@@ -463,17 +463,31 @@ Deno.serve(async (req) => {
                   : stats.newestSynced || rows[rows.length - 1].sent_at;
 
               const latestRow = rows[rows.length - 1];
-              await supabase
+              // Only bump last_message_at when the newly-imported message is
+              // actually newer than what's stored — otherwise historical
+              // imports would regress the conversation position in the list.
+              const { data: convCurrent } = await supabase
                 .from("zapp_conversations")
-                .update({
-                  last_message_at: latestRow.sent_at,
-                  last_message_preview:
-                    latestRow.direction === "outbound"
-                      ? `Você: ${latestRow.content.slice(0, 80)}`
-                      : latestRow.content.slice(0, 100),
-                  updated_at: new Date().toISOString(),
-                })
-                .eq("id", conversationId);
+                .select("last_message_at")
+                .eq("id", conversationId)
+                .maybeSingle();
+              const currentAtMs = convCurrent?.last_message_at
+                ? new Date(convCurrent.last_message_at).getTime()
+                : 0;
+              const latestAtMs = new Date(latestRow.sent_at).getTime();
+              if (latestAtMs > currentAtMs) {
+                await supabase
+                  .from("zapp_conversations")
+                  .update({
+                    last_message_at: latestRow.sent_at,
+                    last_message_preview:
+                      latestRow.direction === "outbound"
+                        ? `Você: ${latestRow.content.slice(0, 80)}`
+                        : latestRow.content.slice(0, 100),
+                    updated_at: new Date().toISOString(),
+                  })
+                  .eq("id", conversationId);
+              }
 
               const { data: assignment } = await supabase
                 .from("zapp_conversation_assignments")
