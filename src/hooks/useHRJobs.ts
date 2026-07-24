@@ -72,6 +72,42 @@ export function useCreateHRJob() {
         .select()
         .single();
       if (error) throw error;
+
+      // Fire-and-forget: generate salary benchmark automatically on job creation
+      if (data?.id) {
+        (async () => {
+          try {
+            const { data: bench, error: bErr } = await supabase.functions.invoke("rh-salary-benchmark", {
+              body: {
+                title: data.title,
+                seniority: data.seniority,
+                contract_type: data.contract_type,
+                work_model: data.work_model,
+                department: data.department,
+                benefits: data.benefits ?? [],
+                salary_min: data.salary_min ?? null,
+                salary_max: data.salary_max ?? null,
+                city: data.unit || null,
+                state: null,
+              },
+            });
+            if (bErr) throw bErr;
+            const benchmark = (bench as any)?.benchmark;
+            if (benchmark) {
+              await supabase.from("hr_job_benchmarks").upsert({
+                job_id: data.id,
+                account_id: currentUser.account_id,
+                benchmark: benchmark as any,
+                generated_by: currentUser.id,
+                generated_at: new Date().toISOString(),
+              }, { onConflict: "job_id" });
+            }
+          } catch (e) {
+            console.warn("Auto benchmark generation failed:", e);
+          }
+        })();
+      }
+
       return data;
     },
     onSuccess: () => {
@@ -83,6 +119,7 @@ export function useCreateHRJob() {
     },
   });
 }
+
 
 // ─── Update Job ───
 export function useUpdateHRJob() {
