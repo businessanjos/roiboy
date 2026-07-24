@@ -207,6 +207,7 @@ export default function PublicJobApplication() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [job, setJob] = useState<HRJob | null>(null);
+  const [jobBenchmark, setJobBenchmark] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
