@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle } from "lucide-react";
+import { ArrowLeft, Pencil, Copy, Check, FileText, ExternalLink, Mail, Clock, User as UserIcon, Calendar as CalIcon, AlertTriangle, DollarSign } from "lucide-react";
 import { useHRJobById } from "@/hooks/useHRJobs";
 import { useHRJobStages, useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { useRecruitmentPartners } from "@/hooks/useRecruitmentPartners";
