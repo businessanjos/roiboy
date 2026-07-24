@@ -1210,10 +1210,6 @@ Deno.serve(async (req) => {
       };
 
     } else if (action === "send_text") {
-
-    
-    
-    } else if (action === "send_text") {
       // ✅ CORRIGIDO: Usar /send/text em vez de /message/sendText
       const cleanPhone = phone?.replace(/\D/g, "");
       if (!cleanPhone || cleanPhone.length < 10) {
