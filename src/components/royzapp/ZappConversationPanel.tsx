@@ -293,7 +293,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
           </div>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-1 shrink-0">
           {/* Visible instance switcher (only renders if 2+ instances exist) */}
           {sectorId && onSelectIntegration && (
             <ZappInstanceSwitcher
@@ -301,7 +301,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               sectorId={sectorId}
               selectedIntegrationId={selectedIntegrationId}
               onChange={onSelectIntegration}
-              className="mr-1"
+              className="mr-1 hidden md:flex"
             />
           )}
           <Tooltip>
