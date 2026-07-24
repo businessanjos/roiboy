@@ -811,9 +811,45 @@ Deno.serve(async (req) => {
 
     let result: unknown = { success: true };
 
-
-
-    if (action === "status") {
+    if (action === "server_health") {
+      // Lightweight reachability probe: pings the sector's UAZAPI host directly.
+      // Used by the UI to surface a clear "server offline / 404" banner instead
+      // of falsely showing "connected" while sends silently fail.
+      const host = sectorServer?.host || GLOBAL_SERVER?.host || null;
+      let online = false;
+      let httpStatus: number | null = null;
+      let errorMessage: string | null = null;
+      if (!host) {
+        errorMessage = "no_host_configured";
+      } else {
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 5000);
+          const res = await fetch(`${host.replace(/\/$/, "")}/status`, {
+            method: "GET",
+            signal: ctrl.signal,
+          });
+          clearTimeout(timer);
+          httpStatus = res.status;
+          // Consume body to avoid resource leak.
+          try { await res.text(); } catch { /* ignore */ }
+          // UAZAPI returns 200 with a JSON health payload when the server is up.
+          online = res.status >= 200 && res.status < 500 && res.status !== 404;
+        } catch (err) {
+          errorMessage = (err as Error)?.message || "fetch_failed";
+          online = false;
+        }
+      }
+      console.log(`[uazapi-manager] server_health host=${host} status=${httpStatus} online=${online} err=${errorMessage || "-"}`);
+      result = {
+        online,
+        host,
+        http_status: httpStatus,
+        error: errorMessage,
+        sector_id: sector_id || null,
+        integration_id: integration_id || null,
+      };
+    } else if (action === "status") {
       const storedConnected = intData?.status === "connected";
       const tokenMissingForUazapi = !!intData?.id && isUazapiProvider(intData.config?.provider) && !token;
       let statusSnapshot: StatusSnapshot = {
