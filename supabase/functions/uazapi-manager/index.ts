@@ -92,6 +92,11 @@ type UazapiInstanceLike = {
   };
 };
 
+function isUazapiProvider(provider: unknown): boolean {
+  const normalized = getString(provider)?.toLowerCase();
+  return !normalized || normalized === "uazapi";
+}
+
 type StatusSnapshot = {
   state: string;
   connected: boolean;
@@ -221,7 +226,9 @@ function getInstanceOwner(instance: UazapiInstanceLike): string | undefined {
 }
 
 function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
-  return instance.token || instance.instance?.token || getString(instance.data?.token);
+  const checkedInstance = asRecord(instance.checked_instance);
+  const data = asRecord(instance.data);
+  return instance.token || instance.instance?.token || getString(checkedInstance?.token) || getString(data?.token);
 }
 
 function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
@@ -337,7 +344,7 @@ function detectLoggedOut(payload: unknown): boolean {
   const msg = (getString(rec.message) || getString(rec.error) || "").toLowerCase();
   const code = typeof rec.code === "number" ? rec.code : undefined;
   if (code === 401) return true;
-  if (/logged out from another device|loggedoutfromanotherdevice|logged out|session (?:closed|ended|expired)/i.test(msg)) return true;
+  if (/logged out from another device|loggedoutfromanotherdevice|logged out|invalid token|session (?:closed|ended|expired)/i.test(msg)) return true;
   return false;
 }
 
@@ -606,7 +613,7 @@ Deno.serve(async (req) => {
     console.log(`[uazapi-manager] Action: ${action}, integration_id: ${integration_id}, sector_id: ${sector_id}`);
 
     // Buscar integração - PRIORIZAR integration_id
-    let intData: { id: string; config: { instance_token?: string; instance_name?: string }; status: string } | null = null;
+    let intData: { id: string; config: { provider?: string; instance_token?: string; instance_name?: string }; status: string } | null = null;
     
     if (integration_id) {
       const { data } = await supabase.from("integrations").select("id, config, status").eq("id", integration_id).eq("account_id", accountId).single();
@@ -768,12 +775,31 @@ Deno.serve(async (req) => {
     }
     // ========== END HEALTH CHECK ==========
 
+    const invalidTokenResponse = async (err: unknown) => {
+      const msg = String((err as Error)?.message || "");
+      if (!/invalid token|401/i.test(msg)) return null;
+
+      if (intData?.id) {
+        await supabase
+          .from("integrations")
+          .update({ status: "disconnected" })
+          .eq("id", intData.id);
+      }
+
+      return new Response(JSON.stringify({
+        error: "WHATSAPP_DISCONNECTED: token inválido. A instância foi marcada como desconectada; gere um novo QR Code e reconecte o WhatsApp.",
+        code: "WHATSAPP_DISCONNECTED",
+        instance_name: instanceName,
+      }), { status: 503, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    };
+
     let result: unknown = { success: true };
 
 
 
     if (action === "status") {
       const storedConnected = intData?.status === "connected";
+      const tokenMissingForUazapi = !!intData?.id && isUazapiProvider(intData.config?.provider) && !token;
       let statusSnapshot: StatusSnapshot = {
         state: storedConnected ? "connected" : "unknown",
         connected: storedConnected,
@@ -785,24 +811,60 @@ Deno.serve(async (req) => {
         const inst = selectBestInstanceMatch(all, instanceName, token);
 
         if (inst) {
-          statusSnapshot = resolveStatusSnapshot(inst);
+          const liveSnapshot = resolveStatusSnapshot(inst);
+          const liveToken = getInstanceToken(inst);
+
+          // If the admin list says the instance is connected but our stored token is stale,
+          // sync the live token immediately. Otherwise the UI shows "connected" while sends fail
+          // with "invalid token".
+          if (liveToken && liveToken !== token && intData?.id && isUazapiProvider(intData.config?.provider)) {
+            console.warn(`[uazapi-manager] 🔁 Syncing live token for instance "${instanceName}" from admin list`);
+            const mergedConfig = {
+              ...(intData.config || {}),
+              provider: "uazapi",
+              instance_name: instanceName,
+              instance_token: liveToken,
+            };
+            await supabase
+              .from("integrations")
+              .update({ config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" })
+              .eq("id", intData.id);
+            intData = { ...intData, config: mergedConfig, status: liveSnapshot.connected ? "connected" : "disconnected" };
+          } else if (liveSnapshot.connected && token && !liveToken && isUazapiProvider(intData?.config?.provider)) {
+            // Some admin responses omit the token. In that case, never trust name-only status;
+            // verify the stored token so stale credentials don't appear connected.
+            const tokenSnapshot = await resolveStatusFromToken(token, sectorServer);
+            statusSnapshot = tokenSnapshot.connected
+              ? liveSnapshot
+              : tokenSnapshot.state !== "unknown"
+                ? tokenSnapshot
+                : { state: "disconnected", connected: false };
+          } else {
+            statusSnapshot = liveSnapshot;
+          }
         } else if (token) {
           console.warn(`[uazapi-manager] Instance ${instanceName} not found in admin list, trying instance-level status check`);
           statusSnapshot = await resolveStatusFromToken(token, sectorServer);
+        } else if (tokenMissingForUazapi) {
+          console.warn(`[uazapi-manager] ⛔ Stored integration "${instanceName}" has no UAZAPI token and no live instance match. Forcing disconnected.`);
+          statusSnapshot = { state: "disconnected", connected: false };
         }
       } catch (adminErr) {
         console.warn(`[uazapi-manager] Admin fetchInstances failed, trying instance-level status check for: ${instanceName}`);
         if (token) {
           statusSnapshot = await resolveStatusFromToken(token, sectorServer);
+        } else if (tokenMissingForUazapi) {
+          statusSnapshot = { state: "disconnected", connected: false };
         }
       }
 
-      const effectiveConnected = statusSnapshot.state === "unknown" ? storedConnected : statusSnapshot.connected;
-      const effectiveState = statusSnapshot.state === "unknown" && storedConnected ? "connected" : statusSnapshot.state;
+      const effectiveConnected = statusSnapshot.connected;
+      const effectiveState = statusSnapshot.state === "unknown" ? "disconnected" : statusSnapshot.state;
 
       // ==== AUTO-RECONNECT: detect "logged out from another device" ====
       let autoReconnect: { attempted: boolean; qr_code?: string; token?: string; error?: string } | undefined;
       if (statusSnapshot.loggedOut && intData?.id) {
+        const reconnectIntegration = intData;
         console.warn(`[uazapi-manager] 🔄 Auto-reconnect triggered for instance "${instanceName}" (logged out from another device)`);
         try {
           // Re-init instance on sector server to get a fresh token/session
@@ -824,10 +886,10 @@ Deno.serve(async (req) => {
           };
           await supabase.from("integrations")
             .update({ config: mergedConfig, status: "pending" })
-            .eq("id", intData.id);
+            .eq("id", reconnectIntegration.id);
 
           // Throttled notification (once per 1h) to account admins + sector members
-          const lastAlert = (intData.config as any)?.last_reconnect_alert_at as string | undefined;
+          const lastAlert = (reconnectIntegration.config as any)?.last_reconnect_alert_at as string | undefined;
           const shouldNotify = !lastAlert || (Date.now() - new Date(lastAlert).getTime()) > 60 * 60 * 1000;
           if (shouldNotify) {
             try {
@@ -841,15 +903,15 @@ Deno.serve(async (req) => {
                 user_id: u.id,
                 type: "system",
                 title: "WhatsApp desconectado",
-                content: `A instância "${intData.config?.instance_name || instanceName}" foi desconectada (logout de outro aparelho). Um novo QR Code foi gerado — escaneie para reconectar.`,
+                content: `A instância "${reconnectIntegration.config?.instance_name || instanceName}" foi desconectada (logout de outro aparelho). Um novo QR Code foi gerado — escaneie para reconectar.`,
                 link: "/integrations/whatsapp",
                 source_type: "integration",
-                source_id: intData.id,
+                source_id: reconnectIntegration.id,
               }));
               if (rows.length) await supabase.from("notifications").insert(rows);
               await supabase.from("integrations")
                 .update({ config: { ...mergedConfig, last_reconnect_alert_at: new Date().toISOString() } })
-                .eq("id", intData.id);
+                .eq("id", reconnectIntegration.id);
             } catch (notifErr) {
               console.warn(`[uazapi-manager] failed to notify admins:`, notifErr);
             }
@@ -871,7 +933,7 @@ Deno.serve(async (req) => {
         auto_reconnect: autoReconnect,
       };
 
-      if (intData?.id && statusSnapshot.state !== "unknown" && !statusSnapshot.loggedOut) {
+      if (intData?.id && (statusSnapshot.state !== "unknown" || tokenMissingForUazapi) && !statusSnapshot.loggedOut) {
         await supabase
           .from("integrations")
           .update({ status: statusSnapshot.connected ? "connected" : "disconnected" })
@@ -929,7 +991,7 @@ Deno.serve(async (req) => {
         }
       }
 
-      // Try connect with current token; if 401 (token belongs to a different server), re-init and retry
+      // Try connect with current token; if auth fails (token belongs to a different server), re-init and retry
       try {
         const ensuredToken = activeToken!;
         const connectResult: any = await uazapiInstance("/instance/connect", "POST", ensuredToken, {}, sectorServer);
@@ -941,11 +1003,26 @@ Deno.serve(async (req) => {
           result = await uazapiInstance("/instance/connect", "POST", activeToken!, {}, sectorServer);
         }
       } catch (e) {
+        const msg = (e as Error)?.message || "";
+        if (/401|invalid token/i.test(msg)) {
+          try {
+            console.warn("[uazapi-manager] Connect failed with invalid token, re-initializing instance on sector server");
+            activeToken = await initOnSectorServer();
+            result = await uazapiInstance("/instance/connect", "POST", activeToken!, {}, sectorServer);
+          } catch (retryErr) {
+            console.error("[uazapi-manager] connect retry after invalid token failed:", retryErr);
+            return new Response(
+              JSON.stringify({ error: `Failed to fetch QR code: ${(retryErr as Error).message}` }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        } else {
         console.error("[uazapi-manager] connect failed:", e);
         return new Response(
           JSON.stringify({ error: `Failed to fetch QR code: ${(e as Error).message}` }),
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+        }
       }
     
     } else if (action === "disconnect") {
@@ -967,9 +1044,15 @@ Deno.serve(async (req) => {
       }
       if (payload.mentions) textBody.mentions = payload.mentions;
       
-      result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
-        uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_text user=${userData.name}`, () =>
+          uazapiInstance("/send/text", "POST", token!, textBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
     
     } else if (action === "send_media") {
       // ✅ NOVO: Suporte a envio de mídia
@@ -989,9 +1072,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
-        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_media user=${userData.name} type=${outboundMediaType}`, () =>
+          uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
       // 🚨 Diagnóstico: detectar respostas sem id (falha silenciosa)
       let r: any = result;
       let hasId = !!(r?.id || r?.messageid || r?.data?.id || r?.data?.messageid);
@@ -1027,9 +1116,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
       if (payload.mentions) groupBody.mentions = payload.mentions;
       
-      result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
-        uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
+          uazapiInstance("/send/text", "POST", token!, groupBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
     
     } else if (action === "send_media_to_group") {
       // ✅ NOVO: Mídia em grupos
@@ -1046,9 +1141,15 @@ Deno.serve(async (req) => {
       if (normalizedQuotedMessageId) { mediaBody.replyid = normalizedQuotedMessageId; }
       if (payload.file_name) mediaBody.fileName = payload.file_name;
       
-      result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>
-        uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
-      );
+      try {
+        result = await enqueueSend(token!, `send_media_to_group user=${userData.name} type=${outboundMediaType}`, () =>
+          uazapiInstance("/send/media", "POST", token!, mediaBody, sectorServer)
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
       // 🔁 Retry PTT em grupos (mesma lógica de send_media): uazapi às vezes
       // devolve resposta sem messageid enquanto converte webm/opus.
       {
