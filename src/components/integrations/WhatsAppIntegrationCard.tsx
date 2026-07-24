@@ -95,6 +95,28 @@ export function WhatsAppIntegrationCard({
     }
   }, [onRefresh]);
 
+  const handleFixWebhookById = useCallback(async (integrationId: string) => {
+    setCheckingStatusId(integrationId);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: "configure_webhook", integration_id: integrationId },
+      });
+      if (error) throw error;
+      const ok = data?.success || data?.webhook_configured || data?.data?.success || data?.data?.webhook_configured;
+      if (ok) {
+        toast.success("Recebimento reativado para esta instância");
+      } else {
+        toast.error("Não foi possível corrigir o webhook automaticamente");
+      }
+      onRefresh();
+    } catch (err) {
+      console.error("Fix webhook error:", err);
+      toast.error(err instanceof Error ? err.message : "Erro ao corrigir recebimento");
+    } finally {
+      setCheckingStatusId(null);
+    }
+  }, [onRefresh]);
+
   const handleDisconnectById = useCallback(async (integrationId: string) => {
     if (!confirm("Tem certeza que deseja desconectar esta instância?")) {
       return;
