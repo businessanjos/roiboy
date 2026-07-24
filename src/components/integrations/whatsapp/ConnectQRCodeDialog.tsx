@@ -269,7 +269,7 @@ export function ConnectQRCodeDialog({
     } finally {
       setAdopting(false);
     }
-  }, [pastedToken, instanceName, integrationId, sectorId, onConnected, fetchQRCode]);
+  }, [pastedToken, instanceName, integrationId, sectorId, onConnected, fetchQRCode, tokenConflict]);
 
 
 
