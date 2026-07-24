@@ -226,7 +226,9 @@ function getInstanceOwner(instance: UazapiInstanceLike): string | undefined {
 }
 
 function getInstanceToken(instance: UazapiInstanceLike): string | undefined {
-  return instance.token || instance.instance?.token || getString(instance.checked_instance?.token) || getString(instance.data?.token);
+  const checkedInstance = asRecord(instance.checked_instance);
+  const data = asRecord(instance.data);
+  return instance.token || instance.instance?.token || getString(checkedInstance?.token) || getString(data?.token);
 }
 
 function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
