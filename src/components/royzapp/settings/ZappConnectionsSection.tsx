@@ -13,7 +13,8 @@ import {
   Lock,
   Trash2,
   QrCode,
-  ExternalLink,
+  AlertTriangle,
+  RefreshCw,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
@@ -41,6 +42,7 @@ interface SectorConnection {
   phone_number: string;
   profile_name: string;
   provider?: "uazapi" | "meta_official";
+  webhook_configured?: boolean;
 }
 
 interface ZappConnectionsSectionProps {
@@ -57,6 +59,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
   const [qrInstance, setQrInstance] = useState<SectorConnection | null>(null);
   const [removing, setRemoving] = useState<SectorConnection | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [fixingWebhookId, setFixingWebhookId] = useState<string | null>(null);
 
   const fetchConnections = useCallback(async () => {
     if (!sectorId) return;
@@ -96,6 +99,29 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
       toast.error("Erro ao remover conexão");
     } finally {
       setBusyId(null);
+    }
+  };
+
+  const handleFixWebhook = async (connection: SectorConnection) => {
+    setFixingWebhookId(connection.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: { action: "configure_webhook", integration_id: connection.id },
+      });
+      if (error) throw error;
+
+      if (data?.success || data?.webhook_configured || data?.data?.success || data?.data?.webhook_configured) {
+        toast.success("Recebimento reativado para esta instância");
+        fetchConnections();
+        return;
+      }
+
+      toast.error("Não foi possível corrigir o webhook automaticamente");
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao corrigir recebimento de mensagens");
+    } finally {
+      setFixingWebhookId(null);
     }
   };
 
@@ -157,12 +183,19 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
           {connections.map((c) => {
             const connected = c.status === "connected";
             const isMeta = c.provider === "meta_official";
+            const webhookBroken = connected && !isMeta && c.webhook_configured === false;
+            const operational = connected && !webhookBroken;
+            const statusLabel = operational ? "Operacional" : webhookBroken ? "Sem recebimento" : "Desconectado";
             return (
               <div
                 key={c.id}
                 className={cn(
                   "p-3 rounded-lg border bg-zapp-panel",
-                  connected ? "border-emerald-500/30" : "border-zapp-border"
+                  operational
+                    ? "border-emerald-500/30"
+                    : webhookBroken
+                      ? "border-amber-500/40"
+                      : "border-zapp-border"
                 )}
               >
                 <div className="flex items-center gap-3">
@@ -193,15 +226,19 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                         variant="outline"
                         className={cn(
                           "text-[10px] px-1.5 py-0 h-4",
-                          connected
+                          operational
                             ? "border-emerald-500/40 text-emerald-500"
+                            : webhookBroken
+                              ? "border-amber-500/50 text-amber-500"
                             : "border-red-500/40 text-red-500"
                         )}
                       >
-                        {connected ? (
-                          <><Wifi className="h-2.5 w-2.5 mr-0.5" />Conectado</>
+                        {operational ? (
+                          <><Wifi className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
+                        ) : webhookBroken ? (
+                          <><AlertTriangle className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
                         ) : (
-                          <><WifiOff className="h-2.5 w-2.5 mr-0.5" />Desconectado</>
+                          <><WifiOff className="h-2.5 w-2.5 mr-0.5" />{statusLabel}</>
                         )}
                       </Badge>
                       <span className="text-[10px] text-zapp-text-muted">
@@ -231,6 +268,37 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                   </div>
                 </div>
 
+                {webhookBroken && (
+                  <div className="mt-3 rounded-md border border-amber-500/35 bg-amber-500/10 p-3">
+                    <div className="flex items-start gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs font-medium text-zapp-text">
+                          Instância ligada, mas mensagens recebidas não chegam no RoyZapp
+                        </p>
+                        <p className="text-[11px] text-zapp-text-muted mt-0.5">
+                          O webhook desta conexão está ausente. Corrija aqui, neste mesmo painel.
+                        </p>
+                      </div>
+                    </div>
+                    {isAdmin && (
+                      <Button
+                        size="sm"
+                        onClick={() => handleFixWebhook(c)}
+                        disabled={fixingWebhookId === c.id}
+                        className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white gap-2"
+                      >
+                        {fixingWebhookId === c.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                        Corrigir recebimento
+                      </Button>
+                    )}
+                  </div>
+                )}
+
                 {!isMeta && !connected && (
                   <Button
                     size="sm"
@@ -250,10 +318,10 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
       {isAdmin && (
         <button
           type="button"
-          onClick={() => navigate("/integrations/whatsapp")}
+          onClick={() => navigate(`/roy-zapp?view=whatsapp-admin${sectorId ? `&sector=${sectorId}` : ""}`)}
           className="w-full flex items-center justify-center gap-1 text-[11px] text-zapp-text-muted hover:text-zapp-accent transition-colors py-1"
         >
-          Configuração avançada por setor <ExternalLink className="h-3 w-3" />
+          Abrir painel técnico de conexões <RefreshCw className="h-3 w-3" />
         </button>
       )}
 

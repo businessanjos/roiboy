@@ -94,11 +94,11 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
       {/* Connections (UAZAPI / Meta) */}
       <ZappConnectionsSection sectorId={sectorId} sectorName={sectorName || "este setor"} />
 
-      {/* WhatsApp Connection (user toggle) */}
+      {/* Local realtime receiver toggle */}
       <div className="space-y-3 pt-4 border-t border-zapp-border">
         <div>
-          <p className="text-zapp-text text-sm font-medium">Minha conexão</p>
-          <p className="text-zapp-text-muted text-xs">Liga/desliga o recebimento de mensagens em tempo real para você</p>
+          <p className="text-zapp-text text-sm font-medium">Recebimento nesta tela</p>
+          <p className="text-zapp-text-muted text-xs">Pausa ou ativa a atualização em tempo real só para o seu usuário. Não desconecta o número do setor.</p>
         </div>
         
         <div className={cn(
@@ -120,12 +120,12 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
               )}
               <div>
                 <p className="text-zapp-text text-sm font-medium">
-                  {whatsappConnected ? "Conectado" : "Desconectado"}
+                  {whatsappConnected ? "Ativo" : "Pausado"}
                 </p>
                 <p className="text-zapp-text-muted text-xs">
                   {whatsappConnected 
                     ? "Recebendo mensagens em tempo real" 
-                    : "Clique para ativar a conexão"}
+                    : "Clique para voltar a receber atualizações nesta tela"}
                 </p>
               </div>
             </div>
@@ -145,7 +145,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
               ) : (
                 <>
                   <Power className="h-4 w-4 mr-1" />
-                  {whatsappConnected ? "Desligar" : "Ligar"}
+                  {whatsappConnected ? "Pausar" : "Ativar"}
                 </>
               )}
             </Button>
@@ -398,7 +398,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           
           {!whatsappConnected && (
             <p className="text-amber-500 text-xs text-center">
-              Conecte o WhatsApp primeiro para importar conversas
+              Ative o recebimento nesta tela para importar conversas
             </p>
           )}
         </div>

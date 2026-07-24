@@ -99,7 +99,7 @@ export function SectorInstanceCard({
 
       if (error) throw error;
 
-      if (data?.webhook_configured) {
+      if (data?.success || data?.webhook_configured || data?.data?.success || data?.data?.webhook_configured) {
         toast.success("Webhook configurado com sucesso!");
         onRefresh?.();
       } else {

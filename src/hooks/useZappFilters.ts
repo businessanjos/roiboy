@@ -87,7 +87,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
           setWhatsappConnected(true);
           toast.success("Recebendo mensagens em tempo real");
         } else {
-          toast.warning("WhatsApp do setor desconectado. Use 'Reconectar via QR Code' na seção 'Conexões WhatsApp' acima.");
+          toast.warning("A instância do WhatsApp não está operacional. Abra 'Conexões WhatsApp' para reconectar por QR ou corrigir o recebimento.");
         }
       }
     } catch (error: any) {

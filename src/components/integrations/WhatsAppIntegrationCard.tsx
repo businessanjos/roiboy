@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { motion, AnimatePresence } from "framer-motion";
 import { usePermissions } from "@/hooks/usePermissions";
+import { cn } from "@/lib/utils";
 
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -42,7 +43,9 @@ export function WhatsAppIntegrationCard({
   const connectionState = config?.connection_state as string | undefined;
   const instanceName = config?.instance_name as string | undefined;
   
-  const isConnected = currentSectorIntegration?.status === "connected" || connectionState === "open";
+  const webhookConfigured = config?.webhook_configured !== false;
+  const isConnected = (currentSectorIntegration?.status === "connected" || connectionState === "open") && webhookConfigured;
+  const isInstanceOnlineWithoutWebhook = (currentSectorIntegration?.status === "connected" || connectionState === "open") && !webhookConfigured;
   
   const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState(false);
@@ -180,7 +183,12 @@ export function WhatsAppIntegrationCard({
               {isConnected ? (
                 <>
                   <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
-                  Conectado
+                  Operacional
+                </>
+              ) : isInstanceOnlineWithoutWebhook ? (
+                <>
+                  <WifiOff className="h-3 w-3" />
+                  Sem recebimento
                 </>
               ) : (
                 <>
@@ -203,11 +211,22 @@ export function WhatsAppIntegrationCard({
           )}
 
           {/* Connection Status for current sector */}
-          {isConnected && instanceName && (
-            <div className="rounded-lg border border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900 p-4 space-y-3">
+          {(isConnected || isInstanceOnlineWithoutWebhook) && instanceName && (
+            <div className={cn(
+              "rounded-lg border p-4 space-y-3",
+              isConnected
+                ? "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900"
+                : "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900"
+            )}>
               <div className="flex items-center gap-2">
-                <CheckCircle2 className="h-5 w-5 text-green-600" />
-                <h4 className="font-medium text-green-800 dark:text-green-400">WhatsApp Conectado</h4>
+                {isConnected ? (
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                ) : (
+                  <WifiOff className="h-5 w-5 text-amber-600" />
+                )}
+                <h4 className={cn("font-medium", isConnected ? "text-green-800 dark:text-green-400" : "text-amber-800 dark:text-amber-400")}>
+                  {isConnected ? "WhatsApp operacional" : "WhatsApp ligado, mas sem recebimento"}
+                </h4>
               </div>
               <div className="grid grid-cols-2 gap-4 text-sm">
                 <div>
@@ -236,7 +255,14 @@ export function WhatsAppIntegrationCard({
               const cfg = integration.config as Record<string, unknown> | null;
               const intInstanceName = cfg?.instance_name as string || cfg?.profileName as string || "Instância sem nome";
               const intOwner = cfg?.owner as string;
-              const isIntegrationConnected = integration.status === "connected" || cfg?.connection_state === "open";
+              const integrationOnline = integration.status === "connected" || cfg?.connection_state === "open";
+              const integrationWebhookBroken = integrationOnline && cfg?.webhook_configured === false;
+              const isIntegrationConnected = integrationOnline && !integrationWebhookBroken;
+              const integrationStatusLabel = isIntegrationConnected
+                ? "Operacional"
+                : integrationWebhookBroken
+                  ? "Sem recebimento"
+                  : "Desconectado";
               const createdAt = integration.created_at ? new Date(integration.created_at) : null;
               const isCheckingThis = checkingStatusId === integration.id;
               const sectorLabel = integration.sector_id || "Padrão";
@@ -244,9 +270,18 @@ export function WhatsAppIntegrationCard({
               return (
                 <div key={integration.id} className="p-4 flex items-center justify-between gap-4">
                   <div className="flex items-center gap-3 flex-1 min-w-0">
-                    <div className={`p-2 rounded-full ${isIntegrationConnected ? "bg-green-100 dark:bg-green-900/30" : "bg-muted"}`}>
+                    <div className={cn(
+                      "p-2 rounded-full",
+                      isIntegrationConnected
+                        ? "bg-green-100 dark:bg-green-900/30"
+                        : integrationWebhookBroken
+                          ? "bg-amber-100 dark:bg-amber-900/30"
+                          : "bg-muted"
+                    )}>
                       {isIntegrationConnected ? (
                         <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+                      ) : integrationWebhookBroken ? (
+                        <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
                       ) : (
                         <WifiOff className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -265,9 +300,12 @@ export function WhatsAppIntegrationCard({
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <Badge 
                       variant={isIntegrationConnected ? "default" : "outline"}
-                      className={isIntegrationConnected ? "bg-green-600" : ""}
+                      className={cn(
+                        isIntegrationConnected && "bg-green-600",
+                        integrationWebhookBroken && "border-amber-500 text-amber-600"
+                      )}
                     >
-                      {isIntegrationConnected ? "Conectado" : "Desconectado"}
+                      {integrationStatusLabel}
                     </Badge>
                     <Button 
                       size="sm" 
