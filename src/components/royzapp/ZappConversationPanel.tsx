@@ -36,6 +36,7 @@ import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappChannelPills } from "./ZappChannelPills";
+import { UazapiServerHealthBanner } from "./UazapiServerHealthBanner";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
