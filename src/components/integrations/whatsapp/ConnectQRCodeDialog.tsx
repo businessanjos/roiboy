@@ -242,11 +242,13 @@ export function ConnectQRCodeDialog({
                 Fechar
               </Button>
             </div>
-          ) : loading ? (
+          ) : loading || resetting ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
               <p className="text-sm text-muted-foreground">
-                Gerando QR Code{attempt > 1 ? ` (tentativa ${attempt}/${MAX_ATTEMPTS})...` : "..."}
+                {resetting
+                  ? "Resetando conexão e gerando novo QR..."
+                  : `Gerando QR Code${attempt > 1 ? ` (tentativa ${attempt}/${MAX_ATTEMPTS})...` : "..."}`}
               </p>
             </div>
           ) : qrError ? (
@@ -254,10 +256,25 @@ export function ConnectQRCodeDialog({
               <Alert variant="destructive">
                 <AlertDescription>{qrError}</AlertDescription>
               </Alert>
-              <Button variant="outline" onClick={fetchQRCode}>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Tentar novamente
-              </Button>
+              <div className="flex flex-col sm:flex-row gap-2 w-full">
+                <Button variant="outline" onClick={fetchQRCode} className="flex-1">
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Tentar novamente
+                </Button>
+                <Button
+                  variant="destructive"
+                  onClick={resetConnection}
+                  disabled={resetting}
+                  className="flex-1"
+                >
+                  <RotateCcw className="h-4 w-4 mr-2" />
+                  Resetar conexão
+                </Button>
+              </div>
+              <p className="text-[11px] text-muted-foreground text-center px-2">
+                O reset força o reprovisionamento da instância no servidor e gera um token novo.
+                Use quando aparecer <strong>invalid token</strong> ou <strong>404</strong>.
+              </p>
             </div>
           ) : qrCode ? (
             <>
@@ -292,12 +309,26 @@ export function ConnectQRCodeDialog({
                 Aguardando conexão...
               </div>
 
-              <Button variant="ghost" size="sm" onClick={fetchQRCode}>
-                <RefreshCw className="h-3.5 w-3.5 mr-1" />
-                Atualizar QR Code
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" size="sm" onClick={fetchQRCode}>
+                  <RefreshCw className="h-3.5 w-3.5 mr-1" />
+                  Atualizar QR Code
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={resetConnection}
+                  disabled={resetting}
+                  className="text-destructive hover:text-destructive"
+                  title="Reprovisiona a instância no servidor e gera um novo token"
+                >
+                  <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                  Resetar conexão
+                </Button>
+              </div>
             </>
           ) : null}
+
         </div>
       </DialogContent>
     </Dialog>
