@@ -221,6 +221,7 @@ export default function RHJobDetail() {
           work_model: (job as any).work_model,
           department: (job as any).department,
           benefits: (job as any).benefits,
+          salary_type: (job as any).salary_type,
           salary_min: (job as any).salary_min,
           salary_max: (job as any).salary_max,
         }}
