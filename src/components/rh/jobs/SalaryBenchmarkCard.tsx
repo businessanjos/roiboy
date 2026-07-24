@@ -41,6 +41,21 @@ interface Props {
 }
 
 
+interface CompetitorCompany {
+  name: string;
+  role_title?: string | null;
+  salary_min?: number | null;
+  salary_max?: number | null;
+  benefits?: string[] | null;
+  work_model?: string | null;
+  source_title?: string | null;
+  source_url: string;
+}
+interface CompetitorCity {
+  summary?: string | null;
+  salary_range?: { min?: number | null; max?: number | null } | null;
+  companies?: CompetitorCompany[] | null;
+}
 interface BenchmarkResult {
   headline?: string;
   currency?: string;
@@ -52,6 +67,10 @@ interface BenchmarkResult {
   extra_benefits?: string[];
   notes?: string;
   sources?: { title?: string; url: string }[];
+  local_competitors?: {
+    barueri?: CompetitorCity | null;
+    sao_paulo?: CompetitorCity | null;
+  } | null;
 }
 
 const fmtBRL = (n?: number | null) =>
