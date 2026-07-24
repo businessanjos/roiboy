@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen, Lightbulb, ArrowUpRight, Plus, MapPin } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen, Lightbulb, ArrowUpRight, Plus, MapPin, BellRing, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+const RH_ALERT_RECIPIENTS = [
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com",
+];
 
 interface Props {
   job: {
@@ -23,7 +34,10 @@ interface Props {
   };
   city?: string | null;
   state?: string | null;
+  jobId?: string | null;
+  alertThreshold?: number;
 }
+
 
 interface BenchmarkResult {
   headline?: string;
@@ -250,10 +264,15 @@ function computeRecommendations(params: Parameters<typeof computeAttractiveness>
 
 
 
-export function SalaryBenchmarkCard({ job, city, state }: Props) {
+export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 60 }: Props) {
+  const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<BenchmarkResult | null>(null);
   const [ranAt, setRanAt] = useState<Date | null>(null);
+  const [alertSending, setAlertSending] = useState(false);
+  const [alertSentAt, setAlertSentAt] = useState<Date | null>(null);
+  const autoNotifiedRef = useRef<string | null>(null);
+
 
   const run = async () => {
     setLoading(true);
@@ -313,6 +332,76 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
     : [];
   const range = result?.market_range;
   const period = result?.period === "hora" ? "/hora" : result?.period === "anual" ? "/ano" : "/mês";
+
+  const isLowAttractiveness = !!attractiveness && attractiveness.total < alertThreshold;
+  const dedupeKey = jobId && attractiveness ? `rh-attractiveness-alert:${jobId}:${Math.floor(attractiveness.total / 10) * 10}` : null;
+
+  const sendLowAttractivenessAlert = async (silent = false) => {
+    if (!attractiveness || !currentUser?.account_id) return;
+    setAlertSending(true);
+    try {
+      const { data: recipients, error: usersError } = await supabase
+        .from("users")
+        .select("id, email")
+        .eq("account_id", currentUser.account_id)
+        .eq("is_active", true)
+        .in("email", RH_ALERT_RECIPIENTS);
+      if (usersError) throw usersError;
+      if (!recipients || recipients.length === 0) {
+        if (!silent) toast.error("Nenhum usuário do RH encontrado para notificar.");
+        return;
+      }
+
+      const topActions = recommendations.slice(0, 3).map((r) => `• ${r.title} (+${r.impact} pts)`).join("\n");
+      const summary = topActions
+        ? `Score ${attractiveness.total}/100 (${attractiveness.tier.label}). Ações prioritárias:\n${topActions}`
+        : `Score ${attractiveness.total}/100 (${attractiveness.tier.label}). Revise salário e benefícios.`;
+
+      const link = jobId ? `/rh/vacancies/${jobId}` : "/rh/vacancies";
+      const rows = recipients.map((u) => ({
+        account_id: currentUser.account_id,
+        user_id: u.id,
+        type: "rh_low_attractiveness",
+        title: `Vaga com baixa atratividade: ${job.title}`,
+        content: summary,
+        link,
+        triggered_by_user_id: currentUser.id,
+        source_type: "hr_job",
+        source_id: jobId ?? null,
+      }));
+
+      const { error: insertError } = await supabase.from("notifications").insert(rows);
+      if (insertError) throw insertError;
+
+      setAlertSentAt(new Date());
+      if (dedupeKey) {
+        try { localStorage.setItem(dedupeKey, new Date().toISOString()); } catch {}
+      }
+      if (!silent) toast.success(`Alerta enviado para ${recipients.length} pessoa${recipients.length === 1 ? "" : "s"} do RH.`);
+    } catch (e: any) {
+      console.error("Failed to send low-attractiveness alert:", e);
+      if (!silent) toast.error(e?.message || "Falha ao enviar alerta.");
+    } finally {
+      setAlertSending(false);
+    }
+  };
+
+  // Auto-dispara uma notificação (dedupe por job + faixa de score) quando abaixo do limiar
+  useEffect(() => {
+    if (!isLowAttractiveness || !dedupeKey || !currentUser?.account_id) return;
+    if (autoNotifiedRef.current === dedupeKey) return;
+    let alreadySent = false;
+    try { alreadySent = !!localStorage.getItem(dedupeKey); } catch {}
+    if (alreadySent) {
+      autoNotifiedRef.current = dedupeKey;
+      return;
+    }
+    autoNotifiedRef.current = dedupeKey;
+    sendLowAttractivenessAlert(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [dedupeKey, isLowAttractiveness, currentUser?.account_id]);
+
+
 
   return (
     <Card>
@@ -418,7 +507,45 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
                     {attractiveness.tier.label} · {attractiveness.total}/100
                   </Badge>
                 </div>
+                {isLowAttractiveness && (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2.5">
+                    <BellRing className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p className="text-[12px] font-semibold text-amber-900">
+                        Atratividade abaixo do limiar ({attractiveness!.total}/100 · alvo ≥ {alertThreshold})
+                      </p>
+                      <p className="text-[11px] text-amber-900/80 leading-snug">
+                        {recommendations.length > 0
+                          ? `Prioridade: ${recommendations.slice(0, 2).map(r => r.title).join(" · ")}.`
+                          : "Revise salário e benefícios antes de publicar a vaga."}
+                        {" "}O RH foi notificado automaticamente com o resumo.
+                      </p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] border-amber-500/40 bg-background/60"
+                          onClick={() => sendLowAttractivenessAlert(false)}
+                          disabled={alertSending}
+                        >
+                          {alertSending ? (
+                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <BellRing className="h-3 w-3 mr-1.5" />
+                          )}
+                          Reenviar alerta ao RH
+                        </Button>
+                        {alertSentAt && (
+                          <span className="text-[10px] text-amber-900/70">
+                            Último envio: {alertSentAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <Progress value={attractiveness.total} className="h-2" />
+
                 <p className="text-xs text-muted-foreground">
                   <strong>Chance de atrair bons candidatos:</strong> {attractiveness.tier.hire}
                 </p>
