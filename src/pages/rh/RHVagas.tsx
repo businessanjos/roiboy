@@ -223,3 +223,57 @@ function JobMetaRow({ job }: { job: HRJob }) {
     </div>
   );
 }
+
+function JobScoreBadge({ job, benchmark }: { job: HRJob; benchmark: any }) {
+  if (!benchmark) {
+    return (
+      <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Sparkles className="h-3 w-3" />
+        <span>Score de mercado calculando…</span>
+      </div>
+    );
+  }
+  const a = computeAttractiveness({
+    offered: { min: job.salary_min, max: job.salary_max },
+    market: benchmark?.market_range,
+    offeredBenefits: job.benefits ?? [],
+    typicalBenefits: benchmark?.typical_benefits ?? [],
+    missingBenefits: benchmark?.missing_benefits ?? [],
+    extraBenefits: benchmark?.extra_benefits ?? [],
+    workModel: job.work_model,
+    city: (job as any).city ?? null,
+    state: (job as any).state ?? null,
+  });
+  const toneClass =
+    a.tier.tone === "emerald"
+      ? "bg-emerald-500/15 text-emerald-700 border-emerald-300"
+      : a.tier.tone === "blue"
+      ? "bg-blue-500/15 text-blue-700 border-blue-300"
+      : a.tier.tone === "amber"
+      ? "bg-amber-500/15 text-amber-700 border-amber-300"
+      : "bg-red-500/15 text-red-700 border-red-300";
+  return (
+    <TooltipProvider delayDuration={100}>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <div className="inline-flex items-center gap-1.5" onClick={e => e.stopPropagation()}>
+            <Badge variant="outline" className={`text-[10px] py-0 ${toneClass}`}>
+              <Sparkles className="h-2.5 w-2.5 mr-0.5" />
+              Atratividade {a.total}/100 · {a.tier.label}
+            </Badge>
+          </div>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="max-w-xs">
+          <div className="space-y-1 text-xs">
+            <p className="font-semibold">{a.tier.hire}</p>
+            {a.breakdown.map(b => (
+              <p key={b.label}>
+                <span className="font-medium">{b.label}:</span> {b.score}/{b.max} — {b.reason}
+              </p>
+            ))}
+          </div>
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
+}
