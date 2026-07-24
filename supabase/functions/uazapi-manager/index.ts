@@ -1217,16 +1217,22 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Register webhook on the server so inbound messages reach us. Non-fatal.
+      const webhookState = await registerWebhookForInstance(pastedToken, providedName, sectorServer);
+
       // Persist the adopted token on the current integration (or create/update).
       const newStatus = snapshot.connected ? "connected" : "disconnected";
+      const baseAdoptedConfig = {
+        provider: "uazapi",
+        instance_name: providedName,
+        instance_token: pastedToken,
+        webhook_configured: webhookState.success,
+        webhook_url: webhookState.success ? webhookState.webhookUrl : null,
+        webhook_events: webhookState.success ? webhookState.events : undefined,
+        ...(snapshot.owner ? { owner: snapshot.owner } : {}),
+      };
       if (intData?.id) {
-        const mergedConfig = {
-          ...(intData.config || {}),
-          provider: "uazapi",
-          instance_name: providedName,
-          instance_token: pastedToken,
-          ...(snapshot.owner ? { owner: snapshot.owner } : {}),
-        };
+        const mergedConfig = { ...(intData.config || {}), ...baseAdoptedConfig };
         await supabase
           .from("integrations")
           .update({ config: mergedConfig, status: newStatus })
@@ -1237,14 +1243,10 @@ Deno.serve(async (req) => {
           type: "whatsapp",
           sector_id: sector_id || null,
           status: newStatus,
-          config: {
-            provider: "uazapi",
-            instance_name: providedName,
-            instance_token: pastedToken,
-            ...(snapshot.owner ? { owner: snapshot.owner } : {}),
-          },
+          config: baseAdoptedConfig,
         });
       }
+
 
       // If not connected yet, request a QR code with the adopted token.
       let qrPayload: any = null;
