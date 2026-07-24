@@ -507,7 +507,45 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                     {attractiveness.tier.label} · {attractiveness.total}/100
                   </Badge>
                 </div>
+                {isLowAttractiveness && (
+                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2.5">
+                    <BellRing className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+                    <div className="min-w-0 flex-1 space-y-1.5">
+                      <p className="text-[12px] font-semibold text-amber-900">
+                        Atratividade abaixo do limiar ({attractiveness!.total}/100 · alvo ≥ {alertThreshold})
+                      </p>
+                      <p className="text-[11px] text-amber-900/80 leading-snug">
+                        {recommendations.length > 0
+                          ? `Prioridade: ${recommendations.slice(0, 2).map(r => r.title).join(" · ")}.`
+                          : "Revise salário e benefícios antes de publicar a vaga."}
+                        {" "}O RH foi notificado automaticamente com o resumo.
+                      </p>
+                      <div className="flex items-center gap-2 pt-0.5">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="h-7 text-[11px] border-amber-500/40 bg-background/60"
+                          onClick={() => sendLowAttractivenessAlert(false)}
+                          disabled={alertSending}
+                        >
+                          {alertSending ? (
+                            <Loader2 className="h-3 w-3 mr-1.5 animate-spin" />
+                          ) : (
+                            <BellRing className="h-3 w-3 mr-1.5" />
+                          )}
+                          Reenviar alerta ao RH
+                        </Button>
+                        {alertSentAt && (
+                          <span className="text-[10px] text-amber-900/70">
+                            Último envio: {alertSentAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
                 <Progress value={attractiveness.total} className="h-2" />
+
                 <p className="text-xs text-muted-foreground">
                   <strong>Chance de atrair bons candidatos:</strong> {attractiveness.tier.hire}
                 </p>
