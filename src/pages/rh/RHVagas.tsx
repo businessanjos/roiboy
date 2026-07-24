@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,7 +7,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2 } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { Briefcase, Plus, MoreVertical, Pencil, Trash2, Users, Send, XCircle, ArrowLeft, CheckSquare, Settings2, Sparkles } from "lucide-react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHRJobs, useDeleteHRJob, useUpdateHRJob, useHRJobStats } from "@/hooks/useHRJobs";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -19,6 +20,9 @@ import { useAccountUsersForJobs } from "@/hooks/useHRJobStages";
 import { OPENING_REASON_LABELS } from "@/types/job";
 import { Clock, User as UserIcon, AlertTriangle } from "lucide-react";
 import { JobsBulkEditDialog } from "@/components/rh/jobs/JobsBulkEditDialog";
+import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function RHVagas() {
   const navigate = useNavigate();
