@@ -1,14 +1,25 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen, Lightbulb, ArrowUpRight, Plus, MapPin } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target, BookOpen, Lightbulb, ArrowUpRight, Plus, MapPin, BellRing, Loader2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+
+const RH_ALERT_RECIPIENTS = [
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com",
+];
 
 interface Props {
   job: {
@@ -23,7 +34,10 @@ interface Props {
   };
   city?: string | null;
   state?: string | null;
+  jobId?: string | null;
+  alertThreshold?: number;
 }
+
 
 interface BenchmarkResult {
   headline?: string;
