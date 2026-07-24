@@ -279,9 +279,32 @@ export default function PublicJobApplication() {
       setError("Vaga não encontrada ou não está mais disponível.");
     } else {
       setJob(data as unknown as HRJob);
+      // Fetch cached market benchmark (if any) — used to validate the
+      // "Salário compatível com o mercado" claim.
+      const { data: bench } = await supabase
+        .from("hr_job_benchmarks")
+        .select("benchmark")
+        .eq("job_id", id!)
+        .maybeSingle();
+      setJobBenchmark(bench?.benchmark ?? null);
     }
     setLoading(false);
   }
+
+  const marketClaim = job
+    ? evaluateMarketSalaryClaim({
+        benefits: job.benefits,
+        salaryType: (job as any).salary_type,
+        salaryMin: (job as any).salary_min,
+        salaryMax: (job as any).salary_max,
+        benchmark: jobBenchmark,
+      })
+    : { claimed: false, valid: true } as any;
+  const visibleBenefits: string[] = job?.benefits
+    ? marketClaim.claimed && !marketClaim.valid
+      ? job.benefits.filter((b) => !isMarketCompatibleClaim(b))
+      : job.benefits
+    : [];
 
   function updateField<K extends keyof ApplicationFormData>(key: K, value: ApplicationFormData[K]) {
     setFormData(prev => ({ ...prev, [key]: value }));
