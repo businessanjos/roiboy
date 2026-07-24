@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { evaluateMarketSalaryClaim, stripMarketCompatibleClaim, MARKET_COMPATIBLE_LABEL } from "@/lib/marketSalaryClaim";
 
 const RH_ALERT_RECIPIENTS = [
   "m.quintana@me.com",
@@ -29,6 +30,7 @@ interface Props {
     work_model?: string | null;
     department?: string | null;
     benefits?: string[] | null;
+    salary_type?: string | null;
     salary_min?: number | null;
     salary_max?: number | null;
   };
@@ -302,6 +304,9 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const run = async () => {
     setLoading(true);
     try {
+      // Não enviamos a auto-declaração "Salário compatível com o mercado" para a IA:
+      // é justamente o que o benchmark valida, não um benefício objetivo.
+      const cleanedBenefits = stripMarketCompatibleClaim(job.benefits);
       const { data, error } = await supabase.functions.invoke("rh-salary-benchmark", {
         body: {
           title: job.title,
@@ -309,7 +314,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
           contract_type: job.contract_type,
           work_model: job.work_model,
           department: job.department,
-          benefits: job.benefits ?? [],
+          benefits: cleanedBenefits,
           salary_min: job.salary_min ?? null,
           salary_max: job.salary_max ?? null,
           city,
@@ -353,15 +358,25 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
 
 
 
+  const cleanOfferedBenefits = stripMarketCompatibleClaim(job.benefits);
+  const cleanExtraBenefits = stripMarketCompatibleClaim(result?.extra_benefits);
+  const claimEval = evaluateMarketSalaryClaim({
+    benefits: job.benefits,
+    salaryType: job.salary_type,
+    salaryMin: job.salary_min,
+    salaryMax: job.salary_max,
+    benchmark: result,
+  });
+
   const positioning = result ? comparePositioning({ min: job.salary_min, max: job.salary_max }, result.market_range) : null;
   const attractiveness = result
     ? computeAttractiveness({
         offered: { min: job.salary_min, max: job.salary_max },
         market: result.market_range,
-        offeredBenefits: job.benefits ?? [],
+        offeredBenefits: cleanOfferedBenefits,
         typicalBenefits: result.typical_benefits ?? [],
         missingBenefits: result.missing_benefits ?? [],
-        extraBenefits: result.extra_benefits ?? [],
+        extraBenefits: cleanExtraBenefits,
         workModel: job.work_model,
         city,
         state,
@@ -371,10 +386,10 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     ? computeRecommendations({
         offered: { min: job.salary_min, max: job.salary_max },
         market: result.market_range,
-        offeredBenefits: job.benefits ?? [],
+        offeredBenefits: cleanOfferedBenefits,
         typicalBenefits: result.typical_benefits ?? [],
         missingBenefits: result.missing_benefits ?? [],
-        extraBenefits: result.extra_benefits ?? [],
+        extraBenefits: cleanExtraBenefits,
         workModel: job.work_model,
         city,
         state,
@@ -720,7 +735,22 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
               </p>
             )}
 
-            {(result.typical_benefits?.length || result.missing_benefits?.length || result.extra_benefits?.length) ? (
+            {claimEval.claimed && !claimEval.valid && (
+              <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 flex items-start gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-red-700 mt-0.5 shrink-0" />
+                <div className="min-w-0 flex-1 space-y-1">
+                  <p className="text-[12px] font-semibold text-red-900">
+                    Diferencial incompatível com o mercado: "{MARKET_COMPATIBLE_LABEL}"
+                  </p>
+                  <p className="text-[11px] text-red-900/80 leading-snug">
+                    {claimEval.reason} Este diferencial fica <strong>oculto</strong> na página pública da vaga até
+                    o salário ser ajustado ou o item ser removido no wizard.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {(result.typical_benefits?.length || result.missing_benefits?.length || cleanExtraBenefits.length) ? (
               <>
                 <Separator />
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -744,11 +774,11 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                       </div>
                     </div>
                   )}
-                  {result.extra_benefits && result.extra_benefits.length > 0 && (
+                  {cleanExtraBenefits.length > 0 && (
                     <div>
                       <p className="text-xs font-medium mb-1.5 text-emerald-700">Diferenciais seus</p>
                       <div className="flex flex-wrap gap-1">
-                        {result.extra_benefits.map((b, i) => (
+                        {cleanExtraBenefits.map((b, i) => (
                           <Badge key={i} variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]">{b}</Badge>
                         ))}
                       </div>

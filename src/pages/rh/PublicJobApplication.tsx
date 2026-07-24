@@ -17,6 +17,7 @@ import type { HRJob, WorkModel, JobContractType, JobSeniority } from "@/types/jo
 import { motion, AnimatePresence } from "framer-motion";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import everBru from "@/assets/eternum/ever-bru.png.asset.json";
+import { evaluateMarketSalaryClaim, isMarketCompatibleClaim } from "@/lib/marketSalaryClaim";
 
 interface ApplicationFormData {
   candidate_name: string;
@@ -206,6 +207,7 @@ export default function PublicJobApplication() {
   const { id } = useParams<{ id: string }>();
   const { toast } = useToast();
   const [job, setJob] = useState<HRJob | null>(null);
+  const [jobBenchmark, setJobBenchmark] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [submitted, setSubmitted] = useState(false);
@@ -277,9 +279,32 @@ export default function PublicJobApplication() {
       setError("Vaga não encontrada ou não está mais disponível.");
     } else {
       setJob(data as unknown as HRJob);
+      // Fetch cached market benchmark (if any) — used to validate the
+      // "Salário compatível com o mercado" claim.
+      const { data: bench } = await supabase
+        .from("hr_job_benchmarks")
+        .select("benchmark")
+        .eq("job_id", id!)
+        .maybeSingle();
+      setJobBenchmark(bench?.benchmark ?? null);
     }
     setLoading(false);
   }
+
+  const marketClaim = job
+    ? evaluateMarketSalaryClaim({
+        benefits: job.benefits,
+        salaryType: (job as any).salary_type,
+        salaryMin: (job as any).salary_min,
+        salaryMax: (job as any).salary_max,
+        benchmark: jobBenchmark,
+      })
+    : { claimed: false, valid: true } as any;
+  const visibleBenefits: string[] = job?.benefits
+    ? marketClaim.claimed && !marketClaim.valid
+      ? job.benefits.filter((b) => !isMarketCompatibleClaim(b))
+      : job.benefits
+    : [];
 
   function updateField<K extends keyof ApplicationFormData>(key: K, value: ApplicationFormData[K]) {
     setFormData(prev => ({ ...prev, [key]: value }));
@@ -810,11 +835,11 @@ export default function PublicJobApplication() {
         )}
 
         {/* BENEFÍCIOS */}
-        {job.benefits?.length > 0 && (
+        {visibleBenefits.length > 0 && (
           <motion.section initial={{ y: 20, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.25 }}>
             <SectionLabel>O que oferecemos</SectionLabel>
             <div className="flex flex-wrap justify-center gap-2">
-              {job.benefits.map(b => (
+              {visibleBenefits.map(b => (
                 <span
                   key={b}
                   className="text-sm px-4 py-2 rounded-sm"
