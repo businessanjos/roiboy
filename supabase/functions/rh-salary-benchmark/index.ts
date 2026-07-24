@@ -63,7 +63,7 @@ Devolva EXCLUSIVAMENTE um objeto JSON válido (sem prosa antes/depois, sem markd
   "sources": [{ "title": "Nome curto da fonte", "url": "https://..." }]
 }
 
-Regras: valores em REAIS mensais brutos (a menos que o contrato seja PJ/Estágio/Freelancer — mantenha bruto e explique em notes). Se o cargo/nível/cidade não tiver dados suficientes, retorne market_range com nulls e explique em notes. Preencha typical_benefits com o que é padrão no Brasil para o cargo/nível. Para local_competitors, liste 3 a 6 empresas REAIS por cidade com vaga do mesmo cargo/senioridade (ou o mais próximo possível), cada uma com URL de anúncio/página real. Se não achar dados para uma cidade, devolva companies: [] e explique no summary. Cite entre 2 e 5 fontes URLs reais no array sources.`;
+Regras: valores em REAIS mensais brutos (a menos que o contrato seja PJ/Estágio/Freelancer — mantenha bruto e explique em notes). Se o cargo/nível/cidade não tiver dados suficientes, retorne market_range com nulls e explique em notes. Preencha typical_benefits com o que é padrão no Brasil para o cargo/nível. Para local_competitors, liste 3 a 6 empresas REAIS por cidade com vaga do mesmo cargo/senioridade (ou o mais próximo possível), cada uma com URL de anúncio/página real. NUNCA inclua: (a) empresas anônimas/confidenciais/"não identificadas"/"empresa confidencial"; (b) empresas de segmentos incompatíveis com o cargo (ex.: sex shop, conteúdo adulto, ou qualquer nicho fora do escopo profissional da vaga); (c) anúncios em que não seja possível identificar o nome real da empresa. Se não achar dados qualificados para uma cidade, devolva companies: [] e explique no summary. Cite entre 2 e 5 fontes URLs reais no array sources.`;
 
 
 Deno.serve(async (req) => {
