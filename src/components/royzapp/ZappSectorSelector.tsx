@@ -515,7 +515,13 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                       ))}
                       {(() => {
                         const total = status.instances.length;
-                        const online = status.instances.filter(i => i.connected).length;
+                        const rawOnline = status.instances.filter(i => i.connected).length;
+                        // Heartbeat override: if we received a webhook event in the
+                        // last 10 min, at least one instance is effectively receiving,
+                        // even if a stale server status flag says otherwise.
+                        const heartbeatMs = status.lastEventAt ? Date.now() - new Date(status.lastEventAt).getTime() : Infinity;
+                        const hasHeartbeat = heartbeatMs < 10 * 60 * 1000;
+                        const online = hasHeartbeat ? Math.max(rawOnline, 1) : rawOnline;
                         const allOn = online === total;
                         const noneOn = online === 0;
                         return (
@@ -529,6 +535,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                                 ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
                                 : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                             )}
+                            title={hasHeartbeat && rawOnline < online ? "Recebendo mensagens agora (heartbeat < 10min)" : undefined}
                           >
                             {online}/{total} online
                           </Badge>
@@ -542,20 +549,29 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                     </div>
                   )}
                   <div className="flex items-center justify-between gap-2">
-                    {/* Connection status */}
-                    <div className="flex items-center gap-2">
-                      {selectedInstance?.connected ? (
-                        <>
-                          <Wifi className="h-4 w-4 text-emerald-500" />
-                          <span className="text-xs text-emerald-600 font-medium">Online</span>
-                        </>
-                      ) : (
-                        <>
-                          <WifiOff className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Desconectado</span>
-                        </>
-                      )}
-                    </div>
+                    {/* Connection status — heartbeat overrides stale disconnected flag */}
+                    {(() => {
+                      const heartbeatMs = status?.lastEventAt ? Date.now() - new Date(status.lastEventAt).getTime() : Infinity;
+                      const hasHeartbeat = heartbeatMs < 10 * 60 * 1000;
+                      const effectiveOnline = !!selectedInstance?.connected || hasHeartbeat;
+                      return (
+                        <div className="flex items-center gap-2" title={hasHeartbeat && !selectedInstance?.connected ? "Recebendo mensagens (status do servidor pode estar desatualizado)" : undefined}>
+                          {effectiveOnline ? (
+                            <>
+                              <Wifi className="h-4 w-4 text-emerald-500" />
+                              <span className="text-xs text-emerald-600 font-medium">
+                                {hasHeartbeat && !selectedInstance?.connected ? "Recebendo" : "Online"}
+                              </span>
+                            </>
+                          ) : (
+                            <>
+                              <WifiOff className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-xs text-muted-foreground">Desconectado</span>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
                     
                     {/* Instance selector dropdown */}
                     {instances.length > 0 && (

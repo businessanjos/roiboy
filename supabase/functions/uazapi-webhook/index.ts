@@ -558,6 +558,39 @@ Deno.serve(async (req) => {
 
     const accountId = integration.account_id;
     const sectorId = integration.sector_id;
+
+    // Auto-heal integration status: receiving a webhook proves the instance
+    // is alive AND the webhook is wired. Server-side status checks can lag
+    // or misreport (401/timeout), leaving the card as "Desconectado" while
+    // messages actually flow. Flip it back — but throttle to at most once
+    // per 60s per integration to avoid write storms.
+    try {
+      const healKey = `heal:${integration.id}`;
+      const lastHeal = getCached(integrationCache as any, healKey) as any;
+      const now = Date.now();
+      if (!lastHeal || now - Number(lastHeal) > 60_000) {
+        setCache(integrationCache as any, healKey, now as any);
+        const cfg = (integration as any).config || {};
+        void supabase
+          .from("integrations")
+          .update({
+            status: "connected",
+            config: {
+              ...cfg,
+              connection_state: "open",
+              webhook_configured: true,
+              last_webhook_at: new Date().toISOString(),
+            },
+          })
+          .eq("id", integration.id)
+          .then(({ error }) => {
+            if (error) console.warn("[auto-heal] failed:", error.message);
+          });
+      }
+    } catch (e) {
+      console.warn("[auto-heal] error:", (e as Error).message);
+    }
+
     const integrationId = integration.id;
     
     
