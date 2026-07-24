@@ -26,6 +26,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 export default function RHVagas() {
   const navigate = useNavigate();
+  const { currentUser } = useCurrentUser();
   const [statusFilter, setStatusFilter] = useState<JobStatus | "all">("all");
   const { data: jobs, isLoading } = useHRJobs({ status: statusFilter });
   const { data: stats } = useHRJobStats();
@@ -35,6 +36,23 @@ export default function RHVagas() {
   const [selectMode, setSelectMode] = useState(false);
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [bulkOpen, setBulkOpen] = useState(false);
+  const [benchmarks, setBenchmarks] = useState<Record<string, any>>({});
+
+  useEffect(() => {
+    if (!jobs?.length || !currentUser?.account_id) return;
+    const ids = jobs.map(j => j.id);
+    supabase
+      .from("hr_job_benchmarks")
+      .select("job_id, benchmark")
+      .eq("account_id", currentUser.account_id)
+      .in("job_id", ids)
+      .then(({ data }) => {
+        if (!data) return;
+        const map: Record<string, any> = {};
+        for (const row of data) map[(row as any).job_id] = (row as any).benchmark;
+        setBenchmarks(map);
+      });
+  }, [jobs, currentUser?.account_id]);
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
