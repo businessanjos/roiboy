@@ -255,6 +255,48 @@ export function SalaryBenchmarkCard({ job, city, state }: Props) {
               </div>
             )}
 
+            {attractiveness && (
+              <div className="rounded-lg border p-4 space-y-3 bg-gradient-to-br from-muted/40 to-transparent">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-4 w-4 text-primary" />
+                    <p className="text-sm font-semibold">Atratividade da vaga</p>
+                  </div>
+                  <Badge
+                    variant="outline"
+                    className={
+                      attractiveness.tier.tone === "emerald"
+                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        : attractiveness.tier.tone === "blue"
+                        ? "bg-blue-500/10 text-blue-700 border-blue-500/30"
+                        : attractiveness.tier.tone === "amber"
+                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                        : "bg-red-500/10 text-red-700 border-red-500/30"
+                    }
+                  >
+                    {attractiveness.tier.label} · {attractiveness.total}/100
+                  </Badge>
+                </div>
+                <Progress value={attractiveness.total} className="h-2" />
+                <p className="text-xs text-muted-foreground">
+                  <strong>Chance de atrair bons candidatos:</strong> {attractiveness.tier.hire}
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                  {attractiveness.breakdown.map((b) => (
+                    <div key={b.label} className="rounded-md border bg-background/60 p-2">
+                      <div className="flex items-center justify-between">
+                        <p className="text-[10px] uppercase tracking-wide text-muted-foreground">{b.label}</p>
+                        <p className="text-[11px] font-semibold">{b.score}/{b.max}</p>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-1 leading-tight">{b.reason}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+
+
             {result.sample_note && (
               <p className="text-xs text-muted-foreground flex items-start gap-1.5">
                 <Info className="h-3 w-3 mt-0.5 shrink-0" />
