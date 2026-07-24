@@ -348,6 +348,17 @@ function detectLoggedOut(payload: unknown): boolean {
   return false;
 }
 
+function isServerWideHealthPayload(payload: unknown): boolean {
+  const rec = asRecord(payload);
+  if (!rec) return false;
+  // UAZAPI returns a server-wide health check (build/info/instance_counts) when the
+  // token is unknown to that server. We must NOT treat this as an instance being connected.
+  const info = getString(rec.info) || "";
+  if (/server health check/i.test(info)) return true;
+  if (asRecord(rec.build) && asRecord(rec.instance_counts)) return true;
+  return false;
+}
+
 async function resolveStatusFromToken(token: string, server?: ServerConfig): Promise<StatusSnapshot> {
   try {
     const instanceInfo = await uazapiInstance("/status", "GET", token, undefined, server);
@@ -356,6 +367,11 @@ async function resolveStatusFromToken(token: string, server?: ServerConfig): Pro
     if (detectLoggedOut(instanceInfo)) {
       console.warn(`[uazapi-manager] ⚠️ Instance logged out from another device (detected via /status)`);
       return { state: "logged_out", connected: false, loggedOut: true };
+    }
+
+    if (isServerWideHealthPayload(instanceInfo)) {
+      console.warn(`[uazapi-manager] ⚠️ /status returned server-wide health payload — token is not recognized by this server. Treating as disconnected.`);
+      return { state: "disconnected", connected: false, loggedOut: true };
     }
 
     const snapshot = resolveStatusSnapshot(instanceInfo);
