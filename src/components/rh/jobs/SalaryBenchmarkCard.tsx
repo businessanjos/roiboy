@@ -358,15 +358,25 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
 
 
 
+  const cleanOfferedBenefits = stripMarketCompatibleClaim(job.benefits);
+  const cleanExtraBenefits = stripMarketCompatibleClaim(result?.extra_benefits);
+  const claimEval = evaluateMarketSalaryClaim({
+    benefits: job.benefits,
+    salaryType: job.salary_type,
+    salaryMin: job.salary_min,
+    salaryMax: job.salary_max,
+    benchmark: result,
+  });
+
   const positioning = result ? comparePositioning({ min: job.salary_min, max: job.salary_max }, result.market_range) : null;
   const attractiveness = result
     ? computeAttractiveness({
         offered: { min: job.salary_min, max: job.salary_max },
         market: result.market_range,
-        offeredBenefits: job.benefits ?? [],
+        offeredBenefits: cleanOfferedBenefits,
         typicalBenefits: result.typical_benefits ?? [],
         missingBenefits: result.missing_benefits ?? [],
-        extraBenefits: result.extra_benefits ?? [],
+        extraBenefits: cleanExtraBenefits,
         workModel: job.work_model,
         city,
         state,
@@ -376,10 +386,10 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     ? computeRecommendations({
         offered: { min: job.salary_min, max: job.salary_max },
         market: result.market_range,
-        offeredBenefits: job.benefits ?? [],
+        offeredBenefits: cleanOfferedBenefits,
         typicalBenefits: result.typical_benefits ?? [],
         missingBenefits: result.missing_benefits ?? [],
-        extraBenefits: result.extra_benefits ?? [],
+        extraBenefits: cleanExtraBenefits,
         workModel: job.work_model,
         city,
         state,
