@@ -48,6 +48,7 @@ export function ZappWhatsAppAdminPanel({ sectorId }: Props) {
         </p>
       </div>
       <IntegrationAccessAlert platform="whatsapp" visibleCount={integrations.length} onReload={fetchIntegrations} />
+      {sectorId && <UazapiServerHealthBanner sectorId={sectorId} />}
       <WhatsAppSectorManager
         integrations={integrations}
         accountId={currentUser?.account_id || null}
