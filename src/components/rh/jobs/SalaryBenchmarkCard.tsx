@@ -468,13 +468,15 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             . Fontes citadas ao final.
           </p>
         </div>
-        <Button size="sm" variant={result ? "outline" : "default"} onClick={run} disabled={loading}>
-          {loading ? <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> : result ? <RefreshCw className="h-3.5 w-3.5 mr-2" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
-          {result ? "Atualizar" : "Consultar mercado"}
-        </Button>
+        {canRegenerate && (
+          <Button size="sm" variant={result ? "outline" : "default"} onClick={run} disabled={loading || loadingCache}>
+            {loading ? <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> : result ? <RefreshCw className="h-3.5 w-3.5 mr-2" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
+            {result ? "Atualizar" : "Consultar mercado"}
+          </Button>
+        )}
       </CardHeader>
       <CardContent className="space-y-4">
-        {loading && !result && (
+        {(loading || loadingCache) && !result && (
           <div className="space-y-3">
             <Skeleton className="h-5 w-3/4" />
             <div className="grid grid-cols-3 gap-3">
@@ -484,9 +486,11 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
           </div>
         )}
 
-        {!loading && !result && (
+        {!loading && !loadingCache && !result && (
           <p className="text-sm text-muted-foreground">
-            Clique em <strong>Consultar mercado</strong> para gerar um benchmark salarial e de benefícios em tempo real usando IA + busca web (Glassdoor, Love Mondays, Vagas, Catho, Robert Half etc.).
+            {canRegenerate
+              ? <>Clique em <strong>Consultar mercado</strong> para gerar um benchmark salarial e de benefícios em tempo real usando IA + busca web (Glassdoor, Love Mondays, Vagas, Catho, Robert Half etc.).</>
+              : "O benchmark de mercado ainda não foi gerado para esta vaga. Assim que estiver disponível, ele aparecerá aqui automaticamente."}
           </p>
         )}
 
