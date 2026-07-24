@@ -395,7 +395,59 @@ export function ConnectQRCodeDialog({
             </>
           ) : null}
 
+          {!connected && !loading && !resetting && (
+            <div className="w-full border-t pt-3 mt-1">
+              <button
+                type="button"
+                onClick={() => setShowAdopt((v) => !v)}
+                className="w-full flex items-center justify-between text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <KeyRound className="h-3.5 w-3.5" />
+                  Já tenho uma instância na UAZAPI — colar token existente
+                </span>
+                {showAdopt ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </button>
+
+              {showAdopt && (
+                <div className="mt-3 space-y-2">
+                  <p className="text-[11px] text-muted-foreground">
+                    Cole o <strong>instance token</strong> (não o admin token) da instância criada
+                    manualmente no painel da UAZAPI. Vamos validar contra o servidor deste setor e
+                    vincular a essa integração sem criar uma nova instância.
+                  </p>
+                  <Input
+                    value={pastedToken}
+                    onChange={(e) => setPastedToken(e.target.value)}
+                    placeholder="Ex: 6c0f1a2b-...-instance-token"
+                    className="font-mono text-xs"
+                    disabled={adopting}
+                  />
+                  <Button
+                    onClick={adoptInstance}
+                    disabled={adopting || !pastedToken.trim()}
+                    className="w-full"
+                    size="sm"
+                  >
+                    {adopting ? (
+                      <>
+                        <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                        Validando token...
+                      </>
+                    ) : (
+                      <>
+                        <KeyRound className="h-3.5 w-3.5 mr-2" />
+                        Adotar instância existente
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+
         </div>
+
       </DialogContent>
     </Dialog>
   );
