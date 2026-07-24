@@ -644,17 +644,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* Faixa de chips de etiquetas removida — filtro continua disponível pelo seletor de etiquetas */}
 
-      <ZappSidebarNav
-        activeView={activeView}
-        setActiveView={setActiveView}
-        filterConversationType={filterConversationType}
-        setFilterConversationType={setFilterConversationType}
-        onlineAgents={onlineAgents}
-        totalQueueConversations={totalQueueConversations}
-        sectorId={sectorId}
-        userRole={currentUser?.role}
-        isAdmin={isAdmin}
-      />
+      {/* Navegação por view (Conversas / Equipe / Configurações / etc.) vive na
+          sidebar esquerda do app. A barra horizontal duplicada foi removida
+          para não dividir a atenção do usuário — ver mem RoyZapp UI cleanup. */}
 
       {/* Channel pills (UAZAPI vs Meta) — appears when sector has 2+ instances */}
       {activeView === "inbox" && sectorId && onSelectIntegration && (

@@ -1,4 +1,5 @@
 import { buildRoyZappUrl } from "@/lib/royZappRoutes";
+import { ROY_ZAPP_SECTORS } from "@/lib/royZappSectors";
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -133,12 +134,26 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
         <div>
           <p className="text-zapp-text text-sm font-medium">Conexões WhatsApp</p>
           <p className="text-zapp-text-muted text-xs">
-            Selecione um setor para gerenciar conexões.
+            Escolha o setor cujo número quer configurar.
           </p>
+        </div>
+        <div className="grid gap-2">
+          {ROY_ZAPP_SECTORS.map((sector) => (
+            <button
+              key={sector.id}
+              type="button"
+              onClick={() => navigate(buildRoyZappUrl({ view: "settings", sector: sector.id }))}
+              className="w-full text-left rounded-lg border border-zapp-border bg-zapp-panel hover:bg-zapp-hover transition-colors px-3 py-2.5"
+            >
+              <p className="text-sm font-medium text-zapp-text">{sector.label}</p>
+              <p className="text-xs text-zapp-text-muted">{sector.description}</p>
+            </button>
+          ))}
         </div>
       </div>
     );
   }
+
 
   return (
     <div className="space-y-3">

@@ -41,6 +41,7 @@ import { useTheme } from "next-themes";
 import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
+import { royZappSectorLabel } from "@/lib/royZappSectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import {
   Sheet,
@@ -223,6 +224,11 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   // Total badge count = unread notifications + pending tasks
   const totalBadgeCount = unreadCount + pendingTasksCount;
   const location = useLocation();
+  const activeWhatsAppSectorLabel = useMemo(() => {
+    if (currentSector?.id !== "royzapp") return "";
+    const sectorParam = new URLSearchParams(location.search).get("sector");
+    return royZappSectorLabel(sectorParam);
+  }, [currentSector?.id, location.search]);
   const [isEditNameOpen, setIsEditNameOpen] = useState(false);
   const [editName, setEditName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -312,8 +318,14 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             <Grid3X3 className="h-5 w-5 flex-shrink-0" />
             {!collapsed && (
               <div className="flex flex-col items-start">
-                <span className="text-xs text-muted-foreground">Setor atual</span>
-                <span className={cn("font-semibold", currentSector.color)}>{currentSector.name}</span>
+                <span className="text-xs text-muted-foreground">
+                  {currentSector.id === "royzapp" && activeWhatsAppSectorLabel ? "WhatsApp" : "Setor atual"}
+                </span>
+                <span className={cn("font-semibold", currentSector.color)}>
+                  {currentSector.id === "royzapp" && activeWhatsAppSectorLabel
+                    ? activeWhatsAppSectorLabel
+                    : currentSector.name}
+                </span>
               </div>
             )}
           </button>
