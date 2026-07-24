@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { evaluateMarketSalaryClaim, stripMarketCompatibleClaim, MARKET_COMPATIBLE_LABEL } from "@/lib/marketSalaryClaim";
 
 const RH_ALERT_RECIPIENTS = [
   "m.quintana@me.com",
