@@ -1,0 +1,1 @@
+UPDATE public.integrations SET status = 'disconnected' WHERE id = 'c3baa312-78b9-400f-802a-705d56731f90';
