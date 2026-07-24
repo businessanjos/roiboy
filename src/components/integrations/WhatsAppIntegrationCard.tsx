@@ -42,10 +42,14 @@ export function WhatsAppIntegrationCard({
   const config = currentSectorIntegration?.config as Record<string, unknown> | null;
   const connectionState = config?.connection_state as string | undefined;
   const instanceName = config?.instance_name as string | undefined;
-  
-  const webhookConfigured = config?.webhook_configured !== false;
-  const isConnected = (currentSectorIntegration?.status === "connected" || connectionState === "open") && webhookConfigured;
-  const isInstanceOnlineWithoutWebhook = (currentSectorIntegration?.status === "connected" || connectionState === "open") && !webhookConfigured;
+
+  const sectorStatus = getInstanceStatusFromIntegration({
+    status: currentSectorIntegration?.status ?? null,
+    provider: (currentSectorIntegration as any)?.provider ?? null,
+    config: config ?? null,
+  });
+  const isConnected = sectorStatus.operational;
+  const isInstanceOnlineWithoutWebhook = sectorStatus.webhookBroken;
   
   const [checkingStatusId, setCheckingStatusId] = useState<string | null>(null);
   const [connectionSuccess, setConnectionSuccess] = useState(false);
