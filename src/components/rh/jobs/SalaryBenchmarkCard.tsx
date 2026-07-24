@@ -4,7 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Separator } from "@/components/ui/separator";
-import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info } from "lucide-react";
+import { Sparkles, TrendingUp, AlertTriangle, CheckCircle2, ExternalLink, RefreshCw, Info, Target } from "lucide-react";
+import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
