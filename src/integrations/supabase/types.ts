@@ -26182,6 +26182,10 @@ export type Database = {
         Args: { _account_id: string }
         Returns: boolean
       }
+      user_has_sector_access: {
+        Args: { _auth_user_id: string; _sector_id: string }
+        Returns: boolean
+      }
       user_is_chat_member: { Args: { p_chat_id: string }; Returns: boolean }
       validate_coupon: {
         Args: {
