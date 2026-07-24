@@ -4,6 +4,8 @@ import { cn } from "@/lib/utils";
 import { Check, BadgeCheck, Smartphone, Loader2 } from "lucide-react";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
+import { getInstanceStatus } from "@/lib/royZappStatus";
+
 interface Integration {
   id: string;
   sector_id?: string | null;
@@ -12,11 +14,13 @@ interface Integration {
   instance_name?: string | null;
   phone_number?: string | null;
   provider?: string | null;
+  webhook_configured?: boolean | null;
   config: {
     phone_number?: string;
     instance_name?: string;
     name?: string;
     provider?: string;
+    webhook_configured?: boolean;
   } | null;
 }
 
