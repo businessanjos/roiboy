@@ -733,49 +733,40 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           if (!next?.id) return;
           if (next.account_id && next.account_id !== accountId) return;
 
+          // Reconcile against high-water mark: only accept last_message_at/preview
+          // if timestamp is >= the highest one already observed for this conversation.
+          // No msgId is available on the conversation payload, so ties keep current.
+          const nextAt: string | null = next.last_message_at ?? null;
+          const acceptLastMessage = nextAt ? reconcileBump(next.id, nextAt, null) : false;
+
           setAssignments(prev => prev.map(a => {
             const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
             if (convId !== next.id) return a;
             if (!a.zapp_conversation) return a;
 
-            const currentAt = a.zapp_conversation.last_message_at || null;
-            const nextAt = next.last_message_at || currentAt;
-            // Only accept the update if it's newer or the preview genuinely changed,
-            // so we don't clobber an optimistic bump made from a fresher INSERT.
-            const isNewer = !currentAt || (nextAt && new Date(nextAt).getTime() >= new Date(currentAt).getTime());
-            const previewChanged = (next.last_message_preview ?? null) !== (a.zapp_conversation.last_message_preview ?? null);
-            if (!isNewer && !previewChanged) {
-              // still allow flag updates (pin/mute/favorite/archive/unread reset) through
-              return {
-                ...a,
-                zapp_conversation: {
-                  ...a.zapp_conversation,
-                  is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
-                  is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
-                  is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
-                  is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
-                  is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
-                  unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
-                  contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
-                  avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
-                },
-              };
+            const base = {
+              ...a.zapp_conversation,
+              is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
+              is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
+              is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
+              is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
+              is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
+              unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
+              contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
+              avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
+            };
+
+            if (!acceptLastMessage) {
+              // Flag/metadata-only update: never regress the last message shown.
+              return { ...a, zapp_conversation: base };
             }
 
             return {
               ...a,
               zapp_conversation: {
-                ...a.zapp_conversation,
-                last_message_at: nextAt,
+                ...base,
+                last_message_at: nextAt ?? a.zapp_conversation.last_message_at,
                 last_message_preview: next.last_message_preview ?? a.zapp_conversation.last_message_preview,
-                unread_count: next.unread_count ?? a.zapp_conversation.unread_count,
-                is_pinned: next.is_pinned ?? a.zapp_conversation.is_pinned,
-                is_muted: next.is_muted ?? a.zapp_conversation.is_muted,
-                is_favorite: next.is_favorite ?? a.zapp_conversation.is_favorite,
-                is_archived: next.is_archived ?? a.zapp_conversation.is_archived,
-                is_blocked: next.is_blocked ?? a.zapp_conversation.is_blocked,
-                contact_name: next.contact_name ?? a.zapp_conversation.contact_name,
-                avatar_url: next.avatar_url ?? a.zapp_conversation.avatar_url,
               },
             };
           }));
