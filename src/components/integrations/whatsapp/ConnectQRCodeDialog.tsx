@@ -189,7 +189,9 @@ export function ConnectQRCodeDialog({
           ) : loading ? (
             <div className="flex flex-col items-center gap-3 py-8">
               <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-              <p className="text-sm text-muted-foreground">Gerando QR Code...</p>
+              <p className="text-sm text-muted-foreground">
+                Gerando QR Code{attempt > 1 ? ` (tentativa ${attempt}/${MAX_ATTEMPTS})...` : "..."}
+              </p>
             </div>
           ) : qrError ? (
             <div className="flex flex-col items-center gap-3 py-4 w-full">
