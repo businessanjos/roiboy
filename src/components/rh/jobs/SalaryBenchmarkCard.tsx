@@ -459,7 +459,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
         <div>
           <CardTitle className="text-lg flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-primary" />
-            Benchmark de mercado (IA)
+            Benchmark de mercado
           </CardTitle>
           <p className="text-xs text-muted-foreground mt-1">
             Faixa salarial e benefícios típicos para {job.title}
