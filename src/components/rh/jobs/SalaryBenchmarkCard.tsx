@@ -694,6 +694,92 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
               </div>
             )}
 
+            {result.local_competitors && (result.local_competitors.barueri || result.local_competitors.sao_paulo) && (
+              <div className="rounded-lg border p-4 space-y-3">
+                <div className="flex items-center gap-2">
+                  <Building2 className="h-4 w-4 text-primary" />
+                  <p className="text-sm font-semibold">Concorrência local — Barueri e São Paulo</p>
+                </div>
+                <p className="text-[11px] text-muted-foreground">
+                  Como empresas dessas praças estão contratando para {job.title}
+                  {job.seniority ? ` (${job.seniority})` : ""}. Cada empresa tem evidência (link do anúncio).
+                </p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {(["barueri", "sao_paulo"] as const).map((key) => {
+                    const city = result.local_competitors?.[key];
+                    const label = key === "barueri" ? "Barueri/SP" : "São Paulo/SP";
+                    if (!city) return null;
+                    const companies = city.companies ?? [];
+                    return (
+                      <div key={key} className="rounded-md border bg-background/60 p-3 space-y-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <p className="text-[12px] font-semibold flex items-center gap-1.5">
+                            <MapPin className="h-3 w-3 text-muted-foreground" />
+                            {label}
+                          </p>
+                          {city.salary_range && (city.salary_range.min || city.salary_range.max) && (
+                            <Badge variant="outline" className="text-[10px] tabular-nums">
+                              {fmtBRL(city.salary_range.min)} – {fmtBRL(city.salary_range.max)}
+                            </Badge>
+                          )}
+                        </div>
+                        {city.summary && (
+                          <p className="text-[11px] text-muted-foreground leading-snug">{city.summary}</p>
+                        )}
+                        {companies.length > 0 ? (
+                          <div className="space-y-1.5 pt-1">
+                            {companies.map((c, i) => {
+                              let host = c.source_url;
+                              try { host = new URL(c.source_url).hostname.replace("www.", ""); } catch {}
+                              const hasSalary = c.salary_min || c.salary_max;
+                              return (
+                                <a
+                                  key={i}
+                                  href={c.source_url}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="flex items-start gap-2 rounded-md border p-2 hover:bg-muted transition-colors group"
+                                >
+                                  <ExternalLink className="h-3 w-3 mt-0.5 shrink-0 text-muted-foreground group-hover:text-foreground" />
+                                  <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <p className="text-[12px] font-medium leading-tight truncate">
+                                        {c.name}
+                                        {c.role_title ? <span className="text-muted-foreground font-normal"> · {c.role_title}</span> : null}
+                                      </p>
+                                      {hasSalary && (
+                                        <Badge variant="secondary" className="shrink-0 text-[10px] tabular-nums">
+                                          {fmtBRL(c.salary_min)}{c.salary_max ? `–${fmtBRL(c.salary_max)}` : ""}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    <p className="text-[10px] text-muted-foreground truncate">
+                                      {c.work_model ? `${c.work_model} · ` : ""}{host}
+                                    </p>
+                                    {c.benefits && c.benefits.length > 0 && (
+                                      <div className="flex flex-wrap gap-1 mt-1">
+                                        {c.benefits.slice(0, 5).map((b, j) => (
+                                          <Badge key={j} variant="outline" className="text-[9px] px-1.5 py-0">{b}</Badge>
+                                        ))}
+                                      </div>
+                                    )}
+                                  </div>
+                                </a>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-[11px] text-muted-foreground italic">Sem dados públicos suficientes para {label}.</p>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+
+
             {recommendations.length > 0 && attractiveness && (
               <div className="rounded-lg border border-primary/20 bg-primary/[0.03] p-4 space-y-3">
                 <div className="flex items-center justify-between gap-3">
