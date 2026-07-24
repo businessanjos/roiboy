@@ -1,0 +1,1 @@
+UPDATE integrations SET config = config - 'webhook_url' - 'webhook_events' || jsonb_build_object('webhook_configured', false) WHERE id = 'c3baa312-78b9-400f-802a-705d56731f90';

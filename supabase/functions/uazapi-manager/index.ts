@@ -551,6 +551,49 @@ async function enqueueSend<T>(token: string, label: string, fn: () => Promise<T>
   return run as Promise<T>;
 }
 
+/**
+ * Register the uazapi-webhook URL against a specific instance on a specific server.
+ * Tries the known endpoints and returns { success, webhookUrl } so callers can persist
+ * the state on the integration. Non-fatal — logs but never throws.
+ */
+async function registerWebhookForInstance(
+  token: string,
+  instanceName: string,
+  server: ServerConfig,
+): Promise<{ success: boolean; webhookUrl: string; events: string[] }> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
+  const events = ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"];
+  const webhookConfig = { url: webhookUrl, enabled: true, events };
+
+  const endpoints: Array<{ path: string; method: string }> = [
+    { path: "/webhook/set", method: "POST" },
+    { path: "/instance/webhook", method: "PUT" },
+    { path: "/webhook", method: "POST" },
+  ];
+
+  for (const ep of endpoints) {
+    try {
+      await uazapiInstance(ep.path, ep.method, token, webhookConfig, server);
+      console.log(`[uazapi-manager] Auto-configured webhook for "${instanceName}" via ${ep.path} on ${server.host}`);
+      return { success: true, webhookUrl, events };
+    } catch (err) {
+      console.log(`[uazapi-manager] webhook ${ep.path} failed on ${server.host}: ${(err as Error).message}`);
+    }
+  }
+
+  try {
+    await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, server);
+    console.log(`[uazapi-manager] Auto-configured webhook via admin endpoint for "${instanceName}"`);
+    return { success: true, webhookUrl, events };
+  } catch (err) {
+    console.warn(`[uazapi-manager] Auto-configure webhook FAILED for "${instanceName}": ${(err as Error).message}`);
+  }
+
+  return { success: false, webhookUrl, events };
+}
+
+
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
   const s = server || GLOBAL_SERVER;
   console.log(`[uazapi] Calling: ${method} ${s.host}${endpoint} (server: ${s.source})`);
@@ -1113,13 +1156,19 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Persist new token and mark disconnected.
+      // Register webhook on the NEW server so inbound messages reach us.
+      const webhookState = await registerWebhookForInstance(freshToken, instName, sectorServer);
+
+      // Persist new token, webhook state, and mark disconnected.
       if (intData?.id) {
         const mergedConfig = {
           ...(intData.config || {}),
           provider: "uazapi",
           instance_name: instName,
           instance_token: freshToken,
+          webhook_configured: webhookState.success,
+          webhook_url: webhookState.success ? webhookState.webhookUrl : null,
+          webhook_events: webhookState.success ? webhookState.events : undefined,
         };
         await supabase
           .from("integrations")
@@ -1130,7 +1179,12 @@ Deno.serve(async (req) => {
       // Immediately request a QR code with the new token.
       try {
         const connectResult: any = await uazapiInstance("/instance/connect", "POST", freshToken, {}, sectorServer);
-        result = { ...connectResult, reset: true, new_token_issued: true };
+        result = {
+          ...connectResult,
+          reset: true,
+          new_token_issued: true,
+          webhook_configured: webhookState.success,
+        };
       } catch (e) {
         console.error("[uazapi-manager] reset: /instance/connect failed:", e);
         return new Response(
@@ -1138,6 +1192,7 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
+
 
     } else if (action === "adopt_instance") {
       // Adopt an existing UAZAPI instance by pasting its instance_token (created manually
@@ -1162,16 +1217,22 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Register webhook on the server so inbound messages reach us. Non-fatal.
+      const webhookState = await registerWebhookForInstance(pastedToken, providedName, sectorServer);
+
       // Persist the adopted token on the current integration (or create/update).
       const newStatus = snapshot.connected ? "connected" : "disconnected";
+      const baseAdoptedConfig = {
+        provider: "uazapi",
+        instance_name: providedName,
+        instance_token: pastedToken,
+        webhook_configured: webhookState.success,
+        webhook_url: webhookState.success ? webhookState.webhookUrl : null,
+        webhook_events: webhookState.success ? webhookState.events : undefined,
+        ...(snapshot.owner ? { owner: snapshot.owner } : {}),
+      };
       if (intData?.id) {
-        const mergedConfig = {
-          ...(intData.config || {}),
-          provider: "uazapi",
-          instance_name: providedName,
-          instance_token: pastedToken,
-          ...(snapshot.owner ? { owner: snapshot.owner } : {}),
-        };
+        const mergedConfig = { ...(intData.config || {}), ...baseAdoptedConfig };
         await supabase
           .from("integrations")
           .update({ config: mergedConfig, status: newStatus })
@@ -1182,14 +1243,10 @@ Deno.serve(async (req) => {
           type: "whatsapp",
           sector_id: sector_id || null,
           status: newStatus,
-          config: {
-            provider: "uazapi",
-            instance_name: providedName,
-            instance_token: pastedToken,
-            ...(snapshot.owner ? { owner: snapshot.owner } : {}),
-          },
+          config: baseAdoptedConfig,
         });
       }
+
 
       // If not connected yet, request a QR code with the adopted token.
       let qrPayload: any = null;
