@@ -864,6 +864,7 @@ Deno.serve(async (req) => {
       // ==== AUTO-RECONNECT: detect "logged out from another device" ====
       let autoReconnect: { attempted: boolean; qr_code?: string; token?: string; error?: string } | undefined;
       if (statusSnapshot.loggedOut && intData?.id) {
+        const reconnectIntegration = intData;
         console.warn(`[uazapi-manager] 🔄 Auto-reconnect triggered for instance "${instanceName}" (logged out from another device)`);
         try {
           // Re-init instance on sector server to get a fresh token/session
@@ -885,10 +886,10 @@ Deno.serve(async (req) => {
           };
           await supabase.from("integrations")
             .update({ config: mergedConfig, status: "pending" })
-            .eq("id", intData.id);
+            .eq("id", reconnectIntegration.id);
 
           // Throttled notification (once per 1h) to account admins + sector members
-          const lastAlert = (intData.config as any)?.last_reconnect_alert_at as string | undefined;
+          const lastAlert = (reconnectIntegration.config as any)?.last_reconnect_alert_at as string | undefined;
           const shouldNotify = !lastAlert || (Date.now() - new Date(lastAlert).getTime()) > 60 * 60 * 1000;
           if (shouldNotify) {
             try {
@@ -902,15 +903,15 @@ Deno.serve(async (req) => {
                 user_id: u.id,
                 type: "system",
                 title: "WhatsApp desconectado",
-                content: `A instância "${intData.config?.instance_name || instanceName}" foi desconectada (logout de outro aparelho). Um novo QR Code foi gerado — escaneie para reconectar.`,
+                content: `A instância "${reconnectIntegration.config?.instance_name || instanceName}" foi desconectada (logout de outro aparelho). Um novo QR Code foi gerado — escaneie para reconectar.`,
                 link: "/integrations/whatsapp",
                 source_type: "integration",
-                source_id: intData.id,
+                source_id: reconnectIntegration.id,
               }));
               if (rows.length) await supabase.from("notifications").insert(rows);
               await supabase.from("integrations")
                 .update({ config: { ...mergedConfig, last_reconnect_alert_at: new Date().toISOString() } })
-                .eq("id", intData.id);
+                .eq("id", reconnectIntegration.id);
             } catch (notifErr) {
               console.warn(`[uazapi-manager] failed to notify admins:`, notifErr);
             }
