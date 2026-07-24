@@ -17,6 +17,7 @@ import type { HRJob, WorkModel, JobContractType, JobSeniority } from "@/types/jo
 import { motion, AnimatePresence } from "framer-motion";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import everBru from "@/assets/eternum/ever-bru.png.asset.json";
+import { evaluateMarketSalaryClaim, isMarketCompatibleClaim } from "@/lib/marketSalaryClaim";
 
 interface ApplicationFormData {
   candidate_name: string;
