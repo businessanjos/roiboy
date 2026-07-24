@@ -15,6 +15,8 @@ interface Integration {
   sector_id?: string | null;
   display_name: string | null;
   status: string | null;
+  instance_name?: string | null;
+  phone_number?: string | null;
   config: { phone_number?: string; instance_name?: string; name?: string } | null;
 }
 
@@ -75,10 +77,12 @@ export function ZappInstanceSwitcher({
   const formatLabel = (it: Integration) => {
     const name =
       it.display_name ||
+      it.instance_name ||
       it.config?.instance_name ||
       it.config?.name ||
       "Instância";
-    const phone = it.config?.phone_number ? ` · ${it.config.phone_number}` : "";
+    const phoneNumber = it.phone_number || it.config?.phone_number;
+    const phone = phoneNumber ? ` · ${phoneNumber}` : "";
     return `${name}${phone}`;
   };
 

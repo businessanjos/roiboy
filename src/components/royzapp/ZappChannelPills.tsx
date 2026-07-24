@@ -9,6 +9,9 @@ interface Integration {
   sector_id?: string | null;
   display_name: string | null;
   status: string | null;
+  instance_name?: string | null;
+  phone_number?: string | null;
+  provider?: string | null;
   config: {
     phone_number?: string;
     instance_name?: string;
@@ -31,6 +34,7 @@ const isMetaProvider = (provider?: string | null) =>
 const formatLabel = (it: Integration) => {
   const name =
     it.display_name ||
+    it.instance_name ||
     it.config?.instance_name ||
     it.config?.name ||
     "Instância";
@@ -114,7 +118,7 @@ export function ZappChannelPills({
           )}
 
           {integrations.map((it) => {
-            const isMeta = isMetaProvider(it.config?.provider);
+    const isMeta = isMetaProvider(it.provider || it.config?.provider);
             const isActive = selectedIntegrationId === it.id;
             const connected = it.status === "connected";
             return (
@@ -123,8 +127,8 @@ export function ZappChannelPills({
                 type="button"
                 onClick={() => onChange(it.id)}
                 title={
-                  it.config?.phone_number
-                    ? `${formatLabel(it)} · ${it.config.phone_number}`
+                  it.phone_number || it.config?.phone_number
+                    ? `${formatLabel(it)} · ${it.phone_number || it.config?.phone_number}`
                     : formatLabel(it)
                 }
                 className={cn(
