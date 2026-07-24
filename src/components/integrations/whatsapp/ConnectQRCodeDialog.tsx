@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Loader2, RefreshCw, Wifi, CheckCircle2, Smartphone, RotateCcw, KeyRound, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
