@@ -212,7 +212,9 @@ export default function RHJobDetail() {
         }}
         city={(job as any).unit || null}
         state={null}
+        jobId={job.id}
       />
+
       <JobStagesPanel jobId={job.id} />
       <Card>
         <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0">
