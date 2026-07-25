@@ -1305,6 +1305,21 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [lostDeals]);
 
+  // Available creation months for lost deals filter
+  const availableLostCreatedMonths = useMemo(() => {
+    const monthsSet = new Map<string, string>();
+    lostDeals.forEach(deal => {
+      if (deal.created_at) {
+        const date = new Date(deal.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+      }
+    });
+    return Array.from(monthsSet.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]));
+  }, [lostDeals]);
+
   // Use structured loss reasons from hook
   const { reasons: lossReasons } = useLossReasons();
 
