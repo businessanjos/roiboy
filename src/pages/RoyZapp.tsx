@@ -1398,6 +1398,7 @@ export default function RoyZapp() {
           sectorName={currentSector?.name}
           sectorColor={currentSector?.color?.replace('text-', '').replace('-600', '')}
           selectedConversation={selectedConversation}
+          zappRole={zappRole}
           currentAgentId={currentAgent?.id || null}
           whatsappConnected={whatsappConnected}
           whatsappConnecting={whatsappConnecting}

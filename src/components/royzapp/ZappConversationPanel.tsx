@@ -50,9 +50,12 @@ import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { ZappFinancePanel } from "./ZappFinancePanel";
 import { getInitials } from "./types";
 import type { ConversationAssignment, Agent, ZappTag, Department } from "./types";
+import type { ZappSectorRole } from "@/lib/royZappRoles";
 
 
 interface ZappConversationPanelProps {
+  /** Papel do usuário no WhatsApp do setor atual (usado na ajuda de papéis). */
+  zappRole?: ZappSectorRole | null;
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
   isAdmin?: boolean;
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
@@ -258,6 +261,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onSelectIntegration,
   onClearIntegration,
   allowedViews,
+  zappRole,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
@@ -580,6 +584,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         userRole={currentUser?.role}
         isAdmin={isAdmin}
         allowedViews={allowedViews}
+        zappRole={zappRole}
       />
 
       {/* Tabs: Minhas | Fila */}
