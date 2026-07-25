@@ -95,6 +95,12 @@ interface ZappChatViewProps {
   // Meta templates
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
+  /** Papel permite transferir (Admin/Gestor). */
+  canTransfer?: boolean;
+  /** Papel permite responder (todos menos Viewer). */
+  canReply?: boolean;
+  /** Papel permite assumir/devolver/alterar status. */
+  canClaim?: boolean;
 }
 
 export function ZappChatView({
