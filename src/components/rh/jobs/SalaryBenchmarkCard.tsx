@@ -539,7 +539,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
           </p>
         </div>
         {canRegenerate && (
-          <Button size="sm" variant={result ? "outline" : "default"} onClick={run} disabled={loading || loadingCache}>
+          <Button size="sm" variant={result ? "outline" : "default"} onClick={() => run("manual")} disabled={loading || loadingCache}>
             {loading ? <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> : result ? <RefreshCw className="h-3.5 w-3.5 mr-2" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
             {result ? "Atualizar" : "Consultar mercado"}
           </Button>
