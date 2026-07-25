@@ -1587,7 +1587,13 @@ export default function RoyZapp() {
            accountId={currentUser?.account_id}
            showLeadOption={hasVendasAccess}
            onMessageChange={messaging.setMessageInput}
-           onSendMessage={messaging.sendMessage}
+            onSendMessage={() => {
+              if (!zappCaps.canReply) {
+                toast.error("Seu acesso a este WhatsApp é somente leitura.");
+                return;
+              }
+              messaging.sendMessage();
+            }}
            onKeyPress={messaging.handleKeyPress}
            onToggleFormatting={() => messaging.setShowFormatting(!messaging.showFormatting)}
            onInsertFormatting={messaging.insertFormatting}
