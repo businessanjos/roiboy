@@ -313,12 +313,19 @@ function selectBestInstanceMatch(
     ? instances.filter((instance) => getInstanceName(instance) === instanceName)
     : instances;
 
-  const pool = named.length > 0 ? named : instances;
+  // CRÍTICO: quando um instance_name é informado e NÃO existe no servidor,
+  // nunca cair para a lista completa — isso fazia um setor "herdar" o status
+  // e o número (owner) da instância de outro setor (ex.: CS exibindo o número
+  // do Comercial). Sem match por nome => sem status ao vivo.
+  if (instanceName && named.length === 0) return undefined;
+
+  const pool = named;
   const tokenMatch = preferredToken
     ? pool.find((instance) => getInstanceToken(instance) === preferredToken)
     : undefined;
 
   if (tokenMatch) return tokenMatch;
+
 
   return [...pool].sort((a, b) => {
     const aStatus = resolveStatusSnapshot(a);
