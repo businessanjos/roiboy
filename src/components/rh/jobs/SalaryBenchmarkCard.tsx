@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { evaluateMarketSalaryClaim, stripMarketCompatibleClaim, MARKET_COMPATIBLE_LABEL } from "@/lib/marketSalaryClaim";
+import { recordBenchmarkRun } from "@/lib/benchmarkRunLog";
+import { JobBenchmarkRunLog } from "@/components/rh/jobs/JobBenchmarkRunLog";
 
 const RH_ALERT_RECIPIENTS = [
   "m.quintana@me.com",
