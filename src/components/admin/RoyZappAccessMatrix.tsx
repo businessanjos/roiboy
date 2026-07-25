@@ -366,7 +366,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
                             Indevido
                           </Badge>
                         )}
-                      </p>
+                      </div>
                       <p className="text-[11px] text-muted-foreground truncate">
                         {row.user.email}
                         {row.homeSectors.length > 0 && (
