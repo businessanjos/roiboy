@@ -430,6 +430,8 @@ export function ZappChatView({
         isMetaChannel={isMetaChannel}
         onOpenTemplates={onOpenTemplates}
       />
+      )}
+
 
       {/* Media Gallery */}
       <ZappMediaGallery
