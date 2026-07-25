@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, MessageSquare, Search, LayoutGrid, X } from "lucide-react";
+import { Check, Loader2, MessageSquare, Search, LayoutGrid, X, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ZAPP_SECTOR_LABELS,
@@ -34,6 +34,8 @@ interface MatrixUser {
  */
 export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
   const [search, setSearch] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
   const [onlyDivergent, setOnlyDivergent] = useState(false);
 
   const { data, isLoading } = useQuery({
@@ -120,38 +122,73 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
     <Card>
       <CardHeader className="pb-3">
         <div className="flex items-start justify-between gap-3 flex-wrap">
-          <div>
-            <CardTitle className="text-base flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-              Matriz de acesso: Pipeline x WhatsApp (ROY zAPP)
-            </CardTitle>
-            <CardDescription className="text-xs">
-              São controles independentes. <strong>P</strong> = áreas do sistema (pipeline,
-              dashboards) do setor. <strong>Z</strong> = WhatsApp daquele setor dentro do ROY zAPP.
-            </CardDescription>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative">
-              <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-              <Input
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Buscar usuário"
-                className="h-8 pl-7 w-48 text-xs"
-              />
+          <button
+            type="button"
+            onClick={() => setIsOpen((v) => !v)}
+            className="flex items-start gap-2 text-left flex-1 min-w-[240px]"
+          >
+            <ChevronRight
+              className={cn(
+                "h-4 w-4 mt-0.5 text-muted-foreground transition-transform",
+                isOpen && "rotate-90",
+              )}
+            />
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+                Matriz de acesso: Pipeline x WhatsApp (ROY zAPP)
+              </CardTitle>
+              <CardDescription className="text-xs">
+                São controles independentes. <strong>P</strong> = áreas do sistema (pipeline,
+                dashboards) do setor. <strong>Z</strong> = WhatsApp daquele setor dentro do ROY zAPP.
+              </CardDescription>
             </div>
+          </button>
+          {isOpen ? (
+            <div className="flex items-center gap-2">
+              <div className="relative">
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                <Input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Buscar usuário"
+                  className="h-8 pl-7 w-48 text-xs"
+                />
+              </div>
+              <Button
+                size="sm"
+                variant={onlyDivergent ? "default" : "outline"}
+                className="h-8 text-xs"
+                onClick={() => setOnlyDivergent((v) => !v)}
+              >
+                Só divergentes
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="h-8 text-xs"
+                onClick={() => setIsOpen(false)}
+              >
+                <ChevronUp className="h-3.5 w-3.5 mr-1" />
+                Fechar
+              </Button>
+            </div>
+          ) : (
             <Button
               size="sm"
-              variant={onlyDivergent ? "default" : "outline"}
+              variant="outline"
               className="h-8 text-xs"
-              onClick={() => setOnlyDivergent((v) => !v)}
+              onClick={() => setIsOpen(true)}
             >
-              Só divergentes
+              <ChevronDown className="h-3.5 w-3.5 mr-1" />
+              Expandir matriz
             </Button>
-          </div>
+          )}
         </div>
       </CardHeader>
+      {isOpen && (
       <CardContent>
+
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -253,7 +290,9 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
           </span>
         </div>
       </CardContent>
+      )}
     </Card>
+
   );
 }
 
