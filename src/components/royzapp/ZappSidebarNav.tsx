@@ -68,7 +68,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
   
   return (
-    <div className="flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 overflow-x-auto sticky top-0 z-30">
+    <div className="relative flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 overflow-x-auto overflow-y-visible sticky top-0 z-50 isolate shadow-sm backdrop-blur-none">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
