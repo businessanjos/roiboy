@@ -68,7 +68,10 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
   
   return (
-    <div className="relative flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 overflow-x-auto overflow-y-visible sticky top-0 z-50 isolate shadow-sm backdrop-blur-none">
+    <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
+      {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
+          em vez de quebrar ou desaparecer */}
+      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
