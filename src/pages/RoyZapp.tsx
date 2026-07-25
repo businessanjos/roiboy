@@ -1610,7 +1610,10 @@ export default function RoyZapp() {
              const intId = selectedConversation?.zapp_conversation?.integration_id || selectedIntegrationId;
              return intId ? integrationProviders[intId] === "meta_official" : false;
            })()}
-           onOpenTemplates={() => setTemplatesDialogOpen(true)}
+            onOpenTemplates={() => setTemplatesDialogOpen(true)}
+            canTransfer={zappCaps.canTransfer}
+            canReply={zappCaps.canReply}
+            canClaim={zappCaps.canClaim}
         />
         )}
       </div>
