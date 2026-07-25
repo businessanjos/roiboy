@@ -71,7 +71,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
 
   type NavView = ZappSidebarNavProps["activeView"];
-  const navItems: { view: NavView; icon: typeof MessageSquare; label: string }[] = [
+  const allNavItems: { view: NavView; icon: typeof MessageSquare; label: string }[] = [
     { view: "inbox", icon: MessageSquare, label: "Conversas" },
     { view: "team", icon: Users, label: "Equipe" },
     { view: "settings", icon: Settings, label: "Configurações" },
@@ -82,6 +82,10 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     ...(showSectorButton ? [{ view: "sector" as NavView, icon: SectorIcon, label: getSectorLabel() }] : []),
     ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
   ];
+
+  const navItems = allowedViews
+    ? allNavItems.filter((item) => allowedViews.includes(item.view))
+    : allNavItems;
 
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
