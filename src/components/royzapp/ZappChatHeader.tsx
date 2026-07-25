@@ -95,6 +95,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onCall,
   onToggleSearch,
   onOpenMediaGallery,
+  canTransfer = true,
+  canClaim = true,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
