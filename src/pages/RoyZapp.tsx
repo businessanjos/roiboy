@@ -1266,13 +1266,16 @@ export default function RoyZapp() {
   }
 
   // Entrada direta no setor: apenas Maikol e Everton veem o seletor de setores.
-  // Todos os outros entram no único setor liberado pelo admin.
-  const autoSectors = sectorAccess
-    .map((a) => a.sector_id as SectorId)
-    .filter((id) => (["operacoes", "financeiro", "vendas", "marketing"] as SectorId[]).includes(id));
+  // Todos os outros entram no único WhatsApp de setor liberado no ROY zAPP
+  // (controle independente do acesso geral ao setor).
+  const generalSectorIds = new Set(sectorAccess.map((a) => a.sector_id));
+  const autoSectors = (ZAPP_WHATSAPP_SECTORS as readonly SectorId[]).filter((id) =>
+    canOpenZappSector(id, generalSectorIds.has(id))
+  );
 
   if (!selectedSectorId && !canChooseSector) {
-    if (sectorAccessLoading || autoSectors.length > 0) {
+    if (sectorAccessLoading || zappAccessLoading || autoSectors.length > 0) {
+
       return (
         <div className="flex items-center justify-center h-full bg-zapp-bg">
           <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />
