@@ -24484,6 +24484,60 @@ export type Database = {
           },
         ]
       }
+      zapp_audit_logs: {
+        Row: {
+          account_id: string
+          action: string
+          actor_auth_user_id: string | null
+          actor_user_id: string | null
+          assignment_id: string | null
+          created_at: string
+          from_agent_id: string | null
+          from_department_id: string | null
+          id: string
+          metadata: Json
+          reason: string | null
+          sector_id: string | null
+          to_agent_id: string | null
+          to_department_id: string | null
+          zapp_conversation_id: string | null
+        }
+        Insert: {
+          account_id: string
+          action: string
+          actor_auth_user_id?: string | null
+          actor_user_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          from_agent_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          sector_id?: string | null
+          to_agent_id?: string | null
+          to_department_id?: string | null
+          zapp_conversation_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          actor_auth_user_id?: string | null
+          actor_user_id?: string | null
+          assignment_id?: string | null
+          created_at?: string
+          from_agent_id?: string | null
+          from_department_id?: string | null
+          id?: string
+          metadata?: Json
+          reason?: string | null
+          sector_id?: string | null
+          to_agent_id?: string | null
+          to_department_id?: string | null
+          zapp_conversation_id?: string | null
+        }
+        Relationships: []
+      }
       zapp_call_settings: {
         Row: {
           account_id: string
