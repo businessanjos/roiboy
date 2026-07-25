@@ -39,6 +39,8 @@ interface RequestBody {
   is_active?: boolean;
   role?: string;
   name?: string;
+  delete_user?: boolean;         // confirma exclusão total no último vínculo
+
 }
 
 function json(status: number, body: Record<string, unknown>) {
