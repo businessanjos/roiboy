@@ -239,13 +239,24 @@ export function UserManagementPanel({
                     variant="ghost"
                     size="icon"
                     className="h-7 w-7"
-                    onClick={() => unlinkMut.mutate(m.user_id)}
+                    onClick={() => {
+                      const isLast = (memberships.data || []).length <= 1;
+                      if (isLast) {
+                        if (!window.confirm(
+                          "Este é o único vínculo. Isso EXCLUI o usuário e sua conta de acesso definitivamente. Continuar?",
+                        )) return;
+                        unlinkMut.mutate({ rowId: m.user_id, deleteUser: true });
+                        return;
+                      }
+                      unlinkMut.mutate({ rowId: m.user_id });
+                    }}
                     disabled={unlinkMut.isPending}
-                    title="Remover vínculo"
+                    title={(memberships.data || []).length <= 1 ? "Excluir usuário" : "Remover vínculo"}
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
                 </div>
+
               );
             })}
           </div>
