@@ -299,6 +299,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const [alertSentAt, setAlertSentAt] = useState<Date | null>(null);
   const autoNotifiedRef = useRef<string | null>(null);
   const autoRanRef = useRef(false);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const canRegenerate = (currentUser?.email || "").toLowerCase() === BENCHMARK_OWNER_EMAIL;
 
