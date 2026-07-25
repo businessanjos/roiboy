@@ -172,6 +172,14 @@ const STATUS_CONFIG = {
 
 type ViewMode = "list" | "kanban";
 
+// Exportação de tarefas restrita a Jonathan, Maikol e Everton.
+const TASKS_EXPORT_EMAILS = [
+  "jonathanmarcato@anjosbusiness.com",
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+];
+
+
 export default function Tasks() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
