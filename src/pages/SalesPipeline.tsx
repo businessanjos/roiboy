@@ -3069,6 +3069,27 @@ function DealListView({
                         </span>
                       </div>
                     )}
+                    {/* Created / Lost dates - shown only for lost deals */}
+                    {deal.status === 'lost' && (
+                      <div className="flex items-center gap-2 sm:gap-3 text-[11px] sm:text-xs">
+                        <div className="flex items-center gap-1 text-muted-foreground">
+                          <Calendar className="h-3 w-3" />
+                          <span>Criado: {deal.created_at ? new Date(deal.created_at).toLocaleDateString('pt-BR') : '—'}</span>
+                        </div>
+                        <div className="flex items-center gap-1 text-destructive">
+                          <Calendar className="h-3 w-3" />
+                          <span>
+                            Perdido: {deal.lost_at
+                              ? (() => {
+                                  const d = new Date(deal.lost_at);
+                                  d.setMinutes(d.getMinutes() + d.getTimezoneOffset());
+                                  return d.toLocaleDateString('pt-BR');
+                                })()
+                              : '—'}
+                          </span>
+                        </div>
+                      </div>
+                    )}
                     <span className="font-semibold text-sm sm:text-base ml-auto sm:ml-0">
                       {formatCurrency(deal.value)}
                     </span>
