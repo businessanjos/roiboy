@@ -856,6 +856,52 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
+    // ========== ROLE GUARD (Viewer = somente leitura) ==========
+    // Bloqueia qualquer envio/alteração de instância se o papel do usuário no
+    // setor deste WhatsApp for "viewer". Admin de conta sempre passa.
+    {
+      const writeActions = [
+        "send_text", "send_media", "send_to_group", "send_media_to_group",
+        "delete_message", "create", "connect", "qrcode", "disconnect",
+        "reset_instance", "adopt_instance", "unlink_instance",
+        "add_instance_to_sector", "update_instance_pin", "configure_webhook",
+        "update_sector_server",
+      ];
+      const isAccountAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
+      if (writeActions.includes(action) && !isAccountAdmin) {
+        const effectiveSector = sector_id || intData?.sector_id || null;
+        if (effectiveSector) {
+          const { data: accessRow } = await supabase
+            .from("user_sector_access")
+            .select("role_in_sector, is_active")
+            .eq("user_id", userData.id)
+            .eq("sector_id", effectiveSector)
+            .maybeSingle();
+          const roleInSector = accessRow?.is_active === false ? "viewer" : (accessRow?.role_in_sector || "member");
+          if (roleInSector === "viewer") {
+            console.warn(`[uazapi-manager] BLOCKED viewer action "${action}" for user ${userData.id} on sector ${effectiveSector}`);
+            return new Response(
+              JSON.stringify({ error: "Seu acesso a este WhatsApp é somente leitura (Viewer).", role_blocked: true }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+          const managementActions = [
+            "create", "connect", "qrcode", "disconnect", "reset_instance", "adopt_instance",
+            "unlink_instance", "add_instance_to_sector", "update_instance_pin",
+            "configure_webhook", "update_sector_server",
+          ];
+          if (managementActions.includes(action) && !["admin", "manager"].includes(roleInSector)) {
+            console.warn(`[uazapi-manager] BLOCKED action "${action}" for role ${roleInSector} (user ${userData.id}, sector ${effectiveSector})`);
+            return new Response(
+              JSON.stringify({ error: "Apenas Admin ou Gestor do setor podem gerenciar a conexão do WhatsApp.", role_blocked: true }),
+              { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
+        }
+      }
+    }
+
+
     // ========== ANTI-SPAM PROTECTION ==========
     if (["send_text", "send_media"].includes(action) && phone && message) {
       const cleanPhoneCheck = phone.replace(/\D/g, "");

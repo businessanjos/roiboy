@@ -539,6 +539,7 @@ export default function RoyZapp() {
     departments,
     tags,
     fetchData,
+    canEditTags: zappCaps.canEditTags,
   });
 
   // Conversation actions hook (assign, release, transfer, delete, flags)

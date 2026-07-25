@@ -9,6 +9,8 @@ interface UseZappCrudOperationsProps {
   departments: Department[];
   tags: ZappTag[];
   fetchData: () => void;
+  /** Papel permite criar/editar/aplicar tags? (Viewer = não) */
+  canEditTags?: boolean;
 }
 
 export function useZappCrudOperations({
@@ -17,6 +19,7 @@ export function useZappCrudOperations({
   departments,
   tags,
   fetchData,
+  canEditTags = true,
 }: UseZappCrudOperationsProps) {
   // Department dialog state
   const [departmentDialogOpen, setDepartmentDialogOpen] = useState(false);
@@ -272,6 +275,10 @@ export function useZappCrudOperations({
   }, []);
 
   const saveTag = useCallback(async () => {
+    if (!canEditTags) {
+      toast.error("Seu acesso a este WhatsApp é somente leitura (Viewer).");
+      return;
+    }
     if (!accountId || !tagForm.name.trim()) {
       toast.error("Nome da tag é obrigatório");
       return;
@@ -312,9 +319,14 @@ export function useZappCrudOperations({
     } finally {
       setSavingTag(false);
     }
-  }, [accountId, tagForm, editingTag, tags.length, fetchData]);
+  }, [accountId, tagForm, editingTag, tags.length, fetchData, canEditTags]);
 
   const deleteTag = useCallback(async (id: string) => {
+    if (!canEditTags) {
+      toast.error("Seu acesso a este WhatsApp é somente leitura (Viewer).");
+      setDeletingTagId(null);
+      return;
+    }
     try {
       const { error } = await supabase.from("zapp_tags").delete().eq("id", id);
       if (error) throw error;
@@ -326,7 +338,7 @@ export function useZappCrudOperations({
     } finally {
       setDeletingTagId(null);
     }
-  }, [fetchData]);
+  }, [fetchData, canEditTags]);
 
   // Conversation tagging
   const openConversationTagDialog = useCallback(async (assignmentId: string) => {
@@ -357,6 +369,10 @@ export function useZappCrudOperations({
   }, []);
 
   const saveConversationTags = useCallback(async () => {
+    if (!canEditTags) {
+      toast.error("Seu acesso a este WhatsApp é somente leitura (Viewer).");
+      return;
+    }
     if (!taggingAssignmentId || !accountId) return;
     
     setSavingConversationTags(true);
@@ -389,7 +405,7 @@ export function useZappCrudOperations({
     } finally {
       setSavingConversationTags(false);
     }
-  }, [taggingAssignmentId, accountId, selectedConversationTags]);
+  }, [taggingAssignmentId, accountId, selectedConversationTags, canEditTags]);
 
   return {
     // Department

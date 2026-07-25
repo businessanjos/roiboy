@@ -17,6 +17,10 @@ export interface ZappRoleCapabilities {
   canReply: boolean;
   /** Pode assumir da fila / devolver para a fila / mudar status. */
   canClaim: boolean;
+  /** Pode criar/editar tags e aplicar tags em conversas. */
+  canEditTags: boolean;
+  /** Pode gerenciar a conexão do WhatsApp (QR Code, reset, webhook). */
+  canManageConnection: boolean;
 }
 
 interface ResolveArgs {
@@ -59,6 +63,8 @@ export function zappRoleCapabilities(role: ZappSectorRole): ZappRoleCapabilities
         canTransfer: true,
         canReply: true,
         canClaim: true,
+        canEditTags: true,
+        canManageConnection: true,
       };
     case "viewer":
       return {
@@ -66,6 +72,8 @@ export function zappRoleCapabilities(role: ZappSectorRole): ZappRoleCapabilities
         canTransfer: false,
         canReply: false,
         canClaim: false,
+        canEditTags: false,
+        canManageConnection: false,
       };
     case "member":
     default:
@@ -74,6 +82,8 @@ export function zappRoleCapabilities(role: ZappSectorRole): ZappRoleCapabilities
         canTransfer: false,
         canReply: true,
         canClaim: true,
+        canEditTags: true,
+        canManageConnection: false,
       };
   }
 }
