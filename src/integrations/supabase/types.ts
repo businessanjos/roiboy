@@ -23556,6 +23556,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_royzapp_views: {
+        Row: {
+          account_id: string
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+          views: string[]
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+          views?: string[]
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+          views?: string[]
+        }
+        Relationships: []
+      }
       user_sector_access: {
         Row: {
           account_id: string
