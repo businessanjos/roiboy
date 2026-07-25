@@ -87,7 +87,13 @@ export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
-  const { allowedViews, canSeeView } = useRoyZappViewAccess();
+  const {
+    allowedViews,
+    canSeeView,
+    canOpenZappSector,
+    loading: zappAccessLoading,
+  } = useRoyZappViewAccess();
+
   const canChooseSector = canPickSector(currentUser?.email);
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
