@@ -1083,13 +1083,26 @@ Deno.serve(async (req) => {
         state: storedConnected ? "connected" : "unknown",
         connected: storedConnected,
       };
+      let matchError: string | undefined;
 
       try {
         const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = selectBestInstanceMatch(all, instanceName, token);
+        if (!inst) {
+          const failure = getLastInstanceMatchFailure();
+          matchError =
+            failure === "missing_instance_name"
+              ? "Integração sem instance_name definido — não é possível identificar a instância do setor."
+              : failure === "instance_name_not_found"
+                ? `Instância "${instanceName}" não existe neste servidor UAZAPI.`
+                : failure === "token_mismatch"
+                  ? "O token armazenado não corresponde a nenhuma instância deste servidor."
+                  : "Nenhuma instância disponível neste servidor UAZAPI.";
+        }
 
         if (inst) {
+
           const liveSnapshot = resolveStatusSnapshot(inst);
           const liveToken = getInstanceToken(inst);
 
