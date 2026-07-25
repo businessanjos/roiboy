@@ -189,7 +189,11 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         <div className="flex items-center gap-1 sm:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
-          {assignment.agent_id !== currentAgentId ? (
+          {!canClaim ? (
+            <Badge variant="outline" className="border-zapp-border text-zapp-text-muted text-[10px]">
+              Somente leitura
+            </Badge>
+          ) : assignment.agent_id !== currentAgentId ? (
             <Button
               size="sm"
               className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-7 sm:h-8 px-2 sm:px-3"
@@ -209,6 +213,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <span className="hidden sm:inline">Devolver</span>
             </Button>
           )}
+
           
           {/* Status dropdown - more compact on mobile */}
           <DropdownMenu>
