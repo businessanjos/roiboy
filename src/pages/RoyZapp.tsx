@@ -1540,10 +1540,34 @@ export default function RoyZapp() {
              setEditingClientId(id);
              setClientEditSheetOpen(true);
            }}
-           onAssignToMe={convActions.assignToMe}
-           onReleaseToQueue={convActions.releaseToQueue}
-           onUpdateStatus={convActions.updateConversationStatus}
-           onOpenTransfer={() => setTransferDialogOpen(true)}
+            onAssignToMe={(id) => {
+              if (!zappCaps.canClaim) {
+                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite assumir conversas.", variant: "destructive" });
+                return;
+              }
+              convActions.assignToMe(id);
+            }}
+            onReleaseToQueue={(id) => {
+              if (!zappCaps.canClaim) {
+                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite devolver conversas.", variant: "destructive" });
+                return;
+              }
+              convActions.releaseToQueue(id);
+            }}
+            onUpdateStatus={(id, status) => {
+              if (!zappCaps.canClaim) {
+                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite alterar o status.", variant: "destructive" });
+                return;
+              }
+              convActions.updateConversationStatus(id, status);
+            }}
+            onOpenTransfer={() => {
+              if (!zappCaps.canTransfer) {
+                toast({ title: "Sem permissão para transferir", description: "Apenas Admin e Gestor do setor podem transferir conversas.", variant: "destructive" });
+                return;
+              }
+              setTransferDialogOpen(true);
+            }}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
            onOpenAddClient={contactOps.openAddContactDialog}
