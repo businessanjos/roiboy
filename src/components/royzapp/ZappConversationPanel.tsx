@@ -710,6 +710,18 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
       )}
 
+      {/* Line disconnected → show QR immediately so the operator can reconnect on the spot */}
+      {activeView === "inbox" && sectorId && (
+        <div className="px-3 pb-2">
+          <ZappDisconnectedQrBanner
+            sectorId={sectorId}
+            integrationId={selectedIntegrationId || null}
+          />
+        </div>
+      )}
+
+
+
       {/* Conversation list */}
       <ScrollArea className="flex-1">
         {activeView === "inbox" && (
