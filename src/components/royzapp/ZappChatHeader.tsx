@@ -34,6 +34,8 @@ import { ConversationAssignment, ContactInfo, getInitials, STATUS_CONFIG } from 
 import { ZappClientSuggestionBanner } from "./ZappClientSuggestionBanner";
 import { ZappTimezoneBanner } from "./ZappTimezoneBanner";
 import { VipBadge } from "@/components/client/VipBadge";
+import { ZappConversationIdBadge } from "./ZappConversationIdBadge";
+
 
 interface ZappChatHeaderProps {
   assignment: ConversationAssignment;
@@ -175,7 +177,11 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             )}
           </div>
         </div>
+        {conversationId && (
+          <ZappConversationIdBadge conversationId={conversationId} className="mx-1 shrink-0" />
+        )}
         <div className="flex items-center gap-1 sm:gap-2">
+
           {/* Assign to me / Release button - icon only on mobile */}
           {assignment.agent_id !== currentAgentId ? (
             <Button
