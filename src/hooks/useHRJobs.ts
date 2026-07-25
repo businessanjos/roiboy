@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import type { HRJob, HRJobApplication, JobStatus, CandidateStage } from "@/types/job";
+import { recordBenchmarkRun } from "@/lib/benchmarkRunLog";
+import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
 
 // ─── List Jobs ───
 export function useHRJobs(filters?: { status?: JobStatus | "all" }) {
@@ -101,6 +103,35 @@ export function useCreateHRJob() {
                 generated_by: currentUser.id,
                 generated_at: new Date().toISOString(),
               }, { onConflict: "job_id" });
+
+              const score = computeAttractiveness({
+                offered: { min: data.salary_min, max: data.salary_max },
+                market: benchmark.market_range,
+                offeredBenefits: data.benefits ?? [],
+                typicalBenefits: benchmark.typical_benefits ?? [],
+                missingBenefits: benchmark.missing_benefits ?? [],
+                extraBenefits: benchmark.extra_benefits ?? [],
+                workModel: data.work_model,
+                city: data.unit || null,
+                state: null,
+              });
+              await recordBenchmarkRun({
+                jobId: data.id,
+                accountId: currentUser.account_id,
+                userId: currentUser.id,
+                triggerSource: "job_created",
+                offeredSalaryMin: data.salary_min ?? null,
+                offeredSalaryMax: data.salary_max ?? null,
+                market: benchmark.market_range,
+                offeredBenefits: data.benefits ?? [],
+                typicalBenefits: benchmark.typical_benefits ?? [],
+                missingBenefits: benchmark.missing_benefits ?? [],
+                extraBenefits: benchmark.extra_benefits ?? [],
+                workModel: data.work_model,
+                city: data.unit || null,
+                state: null,
+                score: { total: score.total, tier: score.tier.label, breakdown: score.breakdown },
+              });
             }
           } catch (e) {
             console.warn("Auto benchmark generation failed:", e);

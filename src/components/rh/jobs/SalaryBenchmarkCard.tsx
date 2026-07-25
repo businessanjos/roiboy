@@ -11,6 +11,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { evaluateMarketSalaryClaim, stripMarketCompatibleClaim, MARKET_COMPATIBLE_LABEL } from "@/lib/marketSalaryClaim";
+import { recordBenchmarkRun } from "@/lib/benchmarkRunLog";
+import { JobBenchmarkRunLog } from "@/components/rh/jobs/JobBenchmarkRunLog";
 
 const RH_ALERT_RECIPIENTS = [
   "m.quintana@me.com",
@@ -297,6 +299,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const [alertSentAt, setAlertSentAt] = useState<Date | null>(null);
   const autoNotifiedRef = useRef<string | null>(null);
   const autoRanRef = useRef(false);
+  const [logRefreshKey, setLogRefreshKey] = useState(0);
 
   const canRegenerate = (currentUser?.email || "").toLowerCase() === BENCHMARK_OWNER_EMAIL;
 
@@ -320,7 +323,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     return () => { cancelled = true; };
   }, [jobId]);
 
-  const run = async () => {
+  const run = async (triggerSource: "manual" | "auto" = "manual") => {
     setLoading(true);
     try {
       // Não enviamos a auto-declaração "Salário compatível com o mercado" para a IA:
@@ -357,6 +360,39 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             generated_at: new Date().toISOString(),
           }, { onConflict: "job_id" });
         if (upsertErr) console.error("Failed to cache benchmark:", upsertErr);
+
+        // Log de recálculo: registra o que entrou no score/benchmark
+        const runOfferedBenefits = cleanedBenefits;
+        const runExtras = stripMarketCompatibleClaim(benchmark.extra_benefits);
+        const runScore = computeAttractiveness({
+          offered: { min: job.salary_min, max: job.salary_max },
+          market: benchmark.market_range,
+          offeredBenefits: runOfferedBenefits,
+          typicalBenefits: benchmark.typical_benefits ?? [],
+          missingBenefits: benchmark.missing_benefits ?? [],
+          extraBenefits: runExtras,
+          workModel: job.work_model,
+          city,
+          state,
+        });
+        await recordBenchmarkRun({
+          jobId,
+          accountId: currentUser.account_id,
+          userId: currentUser.id,
+          triggerSource,
+          offeredSalaryMin: job.salary_min ?? null,
+          offeredSalaryMax: job.salary_max ?? null,
+          market: benchmark.market_range,
+          offeredBenefits: runOfferedBenefits,
+          typicalBenefits: benchmark.typical_benefits ?? [],
+          missingBenefits: benchmark.missing_benefits ?? [],
+          extraBenefits: runExtras,
+          workModel: job.work_model,
+          city,
+          state,
+          score: { total: runScore.total, tier: runScore.tier.label, breakdown: runScore.breakdown },
+        });
+        setLogRefreshKey((k) => k + 1);
       }
     } catch (e: any) {
       console.error(e);
@@ -371,7 +407,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     if (loadingCache || result || loading || autoRanRef.current) return;
     if (!jobId || !currentUser?.account_id) return;
     autoRanRef.current = true;
-    run();
+    run("auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingCache, result, jobId, currentUser?.account_id]);
 
@@ -503,7 +539,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
           </p>
         </div>
         {canRegenerate && (
-          <Button size="sm" variant={result ? "outline" : "default"} onClick={run} disabled={loading || loadingCache}>
+          <Button size="sm" variant={result ? "outline" : "default"} onClick={() => run("manual")} disabled={loading || loadingCache}>
             {loading ? <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" /> : result ? <RefreshCw className="h-3.5 w-3.5 mr-2" /> : <Sparkles className="h-3.5 w-3.5 mr-2" />}
             {result ? "Atualizar" : "Consultar mercado"}
           </Button>
@@ -936,6 +972,9 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             )}
           </>
         )}
+
+        <Separator />
+        <JobBenchmarkRunLog jobId={jobId} refreshKey={logRefreshKey} />
       </CardContent>
     </Card>
   );

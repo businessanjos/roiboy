@@ -11892,6 +11892,125 @@ export type Database = {
           },
         ]
       }
+      hr_job_benchmark_runs: {
+        Row: {
+          account_id: string
+          breakdown: Json
+          catalog_benefits: string[]
+          catalog_benefits_matched: number
+          city: string | null
+          covered_benefits: string[]
+          created_at: string
+          extra_benefits: string[]
+          id: string
+          job_id: string
+          market_p25: number | null
+          market_p50: number | null
+          market_p75: number | null
+          missing_benefits: string[]
+          offered_benefits: string[]
+          offered_salary_max: number | null
+          offered_salary_min: number | null
+          score_benefits: number | null
+          score_location: number | null
+          score_salary: number | null
+          score_tier: string | null
+          score_total: number | null
+          state: string | null
+          trigger_source: string
+          triggered_by: string | null
+          typical_benefits: string[]
+          work_model: string | null
+        }
+        Insert: {
+          account_id: string
+          breakdown?: Json
+          catalog_benefits?: string[]
+          catalog_benefits_matched?: number
+          city?: string | null
+          covered_benefits?: string[]
+          created_at?: string
+          extra_benefits?: string[]
+          id?: string
+          job_id: string
+          market_p25?: number | null
+          market_p50?: number | null
+          market_p75?: number | null
+          missing_benefits?: string[]
+          offered_benefits?: string[]
+          offered_salary_max?: number | null
+          offered_salary_min?: number | null
+          score_benefits?: number | null
+          score_location?: number | null
+          score_salary?: number | null
+          score_tier?: string | null
+          score_total?: number | null
+          state?: string | null
+          trigger_source?: string
+          triggered_by?: string | null
+          typical_benefits?: string[]
+          work_model?: string | null
+        }
+        Update: {
+          account_id?: string
+          breakdown?: Json
+          catalog_benefits?: string[]
+          catalog_benefits_matched?: number
+          city?: string | null
+          covered_benefits?: string[]
+          created_at?: string
+          extra_benefits?: string[]
+          id?: string
+          job_id?: string
+          market_p25?: number | null
+          market_p50?: number | null
+          market_p75?: number | null
+          missing_benefits?: string[]
+          offered_benefits?: string[]
+          offered_salary_max?: number | null
+          offered_salary_min?: number | null
+          score_benefits?: number | null
+          score_location?: number | null
+          score_salary?: number | null
+          score_tier?: string | null
+          score_total?: number | null
+          state?: string | null
+          trigger_source?: string
+          triggered_by?: string | null
+          typical_benefits?: string[]
+          work_model?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_job_benchmark_runs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmark_runs_job_id_fkey"
+            columns: ["job_id"]
+            isOneToOne: false
+            referencedRelation: "hr_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmark_runs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_job_benchmark_runs_triggered_by_fkey"
+            columns: ["triggered_by"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_job_benchmarks: {
         Row: {
           account_id: string
