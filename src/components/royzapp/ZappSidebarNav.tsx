@@ -33,6 +33,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   sectorId,
   userRole,
   isAdmin,
+  allowedViews,
 }: ZappSidebarNavProps) {
   // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
