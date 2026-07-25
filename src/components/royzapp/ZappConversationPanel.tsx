@@ -38,6 +38,8 @@ import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappChannelPills } from "./ZappChannelPills";
 import { UazapiServerHealthBanner } from "./UazapiServerHealthBanner";
 import { ZappTeamList } from "./ZappTeamList";
+import { ZappAuditLogPanel } from "./ZappAuditLogPanel";
+
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
 import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
@@ -897,6 +899,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           />
         )}
         {activeView === "settings" && (
+          <>
           <ZappSettingsPanel
             sectorId={sectorId}
             sectorName={sectorId ? (sectorId.charAt(0).toUpperCase() + sectorId.slice(1)) : ""}
@@ -921,7 +924,12 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onSpellingChange={onSpellingChange}
             onRequestNotificationPermission={onRequestNotificationPermission}
           />
+          {(isAdmin || zappRole === "admin" || zappRole === "manager") && (
+            <ZappAuditLogPanel sectorId={sectorId} />
+          )}
+          </>
         )}
+
         {activeView === "whatsapp-admin" && isAdmin && (
           <ZappWhatsAppAdminPanel sectorId={sectorId} />
         )}
