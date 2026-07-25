@@ -1397,7 +1397,27 @@ export default function SalesPipeline() {
       });
     }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+
+  // Cohort breakdown: created in the same month it was lost vs. carried over from previous months
+  const lostCohortStats = useMemo(() => {
+    const monthKey = (value?: string | null) => {
+      if (!value) return null;
+      const d = new Date(value);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+    let sameMonth = 0;
+    let carriedOver = 0;
+    let unknown = 0;
+    filteredLostDealsByMonth.forEach(deal => {
+      const created = monthKey(deal.created_at);
+      const lost = monthKey(deal.lost_at);
+      if (!created || !lost) { unknown++; return; }
+      if (created === lost) sameMonth++;
+      else carriedOver++;
+    });
+    return { sameMonth, carriedOver, unknown, total: filteredLostDealsByMonth.length };
+  }, [filteredLostDealsByMonth]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
