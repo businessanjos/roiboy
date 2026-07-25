@@ -178,6 +178,7 @@ const HRServiceProviderProfile = lazyRetry(() => import("./pages/rh/HRServicePro
 const HRPartners = lazyRetry(() => import("./pages/rh/HRPartners"));
 const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
 const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
+const RHBenefits = lazyRetry(() => import("./pages/rh/RHBenefits"));
 const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
 const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
 const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
