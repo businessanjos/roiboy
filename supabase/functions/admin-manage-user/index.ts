@@ -355,28 +355,48 @@ Deno.serve(async (req: Request) => {
 
       case "unlink_account": {
         if (!body.user_row_id) return json(400, { error: "user_row_id é obrigatório" });
-        // Safety: ensure this is not the only membership.
         const { data: row } = await admin
           .from("users")
           .select("auth_user_id, id")
           .eq("id", body.user_row_id)
           .maybeSingle();
         if (!row) return json(404, { error: "Vínculo não encontrado" });
+
+        let isLastMembership = false;
         if (row.auth_user_id) {
           const { count } = await admin
             .from("users")
             .select("id", { count: "exact", head: true })
             .eq("auth_user_id", row.auth_user_id);
-          if ((count || 0) <= 1) {
-            return json(400, {
-              error: "Este é o único vínculo do usuário. Remova o usuário pela área de equipe ou crie outro vínculo antes.",
-            });
-          }
+          isLastMembership = (count || 0) <= 1;
         }
+
+        // Último vínculo só pode ser removido com exclusão total (delete_user).
+        if (isLastMembership && !body.delete_user) {
+          return json(400, {
+            error:
+              "Este é o único vínculo do usuário. Confirme a exclusão total do usuário ou crie outro vínculo antes.",
+            requires_delete_user: true,
+          });
+        }
+
         const { error } = await admin.from("users").delete().eq("id", body.user_row_id);
         if (error) return json(400, { error: error.message });
+
+        if (isLastMembership && row.auth_user_id) {
+          const { error: authErr } = await admin.auth.admin.deleteUser(row.auth_user_id);
+          if (authErr) {
+            return json(200, {
+              success: true,
+              message: `Vínculo removido, mas a conta de acesso não pôde ser excluída: ${authErr.message}`,
+            });
+          }
+          return json(200, { success: true, message: "Usuário excluído por completo." });
+        }
+
         return json(200, { success: true, message: "Vínculo removido." });
       }
+
 
       default:
         return json(400, { error: "Ação inválida" });
