@@ -354,7 +354,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
                       onClick={() => onSelectUser?.(row.user.id)}
                       className="text-left"
                     >
-                      <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                      <div className="text-sm font-medium truncate flex items-center gap-1.5">
                         {row.user.name}
                         {row.unrestricted && (
                           <Badge variant="secondary" className="h-4 text-[10px]">
