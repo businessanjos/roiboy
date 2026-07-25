@@ -1229,6 +1229,17 @@ export default function Tasks() {
                 Kanban
               </Button>
             </div>
+            {canExportTasks && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportTasks}
+                className="h-9"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                Exportar
+              </Button>
+            )}
             <Button 
               variant="outline"
               size="sm"
@@ -1238,6 +1249,7 @@ export default function Tasks() {
               <Settings className="h-4 w-4 mr-1.5" />
               Personalizar
             </Button>
+
             <Button 
               onClick={() => openNewTaskDialog()}
               className="shadow-sm"
