@@ -596,126 +596,17 @@ export default function Auth() {
               </TabsContent>
 
               <TabsContent value="signup" className="mt-0">
-                <div className="space-y-4">
-                  <Button type="button" variant="outline" className="w-full" disabled={isSubmitting} onClick={handleGoogleSignIn}>
-                    {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <span className="mr-2 text-base leading-none">G</span>}
-                    Continuar com Google
-                  </Button>
-                  <div className="relative">
-                    <Separator />
-                    <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-card px-2 text-xs text-muted-foreground">
-                      ou crie com email
-                    </span>
-                  </div>
+                <div className="space-y-3 py-6 text-center">
+                  <p className="text-sm font-medium text-foreground">
+                    Cadastro por conta própria desativado
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    O acesso ao ROY APP é liberado apenas por convite de um administrador. Fale com o
+                    responsável da sua equipe para receber seu acesso.
+                  </p>
                 </div>
-                <Form {...signupForm}>
-                  <form onSubmit={signupForm.handleSubmit(handleSignup)} className="space-y-4 pt-4">
-                    <FormField
-                      control={signupForm.control}
-                      name="name"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Nome</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="text"
-                              placeholder="Seu nome"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.NAME_MAX}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="email"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Email</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="email"
-                              placeholder="seu@email.com"
-                              disabled={isSubmitting}
-                              maxLength={SECURITY_LIMITS.EMAIL_MAX}
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="phone"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Telefone</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                              <Input
-                                type="tel"
-                                placeholder="(11) 99999-9999"
-                                disabled={isSubmitting}
-                                className="pl-9"
-                                maxLength={SECURITY_LIMITS.PHONE_MAX}
-                                {...field}
-                              />
-                            </div>
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={signupForm.control}
-                      name="password"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Senha</FormLabel>
-                          <FormControl>
-                            <div className="relative">
-                              <Input
-                                type={showSignupPassword ? "text" : "password"}
-                                placeholder="Crie uma senha forte"
-                                disabled={isSubmitting}
-                                maxLength={SECURITY_LIMITS.PASSWORD_MAX}
-                                {...field}
-                              />
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="absolute right-0 top-0 h-full px-3 hover:bg-transparent"
-                                onClick={() => setShowSignupPassword(!showSignupPassword)}
-                                tabIndex={-1}
-                              >
-                                {showSignupPassword ? <EyeOff className="h-4 w-4 text-muted-foreground" /> : <Eye className="h-4 w-4 text-muted-foreground" />}
-                              </Button>
-                            </div>
-                          </FormControl>
-                          <PasswordStrength password={field.value} />
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    <Button type="submit" className="w-full" disabled={isSubmitting}>
-                      {isSubmitting ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          Criando conta...
-                        </>
-                      ) : (
-                        "Criar conta"
-                      )}
-                    </Button>
-                  </form>
-                </Form>
               </TabsContent>
+
             </CardContent>
           </Tabs>
         </Card>
