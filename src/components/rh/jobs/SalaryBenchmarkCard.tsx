@@ -323,7 +323,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     return () => { cancelled = true; };
   }, [jobId]);
 
-  const run = async () => {
+  const run = async (triggerSource: "manual" | "auto" = "manual") => {
     setLoading(true);
     try {
       // Não enviamos a auto-declaração "Salário compatível com o mercado" para a IA:
@@ -360,9 +360,56 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             generated_at: new Date().toISOString(),
           }, { onConflict: "job_id" });
         if (upsertErr) console.error("Failed to cache benchmark:", upsertErr);
+
+        // Log de recálculo: registra o que entrou no score/benchmark
+        const runOfferedBenefits = cleanedBenefits;
+        const runExtras = stripMarketCompatibleClaim(benchmark.extra_benefits);
+        const runScore = computeAttractiveness({
+          offered: { min: job.salary_min, max: job.salary_max },
+          market: benchmark.market_range,
+          offeredBenefits: runOfferedBenefits,
+          typicalBenefits: benchmark.typical_benefits ?? [],
+          missingBenefits: benchmark.missing_benefits ?? [],
+          extraBenefits: runExtras,
+          workModel: job.work_model,
+          city,
+          state,
+        });
+        await recordBenchmarkRun({
+          jobId,
+          accountId: currentUser.account_id,
+          userId: currentUser.id,
+          triggerSource,
+          offeredSalaryMin: job.salary_min ?? null,
+          offeredSalaryMax: job.salary_max ?? null,
+          market: benchmark.market_range,
+          offeredBenefits: runOfferedBenefits,
+          typicalBenefits: benchmark.typical_benefits ?? [],
+          missingBenefits: benchmark.missing_benefits ?? [],
+          extraBenefits: runExtras,
+          workModel: job.work_model,
+          city,
+          state,
+          score: { total: runScore.total, tier: runScore.tier.label, breakdown: runScore.breakdown },
+        });
+        setLogRefreshKey((k) => k + 1);
       }
     } catch (e: any) {
       console.error(e);
+      toast.error(e?.message || "Falha ao consultar mercado");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Auto-run once if no cached result exists yet (any user can trigger the first generation)
+  useEffect(() => {
+    if (loadingCache || result || loading || autoRanRef.current) return;
+    if (!jobId || !currentUser?.account_id) return;
+    autoRanRef.current = true;
+    run("auto");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loadingCache, result, jobId, currentUser?.account_id]);
       toast.error(e?.message || "Falha ao consultar mercado");
     } finally {
       setLoading(false);
