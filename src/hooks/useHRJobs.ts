@@ -3,6 +3,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import type { HRJob, HRJobApplication, JobStatus, CandidateStage } from "@/types/job";
+import { recordBenchmarkRun } from "@/lib/benchmarkRunLog";
+import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
 
 // ─── List Jobs ───
 export function useHRJobs(filters?: { status?: JobStatus | "all" }) {
