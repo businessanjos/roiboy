@@ -1364,6 +1364,14 @@ export default function SalesPipeline() {
         return key === lostMonthFilter;
       });
     }
+    if (lostCreatedMonthFilter !== 'all') {
+      result = result.filter(deal => {
+        if (!deal.created_at) return false;
+        const date = new Date(deal.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return key === lostCreatedMonthFilter;
+      });
+    }
     if (lostReasonFilter !== 'all') {
       result = result.filter(deal => {
         if (deal.loss_reason_id === lostReasonFilter) return true;
