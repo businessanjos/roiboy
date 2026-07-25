@@ -410,20 +410,6 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
     run("auto");
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loadingCache, result, jobId, currentUser?.account_id]);
-      toast.error(e?.message || "Falha ao consultar mercado");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Auto-run once if no cached result exists yet (any user can trigger the first generation)
-  useEffect(() => {
-    if (loadingCache || result || loading || autoRanRef.current) return;
-    if (!jobId || !currentUser?.account_id) return;
-    autoRanRef.current = true;
-    run();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [loadingCache, result, jobId, currentUser?.account_id]);
 
 
 
