@@ -1081,8 +1081,8 @@ export default function RoyZapp() {
       const skipTabFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
       
       // Checar se o usuário tem visibilidade total (Admin, Gestor, Gerente, Head, Diretor, C-level, Sócio)
-      const isManager = isManagementUser(currentUser);
-      const hasFullVisibility = isAdmin || isManager;
+      // Admin/Gestor do setor enxergam as conversas de todos; Membro/Viewer só as suas
+      const hasFullVisibility = zappCaps.canSeeAllSectorConversations;
       
       // Conversations with no agent should ALWAYS show in queue, regardless of status
       // This catches orphaned "waiting" conversations with no agent assigned
