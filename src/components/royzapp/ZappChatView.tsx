@@ -337,6 +337,8 @@ export function ZappChatView({
         onCall={handleCall}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
+        canTransfer={canTransfer}
+        canClaim={canClaim}
       />
 
       {/* Search bar */}
