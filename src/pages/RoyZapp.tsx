@@ -268,9 +268,17 @@ export default function RoyZapp() {
   }, [departments, selectedSectorId]);
 
   // UI state
-  const [activeView, setActiveView] = useState<ZappView>(
-    ZAPP_VIEWS.has(viewFromUrl as ZappView) ? (viewFromUrl as ZappView) : "inbox"
-  );
+  const ZAPP_VIEW_STORAGE_KEY = "royzapp:activeView";
+  const [activeView, setActiveView] = useState<ZappView>(() => {
+    if (ZAPP_VIEWS.has(viewFromUrl as ZappView)) return viewFromUrl as ZappView;
+    try {
+      const stored = localStorage.getItem(ZAPP_VIEW_STORAGE_KEY);
+      if (stored && ZAPP_VIEWS.has(stored as ZappView)) return stored as ZappView;
+    } catch {
+      /* storage unavailable */
+    }
+    return "inbox";
+  });
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
@@ -283,6 +291,22 @@ export default function RoyZapp() {
       setSearchParams(next, { replace: true });
     }
   }, [viewFromUrl, searchParams, setSearchParams]);
+
+  // Persist the selected menu item and mirror it in the URL so it survives
+  // navigation away from RoyZapp and a full page refresh.
+  useEffect(() => {
+    try {
+      localStorage.setItem(ZAPP_VIEW_STORAGE_KEY, activeView);
+    } catch {
+      /* storage unavailable */
+    }
+    if (viewFromUrl !== activeView) {
+      const next = new URLSearchParams(searchParams);
+      next.set("view", activeView);
+      setSearchParams(next, { replace: true });
+    }
+  }, [activeView, viewFromUrl, searchParams, setSearchParams]);
+
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
