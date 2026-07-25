@@ -34,6 +34,8 @@ interface MatrixUser {
  */
 export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
   const [search, setSearch] = useState("");
+  const [isOpen, setIsOpen] = useState(false);
+
   const [onlyDivergent, setOnlyDivergent] = useState(false);
 
   const { data, isLoading } = useQuery({
