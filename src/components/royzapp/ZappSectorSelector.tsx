@@ -7,6 +7,8 @@ import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { withRetry } from "@/lib/retryFetch";
@@ -71,6 +73,8 @@ interface ZappSectorSelectorProps {
 
 export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) {
   const { hasSectorAccess, isLoading: accessLoading } = useSectorAccess();
+  const { canOpenZappSector, loading: zappAccessLoading } = useRoyZappViewAccess();
+
   const { isAdmin, loading: permissionsLoading } = usePermissions();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
@@ -304,11 +308,12 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     fetchSectorStatuses();
   }, [currentUser?.account_id, currentUser?.auth_user_id]);
 
-  // Filtrar setores que o usuário tem acesso
+  // Filtrar setores liberados no ROY zAPP (controle independente do acesso ao setor)
   const accessibleSectors = WHATSAPP_SECTOR_IDS.filter(sectorId => {
     if (isAdmin) return true;
-    return hasSectorAccess(sectorId);
+    return canOpenZappSector(sectorId, hasSectorAccess(sectorId));
   });
+
 
   // Obter informações do setor
   const getSectorInfo = (sectorId: SectorId) => {
@@ -406,7 +411,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     }
   };
 
-  if (permissionsLoading || accessLoading || loading) {
+  if (permissionsLoading || accessLoading || zappAccessLoading || loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />

@@ -70,7 +70,7 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { isManagementUser } from "@/lib/access/managementRoles";
-import { canPickSector } from "@/lib/royZappAccess";
+import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
@@ -87,7 +87,13 @@ export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { hasVendasAccess, hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
-  const { allowedViews, canSeeView } = useRoyZappViewAccess();
+  const {
+    allowedViews,
+    canSeeView,
+    canOpenZappSector,
+    loading: zappAccessLoading,
+  } = useRoyZappViewAccess();
+
   const canChooseSector = canPickSector(currentUser?.email);
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
@@ -291,13 +297,14 @@ export default function RoyZapp() {
 
   // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
   useEffect(() => {
-    if (canChooseSector || selectedSectorId || sectorAccessLoading) return;
-    const whatsappSectors: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
-    const target = sectorAccess
-      .map((a) => a.sector_id as SectorId)
-      .find((id) => whatsappSectors.includes(id));
+    if (canChooseSector || selectedSectorId || sectorAccessLoading || zappAccessLoading) return;
+    const generalSectors = new Set(sectorAccess.map((a) => a.sector_id));
+    const target = (ZAPP_WHATSAPP_SECTORS as readonly SectorId[]).find((id) =>
+      canOpenZappSector(id, generalSectors.has(id))
+    );
     if (target) setSelectedSectorId(target);
-  }, [canChooseSector, selectedSectorId, sectorAccessLoading, sectorAccess]);
+  }, [canChooseSector, selectedSectorId, sectorAccessLoading, zappAccessLoading, sectorAccess, canOpenZappSector]);
+
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
@@ -1259,13 +1266,16 @@ export default function RoyZapp() {
   }
 
   // Entrada direta no setor: apenas Maikol e Everton veem o seletor de setores.
-  // Todos os outros entram no único setor liberado pelo admin.
-  const autoSectors = sectorAccess
-    .map((a) => a.sector_id as SectorId)
-    .filter((id) => (["operacoes", "financeiro", "vendas", "marketing"] as SectorId[]).includes(id));
+  // Todos os outros entram no único WhatsApp de setor liberado no ROY zAPP
+  // (controle independente do acesso geral ao setor).
+  const generalSectorIds = new Set(sectorAccess.map((a) => a.sector_id));
+  const autoSectors = (ZAPP_WHATSAPP_SECTORS as readonly SectorId[]).filter((id) =>
+    canOpenZappSector(id, generalSectorIds.has(id))
+  );
 
   if (!selectedSectorId && !canChooseSector) {
-    if (sectorAccessLoading || autoSectors.length > 0) {
+    if (sectorAccessLoading || zappAccessLoading || autoSectors.length > 0) {
+
       return (
         <div className="flex items-center justify-center h-full bg-zapp-bg">
           <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />

@@ -44,3 +44,27 @@ export function sanitizeViewList(values: unknown): ZappView[] {
   if (!Array.isArray(values)) return [];
   return ALL_ZAPP_VIEWS.filter((v) => values.includes(v));
 }
+
+/**
+ * Setores que possuem WhatsApp (ROY zAPP) e, portanto, podem ser liberados
+ * ou bloqueados individualmente **apenas dentro do ROY zAPP**.
+ *
+ * IMPORTANTE: este controle é INDEPENDENTE do acesso geral ao setor
+ * (`user_sector_access`). Um usuário pode ter acesso ao pipeline Comercial
+ * (setor "vendas") e continuar bloqueado no WhatsApp do Comercial.
+ */
+export const ZAPP_WHATSAPP_SECTORS = ["operacoes", "financeiro", "vendas", "marketing"] as const;
+export type ZappWhatsAppSector = (typeof ZAPP_WHATSAPP_SECTORS)[number];
+
+export const ZAPP_SECTOR_LABELS: Record<ZappWhatsAppSector, string> = {
+  operacoes: "Customer Success",
+  financeiro: "Finanças",
+  vendas: "Vendas",
+  marketing: "Marketing",
+};
+
+/** Normaliza a lista salva em `user_royzapp_views.zapp_sectors`. */
+export function sanitizeZappSectorList(values: unknown): ZappWhatsAppSector[] {
+  if (!Array.isArray(values)) return [];
+  return ZAPP_WHATSAPP_SECTORS.filter((s) => values.includes(s));
+}
