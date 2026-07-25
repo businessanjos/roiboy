@@ -553,6 +553,15 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                     />
                   </div>
 
+                  {/* Matriz de acesso Pipeline x WhatsApp */}
+                  {accountId && (
+                    <div className="mt-4 pt-4 border-t">
+                      <RoyZappAccessMatrix accountId={accountId} onSelectUser={setSelectedUserId} />
+                    </div>
+                  )}
+
+
+
                   {/* Super-admin panel: role / email / password / active / multi-account */}
                   <div className="mt-4 pt-4 border-t">
                     <UserManagementPanel
