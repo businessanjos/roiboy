@@ -14,6 +14,7 @@ import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
 import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessManager";
+import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
 import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
@@ -301,7 +302,12 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {accountId && (
+            <RoyZappAccessMatrix accountId={accountId} onSelectUser={setSelectedUserId} />
+          )}
+
           <div className="flex flex-wrap items-center gap-3 justify-between">
+
             <div className="flex items-center gap-2 flex-1 min-w-[260px] max-w-xl">
               <Users className="h-4 w-4 text-muted-foreground flex-shrink-0" />
               <Select value={selectedUserId} onValueChange={setSelectedUserId}>
