@@ -289,15 +289,16 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           <TooltipContent side="bottom">Grupos</TooltipContent>
         </Tooltip>
       </div>
+      </div>
 
-
-      <div className="flex-1" />
-
-      {/* Status indicators */}
-      <div className="flex items-center gap-3 px-2 text-xs">
+      {/* Status indicators — compactos em telas pequenas */}
+      <div className="flex items-center gap-2 pl-1 text-xs shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-zapp-accent" />
-          <span className="text-zapp-text-muted">{onlineAgents} online</span>
+          <span className="text-zapp-text-muted whitespace-nowrap">
+            {onlineAgents}
+            <span className="hidden lg:inline"> online</span>
+          </span>
         </div>
         {totalQueueConversations > 0 && (
           <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
@@ -305,6 +306,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </Badge>
         )}
       </div>
+
     </div>
   );
 });
