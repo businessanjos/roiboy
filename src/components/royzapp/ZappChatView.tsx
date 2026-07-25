@@ -1,5 +1,5 @@
 import { RefObject, useCallback, useState, useMemo } from "react";
-import { MessageSquare, Clock } from "lucide-react";
+import { MessageSquare, Clock, Lock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
@@ -95,6 +95,12 @@ interface ZappChatViewProps {
   // Meta templates
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
+  /** Papel permite transferir (Admin/Gestor). */
+  canTransfer?: boolean;
+  /** Papel permite responder (todos menos Viewer). */
+  canReply?: boolean;
+  /** Papel permite assumir/devolver/alterar status. */
+  canClaim?: boolean;
 }
 
 export function ZappChatView({
@@ -166,6 +172,9 @@ export function ZappChatView({
   onOpenPlaybook,
   isMetaChannel,
   onOpenTemplates,
+  canTransfer = true,
+  canReply = true,
+  canClaim = true,
 }: ZappChatViewProps) {
   // Search state
   const [showSearch, setShowSearch] = useState(false);
@@ -328,6 +337,8 @@ export function ZappChatView({
         onCall={handleCall}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
+        canTransfer={canTransfer}
+        canClaim={canClaim}
       />
 
       {/* Search bar */}
@@ -371,7 +382,13 @@ export function ZappChatView({
       />
 
 
-      {/* Message input */}
+      {/* Message input — Viewer não responde */}
+      {!canReply ? (
+        <div className="px-4 py-3 border-t border-zapp-border bg-zapp-panel-header flex items-center gap-2 text-xs text-zapp-text-muted">
+          <Lock className="h-3.5 w-3.5" />
+          Seu acesso a este WhatsApp é somente leitura (Viewer). Você pode acompanhar as conversas, mas não enviar mensagens.
+        </div>
+      ) : (
       <ZappMessageInput
         messageInput={messageInput}
         sendingMessage={sendingMessage}
@@ -413,6 +430,8 @@ export function ZappChatView({
         isMetaChannel={isMetaChannel}
         onOpenTemplates={onOpenTemplates}
       />
+      )}
+
 
       {/* Media Gallery */}
       <ZappMediaGallery

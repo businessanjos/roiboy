@@ -70,6 +70,7 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles";
 import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
@@ -267,6 +268,21 @@ export default function RoyZapp() {
     if (!selectedSectorId) return null;
     return sectors.find(s => s.id === selectedSectorId);
   }, [selectedSectorId]);
+
+  // Papel efetivo do usuário DENTRO do WhatsApp deste setor (admin/manager/member/viewer)
+  const zappRole = useMemo(
+    () =>
+      resolveZappSectorRole({
+        isAccountAdmin: isAdmin || currentUser?.is_also_admin === true,
+        isManagement: isManagementUser(currentUser),
+        sectorId: selectedSectorId,
+        sectorAccess,
+      }),
+    [isAdmin, currentUser, selectedSectorId, sectorAccess]
+  );
+  const zappCaps = useMemo(() => zappRoleCapabilities(zappRole), [zappRole]);
+
+
 
   // Get the department for the current sector (for creating new assignments)
   // CRITICAL FIX: Must match by sector_id to prevent cross-sector leakage
@@ -1065,8 +1081,8 @@ export default function RoyZapp() {
       const skipTabFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
       
       // Checar se o usuário tem visibilidade total (Admin, Gestor, Gerente, Head, Diretor, C-level, Sócio)
-      const isManager = isManagementUser(currentUser);
-      const hasFullVisibility = isAdmin || isManager;
+      // Admin/Gestor do setor enxergam as conversas de todos; Membro/Viewer só as suas
+      const hasFullVisibility = zappCaps.canSeeAllSectorConversations;
       
       // Conversations with no agent should ALWAYS show in queue, regardless of status
       // This catches orphaned "waiting" conversations with no agent assigned
@@ -1107,7 +1123,7 @@ export default function RoyZapp() {
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
-  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, currentUser?.team_role_name]);
+  }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, filterArchived, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, zappCaps.canSeeAllSectorConversations]);
 
   // Tag counts (over all visible assignments, ignoring current tag filter)
   const tagCounts = useMemo(() => {
@@ -1127,8 +1143,7 @@ export default function RoyZapp() {
   // Memoized stats to avoid recalculating on every render
   // Admin/Gestor veem todas as conversas; atendentes comuns só veem as suas
   const stats = useMemo(() => {
-    const isManager = isManagementUser(currentUser);
-    const hasFullVisibility = isAdmin || isManager;
+    const hasFullVisibility = zappCaps.canSeeAllSectorConversations;
     
     const onlineAgents = agents.filter((a) => a.is_online && a.is_active).length;
     
@@ -1172,7 +1187,7 @@ export default function RoyZapp() {
     ).length;
     
     return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
-  }, [agents, assignments, currentAgent?.id, isAdmin, currentUser?.team_role_name]);
+  }, [agents, assignments, currentAgent?.id, zappCaps.canSeeAllSectorConversations]);
   
   const { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount } = stats;
 
@@ -1525,10 +1540,34 @@ export default function RoyZapp() {
              setEditingClientId(id);
              setClientEditSheetOpen(true);
            }}
-           onAssignToMe={convActions.assignToMe}
-           onReleaseToQueue={convActions.releaseToQueue}
-           onUpdateStatus={convActions.updateConversationStatus}
-           onOpenTransfer={() => setTransferDialogOpen(true)}
+            onAssignToMe={(id) => {
+              if (!zappCaps.canClaim) {
+                toast.error("Seu papel neste WhatsApp não permite assumir conversas.");
+                return;
+              }
+              convActions.assignToMe(id);
+            }}
+            onReleaseToQueue={(id) => {
+              if (!zappCaps.canClaim) {
+                toast.error("Seu papel neste WhatsApp não permite devolver conversas.");
+                return;
+              }
+              convActions.releaseToQueue(id);
+            }}
+            onUpdateStatus={(id, status) => {
+              if (!zappCaps.canClaim) {
+                toast.error("Seu papel neste WhatsApp não permite alterar o status.");
+                return;
+              }
+              convActions.updateConversationStatus(id, status);
+            }}
+            onOpenTransfer={() => {
+              if (!zappCaps.canTransfer) {
+                toast.error("Apenas Admin e Gestor do setor podem transferir conversas.");
+                return;
+              }
+              setTransferDialogOpen(true);
+            }}
            onOpenRoiDialog={() => {}}
            onOpenRiskDialog={() => {}}
            onOpenAddClient={contactOps.openAddContactDialog}
@@ -1548,7 +1587,13 @@ export default function RoyZapp() {
            accountId={currentUser?.account_id}
            showLeadOption={hasVendasAccess}
            onMessageChange={messaging.setMessageInput}
-           onSendMessage={messaging.sendMessage}
+            onSendMessage={() => {
+              if (!zappCaps.canReply) {
+                toast.error("Seu acesso a este WhatsApp é somente leitura.");
+                return;
+              }
+              messaging.sendMessage();
+            }}
            onKeyPress={messaging.handleKeyPress}
            onToggleFormatting={() => messaging.setShowFormatting(!messaging.showFormatting)}
            onInsertFormatting={messaging.insertFormatting}
@@ -1595,7 +1640,10 @@ export default function RoyZapp() {
              const intId = selectedConversation?.zapp_conversation?.integration_id || selectedIntegrationId;
              return intId ? integrationProviders[intId] === "meta_official" : false;
            })()}
-           onOpenTemplates={() => setTemplatesDialogOpen(true)}
+            onOpenTemplates={() => setTemplatesDialogOpen(true)}
+            canTransfer={zappCaps.canTransfer}
+            canReply={zappCaps.canReply}
+            canClaim={zappCaps.canClaim}
         />
         )}
       </div>

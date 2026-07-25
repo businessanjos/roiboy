@@ -63,6 +63,10 @@ interface ZappChatHeaderProps {
   onCall?: () => void;
   onToggleSearch?: () => void;
   onOpenMediaGallery?: () => void;
+  /** Papel do usuário permite transferir conversas (Admin/Gestor). */
+  canTransfer?: boolean;
+  /** Papel do usuário permite assumir/devolver/alterar status (não-Viewer). */
+  canClaim?: boolean;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
@@ -91,6 +95,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onCall,
   onToggleSearch,
   onOpenMediaGallery,
+  canTransfer = true,
+  canClaim = true,
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
@@ -183,7 +189,11 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         <div className="flex items-center gap-1 sm:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
-          {assignment.agent_id !== currentAgentId ? (
+          {!canClaim ? (
+            <Badge variant="outline" className="border-zapp-border text-zapp-text-muted text-[10px]">
+              Somente leitura
+            </Badge>
+          ) : assignment.agent_id !== currentAgentId ? (
             <Button
               size="sm"
               className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-7 sm:h-8 px-2 sm:px-3"
@@ -203,6 +213,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <span className="hidden sm:inline">Devolver</span>
             </Button>
           )}
+
           
           {/* Status dropdown - more compact on mobile */}
           <DropdownMenu>
@@ -270,14 +281,18 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             >
               <Search className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
-              onClick={onOpenTransfer}
-            >
-              <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-            </Button>
+            {canTransfer && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                onClick={onOpenTransfer}
+                title="Transferir conversa"
+              >
+                <ArrowRightLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            )}
+
             <Button 
               variant="ghost" 
               size="icon" 
@@ -302,13 +317,16 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     <Search className="h-4 w-4 mr-2" />
                     Buscar na conversa
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-zapp-text hover:bg-zapp-hover"
-                    onClick={onOpenTransfer}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Transferir
-                  </DropdownMenuItem>
+                  {canTransfer && (
+                    <DropdownMenuItem
+                      className="text-zapp-text hover:bg-zapp-hover"
+                      onClick={onOpenTransfer}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      Transferir
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall}>
                     <Phone className="h-4 w-4 mr-2" />
                     Ligar
