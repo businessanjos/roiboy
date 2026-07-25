@@ -224,6 +224,7 @@ export default function SalesPipeline() {
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
   const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string[]>("salesPipeline", "wonProductFilterMulti", []);
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
+  const [lostCreatedMonthFilter, setLostCreatedMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostCreatedMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "lostSellerFilterMulti", []);
   const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string[]>("salesPipeline", "lostProductFilterMulti", []);
@@ -1304,6 +1305,21 @@ export default function SalesPipeline() {
       .sort((a, b) => b[0].localeCompare(a[0]));
   }, [lostDeals]);
 
+  // Available creation months for lost deals filter
+  const availableLostCreatedMonths = useMemo(() => {
+    const monthsSet = new Map<string, string>();
+    lostDeals.forEach(deal => {
+      if (deal.created_at) {
+        const date = new Date(deal.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        const label = format(date, "MMMM 'de' yyyy", { locale: ptBR });
+        monthsSet.set(key, label.charAt(0).toUpperCase() + label.slice(1));
+      }
+    });
+    return Array.from(monthsSet.entries())
+      .sort((a, b) => b[0].localeCompare(a[0]));
+  }, [lostDeals]);
+
   // Use structured loss reasons from hook
   const { reasons: lossReasons } = useLossReasons();
 
@@ -1348,6 +1364,14 @@ export default function SalesPipeline() {
         return key === lostMonthFilter;
       });
     }
+    if (lostCreatedMonthFilter !== 'all') {
+      result = result.filter(deal => {
+        if (!deal.created_at) return false;
+        const date = new Date(deal.created_at);
+        const key = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+        return key === lostCreatedMonthFilter;
+      });
+    }
     if (lostReasonFilter !== 'all') {
       result = result.filter(deal => {
         if (deal.loss_reason_id === lostReasonFilter) return true;
@@ -1373,7 +1397,27 @@ export default function SalesPipeline() {
       });
     }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+
+  // Cohort breakdown: created in the same month it was lost vs. carried over from previous months
+  const lostCohortStats = useMemo(() => {
+    const monthKey = (value?: string | null) => {
+      if (!value) return null;
+      const d = new Date(value);
+      return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    };
+    let sameMonth = 0;
+    let carriedOver = 0;
+    let unknown = 0;
+    filteredLostDealsByMonth.forEach(deal => {
+      const created = monthKey(deal.created_at);
+      const lost = monthKey(deal.lost_at);
+      if (!created || !lost) { unknown++; return; }
+      if (created === lost) sameMonth++;
+      else carriedOver++;
+    });
+    return { sameMonth, carriedOver, unknown, total: filteredLostDealsByMonth.length };
+  }, [filteredLostDealsByMonth]);
 
   const filteredLostTotal = useMemo(() => {
     return filteredLostDealsByMonth.reduce((sum, deal) => sum + (deal.value || 0), 0);
@@ -2540,18 +2584,31 @@ export default function SalesPipeline() {
 
                 {activeTab === 'lost' && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                    <Select value={lostCreatedMonthFilter} onValueChange={setLostCreatedMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[190px] h-8 text-xs bg-background">
                         <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os meses" />
+                        <SelectValue placeholder="Criado em: todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos os meses</SelectItem>
-                        {availableLostMonths.map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        <SelectItem value="all">Criado em: todos os meses</SelectItem>
+                        {availableLostCreatedMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>Criado em: {label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[190px] h-8 text-xs bg-background">
+                        <XCircle className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Perdido em: todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Perdido em: todos os meses</SelectItem>
+                        {availableLostMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>Perdido em: {label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
                     <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
                         <XCircle className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
@@ -2580,8 +2637,35 @@ export default function SalesPipeline() {
                       selected={lostProductFilter}
                       onChange={setLostProductFilter}
                     />
+                    {(lostCreatedMonthFilter !== 'all' || lostMonthFilter !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground"
+                        onClick={() => { setLostCreatedMonthFilter('all'); setLostMonthFilter('all'); }}
+                      >
+                        Limpar meses
+                      </Button>
+                    )}
+                    <div className="w-full flex flex-wrap items-center gap-2 text-xs">
+                      <Badge variant="secondary" className="font-normal">
+                        Total: <span className="font-semibold ml-1">{lostCohortStats.total}</span>
+                      </Badge>
+                      <Badge variant="secondary" className="font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                        Criados e perdidos no mesmo mês: <span className="font-semibold ml-1">{lostCohortStats.sameMonth}</span>
+                      </Badge>
+                      <Badge variant="secondary" className="font-normal bg-sky-500/15 text-sky-700 dark:text-sky-400">
+                        Criados em meses anteriores: <span className="font-semibold ml-1">{lostCohortStats.carriedOver}</span>
+                      </Badge>
+                      {lostCohortStats.unknown > 0 && (
+                        <Badge variant="outline" className="font-normal">
+                          Sem data: <span className="font-semibold ml-1">{lostCohortStats.unknown}</span>
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 )}
+
               </div>
 
               {/* Summary metrics - compact inline */}
