@@ -19,6 +19,8 @@ interface ZappSidebarNavProps {
   sectorId?: string | null;
   userRole?: string | null;
   isAdmin?: boolean;
+  /** Views liberadas pelo admin. Quando ausente, mostra todas. */
+  allowedViews?: string[];
 }
 
 export const ZappSidebarNav = memo(function ZappSidebarNav({
