@@ -67,6 +67,8 @@ import {
   MessageCircle,
   ChevronLeft,
   ChevronRight,
+  Download,
+
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
