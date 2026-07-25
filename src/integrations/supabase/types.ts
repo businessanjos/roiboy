@@ -11499,6 +11499,71 @@ export type Database = {
           },
         ]
       }
+      hr_company_benefits: {
+        Row: {
+          account_id: string
+          category: string
+          contract_types: string[]
+          created_at: string
+          description: string | null
+          employee_contribution: number | null
+          id: string
+          include_in_jobs_by_default: boolean
+          is_active: boolean
+          is_highlight: boolean
+          monthly_value: number | null
+          name: string
+          provider: string | null
+          sort_order: number
+          updated_at: string
+          use_in_benchmark: boolean
+        }
+        Insert: {
+          account_id: string
+          category?: string
+          contract_types?: string[]
+          created_at?: string
+          description?: string | null
+          employee_contribution?: number | null
+          id?: string
+          include_in_jobs_by_default?: boolean
+          is_active?: boolean
+          is_highlight?: boolean
+          monthly_value?: number | null
+          name: string
+          provider?: string | null
+          sort_order?: number
+          updated_at?: string
+          use_in_benchmark?: boolean
+        }
+        Update: {
+          account_id?: string
+          category?: string
+          contract_types?: string[]
+          created_at?: string
+          description?: string | null
+          employee_contribution?: number | null
+          id?: string
+          include_in_jobs_by_default?: boolean
+          is_active?: boolean
+          is_highlight?: boolean
+          monthly_value?: number | null
+          name?: string
+          provider?: string | null
+          sort_order?: number
+          updated_at?: string
+          use_in_benchmark?: boolean
+        }
+        Relationships: [
+          {
+            foreignKeyName: "hr_company_benefits_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       hr_departments: {
         Row: {
           account_id: string

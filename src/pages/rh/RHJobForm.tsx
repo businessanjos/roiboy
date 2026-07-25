@@ -224,7 +224,7 @@ export default function RHJobForm() {
     switch (currentStep) {
       case 1: return <JobStepBasicInfo form={form} />;
       case 2: return <JobStepRequirements form={form} />;
-      case 3: return <JobStepCompensation form={form} />;
+      case 3: return <JobStepCompensation form={form} isEditing={isEditing} />;
       case 4: return <JobStepDescription form={form} />;
       case 5: return <JobStepProcess form={form} jobId={jobId} />;
       case 6: return <JobStepReview form={form} />;

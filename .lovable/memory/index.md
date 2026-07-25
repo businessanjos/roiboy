@@ -119,6 +119,7 @@
 - [Job Offers (Cartas-Proposta)](mem://features/rh/job-offers-pt) — Wizard /rh/offers + link público iamroy.app/oferta/:token com aceite/recusa
 - [No Em-Dashes Candidatura](mem://features/rh/no-em-dashes-pt) — Páginas públicas de candidatura nunca usam — ou –; renderer já remove
 - [Offboarding Suite](mem://features/rh/offboarding-suite-pt) — /rh/offboarding com rescisão CLT, checklist, corte de acesso e exit interview
+- [Company Benefits Catalog](mem://features/rh/company-benefits-catalog-pt) — /rh/benefits: catálogo oficial de benefícios, base das vagas e do benchmark
 
 ### UI, Forms & General Architecture
 - [Sidebar Navigation Pattern](mem://style/universal-sidebar-navigation-pattern-pt) — Vertical sub-navigation

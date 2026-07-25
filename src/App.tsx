@@ -178,6 +178,7 @@ const HRServiceProviderProfile = lazyRetry(() => import("./pages/rh/HRServicePro
 const HRPartners = lazyRetry(() => import("./pages/rh/HRPartners"));
 const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
 const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
+const RHBenefits = lazyRetry(() => import("./pages/rh/RHBenefits"));
 const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
 const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
 const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
@@ -411,6 +412,7 @@ const App = () => (
                             <Route path="/rh/org-chart" element={<OrgChart />} />
                             <Route path="/rh/departments" element={<RHDepartments />} />
                             <Route path="/rh/job-descriptions" element={<RHPositions />} />
+                            <Route path="/rh/benefits" element={<RHBenefits />} />
                             <Route path="/rh/vacancies" element={<RHVagas />} />
                             <Route path="/rh/vacancies/new" element={<RHJobForm />} />
                             <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
