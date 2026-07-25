@@ -268,22 +268,22 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <Avatar className="h-10 w-10">
+      <div className="bg-zapp-panel-header px-4 py-3 flex items-start justify-between gap-2">
+        <div className="flex items-start gap-3 min-w-0 flex-1">
+          <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
             <AvatarFallback className="bg-zapp-accent text-white text-sm">
               {currentUser ? getInitials(currentUser.name) : "?"}
             </AvatarFallback>
           </Avatar>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-zapp-text font-medium">ROY zAPP</h2>
+          <div className="min-w-0 flex-1">
+            <div className="flex items-center gap-2 min-w-0">
+              <h2 className="text-zapp-text font-medium whitespace-nowrap">ROY zAPP</h2>
               {sectorName && (
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1.5 min-w-0">
                   <Badge 
                     variant="outline" 
-                    className="text-[10px] px-1.5 py-0 h-4"
+                    className="text-[10px] px-1.5 py-0 h-4 truncate max-w-[120px]"
                     style={{ 
                       borderColor: sectorColor || '#6b7280',
                       color: sectorColor || '#6b7280'
@@ -298,20 +298,23 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 </div>
               )}
             </div>
-            <p className="text-xs text-zapp-text-muted">{activeConversations} em atendimento</p>
+            <div className="mt-1 flex items-center gap-2 min-w-0">
+              <p className="text-xs text-zapp-text-muted whitespace-nowrap">{activeConversations} em atendimento</p>
+              {/* Instance/line selector — lives under the title so it never collides with the header actions */}
+              {sectorId && onSelectIntegration && (
+                <ZappInstanceSwitcher
+                  accountId={accountId}
+                  sectorId={sectorId}
+                  selectedIntegrationId={selectedIntegrationId}
+                  onChange={onSelectIntegration}
+                  className="min-w-0 flex-1"
+                />
+              )}
+            </div>
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {/* Visible instance switcher (only renders if 2+ instances exist) */}
-          {sectorId && onSelectIntegration && (
-            <ZappInstanceSwitcher
-              accountId={accountId}
-              sectorId={sectorId}
-              selectedIntegrationId={selectedIntegrationId}
-              onChange={onSelectIntegration}
-              className="mr-1 hidden md:flex"
-            />
-          )}
+
           <Tooltip>
             <TooltipTrigger asChild>
               <Button 
