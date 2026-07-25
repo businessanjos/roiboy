@@ -302,9 +302,8 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {accountId && (
-            <RoyZappAccessMatrix accountId={accountId} onSelectUser={setSelectedUserId} />
-          )}
+
+
 
           <div className="flex flex-wrap items-center gap-3 justify-between">
 
@@ -553,6 +552,15 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                       isAccountAdmin={user.role === "admin"}
                     />
                   </div>
+
+                  {/* Matriz de acesso Pipeline x WhatsApp */}
+                  {accountId && (
+                    <div className="mt-4 pt-4 border-t">
+                      <RoyZappAccessMatrix accountId={accountId} onSelectUser={setSelectedUserId} />
+                    </div>
+                  )}
+
+
 
                   {/* Super-admin panel: role / email / password / active / multi-account */}
                   <div className="mt-4 pt-4 border-t">
