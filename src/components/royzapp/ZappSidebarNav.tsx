@@ -66,173 +66,57 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   const SectorIcon = getSectorIcon();
   // Show sector button for vendas/financeiro OR if user is mentor
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
-  
+
+  type NavView = ZappSidebarNavProps["activeView"];
+  const navItems: { view: NavView; icon: typeof MessageSquare; label: string }[] = [
+    { view: "inbox", icon: MessageSquare, label: "Conversas" },
+    { view: "team", icon: Users, label: "Equipe" },
+    { view: "settings", icon: Settings, label: "Configurações" },
+    ...(isAdmin ? [{ view: "whatsapp-admin" as NavView, icon: Plug, label: "Conexões WhatsApp" }] : []),
+    { view: "tags", icon: Tags, label: "Tags" },
+    { view: "playbook", icon: BookOpen, label: "Playbook" },
+    { view: "marketing", icon: Megaphone, label: "Eventos" },
+    ...(showSectorButton ? [{ view: "sector" as NavView, icon: SectorIcon, label: getSectorLabel() }] : []),
+    ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
+  ];
+
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
       {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
           em vez de quebrar ou desaparecer */}
       <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "inbox" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("inbox")}
-          >
-            <MessageSquare className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Conversas</TooltipContent>
-      </Tooltip>
+      {navItems.map(({ view, icon: Icon, label }) => {
+        const isActive = activeView === view;
+        return (
+          <Tooltip key={view}>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-current={isActive ? "page" : undefined}
+                aria-label={label}
+                className={cn(
+                  "relative shrink-0 rounded-full h-10 transition-all",
+                  isActive
+                    ? "w-auto px-3 gap-2 bg-zapp-accent/15 text-zapp-accent ring-1 ring-zapp-accent/40 shadow-[0_0_0_2px_hsl(var(--zapp-bg))] font-medium hover:bg-zapp-accent/20"
+                    : "w-10 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text"
+                )}
+                onClick={() => setActiveView(view)}
+              >
+                <Icon className="h-5 w-5 shrink-0" />
+                {isActive && (
+                  <>
+                    <span className="hidden md:inline text-xs whitespace-nowrap">{label}</span>
+                    <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-zapp-accent" />
+                  </>
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="bottom">{label}</TooltipContent>
+          </Tooltip>
+        );
+      })}
 
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "team" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("team")}
-          >
-            <Users className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Equipe</TooltipContent>
-      </Tooltip>
-
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "settings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("settings")}
-          >
-            <Settings className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Configurações</TooltipContent>
-      </Tooltip>
-
-      {isAdmin && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-full h-10 w-10",
-                activeView === "whatsapp-admin" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-              )}
-              onClick={() => setActiveView("whatsapp-admin")}
-            >
-              <Plug className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Conexões WhatsApp</TooltipContent>
-        </Tooltip>
-      )}
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "tags" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("tags")}
-          >
-            <Tags className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Tags</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "playbook" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("playbook")}
-          >
-            <BookOpen className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Playbook</TooltipContent>
-      </Tooltip>
-
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Button
-            variant="ghost"
-            size="icon"
-            className={cn(
-              "rounded-full h-10 w-10",
-              activeView === "marketing" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-            )}
-            onClick={() => setActiveView("marketing")}
-          >
-            <Megaphone className="h-5 w-5" />
-          </Button>
-        </TooltipTrigger>
-        <TooltipContent side="bottom">Eventos</TooltipContent>
-      </Tooltip>
-
-      {/* Sector-specific button (CRM, Operação, Financeiro) */}
-      {showSectorButton && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-full h-10 w-10",
-                activeView === "sector" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-              )}
-              onClick={() => setActiveView("sector")}
-            >
-              <SectorIcon className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">{getSectorLabel()}</TooltipContent>
-        </Tooltip>
-      )}
-
-      {/* Meetings button for vendas sector */}
-      {sectorId === "vendas" && (
-        <Tooltip>
-          <TooltipTrigger asChild>
-            <Button
-              variant="ghost"
-              size="icon"
-              className={cn(
-                "rounded-full h-10 w-10",
-                activeView === "meetings" ? "bg-zapp-panel text-zapp-accent" : "text-zapp-text-muted hover:bg-zapp-panel"
-              )}
-              onClick={() => setActiveView("meetings")}
-            >
-              <Video className="h-5 w-5" />
-            </Button>
-          </TooltipTrigger>
-          <TooltipContent side="bottom">Reuniões</TooltipContent>
-        </Tooltip>
-      )}
 
       <div className="flex items-center bg-zapp-input rounded-full p-0.5">
         <Tooltip>
