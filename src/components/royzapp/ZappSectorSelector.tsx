@@ -304,11 +304,12 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     fetchSectorStatuses();
   }, [currentUser?.account_id, currentUser?.auth_user_id]);
 
-  // Filtrar setores que o usuário tem acesso
+  // Filtrar setores liberados no ROY zAPP (controle independente do acesso ao setor)
   const accessibleSectors = WHATSAPP_SECTOR_IDS.filter(sectorId => {
     if (isAdmin) return true;
-    return hasSectorAccess(sectorId);
+    return canOpenZappSector(sectorId, hasSectorAccess(sectorId));
   });
+
 
   // Obter informações do setor
   const getSectorInfo = (sectorId: SectorId) => {
