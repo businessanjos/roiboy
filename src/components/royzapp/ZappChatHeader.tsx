@@ -63,6 +63,10 @@ interface ZappChatHeaderProps {
   onCall?: () => void;
   onToggleSearch?: () => void;
   onOpenMediaGallery?: () => void;
+  /** Papel do usuário permite transferir conversas (Admin/Gestor). */
+  canTransfer?: boolean;
+  /** Papel do usuário permite assumir/devolver/alterar status (não-Viewer). */
+  canClaim?: boolean;
 }
 
 export const ZappChatHeader = memo(function ZappChatHeader({
