@@ -115,10 +115,12 @@ export function UserManagementPanel({
     onError: (e: any) => toast.error(e.message),
   });
   const unlinkMut = useMutation({
-    mutationFn: (rowId: string) => call({ action: "unlink_account", user_row_id: rowId }),
-    onSuccess: () => { toast.success("Vínculo removido."); refreshAll(); },
+    mutationFn: ({ rowId, deleteUser }: { rowId: string; deleteUser?: boolean }) =>
+      call({ action: "unlink_account", user_row_id: rowId, delete_user: deleteUser }),
+    onSuccess: (res: any) => { toast.success(res?.message || "Vínculo removido."); refreshAll(); },
     onError: (e: any) => toast.error(e.message),
   });
+
 
   if (!authUserId) {
     return (
