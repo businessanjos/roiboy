@@ -37,6 +37,7 @@ import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappChannelPills } from "./ZappChannelPills";
 import { UazapiServerHealthBanner } from "./UazapiServerHealthBanner";
+import { ZappDisconnectedQrBanner } from "./ZappDisconnectedQrBanner";
 import { ZappTeamList } from "./ZappTeamList";
 import { ZappAuditLogPanel } from "./ZappAuditLogPanel";
 
