@@ -411,7 +411,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
     }
   };
 
-  if (permissionsLoading || accessLoading || loading) {
+  if (permissionsLoading || accessLoading || zappAccessLoading || loading) {
     return (
       <div className="flex items-center justify-center h-full">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
