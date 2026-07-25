@@ -289,6 +289,16 @@ export default function RoyZapp() {
     if (!allowedViews.includes(activeView)) setActiveView("inbox");
   }, [activeView, allowedViews]);
 
+  // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
+  useEffect(() => {
+    if (canChooseSector || selectedSectorId || sectorAccessLoading) return;
+    const whatsappSectors: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
+    const target = sectorAccess
+      .map((a) => a.sector_id as SectorId)
+      .find((id) => whatsappSectors.includes(id));
+    if (target) setSelectedSectorId(target);
+  }, [canChooseSector, selectedSectorId, sectorAccessLoading, sectorAccess]);
+
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
       setActiveView(viewFromUrl as ZappView);
@@ -1254,10 +1264,8 @@ export default function RoyZapp() {
     .map((a) => a.sector_id as SectorId)
     .filter((id) => (["operacoes", "financeiro", "vendas", "marketing"] as SectorId[]).includes(id));
 
-  if (!selectedSectorId && !canChooseSector && !sectorAccessLoading) {
-    if (autoSectors.length > 0) {
-      const target = autoSectors[0];
-      setSelectedSectorId(target);
+  if (!selectedSectorId && !canChooseSector) {
+    if (sectorAccessLoading || autoSectors.length > 0) {
       return (
         <div className="flex items-center justify-center h-full bg-zapp-bg">
           <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />
