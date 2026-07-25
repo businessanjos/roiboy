@@ -566,7 +566,21 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
       </div>
 
+      {/* Barra de navegação horizontal do RoyZapp — sempre visível, independente da view ativa */}
+      <ZappSidebarNav
+        activeView={activeView}
+        setActiveView={setActiveView}
+        filterConversationType={filterConversationType}
+        setFilterConversationType={setFilterConversationType}
+        onlineAgents={onlineAgents}
+        totalQueueConversations={totalQueueConversations}
+        sectorId={sectorId}
+        userRole={currentUser?.role}
+        isAdmin={isAdmin}
+      />
+
       {/* Tabs: Minhas | Fila */}
+
       <div className="flex border-b border-zapp-border bg-zapp-bg">
         <button
           onClick={() => {
@@ -652,18 +666,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* Faixa de chips de etiquetas removida — filtro continua disponível pelo seletor de etiquetas */}
 
-      {/* Barra de navegação horizontal do RoyZapp (Conversas / Equipe / Configurações / etc.) */}
-      <ZappSidebarNav
-        activeView={activeView}
-        setActiveView={setActiveView}
-        filterConversationType={filterConversationType}
-        setFilterConversationType={setFilterConversationType}
-        onlineAgents={onlineAgents}
-        totalQueueConversations={totalQueueConversations}
-        sectorId={sectorId}
-        userRole={currentUser?.role}
-        isAdmin={isAdmin}
-      />
+
 
       {/* Channel pills (UAZAPI vs Meta) — appears when sector has 2+ instances */}
       {activeView === "inbox" && sectorId && onSelectIntegration && (
