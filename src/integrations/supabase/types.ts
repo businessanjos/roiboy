@@ -26226,6 +26226,27 @@ export type Database = {
         }
         Returns: Json
       }
+      zapp_assignment_sector: {
+        Args: { _assignment_id: string }
+        Returns: string
+      }
+      zapp_can_transfer_any: {
+        Args: { _auth_user_id: string }
+        Returns: boolean
+      }
+      zapp_can_transfer_sector: {
+        Args: { _auth_user_id: string; _sector_id: string }
+        Returns: boolean
+      }
+      zapp_can_write_any: { Args: { _auth_user_id: string }; Returns: boolean }
+      zapp_can_write_sector: {
+        Args: { _auth_user_id: string; _sector_id: string }
+        Returns: boolean
+      }
+      zapp_sector_role: {
+        Args: { _auth_user_id: string; _sector_id: string }
+        Returns: string
+      }
     }
     Enums: {
       billing_period:
