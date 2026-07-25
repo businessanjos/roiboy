@@ -70,6 +70,8 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { canPickSector } from "@/lib/royZappAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -84,7 +86,9 @@ import { ZAPP_VIEW_SET as ZAPP_VIEWS, type ZappView } from "@/lib/royZappRoutes"
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
-  const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
+  const { hasVendasAccess, hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const { allowedViews, canSeeView } = useRoyZappViewAccess();
+  const canChooseSector = canPickSector(currentUser?.email);
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -279,6 +283,11 @@ export default function RoyZapp() {
     }
     return "inbox";
   });
+
+  // Gate: se o admin não liberou a tela atual, volta para Conversas.
+  useEffect(() => {
+    if (!canSeeView(activeView)) setActiveView("inbox");
+  }, [activeView, canSeeView]);
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
