@@ -405,7 +405,7 @@ export function useZappCrudOperations({
     } finally {
       setSavingConversationTags(false);
     }
-  }, [taggingAssignmentId, accountId, selectedConversationTags]);
+  }, [taggingAssignmentId, accountId, selectedConversationTags, canEditTags]);
 
   return {
     // Department
