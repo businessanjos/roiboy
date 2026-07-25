@@ -70,6 +70,8 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { canPickSector } from "@/lib/royZappAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -84,7 +86,9 @@ import { ZAPP_VIEW_SET as ZAPP_VIEWS, type ZappView } from "@/lib/royZappRoutes"
 export default function RoyZapp() {
   const { currentUser } = useCurrentUser();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
-  const { hasVendasAccess, hasSectorAccess } = useSectorAccess();
+  const { hasVendasAccess, hasSectorAccess, sectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
+  const { allowedViews, canSeeView } = useRoyZappViewAccess();
+  const canChooseSector = canPickSector(currentUser?.email);
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -279,6 +283,21 @@ export default function RoyZapp() {
     }
     return "inbox";
   });
+
+  // Gate: se o admin não liberou a tela atual, volta para Conversas.
+  useEffect(() => {
+    if (!allowedViews.includes(activeView)) setActiveView("inbox");
+  }, [activeView, allowedViews]);
+
+  // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
+  useEffect(() => {
+    if (canChooseSector || selectedSectorId || sectorAccessLoading) return;
+    const whatsappSectors: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
+    const target = sectorAccess
+      .map((a) => a.sector_id as SectorId)
+      .find((id) => whatsappSectors.includes(id));
+    if (target) setSelectedSectorId(target);
+  }, [canChooseSector, selectedSectorId, sectorAccessLoading, sectorAccess]);
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
@@ -1239,6 +1258,49 @@ export default function RoyZapp() {
     );
   }
 
+  // Entrada direta no setor: apenas Maikol e Everton veem o seletor de setores.
+  // Todos os outros entram no único setor liberado pelo admin.
+  const autoSectors = sectorAccess
+    .map((a) => a.sector_id as SectorId)
+    .filter((id) => (["operacoes", "financeiro", "vendas", "marketing"] as SectorId[]).includes(id));
+
+  if (!selectedSectorId && !canChooseSector) {
+    if (sectorAccessLoading || autoSectors.length > 0) {
+      return (
+        <div className="flex items-center justify-center h-full bg-zapp-bg">
+          <Loader2 className="h-6 w-6 animate-spin text-zapp-accent" />
+        </div>
+      );
+    }
+    return (
+      <div className="flex items-center justify-center h-full bg-zapp-bg">
+        <div className="text-center space-y-4 max-w-md px-4">
+          <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
+            <Building2 className="h-10 w-10 text-amber-500" />
+          </div>
+          <h2 className="text-zapp-text text-xl font-semibold">Nenhum setor liberado</h2>
+          <p className="text-zapp-text-muted">
+            Você ainda não tem um setor de atendimento liberado no ROY zAPP. Peça a um administrador para conceder acesso.
+          </p>
+          <div className="flex flex-col sm:flex-row gap-2 justify-center">
+            <Button variant="default" onClick={reloadPermissions} disabled={reloadingPermissions}>
+              <RefreshCw className={cn("h-4 w-4 mr-2", reloadingPermissions && "animate-spin")} />
+              {reloadingPermissions ? "Recarregando…" : "Recarregar permissões"}
+            </Button>
+            <Button
+              variant="outline"
+              onClick={() => navigate("/dashboard")}
+              className="border-zapp-border text-zapp-text hover:bg-zapp-hover"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Voltar ao Dashboard
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (!selectedSectorId && activeView === "whatsapp-admin" && isAdmin) {
     return <ZappWhatsAppAdminPanel />;
   }
@@ -1267,6 +1329,7 @@ export default function RoyZapp() {
         <ZappConversationPanel
           currentUser={currentUser}
           isAdmin={isAdmin || hasGlobalVisibility}
+          allowedViews={allowedViews}
           activeView={activeView}
           setActiveView={setActiveView}
           inboxTab={inboxTab}

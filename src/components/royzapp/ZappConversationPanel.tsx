@@ -163,6 +163,7 @@ interface ZappConversationPanelProps {
   selectedIntegrationId?: string;
   onSelectIntegration?: (integrationId: string) => void;
   onClearIntegration?: () => void;
+  allowedViews?: string[];
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -256,6 +257,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   selectedIntegrationId,
   onSelectIntegration,
   onClearIntegration,
+  allowedViews,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
@@ -577,6 +579,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         sectorId={sectorId}
         userRole={currentUser?.role}
         isAdmin={isAdmin}
+        allowedViews={allowedViews}
       />
 
       {/* Tabs: Minhas | Fila */}

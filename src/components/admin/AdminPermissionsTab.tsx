@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label";
 import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck, ChevronLeft, ChevronRight } from "lucide-react";
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
+import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessManager";
 import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
@@ -523,6 +524,16 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                         </div>
                       );
                     })}
+                  </div>
+
+                  {/* Telas liberadas no ROY zAPP */}
+                  <div className="mt-4 pt-4 border-t">
+                    <RoyZappViewAccessManager
+                      userId={user.id}
+                      accountId={accountId}
+                      email={user.email}
+                      isAccountAdmin={user.role === "admin"}
+                    />
                   </div>
 
                   {/* Super-admin panel: role / email / password / active / multi-account */}
