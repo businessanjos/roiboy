@@ -852,9 +852,16 @@ Deno.serve(async (req) => {
     // Ações que requerem token
     const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number"];
     if (tokenRequiredActions.includes(action) && !token) {
-      console.error(`[uazapi-manager] Token required but missing for action: ${action}`);
-      return new Response(JSON.stringify({ error: "WhatsApp não configurado para este setor." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      console.error(`[uazapi-manager] Token required but missing for action: ${action} (integration: ${intData?.id || "n/a"}, instance: ${intData?.config?.instance_name || "n/a"})`);
+      return new Response(
+        JSON.stringify({
+          error:
+            "Este canal de WhatsApp não está vinculado a uma linha ativa. Abra Configurações > Conexões do ROY zAPP, conecte (ou vincule) a instância deste setor e leia o QR Code novamente.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+      );
     }
+
 
     // ========== ROLE GUARD (Viewer = somente leitura) ==========
     // Bloqueia qualquer envio/alteração de instância se o papel do usuário no
