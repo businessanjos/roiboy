@@ -8,6 +8,8 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
+import { ZappRoleHelpPopover } from "./ZappRoleHelpPopover";
+import type { ZappSectorRole } from "@/lib/royZappRoles";
 
 interface ZappSidebarNavProps {
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
@@ -21,6 +23,8 @@ interface ZappSidebarNavProps {
   isAdmin?: boolean;
   /** Views liberadas pelo admin. Quando ausente, mostra todas. */
   allowedViews?: string[];
+  /** Papel do usuário no WhatsApp deste setor (para a ajuda de papéis). */
+  zappRole?: ZappSectorRole | null;
 }
 
 export const ZappSidebarNav = memo(function ZappSidebarNav({
@@ -34,6 +38,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   userRole,
   isAdmin,
   allowedViews,
+  zappRole,
 }: ZappSidebarNavProps) {
   // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
@@ -187,6 +192,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
 
       {/* Status indicators — compactos em telas pequenas */}
       <div className="flex items-center gap-2 pl-1 text-xs shrink-0">
+        <ZappRoleHelpPopover currentRole={zappRole ?? undefined} />
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-zapp-accent" />
           <span className="text-zapp-text-muted whitespace-nowrap">
