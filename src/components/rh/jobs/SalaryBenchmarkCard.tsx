@@ -972,6 +972,9 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             )}
           </>
         )}
+
+        <Separator />
+        <JobBenchmarkRunLog jobId={jobId} refreshKey={logRefreshKey} />
       </CardContent>
     </Card>
   );
