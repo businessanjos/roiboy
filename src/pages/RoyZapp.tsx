@@ -269,6 +269,21 @@ export default function RoyZapp() {
     return sectors.find(s => s.id === selectedSectorId);
   }, [selectedSectorId]);
 
+  // Papel efetivo do usuário DENTRO do WhatsApp deste setor (admin/manager/member/viewer)
+  const zappRole = useMemo(
+    () =>
+      resolveZappSectorRole({
+        isAccountAdmin: isAdmin || currentUser?.is_also_admin === true,
+        isManagement: isManagementUser(currentUser),
+        sectorId: selectedSectorId,
+        sectorAccess,
+      }),
+    [isAdmin, currentUser, selectedSectorId, sectorAccess]
+  );
+  const zappCaps = useMemo(() => zappRoleCapabilities(zappRole), [zappRole]);
+
+
+
   // Get the department for the current sector (for creating new assignments)
   // CRITICAL FIX: Must match by sector_id to prevent cross-sector leakage
   const currentSectorDepartmentId = useMemo(() => {
