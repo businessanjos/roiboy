@@ -261,6 +261,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onSelectIntegration,
   onClearIntegration,
   allowedViews,
+  zappRole,
 }: ZappConversationPanelProps) {
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
