@@ -1,5 +1,5 @@
 import { RefObject, useCallback, useState, useMemo } from "react";
-import { MessageSquare, Clock } from "lucide-react";
+import { MessageSquare, Clock, Lock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
 import { ZappMessageInput, MentionData } from "./ZappMessageInput";
