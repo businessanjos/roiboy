@@ -291,13 +291,14 @@ export default function RoyZapp() {
 
   // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
   useEffect(() => {
-    if (canChooseSector || selectedSectorId || sectorAccessLoading) return;
-    const whatsappSectors: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
-    const target = sectorAccess
-      .map((a) => a.sector_id as SectorId)
-      .find((id) => whatsappSectors.includes(id));
+    if (canChooseSector || selectedSectorId || sectorAccessLoading || zappAccessLoading) return;
+    const generalSectors = new Set(sectorAccess.map((a) => a.sector_id));
+    const target = (ZAPP_WHATSAPP_SECTORS as readonly SectorId[]).find((id) =>
+      canOpenZappSector(id, generalSectors.has(id))
+    );
     if (target) setSelectedSectorId(target);
-  }, [canChooseSector, selectedSectorId, sectorAccessLoading, sectorAccess]);
+  }, [canChooseSector, selectedSectorId, sectorAccessLoading, zappAccessLoading, sectorAccess, canOpenZappSector]);
+
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
