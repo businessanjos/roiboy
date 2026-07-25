@@ -1174,7 +1174,9 @@ Deno.serve(async (req) => {
         logged_out: statusSnapshot.loggedOut === true,
         needs_reconnect: statusSnapshot.loggedOut === true,
         auto_reconnect: autoReconnect,
+        match_error: matchError,
       };
+
 
       if (intData?.id && (statusSnapshot.state !== "unknown" || tokenMissingForUazapi) && !statusSnapshot.loggedOut) {
         await supabase
