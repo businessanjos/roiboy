@@ -1542,28 +1542,28 @@ export default function RoyZapp() {
            }}
             onAssignToMe={(id) => {
               if (!zappCaps.canClaim) {
-                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite assumir conversas.", variant: "destructive" });
+                toast.error("Seu papel neste WhatsApp não permite assumir conversas.");
                 return;
               }
               convActions.assignToMe(id);
             }}
             onReleaseToQueue={(id) => {
               if (!zappCaps.canClaim) {
-                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite devolver conversas.", variant: "destructive" });
+                toast.error("Seu papel neste WhatsApp não permite devolver conversas.");
                 return;
               }
               convActions.releaseToQueue(id);
             }}
             onUpdateStatus={(id, status) => {
               if (!zappCaps.canClaim) {
-                toast({ title: "Acesso somente leitura", description: "Seu papel neste WhatsApp não permite alterar o status.", variant: "destructive" });
+                toast.error("Seu papel neste WhatsApp não permite alterar o status.");
                 return;
               }
               convActions.updateConversationStatus(id, status);
             }}
             onOpenTransfer={() => {
               if (!zappCaps.canTransfer) {
-                toast({ title: "Sem permissão para transferir", description: "Apenas Admin e Gestor do setor podem transferir conversas.", variant: "destructive" });
+                toast.error("Apenas Admin e Gestor do setor podem transferir conversas.");
                 return;
               }
               setTransferDialogOpen(true);
