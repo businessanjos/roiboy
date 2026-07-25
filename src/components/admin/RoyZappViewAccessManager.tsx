@@ -88,15 +88,21 @@ export function RoyZappViewAccessManager({ userId, accountId, email, isAccountAd
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-2 flex-wrap">
-        <Label className="text-xs font-medium flex items-center gap-1.5">
-          <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
-          Telas do ROY zAPP
-        </Label>
+        <div>
+          <Label className="text-xs font-semibold flex items-center gap-1.5">
+            <MessageSquare className="h-3.5 w-3.5 text-muted-foreground" />
+            2. Telas dentro do ROY zAPP
+          </Label>
+          <p className="text-[11px] text-muted-foreground mt-0.5">
+            Vale para os setores liberados no passo 1 — não dá acesso a setor nenhum.
+          </p>
+        </div>
         <Button size="sm" variant="outline" onClick={save} disabled={saving || !dirty}>
           {saving ? <Loader2 className="h-3.5 w-3.5 animate-spin mr-1.5" /> : <Save className="h-3.5 w-3.5 mr-1.5" />}
           Salvar telas
         </Button>
       </div>
+
       {isLoading ? (
         <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
       ) : (
