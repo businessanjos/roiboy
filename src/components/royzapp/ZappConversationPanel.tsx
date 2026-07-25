@@ -38,6 +38,8 @@ import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
 import { ZappChannelPills } from "./ZappChannelPills";
 import { UazapiServerHealthBanner } from "./UazapiServerHealthBanner";
 import { ZappTeamList } from "./ZappTeamList";
+import { ZappAuditLogPanel } from "./ZappAuditLogPanel";
+
 import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
 import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
