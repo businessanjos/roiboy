@@ -172,6 +172,9 @@ export function ZappChatView({
   onOpenPlaybook,
   isMetaChannel,
   onOpenTemplates,
+  canTransfer = true,
+  canReply = true,
+  canClaim = true,
 }: ZappChatViewProps) {
   // Search state
   const [showSearch, setShowSearch] = useState(false);
