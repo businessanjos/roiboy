@@ -34,6 +34,8 @@ import { ConversationAssignment, ContactInfo, getInitials, STATUS_CONFIG } from 
 import { ZappClientSuggestionBanner } from "./ZappClientSuggestionBanner";
 import { ZappTimezoneBanner } from "./ZappTimezoneBanner";
 import { VipBadge } from "@/components/client/VipBadge";
+import { ZappConversationIdBadge } from "./ZappConversationIdBadge";
+
 
 interface ZappChatHeaderProps {
   assignment: ConversationAssignment;
