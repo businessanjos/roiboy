@@ -5,7 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, MessageSquare, Search, LayoutGrid, X } from "lucide-react";
+import { Check, Loader2, MessageSquare, Search, LayoutGrid, X, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
 import { cn } from "@/lib/utils";
 import {
   ZAPP_SECTOR_LABELS,
