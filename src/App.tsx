@@ -412,6 +412,7 @@ const App = () => (
                             <Route path="/rh/org-chart" element={<OrgChart />} />
                             <Route path="/rh/departments" element={<RHDepartments />} />
                             <Route path="/rh/job-descriptions" element={<RHPositions />} />
+                            <Route path="/rh/benefits" element={<RHBenefits />} />
                             <Route path="/rh/vacancies" element={<RHVagas />} />
                             <Route path="/rh/vacancies/new" element={<RHJobForm />} />
                             <Route path="/rh/vacancies/:id" element={<RHJobDetail />} />
