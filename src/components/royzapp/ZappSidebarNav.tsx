@@ -68,7 +68,10 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   const showSectorButton = sectorId && (["vendas", "financeiro"].includes(sectorId) || showCRMForMentor);
   
   return (
-    <div className="relative flex items-center gap-1 px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 overflow-x-auto overflow-y-visible sticky top-0 z-50 isolate shadow-sm backdrop-blur-none">
+    <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
+      {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
+          em vez de quebrar ou desaparecer */}
+      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       <Tooltip>
         <TooltipTrigger asChild>
           <Button
@@ -289,15 +292,16 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           <TooltipContent side="bottom">Grupos</TooltipContent>
         </Tooltip>
       </div>
+      </div>
 
-
-      <div className="flex-1" />
-
-      {/* Status indicators */}
-      <div className="flex items-center gap-3 px-2 text-xs">
+      {/* Status indicators — compactos em telas pequenas */}
+      <div className="flex items-center gap-2 pl-1 text-xs shrink-0">
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-zapp-accent" />
-          <span className="text-zapp-text-muted">{onlineAgents} online</span>
+          <span className="text-zapp-text-muted whitespace-nowrap">
+            {onlineAgents}
+            <span className="hidden lg:inline"> online</span>
+          </span>
         </div>
         {totalQueueConversations > 0 && (
           <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
@@ -305,6 +309,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </Badge>
         )}
       </div>
+
     </div>
   );
 });
