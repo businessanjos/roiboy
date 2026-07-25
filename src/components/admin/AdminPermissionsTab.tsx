@@ -525,6 +525,16 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                     })}
                   </div>
 
+                  {/* Telas liberadas no ROY zAPP */}
+                  <div className="mt-4 pt-4 border-t">
+                    <RoyZappViewAccessManager
+                      userId={user.id}
+                      accountId={accountId}
+                      email={user.email}
+                      isAccountAdmin={user.role === "admin"}
+                    />
+                  </div>
+
                   {/* Super-admin panel: role / email / password / active / multi-account */}
                   <div className="mt-4 pt-4 border-t">
                     <UserManagementPanel
