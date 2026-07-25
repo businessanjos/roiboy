@@ -302,32 +302,72 @@ function getInstanceUpdatedAt(instance: UazapiInstanceLike): number {
   return Number.isNaN(ts) ? 0 : ts;
 }
 
+type InstanceMatchFailure =
+  | "no_instances"
+  | "missing_instance_name"
+  | "instance_name_not_found"
+  | "token_mismatch";
+
+let lastInstanceMatchFailure: InstanceMatchFailure | undefined;
+
+function getLastInstanceMatchFailure(): InstanceMatchFailure | undefined {
+  return lastInstanceMatchFailure;
+}
+
 function selectBestInstanceMatch(
   instances: UazapiInstanceLike[],
   instanceName?: string,
   preferredToken?: string,
 ): UazapiInstanceLike | undefined {
-  if (instances.length === 0) return undefined;
+  lastInstanceMatchFailure = undefined;
 
-  const named = instanceName
-    ? instances.filter((instance) => getInstanceName(instance) === instanceName)
-    : instances;
+  if (instances.length === 0) {
+    lastInstanceMatchFailure = "no_instances";
+    return undefined;
+  }
 
-  // CRÍTICO: quando um instance_name é informado e NÃO existe no servidor,
-  // nunca cair para a lista completa — isso fazia um setor "herdar" o status
-  // e o número (owner) da instância de outro setor (ex.: CS exibindo o número
-  // do Comercial). Sem match por nome => sem status ao vivo.
-  if (instanceName && named.length === 0) return undefined;
+  // CRÍTICO: nunca cair para "qualquer instância da conta".
+  // Sem instance_name não há como garantir que a instância pertence ao setor,
+  // então só aceitamos correspondência explícita por token.
+  if (!instanceName) {
+    const tokenOnly = preferredToken
+      ? instances.find((instance) => getInstanceToken(instance) === preferredToken)
+      : undefined;
+    if (!tokenOnly) {
+      lastInstanceMatchFailure = preferredToken ? "token_mismatch" : "missing_instance_name";
+      console.warn(
+        "[uazapi-manager] ⛔ selectBestInstanceMatch sem instance_name e sem token correspondente — nenhuma instância será usada.",
+      );
+    }
+    return tokenOnly;
+  }
 
-  const pool = named;
+  const named = instances.filter((instance) => getInstanceName(instance) === instanceName);
+
+  // Sem match exato de nome => sem status ao vivo. Isso evita que um setor
+  // "herde" o status e o número (owner) da instância de outro setor
+  // (ex.: CS exibindo o número do Comercial).
+  if (named.length === 0) {
+    lastInstanceMatchFailure = "instance_name_not_found";
+    console.warn(
+      `[uazapi-manager] ⛔ Nenhuma instância com nome exato "${instanceName}" no servidor — sem fallback para outras instâncias.`,
+    );
+    return undefined;
+  }
+
   const tokenMatch = preferredToken
-    ? pool.find((instance) => getInstanceToken(instance) === preferredToken)
+    ? named.find((instance) => getInstanceToken(instance) === preferredToken)
     : undefined;
 
   if (tokenMatch) return tokenMatch;
 
+  if (preferredToken) {
+    console.warn(
+      `[uazapi-manager] ⚠️ Instância "${instanceName}" encontrada, mas o token armazenado não corresponde ao do servidor.`,
+    );
+  }
 
-  return [...pool].sort((a, b) => {
+  return [...named].sort((a, b) => {
     const aStatus = resolveStatusSnapshot(a);
     const bStatus = resolveStatusSnapshot(b);
 
@@ -340,6 +380,7 @@ function selectBestInstanceMatch(
     return bUpdated - aUpdated;
   })[0];
 }
+
 
 function resolveStatusSnapshot(payload: unknown): StatusSnapshot {
   const record = asRecord(payload);
@@ -1042,13 +1083,26 @@ Deno.serve(async (req) => {
         state: storedConnected ? "connected" : "unknown",
         connected: storedConnected,
       };
+      let matchError: string | undefined;
 
       try {
         const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
         const all = extractInstancesList(allRaw);
         const inst = selectBestInstanceMatch(all, instanceName, token);
+        if (!inst) {
+          const failure = getLastInstanceMatchFailure();
+          matchError =
+            failure === "missing_instance_name"
+              ? "Integração sem instance_name definido — não é possível identificar a instância do setor."
+              : failure === "instance_name_not_found"
+                ? `Instância "${instanceName}" não existe neste servidor UAZAPI.`
+                : failure === "token_mismatch"
+                  ? "O token armazenado não corresponde a nenhuma instância deste servidor."
+                  : "Nenhuma instância disponível neste servidor UAZAPI.";
+        }
 
         if (inst) {
+
           const liveSnapshot = resolveStatusSnapshot(inst);
           const liveToken = getInstanceToken(inst);
 
@@ -1120,7 +1174,9 @@ Deno.serve(async (req) => {
         logged_out: statusSnapshot.loggedOut === true,
         needs_reconnect: statusSnapshot.loggedOut === true,
         auto_reconnect: autoReconnect,
+        match_error: matchError,
       };
+
 
       if (intData?.id && (statusSnapshot.state !== "unknown" || tokenMissingForUazapi) && !statusSnapshot.loggedOut) {
         await supabase
