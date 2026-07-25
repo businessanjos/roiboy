@@ -7,6 +7,8 @@ import { SectorId, sectors } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { withRetry } from "@/lib/retryFetch";
