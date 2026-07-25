@@ -224,6 +224,7 @@ export default function SalesPipeline() {
   const [wonSellerFilter, setWonSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "wonSellerFilterMulti", []);
   const [wonProductFilter, setWonProductFilter] = usePersistedFilter<string[]>("salesPipeline", "wonProductFilterMulti", []);
   const [lostMonthFilter, setLostMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostMonthFilter", "all");
+  const [lostCreatedMonthFilter, setLostCreatedMonthFilter] = usePersistedFilter<string>("salesPipeline", "lostCreatedMonthFilter", "all");
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "lostSellerFilterMulti", []);
   const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string[]>("salesPipeline", "lostProductFilterMulti", []);
