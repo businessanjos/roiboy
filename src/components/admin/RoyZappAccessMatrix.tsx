@@ -1,16 +1,30 @@
 import { useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Check, Loader2, MessageSquare, Search, LayoutGrid, X, ChevronRight, ChevronUp, ChevronDown } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import {
+  AlertTriangle,
+  LayoutGrid,
+  Loader2,
+  MessageSquare,
+  Search,
+  ShieldCheck,
+  Users,
+} from "lucide-react";
+import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import {
+  DEFAULT_ZAPP_VIEWS,
   ZAPP_SECTOR_LABELS,
   ZAPP_WHATSAPP_SECTORS,
   canPickSector,
+  sanitizeViewList,
   sanitizeZappSectorList,
   type ZappWhatsAppSector,
 } from "@/lib/royZappAccess";
@@ -28,15 +42,18 @@ interface MatrixUser {
 }
 
 /**
- * Matriz de leitura rápida: por usuário, quais setores liberam o PIPELINE
- * (áreas do sistema) e quais WhatsApps aparecem dentro do ROY zAPP.
- * São controles independentes — a matriz existe para evitar confusão.
+ * Painel de acesso por SETOR (não mais uma matriz de leitura).
+ *
+ * Fluxo: escolha o setor (ex.: Vendas) → veja quem entra no pipeline e quem
+ * pode conversar/enviar mensagem pelo WhatsApp daquele setor → ajuste com um
+ * clique. O bloco de alertas mostra exatamente os casos problemáticos, como
+ * alguém de Customer Success com acesso ao WhatsApp do Comercial.
  */
 export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
+  const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-
-  const [onlyDivergent, setOnlyDivergent] = useState(false);
+  const [sector, setSector] = useState<ZappWhatsAppSector>("vendas");
+  const [savingKey, setSavingKey] = useState<string | null>(null);
 
   const { data, isLoading } = useQuery({
     queryKey: ["admin-access-matrix", accountId],
@@ -54,7 +71,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
           .eq("account_id", accountId),
         (supabase as any)
           .from("user_royzapp_views")
-          .select("user_id, zapp_sectors")
+          .select("user_id, views, zapp_sectors")
           .eq("account_id", accountId),
       ]);
       if (usersRes.error) throw usersRes.error;
@@ -71,124 +88,241 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
       });
 
       const zappMap = new Map<string, ZappWhatsAppSector[] | null>();
+      const viewsMap = new Map<string, string[]>();
       (zappRes.data || []).forEach((row: any) => {
         zappMap.set(
           row.user_id,
           row.zapp_sectors === null || row.zapp_sectors === undefined
             ? null
-            : sanitizeZappSectorList(row.zapp_sectors)
+            : sanitizeZappSectorList(row.zapp_sectors),
         );
+        viewsMap.set(row.user_id, sanitizeViewList(row.views));
       });
 
-      return { users, sectorMap, zappMap };
+      return { users, sectorMap, zappMap, viewsMap };
     },
   });
+
+  /** Estado efetivo de um usuário em um setor. */
+  const resolve = (user: MatrixUser, target: ZappWhatsAppSector) => {
+    const unrestricted = user.role === "admin" || canPickSector(user.email);
+    const pipelineSet = data?.sectorMap.get(user.id) ?? new Set<string>();
+    const override = data?.zappMap.get(user.id) ?? null;
+    const hasPipeline = unrestricted || pipelineSet.has(target);
+    const hasZapp = unrestricted ? true : override === null ? hasPipeline : override.includes(target);
+    return { unrestricted, hasPipeline, hasZapp, override, pipelineSet };
+  };
 
   const rows = useMemo(() => {
     if (!data) return [];
     const term = search.trim().toLowerCase();
     return data.users
       .filter(
-        (u) =>
-          !term ||
-          u.name?.toLowerCase().includes(term) ||
-          u.email?.toLowerCase().includes(term)
+        (u) => !term || u.name?.toLowerCase().includes(term) || u.email?.toLowerCase().includes(term),
       )
       .map((u) => {
-        const unrestricted = u.role === "admin" || canPickSector(u.email);
-        const pipeline = data.sectorMap.get(u.id) ?? new Set<string>();
-        const zappOverride = data.zappMap.get(u.id) ?? null;
-        const cells = ZAPP_WHATSAPP_SECTORS.map((sector) => {
-          const hasPipeline = unrestricted || pipeline.has(sector);
-          const hasZapp = unrestricted
-            ? true
-            : zappOverride === null
-              ? hasPipeline
-              : zappOverride.includes(sector);
-          return { sector, hasPipeline, hasZapp };
-        });
-        return {
-          user: u,
-          unrestricted,
-          inheriting: !unrestricted && zappOverride === null,
-          cells,
-          divergent: cells.some((c) => c.hasPipeline !== c.hasZapp),
-        };
+        const state = resolve(u, sector);
+        const homeSectors = ZAPP_WHATSAPP_SECTORS.filter((s) => state.pipelineSet.has(s));
+        return { user: u, ...state, homeSectors };
       })
-      .filter((r) => !onlyDivergent || r.divergent);
-  }, [data, search, onlyDivergent]);
+      .sort((a, b) => {
+        const score = (r: typeof a) => (r.hasZapp ? 0 : r.hasPipeline ? 1 : 2);
+        return score(a) - score(b) || (a.user.name || "").localeCompare(b.user.name || "");
+      });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, search, sector]);
+
+  /** Casos de risco: pode falar pelo WhatsApp do setor sem trabalhar nele. */
+  const risky = useMemo(
+    () => rows.filter((r) => !r.unrestricted && r.hasZapp && !r.hasPipeline),
+    [rows],
+  );
+
+  const withZapp = rows.filter((r) => r.hasZapp).length;
+  const withPipeline = rows.filter((r) => r.hasPipeline).length;
+
+  const materializeZapp = (user: MatrixUser) => {
+    const { override, pipelineSet } = resolve(user, sector);
+    return override ?? ZAPP_WHATSAPP_SECTORS.filter((s) => pipelineSet.has(s));
+  };
+
+  const saveZappSectors = async (user: MatrixUser, next: ZappWhatsAppSector[]) => {
+    const views = data?.viewsMap.get(user.id);
+    const { error } = await (supabase as any).from("user_royzapp_views").upsert(
+      {
+        account_id: accountId,
+        user_id: user.id,
+        views: views && views.length ? views : DEFAULT_ZAPP_VIEWS,
+        zapp_sectors: ZAPP_WHATSAPP_SECTORS.filter((s) => next.includes(s)),
+      },
+      { onConflict: "account_id,user_id" },
+    );
+    if (error) throw error;
+  };
+
+  const toggleZapp = async (user: MatrixUser, enable: boolean) => {
+    setSavingKey(`z-${user.id}`);
+    try {
+      const current = materializeZapp(user);
+      const next = enable
+        ? Array.from(new Set([...current, sector]))
+        : current.filter((s) => s !== sector);
+      await saveZappSectors(user, next as ZappWhatsAppSector[]);
+      toast.success(
+        `${enable ? "Liberado" : "Bloqueado"}: WhatsApp ${ZAPP_SECTOR_LABELS[sector]} — ${user.name}`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["admin-access-matrix", accountId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível salvar");
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const togglePipeline = async (user: MatrixUser, enable: boolean) => {
+    setSavingKey(`p-${user.id}`);
+    try {
+      const { error } = await supabase.from("user_sector_access").upsert(
+        {
+          account_id: accountId,
+          user_id: user.id,
+          sector_id: sector,
+          is_active: enable,
+        },
+        { onConflict: "account_id,user_id,sector_id" },
+      );
+      if (error) throw error;
+      toast.success(
+        `${enable ? "Liberado" : "Bloqueado"}: pipeline ${ZAPP_SECTOR_LABELS[sector]} — ${user.name}`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["admin-access-matrix", accountId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível salvar");
+    } finally {
+      setSavingKey(null);
+    }
+  };
+
+  const blockAllRisky = async () => {
+    setSavingKey("bulk");
+    try {
+      for (const row of risky) {
+        const current = materializeZapp(row.user);
+        await saveZappSectors(
+          row.user,
+          current.filter((s) => s !== sector) as ZappWhatsAppSector[],
+        );
+      }
+      toast.success(
+        `${risky.length} usuário(s) bloqueado(s) no WhatsApp de ${ZAPP_SECTOR_LABELS[sector]}`,
+      );
+      await queryClient.invalidateQueries({ queryKey: ["admin-access-matrix", accountId] });
+    } catch (e: any) {
+      toast.error(e?.message || "Não foi possível aplicar em lote");
+    } finally {
+      setSavingKey(null);
+    }
+  };
 
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-start justify-between gap-3 flex-wrap">
-          <button
-            type="button"
-            onClick={() => setIsOpen((v) => !v)}
-            className="flex items-start gap-2 text-left flex-1 min-w-[240px]"
-          >
-            <ChevronRight
-              className={cn(
-                "h-4 w-4 mt-0.5 text-muted-foreground transition-transform",
-                isOpen && "rotate-90",
-              )}
+        <CardTitle className="text-base flex items-center gap-2">
+          <LayoutGrid className="h-4 w-4 text-muted-foreground" />
+          Quem acessa cada setor e cada WhatsApp
+        </CardTitle>
+        <CardDescription className="text-xs">
+          Escolha o setor e ajuste na hora: <strong>Pipeline</strong> = áreas do sistema (negócios,
+          dashboards). <strong>WhatsApp</strong> = ver conversas e enviar mensagens pelo número daquele
+          setor no ROY zAPP.
+        </CardDescription>
+      </CardHeader>
+
+      <CardContent className="space-y-4">
+        {/* Seletor de setor */}
+        <div className="flex flex-wrap items-center gap-2">
+          {ZAPP_WHATSAPP_SECTORS.map((s) => (
+            <Button
+              key={s}
+              size="sm"
+              variant={sector === s ? "default" : "outline"}
+              className="h-8 text-xs"
+              onClick={() => setSector(s)}
+            >
+              {ZAPP_SECTOR_LABELS[s]}
+            </Button>
+          ))}
+          <div className="relative ml-auto">
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+            <Input
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              placeholder="Buscar pessoa"
+              className="h-8 pl-7 w-52 text-xs"
             />
-            <div>
-              <CardTitle className="text-base flex items-center gap-2">
-                <LayoutGrid className="h-4 w-4 text-muted-foreground" />
-                Matriz de acesso: Pipeline x WhatsApp (ROY zAPP)
-              </CardTitle>
-              <CardDescription className="text-xs">
-                São controles independentes. <strong>P</strong> = áreas do sistema (pipeline,
-                dashboards) do setor. <strong>Z</strong> = WhatsApp daquele setor dentro do ROY zAPP.
-              </CardDescription>
-            </div>
-          </button>
-          {isOpen ? (
-            <div className="flex items-center gap-2">
-              <div className="relative">
-                <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
-                <Input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Buscar usuário"
-                  className="h-8 pl-7 w-48 text-xs"
-                />
+          </div>
+        </div>
+
+        {/* Resumo */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <SummaryTile
+            icon={<Users className="h-3.5 w-3.5" />}
+            label={`Pipeline ${ZAPP_SECTOR_LABELS[sector]}`}
+            value={withPipeline}
+          />
+          <SummaryTile
+            icon={<MessageSquare className="h-3.5 w-3.5" />}
+            label={`WhatsApp ${ZAPP_SECTOR_LABELS[sector]}`}
+            value={withZapp}
+          />
+          <SummaryTile
+            icon={<AlertTriangle className="h-3.5 w-3.5" />}
+            label="Acessos indevidos"
+            value={risky.length}
+            tone={risky.length ? "danger" : "ok"}
+          />
+        </div>
+
+        {/* Alerta de risco */}
+        {risky.length > 0 && (
+          <Alert variant="destructive" className="py-3">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle className="text-sm">
+              {risky.length} pessoa(s) podem falar pelo WhatsApp de {ZAPP_SECTOR_LABELS[sector]} sem
+              trabalhar nesse setor
+            </AlertTitle>
+            <AlertDescription className="text-xs space-y-2">
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {risky.slice(0, 12).map((r) => (
+                  <Badge key={r.user.id} variant="outline" className="text-[10px]">
+                    {r.user.name}
+                    {r.homeSectors.length > 0 && (
+                      <span className="opacity-70 ml-1">
+                        ({r.homeSectors.map((s) => ZAPP_SECTOR_LABELS[s]).join(", ")})
+                      </span>
+                    )}
+                  </Badge>
+                ))}
               </div>
               <Button
                 size="sm"
-                variant={onlyDivergent ? "default" : "outline"}
-                className="h-8 text-xs"
-                onClick={() => setOnlyDivergent((v) => !v)}
+                variant="destructive"
+                className="h-7 text-xs"
+                disabled={savingKey === "bulk"}
+                onClick={blockAllRisky}
               >
-                Só divergentes
+                {savingKey === "bulk" ? (
+                  <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin" />
+                ) : (
+                  <ShieldCheck className="h-3.5 w-3.5 mr-1" />
+                )}
+                Bloquear todos no WhatsApp de {ZAPP_SECTOR_LABELS[sector]}
               </Button>
-              <Button
-                size="sm"
-                variant="ghost"
-                className="h-8 text-xs"
-                onClick={() => setIsOpen(false)}
-              >
-                <ChevronUp className="h-3.5 w-3.5 mr-1" />
-                Fechar
-              </Button>
-            </div>
-          ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs"
-              onClick={() => setIsOpen(true)}
-            >
-              <ChevronDown className="h-3.5 w-3.5 mr-1" />
-              Expandir matriz
-            </Button>
-          )}
-        </div>
-      </CardHeader>
-      {isOpen && (
-      <CardContent>
+            </AlertDescription>
+          </Alert>
+        )}
 
+        {/* Lista */}
         {isLoading ? (
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -198,133 +332,164 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
             Nenhum usuário encontrado com esse filtro.
           </p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs border-separate border-spacing-0">
-              <thead>
-                <tr>
-                  <th className="text-left font-medium text-muted-foreground pb-2 pr-3 sticky left-0 bg-card">
-                    Usuário
-                  </th>
-                  {ZAPP_WHATSAPP_SECTORS.map((sector) => (
-                    <th key={sector} className="pb-2 px-2 font-medium text-muted-foreground">
-                      <div className="flex flex-col items-center gap-0.5">
-                        <span>{ZAPP_SECTOR_LABELS[sector]}</span>
-                        <span className="text-[10px] opacity-70">P · Z</span>
-                      </div>
-                    </th>
-                  ))}
-                  <th className="pb-2 px-2 font-medium text-muted-foreground text-right">
-                    ROY zAPP
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {rows.map((row) => (
-                  <tr
-                    key={row.user.id}
-                    className={cn(
-                      "border-t hover:bg-muted/30 transition-colors",
-                      onSelectUser && "cursor-pointer"
-                    )}
-                    onClick={() => onSelectUser?.(row.user.id)}
-                  >
-                    <td className="py-2 pr-3 border-t sticky left-0 bg-card">
-                      <div className="min-w-0">
-                        <p className="font-medium truncate flex items-center gap-1.5">
-                          {row.user.name}
-                          {row.unrestricted && (
-                            <Badge variant="secondary" className="h-4 text-[10px]">
-                              Total
-                            </Badge>
-                          )}
-                        </p>
-                        <p className="text-[10px] text-muted-foreground truncate">
-                          {row.user.email}
-                        </p>
-                      </div>
-                    </td>
-                    {row.cells.map((cell) => (
-                      <td key={cell.sector} className="py-2 px-2 border-t">
-                        <div className="flex items-center justify-center gap-1.5">
-                          <Flag on={cell.hasPipeline} label="P" tone="pipeline" />
-                          <Flag on={cell.hasZapp} label="Z" tone="zapp" />
-                        </div>
-                      </td>
-                    ))}
-                    <td className="py-2 px-2 border-t text-right">
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          "text-[10px] h-5",
-                          row.unrestricted
-                            ? "border-primary/40 text-primary"
-                            : row.inheriting
-                              ? "text-muted-foreground"
-                              : "border-amber-500/50 text-amber-600 dark:text-amber-400"
+          <div className="rounded-lg border divide-y">
+            <div className="grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-2 text-[11px] font-medium text-muted-foreground bg-muted/40">
+              <span>Pessoa</span>
+              <span className="w-24 text-center">Pipeline</span>
+              <span className="w-24 text-center">WhatsApp</span>
+            </div>
+            {rows.map((row) => {
+              const isRisky = !row.unrestricted && row.hasZapp && !row.hasPipeline;
+              return (
+                <div
+                  key={row.user.id}
+                  className={cn(
+                    "grid grid-cols-[1fr_auto_auto] gap-3 px-3 py-2 items-center",
+                    isRisky && "bg-destructive/5",
+                  )}
+                >
+                  <div className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => onSelectUser?.(row.user.id)}
+                      className="text-left"
+                    >
+                      <p className="text-sm font-medium truncate flex items-center gap-1.5">
+                        {row.user.name}
+                        {row.unrestricted && (
+                          <Badge variant="secondary" className="h-4 text-[10px]">
+                            Acesso total
+                          </Badge>
                         )}
-                      >
-                        <MessageSquare className="h-3 w-3 mr-1" />
-                        {row.unrestricted
-                          ? "Sem restrição"
-                          : row.inheriting
-                            ? "Herda setores"
-                            : "Lista própria"}
-                      </Badge>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+                        {isRisky && (
+                          <Badge variant="destructive" className="h-4 text-[10px]">
+                            Indevido
+                          </Badge>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-muted-foreground truncate">
+                        {row.user.email}
+                        {row.homeSectors.length > 0 && (
+                          <>
+                            {" · "}
+                            {row.homeSectors.map((s) => ZAPP_SECTOR_LABELS[s]).join(", ")}
+                          </>
+                        )}
+                      </p>
+                    </button>
+                  </div>
+
+                  <div className="w-24 flex justify-center">
+                    <ToggleCell
+                      checked={row.hasPipeline}
+                      disabled={row.unrestricted || savingKey === `p-${row.user.id}`}
+                      loading={savingKey === `p-${row.user.id}`}
+                      tooltip={
+                        row.unrestricted
+                          ? "Admin / acesso total — sempre liberado"
+                          : `Acesso às áreas do setor ${ZAPP_SECTOR_LABELS[sector]}`
+                      }
+                      onCheckedChange={(v) => togglePipeline(row.user, v)}
+                    />
+                  </div>
+
+                  <div className="w-24 flex justify-center">
+                    <ToggleCell
+                      checked={row.hasZapp}
+                      disabled={row.unrestricted || savingKey === `z-${row.user.id}`}
+                      loading={savingKey === `z-${row.user.id}`}
+                      tone="zapp"
+                      tooltip={
+                        row.unrestricted
+                          ? "Admin / acesso total — sempre liberado"
+                          : `Ver conversas e enviar mensagens pelo WhatsApp ${ZAPP_SECTOR_LABELS[sector]}`
+                      }
+                      onCheckedChange={(v) => toggleZapp(row.user, v)}
+                    />
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
 
-        <div className="flex items-center gap-4 flex-wrap pt-3 mt-3 border-t text-[11px] text-muted-foreground">
-          <span className="flex items-center gap-1.5">
-            <Flag on label="P" tone="pipeline" /> Pipeline / áreas do setor liberadas
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Flag on label="Z" tone="zapp" /> WhatsApp do setor no ROY zAPP
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Flag on={false} label="P" tone="pipeline" /> sem acesso
-          </span>
-        </div>
+        <p className="text-[11px] text-muted-foreground">
+          Desligar o WhatsApp de um setor não afeta o pipeline: a pessoa continua vendo negócios e
+          dashboards do setor, mas não aparece nem envia mensagens pelo número daquele setor.
+        </p>
       </CardContent>
-      )}
     </Card>
-
   );
 }
 
-function Flag({
-  on,
+function SummaryTile({
+  icon,
   label,
-  tone,
+  value,
+  tone = "neutral",
 }: {
-  on: boolean;
+  icon: React.ReactNode;
   label: string;
-  tone: "pipeline" | "zapp";
+  value: number;
+  tone?: "neutral" | "danger" | "ok";
 }) {
   return (
-    <span
-      title={
-        tone === "pipeline"
-          ? on
-            ? "Pipeline liberado"
-            : "Pipeline bloqueado"
-          : on
-            ? "WhatsApp liberado no ROY zAPP"
-            : "WhatsApp bloqueado no ROY zAPP"
-      }
+    <div
       className={cn(
-        "inline-flex items-center gap-0.5 rounded px-1.5 py-0.5 text-[10px] font-semibold border",
-        !on && "bg-muted/40 text-muted-foreground border-border",
-        on && tone === "pipeline" && "bg-primary/10 text-primary border-primary/30",
-        on && tone === "zapp" && "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+        "rounded-lg border px-3 py-2 flex items-center gap-2",
+        tone === "danger" && "border-destructive/40 bg-destructive/5",
+        tone === "ok" && "border-emerald-500/30 bg-emerald-500/5",
       )}
     >
-      {label}
-      {on ? <Check className="h-2.5 w-2.5" /> : <X className="h-2.5 w-2.5" />}
-    </span>
+      <span
+        className={cn(
+          "text-muted-foreground",
+          tone === "danger" && "text-destructive",
+          tone === "ok" && "text-emerald-600 dark:text-emerald-400",
+        )}
+      >
+        {icon}
+      </span>
+      <div className="min-w-0">
+        <p className="text-lg font-semibold leading-none">{value}</p>
+        <p className="text-[11px] text-muted-foreground truncate">{label}</p>
+      </div>
+    </div>
+  );
+}
+
+function ToggleCell({
+  checked,
+  disabled,
+  loading,
+  tooltip,
+  tone = "pipeline",
+  onCheckedChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  loading?: boolean;
+  tooltip: string;
+  tone?: "pipeline" | "zapp";
+  onCheckedChange: (v: boolean) => void;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <span className="inline-flex items-center">
+          {loading ? (
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          ) : (
+            <Switch
+              checked={checked}
+              disabled={disabled}
+              onCheckedChange={onCheckedChange}
+              className={cn(tone === "zapp" && "data-[state=checked]:bg-emerald-600")}
+            />
+          )}
+        </span>
+      </TooltipTrigger>
+      <TooltipContent className="text-xs max-w-[220px]">{tooltip}</TooltipContent>
+    </Tooltip>
   );
 }
