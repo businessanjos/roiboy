@@ -104,10 +104,11 @@ export function ZappInstanceSwitcher({
       >
         <SelectTrigger
           className={cn(
-            "h-8 min-w-[140px] max-w-[200px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
+            "h-7 min-w-0 w-full max-w-[220px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
             "focus:ring-zapp-accent focus:ring-offset-0"
           )}
         >
+
           <div className="flex items-center gap-1.5 truncate">
             {loading ? (
               <Loader2 className="h-3.5 w-3.5 shrink-0 animate-spin text-zapp-text-muted" />
