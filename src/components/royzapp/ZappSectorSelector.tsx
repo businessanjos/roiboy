@@ -71,6 +71,8 @@ interface ZappSectorSelectorProps {
 
 export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) {
   const { hasSectorAccess, isLoading: accessLoading } = useSectorAccess();
+  const { canOpenZappSector, loading: zappAccessLoading } = useRoyZappViewAccess();
+
   const { isAdmin, loading: permissionsLoading } = usePermissions();
   const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
