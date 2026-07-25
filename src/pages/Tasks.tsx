@@ -678,6 +678,56 @@ export default function Tasks() {
     return sortedTasks.slice(start, start + pageSize);
   }, [sortedTasks, safePage, pageSize]);
 
+  // Export (restrito: Jonathan, Maikol e Everton)
+  const canExportTasks = useMemo(
+    () => TASKS_EXPORT_EMAILS.includes((currentUser?.email || "").trim().toLowerCase()),
+    [currentUser?.email]
+  );
+
+  const handleExportTasks = useCallback(async () => {
+    if (!canExportTasks) return;
+    if (sortedTasks.length === 0) {
+      toast.error("Nenhuma tarefa para exportar com os filtros atuais");
+      return;
+    }
+    try {
+      const XLSX = await import("xlsx");
+      const statusName = (task: Task) => {
+        const custom = customStatuses.find((s) => s.id === task.custom_status_id);
+        if (custom) return custom.name;
+        if (task.completed_at) return "Concluído";
+        return STATUS_CONFIG[task.status]?.label || task.status;
+      };
+      const rows = sortedTasks.map((task) => ({
+        "Título": task.title,
+        "Descrição": task.description || "",
+        "Status": statusName(task),
+        "Prioridade": PRIORITY_CONFIG[task.priority]?.label || task.priority,
+        "Tipo de atividade": task.activity_type?.name || "",
+        "Responsável": task.assigned_user?.name || "",
+        "Cliente": task.clients?.full_name || "",
+        "Lead": task.leads?.full_name || "",
+        "Negócio": task.deals?.title || "",
+        "Etapa": task.deals?.stage?.name || "",
+        "Prazo": task.due_date ? format(parseLocalDate(task.due_date) || new Date(task.due_date), "dd/MM/yyyy") : "",
+        "Hora": task.due_time || "",
+        "Criado em": format(new Date(task.created_at), "dd/MM/yyyy HH:mm"),
+        "Concluído em": task.completed_at ? format(new Date(task.completed_at), "dd/MM/yyyy HH:mm") : "",
+      }));
+      const sheet = XLSX.utils.json_to_sheet(rows);
+      sheet["!cols"] = Object.keys(rows[0]).map(() => ({ wch: 22 }));
+      const book = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(book, sheet, "Tarefas");
+      XLSX.writeFile(book, `tarefas-${format(new Date(), "yyyy-MM-dd-HHmm")}.xlsx`);
+      toast.success(`${rows.length} tarefa(s) exportada(s)`);
+    } catch (error) {
+      console.error("Erro ao exportar tarefas:", error);
+      toast.error("Erro ao gerar a planilha");
+    }
+  }, [canExportTasks, sortedTasks, customStatuses]);
+
+
+
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
