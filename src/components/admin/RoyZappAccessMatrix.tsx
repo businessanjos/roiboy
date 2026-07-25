@@ -288,7 +288,9 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
           </span>
         </div>
       </CardContent>
+      )}
     </Card>
+
   );
 }
 
