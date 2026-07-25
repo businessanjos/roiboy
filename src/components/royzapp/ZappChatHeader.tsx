@@ -317,13 +317,16 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     <Search className="h-4 w-4 mr-2" />
                     Buscar na conversa
                   </DropdownMenuItem>
-                  <DropdownMenuItem 
-                    className="text-zapp-text hover:bg-zapp-hover"
-                    onClick={onOpenTransfer}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Transferir
-                  </DropdownMenuItem>
+                  {canTransfer && (
+                    <DropdownMenuItem
+                      className="text-zapp-text hover:bg-zapp-hover"
+                      onClick={onOpenTransfer}
+                    >
+                      <ArrowRightLeft className="h-4 w-4 mr-2" />
+                      Transferir
+                    </DropdownMenuItem>
+                  )}
+
                   <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall}>
                     <Phone className="h-4 w-4 mr-2" />
                     Ligar
