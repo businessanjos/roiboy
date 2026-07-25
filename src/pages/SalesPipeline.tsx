@@ -2584,18 +2584,31 @@ export default function SalesPipeline() {
 
                 {activeTab === 'lost' && (
                   <div className="flex flex-wrap items-center gap-2">
-                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
-                      <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
+                    <Select value={lostCreatedMonthFilter} onValueChange={setLostCreatedMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[190px] h-8 text-xs bg-background">
                         <Calendar className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                        <SelectValue placeholder="Todos os meses" />
+                        <SelectValue placeholder="Criado em: todos" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Todos os meses</SelectItem>
-                        {availableLostMonths.map(([key, label]) => (
-                          <SelectItem key={key} value={key}>{label}</SelectItem>
+                        <SelectItem value="all">Criado em: todos os meses</SelectItem>
+                        {availableLostCreatedMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>Criado em: {label}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
+                    <Select value={lostMonthFilter} onValueChange={setLostMonthFilter}>
+                      <SelectTrigger className="w-full sm:w-[190px] h-8 text-xs bg-background">
+                        <XCircle className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                        <SelectValue placeholder="Perdido em: todos" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Perdido em: todos os meses</SelectItem>
+                        {availableLostMonths.map(([key, label]) => (
+                          <SelectItem key={key} value={key}>Perdido em: {label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+
                     <Select value={lostReasonFilter} onValueChange={setLostReasonFilter}>
                       <SelectTrigger className="w-full sm:w-[180px] h-8 text-xs bg-background">
                         <XCircle className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
