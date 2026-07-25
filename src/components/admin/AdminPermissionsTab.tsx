@@ -14,6 +14,7 @@ import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
 import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessManager";
+import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
 import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
