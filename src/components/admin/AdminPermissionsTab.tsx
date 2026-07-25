@@ -302,9 +302,8 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          {accountId && (
-            <RoyZappAccessMatrix accountId={accountId} onSelectUser={setSelectedUserId} />
-          )}
+
+
 
           <div className="flex flex-wrap items-center gap-3 justify-between">
 
