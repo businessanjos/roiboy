@@ -2637,8 +2637,35 @@ export default function SalesPipeline() {
                       selected={lostProductFilter}
                       onChange={setLostProductFilter}
                     />
+                    {(lostCreatedMonthFilter !== 'all' || lostMonthFilter !== 'all') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-xs text-muted-foreground"
+                        onClick={() => { setLostCreatedMonthFilter('all'); setLostMonthFilter('all'); }}
+                      >
+                        Limpar meses
+                      </Button>
+                    )}
+                    <div className="w-full flex flex-wrap items-center gap-2 text-xs">
+                      <Badge variant="secondary" className="font-normal">
+                        Total: <span className="font-semibold ml-1">{lostCohortStats.total}</span>
+                      </Badge>
+                      <Badge variant="secondary" className="font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                        Criados e perdidos no mesmo mês: <span className="font-semibold ml-1">{lostCohortStats.sameMonth}</span>
+                      </Badge>
+                      <Badge variant="secondary" className="font-normal bg-sky-500/15 text-sky-700 dark:text-sky-400">
+                        Criados em meses anteriores: <span className="font-semibold ml-1">{lostCohortStats.carriedOver}</span>
+                      </Badge>
+                      {lostCohortStats.unknown > 0 && (
+                        <Badge variant="outline" className="font-normal">
+                          Sem data: <span className="font-semibold ml-1">{lostCohortStats.unknown}</span>
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 )}
+
               </div>
 
               {/* Summary metrics - compact inline */}
