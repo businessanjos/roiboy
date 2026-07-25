@@ -70,7 +70,7 @@ import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDia
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
 import { isManagementUser } from "@/lib/access/managementRoles";
-import { canPickSector } from "@/lib/royZappAccess";
+import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
