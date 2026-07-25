@@ -23564,6 +23564,7 @@ export type Database = {
           updated_at: string
           user_id: string
           views: string[]
+          zapp_sectors: string[] | null
         }
         Insert: {
           account_id: string
@@ -23572,6 +23573,7 @@ export type Database = {
           updated_at?: string
           user_id: string
           views?: string[]
+          zapp_sectors?: string[] | null
         }
         Update: {
           account_id?: string
@@ -23580,6 +23582,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
           views?: string[]
+          zapp_sectors?: string[] | null
         }
         Relationships: []
       }
