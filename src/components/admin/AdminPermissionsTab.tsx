@@ -464,7 +464,18 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                   </div>
 
                   {/* Sectors grid - 5 per row on large screens */}
+                  <div className="mb-2">
+                    <p className="text-xs font-semibold flex items-center gap-1.5">
+                      <Building2 className="h-3.5 w-3.5 text-muted-foreground" />
+                      1. Setores que este usuário pode atender
+                    </p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Define quais WhatsApps do ROY zAPP ele acessa. Desligue "Vendas" para bloquear
+                      o WhatsApp do Comercial.
+                    </p>
+                  </div>
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+
                     {activeSectors.map((sector) => {
                       const eff = getEffective(user.id, sector.id);
                       const Icon = sector.icon;
