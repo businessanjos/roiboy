@@ -43,6 +43,8 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   zappRole,
 }: ZappSidebarNavProps) {
   // Mentors always see CRM functionality
+  const { currentUser } = useCurrentUser();
+  // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
   const showCRMForMentor = isMentor;
   
