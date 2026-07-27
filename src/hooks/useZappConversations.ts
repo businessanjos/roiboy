@@ -325,6 +325,10 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           .select(ASSIGNMENTS_SELECT)
           .eq("account_id", accountId)
           .eq("department_id", dept.id)
+          // Ordena pela última mensagem da conversa (e não pelo updated_at do
+          // assignment, que não muda quando chega/sai mensagem). Sem isso, o
+          // limite abaixo recortava uma janela que ignorava conversas recentes.
+          .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
           .order("updated_at", { ascending: false })
           .limit(1000);
 
@@ -363,6 +367,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           .select(ASSIGNMENTS_SELECT)
           .eq("account_id", accountId)
           .eq("department_id", departmentId)
+          .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
           .order("updated_at", { ascending: false })
           .limit(1000);
 
