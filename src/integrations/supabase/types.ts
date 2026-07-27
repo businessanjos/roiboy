@@ -25456,6 +25456,11 @@ export type Database = {
           sent_at: string
           synced_from_history: boolean | null
           transcription: string | null
+          transcription_attempts: number
+          transcription_error: string | null
+          transcription_last_attempt_at: string | null
+          transcription_next_retry_at: string | null
+          transcription_status: string | null
           updated_at: string | null
           zapp_conversation_id: string
         }
@@ -25492,6 +25497,11 @@ export type Database = {
           sent_at?: string
           synced_from_history?: boolean | null
           transcription?: string | null
+          transcription_attempts?: number
+          transcription_error?: string | null
+          transcription_last_attempt_at?: string | null
+          transcription_next_retry_at?: string | null
+          transcription_status?: string | null
           updated_at?: string | null
           zapp_conversation_id: string
         }
@@ -25528,6 +25538,11 @@ export type Database = {
           sent_at?: string
           synced_from_history?: boolean | null
           transcription?: string | null
+          transcription_attempts?: number
+          transcription_error?: string | null
+          transcription_last_attempt_at?: string | null
+          transcription_next_retry_at?: string | null
+          transcription_status?: string | null
           updated_at?: string | null
           zapp_conversation_id?: string
         }
