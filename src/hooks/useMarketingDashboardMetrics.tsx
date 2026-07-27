@@ -458,6 +458,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         roas,
         adsLastSync,
         adsCampaignCount,
+        adsSyncHealth,
         dataQuality: {
           deletedExcluded: deletedInRange || 0,
           leadsWithoutChannel,
