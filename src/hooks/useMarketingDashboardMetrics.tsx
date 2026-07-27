@@ -254,6 +254,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       let adsCampaignCount = 0;
       let adsIsCumulative = true;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
+      const coveredDates = new Set<string>();
       const orFilter = [
         `account_id.eq.${accountId}`,
         userId ? `user_id.eq.${userId}` : null,
@@ -278,6 +279,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             adSpend += spend;
             adLeads += leads;
             adImpressions += Number(d.impressions) || 0;
+            if (d.stat_date) coveredDates.add(String(d.stat_date));
             if (!adsLastSync || d.synced_at > adsLastSync) adsLastSync = d.synced_at;
             const key = d.meta_campaign_id || d.campaign_name || "—";
             const cur = byCampaign.get(key) || { name: d.campaign_name || "—", spend: 0, leads: 0 };
@@ -293,6 +295,36 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .map((c) => ({ ...c, cpl: c.leads > 0 ? c.spend / c.leads : 0 }));
         }
       }
+
+      // ===== SAÚDE DA SINCRONIZAÇÃO DO META ADS =====
+      // Detecta atraso (última sync antiga / último dia coberto defasado) e
+      // lacunas de dias sem snapshot dentro do período analisado.
+      const DAY_MS = 86400000;
+      const todayIso = format(new Date(), "yyyy-MM-dd");
+      const covEnd = new Date(Math.min(rEnd.getTime(), new Date().getTime()));
+      const expectedDates: string[] = [];
+      for (let t = new Date(format(rStart, "yyyy-MM-dd")).getTime(); t <= new Date(format(covEnd, "yyyy-MM-dd")).getTime(); t += DAY_MS) {
+        expectedDates.push(new Date(t).toISOString().split("T")[0]);
+      }
+      const missingDayLabels = adsIsCumulative
+        ? expectedDates
+        : expectedDates.filter((d) => !coveredDates.has(d));
+      const sortedCovered = Array.from(coveredDates).sort();
+      const lastStatDate = sortedCovered.length > 0 ? sortedCovered[sortedCovered.length - 1] : null;
+      const adsSyncHealth = {
+        lastSync: adsLastSync as string | null,
+        staleHours: adsLastSync
+          ? Math.floor((Date.now() - new Date(adsLastSync).getTime()) / 3600000)
+          : null,
+        lastStatDate,
+        lagDays: lastStatDate
+          ? Math.max(0, Math.round((new Date(todayIso).getTime() - new Date(lastStatDate).getTime()) / DAY_MS))
+          : null,
+        expectedDays: expectedDates.length,
+        coveredDays: expectedDates.length - missingDayLabels.length,
+        missingDays: missingDayLabels.length,
+        missingDayLabels: missingDayLabels.slice(0, 10),
+      };
 
       if (adsIsCumulative) {
         const { data: ads = [] } = await (supabase as any)
