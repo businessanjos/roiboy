@@ -742,6 +742,46 @@ async function uazapiInstance(endpoint: string, method: string, token: string, b
   return json;
 }
 
+/**
+ * Setores de WhatsApp que o usuário pode operar dentro do ROY zAPP.
+ * Independente do acesso geral ao setor: `user_royzapp_views.zapp_sectors`
+ * manda quando preenchido; `null` herda `user_sector_access`.
+ * Retorna `null` quando o usuário é irrestrito (admin / sector picker).
+ */
+const SECTOR_PICKER_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
+
+async function resolveAllowedZappSectors(
+  supabase: ReturnType<typeof createClient>,
+  user: { id: string; account_id: string; role?: string | null; is_also_admin?: boolean | null },
+  email?: string | null,
+): Promise<string[] | null> {
+  const isUnrestricted =
+    user.role === "admin" ||
+    user.role === "super_admin" ||
+    user.is_also_admin === true ||
+    (!!email && SECTOR_PICKER_EMAILS.includes(email.trim().toLowerCase()));
+  if (isUnrestricted) return null;
+
+  const { data: viewRow } = await supabase
+    .from("user_royzapp_views")
+    .select("zapp_sectors")
+    .eq("account_id", user.account_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const zappSectors = (viewRow as { zapp_sectors?: string[] | null } | null)?.zapp_sectors;
+  if (Array.isArray(zappSectors) && zappSectors.length > 0) return zappSectors;
+
+  const { data: accessRows } = await supabase
+    .from("user_sector_access")
+    .select("sector_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true);
+
+  return ((accessRows || []) as { sector_id: string }[]).map((r) => r.sector_id);
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
