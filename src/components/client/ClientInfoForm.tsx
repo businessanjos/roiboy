@@ -440,11 +440,14 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
       return;
     }
     if (data.emails.includes(newEmail.trim())) {
-      setEmailError("E-mail já adicionado");
+      setNewEmail("");
+      onPendingEmailChange?.("");
+      setEmailError("");
       return;
     }
     updateField("emails", [...data.emails, newEmail.trim()]);
     setNewEmail("");
+    onPendingEmailChange?.("");
     setEmailError("");
   };
 
