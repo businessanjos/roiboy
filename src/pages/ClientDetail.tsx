@@ -1989,7 +1989,8 @@ export default function ClientDetail() {
                   onChange={setEditFormData}
                   showBasicFields={true}
                   teamUsers={teamUsers}
-                />
+                  onPendingEmailChange={(v) => { pendingEmailRef.current = v; }}
+                />>
             </ScrollArea>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditInfoDialogOpen(false)}>
