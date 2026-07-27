@@ -421,7 +421,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           leadsWithoutChannel,
           leadsWithoutMqlAnswer,
           mqlUnknownValues: Array.from(mqlUnknownValues),
-          adsIsCumulative: true,
+          adsIsCumulative,
         },
 
         mqlOrganic,
