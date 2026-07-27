@@ -80,6 +80,9 @@ export function DashboardDataTrustPanel({ data }: Props) {
         }. Rode "Sincronizar" em Tráfego Pago para completar o histórico.`,
       });
     }
+  }
+
+
 
   const warnCount = issues.filter((i) => i.level === "warn").length;
 
