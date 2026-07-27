@@ -39,8 +39,11 @@ export function useRoyZappViewAccess() {
     currentUser?.is_also_admin === true;
 
   const { data, isLoading } = useQuery({
+    // Mesmo admins precisam da linha: se o admin definiu `zapp_sectors`
+    // explicitamente para o usuário, isso vence o "unrestricted" — senão
+    // um admin do Comercial cairia no WhatsApp de Customer Success.
     queryKey: ["royzapp-view-access", userId, accountId],
-    enabled: !!userId && !!accountId && !unrestricted,
+    enabled: !!userId && !!accountId,
     staleTime: 300000,
     refetchOnWindowFocus: false,
     queryFn: async (): Promise<ZappAccessRow | null> => {
@@ -69,19 +72,28 @@ export function useRoyZappViewAccess() {
 
   /** `null` = sem restrição específica do RoyZapp (herda os setores gerais). */
   const allowedZappSectors = useMemo<ZappWhatsAppSector[] | null>(() => {
+    // Configuração explícita sempre vence, inclusive para admins.
+    const explicit = data?.zappSectors;
+    if (explicit && explicit.length > 0) return explicit;
     if (unrestricted) return [...ZAPP_WHATSAPP_SECTORS];
-    return data?.zappSectors ?? null;
+    return explicit ?? null;
   }, [unrestricted, data]);
+
 
   /**
    * Regra final de acesso ao WhatsApp de um setor.
    * @param hasGeneralSectorAccess acesso geral ao setor (user_sector_access)
    */
   const canOpenZappSector = (sectorId: string, hasGeneralSectorAccess: boolean) => {
+    const explicit = data?.zappSectors;
+    if (explicit && explicit.length > 0) {
+      return explicit.includes(sectorId as ZappWhatsAppSector);
+    }
     if (unrestricted) return true;
     if (allowedZappSectors === null) return hasGeneralSectorAccess;
     return allowedZappSectors.includes(sectorId as ZappWhatsAppSector);
   };
+
 
   return {
     allowedViews,
