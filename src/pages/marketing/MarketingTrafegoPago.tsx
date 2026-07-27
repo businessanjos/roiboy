@@ -210,7 +210,10 @@ export default function MarketingTrafegoPago() {
           try {
             await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: a.id, ...periodPayload } });
             synced++;
-          } catch (err) { console.warn('[bg-sync] failed for', a.id, err); }
+          } catch (err) {
+            console.warn('[bg-sync] failed for', a.id, err);
+            await backfillDaily([a.id], { silent: true });
+          }
         }
         if (synced > 0) {
           await fetchAdSets();
