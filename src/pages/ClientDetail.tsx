@@ -496,6 +496,7 @@ export default function ClientDetail() {
       additional_bank_accounts: ensureArray((client as any).additional_bank_accounts),
       companies: ensureArray((client as any).companies),
     });
+    pendingEmailRef.current = "";
     setEditInfoDialogOpen(true);
   };
 
