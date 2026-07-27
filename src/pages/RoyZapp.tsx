@@ -578,7 +578,7 @@ export default function RoyZapp() {
         } : prev.zapp_conversation,
       };
     });
-  }, [setAssignments]);
+  }, [setAssignments, noteConversationBump]);
 
   // Messaging hook - handles send, recording, media, quick replies, etc.
   const messaging = useZappMessaging({
