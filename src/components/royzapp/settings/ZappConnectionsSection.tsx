@@ -21,6 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { ZappConnectionWizard } from "./ZappConnectionWizard";
 import { ConnectQRCodeDialog } from "@/components/integrations/whatsapp/ConnectQRCodeDialog";
 import {
@@ -56,6 +58,8 @@ interface ZappConnectionsSectionProps {
 export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnectionsSectionProps) {
   const navigate = useNavigate();
   const { isAdmin } = usePermissions();
+  const { sectorAccess } = useSectorAccess();
+  const { canOpenZappSector } = useRoyZappViewAccess();
   const [loading, setLoading] = useState(false);
   const [connections, setConnections] = useState<SectorConnection[]>([]);
   const [showWizard, setShowWizard] = useState(false);
@@ -64,8 +68,19 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
   const [busyId, setBusyId] = useState<string | null>(null);
   const [fixingWebhookId, setFixingWebhookId] = useState<string | null>(null);
 
+  // ISOLAMENTO: só aparecem aqui os WhatsApps que o usuário pode abrir no ROY zAPP.
+  // Sem isso, o time de CS enxergava (e podia gerenciar) o número do Comercial.
+  const generalSectors = new Set(sectorAccess.map((a) => a.sector_id as string));
+  const allowedSectors = ROY_ZAPP_SECTORS.filter((s) =>
+    canOpenZappSector(s.id, generalSectors.has(s.id))
+  );
+  const canSeeCurrentSector = !!sectorId && canOpenZappSector(sectorId, generalSectors.has(sectorId));
+
   const fetchConnections = useCallback(async () => {
-    if (!sectorId) return;
+    if (!sectorId || !canSeeCurrentSector) {
+      setConnections([]);
+      return;
+    }
     setLoading(true);
     try {
       const { data, error } = await supabase.functions.invoke("uazapi-manager", {
@@ -80,11 +95,23 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
     } finally {
       setLoading(false);
     }
-  }, [sectorId]);
+  }, [sectorId, canSeeCurrentSector]);
 
   useEffect(() => {
     fetchConnections();
   }, [fetchConnections]);
+
+  if (sectorId && !canSeeCurrentSector) {
+    return (
+      <div className="space-y-1">
+        <p className="text-zapp-text text-sm font-medium">Conexões WhatsApp</p>
+        <p className="text-zapp-text-muted text-xs">
+          Você não tem acesso ao WhatsApp deste setor.
+        </p>
+      </div>
+    );
+  }
+
 
   const handleRemove = async () => {
     if (!removing) return;
@@ -138,7 +165,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
           </p>
         </div>
         <div className="grid gap-2">
-          {ROY_ZAPP_SECTORS.map((sector) => (
+          {allowedSectors.map((sector) => (
             <button
               key={sector.id}
               type="button"
