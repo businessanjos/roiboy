@@ -236,6 +236,7 @@ export default function RoyZapp() {
     allClients,
     assignments,
     setAssignments,
+    noteConversationBump,
     messages,
     loading,
     availableProducts,
@@ -542,6 +543,10 @@ export default function RoyZapp() {
   
   // Callback to update local assignment state when a message is sent
   const handleConversationUpdated = useCallback((conversationId: string, lastMessageAt: string, lastMessagePreview: string) => {
+    // Registra no high-water mark + reordena a lista imediatamente (mensagem enviada
+    // por nós conta como "mais recente" igual às recebidas).
+    noteConversationBump(conversationId, lastMessageAt, lastMessagePreview);
+
     setAssignments(prev => prev.map(a => {
       if (a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId) {
         return {
@@ -573,7 +578,7 @@ export default function RoyZapp() {
         } : prev.zapp_conversation,
       };
     });
-  }, [setAssignments]);
+  }, [setAssignments, noteConversationBump]);
 
   // Messaging hook - handles send, recording, media, quick replies, etc.
   const messaging = useZappMessaging({

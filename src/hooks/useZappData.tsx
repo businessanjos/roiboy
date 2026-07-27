@@ -156,6 +156,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     setMessages: conversations.setMessages,
     setAssignments: conversations.setAssignments,
     clearCurrentConversation: conversations.clearCurrentConversation,
+    noteConversationBump: conversations.noteConversationBump,
   };
 }
 
