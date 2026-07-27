@@ -960,6 +960,47 @@ Deno.serve(async (req) => {
       }
     }
 
+    // ========== VIEW GUARD (backend) ==========
+    // Ações que pertencem a telas fora do menu liberado para o usuário (ex.:
+    // administração de conexões no Comercial) são bloqueadas no servidor,
+    // mesmo que a UI seja contornada. A regra vive no banco
+    // (`public.zapp_user_can_use_view`) e é a mesma usada pelo front.
+    const ACTION_VIEW_MAP: Record<string, string> = {
+      create: "whatsapp-admin",
+      connect: "whatsapp-admin",
+      qrcode: "whatsapp-admin",
+      disconnect: "whatsapp-admin",
+      reset_instance: "whatsapp-admin",
+      adopt_instance: "whatsapp-admin",
+      add_instance_to_sector: "whatsapp-admin",
+      unlink_instance: "whatsapp-admin",
+      update_instance_pin: "whatsapp-admin",
+      configure_webhook: "whatsapp-admin",
+      update_sector_server: "whatsapp-admin",
+      check_token_conflict: "whatsapp-admin",
+    };
+    const requiredView = ACTION_VIEW_MAP[action as string];
+    if (requiredView) {
+      const guardSector = sector_id || intData?.sector_id || null;
+      const { data: canUseView, error: viewGuardError } = await supabase.rpc(
+        "zapp_user_can_use_view",
+        { _user_id: userData.id, _sector: guardSector, _view: requiredView },
+      );
+      if (viewGuardError) {
+        console.error("[uazapi-manager] view guard error:", viewGuardError);
+      } else if (canUseView === false) {
+        console.warn(
+          `[uazapi-manager] BLOCKED action "${action}" (view ${requiredView}) for user ${userData.id} in sector ${guardSector}`,
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Esta ação não está liberada para o seu perfil neste setor.",
+            view_blocked: true,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
 
 
     const token = intData?.config?.instance_token;
