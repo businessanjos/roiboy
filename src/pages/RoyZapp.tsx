@@ -1901,9 +1901,10 @@ export default function RoyZapp() {
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
         onUseItem={async (item, processedText) => {
-          // For single send: text goes to input, media sends directly
-          if (item.content_type === 'text' && processedText) {
-            messaging.setMessageInput(processedText);
+          // For single send: text/link goes to input, media sends directly
+          const textPayload = buildPlaybookText(item, processedText);
+          if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
+            messaging.setMessageInput(textPayload);
             messaging.messageInputRef.current?.focus();
           } else if (item.content_type === 'image' && item.media_url) {
             try {
