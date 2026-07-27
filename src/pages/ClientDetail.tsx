@@ -573,7 +573,7 @@ export default function ClientDetail() {
         ...client,
         full_name: editFormData.full_name.trim(),
         phone_e164: editFormData.phone_e164,
-        emails: editFormData.emails,
+        emails: emailsToSave,
         additional_phones: editFormData.additional_phones,
         cpf: editFormData.cpf,
         cnpj: editFormData.cnpj,
