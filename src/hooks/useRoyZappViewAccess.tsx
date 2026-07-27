@@ -85,10 +85,15 @@ export function useRoyZappViewAccess() {
    * @param hasGeneralSectorAccess acesso geral ao setor (user_sector_access)
    */
   const canOpenZappSector = (sectorId: string, hasGeneralSectorAccess: boolean) => {
+    const explicit = data?.zappSectors;
+    if (explicit && explicit.length > 0) {
+      return explicit.includes(sectorId as ZappWhatsAppSector);
+    }
     if (unrestricted) return true;
     if (allowedZappSectors === null) return hasGeneralSectorAccess;
     return allowedZappSectors.includes(sectorId as ZappWhatsAppSector);
   };
+
 
   return {
     allowedViews,
