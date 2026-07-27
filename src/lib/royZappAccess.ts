@@ -35,8 +35,22 @@ export const ZAPP_VIEW_LABELS: Record<ZappView, string> = {
   "whatsapp-admin": "Conexões WhatsApp",
 };
 
-/** Padrão para quem ainda não tem configuração explícita do admin. */
-export const DEFAULT_ZAPP_VIEWS: ZappView[] = ["inbox", "team", "tags", "playbook"];
+/**
+ * Padrão para quem ainda não tem configuração explícita do admin.
+ * Menu operacional completo — só a administração de conexões WhatsApp
+ * (`whatsapp-admin`) fica reservada a admins/pickers.
+ */
+export const DEFAULT_ZAPP_VIEWS: ZappView[] = [
+  "inbox",
+  "team",
+  "departments",
+  "tags",
+  "settings",
+  "playbook",
+  "marketing",
+  "sector",
+  "meetings",
+];
 
 export const ALL_ZAPP_VIEWS: ZappView[] = [...ZAPP_VIEWS];
 
