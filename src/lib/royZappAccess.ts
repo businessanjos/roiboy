@@ -82,3 +82,47 @@ export function sanitizeZappSectorList(values: unknown): ZappWhatsAppSector[] {
   if (!Array.isArray(values)) return [];
   return ZAPP_WHATSAPP_SECTORS.filter((s) => values.includes(s));
 }
+
+/**
+ * REGRA ÚNICA de acesso ao WhatsApp de um setor no ROY zAPP.
+ *
+ * Precedência (nesta ordem, sem exceções):
+ * 1. Configuração explícita em `user_royzapp_views.zapp_sectors` — vence
+ *    SEMPRE, inclusive para admins e pickers. Foi o bug do Jonathan: admin
+ *    configurado só para "vendas" caía no WhatsApp de Customer Success.
+ * 2. Sem configuração explícita: admin/picker abre qualquer setor.
+ * 3. Caso contrário: herda o acesso geral ao setor (`user_sector_access`).
+ *
+ * Qualquer tela nova do ROY zAPP deve usar esta função — nunca reimplementar.
+ */
+export function canOpenZappSectorFor(params: {
+  sectorId: string;
+  explicitZappSectors: ZappWhatsAppSector[] | null | undefined;
+  unrestricted: boolean;
+  hasGeneralSectorAccess: boolean;
+}): boolean {
+  const { sectorId, explicitZappSectors, unrestricted, hasGeneralSectorAccess } = params;
+  if (explicitZappSectors && explicitZappSectors.length > 0) {
+    return explicitZappSectors.includes(sectorId as ZappWhatsAppSector);
+  }
+  if (unrestricted) return true;
+  return hasGeneralSectorAccess;
+}
+
+/** Setores de WhatsApp efetivamente abertos para o usuário. */
+export function resolveAllowedZappSectors(params: {
+  explicitZappSectors: ZappWhatsAppSector[] | null | undefined;
+  unrestricted: boolean;
+  generalSectorIds: Iterable<string>;
+}): ZappWhatsAppSector[] {
+  const general = new Set(params.generalSectorIds);
+  return ZAPP_WHATSAPP_SECTORS.filter((id) =>
+    canOpenZappSectorFor({
+      sectorId: id,
+      explicitZappSectors: params.explicitZappSectors,
+      unrestricted: params.unrestricted,
+      hasGeneralSectorAccess: general.has(id),
+    }),
+  );
+}
+
