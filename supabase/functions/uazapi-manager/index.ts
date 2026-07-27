@@ -1751,7 +1751,9 @@ Deno.serve(async (req) => {
         .eq("type", "whatsapp")
         .not("sector_id", "is", null);
 
-      const integrations = (ints || []) as any[];
+      // Só devolve as conexões dos setores liberados para este usuário.
+      const integrations = ((ints || []) as any[]).filter((i) => isSectorAllowed(i.sector_id));
+
       const liveStatuses = await resolveLiveStatusesForIntegrations(
         integrations.map((integration) => ({
           config: asRecord(integration.config),
