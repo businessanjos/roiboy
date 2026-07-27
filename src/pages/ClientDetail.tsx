@@ -20,7 +20,7 @@ import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones, mergePendingEmail } from "@/components/client/ClientInfoForm";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientMilestones } from "@/components/client/ClientMilestones";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
