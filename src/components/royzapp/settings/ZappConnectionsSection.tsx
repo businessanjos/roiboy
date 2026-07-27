@@ -21,6 +21,8 @@ import {
 import { cn } from "@/lib/utils";
 import { useNavigate } from "react-router-dom";
 import { usePermissions } from "@/hooks/usePermissions";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { ZappConnectionWizard } from "./ZappConnectionWizard";
 import { ConnectQRCodeDialog } from "@/components/integrations/whatsapp/ConnectQRCodeDialog";
 import {
@@ -163,7 +165,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
           </p>
         </div>
         <div className="grid gap-2">
-          {ROY_ZAPP_SECTORS.map((sector) => (
+          {allowedSectors.map((sector) => (
             <button
               key={sector.id}
               type="button"
