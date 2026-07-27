@@ -321,6 +321,42 @@ export default function RoyZapp() {
     if (target) setSelectedSectorId(target);
   }, [canChooseSector, selectedSectorId, sectorAccessLoading, zappAccessLoading, sectorAccess, canOpenZappSector]);
 
+  // Guarda: o parâmetro ?sector= da URL (sidebar, atalhos, links salvos) NÃO é
+  // confiável. Se o setor pedido não estiver liberado no ROY zAPP para o
+  // usuário, trocamos pelo primeiro setor realmente permitido — evita, por
+  // exemplo, alguém do Comercial cair no WhatsApp de Customer Success.
+  useEffect(() => {
+    if (canChooseSector || !selectedSectorId || sectorAccessLoading || zappAccessLoading) return;
+    const generalSectors = new Set(sectorAccess.map((a) => a.sector_id));
+    if (canOpenZappSector(selectedSectorId, generalSectors.has(selectedSectorId))) return;
+    const fallback = (ZAPP_WHATSAPP_SECTORS as readonly SectorId[]).find((id) =>
+      canOpenZappSector(id, generalSectors.has(id))
+    );
+    console.warn(
+      `[RoyZapp] Setor "${selectedSectorId}" não liberado para este usuário — redirecionando para "${fallback ?? "nenhum"}".`
+    );
+    setSelectedSectorId(fallback ?? null);
+    setSelectedIntegrationId(undefined);
+    setSearchParams(
+      (prev) => {
+        prev.delete("integrationId");
+        if (fallback) prev.set("sector", fallback);
+        else prev.delete("sector");
+        return prev;
+      },
+      { replace: true }
+    );
+  }, [
+    canChooseSector,
+    selectedSectorId,
+    sectorAccessLoading,
+    zappAccessLoading,
+    sectorAccess,
+    canOpenZappSector,
+    setSearchParams,
+  ]);
+
+
 
   useEffect(() => {
     if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
