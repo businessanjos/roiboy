@@ -888,5 +888,6 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     setAssignments,
     clearCurrentConversation,
     debouncedFetchAssignments,
+    noteConversationBump,
   };
 }
