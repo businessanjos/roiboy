@@ -26485,9 +26485,19 @@ export type Database = {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: boolean
       }
+      zapp_is_sales_only_user: { Args: { _user_id: string }; Returns: boolean }
+      zapp_is_unrestricted_user: {
+        Args: { _user_id: string }
+        Returns: boolean
+      }
+      zapp_sales_lean_views: { Args: never; Returns: string[] }
       zapp_sector_role: {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: string
+      }
+      zapp_user_can_use_view: {
+        Args: { _sector: string; _user_id: string; _view: string }
+        Returns: boolean
       }
     }
     Enums: {
