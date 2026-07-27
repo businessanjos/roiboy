@@ -284,6 +284,47 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
+      {/* ===== Confiabilidade dos dados ===== */}
+      <DashboardDataTrustPanel data={data} />
+
+      {/* ===== Resultado do período (decisão) ===== */}
+      <section className="space-y-3">
+        <SectionTitle
+          icon={TrendingUp}
+          title="Resultado do período"
+          subtitle={`Receita e eficiência dos negócios criados em ${rangeLabel}`}
+        />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            icon={DollarSign}
+            label="Receita ganha"
+            value={formatBRL(data.wonRevenue)}
+            hint={`${formatNum(data.wonDeals)} negócios ganhos`}
+            tone="success"
+          />
+          <KpiCard
+            icon={Target}
+            label="Ticket médio"
+            value={data.ticketMedio > 0 ? formatBRL(data.ticketMedio) : "—"}
+          />
+          <KpiCard
+            icon={TrendingUp}
+            label="ROAS (aprox.)"
+            value={data.roas > 0 ? `${data.roas.toFixed(1)}x` : "—"}
+            hint="Receita ganha ÷ investimento acumulado"
+            tone={data.roas >= 3 ? "success" : data.roas > 0 ? "warning" : "default"}
+          />
+          <KpiCard
+            icon={Megaphone}
+            label="CAC — tráfego pago"
+            value={data.cacPaid > 0 ? formatBRL(data.cacPaid) : "—"}
+            hint="Investimento ÷ vendas de MQL pago"
+            tone="warning"
+          />
+        </div>
+      </section>
+
+
       {/* ===== Funil de Leads & MQL ===== */}
       <section className="space-y-3">
         <SectionTitle
