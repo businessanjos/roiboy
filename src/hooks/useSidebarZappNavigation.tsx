@@ -140,7 +140,7 @@ export function useSidebarZappNavigation() {
       toast.error("Erro ao buscar instâncias");
       setLoading(false);
     }
-  }, [currentUser?.account_id, completeNavigation]);
+  }, [currentUser?.account_id, completeNavigation, sectorAccess, canOpenZappSector]);
 
   const handleInstanceSelect = useCallback((integrationId: string) => {
     if (!pendingSectorId) return;
