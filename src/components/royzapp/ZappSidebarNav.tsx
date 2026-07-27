@@ -9,8 +9,6 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ZappRoleHelpPopover } from "./ZappRoleHelpPopover";
-import { canPickSector } from "@/lib/royZappAccess";
-import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { ZappSectorRole } from "@/lib/royZappRoles";
 
 interface ZappSidebarNavProps {
@@ -42,7 +40,6 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   allowedViews,
   zappRole,
 }: ZappSidebarNavProps) {
-  const { currentUser } = useCurrentUser();
   // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
   const showCRMForMentor = isMentor;
@@ -96,9 +93,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     : allNavItems;
 
   // Comercial (vendas): menu enxuto definido pela liderança — Conversas, Tags,
-  // Playbook, CRM e Reuniões. Vale para TODOS do setor Comercial (inclusive
-  // gestores/admins do setor); só Maikol/Everton (pickers) veem o menu completo.
-  const isLeanSalesMenu = sectorId === "vendas" && !canPickSector(currentUser?.email);
+  // Playbook, CRM e Reuniões. Vale para TODOS que estiverem no setor Comercial,
+  // sem exceção (inclusive admins e pickers).
+  const isLeanSalesMenu = sectorId === "vendas";
   if (isLeanSalesMenu) {
     const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
