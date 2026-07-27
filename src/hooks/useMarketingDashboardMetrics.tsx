@@ -41,6 +41,22 @@ export interface MarketingDashboardMetrics {
   channelBreakdown: { channel: string; count: number }[];
   leadsChannelBreakdown: { channel: string; count: number }[];
 
+  // Resultado / decisão
+  wonDeals: number;
+  wonRevenue: number;
+  ticketMedio: number;
+  cacPaid: number;
+  roas: number;
+  adsLastSync: string | null;
+  adsCampaignCount: number;
+  dataQuality: {
+    deletedExcluded: number;
+    leadsWithoutChannel: number;
+    leadsWithoutMqlAnswer: number;
+    mqlUnknownValues: string[];
+    adsIsCumulative: boolean;
+  };
+
   // Tráfego pago
   adSpend: number;
   adLeads: number;
@@ -92,17 +108,30 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const last7 = subDays(now, 7);
 
       // ===== LEADS / MQL (no range filtrado) =====
+      // Exclui negócios com soft-delete (deleted_at) — senão o funil infla.
       const { data: rangeDeals = [] } = await supabase
         .from("deals")
-        .select("id, status")
+        .select("id, status, value, deleted_at")
         .eq("account_id", accountId!)
+        .is("deleted_at", null)
+        .gte("created_at", rStart.toISOString())
+        .lte("created_at", rEnd.toISOString());
+
+      const { count: deletedInRange = 0 } = await supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId!)
+        .not("deleted_at", "is", null)
         .gte("created_at", rStart.toISOString())
         .lte("created_at", rEnd.toISOString());
 
       const rangeDealIds = (rangeDeals as any[]).map((d) => d.id);
 
+
       let mqlSet = new Set<string>();
       let channelByDeal = new Map<string, string>();
+      const mqlAnswered = new Set<string>();
+      const mqlUnknownValues = new Set<string>();
       if (rangeDealIds.length) {
         for (let i = 0; i < rangeDealIds.length; i += 500) {
           const chunk = rangeDealIds.slice(i, i + 500);
@@ -112,14 +141,18 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .in("deal_id", chunk)
             .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
           for (const fv of fvs as any[]) {
-            if (fv.field_id === MQL_FIELD_ID && MQL_VALUES.has(fv.value_text)) {
-              mqlSet.add(fv.deal_id);
+            if (fv.field_id === MQL_FIELD_ID) {
+              if (!fv.value_text) continue;
+              mqlAnswered.add(fv.deal_id);
+              if (MQL_VALUES.has(fv.value_text)) mqlSet.add(fv.deal_id);
+              else if (fv.value_text !== "nao_abaixo_30k") mqlUnknownValues.add(fv.value_text);
             } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
               channelByDeal.set(fv.deal_id, fv.value_text);
             }
           }
         }
       }
+
 
       const wonByDeal = new Map<string, string>();
       (rangeDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
@@ -165,7 +198,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         .from("deals")
         .select("id, status, created_at")
         .eq("account_id", accountId!)
+        .is("deleted_at", null)
         .gte("created_at", sixStart.toISOString());
+
 
       const histIds = (histDeals as any[]).map((d) => d.id);
       const histMql = new Set<string>();
@@ -200,22 +235,34 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         monthlyHistory.push({ month: format(mDate, "MMM/yy"), leads, mql, won });
       }
 
-      // ===== TRÁFEGO PAGO (filtrado por período via updated_at do ad set) =====
+      // ===== TRÁFEGO PAGO =====
+      // Os ad sets vêm de sincronizações do Meta e guardam totais acumulados da campanha
+      // (não há série diária). Por isso NÃO filtramos por período aqui: filtrar por
+      // updated_at zerava o investimento sempre que o range não continha o dia do sync.
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
+      let adsLastSync: string | null = null;
+      let adsCampaignCount = 0;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
-      if (userId) {
-        const { data: ads = [] } = await supabase
+      {
+        const { data: ads = [] } = await (supabase as any)
           .from("marketing_ad_sets")
-          .select("name, spend, conversions, impressions, cpl, updated_at")
-          .eq("user_id", userId)
-          .gte("updated_at", rStart.toISOString())
-          .lte("updated_at", rEnd.toISOString())
+          .select("name, spend, conversions, impressions, cpl, updated_at, account_id, user_id")
+          .or(
+            [
+              `account_id.eq.${accountId}`,
+              userId ? `user_id.eq.${userId}` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          )
           .order("spend", { ascending: false });
         for (const a of ads as any[]) {
           adSpend += Number(a.spend) || 0;
           adLeads += Number(a.conversions) || 0;
           adImpressions += Number(a.impressions) || 0;
+          if (!adsLastSync || a.updated_at > adsLastSync) adsLastSync = a.updated_at;
         }
+        adsCampaignCount = (ads as any[]).length;
         adCpl = adLeads > 0 ? adSpend / adLeads : 0;
         topCampaigns = (ads as any[]).slice(0, 5).map((a) => ({
           name: a.name,
@@ -224,6 +271,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           cpl: Number(a.cpl) || 0,
         }));
       }
+
 
       // ===== CONTEÚDO (filtrado por período) =====
       const contentStartIso = rStart.toISOString();
@@ -307,9 +355,40 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const wonTotal = wonMqlOrganic + wonMqlPaid + wonMqlOthers;
       const mqlConversionRate = mqlTotal > 0 ? (wonTotal / mqlTotal) * 100 : 0;
 
+      // Receita ganha dos negócios criados no período (mesma coorte dos leads)
+      let wonRevenue = 0;
+      let wonDeals = 0;
+      for (const d of rangeDeals as any[]) {
+        if (d.status === "won") {
+          wonDeals++;
+          wonRevenue += Number(d.value) || 0;
+        }
+      }
+      const ticketMedio = wonDeals > 0 ? wonRevenue / wonDeals : 0;
+      const cacPaid = wonMqlPaid > 0 ? adSpend / wonMqlPaid : 0;
+      const roas = adSpend > 0 ? wonRevenue / adSpend : 0;
+
+      const leadsWithoutChannel = (rangeDeals as any[]).filter((d) => !channelByDeal.get(d.id)).length;
+      const leadsWithoutMqlAnswer = (rangeDeals as any[]).filter((d) => !mqlAnswered.has(d.id)).length;
+
       return {
         leadsThisMonth: rangeDeals.length,
         mqlThisMonth: mqlSet.size,
+        wonDeals,
+        wonRevenue,
+        ticketMedio,
+        cacPaid,
+        roas,
+        adsLastSync,
+        adsCampaignCount,
+        dataQuality: {
+          deletedExcluded: deletedInRange || 0,
+          leadsWithoutChannel,
+          leadsWithoutMqlAnswer,
+          mqlUnknownValues: Array.from(mqlUnknownValues),
+          adsIsCumulative: true,
+        },
+
         mqlOrganic,
         mqlPaid,
         mqlOthers,

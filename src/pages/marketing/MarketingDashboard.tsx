@@ -58,6 +58,7 @@ import {
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMarketingDashboardMetrics } from "@/hooks/useMarketingDashboardMetrics";
+import { DashboardDataTrustPanel } from "@/components/marketing/DashboardDataTrustPanel";
 
 type DatePreset = "today" | "month" | "quarter" | "custom";
 const PRESETS: { value: DatePreset; label: string }[] = [
@@ -284,6 +285,47 @@ export default function MarketingDashboard() {
         </div>
       </div>
 
+      {/* ===== Confiabilidade dos dados ===== */}
+      <DashboardDataTrustPanel data={data} />
+
+      {/* ===== Resultado do período (decisão) ===== */}
+      <section className="space-y-3">
+        <SectionTitle
+          icon={TrendingUp}
+          title="Resultado do período"
+          subtitle={`Receita e eficiência dos negócios criados em ${rangeLabel}`}
+        />
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          <KpiCard
+            icon={DollarSign}
+            label="Receita ganha"
+            value={formatBRL(data.wonRevenue)}
+            hint={`${formatNum(data.wonDeals)} negócios ganhos`}
+            tone="success"
+          />
+          <KpiCard
+            icon={Target}
+            label="Ticket médio"
+            value={data.ticketMedio > 0 ? formatBRL(data.ticketMedio) : "—"}
+          />
+          <KpiCard
+            icon={TrendingUp}
+            label="ROAS (aprox.)"
+            value={data.roas > 0 ? `${data.roas.toFixed(1)}x` : "—"}
+            hint="Receita ganha ÷ investimento acumulado"
+            tone={data.roas >= 3 ? "success" : data.roas > 0 ? "warning" : "default"}
+          />
+          <KpiCard
+            icon={Megaphone}
+            label="CAC — tráfego pago"
+            value={data.cacPaid > 0 ? formatBRL(data.cacPaid) : "—"}
+            hint="Investimento ÷ vendas de MQL pago"
+            tone="warning"
+          />
+        </div>
+      </section>
+
+
       {/* ===== Funil de Leads & MQL ===== */}
       <section className="space-y-3">
         <SectionTitle
@@ -464,7 +506,11 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Megaphone}
           title="Tráfego Pago"
-          subtitle={`Campanhas atualizadas no período (${rangeLabel})`}
+          subtitle={
+            data.adsLastSync
+              ? `Totais acumulados das campanhas (${data.adsCampaignCount}) — última sincronização em ${format(new Date(data.adsLastSync), "dd/MM/yyyy HH:mm", { locale: ptBR })}`
+              : "Nenhuma campanha sincronizada do Meta Ads ainda"
+          }
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/marketing/trafego-pago")}>
               Abrir Meta Ads <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -472,7 +518,13 @@ export default function MarketingDashboard() {
           }
         />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard icon={DollarSign} label="Investimento" value={formatBRL(data.adSpend)} tone="info" />
+          <KpiCard
+            icon={DollarSign}
+            label="Investimento"
+            value={formatBRL(data.adSpend)}
+            hint="Acumulado das campanhas (não recortado pelo período)"
+            tone="info"
+          />
           <KpiCard icon={Target} label="Leads gerados" value={formatNum(data.adLeads)} tone="success" />
           <KpiCard
             icon={TrendingUp}
@@ -490,6 +542,7 @@ export default function MarketingDashboard() {
             }
           />
         </div>
+
 
         {data.topCampaigns.length > 0 && (
           <Card>
