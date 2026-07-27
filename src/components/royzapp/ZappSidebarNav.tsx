@@ -88,9 +88,17 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
   ];
 
-  const navItems = allowedViews
+  let navItems = allowedViews
     ? allNavItems.filter((item) => allowedViews.includes(item.view))
     : allNavItems;
+
+  // Comercial (vendas): menu enxuto definido pela liderança — Conversas, Tags,
+  // Playbook, CRM e Reuniões. Admins/pickers seguem com o menu completo.
+  const isLeanSalesMenu = sectorId === "vendas" && !isAdmin;
+  if (isLeanSalesMenu) {
+    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
+    navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
+  }
 
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
