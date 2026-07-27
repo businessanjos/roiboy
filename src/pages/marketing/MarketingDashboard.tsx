@@ -464,7 +464,11 @@ export default function MarketingDashboard() {
         <SectionTitle
           icon={Megaphone}
           title="Tráfego Pago"
-          subtitle={`Campanhas atualizadas no período (${rangeLabel})`}
+          subtitle={
+            data.adsLastSync
+              ? `Totais acumulados das campanhas (${data.adsCampaignCount}) — última sincronização em ${format(new Date(data.adsLastSync), "dd/MM/yyyy HH:mm", { locale: ptBR })}`
+              : "Nenhuma campanha sincronizada do Meta Ads ainda"
+          }
           action={
             <Button variant="outline" size="sm" onClick={() => navigate("/marketing/trafego-pago")}>
               Abrir Meta Ads <ArrowRight className="h-3.5 w-3.5 ml-1" />
@@ -472,7 +476,13 @@ export default function MarketingDashboard() {
           }
         />
         <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-          <KpiCard icon={DollarSign} label="Investimento" value={formatBRL(data.adSpend)} tone="info" />
+          <KpiCard
+            icon={DollarSign}
+            label="Investimento"
+            value={formatBRL(data.adSpend)}
+            hint="Acumulado das campanhas (não recortado pelo período)"
+            tone="info"
+          />
           <KpiCard icon={Target} label="Leads gerados" value={formatNum(data.adLeads)} tone="success" />
           <KpiCard
             icon={TrendingUp}
@@ -490,6 +500,7 @@ export default function MarketingDashboard() {
             }
           />
         </div>
+
 
         {data.topCampaigns.length > 0 && (
           <Card>
