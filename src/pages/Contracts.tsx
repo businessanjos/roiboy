@@ -2468,6 +2468,7 @@ export default function Contracts() {
                         data={clientFormData}
                         onChange={setClientFormData}
                         teamUsers={teamUsers}
+                        onPendingEmailChange={(v) => { clientPendingEmailRef.current = v; }}
                         compact
                       />
                     </div>
