@@ -673,10 +673,58 @@ async function registerWebhookForInstance(
   const events = ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"];
   const webhookConfig = { url: webhookUrl, enabled: true, events };
 
+  // Newer UAZAPI builds expose an action-based /webhook API and IGNORE plain
+  // POSTs (returning "Invalid action"). Worse: a webhook row can exist with
+  // enabled=false, which silently kills all inbound messages. So we always
+  // read the current rows, update/create explicitly, then VERIFY.
+  const readWebhooks = async (): Promise<Array<Record<string, unknown>>> => {
+    try {
+      const list = await uazapiInstance("/webhook", "GET", token, undefined, server);
+      return Array.isArray(list) ? (list as Array<Record<string, unknown>>) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const isOurs = (w: Record<string, unknown>) =>
+    typeof w.url === "string" && (w.url as string).startsWith(webhookUrl);
+
+  try {
+    const existing = await readWebhooks();
+    const mine = existing.filter(isOurs);
+
+    if (mine.length > 0) {
+      for (const w of mine) {
+        await uazapiInstance("/webhook", "POST", token, {
+          ...w,
+          action: "update",
+          enabled: true,
+          events: (w.events as string[]) ?? events,
+        }, server).catch(() => {});
+      }
+    } else {
+      await uazapiInstance("/webhook", "POST", token, {
+        ...webhookConfig,
+        action: "add",
+        excludeMessages: ["wasSentByApi"],
+        addUrlEvents: true,
+        addUrlTypesMessages: true,
+      }, server).catch(() => {});
+    }
+
+    const after = await readWebhooks();
+    if (after.some((w) => isOurs(w) && w.enabled === true)) {
+      console.log(`[uazapi-manager] Webhook ACTIVE for "${instanceName}" on ${server.host}`);
+      return { success: true, webhookUrl, events };
+    }
+  } catch (err) {
+    console.log(`[uazapi-manager] action-based webhook setup failed: ${(err as Error).message}`);
+  }
+
+  // Legacy fallbacks for older UAZAPI builds.
   const endpoints: Array<{ path: string; method: string }> = [
     { path: "/webhook/set", method: "POST" },
     { path: "/instance/webhook", method: "PUT" },
-    { path: "/webhook", method: "POST" },
   ];
 
   for (const ep of endpoints) {
@@ -699,6 +747,7 @@ async function registerWebhookForInstance(
 
   return { success: false, webhookUrl, events };
 }
+
 
 
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
@@ -1891,51 +1940,12 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "WhatsApp não conectado. Conecte primeiro." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
-      
-      const webhookConfig = {
-        url: webhookUrl,
-        enabled: true,
-        events: ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"]
-      };
-      
-      console.log(`[uazapi-manager] Configuring webhook for ${instanceName}: ${webhookUrl}`);
-      console.log(`[uazapi-manager] Events: ${webhookConfig.events.join(", ")}`);
-      
-      // Tentar múltiplos endpoints possíveis da UAZAPI GO v2
-      let webhookResult: any = null;
-      let webhookSuccess = false;
-      
-      const endpoints = [
-        { path: "/webhook/set", method: "POST" },
-        { path: "/instance/webhook", method: "PUT" },
-        { path: "/webhook", method: "POST" },
-      ];
-      
-      for (const ep of endpoints) {
-        try {
-          console.log(`[uazapi-manager] Trying ${ep.method} ${ep.path}...`);
-          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig, sectorServer);
-          webhookSuccess = true;
-          console.log(`[uazapi-manager] Webhook configured via ${ep.path}`);
-          break;
-        } catch (err) {
-          console.log(`[uazapi-manager] ${ep.path} failed: ${(err as Error).message}`);
-        }
-      }
-      
-      if (!webhookSuccess) {
-        // Fallback: tentar via admin endpoint
-        try {
-          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, sectorServer);
-          webhookSuccess = true;
-          console.log(`[uazapi-manager] Webhook configured via admin endpoint`);
-        } catch (err) {
-          console.log(`[uazapi-manager] Admin webhook also failed: ${(err as Error).message}`);
-        }
-      }
-      
+      console.log(`[uazapi-manager] Configuring webhook for ${instanceName}`);
+      const webhookState = await registerWebhookForInstance(token!, instanceName || "", sectorServer);
+      const webhookUrl = webhookState.webhookUrl;
+      const webhookSuccess = webhookState.success;
+      const webhookConfig = { url: webhookUrl, enabled: true, events: webhookState.events };
+
       // Atualizar status no banco
       if (intData?.id) {
         const currentConfig = intData.config || {};
@@ -1945,8 +1955,9 @@ Deno.serve(async (req) => {
       }
       
       if (!webhookSuccess) {
-        return new Response(JSON.stringify({ error: "Não foi possível configurar o webhook automaticamente. Configure manualmente no painel UAZAPI.", details: webhookResult }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Não foi possível configurar o webhook automaticamente. Configure manualmente no painel UAZAPI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
       
       result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
     
