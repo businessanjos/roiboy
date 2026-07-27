@@ -41,7 +41,6 @@ export interface MarketingDashboardMetrics {
   channelBreakdown: { channel: string; count: number }[];
   leadsChannelBreakdown: { channel: string; count: number }[];
 
-  // Tráfego pago
   // Resultado / decisão
   wonDeals: number;
   wonRevenue: number;
