@@ -770,7 +770,9 @@ async function resolveAllowedZappSectors(
     .maybeSingle();
 
   const zappSectors = (viewRow as { zapp_sectors?: string[] | null } | null)?.zapp_sectors;
-  if (Array.isArray(zappSectors) && zappSectors.length > 0) return zappSectors;
+  // Array explícito (mesmo vazio) manda: [] = nenhum WhatsApp liberado.
+  // Só quando é null/ausente é que herda `user_sector_access` (mesma regra do frontend).
+  if (Array.isArray(zappSectors)) return zappSectors;
 
   const { data: accessRows } = await supabase
     .from("user_sector_access")
