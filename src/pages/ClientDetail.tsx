@@ -260,6 +260,8 @@ export default function ClientDetail() {
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const pendingEmailRef = useRef<string>("");
   const [savingInfo, setSavingInfo] = useState(false);
 
   // Forms for sending to client
