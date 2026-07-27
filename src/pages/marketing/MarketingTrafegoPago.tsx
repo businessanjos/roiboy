@@ -114,6 +114,23 @@ export default function MarketingTrafegoPago() {
     }
   }, [adSets]);
 
+  // Backfill dos snapshots diários (últimos 90 dias): preenche buracos na série
+  // histórica sempre que a sincronização falha ou o escopo de conta muda.
+  const backfillDaily = useCallback(async (adAccountIds: string[], opts?: { silent?: boolean; force?: boolean }) => {
+    if (adAccountIds.length === 0) return;
+    try {
+      const { data, error: e } = await supabase.functions.invoke('backfill-meta-daily-stats', {
+        body: { adAccountIds, days: 90, force: !!opts?.force },
+      });
+      if (e) throw e;
+      if (data?.error) { if (!opts?.silent) toast.error(data.error); return; }
+      const rows = data?.totalRows || 0;
+      if (!opts?.silent && rows > 0) toast.success(`Histórico diário atualizado (${rows} registros)`);
+    } catch (err) {
+      console.warn('[backfill-daily] falhou', err);
+    }
+  }, []);
+
   const syncCampaigns = useCallback(async () => {
     const acc = selectedAccount || accounts[0]?.id;
     if (!acc) { toast.error('Nenhuma conta de anúncios'); return; }
@@ -121,17 +138,30 @@ export default function MarketingTrafegoPago() {
     try {
       const { data, error: e } = await supabase.functions.invoke('sync-meta-campaigns', { body: { adAccountId: acc, ...periodPayload } });
       if (e) throw e;
-      if (data?.error) toast.error(data.error);
-      else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); }
-    } catch (err) { console.error(err); toast.error('Erro ao sincronizar'); }
+      if (data?.error) { toast.error(data.error); await backfillDaily([acc], { silent: true }); }
+      else { toast.success(`${data?.count || 0} campanhas sincronizadas!`); await fetchAdSets(); await backfillDaily([acc], { silent: true }); }
+    } catch (err) {
+      console.error(err);
+      toast.error('Erro ao sincronizar');
+      await backfillDaily([acc], { silent: true });
+    }
     finally { setSyncing(false); }
-  }, [accounts, selectedAccount, periodPayload, fetchAdSets]);
+  }, [accounts, selectedAccount, periodPayload, fetchAdSets, backfillDaily]);
 
   useEffect(() => {
     if (accounts.length > 0 && (!selectedAccount || !accounts.find(a => a.id === selectedAccount))) {
       setSelectedAccount(accounts[0].id);
     }
   }, [accounts, selectedAccount]);
+
+  // Escopo mudou (nova conta selecionada) → garante a série diária dessa conta
+  const backfilledAccountsRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!isConnected || !selectedAccount) return;
+    if (backfilledAccountsRef.current.has(selectedAccount)) return;
+    backfilledAccountsRef.current.add(selectedAccount);
+    backfillDaily([selectedAccount], { silent: true });
+  }, [isConnected, selectedAccount, backfillDaily]);
 
   const loadInsights = useCallback(async () => {
     if (!selectedAccount) return;
