@@ -756,10 +756,28 @@ export default function RoyZapp() {
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
   const [multiSendInProgress, setMultiSendInProgress] = useState(false);
 
+  // Monta o texto de itens que viram mensagem de texto (texto, link, lista, template)
+  const buildPlaybookText = useCallback((item: PlaybookItem, processedText?: string): string => {
+    const parts: string[] = [];
+    const base = (processedText ?? item.text_content ?? "").trim();
+    if (item.content_type === 'link') {
+      const title = (item.link_title || "").trim();
+      const desc = (item.link_description || "").trim();
+      const url = (item.link_url || item.media_url || "").trim();
+      if (title) parts.push(title);
+      if (desc) parts.push(desc);
+      if (base) parts.push(base);
+      if (url) parts.push(url);
+      return parts.join("\n").trim();
+    }
+    return base;
+  }, []);
+
   // Helper to send a single playbook item
   const sendSinglePlaybookItem = useCallback(async (item: PlaybookItem, processedText?: string) => {
-    if (item.content_type === 'text' && processedText) {
-      messaging.setMessageInput(processedText);
+    const textPayload = buildPlaybookText(item, processedText);
+    if (['text', 'link', 'list', 'template'].includes(item.content_type) && textPayload) {
+      messaging.setMessageInput(textPayload);
       // Wait a tick for state to update, then trigger send
       await new Promise(resolve => setTimeout(resolve, 100));
       await messaging.sendMessage();
