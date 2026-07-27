@@ -1942,6 +1942,7 @@ export default function Clients() {
                     errors={formErrors}
                     showBasicFields={true}
                     teamUsers={teamUsers}
+                    onPendingEmailChange={(v) => { newClientPendingEmailRef.current = v; }}
                   />
                   
                         {/* Product Selection */}
