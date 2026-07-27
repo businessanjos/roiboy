@@ -98,6 +98,68 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     }
   }, []);
 
+  /**
+   * Aplica o "piso de recência" conhecido localmente sobre linhas vindas do banco.
+   * Um refetch pode chegar antes do commit/replicação do último envio (nosso ou do
+   * cliente) e faria a conversa "cair" na lista. Aqui garantimos que a lista nunca
+   * regride para um horário mais antigo do que o já observado.
+   */
+  const applyRecencyFloor = useCallback((rows: ConversationAssignment[]): ConversationAssignment[] => {
+    const maxAcceptable = Date.now() + 5000; // ignora relógios adiantados
+    return rows.map((a) => {
+      const convId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
+      if (!convId || !a.zapp_conversation) return a;
+      const hwm = lastMessageHWMRef.current.get(convId);
+      if (!hwm || hwm.at > maxAcceptable) return a;
+      const dbAt = a.zapp_conversation.last_message_at;
+      const dbMs = dbAt ? new Date(dbAt).getTime() : 0;
+      if (Number.isFinite(dbMs) && dbMs >= hwm.at) return a;
+      return {
+        ...a,
+        zapp_conversation: {
+          ...a.zapp_conversation,
+          last_message_at: new Date(hwm.at).toISOString(),
+        },
+      } as ConversationAssignment;
+    });
+  }, []);
+
+  /**
+   * Bump manual (ex.: mensagem enviada pelo próprio usuário no ROY zAPP).
+   * Registra no high-water mark e reordena a lista imediatamente, sem depender
+   * do realtime — a conversa vai ao topo independente de quem enviou.
+   */
+  const noteConversationBump = useCallback(
+    (convId: string, at: string, preview?: string) => {
+      if (!convId || !at) return;
+      const atMs = new Date(at).getTime();
+      if (!Number.isFinite(atMs)) return;
+      const prev = lastMessageHWMRef.current.get(convId);
+      if (!prev || atMs >= prev.at) {
+        lastMessageHWMRef.current.set(convId, { at: atMs, msgId: prev?.msgId });
+      }
+      setAssignments((rows) =>
+        rows.map((a) => {
+          const rowConvId = a.zapp_conversation?.id || (a as any).zapp_conversation_id;
+          if (rowConvId !== convId || !a.zapp_conversation) return a;
+          const currentMs = a.zapp_conversation.last_message_at
+            ? new Date(a.zapp_conversation.last_message_at).getTime()
+            : 0;
+          if (currentMs > atMs) return a;
+          return {
+            ...a,
+            zapp_conversation: {
+              ...a.zapp_conversation,
+              last_message_at: at,
+              last_message_preview: preview ?? a.zapp_conversation.last_message_preview,
+            },
+          } as ConversationAssignment;
+        })
+      );
+    },
+    []
+  );
+
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
 
   // Build the assignments select query (shared between fetchAssignmentsOnly and fetchData)
