@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useEffect } from "react";
 import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -88,9 +88,31 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
   ];
 
-  const navItems = allowedViews
+  let navItems = allowedViews
     ? allNavItems.filter((item) => allowedViews.includes(item.view))
     : allNavItems;
+
+  // Comercial (vendas): menu enxuto definido pela liderança — Conversas, Tags,
+  // Playbook, CRM e Reuniões. Admins/pickers seguem com o menu completo.
+  const isLeanSalesMenu = sectorId === "vendas" && !isAdmin;
+  if (isLeanSalesMenu) {
+    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
+    navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
+  }
+
+  // Sem o filtro "Todas" no menu enxuto, cai em conversas individuais.
+  useEffect(() => {
+    if (isLeanSalesMenu && filterConversationType === "all") {
+      setFilterConversationType("individual");
+    }
+  }, [isLeanSalesMenu, filterConversationType, setFilterConversationType]);
+
+  // Se a tela ativa não está mais disponível, volta para Conversas.
+  useEffect(() => {
+    if (navItems.length > 0 && !navItems.some((i) => i.view === activeView)) {
+      setActiveView("inbox");
+    }
+  });
 
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
@@ -131,6 +153,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
 
 
       <div className="flex items-center bg-zapp-input rounded-full p-0.5">
+        {!isLeanSalesMenu && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -149,6 +172,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </TooltipTrigger>
           <TooltipContent side="bottom">Todas as conversas</TooltipContent>
         </Tooltip>
+        )}
 
         <Tooltip>
           <TooltipTrigger asChild>
