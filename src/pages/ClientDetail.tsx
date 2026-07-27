@@ -520,6 +520,9 @@ export default function ClientDetail() {
       return;
     }
 
+    // Garante que um e-mail digitado sem clicar em "+" também seja salvo
+    const emailsToSave = mergePendingEmail(editFormData.emails, pendingEmailRef.current);
+
     setSavingInfo(true);
     try {
       const { error } = await supabase
@@ -527,7 +530,7 @@ export default function ClientDetail() {
         .update({
           full_name: editFormData.full_name.trim(),
           phone_e164: editFormData.phone_e164,
-          emails: editFormData.emails,
+          emails: emailsToSave,
           additional_phones: editFormData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
           cpf: editFormData.cpf.replace(/\D/g, '') || null,
           cnpj: editFormData.cnpj.replace(/\D/g, '') || null,
