@@ -236,25 +236,59 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       }
 
       // ===== TRÁFEGO PAGO =====
-      // Os ad sets vêm de sincronizações do Meta e guardam totais acumulados da campanha
-      // (não há série diária). Por isso NÃO filtramos por período aqui: filtrar por
-      // updated_at zerava o investimento sempre que o range não continha o dia do sync.
+      // Preferimos a série diária (marketing_ad_daily_stats), que permite ROAS/CPL
+      // reais por período. Só caímos no acumulado de marketing_ad_sets quando ainda
+      // não existem snapshots diários no range.
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
       let adsLastSync: string | null = null;
       let adsCampaignCount = 0;
+      let adsIsCumulative = true;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
+      const orFilter = [
+        `account_id.eq.${accountId}`,
+        userId ? `user_id.eq.${userId}` : null,
+      ]
+        .filter(Boolean)
+        .join(",");
+
       {
+        const { data: daily = [] } = await (supabase as any)
+          .from("marketing_ad_daily_stats")
+          .select("campaign_name, meta_campaign_id, spend, conversions, impressions, stat_date, synced_at, account_id, user_id")
+          .or(orFilter)
+          .gte("stat_date", format(rStart, "yyyy-MM-dd"))
+          .lte("stat_date", format(rEnd, "yyyy-MM-dd"));
+
+        if ((daily as any[]).length > 0) {
+          adsIsCumulative = false;
+          const byCampaign = new Map<string, { name: string; spend: number; leads: number }>();
+          for (const d of daily as any[]) {
+            const spend = Number(d.spend) || 0;
+            const leads = Number(d.conversions) || 0;
+            adSpend += spend;
+            adLeads += leads;
+            adImpressions += Number(d.impressions) || 0;
+            if (!adsLastSync || d.synced_at > adsLastSync) adsLastSync = d.synced_at;
+            const key = d.meta_campaign_id || d.campaign_name || "—";
+            const cur = byCampaign.get(key) || { name: d.campaign_name || "—", spend: 0, leads: 0 };
+            cur.spend += spend;
+            cur.leads += leads;
+            byCampaign.set(key, cur);
+          }
+          adsCampaignCount = byCampaign.size;
+          adCpl = adLeads > 0 ? adSpend / adLeads : 0;
+          topCampaigns = Array.from(byCampaign.values())
+            .sort((a, b) => b.spend - a.spend)
+            .slice(0, 5)
+            .map((c) => ({ ...c, cpl: c.leads > 0 ? c.spend / c.leads : 0 }));
+        }
+      }
+
+      if (adsIsCumulative) {
         const { data: ads = [] } = await (supabase as any)
           .from("marketing_ad_sets")
           .select("name, spend, conversions, impressions, cpl, updated_at, account_id, user_id")
-          .or(
-            [
-              `account_id.eq.${accountId}`,
-              userId ? `user_id.eq.${userId}` : null,
-            ]
-              .filter(Boolean)
-              .join(",")
-          )
+          .or(orFilter)
           .order("spend", { ascending: false });
         for (const a of ads as any[]) {
           adSpend += Number(a.spend) || 0;
@@ -271,6 +305,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           cpl: Number(a.cpl) || 0,
         }));
       }
+
 
 
       // ===== CONTEÚDO (filtrado por período) =====
@@ -386,7 +421,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           leadsWithoutChannel,
           leadsWithoutMqlAnswer,
           mqlUnknownValues: Array.from(mqlUnknownValues),
-          adsIsCumulative: true,
+          adsIsCumulative,
         },
 
         mqlOrganic,

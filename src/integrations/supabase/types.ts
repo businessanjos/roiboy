@@ -15574,6 +15574,63 @@ export type Database = {
         }
         Relationships: []
       }
+      marketing_ad_daily_stats: {
+        Row: {
+          account_id: string | null
+          agency_id: string | null
+          campaign_name: string | null
+          clicks: number
+          conversions: number
+          created_at: string
+          id: string
+          impressions: number
+          meta_ad_account_id: string
+          meta_campaign_id: string
+          platform: string
+          spend: number
+          stat_date: string
+          synced_at: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id?: string | null
+          agency_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          meta_ad_account_id: string
+          meta_campaign_id: string
+          platform?: string
+          spend?: number
+          stat_date: string
+          synced_at?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string | null
+          agency_id?: string | null
+          campaign_name?: string | null
+          clicks?: number
+          conversions?: number
+          created_at?: string
+          id?: string
+          impressions?: number
+          meta_ad_account_id?: string
+          meta_campaign_id?: string
+          platform?: string
+          spend?: number
+          stat_date?: string
+          synced_at?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       marketing_ad_sets: {
         Row: {
           account_id: string | null

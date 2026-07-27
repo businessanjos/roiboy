@@ -71,8 +71,72 @@ serve(async (req) => {
       if (insErr) return new Response(JSON.stringify({ error: 'Erro ao salvar' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
     }
 
-    return new Response(JSON.stringify({ success: true, count: rows.length }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    // ===== SNAPSHOTS DIÁRIOS (time_increment=1) =====
+    // Guarda a série diária de gasto/leads para que ROAS e CPL por período
+    // reflitam o que realmente aconteceu, e não o acumulado do último sync.
+    let dailyRows = 0;
+    try {
+      const dayMs = 86400000;
+      const toIso = (d: Date) => d.toISOString().split('T')[0];
+      const dSince = since || toIso(new Date(Date.now() - 90 * dayMs));
+      const dUntil = until || toIso(new Date());
+
+      // Herda account_id / agency_id já resolvidos nos ad sets desse usuário
+      const { data: scope } = await supabase
+        .from('marketing_ad_sets')
+        .select('account_id, agency_id')
+        .eq('user_id', user.id)
+        .eq('meta_ad_account_id', accountId)
+        .limit(1)
+        .maybeSingle();
+
+      const nameById = new Map<string, string>(campaigns.map((c: any) => [c.id, c.name]));
+      const daily: any[] = [];
+      let dUrl: string | null = `https://graph.facebook.com/v21.0/${accountId}/insights?level=campaign&time_increment=1&time_range={'since':'${dSince}','until':'${dUntil}'}&fields=campaign_id,campaign_name,spend,impressions,clicks,actions&limit=500&access_token=${tokenData.access_token}`;
+      let dPages = 0;
+      while (dUrl && dPages < 40) {
+        const res: any = await (await fetch(dUrl)).json();
+        if (res.error) { console.error('daily insights error:', res.error.message); break; }
+        for (const r of (res.data || [])) {
+          let conv = 0;
+          for (const a of (r.actions || [])) {
+            if (['purchase', 'omni_purchase', 'lead', 'complete_registration'].includes(a.action_type)) conv += parseInt(a.value) || 0;
+          }
+          daily.push({
+            user_id: user.id,
+            account_id: scope?.account_id ?? null,
+            agency_id: scope?.agency_id ?? null,
+            meta_ad_account_id: accountId,
+            meta_campaign_id: r.campaign_id,
+            campaign_name: r.campaign_name || nameById.get(r.campaign_id) || null,
+            platform: 'Meta Ads',
+            stat_date: r.date_start,
+            spend: parseFloat(r.spend) || 0,
+            impressions: parseInt(r.impressions) || 0,
+            clicks: parseInt(r.clicks) || 0,
+            conversions: conv,
+            synced_at: new Date().toISOString(),
+            updated_at: new Date().toISOString(),
+          });
+        }
+        dUrl = res.paging?.next || null;
+        dPages++;
+      }
+
+      for (let i = 0; i < daily.length; i += 500) {
+        const { error: upErr } = await supabase
+          .from('marketing_ad_daily_stats')
+          .upsert(daily.slice(i, i + 500) as any, { onConflict: 'user_id,meta_ad_account_id,meta_campaign_id,stat_date' });
+        if (upErr) { console.error('daily upsert error:', upErr.message); break; }
+      }
+      dailyRows = daily.length;
+    } catch (e) {
+      console.error('daily snapshots failed:', e);
+    }
+
+    return new Response(JSON.stringify({ success: true, count: rows.length, dailyRows }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   } catch (e) {
+
     console.error('sync-meta-campaigns error:', e);
     return new Response(JSON.stringify({ error: 'Erro interno' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
   }
