@@ -325,6 +325,11 @@ export default function MarketingDashboard() {
         </div>
       </section>
 
+      {/* ===== Séries históricas de investimento ===== */}
+      <AdSpendTrendCharts range={{ startDate: rangeStart, endDate: rangeEnd }} />
+
+
+
 
       {/* ===== Funil de Leads & MQL ===== */}
       <section className="space-y-3">
