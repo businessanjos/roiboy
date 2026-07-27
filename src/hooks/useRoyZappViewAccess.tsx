@@ -81,18 +81,18 @@ export function useRoyZappViewAccess() {
 
 
   /**
-   * Regra final de acesso ao WhatsApp de um setor.
+   * Regra final de acesso ao WhatsApp de um setor — delega para a regra única
+   * em `royZappAccess.ts` (não reimplementar em outros lugares).
    * @param hasGeneralSectorAccess acesso geral ao setor (user_sector_access)
    */
-  const canOpenZappSector = (sectorId: string, hasGeneralSectorAccess: boolean) => {
-    const explicit = data?.zappSectors;
-    if (explicit && explicit.length > 0) {
-      return explicit.includes(sectorId as ZappWhatsAppSector);
-    }
-    if (unrestricted) return true;
-    if (allowedZappSectors === null) return hasGeneralSectorAccess;
-    return allowedZappSectors.includes(sectorId as ZappWhatsAppSector);
-  };
+  const canOpenZappSector = (sectorId: string, hasGeneralSectorAccess: boolean) =>
+    canOpenZappSectorFor({
+      sectorId,
+      explicitZappSectors: data?.zappSectors,
+      unrestricted,
+      hasGeneralSectorAccess,
+    });
+
 
 
   return {
