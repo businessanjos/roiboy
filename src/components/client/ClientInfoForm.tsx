@@ -350,7 +350,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
   );
 }
 
-export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [], compact = false }: ClientInfoFormProps) {
+export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = true, teamUsers = [], compact = false, onPendingEmailChange }: ClientInfoFormProps) {
   const [newEmail, setNewEmail] = useState("");
   const [newPhone, setNewPhone] = useState("");
   const [newPhoneLabel, setNewPhoneLabel] = useState("");
