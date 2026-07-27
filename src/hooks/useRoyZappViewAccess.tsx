@@ -9,6 +9,7 @@ import {
   ZAPP_WHATSAPP_SECTORS,
   canPickSector,
   sanitizeViewList,
+  canOpenZappSectorFor,
   sanitizeZappSectorList,
   type ZappWhatsAppSector,
 } from "@/lib/royZappAccess";
