@@ -6,6 +6,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ZappPinDialog } from "@/components/royzapp/dialogs/ZappPinDialog";
 import { ZappInstanceSelectorDialog } from "@/components/royzapp/dialogs/ZappInstanceSelectorDialog";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+import { ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 
 interface IntegrationInfo {
   id: string;
