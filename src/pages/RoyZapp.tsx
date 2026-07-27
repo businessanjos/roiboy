@@ -73,6 +73,7 @@ import { isManagementUser } from "@/lib/access/managementRoles";
 import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles";
 import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+import { useZappConnectionAlerts } from "@/hooks/useZappConnectionAlerts";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -310,6 +311,27 @@ export default function RoyZapp() {
   useEffect(() => {
     if (!allowedViews.includes(activeView)) setActiveView("inbox");
   }, [activeView, allowedViews]);
+
+  // Alerta automático: linha de WhatsApp do setor fora do ar → toast com ação de reconectar.
+  useZappConnectionAlerts({
+    enabled: !zappAccessLoading && !sectorAccessLoading && !!currentUser?.account_id,
+    onReconnect: (sectorId, integrationId) => {
+      setSelectedSectorId(sectorId as SectorId);
+      setSelectedIntegrationId(integrationId);
+      setActiveView("inbox");
+      setSearchParams(
+        (prev) => {
+          prev.set("sector", sectorId);
+          prev.set("integrationId", integrationId);
+          prev.set("view", "inbox");
+          return prev;
+        },
+        { replace: true },
+      );
+    },
+  });
+
+
 
   // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
   useEffect(() => {
