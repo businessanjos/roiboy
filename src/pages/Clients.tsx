@@ -913,13 +913,18 @@ export default function Clients() {
   };
 
   const handleAddClient = async () => {
+    // Garante que um e-mail digitado sem clicar em "+" também seja considerado
+    const mergedEmails = mergePendingEmail(newClientData.emails, newClientPendingEmailRef.current);
+    if (mergedEmails.length !== newClientData.emails.length) {
+      setNewClientData({ ...newClientData, emails: mergedEmails });
+    }
     const errors: Record<string, string> = {};
     if (!newClientData.full_name.trim()) errors.full_name = "Nome é obrigatório";
     if (!newClientData.phone_e164.trim() || !/^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164)) {
       errors.phone_e164 = "Telefone inválido. Ex: +5511999999999";
     }
     // Validate at least one email is provided
-    const validEmails = newClientData.emails.filter(e => e.trim());
+    const validEmails = mergedEmails.filter(e => e.trim());
     if (validEmails.length === 0) {
       errors.emails = "Pelo menos um email é obrigatório";
     } else {
