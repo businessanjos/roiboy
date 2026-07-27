@@ -367,6 +367,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
           .select(ASSIGNMENTS_SELECT)
           .eq("account_id", accountId)
           .eq("department_id", departmentId)
+          .order("last_message_at", { referencedTable: "zapp_conversation", ascending: false, nullsFirst: false })
           .order("updated_at", { ascending: false })
           .limit(1000);
 
