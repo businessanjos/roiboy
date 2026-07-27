@@ -42,6 +42,23 @@ export interface MarketingDashboardMetrics {
   leadsChannelBreakdown: { channel: string; count: number }[];
 
   // Tráfego pago
+  // Resultado / decisão
+  wonDeals: number;
+  wonRevenue: number;
+  ticketMedio: number;
+  cacPaid: number;
+  roas: number;
+  adsLastSync: string | null;
+  adsCampaignCount: number;
+  dataQuality: {
+    deletedExcluded: number;
+    leadsWithoutChannel: number;
+    leadsWithoutMqlAnswer: number;
+    mqlUnknownValues: string[];
+    adsIsCumulative: boolean;
+  };
+
+  // Tráfego pago
   adSpend: number;
   adLeads: number;
   adImpressions: number;
