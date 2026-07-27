@@ -673,6 +673,9 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   placeholder="email@exemplo.com"
                   className={`h-9 pr-9 ${emailError || errors.emails ? "border-destructive ring-1 ring-destructive/30" : getInputClass(validation.newEmail)}`}
                   onKeyDown={(e) => e.key === "Enter" && (e.preventDefault(), handleAddEmail())}
+                  onBlur={() => {
+                    if (newEmail.trim()) handleAddEmail();
+                  }}
                 />
                 <ValidationIndicator isValid={validation.newEmail.isValid} isEmpty={validation.newEmail.isEmpty} />
               </div>
