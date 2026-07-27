@@ -59,6 +59,8 @@ import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { useMarketingDashboardMetrics } from "@/hooks/useMarketingDashboardMetrics";
 import { DashboardDataTrustPanel } from "@/components/marketing/DashboardDataTrustPanel";
+import { AdSpendTrendCharts } from "@/components/marketing/AdSpendTrendCharts";
+
 
 type DatePreset = "today" | "month" | "quarter" | "custom";
 const PRESETS: { value: DatePreset; label: string }[] = [
@@ -324,6 +326,11 @@ export default function MarketingDashboard() {
           />
         </div>
       </section>
+
+      {/* ===== Séries históricas de investimento ===== */}
+      <AdSpendTrendCharts range={range} />
+
+
 
 
       {/* ===== Funil de Leads & MQL ===== */}
