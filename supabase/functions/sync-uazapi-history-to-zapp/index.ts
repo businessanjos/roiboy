@@ -77,7 +77,17 @@ function normalizeUazTimestampMs(raw?: number | string | null): number {
   return value < 10_000_000_000 ? value * 1000 : value;
 }
 
+function mediaKeyOf(m: UazMessage): string | null {
+  const anyMsg = m as unknown as Record<string, unknown>;
+  const c = (m.content && typeof m.content === "object" ? m.content : null) as
+    | Record<string, unknown>
+    | null;
+  const raw = anyMsg.mediaKey ?? anyMsg.mediakey ?? c?.mediaKey ?? c?.mediakey;
+  return raw ? String(raw) : null;
+}
+
 function extractContent(m: UazMessage): {
+
   content: string;
   messageType: string;
   mediaUrl: string | null;
@@ -424,6 +434,13 @@ Deno.serve(async (req) => {
               const senderPhone = isGroup
                 ? normalizePhone(m.sender_pn) || normalizePhone(m.sender)
                 : null;
+              // Mídia vinda do CDN do WhatsApp (mmg.whatsapp.net) está
+              // criptografada: precisa ir para media_encrypted_url + media_key
+              // para o pipeline de download/descriptografia. Guardar isso em
+              // media_url deixava o áudio impossível de tocar e de transcrever.
+              const rawMediaUrl = extracted.mediaUrl;
+              const isEncryptedCdn = !!rawMediaUrl && rawMediaUrl.includes("whatsapp.net");
+              const historyMediaKey = mediaKeyOf(m);
               rows.push({
                 account_id: integration.account_id,
                 zapp_conversation_id: conversationId,
@@ -436,7 +453,17 @@ Deno.serve(async (req) => {
                 ).toISOString(),
                 sender_phone: isGroup ? senderPhone : null,
                 sender_name: isGroup ? m.senderName || null : null,
-                media_url: extracted.mediaUrl,
+                media_url: isEncryptedCdn ? null : rawMediaUrl,
+                media_encrypted_url: isEncryptedCdn ? rawMediaUrl : null,
+                media_key: isEncryptedCdn ? historyMediaKey : null,
+                media_download_status: !rawMediaUrl
+                  ? null
+                  : isEncryptedCdn
+                    ? (historyMediaKey ? "pending" : "failed")
+                    : "completed",
+                media_last_error: isEncryptedCdn && !historyMediaKey
+                  ? "Mídia histórica sem chave de descriptografia (mediaKey ausente no histórico do provedor)"
+                  : null,
                 media_type: extracted.mediaType,
                 media_mimetype: m.mimetype || null,
                 delivery_status: m.fromMe ? "sent" : null,
@@ -444,6 +471,7 @@ Deno.serve(async (req) => {
                 synced_from_history: true,
               });
             }
+
 
             if (rows.length) {
               const { error: insertError } = await supabase
