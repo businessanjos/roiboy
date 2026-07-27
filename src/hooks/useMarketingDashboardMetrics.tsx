@@ -92,14 +92,25 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const last7 = subDays(now, 7);
 
       // ===== LEADS / MQL (no range filtrado) =====
+      // Exclui negócios com soft-delete (deleted_at) — senão o funil infla.
       const { data: rangeDeals = [] } = await supabase
         .from("deals")
-        .select("id, status")
+        .select("id, status, value, deleted_at")
         .eq("account_id", accountId!)
+        .is("deleted_at", null)
+        .gte("created_at", rStart.toISOString())
+        .lte("created_at", rEnd.toISOString());
+
+      const { count: deletedInRange = 0 } = await supabase
+        .from("deals")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId!)
+        .not("deleted_at", "is", null)
         .gte("created_at", rStart.toISOString())
         .lte("created_at", rEnd.toISOString());
 
       const rangeDealIds = (rangeDeals as any[]).map((d) => d.id);
+
 
       let mqlSet = new Set<string>();
       let channelByDeal = new Map<string, string>();
