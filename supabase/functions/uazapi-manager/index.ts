@@ -1940,51 +1940,12 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ error: "WhatsApp não conectado. Conecte primeiro." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
       
-      const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-      const webhookUrl = `${supabaseUrl}/functions/v1/uazapi-webhook`;
-      
-      const webhookConfig = {
-        url: webhookUrl,
-        enabled: true,
-        events: ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"]
-      };
-      
-      console.log(`[uazapi-manager] Configuring webhook for ${instanceName}: ${webhookUrl}`);
-      console.log(`[uazapi-manager] Events: ${webhookConfig.events.join(", ")}`);
-      
-      // Tentar múltiplos endpoints possíveis da UAZAPI GO v2
-      let webhookResult: any = null;
-      let webhookSuccess = false;
-      
-      const endpoints = [
-        { path: "/webhook/set", method: "POST" },
-        { path: "/instance/webhook", method: "PUT" },
-        { path: "/webhook", method: "POST" },
-      ];
-      
-      for (const ep of endpoints) {
-        try {
-          console.log(`[uazapi-manager] Trying ${ep.method} ${ep.path}...`);
-          webhookResult = await uazapiInstance(ep.path, ep.method, token!, webhookConfig, sectorServer);
-          webhookSuccess = true;
-          console.log(`[uazapi-manager] Webhook configured via ${ep.path}`);
-          break;
-        } catch (err) {
-          console.log(`[uazapi-manager] ${ep.path} failed: ${(err as Error).message}`);
-        }
-      }
-      
-      if (!webhookSuccess) {
-        // Fallback: tentar via admin endpoint
-        try {
-          webhookResult = await uazapiAdmin(`/instance/webhook/${instanceName}`, "PUT", webhookConfig, sectorServer);
-          webhookSuccess = true;
-          console.log(`[uazapi-manager] Webhook configured via admin endpoint`);
-        } catch (err) {
-          console.log(`[uazapi-manager] Admin webhook also failed: ${(err as Error).message}`);
-        }
-      }
-      
+      console.log(`[uazapi-manager] Configuring webhook for ${instanceName}`);
+      const webhookState = await registerWebhookForInstance(token!, instanceName || "", sectorServer);
+      const webhookUrl = webhookState.webhookUrl;
+      const webhookSuccess = webhookState.success;
+      const webhookConfig = { url: webhookUrl, enabled: true, events: webhookState.events };
+
       // Atualizar status no banco
       if (intData?.id) {
         const currentConfig = intData.config || {};
@@ -1994,8 +1955,9 @@ Deno.serve(async (req) => {
       }
       
       if (!webhookSuccess) {
-        return new Response(JSON.stringify({ error: "Não foi possível configurar o webhook automaticamente. Configure manualmente no painel UAZAPI.", details: webhookResult }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        return new Response(JSON.stringify({ error: "Não foi possível configurar o webhook automaticamente. Configure manualmente no painel UAZAPI." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+
       
       result = { success: true, webhook_url: webhookUrl, events: webhookConfig.events };
     
