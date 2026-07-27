@@ -100,6 +100,20 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
   }
 
+  // Sem o filtro "Todas" no menu enxuto, cai em conversas individuais.
+  useEffect(() => {
+    if (isLeanSalesMenu && filterConversationType === "all") {
+      setFilterConversationType("individual");
+    }
+  }, [isLeanSalesMenu, filterConversationType, setFilterConversationType]);
+
+  // Se a tela ativa não está mais disponível, volta para Conversas.
+  useEffect(() => {
+    if (navItems.length > 0 && !navItems.some((i) => i.view === activeView)) {
+      setActiveView("inbox");
+    }
+  });
+
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
       {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
