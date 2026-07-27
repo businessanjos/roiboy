@@ -139,6 +139,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
 
 
       <div className="flex items-center bg-zapp-input rounded-full p-0.5">
+        {!isLeanSalesMenu && (
         <Tooltip>
           <TooltipTrigger asChild>
             <Button
@@ -157,6 +158,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </TooltipTrigger>
           <TooltipContent side="bottom">Todas as conversas</TooltipContent>
         </Tooltip>
+        )}
 
         <Tooltip>
           <TooltipTrigger asChild>
