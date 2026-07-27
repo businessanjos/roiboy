@@ -29,7 +29,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, mergePendingEmail } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
