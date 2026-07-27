@@ -236,6 +236,7 @@ export default function RoyZapp() {
     allClients,
     assignments,
     setAssignments,
+    noteConversationBump,
     messages,
     loading,
     availableProducts,
