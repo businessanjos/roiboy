@@ -9,6 +9,8 @@ import {
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 import { ZappRoleHelpPopover } from "./ZappRoleHelpPopover";
+import { canPickSector } from "@/lib/royZappAccess";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import type { ZappSectorRole } from "@/lib/royZappRoles";
 
 interface ZappSidebarNavProps {
