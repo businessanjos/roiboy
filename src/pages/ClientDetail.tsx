@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -20,7 +20,7 @@ import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
 import { ClientAgenda } from "@/components/client/ClientAgenda";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones, mergePendingEmail } from "@/components/client/ClientInfoForm";
 import { ClientLifeEvents } from "@/components/client/ClientLifeEvents";
 import { ClientMilestones } from "@/components/client/ClientMilestones";
 import { ClientFieldsSummary } from "@/components/client/ClientFieldsSummary";
@@ -260,6 +260,8 @@ export default function ClientDetail() {
   // Edit client info state
   const [editInfoDialogOpen, setEditInfoDialogOpen] = useState(false);
   const [editFormData, setEditFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const pendingEmailRef = useRef<string>("");
   const [savingInfo, setSavingInfo] = useState(false);
 
   // Forms for sending to client
@@ -494,6 +496,7 @@ export default function ClientDetail() {
       additional_bank_accounts: ensureArray((client as any).additional_bank_accounts),
       companies: ensureArray((client as any).companies),
     });
+    pendingEmailRef.current = "";
     setEditInfoDialogOpen(true);
   };
 
@@ -518,6 +521,9 @@ export default function ClientDetail() {
       return;
     }
 
+    // Garante que um e-mail digitado sem clicar em "+" também seja salvo
+    const emailsToSave = mergePendingEmail(editFormData.emails, pendingEmailRef.current);
+
     setSavingInfo(true);
     try {
       const { error } = await supabase
@@ -525,7 +531,7 @@ export default function ClientDetail() {
         .update({
           full_name: editFormData.full_name.trim(),
           phone_e164: editFormData.phone_e164,
-          emails: editFormData.emails,
+          emails: emailsToSave,
           additional_phones: editFormData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
           cpf: editFormData.cpf.replace(/\D/g, '') || null,
           cnpj: editFormData.cnpj.replace(/\D/g, '') || null,
@@ -568,7 +574,7 @@ export default function ClientDetail() {
         ...client,
         full_name: editFormData.full_name.trim(),
         phone_e164: editFormData.phone_e164,
-        emails: editFormData.emails,
+        emails: emailsToSave,
         additional_phones: editFormData.additional_phones,
         cpf: editFormData.cpf,
         cnpj: editFormData.cnpj,
@@ -600,6 +606,7 @@ export default function ClientDetail() {
         companies: editFormData.companies,
       } as any);
 
+      pendingEmailRef.current = "";
       toast.success("Informações atualizadas!");
       setEditInfoDialogOpen(false);
     } catch (error: any) {
@@ -1987,6 +1994,7 @@ export default function ClientDetail() {
                   onChange={setEditFormData}
                   showBasicFields={true}
                   teamUsers={teamUsers}
+                  onPendingEmailChange={(v) => { pendingEmailRef.current = v; }}
                 />
             </ScrollArea>
             <DialogFooter>

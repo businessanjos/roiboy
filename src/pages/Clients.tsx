@@ -29,7 +29,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { Progress } from "@/components/ui/progress";
 import { toast } from "sonner";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, mergePendingEmail } from "@/components/client/ClientInfoForm";
 import { validateCPF, validateCNPJ } from "@/lib/validators";
 import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from "@/components/custom-fields";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -301,6 +301,8 @@ export default function Clients() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [newClientData, setNewClientData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const newClientPendingEmailRef = useRef<string>("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // CSV Import state
@@ -913,13 +915,18 @@ export default function Clients() {
   };
 
   const handleAddClient = async () => {
+    // Garante que um e-mail digitado sem clicar em "+" também seja considerado
+    const mergedEmails = mergePendingEmail(newClientData.emails, newClientPendingEmailRef.current);
+    if (mergedEmails.length !== newClientData.emails.length) {
+      setNewClientData({ ...newClientData, emails: mergedEmails });
+    }
     const errors: Record<string, string> = {};
     if (!newClientData.full_name.trim()) errors.full_name = "Nome é obrigatório";
     if (!newClientData.phone_e164.trim() || !/^\+[1-9]\d{1,14}$/.test(newClientData.phone_e164)) {
       errors.phone_e164 = "Telefone inválido. Ex: +5511999999999";
     }
     // Validate at least one email is provided
-    const validEmails = newClientData.emails.filter(e => e.trim());
+    const validEmails = mergedEmails.filter(e => e.trim());
     if (validEmails.length === 0) {
       errors.emails = "Pelo menos um email é obrigatório";
     } else {
@@ -964,7 +971,7 @@ export default function Clients() {
         account_id: currentUser.account_id,
         full_name: newClientData.full_name.trim(),
         phone_e164: newClientData.phone_e164.trim(),
-        emails: newClientData.emails,
+        emails: mergedEmails,
         additional_phones: newClientData.additional_phones as unknown as import("@/integrations/supabase/types").Json,
         cpf: newClientData.cpf?.replace(/\D/g, '') || null,
         cnpj: newClientData.cnpj?.replace(/\D/g, '') || null,
@@ -1942,6 +1949,7 @@ export default function Clients() {
                     errors={formErrors}
                     showBasicFields={true}
                     teamUsers={teamUsers}
+                    onPendingEmailChange={(v) => { newClientPendingEmailRef.current = v; }}
                   />
                   
                         {/* Product Selection */}

@@ -34,7 +34,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones } from "@/components/client/ClientInfoForm";
+import { ClientInfoForm, ClientFormData, getEmptyClientFormData, normalizeAdditionalPhones, mergePendingEmail } from "@/components/client/ClientInfoForm";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -421,6 +421,8 @@ export default function Contracts() {
   
   // Client registration data
   const [clientFormData, setClientFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const clientPendingEmailRef = useRef<string>("");
   const [loadingClientData, setLoadingClientData] = useState(false);
   const [isCreatingNewClient, setIsCreatingNewClient] = useState(false);
   
@@ -1346,7 +1348,7 @@ export default function Contracts() {
           full_name: clientFormData.full_name,
           phone_e164: clientFormData.phone_e164,
           status: "active" as const,
-          emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+          emails: mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current).length > 0 ? mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current) : null,
           additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
           cpf: clientFormData.cpf || null,
           rg: clientFormData.rg || null,
@@ -1422,7 +1424,7 @@ export default function Contracts() {
         const clientUpdateData = {
           full_name: clientFormData.full_name,
           phone_e164: clientFormData.phone_e164,
-          emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+          emails: mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current).length > 0 ? mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current) : null,
           additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
           cpf: clientFormData.cpf || null,
           rg: clientFormData.rg || null,
@@ -2466,6 +2468,7 @@ export default function Contracts() {
                         data={clientFormData}
                         onChange={setClientFormData}
                         teamUsers={teamUsers}
+                        onPendingEmailChange={(v) => { clientPendingEmailRef.current = v; }}
                         compact
                       />
                     </div>
