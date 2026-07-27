@@ -182,7 +182,9 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         .from("deals")
         .select("id, status, created_at")
         .eq("account_id", accountId!)
+        .is("deleted_at", null)
         .gte("created_at", sixStart.toISOString());
+
 
       const histIds = (histDeals as any[]).map((d) => d.id);
       const histMql = new Set<string>();
