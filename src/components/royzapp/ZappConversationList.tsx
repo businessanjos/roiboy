@@ -7,6 +7,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { cn } from "@/lib/utils";
 import { ConversationAssignment, Agent, getContactInfo, matchesSearchQuery } from "./types";
 import { ZappConversationItem } from "./ZappConversationItem";
+import { compareConversationsByRecency } from "@/lib/royZappConversationSort";
 
 interface ZappConversationListProps {
   assignments: ConversationAssignment[];
