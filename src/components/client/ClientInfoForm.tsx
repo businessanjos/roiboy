@@ -684,6 +684,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   value={newEmail}
                   onChange={(e) => {
                     setNewEmail(e.target.value);
+                    onPendingEmailChange?.(e.target.value);
                     setEmailError("");
                   }}
                   placeholder="email@exemplo.com"
