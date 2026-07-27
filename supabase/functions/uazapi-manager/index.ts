@@ -1834,8 +1834,7 @@ Deno.serve(async (req) => {
         await Promise.all(pendingStatusUpdates);
       }
 
-      result = {
-        instances: integrations.map((integration: any) => {
+      const mappedInstances = integrations.map((integration: any) => {
           const config = asRecord(integration.config) || {};
           const currentInstanceName = getString(config.instance_name) || "";
           const liveStatus = currentInstanceName ? liveStatuses.get(currentInstanceName) : undefined;
@@ -1862,6 +1861,31 @@ Deno.serve(async (req) => {
             created_at: integration.created_at,
             webhook_configured: typeof config.webhook_configured === "boolean" ? config.webhook_configured : undefined,
           };
+        });
+
+      const sectorsWithOperationalUazapi = new Set(
+        mappedInstances
+          .filter((instance: any) =>
+            instance.provider === "uazapi" &&
+            instance.status === "connected" &&
+            instance.webhook_configured !== false
+          )
+          .map((instance: any) => instance.sector_id)
+          .filter(Boolean),
+      );
+
+      result = {
+        instances: mappedInstances.filter((instance: any) => {
+          const isLegacyMetaPlaceholder =
+            instance.provider === "meta_official" &&
+            instance.status !== "connected" &&
+            !instance.instance_name &&
+            sectorsWithOperationalUazapi.has(instance.sector_id);
+
+          // Some sectors still have old Meta placeholder rows from previous connection attempts.
+          // When the same sector already has an operational UAZAPI line, those stale rows should
+          // not trigger false "WhatsApp desconectado" alerts or confuse the settings list.
+          return !isLegacyMetaPlaceholder;
         }),
       };
     
