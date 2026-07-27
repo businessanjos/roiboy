@@ -223,7 +223,7 @@ export default function MarketingTrafegoPago() {
         console.warn('[bg-sync] error', err);
       }
     })();
-  }, [isConnected, user?.id, accounts, periodPayload, fetchAdSets]);
+  }, [isConnected, user?.id, accounts, periodPayload, fetchAdSets, backfillDaily]);
 
   if (isLoadingConnection) {
     return (
