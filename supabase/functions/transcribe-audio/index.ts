@@ -56,6 +56,11 @@ Deno.serve(async (req) => {
       throw new Error('No audio URL available for this message');
     }
 
+    // Áudios ainda criptografados no CDN do WhatsApp (.enc) não são decodificáveis.
+    if (message.media_url.includes('.enc') || message.media_url.includes('mmg.whatsapp.net')) {
+      throw new Error('Áudio ainda não foi baixado para o storage. Aguarde o download da mídia e tente novamente.');
+    }
+
     console.log(`[transcribe-audio] Downloading audio from: ${message.media_url}`);
 
     // Download the audio file
@@ -67,11 +72,32 @@ Deno.serve(async (req) => {
     const audioBlob = await audioResponse.blob();
     console.log(`[transcribe-audio] Audio downloaded, size: ${audioBlob.size} bytes`);
 
+    if (audioBlob.size < 1024) {
+      throw new Error('Áudio vazio ou muito curto para transcrever.');
+    }
+
+    // Nome do arquivo precisa refletir o container real (OpenAI infere pelo sufixo)
+    const contentType = (audioResponse.headers.get('content-type') || audioBlob.type || '').toLowerCase();
+    const urlExt = message.media_url.split('?')[0].split('.').pop()?.toLowerCase() || '';
+    const knownExts = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'];
+    const ext = knownExts.includes(urlExt)
+      ? urlExt
+      : contentType.includes('webm')
+        ? 'webm'
+        : contentType.includes('mp4') || contentType.includes('m4a')
+          ? 'm4a'
+          : contentType.includes('mpeg')
+            ? 'mp3'
+            : contentType.includes('wav')
+              ? 'wav'
+              : 'ogg';
+
     // Prepare form data for OpenAI Whisper API
     const formData = new FormData();
-    formData.append('file', audioBlob, 'audio.ogg');
+    formData.append('file', audioBlob, `audio.${ext}`);
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt'); // Portuguese as default, Whisper auto-detects if wrong
+
 
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {

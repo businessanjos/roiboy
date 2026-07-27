@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -36,6 +36,9 @@ import {
 } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+
+// Evita transcrições duplicadas quando o componente remonta (scroll/virtualização)
+const autoTranscribedIds = new Set<string>();
 
 interface ZappMessageBubbleProps {
   message: Message;
@@ -341,7 +344,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   };
 
   // Handle audio transcription
-  const handleTranscribe = async () => {
+  const handleTranscribe = useCallback(async (silent = false) => {
     setIsTranscribing(true);
     try {
       const { data, error } = await supabase.functions.invoke('transcribe-audio', {
@@ -352,21 +355,47 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
       if (data?.error) throw new Error(data.error);
       
       setTranscription(data.transcription);
-      toast({ 
-        title: "Áudio transcrito com sucesso!",
-        description: "A transcrição foi salva automaticamente."
-      });
+      if (!silent) {
+        toast({ 
+          title: "Áudio transcrito com sucesso!",
+          description: "A transcrição foi salva automaticamente."
+        });
+      }
     } catch (err) {
       console.error('Transcription error:', err);
-      toast({ 
-        title: "Erro na transcrição", 
-        description: err instanceof Error ? err.message : "Tente novamente mais tarde",
-        variant: "destructive" 
-      });
+      if (!silent) {
+        toast({ 
+          title: "Erro na transcrição", 
+          description: err instanceof Error ? err.message : "Tente novamente mais tarde",
+          variant: "destructive" 
+        });
+      }
     } finally {
       setIsTranscribing(false);
     }
-  };
+  }, [message.id, toast]);
+
+  // Auto-transcreve áudios assim que a mídia estiver disponível no storage.
+  // Evita depender do clique manual em "Transcrever" (que o time de CS não usava).
+  useEffect(() => {
+    if (transcription) return;
+    if (message.media_type !== "audio" && message.message_type !== "ptt") return;
+    const url = message.media_url;
+    if (!url || !url.includes("/storage/v1/object/")) return;
+    if (message.media_download_status && message.media_download_status !== "completed") return;
+    if (autoTranscribedIds.has(message.id)) return;
+    autoTranscribedIds.add(message.id);
+    void handleTranscribe(true);
+  }, [
+    transcription,
+    message.id,
+    message.media_type,
+    message.message_type,
+    message.media_url,
+    message.media_download_status,
+    handleTranscribe,
+  ]);
+
 
   return (
     <div>
@@ -537,7 +566,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleTranscribe}
+                  onClick={() => handleTranscribe(false)}
                   disabled={isTranscribing}
                   className="text-[10px] text-zapp-text-muted hover:text-primary mt-1 h-auto py-1 px-2"
                 >
