@@ -134,23 +134,25 @@ export const ZappConversationList = memo(function ZappConversationList({
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
     
-    // Sort: pinned first, then strictly by last message date (desc) — como no WhatsApp
+    // Sort: pinned first, then strictly by last message date (desc) — como no WhatsApp.
+    // Regra centralizada em @/lib/royZappConversationSort (coberta por testes).
     return filtered.sort((a, b) => {
       const contactA = getContactInfo(a);
       const contactB = getContactInfo(b);
-
-      // Pinned conversations first
-      if (contactA.isPinned && !contactB.isPinned) return -1;
-      if (!contactA.isPinned && contactB.isPinned) return 1;
-
-      // Then by last message date (mais recente no topo), independente de quem enviou
-      const rawA = contactA.lastMessageAt || a.zapp_conversation?.last_message_at || a.created_at;
-      const rawB = contactB.lastMessageAt || b.zapp_conversation?.last_message_at || b.created_at;
-      const dateA = rawA ? new Date(rawA).getTime() : 0;
-      const dateB = rawB ? new Date(rawB).getTime() : 0;
-      if (dateB !== dateA) return dateB - dateA;
-      // Deterministic tiebreak so ties don't shuffle between renders/realtime events
-      return String(b.id).localeCompare(String(a.id));
+      return compareConversationsByRecency(
+        {
+          id: a.id,
+          isPinned: contactA.isPinned,
+          lastMessageAt: contactA.lastMessageAt || a.zapp_conversation?.last_message_at,
+          fallbackAt: a.created_at,
+        },
+        {
+          id: b.id,
+          isPinned: contactB.isPinned,
+          lastMessageAt: contactB.lastMessageAt || b.zapp_conversation?.last_message_at,
+          fallbackAt: b.created_at,
+        }
+      );
     });
   }, [assignments, searchQuery, filterStatus, filterUnread, filterConversationType, inboxTab, currentAgent?.id, filterProductId, filterTagId, filterAgentId, clientProducts, isAdmin, showClosed]);
 
