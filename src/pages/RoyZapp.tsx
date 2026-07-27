@@ -803,8 +803,12 @@ export default function RoyZapp() {
       await messaging.sendMediaMessage(file, item.content_type === 'video' ? 'video' : 'document', item.media_caption || undefined);
     } else if (item.media_url) {
       navigator.clipboard.writeText(item.media_url);
+      toast.info("Item copiado para a área de transferência (sem conteúdo enviável).");
+    } else {
+      toast.error("Item do playbook sem conteúdo para enviar.");
+      throw new Error('Playbook item has no sendable content');
     }
-  }, [messaging]);
+  }, [messaging, buildPlaybookText]);
 
   // Multi-send handler
   const handleMultiSend = useCallback(async (payload: MultiSendPayload) => {
