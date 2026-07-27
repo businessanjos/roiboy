@@ -742,6 +742,46 @@ async function uazapiInstance(endpoint: string, method: string, token: string, b
   return json;
 }
 
+/**
+ * Setores de WhatsApp que o usuário pode operar dentro do ROY zAPP.
+ * Independente do acesso geral ao setor: `user_royzapp_views.zapp_sectors`
+ * manda quando preenchido; `null` herda `user_sector_access`.
+ * Retorna `null` quando o usuário é irrestrito (admin / sector picker).
+ */
+const SECTOR_PICKER_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
+
+async function resolveAllowedZappSectors(
+  supabase: ReturnType<typeof createClient>,
+  user: { id: string; account_id: string; role?: string | null; is_also_admin?: boolean | null },
+  email?: string | null,
+): Promise<string[] | null> {
+  const isUnrestricted =
+    user.role === "admin" ||
+    user.role === "super_admin" ||
+    user.is_also_admin === true ||
+    (!!email && SECTOR_PICKER_EMAILS.includes(email.trim().toLowerCase()));
+  if (isUnrestricted) return null;
+
+  const { data: viewRow } = await supabase
+    .from("user_royzapp_views")
+    .select("zapp_sectors")
+    .eq("account_id", user.account_id)
+    .eq("user_id", user.id)
+    .maybeSingle();
+
+  const zappSectors = (viewRow as { zapp_sectors?: string[] | null } | null)?.zapp_sectors;
+  if (Array.isArray(zappSectors) && zappSectors.length > 0) return zappSectors;
+
+  const { data: accessRows } = await supabase
+    .from("user_sector_access")
+    .select("sector_id")
+    .eq("user_id", user.id)
+    .eq("is_active", true);
+
+  return ((accessRows || []) as { sector_id: string }[]).map((r) => r.sector_id);
+}
+
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
@@ -829,6 +869,47 @@ Deno.serve(async (req) => {
       const { data } = await supabase.from("integrations").select("id, config, status, sector_id").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
       intData = data?.[0] || null;
     }
+
+    // ========== SECTOR GUARD (backend) ==========
+    // A conexão resolvida DEVE pertencer a um setor liberado para o usuário.
+    // Impede que estado stale/URL manipulada devolva o WhatsApp de outro setor.
+    const allowedZappSectors = await resolveAllowedZappSectors(
+      supabase,
+      { id: userData.id, account_id: accountId, role: userData.role, is_also_admin: userData.is_also_admin },
+      authData.user.email,
+    );
+    const isSectorAllowed = (s?: string | null) =>
+      allowedZappSectors === null || !s || allowedZappSectors.includes(s);
+
+    if (allowedZappSectors !== null) {
+      const requestedSector = sector_id || intData?.sector_id || null;
+      if (requestedSector && !allowedZappSectors.includes(requestedSector)) {
+        console.warn(
+          `[uazapi-manager] BLOCKED sector "${requestedSector}" for user ${userData.id}. Allowed: ${allowedZappSectors.join(",") || "none"}`,
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Você não tem acesso ao WhatsApp deste setor.",
+            sector_blocked: true,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (intData?.sector_id && !allowedZappSectors.includes(intData.sector_id)) {
+        console.warn(
+          `[uazapi-manager] BLOCKED integration ${intData.id} (sector ${intData.sector_id}) for user ${userData.id}.`,
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Esta conexão WhatsApp pertence a um setor que você não pode acessar.",
+            sector_blocked: true,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+
 
     const token = intData?.config?.instance_token;
     const instanceName = intData?.config?.instance_name || `roy-${accountId.slice(0,8)}`;
@@ -1670,7 +1751,9 @@ Deno.serve(async (req) => {
         .eq("type", "whatsapp")
         .not("sector_id", "is", null);
 
-      const integrations = (ints || []) as any[];
+      // Só devolve as conexões dos setores liberados para este usuário.
+      const integrations = ((ints || []) as any[]).filter((i) => isSectorAllowed(i.sector_id));
+
       const liveStatuses = await resolveLiveStatusesForIntegrations(
         integrations.map((integration) => ({
           config: asRecord(integration.config),
