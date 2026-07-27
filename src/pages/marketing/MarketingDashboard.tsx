@@ -326,7 +326,7 @@ export default function MarketingDashboard() {
       </section>
 
       {/* ===== Séries históricas de investimento ===== */}
-      <AdSpendTrendCharts range={{ startDate: rangeStart, endDate: rangeEnd }} />
+      <AdSpendTrendCharts range={range} />
 
 
 
