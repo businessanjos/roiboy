@@ -605,6 +605,7 @@ export default function ClientDetail() {
         companies: editFormData.companies,
       } as any);
 
+      pendingEmailRef.current = "";
       toast.success("Informações atualizadas!");
       setEditInfoDialogOpen(false);
     } catch (error: any) {
