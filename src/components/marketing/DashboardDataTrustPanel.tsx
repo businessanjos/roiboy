@@ -53,6 +53,34 @@ export function DashboardDataTrustPanel({ data }: Props) {
     });
   }
 
+  // ===== Alertas de sincronização do Meta Ads =====
+  const h = data.adsSyncHealth;
+  const fmtDay = (iso: string) => format(new Date(`${iso}T12:00:00`), "dd/MM", { locale: ptBR });
+
+  if (h) {
+    if (h.staleHours !== null && h.staleHours >= 24) {
+      issues.push({
+        level: h.staleHours >= 48 ? "warn" : "info",
+        text: `Meta Ads sem sincronizar há ${Math.floor(h.staleHours / 24)} dia(s) (última: ${
+          h.lastSync ? format(new Date(h.lastSync), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "—"
+        }). Investimento, CPL, CAC e ROAS podem estar desatualizados.`,
+      });
+    }
+    if (h.lagDays !== null && h.lagDays >= 2) {
+      issues.push({
+        level: "warn",
+        text: `O último dia com dados de anúncios é ${fmtDay(h.lastStatDate!)} — ${h.lagDays} dias de atraso. Os últimos dias do período estão sem investimento contabilizado.`,
+      });
+    }
+    if (!q.adsIsCumulative && h.missingDays > 0) {
+      issues.push({
+        level: h.expectedDays > 0 && h.missingDays / h.expectedDays >= 0.2 ? "warn" : "info",
+        text: `Lacuna na série diária do Meta Ads: ${h.missingDays} de ${h.expectedDays} dias do período sem snapshot${
+          h.missingDayLabels.length > 0 ? ` (ex.: ${h.missingDayLabels.map(fmtDay).join(", ")})` : ""
+        }. Rode "Sincronizar" em Tráfego Pago para completar o histórico.`,
+      });
+    }
+
   const warnCount = issues.filter((i) => i.level === "warn").length;
 
   return (
