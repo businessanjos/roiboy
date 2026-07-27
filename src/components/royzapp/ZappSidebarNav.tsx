@@ -96,9 +96,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     : allNavItems;
 
   // Comercial (vendas): menu enxuto definido pela liderança — Conversas, Tags,
-  // Playbook, CRM e Reuniões. Vale para TODOS do setor Comercial (inclusive
-  // gestores/admins do setor); só Maikol/Everton (pickers) veem o menu completo.
-  const isLeanSalesMenu = sectorId === "vendas" && !canPickSector(currentUser?.email);
+  // Playbook, CRM e Reuniões. Vale para TODOS que estiverem no setor Comercial,
+  // sem exceção (inclusive admins e pickers).
+  const isLeanSalesMenu = sectorId === "vendas";
   if (isLeanSalesMenu) {
     const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
