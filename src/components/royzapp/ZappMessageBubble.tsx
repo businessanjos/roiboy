@@ -37,6 +37,9 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+// Evita transcrições duplicadas quando o componente remonta (scroll/virtualização)
+const autoTranscribedIds = new Set<string>();
+
 interface ZappMessageBubbleProps {
   message: Message;
   showTimestamp: boolean;
@@ -563,7 +566,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={handleTranscribe}
+                  onClick={() => handleTranscribe(false)}
                   disabled={isTranscribing}
                   className="text-[10px] text-zapp-text-muted hover:text-primary mt-1 h-auto py-1 px-2"
                 >
