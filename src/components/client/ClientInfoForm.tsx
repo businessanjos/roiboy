@@ -136,6 +136,22 @@ interface ClientInfoFormProps {
   teamUsers?: { id: string; name: string; email: string }[];
   /** compact: simplifies layout for embedded use (e.g., in dialogs) */
   compact?: boolean;
+  /** Notifies the parent about an e-mail typed but not yet confirmed with the "+" button */
+  onPendingEmailChange?: (value: string) => void;
+}
+
+/**
+ * Merges an e-mail that was typed in the input but never confirmed with the "+"
+ * button into the list of e-mails, so saving always persists what the user typed.
+ */
+export function mergePendingEmail(emails: string[] | null | undefined, pending?: string | null): string[] {
+  const list = Array.isArray(emails) ? emails.filter((e) => typeof e === "string" && e.trim()) : [];
+  const value = (pending || "").trim();
+  if (!value) return list;
+  const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+  if (!isValid) return list;
+  if (list.some((e) => e.toLowerCase() === value.toLowerCase())) return list;
+  return [...list, value];
 }
 
 const BRAZILIAN_STATES = [
