@@ -300,7 +300,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       // Detecta atraso (última sync antiga / último dia coberto defasado) e
       // lacunas de dias sem snapshot dentro do período analisado.
       const DAY_MS = 86400000;
-      const todayIso = format(new Date(), "yyyy-MM-dd");
+      const adsTodayIso = format(new Date(), "yyyy-MM-dd");
       const covEnd = new Date(Math.min(rEnd.getTime(), new Date().getTime()));
       const expectedDates: string[] = [];
       for (let t = new Date(format(rStart, "yyyy-MM-dd")).getTime(); t <= new Date(format(covEnd, "yyyy-MM-dd")).getTime(); t += DAY_MS) {
@@ -318,7 +318,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           : null,
         lastStatDate,
         lagDays: lastStatDate
-          ? Math.max(0, Math.round((new Date(todayIso).getTime() - new Date(lastStatDate).getTime()) / DAY_MS))
+          ? Math.max(0, Math.round((new Date(adsTodayIso).getTime() - new Date(lastStatDate).getTime()) / DAY_MS))
           : null,
         expectedDays: expectedDates.length,
         coveredDays: expectedDates.length - missingDayLabels.length,
