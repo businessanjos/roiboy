@@ -1424,7 +1424,7 @@ export default function Contracts() {
         const clientUpdateData = {
           full_name: clientFormData.full_name,
           phone_e164: clientFormData.phone_e164,
-          emails: clientFormData.emails.length > 0 ? clientFormData.emails : null,
+          emails: mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current).length > 0 ? mergePendingEmail(clientFormData.emails, clientPendingEmailRef.current) : null,
           additional_phones: clientFormData.additional_phones.length > 0 ? clientFormData.additional_phones : null,
           cpf: clientFormData.cpf || null,
           rg: clientFormData.rg || null,
