@@ -6,6 +6,9 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ZappPinDialog } from "@/components/royzapp/dialogs/ZappPinDialog";
 import { ZappInstanceSelectorDialog } from "@/components/royzapp/dialogs/ZappInstanceSelectorDialog";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+import { ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 
 interface IntegrationInfo {
   id: string;
@@ -24,6 +27,8 @@ interface PendingNavigation {
 export function useSidebarZappNavigation() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const { sectorAccess } = useSectorAccess();
+  const { canOpenZappSector } = useRoyZappViewAccess();
   const [loading, setLoading] = useState(false);
   
   // PIN dialog state
@@ -41,13 +46,28 @@ export function useSidebarZappNavigation() {
     toast.info("Abrindo RoyZapp...");
   }, [navigate]);
 
-  const openZappForSector = useCallback(async (sectorId: string) => {
+  const openZappForSector = useCallback(async (requestedSectorId: string) => {
     if (!currentUser?.account_id) {
       toast.error("Usuário não autenticado");
       return;
     }
 
+    // O setor do menu lateral não é necessariamente um WhatsApp liberado para
+    // este usuário. Resolve o setor efetivo antes de navegar.
+    const generalSectors = new Set(sectorAccess.map((a) => a.sector_id));
+    const sectorId = canOpenZappSector(requestedSectorId, generalSectors.has(requestedSectorId as any))
+      ? requestedSectorId
+      : (ZAPP_WHATSAPP_SECTORS as readonly string[]).find((id) =>
+          canOpenZappSector(id, generalSectors.has(id as any))
+        );
+
+    if (!sectorId) {
+      toast.error("Nenhum WhatsApp liberado para o seu usuário.");
+      return;
+    }
+
     setLoading(true);
+
 
     try {
       // Fetch connected WhatsApp integrations for this sector
@@ -120,7 +140,7 @@ export function useSidebarZappNavigation() {
       toast.error("Erro ao buscar instâncias");
       setLoading(false);
     }
-  }, [currentUser?.account_id, completeNavigation]);
+  }, [currentUser?.account_id, completeNavigation, sectorAccess, canOpenZappSector]);
 
   const handleInstanceSelect = useCallback((integrationId: string) => {
     if (!pendingSectorId) return;
