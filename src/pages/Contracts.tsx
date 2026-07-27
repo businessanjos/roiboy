@@ -421,6 +421,8 @@ export default function Contracts() {
   
   // Client registration data
   const [clientFormData, setClientFormData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const clientPendingEmailRef = useRef<string>("");
   const [loadingClientData, setLoadingClientData] = useState(false);
   const [isCreatingNewClient, setIsCreatingNewClient] = useState(false);
   
