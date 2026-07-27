@@ -870,6 +870,47 @@ Deno.serve(async (req) => {
       intData = data?.[0] || null;
     }
 
+    // ========== SECTOR GUARD (backend) ==========
+    // A conexão resolvida DEVE pertencer a um setor liberado para o usuário.
+    // Impede que estado stale/URL manipulada devolva o WhatsApp de outro setor.
+    const allowedZappSectors = await resolveAllowedZappSectors(
+      supabase,
+      { id: userData.id, account_id: accountId, role: userData.role, is_also_admin: userData.is_also_admin },
+      authData.user.email,
+    );
+    const isSectorAllowed = (s?: string | null) =>
+      allowedZappSectors === null || !s || allowedZappSectors.includes(s);
+
+    if (allowedZappSectors !== null) {
+      const requestedSector = sector_id || intData?.sector_id || null;
+      if (requestedSector && !allowedZappSectors.includes(requestedSector)) {
+        console.warn(
+          `[uazapi-manager] BLOCKED sector "${requestedSector}" for user ${userData.id}. Allowed: ${allowedZappSectors.join(",") || "none"}`,
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Você não tem acesso ao WhatsApp deste setor.",
+            sector_blocked: true,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+      if (intData?.sector_id && !allowedZappSectors.includes(intData.sector_id)) {
+        console.warn(
+          `[uazapi-manager] BLOCKED integration ${intData.id} (sector ${intData.sector_id}) for user ${userData.id}.`,
+        );
+        return new Response(
+          JSON.stringify({
+            error: "Esta conexão WhatsApp pertence a um setor que você não pode acessar.",
+            sector_blocked: true,
+          }),
+          { status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+    }
+
+
+
     const token = intData?.config?.instance_token;
     const instanceName = intData?.config?.instance_name || `roy-${accountId.slice(0,8)}`;
 
