@@ -339,9 +339,40 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
       const wonTotal = wonMqlOrganic + wonMqlPaid + wonMqlOthers;
       const mqlConversionRate = mqlTotal > 0 ? (wonTotal / mqlTotal) * 100 : 0;
 
+      // Receita ganha dos negócios criados no período (mesma coorte dos leads)
+      let wonRevenue = 0;
+      let wonDeals = 0;
+      for (const d of rangeDeals as any[]) {
+        if (d.status === "won") {
+          wonDeals++;
+          wonRevenue += Number(d.value) || 0;
+        }
+      }
+      const ticketMedio = wonDeals > 0 ? wonRevenue / wonDeals : 0;
+      const cacPaid = wonMqlPaid > 0 ? adSpend / wonMqlPaid : 0;
+      const roas = adSpend > 0 ? wonRevenue / adSpend : 0;
+
+      const leadsWithoutChannel = (rangeDeals as any[]).filter((d) => !channelByDeal.get(d.id)).length;
+      const leadsWithoutMqlAnswer = (rangeDeals as any[]).filter((d) => !mqlAnswered.has(d.id)).length;
+
       return {
         leadsThisMonth: rangeDeals.length,
         mqlThisMonth: mqlSet.size,
+        wonDeals,
+        wonRevenue,
+        ticketMedio,
+        cacPaid,
+        roas,
+        adsLastSync,
+        adsCampaignCount,
+        dataQuality: {
+          deletedExcluded: deletedInRange || 0,
+          leadsWithoutChannel,
+          leadsWithoutMqlAnswer,
+          mqlUnknownValues: Array.from(mqlUnknownValues),
+          adsIsCumulative: true,
+        },
+
         mqlOrganic,
         mqlPaid,
         mqlOthers,
