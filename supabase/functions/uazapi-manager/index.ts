@@ -673,10 +673,58 @@ async function registerWebhookForInstance(
   const events = ["messages", "messages.update", "messages.delete", "connection", "groups", "qrcode"];
   const webhookConfig = { url: webhookUrl, enabled: true, events };
 
+  // Newer UAZAPI builds expose an action-based /webhook API and IGNORE plain
+  // POSTs (returning "Invalid action"). Worse: a webhook row can exist with
+  // enabled=false, which silently kills all inbound messages. So we always
+  // read the current rows, update/create explicitly, then VERIFY.
+  const readWebhooks = async (): Promise<Array<Record<string, unknown>>> => {
+    try {
+      const list = await uazapiInstance("/webhook", "GET", token, undefined, server);
+      return Array.isArray(list) ? (list as Array<Record<string, unknown>>) : [];
+    } catch {
+      return [];
+    }
+  };
+
+  const isOurs = (w: Record<string, unknown>) =>
+    typeof w.url === "string" && (w.url as string).startsWith(webhookUrl);
+
+  try {
+    const existing = await readWebhooks();
+    const mine = existing.filter(isOurs);
+
+    if (mine.length > 0) {
+      for (const w of mine) {
+        await uazapiInstance("/webhook", "POST", token, {
+          ...w,
+          action: "update",
+          enabled: true,
+          events: (w.events as string[]) ?? events,
+        }, server).catch(() => {});
+      }
+    } else {
+      await uazapiInstance("/webhook", "POST", token, {
+        ...webhookConfig,
+        action: "add",
+        excludeMessages: ["wasSentByApi"],
+        addUrlEvents: true,
+        addUrlTypesMessages: true,
+      }, server).catch(() => {});
+    }
+
+    const after = await readWebhooks();
+    if (after.some((w) => isOurs(w) && w.enabled === true)) {
+      console.log(`[uazapi-manager] Webhook ACTIVE for "${instanceName}" on ${server.host}`);
+      return { success: true, webhookUrl, events };
+    }
+  } catch (err) {
+    console.log(`[uazapi-manager] action-based webhook setup failed: ${(err as Error).message}`);
+  }
+
+  // Legacy fallbacks for older UAZAPI builds.
   const endpoints: Array<{ path: string; method: string }> = [
     { path: "/webhook/set", method: "POST" },
     { path: "/instance/webhook", method: "PUT" },
-    { path: "/webhook", method: "POST" },
   ];
 
   for (const ep of endpoints) {
@@ -699,6 +747,7 @@ async function registerWebhookForInstance(
 
   return { success: false, webhookUrl, events };
 }
+
 
 
 async function uazapiInstance(endpoint: string, method: string, token: string, body?: unknown, server?: ServerConfig) {
