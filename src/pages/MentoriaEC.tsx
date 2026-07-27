@@ -487,7 +487,7 @@ export default function MentoriaEC() {
                         <Input
                           type="date"
                           value={m.lastAttendance ?? ""}
-                          max={format(new Date(new Date().getFullYear() + 2, 11, 31), "yyyy-MM-dd")}
+                          max={format(new Date(new Date().setMonth(new Date().getMonth() + 12)), "yyyy-MM-dd")}
                           onChange={(e) => {
                             const date = e.target.value;
                             if (!date) return;
