@@ -301,6 +301,8 @@ export default function Clients() {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [newClientData, setNewClientData] = useState<ClientFormData>(getEmptyClientFormData());
+  // E-mail digitado mas ainda não confirmado no botão "+"
+  const newClientPendingEmailRef = useRef<string>("");
   const [formErrors, setFormErrors] = useState<Record<string, string>>({});
 
   // CSV Import state
