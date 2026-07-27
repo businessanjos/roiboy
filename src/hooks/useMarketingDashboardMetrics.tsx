@@ -114,6 +114,8 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
 
       let mqlSet = new Set<string>();
       let channelByDeal = new Map<string, string>();
+      const mqlAnswered = new Set<string>();
+      const mqlUnknownValues = new Set<string>();
       if (rangeDealIds.length) {
         for (let i = 0; i < rangeDealIds.length; i += 500) {
           const chunk = rangeDealIds.slice(i, i + 500);
@@ -123,14 +125,18 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
             .in("deal_id", chunk)
             .in("field_id", [MQL_FIELD_ID, CANAL_FIELD_ID]);
           for (const fv of fvs as any[]) {
-            if (fv.field_id === MQL_FIELD_ID && MQL_VALUES.has(fv.value_text)) {
-              mqlSet.add(fv.deal_id);
+            if (fv.field_id === MQL_FIELD_ID) {
+              if (!fv.value_text) continue;
+              mqlAnswered.add(fv.deal_id);
+              if (MQL_VALUES.has(fv.value_text)) mqlSet.add(fv.deal_id);
+              else if (fv.value_text !== "nao_abaixo_30k") mqlUnknownValues.add(fv.value_text);
             } else if (fv.field_id === CANAL_FIELD_ID && fv.value_text) {
               channelByDeal.set(fv.deal_id, fv.value_text);
             }
           }
         }
       }
+
 
       const wonByDeal = new Map<string, string>();
       (rangeDeals as any[]).forEach((d) => wonByDeal.set(d.id, d.status));
