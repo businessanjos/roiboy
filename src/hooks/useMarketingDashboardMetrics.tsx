@@ -49,6 +49,16 @@ export interface MarketingDashboardMetrics {
   roas: number;
   adsLastSync: string | null;
   adsCampaignCount: number;
+  adsSyncHealth: {
+    lastSync: string | null;
+    staleHours: number | null;
+    lastStatDate: string | null;
+    lagDays: number | null;
+    expectedDays: number;
+    coveredDays: number;
+    missingDays: number;
+    missingDayLabels: string[];
+  };
   dataQuality: {
     deletedExcluded: number;
     leadsWithoutChannel: number;
