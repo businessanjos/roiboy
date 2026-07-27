@@ -312,6 +312,27 @@ export default function RoyZapp() {
     if (!allowedViews.includes(activeView)) setActiveView("inbox");
   }, [activeView, allowedViews]);
 
+  // Alerta automático: linha de WhatsApp do setor fora do ar → toast com ação de reconectar.
+  useZappConnectionAlerts({
+    enabled: !zappAccessLoading && !sectorAccessLoading && !!currentUser?.account_id,
+    onReconnect: (sectorId, integrationId) => {
+      setSelectedSectorId(sectorId as SectorId);
+      setSelectedIntegrationId(integrationId);
+      setActiveView("inbox");
+      setSearchParams(
+        (prev) => {
+          prev.set("sector", sectorId);
+          prev.set("integrationId", integrationId);
+          prev.set("view", "inbox");
+          return prev;
+        },
+        { replace: true },
+      );
+    },
+  });
+
+
+
   // Auto-entrada no setor liberado (todos, exceto quem pode escolher setor).
   useEffect(() => {
     if (canChooseSector || selectedSectorId || sectorAccessLoading || zappAccessLoading) return;
