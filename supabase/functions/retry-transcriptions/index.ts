@@ -5,7 +5,16 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const BATCH_SIZE = 15;
+const RETRY_BATCH = 15;
+const COLD_BATCH = 60;
+const CONCURRENCY = 4;
+const LOOKBACK_DAYS = 14;
+
+function isTranscribable(url: string | null): boolean {
+  if (!url) return false;
+  // Só áudios já espelhados no storage são decodificáveis (CDN do WhatsApp vem criptografado)
+  return url.includes('/storage/v1/object/');
+}
 
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -18,65 +27,99 @@ Deno.serve(async (req) => {
 
   try {
     const nowIso = new Date().toISOString();
+    const since = new Date(Date.now() - LOOKBACK_DAYS * 24 * 60 * 60 * 1000).toISOString();
 
-    // 1) Áudios que falharam e já venceram o backoff
+    // 1) Falhas cujo backoff já venceu
     const { data: due, error: dueError } = await supabase
       .from('zapp_messages')
-      .select('id, transcription_attempts, transcription_error')
+      .select('id, media_url')
       .eq('transcription_status', 'failed')
       .is('transcription', null)
       .lte('transcription_next_retry_at', nowIso)
       .order('transcription_next_retry_at', { ascending: true })
-      .limit(BATCH_SIZE);
+      .limit(RETRY_BATCH * 3);
 
     if (dueError) throw dueError;
 
-    // 2) Áudios nunca processados (fila fria) — mídia já disponível no storage
+    // 2) Fila fria: áudios nunca processados que já estão no storage.
+    //    Não filtramos por media_download_status porque muitas mensagens ficam
+    //    com o status desatualizado mesmo já tendo a mídia espelhada.
     const { data: pending, error: pendingError } = await supabase
       .from('zapp_messages')
-      .select('id')
+      .select('id, media_url')
       .is('transcription', null)
       .is('transcription_status', null)
-      .in('media_type', ['audio', 'ptt', 'audio/ogg', 'audioMessage'])
+      .eq('media_type', 'audio')
       .not('media_url', 'is', null)
-      .eq('media_download_status', 'completed')
-      .gte('created_at', new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString())
-      .limit(BATCH_SIZE)
-      .order('created_at', { ascending: false });
+      .gte('created_at', since)
+      .order('created_at', { ascending: false })
+      .limit(COLD_BATCH * 4);
 
     if (pendingError) throw pendingError;
 
-    const ids = [
-      ...(due ?? []).map((m) => m.id),
-      ...(pending ?? []).map((m) => m.id),
-    ];
+    const dueIds = (due ?? []).filter((m) => isTranscribable(m.media_url)).slice(0, RETRY_BATCH).map((m) => m.id);
+    const coldIds = (pending ?? []).filter((m) => isTranscribable(m.media_url)).slice(0, COLD_BATCH).map((m) => m.id);
+    const ids = [...dueIds, ...coldIds];
 
-    console.log(`[retry-transcriptions] ${due?.length ?? 0} reprocessáveis + ${pending?.length ?? 0} pendentes`);
+    console.log(`[retry-transcriptions] ${dueIds.length} reprocessáveis + ${coldIds.length} pendentes`);
+
+    // 3) Empurra o download das mídias que ainda não foram espelhadas,
+    //    para que entrem na fila de transcrição no próximo ciclo.
+    const { data: notMirrored } = await supabase
+      .from('zapp_messages')
+      .select('id')
+      .eq('media_type', 'audio')
+      .is('media_url', null)
+      .not('media_encrypted_url', 'is', null)
+      .in('media_download_status', ['pending', 'failed'])
+      .gte('created_at', since)
+      .limit(25);
+
+    if (notMirrored?.length) {
+      console.log(`[retry-transcriptions] Solicitando download de ${notMirrored.length} áudios`);
+      await fetch(`${supabaseUrl}/functions/v1/download-media`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${supabaseServiceKey}`,
+        },
+        body: JSON.stringify({ message_ids: notMirrored.map((m) => m.id) }),
+      }).catch((err) => console.error('[retry-transcriptions] download-media falhou:', err));
+    }
 
     const results: { id: string; ok: boolean; error?: string }[] = [];
 
-    for (const id of ids) {
-      try {
-        const { data, error } = await supabase.functions.invoke('transcribe-audio', {
-          body: { message_id: id },
-        });
-        if (error) {
-          results.push({ id, ok: false, error: error.message });
-        } else {
-          results.push({ id, ok: Boolean(data?.transcription) });
+    const queue = [...ids];
+    async function worker() {
+      while (queue.length) {
+        const id = queue.shift();
+        if (!id) return;
+        try {
+          const { data, error } = await supabase.functions.invoke('transcribe-audio', {
+            body: { message_id: id },
+          });
+          if (error) {
+            results.push({ id, ok: false, error: error.message });
+          } else {
+            results.push({ id, ok: Boolean(data?.transcription) });
+          }
+        } catch (err) {
+          results.push({ id, ok: false, error: err instanceof Error ? err.message : 'unknown' });
         }
-      } catch (err) {
-        results.push({ id, ok: false, error: err instanceof Error ? err.message : 'unknown' });
+        await new Promise((r) => setTimeout(r, 150));
       }
-      // pequeno espaçamento para não estourar rate limit da OpenAI
-      await new Promise((r) => setTimeout(r, 400));
     }
+    await Promise.all(Array.from({ length: CONCURRENCY }, () => worker()));
 
     const succeeded = results.filter((r) => r.ok).length;
     console.log(`[retry-transcriptions] concluído: ${succeeded}/${results.length} transcritos`);
 
     return new Response(
-      JSON.stringify({ processed: results.length, succeeded, results }),
+      JSON.stringify({
+        processed: results.length,
+        succeeded,
+        download_requested: notMirrored?.length ?? 0,
+      }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   } catch (error: unknown) {
