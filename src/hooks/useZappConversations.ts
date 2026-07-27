@@ -342,7 +342,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.log(`[ZappConversations] Fetched ${result.assignments.length} assignments for department ${result.deptId}`);
       const deduped = dedupeAssignments(result.assignments);
       seedHWMFromAssignments(deduped);
-      setAssignments(deduped);
+      setAssignments(applyRecencyFloor(deduped));
 
       await fetchSupplementaryData(result.assignments);
     } catch (error) {
