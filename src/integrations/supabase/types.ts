@@ -26450,6 +26450,10 @@ export type Database = {
         Args: { _account_id: string }
         Returns: boolean
       }
+      user_can_access_zapp_sector: {
+        Args: { _sector_id: string }
+        Returns: boolean
+      }
       user_has_sector_access: {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: boolean
