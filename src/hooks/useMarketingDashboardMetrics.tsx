@@ -219,22 +219,34 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
         monthlyHistory.push({ month: format(mDate, "MMM/yy"), leads, mql, won });
       }
 
-      // ===== TRÁFEGO PAGO (filtrado por período via updated_at do ad set) =====
+      // ===== TRÁFEGO PAGO =====
+      // Os ad sets vêm de sincronizações do Meta e guardam totais acumulados da campanha
+      // (não há série diária). Por isso NÃO filtramos por período aqui: filtrar por
+      // updated_at zerava o investimento sempre que o range não continha o dia do sync.
       let adSpend = 0, adLeads = 0, adImpressions = 0, adCpl = 0;
+      let adsLastSync: string | null = null;
+      let adsCampaignCount = 0;
       let topCampaigns: { name: string; spend: number; leads: number; cpl: number }[] = [];
-      if (userId) {
-        const { data: ads = [] } = await supabase
+      {
+        const { data: ads = [] } = await (supabase as any)
           .from("marketing_ad_sets")
-          .select("name, spend, conversions, impressions, cpl, updated_at")
-          .eq("user_id", userId)
-          .gte("updated_at", rStart.toISOString())
-          .lte("updated_at", rEnd.toISOString())
+          .select("name, spend, conversions, impressions, cpl, updated_at, account_id, user_id")
+          .or(
+            [
+              `account_id.eq.${accountId}`,
+              userId ? `user_id.eq.${userId}` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          )
           .order("spend", { ascending: false });
         for (const a of ads as any[]) {
           adSpend += Number(a.spend) || 0;
           adLeads += Number(a.conversions) || 0;
           adImpressions += Number(a.impressions) || 0;
+          if (!adsLastSync || a.updated_at > adsLastSync) adsLastSync = a.updated_at;
         }
+        adsCampaignCount = (ads as any[]).length;
         adCpl = adLeads > 0 ? adSpend / adLeads : 0;
         topCampaigns = (ads as any[]).slice(0, 5).map((a) => ({
           name: a.name,
@@ -243,6 +255,7 @@ export function useMarketingDashboardMetrics(range?: MarketingDashboardRange) {
           cpl: Number(a.cpl) || 0,
         }));
       }
+
 
       // ===== CONTEÚDO (filtrado por período) =====
       const contentStartIso = rStart.toISOString();
