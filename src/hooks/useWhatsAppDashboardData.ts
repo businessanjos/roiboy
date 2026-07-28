@@ -170,7 +170,8 @@ export function useWhatsAppDashboardData() {
         .eq('status', 'won')
         .not('won_at', 'is', null)
         .gte('won_at', filters.startDate)
-        .lte('won_at', filters.endDate);
+        .lte('won_at', filters.endDate)
+        .is('deleted_at', null);
 
       if (userFilter) {
         wonDealsQuery = wonDealsQuery.eq('responsible_user_id', userFilter);
