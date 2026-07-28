@@ -26413,6 +26413,7 @@ export type Database = {
         Args: { p_account_id: string }
         Returns: string
       }
+      normalize_invoice_status: { Args: { _status: string }; Returns: string }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
       private_get_tech_projects_key: { Args: never; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
