@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Copy, Trash2 } from "lucide-react";
+import { Link } from "react-router-dom";
+import { Plus, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Copy, Trash2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
@@ -168,6 +169,14 @@ export function InsightsDashboardTabs() {
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
+        </Button>
+
+        {/* Metas */}
+        <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 gap-1">
+          <Link to="/insights/goals">
+            <Target className="h-4 w-4" />
+            Metas
+          </Link>
         </Button>
       </div>
 
