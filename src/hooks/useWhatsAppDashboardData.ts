@@ -337,20 +337,31 @@ export function useWhatsAppDashboardData() {
       }
 
       const leadsByDayMap: Record<string, { count: number; sources: Record<string, number> }> = {};
-      
-      // Initialize days in the filter range (limit to last 30 days for performance)
-      const daysDiff = Math.ceil((filterEndDate.getTime() - filterStartDate.getTime()) / (1000 * 60 * 60 * 24));
-      const daysToShow = Math.min(daysDiff, 30);
-      
-      for (let i = daysToShow - 1; i >= 0; i--) {
-        const date = new Date(filterEndDate);
-        date.setDate(date.getDate() - i);
-        const dateStr = date.toISOString().split('T')[0];
+
+      // Initialize every day inside the selected filter range in Brasília time
+      // (no artificial 30-day cap — respect ranges like "Este Ano" or custom multi-month ranges).
+      const startBrasilia = toBrasiliaDateStr(filterStartDate);
+      const endBrasilia = toBrasiliaDateStr(filterEndDate);
+      const daysDiff = Math.max(
+        1,
+        Math.ceil(
+          (new Date(endBrasilia + 'T12:00:00Z').getTime() -
+            new Date(startBrasilia + 'T12:00:00Z').getTime()) /
+            (1000 * 60 * 60 * 24)
+        ) + 1
+      );
+
+      for (let i = daysDiff - 1; i >= 0; i--) {
+        // Walk back from end date in Brasília wall-time days
+        const anchor = new Date(endBrasilia + 'T12:00:00Z');
+        anchor.setUTCDate(anchor.getUTCDate() - i);
+        const dateStr = anchor.toISOString().split('T')[0];
         leadsByDayMap[dateStr] = { count: 0, sources: {} };
       }
 
       (dealsbyDay || []).forEach(deal => {
-        const dateStr = deal.created_at.split('T')[0];
+        // Bucket by the deal's Brasília wall-time date so late-night deals don't drift to the next day
+        const dateStr = toBrasiliaDateStr(new Date(deal.created_at));
         if (leadsByDayMap[dateStr]) {
           leadsByDayMap[dateStr].count++;
           // Use the custom field value directly, or "Outros" if not set
