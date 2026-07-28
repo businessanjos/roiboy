@@ -251,6 +251,31 @@ export function InsightsFilterBar() {
         </DropdownMenuContent>
       </DropdownMenu>
 
+      {/* Pipeline Filter */}
+      {pipelines.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <GitBranch className="h-4 w-4" />
+              {selectedPipeline?.name || "Selecionar Pipeline"}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+            {pipelines.map((pipeline) => (
+              <DropdownMenuItem
+                key={pipeline.id}
+                onClick={() => setPipelineId(pipeline.id)}
+                className={cn(filters.pipelineId === pipeline.id && "bg-accent")}
+              >
+                {pipeline.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
+
       {/* Reset Button */}
       {hasActiveFilters && (
         <Button
