@@ -253,6 +253,11 @@ export function InsightsGlobalFieldFilter() {
   };
 
   const isActive = !!active;
+  const activeCount = active
+    ? active.filter.fieldId === DEAL_CREATED_AT_FIELD_ID
+      ? 1
+      : active.filter.selectedValues.length
+    : 0;
   const activeLabel = active
     ? (() => {
         const src = active.source === "deal" ? "Negócio" : "Lead";
@@ -269,19 +274,32 @@ export function InsightsGlobalFieldFilter() {
     : "Filtrar por campo";
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant={isActive ? "secondary" : "outline"}
-          size="sm"
-          className="gap-2 max-w-[260px]"
-          title={activeLabel}
-        >
-          <Filter className="h-4 w-4 shrink-0" />
-          <span className="truncate">{activeLabel}</span>
-          <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
-        </Button>
-      </PopoverTrigger>
+    <div className="flex items-center">
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <Button
+            variant={isActive ? "secondary" : "outline"}
+            size="sm"
+            className={cn(
+              "gap-2 max-w-[260px]",
+              isActive && "rounded-r-none border-r-0 pr-2",
+            )}
+            title={activeLabel}
+          >
+            <Filter className="h-4 w-4 shrink-0" />
+            <span className="truncate">{activeLabel}</span>
+            {isActive && activeCount > 0 && (
+              <Badge
+                variant="default"
+                className="h-5 min-w-[20px] px-1.5 text-[10px] leading-none"
+              >
+                {activeCount}
+              </Badge>
+            )}
+            <ChevronDown className="h-3 w-3 opacity-50 shrink-0" />
+          </Button>
+        </PopoverTrigger>
+
       <PopoverContent align="start" className="w-[340px] p-3 space-y-3">
         <div className="flex items-center justify-between">
           <Label className="text-sm font-medium">Filtrar por campo</Label>
