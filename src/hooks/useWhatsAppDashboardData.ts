@@ -56,6 +56,7 @@ export interface WhatsAppDashboardData {
   totalMessages: number;
   totalInbound: number;
   totalOutbound: number;
+  avgFirstResponseMinutes: number | null;
 }
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
