@@ -468,9 +468,11 @@ Deno.serve(async (req) => {
         if (areaFilter === "none") {
           q = q.or("business_niche.is.null,business_niche.eq.");
         } else {
-          q = q.eq("business_niche", areaFilter);
+          // business_niche pode conter várias áreas separadas por vírgula
+          q = q.ilike("business_niche", `%${areaFilter}%`);
         }
       }
+
       return q;
     };
 
