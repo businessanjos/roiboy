@@ -202,7 +202,8 @@ export function useWhatsAppDashboardData() {
         .select('id, value, status, stage_id, responsible_user_id, created_at, won_at, pipeline_id')
         .eq('account_id', accountId)
         .gte('created_at', filters.startDate)
-        .lte('created_at', filters.endDate);
+        .lte('created_at', filters.endDate)
+        .is('deleted_at', null);
 
       if (userFilter) {
         dealsQuery = dealsQuery.eq('responsible_user_id', userFilter);
