@@ -75,6 +75,7 @@ export interface InsightsFilters {
   pipelineId: string;
   preset: DatePreset;
   accountIdOverride?: string;
+  globalFieldFilter?: GlobalFieldFilter | null;
 }
 
 interface InsightsFiltersContextType {
@@ -86,6 +87,7 @@ interface InsightsFiltersContextType {
   setStageId: (stageId: string) => void;
   setProductId: (productId: string) => void;
   setPipelineId: (pipelineId: string) => void;
+  setGlobalFieldFilter: (f: GlobalFieldFilter | null) => void;
   getDateRangeLabel: () => string;
   resetFilters: () => void;
   setAccountIdOverride: (accountId: string) => void;
@@ -103,6 +105,7 @@ const getDefaultFilters = (): InsightsFilters => {
     productId: "all",
     pipelineId: "",
     preset: "year",
+    globalFieldFilter: null,
   };
 };
 
