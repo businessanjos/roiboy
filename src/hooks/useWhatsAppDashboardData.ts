@@ -243,9 +243,9 @@ export function useWhatsAppDashboardData() {
         stage.conversionPct = Math.round((stage.count / maxCount) * 100);
       });
 
-      // 2. Overall stats (from filtered deals)
+      // 2. Overall stats — Ganhos unificado via won_at (mesma fonte do funil)
       const totalDeals = allDealsFiltered?.length || 0;
-      const wonDeals = allDealsFiltered?.filter(d => d.status === 'won').length || 0;
+      const wonDeals = wonDealsForFunnel ?? 0;
       const lostDeals = allDealsFiltered?.filter(d => d.status === 'lost').length || 0;
       const overallConversion = totalDeals > 0 ? Math.round((wonDeals / totalDeals) * 100) : 0;
 
