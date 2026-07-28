@@ -476,6 +476,15 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
               </>
             ) : (
               <>
+                {isFunnel && (
+                  <div className="rounded-lg border border-border bg-muted/30 p-3">
+                    <p className="text-xs text-muted-foreground">
+                      Funil renderiza cada valor da dimensão como uma etapa. Para o funil de
+                      vendas, use <b>Negócios</b> como fonte e <b>Etapa do Funil</b> como dimensão
+                      (já pré-selecionados).
+                    </p>
+                  </div>
+                )}
                 {/* Data Source */}
                 <DataSourceSelect
                   value={dataSource}
