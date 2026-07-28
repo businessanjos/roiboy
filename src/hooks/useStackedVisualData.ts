@@ -481,8 +481,8 @@ async function fetchStackedLeadsData(
     from += pageSize;
   }
 
-  // Apply lead field filters if configured (AND logic)
-  const leadFilters = getLeadFilters(config);
+  // Apply lead field filters if configured (AND logic), including any global insights-bar filter
+  const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     allLeads = await filterByLeadFields(allLeads, accountId, leadFilters, 'leads');
   }
