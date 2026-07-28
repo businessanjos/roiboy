@@ -856,24 +856,37 @@ export default function Clients() {
     }
   }, [accountId, currentUser?.account_id]);
 
-  // Fetch distinct business_niche values for the Area filter
+  // Opções do filtro de Área: catálogo oficial (practice_areas) + valores já usados
   useEffect(() => {
     const accId = accountId || currentUser?.account_id;
     if (!accId) return;
     (async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("business_niche")
-        .eq("account_id", accId)
-        .not("business_niche", "is", null)
-        .neq("business_niche", "")
-        .limit(2000);
-      const uniq = Array.from(
-        new Set((data || []).map((r: any) => (r.business_niche || "").trim()).filter(Boolean))
-      ).sort((a, b) => a.localeCompare(b, "pt-BR"));
-      setAreaOptions(uniq);
+      const [{ data: catalog }, { data }] = await Promise.all([
+        supabase
+          .from("practice_areas")
+          .select("label,sort_order")
+          .eq("active", true)
+          .order("sort_order", { ascending: true }),
+        supabase
+          .from("clients")
+          .select("business_niche")
+          .eq("account_id", accId)
+          .not("business_niche", "is", null)
+          .neq("business_niche", "")
+          .limit(2000),
+      ]);
+      const catalogLabels = (catalog || []).map((a: any) => (a.label || "").trim()).filter(Boolean);
+      const used = (data || [])
+        .flatMap((r: any) => String(r.business_niche || "").split(","))
+        .map((s: string) => s.trim())
+        .filter(Boolean);
+      const extras = Array.from(new Set(used.filter((u) => !catalogLabels.includes(u)))).sort(
+        (a, b) => a.localeCompare(b, "pt-BR"),
+      );
+      setAreaOptions([...catalogLabels, ...extras]);
     })();
   }, [accountId, currentUser?.account_id]);
+
 
   // Fetch field values when clients are loaded
   // Note: pendingFormSends now comes from edge function response
