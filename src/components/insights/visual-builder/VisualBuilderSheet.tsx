@@ -158,10 +158,25 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const isGauge = chartType === 'gauge';
   const isIndicator = chartType === 'indicator';
   const isTable = chartType === 'data_table';
-  
+  const isFunnel = chartType === 'funnel';
+  const isBubbleMap = chartType === 'bubble_map';
+
+  // Auto-default funnel to deals + stage_name (the shape ConfigurableFunnel expects)
+  useEffect(() => {
+    if (isFunnel) {
+      if (!dataSource) setDataSource('deals');
+      if (dataSource === 'deals' && !dimensionField) {
+        setDimensionField('stage_name');
+        setAggregation('count');
+      }
+    }
+  }, [isFunnel, dataSource, dimensionField]);
+
   useEffect(() => {
     if (isGauge) {
       setTitle(gaugeSubType === 'days_elapsed' ? 'Dias Corridos do Mês' : 'Faturamento x Meta');
+    } else if (isBubbleMap && !title) {
+      setTitle('Mapa de Faturamento por Cidade');
     } else if (isIndicator && !title) {
       setTitle('Indicador');
     } else if (isTable && dataSource && !title) {
@@ -175,7 +190,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
       );
       setTitle(generatedTitle);
     }
-  }, [dataSource, measureField, aggregation, dimensionField, isGauge, isIndicator, isTable, gaugeSubType]);
+  }, [dataSource, measureField, aggregation, dimensionField, isGauge, isIndicator, isTable, isBubbleMap, gaugeSubType]);
 
   // Check if dimension is a date field
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
@@ -190,6 +205,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
     ? (isGaugeDaysElapsed || (isGaugeRevenue && dataSource === 'deals')) &&
       title.trim() !== '' &&
       activeDashboardId !== null
+    : isBubbleMap
+    ? title.trim() !== '' && activeDashboardId !== null
     : isTable
     ? dataSource !== null &&
       tableColumns.length > 0 &&
