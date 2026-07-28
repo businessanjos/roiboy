@@ -248,6 +248,7 @@ const fallbackContext: InsightsFiltersContextType = {
   setStageId: () => {},
   setProductId: () => {},
   setPipelineId: () => {},
+  setGlobalFieldFilter: () => {},
   getDateRangeLabel: () => "Este Ano",
   resetFilters: () => {},
   setAccountIdOverride: () => {},
