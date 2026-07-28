@@ -441,6 +441,39 @@ export function useWhatsAppDashboardData() {
         }
       });
 
+      // === Recount funnel: "deals que ENTRARAM em cada etapa dentro do período" ===
+      // Fonte de verdade = deal_activities.new_value dentro do período + deals criados no período que nunca mudaram de etapa (ficaram na inicial)
+      const startMs = new Date(filters.startDate).getTime();
+      const endMs = new Date(filters.endDate).getTime();
+      const enteredByStage: Record<string, Set<string>> = {};
+      orderedStages.forEach(s => { enteredByStage[s] = new Set(); });
+
+      activities.forEach(act => {
+        if (!act.new_value || !validStageSet.has(act.new_value)) return;
+        const t = new Date(act.created_at).getTime();
+        if (t < startMs || t > endMs) return;
+        enteredByStage[act.new_value].add(act.deal_id);
+      });
+
+      // Deals criados no período sem stage_change ainda → contam para a etapa atual (inicial)
+      const stageIdToName: Record<string, string> = {};
+      (stagesData || []).forEach(s => { stageIdToName[s.id] = s.name; });
+      (allDealsFiltered || []).forEach(deal => {
+        if (dealActivities[deal.id]?.length) return;
+        const stageName = deal.stage_id ? stageIdToName[deal.stage_id] : null;
+        if (stageName && enteredByStage[stageName]) {
+          enteredByStage[stageName].add(deal.id);
+        }
+      });
+
+      // Atualiza contagens e conversão direta A→B na stageDistribution
+      stageDistribution.forEach((stage, idx) => {
+        const enteredHere = enteredByStage[stage.name]?.size || 0;
+        stage.count = enteredHere;
+        const prev = idx > 0 ? (enteredByStage[stageDistribution[idx - 1].name]?.size || 0) : 0;
+        stage.conversionPct = prev > 0 ? Math.round((enteredHere / prev) * 100) : 100;
+      });
+
       // Monta lista ordenada: tempo médio em cada stage → representado como transição from→to
       const avgTimePerTransition: TimeTransition[] = [];
       for (let i = 0; i < orderedStages.length - 1; i++) {
