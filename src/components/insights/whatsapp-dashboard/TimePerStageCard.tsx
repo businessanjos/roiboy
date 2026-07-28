@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Clock, ArrowRight, Timer, Zap, RefreshCcw } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { Clock, ArrowRight, Zap, RefreshCcw } from "lucide-react";
 
 interface TimeTransition {
   from: string;
@@ -11,8 +10,7 @@ interface TimeTransition {
 interface TimePerStageCardProps {
   transitions: TimeTransition[];
   totalCycleDays: number;
-  timeToSchedule?: string;
-  avgResponseTime?: string;
+  avgFirstResponseMinutes?: number | null;
   isLoading?: boolean;
 }
 
@@ -30,12 +28,23 @@ function formatDuration(days: number): string {
   return `${rounded} ${rounded === 1 ? 'dia' : 'dias'}`;
 }
 
-export function TimePerStageCard({ 
-  transitions, 
-  totalCycleDays, 
-  timeToSchedule = "1 sem 12h",
-  avgResponseTime = "3min 16s",
-  isLoading 
+function formatMinutes(min: number): string {
+  if (min < 1) return `${Math.round(min * 60)}s`;
+  if (min < 60) {
+    const whole = Math.floor(min);
+    const secs = Math.round((min - whole) * 60);
+    return secs > 0 ? `${whole}min ${secs}s` : `${whole}min`;
+  }
+  const hours = Math.floor(min / 60);
+  const restMin = Math.round(min - hours * 60);
+  return restMin > 0 ? `${hours}h ${restMin}min` : `${hours}h`;
+}
+
+export function TimePerStageCard({
+  transitions,
+  totalCycleDays,
+  avgFirstResponseMinutes,
+  isLoading,
 }: TimePerStageCardProps) {
   if (isLoading) {
     return (
@@ -73,7 +82,6 @@ export function TimePerStageCard({
             </p>
           ) : (
             <>
-              {/* Stage transitions */}
               {transitions.map((t, i) => (
                 <div key={i} className="flex items-center justify-between text-xs py-0.5">
                   <div className="flex items-center gap-1 text-muted-foreground">
@@ -86,44 +94,25 @@ export function TimePerStageCard({
                 </div>
               ))}
 
-              {/* Divider */}
               <div className="border-t pt-2 mt-2 space-y-2">
-                {/* Time to schedule */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Timer className="h-3 w-3 flex-shrink-0" />
-                    <span>Tempo até Agendamento</span>
+                {avgFirstResponseMinutes !== null && avgFirstResponseMinutes !== undefined && (
+                  <div className="flex items-center justify-between text-xs">
+                    <div className="flex items-center gap-1 text-muted-foreground">
+                      <Zap className="h-3 w-3 flex-shrink-0" />
+                      <span>Tempo médio de 1ª resposta</span>
+                    </div>
+                    <span className="font-semibold">{formatMinutes(avgFirstResponseMinutes)}</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold">{timeToSchedule}</span>
-                    <span className="text-[10px] text-red-500">↘-5%</span>
-                  </div>
-                </div>
+                )}
 
-                {/* Average response time */}
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1 text-muted-foreground">
-                    <Zap className="h-3 w-3 flex-shrink-0" />
-                    <span>Tempo Médio Resposta</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-semibold">{avgResponseTime}</span>
-                    <span className="text-[10px] text-red-500">↘-12%</span>
-                  </div>
-                </div>
-
-                {/* Total cycle */}
                 <div className="flex items-center justify-between text-xs bg-primary/5 -mx-4 px-4 py-1.5 rounded">
                   <div className="flex items-center gap-1 text-muted-foreground">
                     <RefreshCcw className="h-3 w-3 flex-shrink-0" />
-                    <span className="font-medium">Ciclo Total de Vendas</span>
+                    <span className="font-medium">Ciclo total de vendas</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-base font-bold text-primary">
-                      {formatDuration(totalCycleDays)}
-                    </span>
-                    <span className="text-[10px] text-red-500">↘-8%</span>
-                  </div>
+                  <span className="text-base font-bold text-primary">
+                    {formatDuration(totalCycleDays)}
+                  </span>
                 </div>
               </div>
             </>
