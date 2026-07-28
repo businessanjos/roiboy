@@ -354,130 +354,107 @@ export function useWhatsAppDashboardData() {
         sources: data.sources,
       }));
 
-      // 4. Time per transition - calculate average time between consecutive funnel stages
-      // Filter activities based on the filtered deals
-      const filteredDealIds = (allDealsFiltered || []).map(d => d.id);
-      
-      let activitiesQuery = supabase
-        .from('deal_activities')
-        .select('deal_id, type, old_value, new_value, created_at')
+      // 4. Tempo real gasto em cada etapa (via deal_activities de todos os deals do pipeline no período)
+      // Coleta deals a considerar: os criados no período + os ganhos no período (pode ser criado antes)
+      let wonInPeriodQuery = supabase
+        .from('deals')
+        .select('id, created_at, won_at, stage_id')
         .eq('account_id', accountId)
-        .eq('type', 'stage_change')
-        .gte('created_at', filters.startDate)
-        .lte('created_at', filters.endDate)
-        .order('created_at');
+        .eq('status', 'won')
+        .not('won_at', 'is', null)
+        .gte('won_at', filters.startDate)
+        .lte('won_at', filters.endDate);
+      if (userFilter) wonInPeriodQuery = wonInPeriodQuery.eq('responsible_user_id', userFilter);
+      if (effectivePipelineId) wonInPeriodQuery = wonInPeriodQuery.eq('pipeline_id', effectivePipelineId);
+      const { data: wonInPeriod } = await wonInPeriodQuery;
 
-      // If we have specific deals from filters, only get activities for those
-      if (filteredDealIds.length > 0 && filteredDealIds.length < 1000) {
-        activitiesQuery = activitiesQuery.in('deal_id', filteredDealIds);
-      }
-
-      const { data: activities } = await activitiesQuery;
-
-      // Build ordered stage list from stagesData (already sorted by display_order)
-      const orderedStages = (stagesData || []).map(s => s.name);
-      
-      // Build a map of stage name -> display_order for quick lookup
-      const stageOrderMap: Record<string, number> = {};
-      (stagesData || []).forEach(stage => {
-        stageOrderMap[stage.name] = stage.display_order;
+      const dealMeta: Record<string, { created_at: string; won_at: string | null }> = {};
+      (allDealsFiltered || []).forEach(d => {
+        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at };
+      });
+      (wonInPeriod || []).forEach(d => {
+        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at };
       });
 
-      // Group activities by deal
-      const dealActivities: Record<string, any[]> = {};
-      (activities || []).forEach(act => {
-        if (!act.old_value || !act.new_value) return;
-        if (act.old_value === act.new_value) return;
-        
-        if (!dealActivities[act.deal_id]) {
-          dealActivities[act.deal_id] = [];
-        }
+      const allDealIds = Object.keys(dealMeta);
+
+      // Busca activities em lotes (sem filtro de data — precisamos do histórico completo do deal)
+      const CHUNK = 300;
+      let activities: Array<{ deal_id: string; old_value: string | null; new_value: string | null; created_at: string }> = [];
+      for (let i = 0; i < allDealIds.length; i += CHUNK) {
+        const chunk = allDealIds.slice(i, i + CHUNK);
+        if (chunk.length === 0) continue;
+        const { data: batch } = await supabase
+          .from('deal_activities')
+          .select('deal_id, old_value, new_value, created_at')
+          .eq('account_id', accountId)
+          .eq('type', 'stage_change')
+          .in('deal_id', chunk)
+          .order('created_at');
+        activities = activities.concat(batch || []);
+      }
+
+      // Nomes de stages válidos no pipeline
+      const orderedStages = (stagesData || []).map(s => s.name);
+      const validStageSet = new Set(orderedStages);
+
+      // Agrupa activities por deal
+      const dealActivities: Record<string, typeof activities> = {};
+      activities.forEach(act => {
+        if (!act.new_value) return;
+        if (!dealActivities[act.deal_id]) dealActivities[act.deal_id] = [];
         dealActivities[act.deal_id].push(act);
       });
 
-      // Calculate time for each consecutive stage pair in the funnel
-      const consecutiveTransitionTimes: Record<string, number[]> = {};
-      
-      // Initialize for each consecutive stage pair
-      for (let i = 0; i < orderedStages.length - 1; i++) {
-        const key = `${orderedStages[i]}->${orderedStages[i + 1]}`;
-        consecutiveTransitionTimes[key] = [];
-      }
-      // Add transition to "Venda" from the last stage
-      if (orderedStages.length > 0) {
-        consecutiveTransitionTimes[`${orderedStages[orderedStages.length - 1]}->Venda`] = [];
-      }
+      // Acumula tempo gasto em cada stage (dias)
+      const timeInStage: Record<string, number[]> = {};
+      orderedStages.forEach(s => { timeInStage[s] = []; });
 
-      // Process each deal's activities to find times between consecutive stages
       Object.entries(dealActivities).forEach(([dealId, acts]) => {
-        acts.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        
-        for (let i = 0; i < acts.length; i++) {
-          const from = acts[i].old_value;
-          const to = acts[i].new_value;
-          const key = `${from}->${to}`;
-          
-          // Only track if this is a consecutive forward transition
-          if (consecutiveTransitionTimes[key] !== undefined) {
-            if (i > 0) {
-              const diffMs = new Date(acts[i].created_at).getTime() - new Date(acts[i-1].created_at).getTime();
-              const diffDays = diffMs / (1000 * 60 * 60 * 24);
-              if (diffDays >= 0) {
-                consecutiveTransitionTimes[key].push(diffDays);
-              }
-            }
+        const sorted = [...acts].sort(
+          (a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+        );
+        const meta = dealMeta[dealId];
+        if (!meta) return;
+
+        // Stage inicial: do created_at do deal até a 1ª transição
+        if (sorted.length > 0 && sorted[0].old_value && validStageSet.has(sorted[0].old_value)) {
+          const diffDays = (new Date(sorted[0].created_at).getTime() - new Date(meta.created_at).getTime()) / 86400000;
+          if (diffDays >= 0) timeInStage[sorted[0].old_value].push(diffDays);
+        }
+
+        // Stages intermediários: entre transições consecutivas
+        for (let i = 0; i < sorted.length - 1; i++) {
+          const stage = sorted[i].new_value;
+          if (!stage || !validStageSet.has(stage)) continue;
+          const diffDays = (new Date(sorted[i + 1].created_at).getTime() - new Date(sorted[i].created_at).getTime()) / 86400000;
+          if (diffDays >= 0) timeInStage[stage].push(diffDays);
+        }
+
+        // Último stage: até won_at (se ganho) ou ignora
+        if (sorted.length > 0 && meta.won_at) {
+          const lastStage = sorted[sorted.length - 1].new_value;
+          if (lastStage && validStageSet.has(lastStage)) {
+            const diffDays = (new Date(meta.won_at).getTime() - new Date(sorted[sorted.length - 1].created_at).getTime()) / 86400000;
+            if (diffDays >= 0) timeInStage[lastStage].push(diffDays);
           }
         }
       });
 
-      // Also track time to "Venda" for won deals
-      const wonDealsData = (allDealsFiltered || []).filter(d => d.status === 'won');
-      wonDealsData.forEach(deal => {
-        const dealActs = dealActivities[deal.id];
-        if (dealActs && dealActs.length > 0 && deal.won_at) {
-          const lastActivity = dealActs[dealActs.length - 1];
-          const lastStageName = lastActivity.new_value;
-          const key = `${lastStageName}->Venda`;
-          
-          if (consecutiveTransitionTimes[key] !== undefined) {
-            const diffMs = new Date(deal.won_at).getTime() - new Date(lastActivity.created_at).getTime();
-            const diffDays = diffMs / (1000 * 60 * 60 * 24);
-            if (diffDays >= 0) {
-              consecutiveTransitionTimes[key].push(diffDays);
-            }
-          }
-        }
-      });
-
-      // Build ordered transitions array following funnel sequence
+      // Monta lista ordenada: tempo médio em cada stage → representado como transição from→to
       const avgTimePerTransition: TimeTransition[] = [];
-      
       for (let i = 0; i < orderedStages.length - 1; i++) {
         const from = orderedStages[i];
         const to = orderedStages[i + 1];
-        const key = `${from}->${to}`;
-        const times = consecutiveTransitionTimes[key] || [];
+        const times = timeInStage[from] || [];
         const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-        
-        avgTimePerTransition.push({
-          from,
-          to,
-          avgDays,
-        });
+        avgTimePerTransition.push({ from, to, avgDays });
       }
-      
-      // Add final transition to Venda
       if (orderedStages.length > 0) {
         const lastStage = orderedStages[orderedStages.length - 1];
-        const key = `${lastStage}->Venda`;
-        const times = consecutiveTransitionTimes[key] || [];
+        const times = timeInStage[lastStage] || [];
         const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-        
-        avgTimePerTransition.push({
-          from: lastStage,
-          to: 'Venda',
-          avgDays,
-        });
+        avgTimePerTransition.push({ from: lastStage, to: 'Venda', avgDays });
       }
 
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
