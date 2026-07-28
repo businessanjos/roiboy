@@ -1,13 +1,9 @@
 import { memo, useMemo } from "react";
 import {
   MessageSquare,
-  Users,
-  Building2,
-  Settings,
   Plus,
   Search,
   Filter,
-  MoreVertical,
   Check,
   
   ArrowDownToLine,
@@ -302,7 +298,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             <div className="mt-1 flex items-center gap-2 min-w-0">
               <p className="text-xs text-zapp-text-muted whitespace-nowrap">{activeConversations} em atendimento</p>
               {/* Instance/line selector — lives under the title so it never collides with the header actions */}
-              {sectorId && onSelectIntegration && (
+              {activeView === "inbox" && sectorId && onSelectIntegration && (
                 <ZappInstanceSwitcher
                   accountId={accountId}
                   sectorId={sectorId}
@@ -316,26 +312,28 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
         <div className="flex items-center gap-1 shrink-0">
 
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
-                onClick={onOpenNewConversationDialog}
-              >
-                <Plus className="h-5 w-5" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Nova conversa</TooltipContent>
-          </Tooltip>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
-                <Filter className="h-5 w-5" />
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 max-h-80 overflow-y-auto">
+          {activeView === "inbox" && (
+            <>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
+                    onClick={onOpenNewConversationDialog}
+                  >
+                    <Plus className="h-5 w-5" />
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent>Nova conversa</TooltipContent>
+              </Tooltip>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
+                    <Filter className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 max-h-80 overflow-y-auto">
               {/* Status filters */}
               <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
               <DropdownMenuItem 
@@ -518,19 +516,21 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   ))}
                 </>
               )}
-            </DropdownMenuContent>
-          </DropdownMenu>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
-            onClick={onRefreshMessages}
-            disabled={isRefreshingMessages}
-            title="Atualizar mensagens"
-            aria-label="Atualizar mensagens"
-          >
-            <RefreshCw className={cn("h-5 w-5", isRefreshingMessages && "animate-spin")} />
-          </Button>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
+                onClick={onRefreshMessages}
+                disabled={isRefreshingMessages}
+                title="Atualizar mensagens"
+                aria-label="Atualizar mensagens"
+              >
+                <RefreshCw className={cn("h-5 w-5", isRefreshingMessages && "animate-spin")} />
+              </Button>
+            </>
+          )}
 
         </div>
       </div>
@@ -552,6 +552,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* Tabs: Minhas | Fila */}
 
+      {activeView === "inbox" && (
       <div className="flex border-b border-zapp-border bg-zapp-bg">
         <button
           onClick={() => {
@@ -606,9 +607,10 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           )}
         </button>
       </div>
+      )}
 
       {/* Pull from queue button - shows when there are unassigned conversations */}
-      {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
+      {activeView === "inbox" && inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
         <div className="px-3 py-2 bg-zapp-bg-dark border-b border-zapp-border">
           <Button
             variant="outline"
@@ -623,6 +625,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       )}
 
       {/* Search */}
+      {activeView === "inbox" && (
       <div className="px-3 py-2 bg-zapp-bg">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
@@ -634,6 +637,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           />
         </div>
       </div>
+      )}
 
       {/* Faixa de chips de etiquetas removida — filtro continua disponível pelo seletor de etiquetas */}
 

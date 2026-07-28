@@ -1,13 +1,6 @@
 import { memo } from "react";
-import { Tags, Plus, MoreVertical, Pencil, Trash2 } from "lucide-react";
+import { Tags, Plus, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ZappTag } from "./types";
 
 interface ZappTagsListProps {
@@ -56,27 +49,26 @@ export const ZappTagsList = memo(function ZappTagsList({
                   />
                   <span className="text-zapp-text font-medium">{tag.name}</span>
                 </div>
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border">
-                    <DropdownMenuItem className="text-zapp-text" onClick={() => onOpenTagDialog(tag)}>
-                      <Pencil className="h-4 w-4 mr-2" />
-                      Editar
-                    </DropdownMenuItem>
-                    <DropdownMenuSeparator className="bg-zapp-border" />
-                    <DropdownMenuItem 
-                      className="text-destructive"
-                      onClick={() => onDeleteTag(tag.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Excluir
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark"
+                    onClick={() => onOpenTagDialog(tag)}
+                    aria-label={`Editar tag ${tag.name}`}
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-8 w-8 text-destructive hover:bg-destructive/10"
+                    onClick={() => onDeleteTag(tag.id)}
+                    aria-label={`Excluir tag ${tag.name}`}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
               {tag.description && (
                 <p className="text-zapp-text-muted text-xs mt-1">{tag.description}</p>
