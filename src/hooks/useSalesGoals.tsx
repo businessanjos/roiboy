@@ -35,11 +35,11 @@ export function useSalesGoals() {
   const qc = useQueryClient();
 
   const query = useQuery({
-    queryKey: ["sales-goals", currentUser?.account_id],
+    queryKey: ["sales-rep-goals", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<SalesGoal[]> => {
       const { data, error } = await supabase
-        .from("sales_goals")
+        .from("sales_rep_goals")
         .select("*")
         .order("period_start", { ascending: false });
       if (error) throw error;
@@ -51,7 +51,7 @@ export function useSalesGoals() {
     mutationFn: async (input: SalesGoalInput) => {
       if (!currentUser?.account_id) throw new Error("Sem conta ativa");
       const { data, error } = await supabase
-        .from("sales_goals")
+        .from("sales_rep_goals")
         .insert({
           account_id: currentUser.account_id,
           created_by: currentUser.id,
@@ -63,7 +63,7 @@ export function useSalesGoals() {
       return data as SalesGoal;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sales-goals"] });
+      qc.invalidateQueries({ queryKey: ["sales-rep-goals"] });
       toast.success("Meta criada");
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao criar meta"),
@@ -72,7 +72,7 @@ export function useSalesGoals() {
   const update = useMutation({
     mutationFn: async ({ id, ...patch }: { id: string } & Partial<SalesGoalInput>) => {
       const { data, error } = await supabase
-        .from("sales_goals")
+        .from("sales_rep_goals")
         .update(patch)
         .eq("id", id)
         .select()
@@ -81,7 +81,7 @@ export function useSalesGoals() {
       return data as SalesGoal;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sales-goals"] });
+      qc.invalidateQueries({ queryKey: ["sales-rep-goals"] });
       toast.success("Meta atualizada");
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao atualizar meta"),
@@ -89,11 +89,11 @@ export function useSalesGoals() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("sales_goals").delete().eq("id", id);
+      const { error } = await supabase.from("sales_rep_goals").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["sales-goals"] });
+      qc.invalidateQueries({ queryKey: ["sales-rep-goals"] });
       toast.success("Meta removida");
     },
     onError: (e: any) => toast.error(e?.message ?? "Erro ao remover meta"),
