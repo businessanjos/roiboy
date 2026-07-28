@@ -124,6 +124,10 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
     setFilters((prev) => ({ ...prev, productId }));
   }, []);
 
+  const setPipelineId = useCallback((pipelineId: string) => {
+    setFilters((prev) => ({ ...prev, pipelineId }));
+  }, []);
+
   const getDateRangeLabel = useCallback(() => {
     const presetLabels: Record<DatePreset, string> = {
       today: "Hoje",
