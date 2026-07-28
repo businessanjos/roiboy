@@ -275,6 +275,9 @@ export function InsightsFilterBar() {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {/* Global Custom Field Filter */}
+      <InsightsGlobalFieldFilter />
+
 
 
       {/* Reset Button */}
