@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useInsightsFilters } from "./useInsightsFilters";
 
 interface StageDistribution {
+  id: string;
   name: string;
   count: number;
   value: number;
