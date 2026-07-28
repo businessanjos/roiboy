@@ -36,7 +36,7 @@ interface CustomFieldRow {
 export function InsightsGlobalFieldFilter() {
   const { filters, setGlobalFieldFilter } = useInsightsFilters();
   const { currentUser } = useCurrentUser();
-  const accountId = filters.accountIdOverride || currentUser?.account_id;
+  const accountId = currentUser?.account_id;
 
   const [open, setOpen] = useState(false);
   const active = filters.globalFieldFilter;
