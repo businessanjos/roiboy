@@ -581,6 +581,34 @@ export function useWhatsAppDashboardData() {
         p.responseRate = p.inbound > 0 ? Math.round((p.outbound / p.inbound) * 100) : 0;
       });
 
+      // === Tempo médio de primeira resposta (minutos) — por conversa ===
+      // Para cada conversa: procurar pares (inbound sem resposta ainda → próximo outbound). Média dos deltas.
+      const msgsByConv: Record<string, Array<{ dir: string; t: number }>> = {};
+      (allMessages || []).forEach(m => {
+        const cid = (m as any).conversation_id as string | null;
+        if (!cid) return;
+        if (!msgsByConv[cid]) msgsByConv[cid] = [];
+        msgsByConv[cid].push({ dir: m.direction, t: new Date(m.sent_at).getTime() });
+      });
+      const responseDeltasMin: number[] = [];
+      Object.values(msgsByConv).forEach(list => {
+        list.sort((a, b) => a.t - b.t);
+        let pendingInboundAt: number | null = null;
+        for (const m of list) {
+          if (m.dir === 'inbound') {
+            if (pendingInboundAt === null) pendingInboundAt = m.t;
+          } else if (pendingInboundAt !== null) {
+            const deltaMin = (m.t - pendingInboundAt) / 60000;
+            // Ignora deltas absurdos (>24h) para não distorcer a média
+            if (deltaMin >= 0 && deltaMin <= 24 * 60) responseDeltasMin.push(deltaMin);
+            pendingInboundAt = null;
+          }
+        }
+      });
+      const avgFirstResponseMinutes = responseDeltasMin.length > 0
+        ? responseDeltasMin.reduce((a, b) => a + b, 0) / responseDeltasMin.length
+        : null;
+
       return {
         stageDistribution,
         totalDeals,
@@ -596,6 +624,7 @@ export function useWhatsAppDashboardData() {
         totalMessages,
         totalInbound,
         totalOutbound,
+        avgFirstResponseMinutes,
       };
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
