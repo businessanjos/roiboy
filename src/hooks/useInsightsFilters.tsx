@@ -23,6 +23,7 @@ export interface InsightsFilters {
   userId: string;
   stageId: string;
   productId: string;
+  pipelineId: string;
   preset: DatePreset;
   accountIdOverride?: string;
 }
@@ -35,6 +36,7 @@ interface InsightsFiltersContextType {
   setUserId: (userId: string) => void;
   setStageId: (stageId: string) => void;
   setProductId: (productId: string) => void;
+  setPipelineId: (pipelineId: string) => void;
   getDateRangeLabel: () => string;
   resetFilters: () => void;
   setAccountIdOverride: (accountId: string) => void;
@@ -50,6 +52,7 @@ const getDefaultFilters = (): InsightsFilters => {
     userId: "all",
     stageId: "all",
     productId: "all",
+    pipelineId: "",
     preset: "year",
   };
 };
@@ -121,6 +124,10 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
     setFilters((prev) => ({ ...prev, productId }));
   }, []);
 
+  const setPipelineId = useCallback((pipelineId: string) => {
+    setFilters((prev) => ({ ...prev, pipelineId }));
+  }, []);
+
   const getDateRangeLabel = useCallback(() => {
     const presetLabels: Record<DatePreset, string> = {
       today: "Hoje",
@@ -158,11 +165,12 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
       setUserId,
       setStageId,
       setProductId,
+      setPipelineId,
       getDateRangeLabel,
       resetFilters,
       setAccountIdOverride,
     }),
-    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, getDateRangeLabel, resetFilters, setAccountIdOverride]
+    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, getDateRangeLabel, resetFilters, setAccountIdOverride]
   );
 
   return (
@@ -182,6 +190,7 @@ const fallbackContext: InsightsFiltersContextType = {
   setUserId: () => {},
   setStageId: () => {},
   setProductId: () => {},
+  setPipelineId: () => {},
   getDateRangeLabel: () => "Este Ano",
   resetFilters: () => {},
   setAccountIdOverride: () => {},

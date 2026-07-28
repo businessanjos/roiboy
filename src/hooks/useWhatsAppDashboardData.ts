@@ -114,7 +114,7 @@ export function useWhatsAppDashboardData() {
   const { filters } = useInsightsFilters();
 
   return useQuery({
-    queryKey: ['whatsapp-dashboard', filters.startDate, filters.endDate, filters.userId, filters.productId],
+    queryKey: ['whatsapp-dashboard', filters.startDate, filters.endDate, filters.userId, filters.productId, filters.pipelineId],
   queryFn: async (): Promise<WhatsAppDashboardData> => {
       // Get current auth user
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -138,6 +138,21 @@ export function useWhatsAppDashboardData() {
 
       // Build filter conditions
       const userFilter = filters.userId !== 'all' ? filters.userId : null;
+      const pipelineFilter = filters.pipelineId || null;
+
+      // Resolve effective pipeline: use selected, else first active pipeline (isolates funnel)
+      let effectivePipelineId: string | null = pipelineFilter;
+      if (!effectivePipelineId) {
+        const { data: firstPipeline } = await supabase
+          .from('pipelines')
+          .select('id')
+          .eq('account_id', accountId)
+          .eq('is_active', true)
+          .order('display_order', { nullsFirst: false })
+          .limit(1)
+          .maybeSingle();
+        effectivePipelineId = firstPipeline?.id ?? null;
+      }
 
       // Fetch won deals count using won_at filter (matches funnel visual logic)
       let wonDealsQuery = supabase
@@ -152,27 +167,39 @@ export function useWhatsAppDashboardData() {
       if (userFilter) {
         wonDealsQuery = wonDealsQuery.eq('responsible_user_id', userFilter);
       }
+      if (effectivePipelineId) {
+        wonDealsQuery = wonDealsQuery.eq('pipeline_id', effectivePipelineId);
+      }
 
       const { count: wonDealsForFunnel } = await wonDealsQuery;
 
 
-      // 1. Pipeline by Stage - need to fetch deals separately to apply filters
-      const { data: stagesData } = await supabase
+      // 1. Pipeline by Stage - only stages from the selected pipeline
+      let stagesQuery = supabase
         .from('deal_stages')
-        .select('id, name, color, display_order')
+        .select('id, name, color, display_order, pipeline_id')
         .eq('account_id', accountId)
         .order('display_order');
+
+      if (effectivePipelineId) {
+        stagesQuery = stagesQuery.eq('pipeline_id', effectivePipelineId);
+      }
+
+      const { data: stagesData } = await stagesQuery;
 
       // Fetch deals with filters applied
       let dealsQuery = supabase
         .from('deals')
-        .select('id, value, status, stage_id, responsible_user_id, created_at, won_at')
+        .select('id, value, status, stage_id, responsible_user_id, created_at, won_at, pipeline_id')
         .eq('account_id', accountId)
         .gte('created_at', filters.startDate)
         .lte('created_at', filters.endDate);
 
       if (userFilter) {
         dealsQuery = dealsQuery.eq('responsible_user_id', userFilter);
+      }
+      if (effectivePipelineId) {
+        dealsQuery = dealsQuery.eq('pipeline_id', effectivePipelineId);
       }
 
       const { data: allDealsFiltered } = await dealsQuery;
@@ -246,6 +273,9 @@ export function useWhatsAppDashboardData() {
 
       if (userFilter) {
         dealsbyDayQuery = dealsbyDayQuery.eq('responsible_user_id', userFilter);
+      }
+      if (effectivePipelineId) {
+        dealsbyDayQuery = dealsbyDayQuery.eq('pipeline_id', effectivePipelineId);
       }
 
       const { data: dealsbyDay } = await dealsbyDayQuery;

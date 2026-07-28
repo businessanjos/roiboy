@@ -1,4 +1,5 @@
-import { CalendarDays, ChevronDown, Filter, RotateCcw, User } from "lucide-react";
+import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User } from "lucide-react";
+import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -37,6 +38,7 @@ export function InsightsFilterBar() {
     setDateRange,
     setUserId,
     setProductId,
+    setPipelineId,
     getDateRangeLabel,
     resetFilters,
   } = useInsightsFilters();
@@ -76,6 +78,26 @@ export function InsightsFilterBar() {
     },
   });
 
+  // Fetch pipelines for filter
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ["insights-filter-pipelines"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pipelines")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("display_order", { nullsFirst: false });
+      return data || [];
+    },
+  });
+
+  // Auto-select first pipeline when list loads if none chosen yet
+  useEffect(() => {
+    if (!filters.pipelineId && pipelines.length > 0) {
+      setPipelineId(pipelines[0].id);
+    }
+  }, [pipelines, filters.pipelineId, setPipelineId]);
+
   const handleDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (range) {
       setDateRangeLocal({ from: range.from, to: range.to });
@@ -88,6 +110,7 @@ export function InsightsFilterBar() {
 
   const selectedUser = users.find((u) => u.id === filters.userId);
   const selectedProduct = products.find((p) => p.id === filters.productId);
+  const selectedPipeline = pipelines.find((p) => p.id === filters.pipelineId);
 
   const hasActiveFilters =
     filters.userId !== "all" || filters.productId !== "all";
@@ -227,6 +250,31 @@ export function InsightsFilterBar() {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
+
+      {/* Pipeline Filter */}
+      {pipelines.length > 0 && (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="sm" className="gap-2">
+              <GitBranch className="h-4 w-4" />
+              {selectedPipeline?.name || "Selecionar Pipeline"}
+              <ChevronDown className="h-3 w-3 opacity-50" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+            {pipelines.map((pipeline) => (
+              <DropdownMenuItem
+                key={pipeline.id}
+                onClick={() => setPipelineId(pipeline.id)}
+                className={cn(filters.pipelineId === pipeline.id && "bg-accent")}
+              >
+                {pipeline.name}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
 
       {/* Reset Button */}
       {hasActiveFilters && (
