@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { useInsightsFilters, isGlobalFieldFilterActive } from "@/hooks/useInsightsFilters";
+import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 
 const CIDADE_FIELD_ID = '5accffbd-3d87-4735-b890-bc6c361694b7';
 
