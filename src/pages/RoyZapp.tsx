@@ -385,20 +385,25 @@ export default function RoyZapp() {
 
 
 
+  // URL -> estado (só quando o parâmetro realmente muda; nunca depende do
+  // objeto searchParams, que é recriado a cada replace e causava loop/piscar).
   useEffect(() => {
-    if (viewFromUrl && ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
-      setActiveView(viewFromUrl as ZappView);
-    } else if (viewFromUrl) {
-      // Unknown view in URL — sanitize by removing the param so bookmarks
-      // and stale links never leave the user on a blank screen.
-      const next = new URLSearchParams(searchParams);
-      next.delete("view");
-      setSearchParams(next, { replace: true });
+    if (!viewFromUrl) return;
+    if (ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
+      setActiveView((prev) => (prev === viewFromUrl ? prev : (viewFromUrl as ZappView)));
+    } else {
+      // View desconhecida na URL — limpa o parâmetro.
+      setSearchParams(
+        (prev) => {
+          prev.delete("view");
+          return prev;
+        },
+        { replace: true },
+      );
     }
-  }, [viewFromUrl, searchParams, setSearchParams]);
+  }, [viewFromUrl, setSearchParams]);
 
-  // Persist the selected menu item and mirror it in the URL so it survives
-  // navigation away from RoyZapp and a full page refresh.
+  // Estado -> URL + localStorage, para sobreviver a refresh e navegação.
   useEffect(() => {
     try {
       localStorage.setItem(ZAPP_VIEW_STORAGE_KEY, activeView);
@@ -406,11 +411,16 @@ export default function RoyZapp() {
       /* storage unavailable */
     }
     if (viewFromUrl !== activeView) {
-      const next = new URLSearchParams(searchParams);
-      next.set("view", activeView);
-      setSearchParams(next, { replace: true });
+      setSearchParams(
+        (prev) => {
+          prev.set("view", activeView);
+          return prev;
+        },
+        { replace: true },
+      );
     }
-  }, [activeView, viewFromUrl, searchParams, setSearchParams]);
+  }, [activeView, viewFromUrl, setSearchParams]);
+
 
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
