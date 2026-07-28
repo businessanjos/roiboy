@@ -146,8 +146,8 @@ async function fetchDealsRecords(
 
   let filteredData = data || [];
 
-  // Apply lead field filters if configured (AND logic)
-  const leadFilters = getLeadFilters(config);
+  // Apply lead field filters if configured (AND logic), including any global insights-bar filter
+  const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     filteredData = await filterByLeadFields(
       filteredData.map((d: any) => ({ ...d, lead_id: d.lead_id })),
@@ -155,8 +155,8 @@ async function fetchDealsRecords(
     ) as any[];
   }
 
-  // Apply deal field filters if configured (AND logic)
-  const dealFilters = getDealFilters(config);
+  // Apply deal field filters if configured (AND logic), including any global insights-bar filter
+  const dealFilters = mergeGlobalDealFilter(getDealFilters(config), filters.globalFieldFilter);
   if (dealFilters.length > 0) {
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
