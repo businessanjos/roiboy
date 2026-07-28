@@ -29,7 +29,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
       // 1. Fetch won deals with date filters
       let dealsQuery = supabase
         .from('deals')
-        .select('id, value, won_at')
+        .select('id, value, won_at, lead_id')
         .eq('account_id', accountId)
         .eq('status', 'won')
         .is('deleted_at', null)
@@ -48,6 +48,16 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
         allDeals = allDeals.concat(data || []);
         if (!data || data.length < pageSize) break;
         from += pageSize;
+      }
+
+      // Apply global insights-bar custom field filter (deal or lead), if any
+      if (isGlobalFieldFilterActive(filters.globalFieldFilter)) {
+        const g = filters.globalFieldFilter!;
+        if (g.source === 'deal') {
+          allDeals = await filterByDealFields(allDeals, accountId, [g.filter]);
+        } else {
+          allDeals = await filterByLeadFields(allDeals, accountId, [g.filter], 'deals');
+        }
       }
 
       if (allDeals.length === 0) return [];
