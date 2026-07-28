@@ -271,6 +271,14 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           },
           appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
         };
+      } else if (isBubbleMap) {
+        config = {
+          dataSource: 'deals',
+          measure: { field: 'value', aggregation: 'sum' },
+          dimension: { field: 'won_at', type: 'date', dateGrouping: 'month' },
+          formatting: { type: 'currency', decimals: 0 },
+          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
+        };
       } else if (isTable) {
         config = {
           dataSource: dataSource!,
