@@ -165,11 +165,12 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
       setUserId,
       setStageId,
       setProductId,
+      setPipelineId,
       getDateRangeLabel,
       resetFilters,
       setAccountIdOverride,
     }),
-    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, getDateRangeLabel, resetFilters, setAccountIdOverride]
+    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, getDateRangeLabel, resetFilters, setAccountIdOverride]
   );
 
   return (
@@ -189,6 +190,7 @@ const fallbackContext: InsightsFiltersContextType = {
   setUserId: () => {},
   setStageId: () => {},
   setProductId: () => {},
+  setPipelineId: () => {},
   getDateRangeLabel: () => "Este Ano",
   resetFilters: () => {},
   setAccountIdOverride: () => {},
