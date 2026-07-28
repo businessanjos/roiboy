@@ -313,6 +313,7 @@ export default function RoyZapp() {
   // Conversas e a view clicada enquanto a query resolve.
   useEffect(() => {
     if (zappAccessLoading) return;
+    if (allowedViews.length === 0) return;
     if (!allowedViews.includes(activeView)) setActiveView("inbox");
   }, [activeView, allowedViews, zappAccessLoading]);
 
@@ -326,10 +327,11 @@ export default function RoyZapp() {
       setActiveView("inbox");
       setSearchParams(
         (prev) => {
-          prev.set("sector", sectorId);
-          prev.set("integrationId", integrationId);
-          prev.set("view", "inbox");
-          return prev;
+          const next = new URLSearchParams(prev);
+          next.set("sector", sectorId);
+          next.set("integrationId", integrationId);
+          next.set("view", "inbox");
+          return next;
         },
         { replace: true },
       );
@@ -366,10 +368,11 @@ export default function RoyZapp() {
     setSelectedIntegrationId(undefined);
     setSearchParams(
       (prev) => {
-        prev.delete("integrationId");
-        if (fallback) prev.set("sector", fallback);
-        else prev.delete("sector");
-        return prev;
+        const next = new URLSearchParams(prev);
+        next.delete("integrationId");
+        if (fallback) next.set("sector", fallback);
+        else next.delete("sector");
+        return next;
       },
       { replace: true }
     );
@@ -395,8 +398,9 @@ export default function RoyZapp() {
       // View desconhecida na URL — limpa o parâmetro.
       setSearchParams(
         (prev) => {
-          prev.delete("view");
-          return prev;
+          const next = new URLSearchParams(prev);
+          next.delete("view");
+          return next;
         },
         { replace: true },
       );
@@ -413,8 +417,9 @@ export default function RoyZapp() {
     if (viewFromUrl !== activeView) {
       setSearchParams(
         (prev) => {
-          prev.set("view", activeView);
-          return prev;
+          const next = new URLSearchParams(prev);
+          next.set("view", activeView);
+          return next;
         },
         { replace: true },
       );
@@ -445,6 +450,11 @@ export default function RoyZapp() {
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
+  useEffect(() => {
+    if (activeView !== "inbox" && selectedConversation) {
+      setSelectedConversation(null);
+    }
+  }, [activeView, selectedConversation]);
   
   // Keep the open chat synced with the latest assignment object from the list
   useEffect(() => {
@@ -1441,14 +1451,16 @@ export default function RoyZapp() {
     }} />;
   }
   // Tag and conversation tag functions are now in crud hook
+  const isInboxView = activeView === "inbox";
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
       {/* Left panel - Conversation list */}
       <div 
         className={cn(
-          "w-full lg:w-[440px] lg:min-w-[440px] lg:max-w-[440px] flex flex-col overflow-hidden border-r border-zapp-border",
-          selectedConversation ? "hidden lg:flex" : "flex"
+          "flex flex-col overflow-hidden border-r border-zapp-border",
+          isInboxView ? "w-full lg:w-[440px] lg:min-w-[440px] lg:max-w-[440px]" : "w-full flex-1",
+          isInboxView && selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
         <ZappConversationPanel
@@ -1606,6 +1618,7 @@ export default function RoyZapp() {
       </div>
 
       {/* Right panel - Chat view or AI Agent Chat */}
+      {isInboxView && (
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
@@ -1748,6 +1761,7 @@ export default function RoyZapp() {
         />
         )}
       </div>
+      )}
 
       {/* Department Dialog */}
       <ZappDepartmentDialog
