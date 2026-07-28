@@ -61,8 +61,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       const fillEmptyDates = appearance?.fillEmptyDates || false;
 
       // Normalize filters (supports both legacy single and new multi-filter)
-      const leadFilters = getLeadFilters(config);
-      const dealFilters = getDealFilters(config);
+      const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), globalFilters.globalFieldFilter);
+      const dealFilters = mergeGlobalDealFilter(getDealFilters(config), globalFilters.globalFieldFilter);
 
       // Infer status filter for legacy scorecards without explicit statusFilter
       const effectiveStatusFilter = statusFilter ?? inferStatusFilter(measure, dimension);
