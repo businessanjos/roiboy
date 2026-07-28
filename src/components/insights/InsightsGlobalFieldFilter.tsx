@@ -393,5 +393,17 @@ export function InsightsGlobalFieldFilter() {
         </div>
       </PopoverContent>
     </Popover>
+    {isActive && (
+      <Button
+        variant="secondary"
+        size="sm"
+        className="rounded-l-none border-l px-2"
+        title="Limpar filtro"
+        onClick={clear}
+      >
+        <X className="h-3 w-3" />
+      </Button>
+    )}
+  </div>
   );
 }
