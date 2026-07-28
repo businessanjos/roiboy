@@ -361,7 +361,7 @@ export function useWhatsAppDashboardData() {
       // Coleta deals a considerar: os criados no período + os ganhos no período (pode ser criado antes)
       let wonInPeriodQuery = supabase
         .from('deals')
-        .select('id, created_at, won_at, stage_id')
+        .select('id, created_at, won_at, stage_id, pipeline_id')
         .eq('account_id', accountId)
         .eq('status', 'won')
         .not('won_at', 'is', null)
@@ -371,12 +371,12 @@ export function useWhatsAppDashboardData() {
       if (effectivePipelineId) wonInPeriodQuery = wonInPeriodQuery.eq('pipeline_id', effectivePipelineId);
       const { data: wonInPeriod } = await wonInPeriodQuery;
 
-      const dealMeta: Record<string, { created_at: string; won_at: string | null }> = {};
+      const dealMeta: Record<string, { created_at: string; won_at: string | null; pipeline_id: string | null; stage_id: string | null }> = {};
       (allDealsFiltered || []).forEach(d => {
-        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at };
+        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at, pipeline_id: d.pipeline_id ?? null, stage_id: d.stage_id ?? null };
       });
       (wonInPeriod || []).forEach(d => {
-        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at };
+        dealMeta[d.id] = { created_at: d.created_at, won_at: d.won_at, pipeline_id: d.pipeline_id ?? null, stage_id: d.stage_id ?? null };
       });
 
       const allDealIds = Object.keys(dealMeta);
@@ -397,9 +397,25 @@ export function useWhatsAppDashboardData() {
         activities = activities.concat(batch || []);
       }
 
-      // Nomes de stages válidos no pipeline
-      const orderedStages = (stagesData || []).map(s => s.name);
-      const validStageSet = new Set(orderedStages);
+      // Ordem canônica de stage_ids do pipeline selecionado (chave única, não depende de nomes)
+      const orderedStageIds = (stagesData || []).map(s => s.id);
+      const validStageIdSet = new Set(orderedStageIds);
+
+      // Resolve name → id por pipeline (activities.new_value armazena o nome da etapa).
+      // Fazemos por pipeline para evitar colisão de nomes iguais entre pipelines diferentes.
+      const nameToIdByPipeline: Record<string, Record<string, string>> = {};
+      (stagesData || []).forEach(s => {
+        const pid = s.pipeline_id || '';
+        if (!nameToIdByPipeline[pid]) nameToIdByPipeline[pid] = {};
+        nameToIdByPipeline[pid][s.name] = s.id;
+      });
+      const resolveStageId = (dealId: string, name: string | null): string | null => {
+        if (!name) return null;
+        const pid = dealMeta[dealId]?.pipeline_id || '';
+        const id = nameToIdByPipeline[pid]?.[name];
+        if (id && validStageIdSet.has(id)) return id;
+        return null;
+      };
 
       // Agrupa activities por deal
       const dealActivities: Record<string, typeof activities> = {};
@@ -409,9 +425,9 @@ export function useWhatsAppDashboardData() {
         dealActivities[act.deal_id].push(act);
       });
 
-      // Acumula tempo gasto em cada stage (dias)
+      // Acumula tempo gasto em cada stage (dias), chaveado por stage_id
       const timeInStage: Record<string, number[]> = {};
-      orderedStages.forEach(s => { timeInStage[s] = []; });
+      orderedStageIds.forEach(sid => { timeInStage[sid] = []; });
 
       Object.entries(dealActivities).forEach(([dealId, acts]) => {
         const sorted = [...acts].sort(
@@ -421,25 +437,28 @@ export function useWhatsAppDashboardData() {
         if (!meta) return;
 
         // Stage inicial: do created_at do deal até a 1ª transição
-        if (sorted.length > 0 && sorted[0].old_value && validStageSet.has(sorted[0].old_value)) {
-          const diffDays = (new Date(sorted[0].created_at).getTime() - new Date(meta.created_at).getTime()) / 86400000;
-          if (diffDays >= 0) timeInStage[sorted[0].old_value].push(diffDays);
+        if (sorted.length > 0) {
+          const initialStageId = resolveStageId(dealId, sorted[0].old_value);
+          if (initialStageId) {
+            const diffDays = (new Date(sorted[0].created_at).getTime() - new Date(meta.created_at).getTime()) / 86400000;
+            if (diffDays >= 0) timeInStage[initialStageId].push(diffDays);
+          }
         }
 
         // Stages intermediários: entre transições consecutivas
         for (let i = 0; i < sorted.length - 1; i++) {
-          const stage = sorted[i].new_value;
-          if (!stage || !validStageSet.has(stage)) continue;
+          const stageId = resolveStageId(dealId, sorted[i].new_value);
+          if (!stageId) continue;
           const diffDays = (new Date(sorted[i + 1].created_at).getTime() - new Date(sorted[i].created_at).getTime()) / 86400000;
-          if (diffDays >= 0) timeInStage[stage].push(diffDays);
+          if (diffDays >= 0) timeInStage[stageId].push(diffDays);
         }
 
         // Último stage: até won_at (se ganho) ou ignora
         if (sorted.length > 0 && meta.won_at) {
-          const lastStage = sorted[sorted.length - 1].new_value;
-          if (lastStage && validStageSet.has(lastStage)) {
+          const lastStageId = resolveStageId(dealId, sorted[sorted.length - 1].new_value);
+          if (lastStageId) {
             const diffDays = (new Date(meta.won_at).getTime() - new Date(sorted[sorted.length - 1].created_at).getTime()) / 86400000;
-            if (diffDays >= 0) timeInStage[lastStage].push(diffDays);
+            if (diffDays >= 0) timeInStage[lastStageId].push(diffDays);
           }
         }
       });
@@ -449,49 +468,51 @@ export function useWhatsAppDashboardData() {
       const startMs = new Date(filters.startDate).getTime();
       const endMs = new Date(filters.endDate).getTime();
       const enteredByStage: Record<string, Set<string>> = {};
-      orderedStages.forEach(s => { enteredByStage[s] = new Set(); });
+      orderedStageIds.forEach(sid => { enteredByStage[sid] = new Set(); });
 
       activities.forEach(act => {
-        if (!act.new_value || !validStageSet.has(act.new_value)) return;
+        const stageId = resolveStageId(act.deal_id, act.new_value);
+        if (!stageId) return;
         const t = new Date(act.created_at).getTime();
         if (t < startMs || t > endMs) return;
-        enteredByStage[act.new_value].add(act.deal_id);
+        enteredByStage[stageId].add(act.deal_id);
       });
 
       // Deals criados no período sem stage_change ainda → contam para a etapa atual (inicial)
-      const stageIdToName: Record<string, string> = {};
-      (stagesData || []).forEach(s => { stageIdToName[s.id] = s.name; });
       (allDealsFiltered || []).forEach(deal => {
         if (dealActivities[deal.id]?.length) return;
-        const stageName = deal.stage_id ? stageIdToName[deal.stage_id] : null;
-        if (stageName && enteredByStage[stageName]) {
-          enteredByStage[stageName].add(deal.id);
+        const sid = deal.stage_id;
+        if (sid && enteredByStage[sid]) {
+          enteredByStage[sid].add(deal.id);
         }
       });
 
-      // Atualiza contagens e conversão direta A→B na stageDistribution
+      // Atualiza contagens e conversão direta A→B na stageDistribution (chave = id)
       stageDistribution.forEach((stage, idx) => {
-        const enteredHere = enteredByStage[stage.name]?.size || 0;
+        const enteredHere = enteredByStage[stage.id]?.size || 0;
         stage.count = enteredHere;
-        const prev = idx > 0 ? (enteredByStage[stageDistribution[idx - 1].name]?.size || 0) : 0;
+        const prev = idx > 0 ? (enteredByStage[stageDistribution[idx - 1].id]?.size || 0) : 0;
         stage.conversionPct = prev > 0 ? Math.round((enteredHere / prev) * 100) : 100;
       });
 
-      // Monta lista ordenada: tempo médio em cada stage → representado como transição from→to
+      // Monta lista ordenada: tempo médio em cada stage → representado como transição from→to (por nome, para exibição)
+      const stageIdToName: Record<string, string> = {};
+      (stagesData || []).forEach(s => { stageIdToName[s.id] = s.name; });
       const avgTimePerTransition: TimeTransition[] = [];
-      for (let i = 0; i < orderedStages.length - 1; i++) {
-        const from = orderedStages[i];
-        const to = orderedStages[i + 1];
-        const times = timeInStage[from] || [];
+      for (let i = 0; i < orderedStageIds.length - 1; i++) {
+        const fromId = orderedStageIds[i];
+        const toId = orderedStageIds[i + 1];
+        const times = timeInStage[fromId] || [];
         const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-        avgTimePerTransition.push({ from, to, avgDays });
+        avgTimePerTransition.push({ from: stageIdToName[fromId], to: stageIdToName[toId], avgDays });
       }
-      if (orderedStages.length > 0) {
-        const lastStage = orderedStages[orderedStages.length - 1];
-        const times = timeInStage[lastStage] || [];
+      if (orderedStageIds.length > 0) {
+        const lastId = orderedStageIds[orderedStageIds.length - 1];
+        const times = timeInStage[lastId] || [];
         const avgDays = times.length > 0 ? times.reduce((a, b) => a + b, 0) / times.length : 0;
-        avgTimePerTransition.push({ from: lastStage, to: 'Venda', avgDays });
+        avgTimePerTransition.push({ from: stageIdToName[lastId], to: 'Venda', avgDays });
       }
+
 
       const totalCycleDays = avgTimePerTransition.reduce((sum, t) => sum + t.avgDays, 0);
 
