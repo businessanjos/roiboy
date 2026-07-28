@@ -34,6 +34,8 @@ import {
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
+import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
+
 
 export interface PixKeyData {
   type: string;
