@@ -38,6 +38,7 @@ export function InsightsFilterBar() {
     setDateRange,
     setUserId,
     setProductId,
+    setPipelineId,
     getDateRangeLabel,
     resetFilters,
   } = useInsightsFilters();
