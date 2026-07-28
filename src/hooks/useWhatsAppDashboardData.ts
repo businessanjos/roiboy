@@ -375,7 +375,8 @@ export function useWhatsAppDashboardData() {
         .eq('status', 'won')
         .not('won_at', 'is', null)
         .gte('won_at', filters.startDate)
-        .lte('won_at', filters.endDate);
+        .lte('won_at', filters.endDate)
+        .is('deleted_at', null);
       if (userFilter) wonInPeriodQuery = wonInPeriodQuery.eq('responsible_user_id', userFilter);
       if (effectivePipelineId) wonInPeriodQuery = wonInPeriodQuery.eq('pipeline_id', effectivePipelineId);
       const { data: wonInPeriod } = await wonInPeriodQuery;
