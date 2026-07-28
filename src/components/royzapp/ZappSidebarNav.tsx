@@ -1,4 +1,4 @@
-import { memo, useEffect } from "react";
+import { memo } from "react";
 import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -100,13 +100,6 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
   }
-
-  // Sem o filtro "Todas" no menu enxuto, cai em conversas individuais.
-  useEffect(() => {
-    if (isLeanSalesMenu && filterConversationType === "all") {
-      setFilterConversationType("individual");
-    }
-  }, [isLeanSalesMenu, filterConversationType, setFilterConversationType]);
 
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">

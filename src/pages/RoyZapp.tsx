@@ -412,7 +412,9 @@ export default function RoyZapp() {
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterUnread, setFilterUnread] = useState(false);
-  const [filterConversationType, setFilterConversationType] = useState<"all" | "individual" | "group">("all");
+  const [filterConversationType, setFilterConversationType] = useState<"all" | "individual" | "group">(() =>
+    sectorFromUrl === "vendas" ? "individual" : "all"
+  );
   const [filterArchived, setFilterArchived] = useState(false);
   const [filterProductId, setFilterProductId] = useState<string>("all");
   const [filterTagId, setFilterTagId] = useState<string>(() => {
