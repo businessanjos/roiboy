@@ -503,6 +503,7 @@ export function useWhatsAppDashboardData() {
         const { data: batch } = await supabase
           .from('zapp_messages')
           .select(`
+            conversation_id,
             direction,
             sent_at,
             zapp_conversations!inner(
@@ -517,6 +518,7 @@ export function useWhatsAppDashboardData() {
           .eq('zapp_conversations.integrations.sector_id', 'vendas')
           .gte('sent_at', filters.startDate)
           .lte('sent_at', filters.endDate)
+          .order('sent_at')
           .range(msgPage * MSG_PAGE_SIZE, (msgPage + 1) * MSG_PAGE_SIZE - 1);
 
         allMessages = allMessages.concat(batch || []);
