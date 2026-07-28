@@ -42,6 +42,19 @@ interface UseZappConversationsOptions {
   hasGlobalVisibility?: boolean;
 }
 
+// Stable select string shared by all assignment fetches. Keeping it outside the
+// hook is important: if this string is recreated on every render and is used in
+// callback dependency arrays, the RoyZapp data-loading effect re-runs
+// continuously and the screen flashes between loader and content in production.
+const ASSIGNMENTS_SELECT = `
+  *,
+  agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
+  department:zapp_departments(*),
+  conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state)),
+  zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state), lead:leads(id, full_name, phone, email, status)),
+  conversation_tags:zapp_conversation_tags(tag_id, tag:zapp_tags(id, name, color))
+`;
+
 export function useZappConversations(options: UseZappConversationsOptions) {
   const { accountId, sectorId, integrationId, departments, onNewInboundMessage, hasGlobalVisibility = false } = options;
 
@@ -161,16 +174,6 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   );
 
   const fetchMessagesRef = useRef<(id: string) => Promise<void>>();
-
-  // Build the assignments select query (shared between fetchAssignmentsOnly and fetchData)
-  const ASSIGNMENTS_SELECT = `
-    *,
-    agent:zapp_agents(*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id)),
-    department:zapp_departments(*),
-    conversation:conversations(id, client_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state)),
-    zapp_conversation:zapp_conversations(id, phone_e164, contact_name, client_id, lead_id, last_message_at, last_message_preview, unread_count, is_group, group_jid, is_archived, is_muted, is_pinned, is_favorite, is_blocked, avatar_url, sector_id, integration_id, client:clients(id, full_name, phone_e164, avatar_url, timezone, state), lead:leads(id, full_name, phone, email, status)),
-    conversation_tags:zapp_conversation_tags(tag_id, tag:zapp_tags(id, name, color))
-  `;
 
   // Fetch supplementary data (products, deal stages) for assignments
   const fetchSupplementaryData = useCallback(async (assignmentsData: ConversationAssignment[]) => {
@@ -352,7 +355,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
-  }, [accountId, sectorId, fetchSupplementaryData, ASSIGNMENTS_SELECT, seedHWMFromAssignments, applyRecencyFloor]);
+  }, [accountId, sectorId, fetchSupplementaryData, seedHWMFromAssignments, applyRecencyFloor]);
 
   // Fetch assignments as part of initial data load (with department id already known)
   const fetchAssignmentsForDepartment = useCallback(async (departmentId: string): Promise<ConversationAssignment[]> => {
@@ -384,7 +387,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       console.error("Error fetching assignments for department:", error);
       return [];
     }
-  }, [accountId, ASSIGNMENTS_SELECT, fetchSupplementaryData, seedHWMFromAssignments, applyRecencyFloor]);
+  }, [accountId, fetchSupplementaryData, seedHWMFromAssignments, applyRecencyFloor]);
 
   // Debounced fetch for realtime
   const debouncedFetchAssignments = useCallback(() => {
