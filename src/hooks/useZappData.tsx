@@ -54,6 +54,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
   const { sectorId, integrationId, onNewInboundMessage } = options;
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
+  const hasLoadedOnceRef = useRef(false);
 
   // Compose sub-hooks
   const dialogs = useZappDialogs({
@@ -89,7 +90,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
   // Main data fetch - orchestrates all sub-hooks
   const fetchData = useCallback(async () => {
     if (!currentUser?.account_id) return;
-    setLoading(true);
+    if (!hasLoadedOnceRef.current) setLoading(true);
 
     try {
       // Fetch dialog data (departments, agents, users, roles)
@@ -109,6 +110,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
       console.error("Error fetching zapp data:", error);
       toast.error("Erro ao carregar dados");
     } finally {
+      hasLoadedOnceRef.current = true;
       setLoading(false);
     }
   }, [currentUser?.account_id, sectorId, dialogs.fetchDialogData, conversations.fetchAssignmentsForDepartment, filters.fetchFilterData]);
