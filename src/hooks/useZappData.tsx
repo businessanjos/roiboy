@@ -48,10 +48,11 @@ interface UseZappDataOptions {
   sectorId?: SectorId;
   integrationId?: string;
   onNewInboundMessage?: (data: InboundMessageData) => void;
+  enabled?: boolean;
 }
 
 export function useZappData(options: UseZappDataOptions = {}) {
-  const { sectorId, integrationId, onNewInboundMessage } = options;
+  const { sectorId, integrationId, onNewInboundMessage, enabled = true } = options;
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
   const hasLoadedOnceRef = useRef(false);
@@ -89,7 +90,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
 
   // Main data fetch - orchestrates all sub-hooks
   const fetchData = useCallback(async () => {
-    if (!currentUser?.account_id) return;
+    if (!enabled || !currentUser?.account_id) return;
     if (!hasLoadedOnceRef.current) setLoading(true);
 
     try {
@@ -113,15 +114,17 @@ export function useZappData(options: UseZappDataOptions = {}) {
       hasLoadedOnceRef.current = true;
       setLoading(false);
     }
-  }, [currentUser?.account_id, sectorId, dialogs.fetchDialogData, conversations.fetchAssignmentsForDepartment, filters.fetchFilterData]);
+  }, [enabled, currentUser?.account_id, sectorId, dialogs.fetchDialogData, conversations.fetchAssignmentsForDepartment, filters.fetchFilterData]);
 
   // Initial load
   useEffect(() => {
-    if (currentUser?.account_id) {
-      fetchData();
-      filters.checkWhatsAppStatus(sectorId, integrationId);
+    if (!enabled || !currentUser?.account_id) {
+      setLoading(false);
+      return;
     }
-  }, [currentUser?.account_id, sectorId, integrationId, fetchData]);
+    fetchData();
+    filters.checkWhatsAppStatus(sectorId, integrationId);
+  }, [enabled, currentUser?.account_id, sectorId, integrationId, fetchData, filters.checkWhatsAppStatus]);
 
   return {
     // Dialog data
@@ -139,6 +142,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     assignments: conversations.assignments,
     messages: conversations.messages,
     loading,
+    initialDataLoaded: hasLoadedOnceRef.current,
     availableProducts: filters.availableProducts,
     clientProducts: conversations.clientProducts,
     clientResponsibles: conversations.clientResponsibles,
