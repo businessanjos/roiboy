@@ -280,6 +280,7 @@ export function useWhatsAppDashboardData() {
         .eq('account_id', accountId)
         .gte('created_at', filters.startDate)
         .lte('created_at', filters.endDate)
+        .is('deleted_at', null)
         .order('created_at');
 
       if (userFilter) {
