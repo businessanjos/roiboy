@@ -80,9 +80,52 @@ export function InsightsGlobalFieldFilter() {
   const { filters, setGlobalFieldFilter } = useInsightsFilters();
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const [searchParams, setSearchParams] = useSearchParams();
+  const hydratedRef = useRef(false);
 
   const [open, setOpen] = useState(false);
   const active = filters.globalFieldFilter;
+
+  // Hydrate once on mount: URL > localStorage > default (null)
+  useEffect(() => {
+    if (hydratedRef.current) return;
+    hydratedRef.current = true;
+    const fromUrl = parseFromUrl(searchParams);
+    if (fromUrl) {
+      setGlobalFieldFilter(fromUrl);
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw) as GlobalFieldFilter;
+        if (parsed?.filter?.fieldId) setGlobalFieldFilter(parsed);
+      }
+    } catch {
+      // ignore corrupt storage
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Sync active filter → URL + localStorage
+  useEffect(() => {
+    if (!hydratedRef.current) return;
+    try {
+      if (active) localStorage.setItem(STORAGE_KEY, JSON.stringify(active));
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch {
+      // ignore quota errors
+    }
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        serializeToUrl(next, active ?? null);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [active, setSearchParams]);
+
   const [source, setSource] = useState<GlobalFieldFilterSource>(active?.source ?? "deal");
   const [fieldId, setFieldId] = useState<string>(active?.filter.fieldId ?? "");
   const [fieldName, setFieldName] = useState<string>(active?.filter.fieldName ?? "");
