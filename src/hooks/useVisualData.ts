@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
 import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,8 +61,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       const fillEmptyDates = appearance?.fillEmptyDates || false;
 
       // Normalize filters (supports both legacy single and new multi-filter)
-      const leadFilters = getLeadFilters(config);
-      const dealFilters = getDealFilters(config);
+      const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), globalFilters.globalFieldFilter);
+      const dealFilters = mergeGlobalDealFilter(getDealFilters(config), globalFilters.globalFieldFilter);
 
       // Infer status filter for legacy scorecards without explicit statusFilter
       const effectiveStatusFilter = statusFilter ?? inferStatusFilter(measure, dimension);

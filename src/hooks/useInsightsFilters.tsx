@@ -14,8 +14,57 @@ import {
   format,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
 export type DatePreset = "today" | "week" | "month" | "quarter" | "year" | "last_month" | "custom";
+
+export type GlobalFieldFilterSource = "deal" | "lead";
+
+export interface GlobalFieldFilter {
+  source: GlobalFieldFilterSource;
+  filter: FieldFilter;
+}
+
+/**
+ * Returns true when the filter has enough info to actually restrict results.
+ * Applied by every insights hook before injecting it into query pipelines.
+ */
+export function isGlobalFieldFilterActive(g?: GlobalFieldFilter | null): boolean {
+  if (!g) return false;
+  const f = g.filter;
+  if (!f?.fieldId) return false;
+  if (f.fieldId === DEAL_CREATED_AT_FIELD_ID) {
+    return !!(f.dateFrom || f.dateTo);
+  }
+  return (f.selectedValues?.length ?? 0) > 0;
+}
+
+/**
+ * Merges the global deal field filter into a per-visual deal filter list.
+ * Duplicate-by-fieldId collisions keep the per-visual filter (more specific wins).
+ */
+export function mergeGlobalDealFilter(
+  local: FieldFilter[],
+  global?: GlobalFieldFilter | null,
+): FieldFilter[] {
+  if (!isGlobalFieldFilterActive(global) || global!.source !== "deal") return local;
+  const localIds = new Set(local.map((f) => f.fieldId));
+  if (localIds.has(global!.filter.fieldId)) return local;
+  return [...local, global!.filter];
+}
+
+/**
+ * Merges the global lead field filter into a per-visual lead filter list.
+ */
+export function mergeGlobalLeadFilter(
+  local: FieldFilter[],
+  global?: GlobalFieldFilter | null,
+): FieldFilter[] {
+  if (!isGlobalFieldFilterActive(global) || global!.source !== "lead") return local;
+  const localIds = new Set(local.map((f) => f.fieldId));
+  if (localIds.has(global!.filter.fieldId)) return local;
+  return [...local, global!.filter];
+}
 
 export interface InsightsFilters {
   startDate: string;
@@ -26,6 +75,7 @@ export interface InsightsFilters {
   pipelineId: string;
   preset: DatePreset;
   accountIdOverride?: string;
+  globalFieldFilter?: GlobalFieldFilter | null;
 }
 
 interface InsightsFiltersContextType {
@@ -37,6 +87,7 @@ interface InsightsFiltersContextType {
   setStageId: (stageId: string) => void;
   setProductId: (productId: string) => void;
   setPipelineId: (pipelineId: string) => void;
+  setGlobalFieldFilter: (f: GlobalFieldFilter | null) => void;
   getDateRangeLabel: () => string;
   resetFilters: () => void;
   setAccountIdOverride: (accountId: string) => void;
@@ -54,6 +105,7 @@ const getDefaultFilters = (): InsightsFilters => {
     productId: "all",
     pipelineId: "",
     preset: "year",
+    globalFieldFilter: null,
   };
 };
 
@@ -156,6 +208,10 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
     setFilters((prev) => ({ ...prev, accountIdOverride: accountId }));
   }, []);
 
+  const setGlobalFieldFilter = useCallback((globalFieldFilter: GlobalFieldFilter | null) => {
+    setFilters((prev) => ({ ...prev, globalFieldFilter }));
+  }, []);
+
   const value = useMemo(
     () => ({
       filters,
@@ -166,11 +222,12 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
       setStageId,
       setProductId,
       setPipelineId,
+      setGlobalFieldFilter,
       getDateRangeLabel,
       resetFilters,
       setAccountIdOverride,
     }),
-    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, getDateRangeLabel, resetFilters, setAccountIdOverride]
+    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, setGlobalFieldFilter, getDateRangeLabel, resetFilters, setAccountIdOverride]
   );
 
   return (
@@ -191,6 +248,7 @@ const fallbackContext: InsightsFiltersContextType = {
   setStageId: () => {},
   setProductId: () => {},
   setPipelineId: () => {},
+  setGlobalFieldFilter: () => {},
   getDateRangeLabel: () => "Este Ano",
   resetFilters: () => {},
   setAccountIdOverride: () => {},

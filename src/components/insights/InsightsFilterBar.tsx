@@ -21,6 +21,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { InsightsGlobalFieldFilter } from "./InsightsGlobalFieldFilter";
 
 const PRESETS: { value: DatePreset; label: string }[] = [
   { value: "today", label: "Hoje" },
@@ -113,7 +114,7 @@ export function InsightsFilterBar() {
   const selectedPipeline = pipelines.find((p) => p.id === filters.pipelineId);
 
   const hasActiveFilters =
-    filters.userId !== "all" || filters.productId !== "all";
+    filters.userId !== "all" || filters.productId !== "all" || !!filters.globalFieldFilter;
 
   return (
     <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
@@ -274,6 +275,9 @@ export function InsightsFilterBar() {
           </DropdownMenuContent>
         </DropdownMenu>
       )}
+      {/* Global Custom Field Filter */}
+      <InsightsGlobalFieldFilter />
+
 
 
       {/* Reset Button */}

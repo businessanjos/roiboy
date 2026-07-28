@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
 import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -146,8 +146,8 @@ async function fetchDealsRecords(
 
   let filteredData = data || [];
 
-  // Apply lead field filters if configured (AND logic)
-  const leadFilters = getLeadFilters(config);
+  // Apply lead field filters if configured (AND logic), including any global insights-bar filter
+  const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     filteredData = await filterByLeadFields(
       filteredData.map((d: any) => ({ ...d, lead_id: d.lead_id })),
@@ -155,8 +155,8 @@ async function fetchDealsRecords(
     ) as any[];
   }
 
-  // Apply deal field filters if configured (AND logic)
-  const dealFilters = getDealFilters(config);
+  // Apply deal field filters if configured (AND logic), including any global insights-bar filter
+  const dealFilters = mergeGlobalDealFilter(getDealFilters(config), filters.globalFieldFilter);
   if (dealFilters.length > 0) {
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
@@ -343,8 +343,8 @@ async function fetchLeadsRecords(
 
   let filteredData = allData;
 
-  // Apply lead field filters if configured (AND logic)
-  const leadFilters = getLeadFilters(config);
+  // Apply lead field filters if configured (AND logic), including any global insights-bar filter
+  const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
   }

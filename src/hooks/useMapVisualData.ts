@@ -1,7 +1,9 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { useInsightsFilters, isGlobalFieldFilterActive } from "@/hooks/useInsightsFilters";
+import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 
 const CIDADE_FIELD_ID = '5accffbd-3d87-4735-b890-bc6c361694b7';
 
@@ -27,7 +29,7 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
       // 1. Fetch won deals with date filters
       let dealsQuery = supabase
         .from('deals')
-        .select('id, value, won_at')
+        .select('id, value, won_at, lead_id')
         .eq('account_id', accountId)
         .eq('status', 'won')
         .is('deleted_at', null)
@@ -46,6 +48,16 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
         allDeals = allDeals.concat(data || []);
         if (!data || data.length < pageSize) break;
         from += pageSize;
+      }
+
+      // Apply global insights-bar custom field filter (deal or lead), if any
+      if (isGlobalFieldFilterActive(filters.globalFieldFilter)) {
+        const g = filters.globalFieldFilter!;
+        if (g.source === 'deal') {
+          allDeals = await filterByDealFields(allDeals, accountId, [g.filter]);
+        } else {
+          allDeals = await filterByLeadFields(allDeals, accountId, [g.filter], 'deals');
+        }
       }
 
       if (allDeals.length === 0) return [];
