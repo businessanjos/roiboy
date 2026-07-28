@@ -309,9 +309,13 @@ export default function RoyZapp() {
   });
 
   // Gate: se o admin não liberou a tela atual, volta para Conversas.
+  // Só roda depois que as permissões carregaram — senão a tela oscila entre
+  // Conversas e a view clicada enquanto a query resolve.
   useEffect(() => {
+    if (zappAccessLoading) return;
     if (!allowedViews.includes(activeView)) setActiveView("inbox");
-  }, [activeView, allowedViews]);
+  }, [activeView, allowedViews, zappAccessLoading]);
+
 
   // Alerta automático: linha de WhatsApp do setor fora do ar → toast com ação de reconectar.
   useZappConnectionAlerts({
