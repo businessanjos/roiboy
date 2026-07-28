@@ -1,11 +1,13 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ChevronDown, Filter, X } from "lucide-react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -19,6 +21,47 @@ import {
   DEAL_CREATED_AT_FIELD_ID,
   FieldFilter,
 } from "@/components/insights/visual-builder/types";
+
+const STORAGE_KEY = "insights.globalFieldFilter";
+const URL_KEYS = {
+  source: "gff_src",
+  fieldId: "gff_fid",
+  fieldName: "gff_fname",
+  values: "gff_vals",
+  dateFrom: "gff_from",
+  dateTo: "gff_to",
+} as const;
+
+function serializeToUrl(params: URLSearchParams, g: GlobalFieldFilter | null) {
+  Object.values(URL_KEYS).forEach((k) => params.delete(k));
+  if (!g) return;
+  params.set(URL_KEYS.source, g.source);
+  params.set(URL_KEYS.fieldId, g.filter.fieldId);
+  if (g.filter.fieldName) params.set(URL_KEYS.fieldName, g.filter.fieldName);
+  if (g.filter.selectedValues?.length) {
+    params.set(URL_KEYS.values, g.filter.selectedValues.join("|"));
+  }
+  if (g.filter.dateFrom) params.set(URL_KEYS.dateFrom, g.filter.dateFrom);
+  if (g.filter.dateTo) params.set(URL_KEYS.dateTo, g.filter.dateTo);
+}
+
+function parseFromUrl(params: URLSearchParams): GlobalFieldFilter | null {
+  const source = params.get(URL_KEYS.source) as GlobalFieldFilterSource | null;
+  const fieldId = params.get(URL_KEYS.fieldId);
+  if (!source || !fieldId) return null;
+  const valuesRaw = params.get(URL_KEYS.values);
+  const values = valuesRaw ? valuesRaw.split("|").filter(Boolean) : [];
+  const dateFrom = params.get(URL_KEYS.dateFrom) ?? undefined;
+  const dateTo = params.get(URL_KEYS.dateTo) ?? undefined;
+  const fieldName = params.get(URL_KEYS.fieldName) ?? "";
+  if (fieldId !== DEAL_CREATED_AT_FIELD_ID && values.length === 0) return null;
+  if (fieldId === DEAL_CREATED_AT_FIELD_ID && !dateFrom && !dateTo) return null;
+  return {
+    source,
+    filter: { fieldId, fieldName, selectedValues: values, dateFrom, dateTo },
+  };
+}
+
 
 interface CustomFieldRow {
   id: string;
