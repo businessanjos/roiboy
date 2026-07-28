@@ -21,6 +21,7 @@ import { useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { InsightsGlobalFieldFilter } from "./InsightsGlobalFieldFilter";
 
 const PRESETS: { value: DatePreset; label: string }[] = [
   { value: "today", label: "Hoje" },
