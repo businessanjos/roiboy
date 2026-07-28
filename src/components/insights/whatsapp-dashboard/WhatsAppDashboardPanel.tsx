@@ -120,6 +120,7 @@ export function WhatsAppDashboardPanel({ onAddVisual, visuals = [], onLayoutChan
                 <TimePerStageCard 
                   transitions={data?.avgTimePerTransition || []}
                   totalCycleDays={data?.totalCycleDays || 0}
+                  avgFirstResponseMinutes={data?.avgFirstResponseMinutes ?? null}
                   isLoading={isLoading}
                 />
               </div>

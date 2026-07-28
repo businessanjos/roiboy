@@ -56,6 +56,7 @@ export interface WhatsAppDashboardData {
   totalMessages: number;
   totalInbound: number;
   totalOutbound: number;
+  avgFirstResponseMinutes: number | null;
 }
 
 const DAY_NAMES = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
@@ -441,6 +442,39 @@ export function useWhatsAppDashboardData() {
         }
       });
 
+      // === Recount funnel: "deals que ENTRARAM em cada etapa dentro do período" ===
+      // Fonte de verdade = deal_activities.new_value dentro do período + deals criados no período que nunca mudaram de etapa (ficaram na inicial)
+      const startMs = new Date(filters.startDate).getTime();
+      const endMs = new Date(filters.endDate).getTime();
+      const enteredByStage: Record<string, Set<string>> = {};
+      orderedStages.forEach(s => { enteredByStage[s] = new Set(); });
+
+      activities.forEach(act => {
+        if (!act.new_value || !validStageSet.has(act.new_value)) return;
+        const t = new Date(act.created_at).getTime();
+        if (t < startMs || t > endMs) return;
+        enteredByStage[act.new_value].add(act.deal_id);
+      });
+
+      // Deals criados no período sem stage_change ainda → contam para a etapa atual (inicial)
+      const stageIdToName: Record<string, string> = {};
+      (stagesData || []).forEach(s => { stageIdToName[s.id] = s.name; });
+      (allDealsFiltered || []).forEach(deal => {
+        if (dealActivities[deal.id]?.length) return;
+        const stageName = deal.stage_id ? stageIdToName[deal.stage_id] : null;
+        if (stageName && enteredByStage[stageName]) {
+          enteredByStage[stageName].add(deal.id);
+        }
+      });
+
+      // Atualiza contagens e conversão direta A→B na stageDistribution
+      stageDistribution.forEach((stage, idx) => {
+        const enteredHere = enteredByStage[stage.name]?.size || 0;
+        stage.count = enteredHere;
+        const prev = idx > 0 ? (enteredByStage[stageDistribution[idx - 1].name]?.size || 0) : 0;
+        stage.conversionPct = prev > 0 ? Math.round((enteredHere / prev) * 100) : 100;
+      });
+
       // Monta lista ordenada: tempo médio em cada stage → representado como transição from→to
       const avgTimePerTransition: TimeTransition[] = [];
       for (let i = 0; i < orderedStages.length - 1; i++) {
@@ -470,6 +504,7 @@ export function useWhatsAppDashboardData() {
         const { data: batch } = await supabase
           .from('zapp_messages')
           .select(`
+            conversation_id,
             direction,
             sent_at,
             zapp_conversations!inner(
@@ -484,6 +519,7 @@ export function useWhatsAppDashboardData() {
           .eq('zapp_conversations.integrations.sector_id', 'vendas')
           .gte('sent_at', filters.startDate)
           .lte('sent_at', filters.endDate)
+          .order('sent_at')
           .range(msgPage * MSG_PAGE_SIZE, (msgPage + 1) * MSG_PAGE_SIZE - 1);
 
         allMessages = allMessages.concat(batch || []);
@@ -546,6 +582,34 @@ export function useWhatsAppDashboardData() {
         p.responseRate = p.inbound > 0 ? Math.round((p.outbound / p.inbound) * 100) : 0;
       });
 
+      // === Tempo médio de primeira resposta (minutos) — por conversa ===
+      // Para cada conversa: procurar pares (inbound sem resposta ainda → próximo outbound). Média dos deltas.
+      const msgsByConv: Record<string, Array<{ dir: string; t: number }>> = {};
+      (allMessages || []).forEach(m => {
+        const cid = (m as any).conversation_id as string | null;
+        if (!cid) return;
+        if (!msgsByConv[cid]) msgsByConv[cid] = [];
+        msgsByConv[cid].push({ dir: m.direction, t: new Date(m.sent_at).getTime() });
+      });
+      const responseDeltasMin: number[] = [];
+      Object.values(msgsByConv).forEach(list => {
+        list.sort((a, b) => a.t - b.t);
+        let pendingInboundAt: number | null = null;
+        for (const m of list) {
+          if (m.dir === 'inbound') {
+            if (pendingInboundAt === null) pendingInboundAt = m.t;
+          } else if (pendingInboundAt !== null) {
+            const deltaMin = (m.t - pendingInboundAt) / 60000;
+            // Ignora deltas absurdos (>24h) para não distorcer a média
+            if (deltaMin >= 0 && deltaMin <= 24 * 60) responseDeltasMin.push(deltaMin);
+            pendingInboundAt = null;
+          }
+        }
+      });
+      const avgFirstResponseMinutes = responseDeltasMin.length > 0
+        ? responseDeltasMin.reduce((a, b) => a + b, 0) / responseDeltasMin.length
+        : null;
+
       return {
         stageDistribution,
         totalDeals,
@@ -561,6 +625,7 @@ export function useWhatsAppDashboardData() {
         totalMessages,
         totalInbound,
         totalOutbound,
+        avgFirstResponseMinutes,
       };
     },
     staleTime: 1000 * 60 * 5, // 5 minutes
