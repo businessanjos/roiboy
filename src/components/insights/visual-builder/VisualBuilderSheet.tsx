@@ -319,7 +319,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
         title: title.trim(),
         chart_type: chartType,
         config,
-        layout: { x: 0, y: 0, w: isTable ? 12 : 6, h: isTable ? 6 : 4 },
+        layout: { x: 0, y: 0, w: (isTable || isBubbleMap) ? 12 : 6, h: (isTable || isBubbleMap) ? 6 : 4 },
       });
 
       onOpenChange(false);
