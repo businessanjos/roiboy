@@ -208,6 +208,10 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
     setFilters((prev) => ({ ...prev, accountIdOverride: accountId }));
   }, []);
 
+  const setGlobalFieldFilter = useCallback((globalFieldFilter: GlobalFieldFilter | null) => {
+    setFilters((prev) => ({ ...prev, globalFieldFilter }));
+  }, []);
+
   const value = useMemo(
     () => ({
       filters,
@@ -218,11 +222,12 @@ export function InsightsFiltersProvider({ children }: { children: ReactNode }) {
       setStageId,
       setProductId,
       setPipelineId,
+      setGlobalFieldFilter,
       getDateRangeLabel,
       resetFilters,
       setAccountIdOverride,
     }),
-    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, getDateRangeLabel, resetFilters, setAccountIdOverride]
+    [filters, setPreset, setDateRange, setUserId, setStageId, setProductId, setPipelineId, setGlobalFieldFilter, getDateRangeLabel, resetFilters, setAccountIdOverride]
   );
 
   return (
