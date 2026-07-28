@@ -274,6 +274,9 @@ export function useWhatsAppDashboardData() {
       if (userFilter) {
         dealsbyDayQuery = dealsbyDayQuery.eq('responsible_user_id', userFilter);
       }
+      if (effectivePipelineId) {
+        dealsbyDayQuery = dealsbyDayQuery.eq('pipeline_id', effectivePipelineId);
+      }
 
       const { data: dealsbyDay } = await dealsbyDayQuery;
 
