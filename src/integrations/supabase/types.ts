@@ -21492,6 +21492,51 @@ export type Database = {
           },
         ]
       }
+      sales_rep_goals: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          note: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          target_type: string
+          target_value: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          period_end: string
+          period_start: string
+          period_type: string
+          target_type: string
+          target_value: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          note?: string | null
+          period_end?: string
+          period_start?: string
+          period_type?: string
+          target_type?: string
+          target_value?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sales_scripts: {
         Row: {
           account_id: string
