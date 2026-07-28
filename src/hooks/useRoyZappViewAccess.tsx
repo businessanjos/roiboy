@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useCallback, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -86,13 +86,16 @@ export function useRoyZappViewAccess() {
    * em `royZappAccess.ts` (não reimplementar em outros lugares).
    * @param hasGeneralSectorAccess acesso geral ao setor (user_sector_access)
    */
-  const canOpenZappSector = (sectorId: string, hasGeneralSectorAccess: boolean) =>
-    canOpenZappSectorFor({
-      sectorId,
-      explicitZappSectors: data?.zappSectors,
-      unrestricted,
-      hasGeneralSectorAccess,
-    });
+  const canOpenZappSector = useCallback(
+    (sectorId: string, hasGeneralSectorAccess: boolean) =>
+      canOpenZappSectorFor({
+        sectorId,
+        explicitZappSectors: data?.zappSectors,
+        unrestricted,
+        hasGeneralSectorAccess,
+      }),
+    [data?.zappSectors, unrestricted]
+  );
 
 
 

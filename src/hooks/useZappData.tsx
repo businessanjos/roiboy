@@ -142,6 +142,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     assignments: conversations.assignments,
     messages: conversations.messages,
     loading,
+    initialDataLoaded: hasLoadedOnceRef.current,
     availableProducts: filters.availableProducts,
     clientProducts: conversations.clientProducts,
     clientResponsibles: conversations.clientResponsibles,

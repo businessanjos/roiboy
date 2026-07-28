@@ -283,6 +283,7 @@ export default function RoyZapp() {
     noteConversationBump,
     messages,
     loading,
+    initialDataLoaded,
     availableProducts,
     clientProducts,
     clientResponsibles,
@@ -1373,7 +1374,13 @@ export default function RoyZapp() {
   // Check access permission — admin panel "royzapp" sector toggle is the source of truth.
   const hasZappAccess = isAdmin || hasSectorAccess("royzapp") || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
 
-  if (permissionsLoading) {
+  const showInitialRoyZappLoader =
+    permissionsLoading ||
+    (!!selectedSectorId &&
+      !initialDataLoaded &&
+      (sectorAccessLoading || zappAccessLoading || integrationResolving || (canLoadZappData && loading)));
+
+  if (showInitialRoyZappLoader) {
     return (
       <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4">
