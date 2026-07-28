@@ -229,6 +229,7 @@ export function useWhatsAppDashboardData() {
         const value = stageDeals.reduce((sum: number, d) => sum + (d.value || 0), 0);
         const wonCount = wonDealsByStage[stage.id] || 0;
         return {
+          id: stage.id,
           name: stage.name,
           count,
           value,
