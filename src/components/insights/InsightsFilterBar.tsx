@@ -78,6 +78,26 @@ export function InsightsFilterBar() {
     },
   });
 
+  // Fetch pipelines for filter
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ["insights-filter-pipelines"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("pipelines")
+        .select("id, name")
+        .eq("is_active", true)
+        .order("display_order", { nullsFirst: false });
+      return data || [];
+    },
+  });
+
+  // Auto-select first pipeline when list loads if none chosen yet
+  useEffect(() => {
+    if (!filters.pipelineId && pipelines.length > 0) {
+      setPipelineId(pipelines[0].id);
+    }
+  }, [pipelines, filters.pipelineId, setPipelineId]);
+
   const handleDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (range) {
       setDateRangeLocal({ from: range.from, to: range.to });
@@ -90,6 +110,7 @@ export function InsightsFilterBar() {
 
   const selectedUser = users.find((u) => u.id === filters.userId);
   const selectedProduct = products.find((p) => p.id === filters.productId);
+  const selectedPipeline = pipelines.find((p) => p.id === filters.pipelineId);
 
   const hasActiveFilters =
     filters.userId !== "all" || filters.productId !== "all";
