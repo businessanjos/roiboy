@@ -114,7 +114,7 @@ export function InsightsFilterBar() {
   const selectedPipeline = pipelines.find((p) => p.id === filters.pipelineId);
 
   const hasActiveFilters =
-    filters.userId !== "all" || filters.productId !== "all";
+    filters.userId !== "all" || filters.productId !== "all" || !!filters.globalFieldFilter;
 
   return (
     <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
