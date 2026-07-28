@@ -421,6 +421,18 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                   </>
                 )}
               </>
+            ) : isBubbleMap ? (
+              <div className="space-y-3 rounded-lg border border-border bg-muted/30 p-4">
+                <Label className="text-base font-medium">Mapa de Bolhas</Label>
+                <p className="text-sm text-muted-foreground">
+                  Este visual plota geograficamente os negócios <b>ganhos</b> por cidade,
+                  usando o faturamento como tamanho da bolha. A cidade é lida do campo
+                  customizado padrão do lead, e o filtro global de datas/vendedor é aplicado.
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Nenhuma configuração adicional é necessária — apenas defina o título abaixo.
+                </p>
+              </div>
             ) : isTable ? (
               <>
                 {/* Data Source for table */}
