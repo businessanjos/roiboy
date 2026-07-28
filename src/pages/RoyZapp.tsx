@@ -124,28 +124,6 @@ export default function RoyZapp() {
   const [integrationProviders, setIntegrationProviders] = useState<Record<string, string>>({});
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
 
-  // Guard: if URL provides integrationId but it doesn't belong to the selected sector,
-  // clear it so we don't accidentally send via the wrong WhatsApp number.
-  useEffect(() => {
-    if (!selectedIntegrationId || !selectedSectorId || !currentUser?.account_id) return;
-    (async () => {
-      const { data } = await supabase
-        .from("integrations")
-        .select("sector_id")
-        .eq("id", selectedIntegrationId)
-        .eq("account_id", currentUser.account_id)
-        .maybeSingle();
-      if (data && data.sector_id !== selectedSectorId) {
-        console.warn(
-          `[RoyZapp] Clearing integrationId ${selectedIntegrationId} — belongs to sector ${data.sector_id}, not ${selectedSectorId}.`
-        );
-        setSelectedIntegrationId(undefined);
-        replaceSearchParams((next) => next.delete('integrationId'));
-      }
-    })();
-  }, [selectedIntegrationId, selectedSectorId, currentUser?.account_id, replaceSearchParams]);
-
-
   useEffect(() => {
     if (!currentUser?.account_id) return;
     (async () => {
@@ -163,70 +141,135 @@ export default function RoyZapp() {
     })();
   }, [currentUser?.account_id]);
   
-  // Auto-fetch user's preferred instance when sector is selected but integrationId is missing
+  const [integrationResolving, setIntegrationResolving] = useState(() => Boolean(sectorFromUrl));
+  const integrationResolutionRunRef = useRef(0);
+
+  // Resolve and validate the WhatsApp instance in one atomic flow. This prevents
+  // production flicker caused by loading data once without integrationId, then
+  // immediately reloading after the preference/fallback instance is discovered.
   useEffect(() => {
-    if (!selectedSectorId || selectedIntegrationId || !currentUser?.auth_user_id || !currentUser?.account_id) return;
-    
-    const fetchInstancePreference = async () => {
+    if (!selectedSectorId) {
+      setIntegrationResolving(false);
+      return;
+    }
+
+    if (!currentUser?.auth_user_id || !currentUser?.account_id) {
+      setIntegrationResolving(true);
+      return;
+    }
+
+    let cancelled = false;
+    const runId = integrationResolutionRunRef.current + 1;
+    integrationResolutionRunRef.current = runId;
+
+    const resolveIntegration = async () => {
+      setIntegrationResolving(true);
       try {
-        // First, check if user has a saved preference for this sector
+        if (selectedIntegrationId) {
+          const { data: currentIntegration } = await supabase
+            .from("integrations")
+            .select("id, sector_id")
+            .eq("id", selectedIntegrationId)
+            .eq("account_id", currentUser.account_id)
+            .maybeSingle();
+
+          if (cancelled || integrationResolutionRunRef.current !== runId) return;
+
+          if (currentIntegration?.sector_id === selectedSectorId) {
+            replaceSearchParams((next) => {
+              next.set("sector", selectedSectorId);
+              next.set("integrationId", selectedIntegrationId);
+            });
+            setIntegrationResolving(false);
+            return;
+          }
+
+          console.warn(
+            `[RoyZapp] Ignoring integrationId ${selectedIntegrationId} — belongs to sector ${currentIntegration?.sector_id ?? "unknown"}, not ${selectedSectorId}.`
+          );
+        }
+
         const { data: preference } = await supabase
           .from("user_instance_preferences")
           .select("integration_id")
           .eq("user_id", currentUser.auth_user_id)
           .eq("sector_id", selectedSectorId)
           .maybeSingle();
-        
+        if (cancelled || integrationResolutionRunRef.current !== runId) return;
+
+        let resolvedIntegrationId: string | undefined;
+
         if (preference?.integration_id) {
-          // CRITICAL: validate the preferred integration actually belongs to the selected sector.
-          // Without this check, a stale/cross-sector preference could route messages through
-          // the wrong WhatsApp number (e.g. Operações enviando pelo número da Comercial).
           const { data: prefIntegration } = await supabase
             .from("integrations")
-            .select("id, sector_id, status")
+            .select("id, sector_id")
             .eq("id", preference.integration_id)
             .eq("account_id", currentUser.account_id)
             .maybeSingle();
 
-          if (prefIntegration && prefIntegration.sector_id === selectedSectorId) {
-            console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
-            setSelectedIntegrationId(preference.integration_id);
-            replaceSearchParams((next) => next.set('integrationId', preference.integration_id));
-            return;
-          }
+          if (cancelled || integrationResolutionRunRef.current !== runId) return;
 
-          console.warn(
-            `[RoyZapp] Ignoring stale preference ${preference.integration_id} ` +
-            `(belongs to sector ${prefIntegration?.sector_id ?? "unknown"}, current sector is ${selectedSectorId}). ` +
-            `Falling back to first connected integration of the current sector.`
-          );
+          if (prefIntegration?.sector_id === selectedSectorId) {
+            resolvedIntegrationId = preference.integration_id;
+          } else {
+            console.warn(
+              `[RoyZapp] Ignoring stale preference ${preference.integration_id} ` +
+              `(belongs to sector ${prefIntegration?.sector_id ?? "unknown"}, current sector is ${selectedSectorId}).`
+            );
+          }
         }
-        
-        
-        // No preference saved - fallback to first connected integration for this sector
-        const { data: integrations } = await supabase
-          .from("integrations")
-          .select("id, display_name")
-          .eq("account_id", currentUser.account_id)
-          .eq("sector_id", selectedSectorId)
-          .eq("status", "connected")
-          .order("created_at", { ascending: true })
-          .limit(1);
-        
-        if (integrations && integrations.length > 0) {
-          console.log(`[RoyZapp] Auto-selecting first integration: ${integrations[0].id}`);
-          setSelectedIntegrationId(integrations[0].id);
-          replaceSearchParams((next) => next.set('integrationId', integrations[0].id));
-        } else {
+
+        if (!resolvedIntegrationId) {
+          const { data: integrations } = await supabase
+            .from("integrations")
+            .select("id")
+            .eq("account_id", currentUser.account_id)
+            .eq("sector_id", selectedSectorId)
+            .eq("status", "connected")
+            .order("created_at", { ascending: true })
+            .limit(1);
+
+          if (cancelled || integrationResolutionRunRef.current !== runId) return;
+
+          resolvedIntegrationId = integrations?.[0]?.id;
+        }
+
+        setSelectedIntegrationId((prev) => (prev === resolvedIntegrationId ? prev : resolvedIntegrationId));
+        replaceSearchParams((next) => {
+          next.set("sector", selectedSectorId);
+          if (resolvedIntegrationId) next.set("integrationId", resolvedIntegrationId);
+          else next.delete("integrationId");
+        });
+
+        if (!resolvedIntegrationId) {
           console.log(`[RoyZapp] No integrations found for sector ${selectedSectorId}`);
         }
       } catch (error) {
         console.error("[RoyZapp] Error fetching instance preference:", error);
+      } finally {
+        if (!cancelled && integrationResolutionRunRef.current === runId) {
+          setIntegrationResolving(false);
+        }
       }
     };
-    
-    fetchInstancePreference();
+
+    resolveIntegration();
+
+    return () => {
+      cancelled = true;
+    };
   }, [selectedSectorId, selectedIntegrationId, currentUser?.auth_user_id, currentUser?.account_id, replaceSearchParams]);
+
+  const generalSectorIdsForLoad = useMemo(() => new Set(sectorAccess.map((a) => a.sector_id)), [sectorAccess]);
+  const selectedSectorAllowed = selectedSectorId
+    ? canChooseSector || canOpenZappSector(selectedSectorId, generalSectorIdsForLoad.has(selectedSectorId))
+    : false;
+  const canLoadZappData =
+    !!selectedSectorId &&
+    selectedSectorAllowed &&
+    !sectorAccessLoading &&
+    !zappAccessLoading &&
+    !integrationResolving;
   
   // Use centralized data hook with sector filtering
   const {
@@ -255,7 +298,11 @@ export default function RoyZapp() {
     fetchData,
     fetchMessages,
     setMessages,
-  } = useZappData({ sectorId: selectedSectorId || undefined, integrationId: selectedIntegrationId });
+  } = useZappData({
+    sectorId: selectedSectorId || undefined,
+    integrationId: selectedIntegrationId,
+    enabled: canLoadZappData,
+  });
 
   // Messaging hook is initialized below after state declarations
 
@@ -1326,7 +1373,7 @@ export default function RoyZapp() {
   // Check access permission — admin panel "royzapp" sector toggle is the source of truth.
   const hasZappAccess = isAdmin || hasSectorAccess("royzapp") || hasPermission(PERMISSIONS.ROYZAPP_ACCESS);
 
-  if (permissionsLoading || (loading && selectedSectorId)) {
+  if (permissionsLoading) {
     return (
       <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4">
