@@ -343,8 +343,8 @@ async function fetchLeadsRecords(
 
   let filteredData = allData;
 
-  // Apply lead field filters if configured (AND logic)
-  const leadFilters = getLeadFilters(config);
+  // Apply lead field filters if configured (AND logic), including any global insights-bar filter
+  const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
   }
