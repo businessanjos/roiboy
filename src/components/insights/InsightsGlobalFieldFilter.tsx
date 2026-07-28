@@ -64,11 +64,11 @@ export function InsightsGlobalFieldFilter() {
     enabled: !!accountId,
     queryFn: async () => {
       const column = source === "deal" ? "show_in_deals" : "show_in_leads";
-      const { data } = await supabase
+      const { data } = await (supabase as any)
         .from("custom_fields")
         .select("id, name, field_type, options")
         .eq("account_id", accountId as string)
-        .eq(column as any, true)
+        .eq(column, true)
         .eq("is_active", true)
         .order("display_order", { ascending: true });
       const rows = (data as CustomFieldRow[]) || [];
