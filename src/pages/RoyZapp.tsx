@@ -100,6 +100,16 @@ export default function RoyZapp() {
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
+  const replaceSearchParams = useCallback((update: (params: URLSearchParams) => void) => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev);
+        update(next);
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
   
   // Get sector and integrationId from URL if provided
   const sectorFromUrl = searchParams.get('sector') as SectorId | null;
@@ -130,13 +140,10 @@ export default function RoyZapp() {
           `[RoyZapp] Clearing integrationId ${selectedIntegrationId} — belongs to sector ${data.sector_id}, not ${selectedSectorId}.`
         );
         setSelectedIntegrationId(undefined);
-        setSearchParams(prev => {
-          prev.delete('integrationId');
-          return prev;
-        }, { replace: true });
+        replaceSearchParams((next) => next.delete('integrationId'));
       }
     })();
-  }, [selectedIntegrationId, selectedSectorId, currentUser?.account_id, setSearchParams]);
+  }, [selectedIntegrationId, selectedSectorId, currentUser?.account_id, replaceSearchParams]);
 
 
   useEffect(() => {
@@ -184,10 +191,7 @@ export default function RoyZapp() {
           if (prefIntegration && prefIntegration.sector_id === selectedSectorId) {
             console.log(`[RoyZapp] Auto-selecting preferred instance: ${preference.integration_id}`);
             setSelectedIntegrationId(preference.integration_id);
-            setSearchParams(prev => {
-              prev.set('integrationId', preference.integration_id);
-              return prev;
-            }, { replace: true });
+            replaceSearchParams((next) => next.set('integrationId', preference.integration_id));
             return;
           }
 
@@ -212,10 +216,7 @@ export default function RoyZapp() {
         if (integrations && integrations.length > 0) {
           console.log(`[RoyZapp] Auto-selecting first integration: ${integrations[0].id}`);
           setSelectedIntegrationId(integrations[0].id);
-          setSearchParams(prev => {
-            prev.set('integrationId', integrations[0].id);
-            return prev;
-          }, { replace: true });
+          replaceSearchParams((next) => next.set('integrationId', integrations[0].id));
         } else {
           console.log(`[RoyZapp] No integrations found for sector ${selectedSectorId}`);
         }
@@ -225,7 +226,7 @@ export default function RoyZapp() {
     };
     
     fetchInstancePreference();
-  }, [selectedSectorId, selectedIntegrationId, currentUser?.auth_user_id, currentUser?.account_id, setSearchParams]);
+  }, [selectedSectorId, selectedIntegrationId, currentUser?.auth_user_id, currentUser?.account_id, replaceSearchParams]);
   
   // Use centralized data hook with sector filtering
   const {
@@ -325,16 +326,11 @@ export default function RoyZapp() {
       setSelectedSectorId(sectorId as SectorId);
       setSelectedIntegrationId(integrationId);
       setActiveView("inbox");
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("sector", sectorId);
-          next.set("integrationId", integrationId);
-          next.set("view", "inbox");
-          return next;
-        },
-        { replace: true },
-      );
+      replaceSearchParams((next) => {
+        next.set("sector", sectorId);
+        next.set("integrationId", integrationId);
+        next.set("view", "inbox");
+      });
     },
   });
 
@@ -366,16 +362,11 @@ export default function RoyZapp() {
     );
     setSelectedSectorId(fallback ?? null);
     setSelectedIntegrationId(undefined);
-    setSearchParams(
-      (prev) => {
-        const next = new URLSearchParams(prev);
-        next.delete("integrationId");
-        if (fallback) next.set("sector", fallback);
-        else next.delete("sector");
-        return next;
-      },
-      { replace: true }
-    );
+    replaceSearchParams((next) => {
+      next.delete("integrationId");
+      if (fallback) next.set("sector", fallback);
+      else next.delete("sector");
+    });
   }, [
     canChooseSector,
     selectedSectorId,
@@ -383,29 +374,27 @@ export default function RoyZapp() {
     zappAccessLoading,
     sectorAccess,
     canOpenZappSector,
-    setSearchParams,
+    replaceSearchParams,
   ]);
 
 
 
-  // URL -> estado (só quando o parâmetro realmente muda; nunca depende do
-  // objeto searchParams, que é recriado a cada replace e causava loop/piscar).
+  // URL -> estado. Importante: só aceita uma mudança real do parâmetro na URL.
+  // Ao clicar em uma aba, o estado muda antes da URL; sem esse guard, o efeito
+  // lia o parâmetro antigo e jogava a tela de volta para Conversas, causando o
+  // piscar/oscilação entre abas.
+  const lastHandledViewParamRef = useRef<string | null>(null);
   useEffect(() => {
+    if (viewFromUrl === lastHandledViewParamRef.current) return;
+    lastHandledViewParamRef.current = viewFromUrl;
     if (!viewFromUrl) return;
     if (ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
       setActiveView((prev) => (prev === viewFromUrl ? prev : (viewFromUrl as ZappView)));
     } else {
       // View desconhecida na URL — limpa o parâmetro.
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.delete("view");
-          return next;
-        },
-        { replace: true },
-      );
+      replaceSearchParams((next) => next.delete("view"));
     }
-  }, [viewFromUrl, setSearchParams]);
+  }, [viewFromUrl, replaceSearchParams]);
 
   // Estado -> URL + localStorage, para sobreviver a refresh e navegação.
   useEffect(() => {
@@ -415,16 +404,9 @@ export default function RoyZapp() {
       /* storage unavailable */
     }
     if (viewFromUrl !== activeView) {
-      setSearchParams(
-        (prev) => {
-          const next = new URLSearchParams(prev);
-          next.set("view", activeView);
-          return next;
-        },
-        { replace: true },
-      );
+      replaceSearchParams((next) => next.set("view", activeView));
     }
-  }, [activeView, viewFromUrl, setSearchParams]);
+  }, [activeView, viewFromUrl, replaceSearchParams]);
 
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -681,9 +663,9 @@ export default function RoyZapp() {
       return;
     }
     // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
-    setSearchParams(prev => { prev.set("conversation", conversationId); return prev; }, { replace: true });
+    replaceSearchParams((next) => next.set("conversation", conversationId));
     setUrlParamsProcessed(false);
-  }, [assignments, currentAgent?.id, agents, setSearchParams]);
+  }, [assignments, currentAgent?.id, agents, replaceSearchParams]);
 
   // Notification hook
   const { 
@@ -965,13 +947,13 @@ export default function RoyZapp() {
           toast.warning(`Esta conversa está atribuída a ${name}.`, {
             description: "Peça a transferência para conseguir abrir.",
           });
-          setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+          replaceSearchParams((next) => next.delete('conversation'));
           setUrlParamsProcessed(true);
           return;
         }
         setSelectedConversation(assignment);
         setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
-        setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+        replaceSearchParams((next) => next.delete('conversation'));
         setUrlParamsProcessed(true);
         return;
       }
@@ -988,7 +970,7 @@ export default function RoyZapp() {
           
           if (error || !data) {
             toast.error("Conversa não encontrada.");
-            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            replaceSearchParams((next) => next.delete('conversation'));
             setUrlParamsProcessed(true);
             return;
           }
@@ -1004,7 +986,7 @@ export default function RoyZapp() {
             toast.warning(`Esta conversa está atribuída a ${name}.`, {
               description: "Peça a transferência para conseguir abrir.",
             });
-            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            replaceSearchParams((next) => next.delete('conversation'));
             setUrlParamsProcessed(true);
             return;
           }
@@ -1023,7 +1005,7 @@ export default function RoyZapp() {
           }
           if (!switched) {
             toast.info("Conversa não visível no filtro atual. Ajuste os filtros para encontrá-la.");
-            setSearchParams(prev => { prev.delete('conversation'); return prev; }, { replace: true });
+            replaceSearchParams((next) => next.delete('conversation'));
             setUrlParamsProcessed(true);
           }
           // Se trocou contexto, o efeito re-executa quando os assignments recarregarem
@@ -1044,7 +1026,7 @@ export default function RoyZapp() {
         contactOps.createConversationFromUrl(contact, !!leadId);
       }
     }
-  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, setSearchParams]);
+  }, [assignments, loading, currentUser?.account_id, currentAgent, agents, searchParams, urlParamsProcessed, contactOps, selectedSectorId, selectedIntegrationId, replaceSearchParams]);
 
   const getAgentName = (agentId: string | null) => {
     if (!agentId) return null;
@@ -1440,14 +1422,20 @@ export default function RoyZapp() {
     return <ZappWhatsAppAdminPanel />;
   }
 
-  // Views administrativas que não dependem de um setor — podem abrir direto.
-  const SECTORLESS_VIEWS: ZappView[] = ["team", "departments", "tags", "settings", "playbook"];
-
-  // If no sector selected and view requires sector, show selector
-  if (!selectedSectorId && !SECTORLESS_VIEWS.includes(activeView)) {
+  // Maikol/Everton escolhem o setor antes de abrir qualquer tela operacional.
+  // Isso evita uma view persistida (Equipe/Tags/etc.) abrir sem setor e misturar
+  // dados de WhatsApps diferentes.
+  if (!selectedSectorId) {
     return <ZappSectorSelector onSelectSector={(sectorId, integrationId) => {
       setSelectedSectorId(sectorId);
       setSelectedIntegrationId(integrationId);
+      setActiveView("inbox");
+      replaceSearchParams((next) => {
+        next.set("sector", sectorId);
+        if (integrationId) next.set("integrationId", integrationId);
+        else next.delete("integrationId");
+        next.set("view", "inbox");
+      });
     }} />;
   }
   // Tag and conversation tag functions are now in crud hook
@@ -1586,10 +1574,7 @@ export default function RoyZapp() {
             if (integrationId === selectedIntegrationId) return;
             setSelectedIntegrationId(integrationId);
             setSelectedConversation(null);
-            setSearchParams(prev => {
-              prev.set('integrationId', integrationId);
-              return prev;
-            }, { replace: true });
+            replaceSearchParams((next) => next.set('integrationId', integrationId));
 
             // Persist preference for this user/sector
             if (currentUser?.auth_user_id && currentUser?.account_id && selectedSectorId) {
@@ -1609,10 +1594,7 @@ export default function RoyZapp() {
           onClearIntegration={() => {
             setSelectedIntegrationId(undefined);
             setSelectedConversation(null);
-            setSearchParams(prev => {
-              prev.delete('integrationId');
-              return prev;
-            }, { replace: true });
+            replaceSearchParams((next) => next.delete('integrationId'));
           }}
         />
       </div>
