@@ -69,6 +69,12 @@ function toBrasiliaTime(date: Date): Date {
   return new Date(utcTime - (3 * 60 * 60 * 1000));
 }
 
+// Get YYYY-MM-DD string in Brasília (America/Sao_Paulo) timezone
+function toBrasiliaDateStr(date: Date): string {
+  // en-CA locale returns YYYY-MM-DD; timeZone forces Brasília wall date
+  return date.toLocaleDateString('en-CA', { timeZone: 'America/Sao_Paulo' });
+}
+
 // Normalize source names to standardized categories
 function normalizeSource(rawSource: string | null): string {
   if (!rawSource) return 'Outros';
