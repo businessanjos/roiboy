@@ -34,6 +34,8 @@ import {
 } from "@/lib/validators";
 import { MLS_LEVELS } from "@/lib/mls-utils";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
+import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
+
 
 export interface PixKeyData {
   type: string;
@@ -1168,14 +1170,14 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
               </div>
               <div className="space-y-1.5">
                 <Label className="text-sm font-medium">Nicho</Label>
-                <Input
+                <PracticeAreaMultiSelect
                   value={data.business_niche}
-                  onChange={(e) => updateField("business_niche", e.target.value)}
-                  placeholder="Ex: Harmonização Facial"
-                  className="h-9"
+                  onChange={(v) => updateField("business_niche", v)}
+                  placeholder="Selecione as áreas de atuação"
                 />
-                <p className="text-[11px] text-muted-foreground">Especialidade dentro do segmento</p>
+                <p className="text-[11px] text-muted-foreground">Especialidades dentro do segmento</p>
             </div>
+
           </div>
 
           {/* Formação Profissional (CS/CX) */}
