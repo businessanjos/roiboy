@@ -334,7 +334,16 @@ export default function RoyZapp() {
       }),
     [isAdmin, currentUser, selectedSectorId, sectorAccess]
   );
-  const zappCaps = useMemo(() => zappRoleCapabilities(zappRole), [zappRole]);
+  const zappCaps = useMemo(() => {
+    const base = zappRoleCapabilities(zappRole);
+    // O toggle "Acesso global" (zapp_agents.has_global_access) libera enxergar e
+    // puxar QUALQUER conversa do setor, mesmo para quem é apenas "member".
+    // Viewer continua somente leitura.
+    if (hasGlobalVisibility && zappRole !== "viewer") {
+      return { ...base, canSeeAllSectorConversations: true, canClaim: true };
+    }
+    return base;
+  }, [zappRole, hasGlobalVisibility]);
 
 
 
