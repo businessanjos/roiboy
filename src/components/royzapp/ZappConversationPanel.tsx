@@ -57,6 +57,9 @@ interface ZappConversationPanelProps {
   zappRole?: ZappSectorRole | null;
   currentUser: { name: string; avatar_url: string | null; role?: string } | null;
   isAdmin?: boolean;
+  /** Usuário pode ver as conversas de todos os atendentes do setor. */
+  canSeeAllSectorConversations?: boolean;
+
   activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
   setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
   inboxTab: "mine" | "queue";
