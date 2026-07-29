@@ -1295,11 +1295,23 @@ export default function RoyZapp() {
       // This catches orphaned "waiting" conversations with no agent assigned
       const isUnassigned = a.agent_id === null;
       
+      // "Minhas" agora sempre parte das conversas do próprio atendente.
+      // Quem tem visibilidade total pode alternar para um colega específico (filterAgentId)
+      // ou para toda a equipe do setor (filterAgentId === "__team__").
+      const matchesMineScope = hasFullVisibility
+        ? (filterAgentId === "all"
+            ? a.agent_id === currentAgent?.id
+            : filterAgentId === "__team__"
+              ? a.agent_id !== null
+              : a.agent_id === filterAgentId)
+        : a.agent_id === currentAgent?.id;
+
       const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups || skipTabFilterForPinnedGroups) ? true : (
         inboxTab === "mine" 
-          ? (hasFullVisibility ? a.agent_id !== null : a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as ATRIBUÍDAS; demais veem só as suas
+          ? matchesMineScope
           : isUnassigned // Fila SEMPRE mostra apenas conversas sem agente atribuído (igual para todos)
       );
+
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
       // Status filter: "triage" means no agent assigned (in queue) - also catches orphaned "waiting" with no agent
@@ -1325,8 +1337,9 @@ export default function RoyZapp() {
       const matchesTag = filterTagId === "all" || 
         (a.conversation_tags && a.conversation_tags.some(ct => ct.tag_id === filterTagId));
       
-      // Agent filter
-      const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
+      // Agent filter (na aba "Minhas" o escopo já é tratado em matchesMineScope)
+      const matchesAgent = filterAgentId === "all" || filterAgentId === "__team__" || inboxTab === "mine" || a.agent_id === filterAgentId;
+
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
@@ -1361,29 +1374,30 @@ export default function RoyZapp() {
       !a.zapp_conversation?.is_archived
     ).length;
     
-    // Para Admin/Gestor: mostrar todas as conversas atribuídas
-    // Para atendentes: mostrar apenas suas próprias conversas
-    const myConversations = hasFullVisibility
-      ? assignments.filter((a) => a.agent_id !== null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length
-      : assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
+    // A contagem de "Minhas" acompanha o escopo selecionado no seletor de atendente
+    const inMineScope = (a: typeof assignments[number]) => {
+      if (!hasFullVisibility) return a.agent_id === currentAgent?.id;
+      if (filterAgentId === "all") return a.agent_id === currentAgent?.id;
+      if (filterAgentId === "__team__") return a.agent_id !== null;
+      return a.agent_id === filterAgentId;
+    };
+
+    const myConversations = assignments.filter(
+      (a) => inMineScope(a) && a.status !== "closed" && !a.zapp_conversation?.is_archived
+    ).length;
     
     const activeConversations = assignments.filter((a) => a.status === "active").length;
     const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
     
-    // Unread counts também respeitam visibilidade
-    const myUnreadCount = hasFullVisibility
-      ? assignments.filter((a) => 
-          a.agent_id !== null &&
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length
-      : assignments.filter((a) => 
-          a.agent_id === currentAgent?.id && 
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length;
+    // Unread counts também respeitam o escopo
+    const myUnreadCount = assignments.filter(
+      (a) =>
+        inMineScope(a) &&
+        a.status !== "closed" &&
+        !a.zapp_conversation?.is_archived &&
+        (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
+
     
     // Queue unread: sempre mostra apenas conversas SEM agente (igual para todos)
     const queueUnreadCount = assignments.filter((a) => 
@@ -1394,7 +1408,7 @@ export default function RoyZapp() {
     ).length;
     
     return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
-  }, [agents, assignments, currentAgent?.id, zappCaps.canSeeAllSectorConversations]);
+  }, [agents, assignments, currentAgent?.id, zappCaps.canSeeAllSectorConversations, filterAgentId]);
   
   const { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount } = stats;
 
@@ -1577,6 +1591,8 @@ export default function RoyZapp() {
         <ZappConversationPanel
           currentUser={currentUser}
           isAdmin={isAdmin || hasGlobalVisibility}
+          canSeeAllSectorConversations={zappCaps.canSeeAllSectorConversations}
+
           allowedViews={allowedViews}
           activeView={activeView}
           setActiveView={changeView}
