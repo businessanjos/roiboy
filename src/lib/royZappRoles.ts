@@ -3,7 +3,7 @@
  *
  * - admin   → vê todas as conversas do setor, transfere, responde, gerencia
  * - manager → vê todas as conversas do setor (fila + atribuídas), transfere e responde
- * - member  → vê apenas as conversas atribuídas a ele + a fila (para assumir), responde
+ * - member  → vê apenas as conversas atribuídas a ele + a fila (para assumir), responde e transfere
  * - viewer  → somente leitura: não responde, não transfere, não assume
  */
 export type ZappSectorRole = "admin" | "manager" | "member" | "viewer";
@@ -79,7 +79,8 @@ export function zappRoleCapabilities(role: ZappSectorRole): ZappRoleCapabilities
     default:
       return {
         canSeeAllSectorConversations: false,
-        canTransfer: false,
+        // Membro pode transferir as conversas que atende (não fica preso a um chat).
+        canTransfer: true,
         canReply: true,
         canClaim: true,
         canEditTags: true,

@@ -67,11 +67,20 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
                   <SelectValue placeholder="Selecione um atendente" />
                 </SelectTrigger>
                 <SelectContent className="bg-zapp-panel border-zapp-border">
-                  {agents.filter(a => a.is_online && a.id !== currentAgentId).map((agent) => (
+                  {agents
+                    .filter((a) => a.is_active !== false && a.id !== currentAgentId)
+                    .sort((a, b) => {
+                      if (!!a.is_online !== !!b.is_online) return a.is_online ? -1 : 1;
+                      return (a.user?.name || "").localeCompare(b.user?.name || "", "pt-BR");
+                    })
+                    .map((agent) => (
                     <SelectItem key={agent.id} value={agent.id} className="text-zapp-text">
                       <div className="flex items-center gap-2">
-                        <div className="w-2 h-2 rounded-full bg-zapp-accent" />
+                        <div className={agent.is_online ? "w-2 h-2 rounded-full bg-zapp-accent" : "w-2 h-2 rounded-full bg-zapp-text-muted/50"} />
                         {agent.user?.name}
+                        {!agent.is_online && (
+                          <span className="text-[10px] text-zapp-text-muted">(offline)</span>
+                        )}
                       </div>
                     </SelectItem>
                   ))}
