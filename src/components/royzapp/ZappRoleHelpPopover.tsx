@@ -154,8 +154,8 @@ export const ZappRoleHelpPopover = memo(function ZappRoleHelpPopover({
             </table>
           </div>
           <p className="text-[11px] text-zapp-text-muted mt-2">
-            Observação: um cargo de gestão (Head, Diretor, Sócio…) é tratado como Gestor, mas um
-            Viewer explícito continua sendo somente leitura.
+            Observação: um cargo de gestão (Head, Diretor, Sócio…) é tratado como Gestor. Um Viewer
+            explícito é somente leitura, mas todos os papéis podem transferir conversas.
           </p>
         </div>
       </PopoverContent>
