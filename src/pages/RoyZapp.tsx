@@ -1570,7 +1570,7 @@ export default function RoyZapp() {
           isAdmin={isAdmin || hasGlobalVisibility}
           allowedViews={allowedViews}
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={changeView}
           inboxTab={inboxTab}
           setInboxTab={setInboxTab}
           searchQuery={searchQuery}
