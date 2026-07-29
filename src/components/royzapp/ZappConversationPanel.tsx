@@ -563,7 +563,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           onClick={() => {
             setInboxTab("mine");
             if (filterConversationType !== "all") setFilterConversationType("all");
-            if (activeView !== "inbox") setActiveView("inbox");
+            if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
@@ -589,7 +589,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           onClick={() => {
             setInboxTab("queue");
             if (filterConversationType !== "all") setFilterConversationType("all");
-            if (activeView !== "inbox") setActiveView("inbox");
+            if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
