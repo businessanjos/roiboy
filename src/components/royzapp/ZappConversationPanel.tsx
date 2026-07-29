@@ -82,6 +82,8 @@ interface ZappConversationPanelProps {
   setFilterTagId: (id: string) => void;
   filterAgentId: string;
   setFilterAgentId: (id: string) => void;
+  /** Departamento do setor atual — restringe o seletor "Exibir" ao time do setor */
+  sectorDepartmentId?: string | null;
   
   // Sector for playbook
   sectorId?: string | null;
@@ -199,6 +201,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   filterTagId,
   setFilterTagId,
   filterAgentId,
+  sectorDepartmentId,
   setFilterAgentId,
   filteredAssignments,
   agents,
@@ -632,7 +635,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             <SelectContent className="bg-zapp-panel border-zapp-border">
               <SelectItem value="all" className="text-zapp-text text-xs">Somente minhas conversas</SelectItem>
               <SelectItem value="__team__" className="text-zapp-text text-xs">Toda a equipe do setor</SelectItem>
-              {agents.filter((a) => a.is_active).map((agent) => (
+              {agents
+                .filter((a) => a.is_active && (!sectorDepartmentId || a.department_id === sectorDepartmentId))
+                .map((agent) => (
                 <SelectItem key={agent.id} value={agent.id} className="text-zapp-text text-xs">
                   {agent.user?.name || "Atendente"}
                 </SelectItem>
