@@ -863,6 +863,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             onToggleAgentGlobalAccess={onToggleAgentGlobalAccess}
             canManageGlobalAccess={canManageGlobalAccess}
             onDeleteAgent={onDeleteAgent}
+            departments={departments}
+            sectorId={sectorId}
           />
         )}
         {activeView === "departments" && (
