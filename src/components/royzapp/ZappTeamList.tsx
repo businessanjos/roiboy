@@ -141,11 +141,32 @@ export const ZappTeamList = memo(function ZappTeamList({
                       </Tooltip>
                     </TooltipProvider>
                   )}
-                  <Switch
-                    checked={agent.is_online}
-                    onCheckedChange={() => onToggleAgentOnline(agent)}
-                    className="data-[state=checked]:bg-zapp-accent"
-                  />
+                  <TooltipProvider delayDuration={200}>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="flex items-center gap-1.5 px-2 py-1 rounded hover:bg-zapp-bg-dark">
+                          <span
+                            className={cn(
+                              "text-[10px] font-medium uppercase tracking-wide",
+                              agent.is_online ? "text-zapp-accent" : "text-zapp-text-muted"
+                            )}
+                          >
+                            {agent.is_online ? "Online" : "Offline"}
+                          </span>
+                          <Switch
+                            checked={agent.is_online}
+                            onCheckedChange={() => onToggleAgentOnline(agent)}
+                            className="data-[state=checked]:bg-zapp-accent scale-75"
+                          />
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="top" className="max-w-[240px]">
+                        {agent.is_online
+                          ? "Online: disponível para receber novas conversas na distribuição automática"
+                          : "Offline: fora do rodízio, não recebe novas conversas (as atuais permanecem)"}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                       <Button variant="ghost" size="icon" className="h-8 w-8 text-zapp-text-muted hover:bg-zapp-bg-dark">
