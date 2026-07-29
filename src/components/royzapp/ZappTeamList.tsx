@@ -55,7 +55,8 @@ export const ZappTeamList = memo(function ZappTeamList({
   const [scope, setScope] = useState<"sector" | "all">("sector");
 
   const sectorLabel = sectorId
-    ? sectorId.charAt(0).toUpperCase() + sectorId.slice(1)
+    ? sectors.find((s) => s.id === sectorId)?.name ??
+      sectorId.charAt(0).toUpperCase() + sectorId.slice(1)
     : "Setor atual";
 
   const sectorDepartmentIds = useMemo(
