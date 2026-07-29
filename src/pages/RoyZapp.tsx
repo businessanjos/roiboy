@@ -486,12 +486,52 @@ export default function RoyZapp() {
   const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
   const keepsConversationSelection = activeView === "inbox" || isCrmSectorView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
+
+  // Remember the last selected conversation so navigating away (and back) to CRM/Inbox restores it
+  const lastSelectedAssignmentIdRef = useRef<string | null>(null);
+  const selectionStorageKey = useMemo(
+    () => `royzapp:lastConversation:${selectedSectorId || "default"}:${selectedIntegrationId || "all"}`,
+    [selectedSectorId, selectedIntegrationId]
+  );
+
+  useEffect(() => {
+    if (selectedConversation?.id) {
+      lastSelectedAssignmentIdRef.current = selectedConversation.id;
+      try {
+        localStorage.setItem(selectionStorageKey, selectedConversation.id);
+      } catch {
+        // ignore quota / privacy mode errors
+      }
+    }
+  }, [selectedConversation?.id, selectionStorageKey]);
+
   useEffect(() => {
     if (!keepsConversationSelection && selectedConversation) {
       setSelectedConversation(null);
     }
   }, [keepsConversationSelection, selectedConversation]);
-  
+
+  // Reapply the remembered conversation when returning to a view that shows the list
+  useEffect(() => {
+    if (!keepsConversationSelection || selectedConversation) return;
+    if (!assignments.length) return;
+
+    let rememberedId = lastSelectedAssignmentIdRef.current;
+    if (!rememberedId) {
+      try {
+        rememberedId = localStorage.getItem(selectionStorageKey);
+      } catch {
+        rememberedId = null;
+      }
+    }
+    if (!rememberedId) return;
+
+    const remembered = assignments.find((a) => a.id === rememberedId);
+    if (remembered) {
+      setSelectedConversation(remembered);
+    }
+  }, [keepsConversationSelection, selectedConversation, assignments, selectionStorageKey]);
+
   // Keep the open chat synced with the latest assignment object from the list
   useEffect(() => {
     if (!selectedConversation) return;
@@ -503,6 +543,7 @@ export default function RoyZapp() {
       setSelectedConversation(updatedAssignment);
     }
   }, [assignments, selectedConversation]);
+
 
   // Detect when selected conversation is not in current assignments list
   // For MULTI-INSTANCE architecture: each instance has its own conversation with the same contact
