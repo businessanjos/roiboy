@@ -1408,7 +1408,7 @@ export default function RoyZapp() {
     ).length;
     
     return { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount };
-  }, [agents, assignments, currentAgent?.id, zappCaps.canSeeAllSectorConversations]);
+  }, [agents, assignments, currentAgent?.id, zappCaps.canSeeAllSectorConversations, filterAgentId]);
   
   const { onlineAgents, totalQueueConversations, myConversations, activeConversations, assignedToOthers, myUnreadCount, queueUnreadCount } = stats;
 
