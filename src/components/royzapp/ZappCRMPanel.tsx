@@ -37,6 +37,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappDealDetailSheet } from "./ZappDealDetailSheet";
+import { ZappDealPipelineTrack } from "./ZappDealPipelineTrack";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
