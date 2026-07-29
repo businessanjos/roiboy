@@ -1374,29 +1374,30 @@ export default function RoyZapp() {
       !a.zapp_conversation?.is_archived
     ).length;
     
-    // Para Admin/Gestor: mostrar todas as conversas atribuídas
-    // Para atendentes: mostrar apenas suas próprias conversas
-    const myConversations = hasFullVisibility
-      ? assignments.filter((a) => a.agent_id !== null && a.status !== "closed" && !a.zapp_conversation?.is_archived).length
-      : assignments.filter((a) => a.agent_id === currentAgent?.id && a.status !== "closed" && !a.zapp_conversation?.is_archived).length;
+    // A contagem de "Minhas" acompanha o escopo selecionado no seletor de atendente
+    const inMineScope = (a: typeof assignments[number]) => {
+      if (!hasFullVisibility) return a.agent_id === currentAgent?.id;
+      if (filterAgentId === "all") return a.agent_id === currentAgent?.id;
+      if (filterAgentId === "__team__") return a.agent_id !== null;
+      return a.agent_id === filterAgentId;
+    };
+
+    const myConversations = assignments.filter(
+      (a) => inMineScope(a) && a.status !== "closed" && !a.zapp_conversation?.is_archived
+    ).length;
     
     const activeConversations = assignments.filter((a) => a.status === "active").length;
     const assignedToOthers = assignments.filter((a) => a.agent_id && a.agent_id !== currentAgent?.id && a.status !== "closed").length;
     
-    // Unread counts também respeitam visibilidade
-    const myUnreadCount = hasFullVisibility
-      ? assignments.filter((a) => 
-          a.agent_id !== null &&
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length
-      : assignments.filter((a) => 
-          a.agent_id === currentAgent?.id && 
-          a.status !== "closed" && 
-          !a.zapp_conversation?.is_archived &&
-          (a.zapp_conversation?.unread_count || 0) > 0
-        ).length;
+    // Unread counts também respeitam o escopo
+    const myUnreadCount = assignments.filter(
+      (a) =>
+        inMineScope(a) &&
+        a.status !== "closed" &&
+        !a.zapp_conversation?.is_archived &&
+        (a.zapp_conversation?.unread_count || 0) > 0
+    ).length;
+
     
     // Queue unread: sempre mostra apenas conversas SEM agente (igual para todos)
     const queueUnreadCount = assignments.filter((a) => 
