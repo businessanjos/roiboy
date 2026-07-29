@@ -28,6 +28,25 @@ import { Badge } from "@/components/ui/badge";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
+/**
+ * Considera o item ativo quando todos os parâmetros do link estão presentes na URL atual
+ * (a URL pode ter parâmetros extras como `sector` ou `integrationId`).
+ * Se o link exige `view=inbox` e a URL não define `view`, também é considerado ativo (default).
+ */
+const searchParamsMatch = (itemSearch: string, currentSearch: string) => {
+  const itemParams = new URLSearchParams(itemSearch);
+  const currentParams = new URLSearchParams(currentSearch);
+  for (const [key, value] of itemParams.entries()) {
+    const current = currentParams.get(key);
+    if (current === value) continue;
+    if (key === "view" && value === "inbox" && current === null) continue;
+    return false;
+  }
+  return true;
+};
+
+
+
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useAuth } from "@/hooks/useAuth";
