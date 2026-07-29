@@ -11,6 +11,7 @@ import { useZappContactOperations } from "@/hooks/useZappContactOperations";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
 import { 
   ZappConversationPanel,
   ZappChatView,
