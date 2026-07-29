@@ -1,9 +1,16 @@
-import { memo } from "react";
+import { memo, useMemo, useState } from "react";
 import { Users, Plus, MoreVertical, Pencil, Trash2, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -18,7 +25,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { Agent, TeamUser, getInitials } from "./types";
+import { Agent, TeamUser, Department, getInitials } from "./types";
 
 interface ZappTeamListProps {
   agents: Agent[];
@@ -29,6 +36,8 @@ interface ZappTeamListProps {
   onToggleAgentGlobalAccess?: (agent: Agent) => void;
   canManageGlobalAccess?: boolean;
   onDeleteAgent: (agentId: string) => void;
+  departments?: Department[];
+  sectorId?: string | null;
 }
 
 export const ZappTeamList = memo(function ZappTeamList({
@@ -40,7 +49,34 @@ export const ZappTeamList = memo(function ZappTeamList({
   onToggleAgentGlobalAccess,
   canManageGlobalAccess = false,
   onDeleteAgent,
+  departments = [],
+  sectorId,
 }: ZappTeamListProps) {
+  const [scope, setScope] = useState<"sector" | "all">("sector");
+
+  const sectorLabel = sectorId
+    ? sectorId.charAt(0).toUpperCase() + sectorId.slice(1)
+    : "Setor atual";
+
+  const sectorDepartmentIds = useMemo(
+    () =>
+      new Set(
+        departments
+          .filter((d) => sectorId && (d as any).sector_id === sectorId)
+          .map((d) => d.id)
+      ),
+    [departments, sectorId]
+  );
+
+  const canFilterBySector = !!sectorId && sectorDepartmentIds.size > 0;
+
+  const visibleAgents = useMemo(() => {
+    if (!canFilterBySector || scope === "all") return agents;
+    return agents.filter(
+      (a) => !a.department_id || sectorDepartmentIds.has(a.department_id)
+    );
+  }, [agents, canFilterBySector, scope, sectorDepartmentIds]);
+
   return (
     <div className="p-4 space-y-4">
       <div className="flex items-center justify-between">
@@ -55,6 +91,28 @@ export const ZappTeamList = memo(function ZappTeamList({
           Adicionar
         </Button>
       </div>
+
+      {canFilterBySector && (
+        <div className="flex items-center gap-2">
+          <Select value={scope} onValueChange={(v) => setScope(v as "sector" | "all")}>
+            <SelectTrigger className="h-8 w-[260px] bg-zapp-panel border-zapp-border text-zapp-text text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-zapp-panel border-zapp-border">
+              <SelectItem value="sector" className="text-xs">
+                Somente {sectorLabel}
+              </SelectItem>
+              <SelectItem value="all" className="text-xs">
+                Todos os departamentos
+              </SelectItem>
+            </SelectContent>
+          </Select>
+          <span className="text-zapp-text-muted text-xs">
+            {visibleAgents.length} de {agents.length}
+          </span>
+        </div>
+      )}
+
 
       {agents.length === 0 ? (
         <div className="text-center py-8">
