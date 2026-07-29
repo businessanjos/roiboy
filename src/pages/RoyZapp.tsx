@@ -1295,11 +1295,23 @@ export default function RoyZapp() {
       // This catches orphaned "waiting" conversations with no agent assigned
       const isUnassigned = a.agent_id === null;
       
+      // "Minhas" agora sempre parte das conversas do próprio atendente.
+      // Quem tem visibilidade total pode alternar para um colega específico (filterAgentId)
+      // ou para toda a equipe do setor (filterAgentId === "__team__").
+      const matchesMineScope = hasFullVisibility
+        ? (filterAgentId === "all"
+            ? a.agent_id === currentAgent?.id
+            : filterAgentId === "__team__"
+              ? a.agent_id !== null
+              : a.agent_id === filterAgentId)
+        : a.agent_id === currentAgent?.id;
+
       const matchesTab = (filterArchived || filterStatus === "closed" || skipTabFilterForGroups || skipTabFilterForPinnedGroups) ? true : (
         inboxTab === "mine" 
-          ? (hasFullVisibility ? a.agent_id !== null : a.agent_id === currentAgent?.id) // Admin/Gestor veem todas as ATRIBUÍDAS; demais veem só as suas
+          ? matchesMineScope
           : isUnassigned // Fila SEMPRE mostra apenas conversas sem agente atribuído (igual para todos)
       );
+
       
       const matchesSearch = matchesSearchQuery(contact, searchQuery);
       // Status filter: "triage" means no agent assigned (in queue) - also catches orphaned "waiting" with no agent
