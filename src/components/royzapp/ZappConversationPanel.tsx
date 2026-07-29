@@ -932,7 +932,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "sector" && sectorId === "financeiro" && (
           <ZappFinancePanel sectorId={sectorId} />
         )}
-        {activeView === "meetings" && (
+        {activeView === "meetings" && !showConversationList && (
           <MeetingsPanel />
         )}
       </ScrollArea>
