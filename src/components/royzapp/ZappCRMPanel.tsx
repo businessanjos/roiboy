@@ -318,7 +318,7 @@ export function ZappCRMPanel({
     enabled: !!(activeDeal?.id || conversationLeadId),
   });
 
-  // Move deal mutation
+  // Move deal mutation (com atualização otimista para refletir a etapa na hora)
   const moveDeal = useMutation({
     mutationFn: async ({ dealId, stageId }: { dealId: string; stageId: string }) => {
       const { error } = await supabase
@@ -327,9 +327,26 @@ export function ZappCRMPanel({
         .eq("id", dealId);
       if (error) throw error;
     },
+    onMutate: async ({ dealId, stageId }) => {
+      await queryClient.cancelQueries({ queryKey: ["contact-deals-zapp"] });
+      const previous = queryClient.getQueriesData<Deal[]>({ queryKey: ["contact-deals-zapp"] });
+      queryClient.setQueriesData<Deal[]>({ queryKey: ["contact-deals-zapp"] }, (old) =>
+        Array.isArray(old)
+          ? old.map((d) => (d.id === dealId ? { ...d, stage_id: stageId } : d))
+          : old
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error("Não foi possível mover o negócio");
+    },
     onSuccess: () => {
-      refetchDeals();
       toast.success("Negócio movido!");
+    },
+    onSettled: () => {
+      refetchDeals();
+      queryClient.invalidateQueries({ queryKey: ["pending-tasks-deal-zapp"] });
     },
   });
 
