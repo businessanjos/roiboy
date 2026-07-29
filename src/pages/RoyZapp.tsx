@@ -484,7 +484,8 @@ export default function RoyZapp() {
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
-  const keepsConversationSelection = activeView === "inbox" || isCrmSectorView;
+  const isMeetingsView = activeView === "meetings";
+  const keepsConversationSelection = activeView === "inbox" || isCrmSectorView || isMeetingsView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
 
   // Remember the last selected conversation so navigating away (and back) to CRM/Inbox restores it
@@ -1541,7 +1542,8 @@ export default function RoyZapp() {
   }
   // Tag and conversation tag functions are now in crud hook
   const isInboxView = activeView === "inbox";
-  const showConversationList = isInboxView || isCrmSectorView;
+  const showConversationList = isInboxView || isCrmSectorView || isMeetingsView;
+
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
@@ -1702,15 +1704,19 @@ export default function RoyZapp() {
         />
       </div>
 
-      {/* Right panel - Chat view or CRM context */}
+      {/* Right panel - Chat view, CRM or Meetings context */}
       {showConversationList && (
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
-          !selectedConversation ? "hidden lg:flex" : "flex"
+          !selectedConversation && !isMeetingsView ? "hidden lg:flex" : "flex"
         )}
       >
-        {isCrmSectorView ? (
+        {isMeetingsView ? (
+          <div className="flex-1 min-h-0 overflow-y-auto bg-zapp-bg">
+            <MeetingsPanel />
+          </div>
+        ) : isCrmSectorView ? (
           selectedConversation ? (
             <ZappCRMPanel
               conversationPhone={selectedConversation.zapp_conversation?.phone_e164 || selectedConversation.zapp_conversation?.group_jid}
