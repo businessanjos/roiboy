@@ -355,7 +355,7 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
             return other.to !== item.to && otherPath.startsWith(itemPath + "/") && (location.pathname === otherPath || location.pathname.startsWith(otherPath + "/"));
           });
           const isActive = itemSearchValue
-            ? location.pathname === itemPath && location.search === itemSearchValue
+            ? location.pathname === itemPath && searchParamsMatch(itemSearchValue, location.search)
             : (location.pathname === itemPath && (!hasSearchSibling || !location.search)) || (itemPath !== "/" && location.pathname.startsWith(itemPath + "/") && !hasMoreSpecificMatch);
           const isHighlighted = item.to === "/sales-team";
           const showGroupHeader = item.group && !collapsed;
