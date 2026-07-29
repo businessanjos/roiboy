@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { Users, Plus, MoreVertical, Pencil, Trash2, Globe } from "lucide-react";
+import { sectors } from "@/config/sectors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
