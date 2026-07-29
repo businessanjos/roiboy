@@ -619,6 +619,28 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       </div>
       )}
 
+      {/* Escopo da aba "Minhas": próprias, de um colega ou de toda a equipe do setor */}
+      {isConversationListVisible && inboxTab === "mine" && canSeeAllSectorConversations && (
+        <div className="px-3 py-2 bg-zapp-bg border-b border-zapp-border flex items-center gap-2">
+          <span className="text-xs text-zapp-text-muted whitespace-nowrap">Exibir:</span>
+          <Select value={filterAgentId} onValueChange={setFilterAgentId}>
+            <SelectTrigger className="h-8 flex-1 bg-zapp-input border-0 text-zapp-text text-xs focus:ring-0">
+              <SelectValue placeholder="Minhas conversas" />
+            </SelectTrigger>
+            <SelectContent className="bg-zapp-panel border-zapp-border">
+              <SelectItem value="all" className="text-zapp-text text-xs">Somente minhas conversas</SelectItem>
+              <SelectItem value="__team__" className="text-zapp-text text-xs">Toda a equipe do setor</SelectItem>
+              {agents.filter((a) => a.is_active).map((agent) => (
+                <SelectItem key={agent.id} value={agent.id} className="text-zapp-text text-xs">
+                  {agent.user?.name || "Atendente"}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+
       {/* Pull from queue button - shows when there are unassigned conversations */}
       {isConversationListVisible && inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
         <div className="px-3 py-2 bg-zapp-bg-dark border-b border-zapp-border">
