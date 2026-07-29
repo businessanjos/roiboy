@@ -1,4 +1,6 @@
 import { memo, useMemo } from "react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 import {
   MessageSquare,
   Plus,
