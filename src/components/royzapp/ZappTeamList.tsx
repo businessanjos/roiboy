@@ -114,14 +114,18 @@ export const ZappTeamList = memo(function ZappTeamList({
       )}
 
 
-      {agents.length === 0 ? (
+      {visibleAgents.length === 0 ? (
         <div className="text-center py-8">
           <Users className="h-12 w-12 text-zapp-text-muted mx-auto mb-3" />
-          <p className="text-zapp-text-muted text-sm">Nenhum atendente cadastrado</p>
+          <p className="text-zapp-text-muted text-sm">
+            {agents.length === 0
+              ? "Nenhum atendente cadastrado"
+              : `Nenhum atendente vinculado a ${sectorLabel}`}
+          </p>
         </div>
       ) : (
         <div className="space-y-2">
-          {agents.map((agent) => {
+          {visibleAgents.map((agent) => {
             const teamUser = teamUsers.find(u => u.id === agent.user_id);
             return (
               <div
