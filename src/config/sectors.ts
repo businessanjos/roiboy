@@ -190,13 +190,18 @@ export const sectors: Sector[] = [
     color: "text-amber-600",
     bgColor: "bg-amber-500/10",
     defaultRoute: buildRoyZappUrl(),
-    // Navegação entre telas (Conversas, Tags, Playbook, CRM, Reuniões, Equipe…)
-    // vive APENAS na barra de ícones do topo do RoyZapp (ZappSidebarNav), que
-    // respeita permissões por usuário/setor. Não duplicar aqui.
+    // Navegação principal do RoyZapp no sidebar (espelha as views internas).
     navItems: [
-      { to: buildRoyZappUrl(), icon: MessageSquare, label: "ROY zAPP" },
+      { to: buildRoyZappUrl({ view: "inbox" }), icon: MessageSquare, label: "Conversas" },
+      { to: buildRoyZappUrl({ view: "team" }), icon: Users, label: "Equipe" },
+      { to: buildRoyZappUrl({ view: "departments" }), icon: Building2, label: "Departamentos" },
+      { to: buildRoyZappUrl({ view: "tags" }), icon: Tags, label: "Tags" },
+      { to: buildRoyZappUrl({ view: "settings" }), icon: Settings, label: "Configurações" },
+      { to: buildRoyZappUrl({ view: "playbook" }), icon: BookOpen, label: "Playbook" },
+      { to: buildRoyZappUrl({ view: "marketing" }), icon: Megaphone, label: "Eventos" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
+
   },
   {
     id: "gestao-tech",
