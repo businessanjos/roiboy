@@ -1337,8 +1337,9 @@ export default function RoyZapp() {
       const matchesTag = filterTagId === "all" || 
         (a.conversation_tags && a.conversation_tags.some(ct => ct.tag_id === filterTagId));
       
-      // Agent filter
-      const matchesAgent = filterAgentId === "all" || a.agent_id === filterAgentId;
+      // Agent filter (na aba "Minhas" o escopo já é tratado em matchesMineScope)
+      const matchesAgent = filterAgentId === "all" || filterAgentId === "__team__" || inboxTab === "mine" || a.agent_id === filterAgentId;
+
       
       return matchesTab && matchesSearch && matchesStatus && matchesUnread && matchesConversationType && matchesProduct && matchesTag && matchesAgent;
     });
