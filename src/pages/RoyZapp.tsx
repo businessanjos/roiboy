@@ -455,9 +455,18 @@ export default function RoyZapp() {
       /* storage unavailable */
     }
     if (viewFromUrl !== activeView) {
+      lastHandledViewParamRef.current = activeView;
       replaceSearchParams((next) => next.set("view", activeView));
     }
   }, [activeView, viewFromUrl, replaceSearchParams]);
+
+  // Troca de menu: estado e URL sempre juntos, na mesma ação do usuário.
+  const changeView = useCallback((view: ZappView) => {
+    lastHandledViewParamRef.current = view;
+    setActiveView(view);
+    replaceSearchParams((next) => next.set("view", view));
+  }, [replaceSearchParams]);
+
 
 
   const [searchQuery, setSearchQuery] = useState("");
