@@ -455,9 +455,18 @@ export default function RoyZapp() {
       /* storage unavailable */
     }
     if (viewFromUrl !== activeView) {
+      lastHandledViewParamRef.current = activeView;
       replaceSearchParams((next) => next.set("view", activeView));
     }
   }, [activeView, viewFromUrl, replaceSearchParams]);
+
+  // Troca de menu: estado e URL sempre juntos, na mesma ação do usuário.
+  const changeView = useCallback((view: ZappView) => {
+    lastHandledViewParamRef.current = view;
+    setActiveView(view);
+    replaceSearchParams((next) => next.set("view", view));
+  }, [replaceSearchParams]);
+
 
 
   const [searchQuery, setSearchQuery] = useState("");
@@ -1561,7 +1570,7 @@ export default function RoyZapp() {
           isAdmin={isAdmin || hasGlobalVisibility}
           allowedViews={allowedViews}
           activeView={activeView}
-          setActiveView={setActiveView}
+          setActiveView={changeView}
           inboxTab={inboxTab}
           setInboxTab={setInboxTab}
           searchQuery={searchQuery}
@@ -1943,7 +1952,7 @@ export default function RoyZapp() {
         onToggleTag={crud.toggleConversationTag}
         onSave={crud.saveConversationTags}
         saving={crud.savingConversationTags}
-        onNavigateToTags={() => setActiveView("tags")}
+        onNavigateToTags={() => changeView("tags")}
       />
 
       {/* Client Quick Edit Sheet with Deals */}
