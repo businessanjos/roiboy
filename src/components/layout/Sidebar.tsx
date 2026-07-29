@@ -751,7 +751,7 @@ function FinancialGroupedNav({
                 const [itemPath, itemSearch = ""] = item.to.split("?");
                 const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
                 const isActive = itemSearchValue
-                  ? pathname === itemPath && search === itemSearchValue
+                  ? pathname === itemPath && searchParamsMatch(itemSearchValue, search)
                   : pathname === itemPath || (itemPath !== "/" && pathname.startsWith(itemPath + "/"));
                 return (
                   <NavLink
