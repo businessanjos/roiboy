@@ -69,7 +69,8 @@ export function zappRoleCapabilities(role: ZappSectorRole): ZappRoleCapabilities
     case "viewer":
       return {
         canSeeAllSectorConversations: false,
-        canTransfer: false,
+        // Todo usuário do RoyZapp pode transferir conversas.
+        canTransfer: true,
         canReply: false,
         canClaim: false,
         canEditTags: false,
