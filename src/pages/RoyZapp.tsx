@@ -1952,7 +1952,7 @@ export default function RoyZapp() {
         onToggleTag={crud.toggleConversationTag}
         onSave={crud.saveConversationTags}
         saving={crud.savingConversationTags}
-        onNavigateToTags={() => setActiveView("tags")}
+        onNavigateToTags={() => changeView("tags")}
       />
 
       {/* Client Quick Edit Sheet with Deals */}
