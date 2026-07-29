@@ -176,6 +176,8 @@ interface ZappConversationPanelProps {
 export const ZappConversationPanel = memo(function ZappConversationPanel({
   currentUser,
   isAdmin,
+  canSeeAllSectorConversations = false,
+
   activeView,
   setActiveView,
   inboxTab,
