@@ -1591,6 +1591,8 @@ export default function RoyZapp() {
         <ZappConversationPanel
           currentUser={currentUser}
           isAdmin={isAdmin || hasGlobalVisibility}
+          canSeeAllSectorConversations={zappCaps.canSeeAllSectorConversations}
+
           allowedViews={allowedViews}
           activeView={activeView}
           setActiveView={changeView}
