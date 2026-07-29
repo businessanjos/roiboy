@@ -37,6 +37,7 @@ import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappDealDetailSheet } from "./ZappDealDetailSheet";
+import { ZappDealPipelineTrack } from "./ZappDealPipelineTrack";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
@@ -318,7 +319,7 @@ export function ZappCRMPanel({
     enabled: !!(activeDeal?.id || conversationLeadId),
   });
 
-  // Move deal mutation
+  // Move deal mutation (com atualização otimista para refletir a etapa na hora)
   const moveDeal = useMutation({
     mutationFn: async ({ dealId, stageId }: { dealId: string; stageId: string }) => {
       const { error } = await supabase
@@ -327,9 +328,26 @@ export function ZappCRMPanel({
         .eq("id", dealId);
       if (error) throw error;
     },
+    onMutate: async ({ dealId, stageId }) => {
+      await queryClient.cancelQueries({ queryKey: ["contact-deals-zapp"] });
+      const previous = queryClient.getQueriesData<Deal[]>({ queryKey: ["contact-deals-zapp"] });
+      queryClient.setQueriesData<Deal[]>({ queryKey: ["contact-deals-zapp"] }, (old) =>
+        Array.isArray(old)
+          ? old.map((d) => (d.id === dealId ? { ...d, stage_id: stageId } : d))
+          : old
+      );
+      return { previous };
+    },
+    onError: (_error, _vars, context) => {
+      context?.previous?.forEach(([key, data]) => queryClient.setQueryData(key, data));
+      toast.error("Não foi possível mover o negócio");
+    },
     onSuccess: () => {
-      refetchDeals();
       toast.success("Negócio movido!");
+    },
+    onSettled: () => {
+      refetchDeals();
+      queryClient.invalidateQueries({ queryKey: ["pending-tasks-deal-zapp"] });
     },
   });
 
@@ -629,54 +647,35 @@ export function ZappCRMPanel({
                   <p className="text-lg font-bold text-zapp-accent">{formatCurrency(activeDeal.value)}</p>
                 </div>
 
-                {/* Stage selector */}
-                <div className="space-y-2">
-                  <Label className="text-xs text-zapp-text-muted">Mover para estágio:</Label>
-                  <div className="flex flex-wrap gap-1">
-                    {stages
-                      .filter(stage =>
-                        activeDeal.pipeline_id
-                          ? stage.pipeline_id === activeDeal.pipeline_id
-                          : true
-                      )
-                      .map(stage => {
-                      const isActive = stage.id === activeDeal.stage_id;
-                      return (
-                        <Button
-                          key={stage.id}
-                          size="sm"
-                          variant={isActive ? "default" : "outline"}
-                          className={cn(
-                            "h-7 text-xs px-2",
-                            isActive && "pointer-events-none"
-                          )}
-                          style={isActive ? { backgroundColor: stage.color } : { borderColor: stage.color, color: stage.color }}
-                          onClick={async () => {
-                            if (!isActive && currentUser?.account_id) {
-                              const result = await validateDealMove(activeDeal.id, stage.id, currentUser.account_id);
-                              if (!result.canMoveToStage) {
-                                setRequiredFieldsModal({
-                                  open: true,
-                                  dealId: activeDeal.id,
-                                  dealTitle: activeDeal.title,
-                                  targetStageId: stage.id,
-                                  targetStageName: stage.name,
-                                  missingFields: result.missingFields,
-                                });
-                              } else {
-                                moveDeal.mutate({ dealId: activeDeal.id, stageId: stage.id });
-                              }
-                            }
-                          }}
-                          disabled={moveDeal.isPending}
-                        >
-                          {stage.name}
-                          {isActive && <CheckCircle className="h-3 w-3 ml-1" />}
-                        </Button>
-                      );
-                    })}
-                  </div>
-                </div>
+                {/* Visual do pipeline: trilha de etapas clicável */}
+                <ZappDealPipelineTrack
+                  stages={stages.filter(stage =>
+                    activeDeal.pipeline_id
+                      ? stage.pipeline_id === activeDeal.pipeline_id
+                      : true
+                  )}
+                  currentStageId={activeDeal.stage_id}
+                  pendingStageId={moveDeal.isPending ? moveDeal.variables?.stageId : null}
+                  disabled={moveDeal.isPending}
+                  onSelectStage={async (stageId) => {
+                    if (!currentUser?.account_id) return;
+                    const stage = stages.find(s => s.id === stageId);
+                    if (!stage) return;
+                    const result = await validateDealMove(activeDeal.id, stageId, currentUser.account_id);
+                    if (!result.canMoveToStage) {
+                      setRequiredFieldsModal({
+                        open: true,
+                        dealId: activeDeal.id,
+                        dealTitle: activeDeal.title,
+                        targetStageId: stageId,
+                        targetStageName: stage.name,
+                        missingFields: result.missingFields,
+                      });
+                      return;
+                    }
+                    moveDeal.mutate({ dealId: activeDeal.id, stageId });
+                  }}
+                />
               </Card>
 
               {/* Quick Actions */}
