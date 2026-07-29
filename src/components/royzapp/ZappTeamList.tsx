@@ -1,5 +1,6 @@
 import { memo, useMemo, useState } from "react";
 import { Users, Plus, MoreVertical, Pencil, Trash2, Globe } from "lucide-react";
+import { sectors } from "@/config/sectors";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
@@ -55,7 +56,8 @@ export const ZappTeamList = memo(function ZappTeamList({
   const [scope, setScope] = useState<"sector" | "all">("sector");
 
   const sectorLabel = sectorId
-    ? sectorId.charAt(0).toUpperCase() + sectorId.slice(1)
+    ? sectors.find((s) => s.id === sectorId)?.name ??
+      sectorId.charAt(0).toUpperCase() + sectorId.slice(1)
     : "Setor atual";
 
   const sectorDepartmentIds = useMemo(
