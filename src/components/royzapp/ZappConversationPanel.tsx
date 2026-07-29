@@ -166,6 +166,8 @@ interface ZappConversationPanelProps {
   onSelectIntegration?: (integrationId: string) => void;
   onClearIntegration?: () => void;
   allowedViews?: string[];
+  /** Mantém a lista de conversas visível em views contextuais como CRM. */
+  showConversationList?: boolean;
 }
 
 export const ZappConversationPanel = memo(function ZappConversationPanel({
@@ -261,7 +263,10 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   onClearIntegration,
   allowedViews,
   zappRole,
+  showConversationList = false,
 }: ZappConversationPanelProps) {
+  const isConversationListVisible = activeView === "inbox" || showConversationList;
+
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
@@ -298,7 +303,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             <div className="mt-1 flex items-center gap-2 min-w-0">
               <p className="text-xs text-zapp-text-muted whitespace-nowrap">{activeConversations} em atendimento</p>
               {/* Instance/line selector — lives under the title so it never collides with the header actions */}
-              {activeView === "inbox" && sectorId && onSelectIntegration && (
+              {isConversationListVisible && sectorId && onSelectIntegration && (
                 <ZappInstanceSwitcher
                   accountId={accountId}
                   sectorId={sectorId}
@@ -312,7 +317,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
         <div className="flex items-center gap-1 shrink-0">
 
-          {activeView === "inbox" && (
+          {isConversationListVisible && (
             <>
               <Tooltip>
                 <TooltipTrigger asChild>
@@ -552,13 +557,13 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* Tabs: Minhas | Fila */}
 
-      {activeView === "inbox" && (
+      {isConversationListVisible && (
       <div className="flex border-b border-zapp-border bg-zapp-bg">
         <button
           onClick={() => {
             setInboxTab("mine");
             if (filterConversationType !== "all") setFilterConversationType("all");
-            if (activeView !== "inbox") setActiveView("inbox");
+            if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
@@ -584,7 +589,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           onClick={() => {
             setInboxTab("queue");
             if (filterConversationType !== "all") setFilterConversationType("all");
-            if (activeView !== "inbox") setActiveView("inbox");
+            if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
             "flex-1 py-3 text-sm font-medium transition-colors relative",
@@ -610,7 +615,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       )}
 
       {/* Pull from queue button - shows when there are unassigned conversations */}
-      {activeView === "inbox" && inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
+      {isConversationListVisible && inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
         <div className="px-3 py-2 bg-zapp-bg-dark border-b border-zapp-border">
           <Button
             variant="outline"
@@ -625,7 +630,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       )}
 
       {/* Search */}
-      {activeView === "inbox" && (
+      {isConversationListVisible && (
       <div className="px-3 py-2 bg-zapp-bg">
         <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
@@ -644,7 +649,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
 
       {/* Channel pills (UAZAPI vs Meta) — appears when sector has 2+ instances */}
-      {activeView === "inbox" && sectorId && onSelectIntegration && (
+      {isConversationListVisible && sectorId && onSelectIntegration && (
         <ZappChannelPills
           accountId={accountId}
           sectorId={sectorId}
@@ -661,7 +666,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       )}
 
       {/* UAZAPI server offline alert — appears only when the sector's WhatsApp gateway is unreachable */}
-      {activeView === "inbox" && sectorId && (
+      {isConversationListVisible && sectorId && (
         <div className="px-3 pb-2">
           <UazapiServerHealthBanner
             sectorId={sectorId}
@@ -672,7 +677,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       )}
 
       {/* Line disconnected → show QR immediately so the operator can reconnect on the spot */}
-      {activeView === "inbox" && sectorId && (
+      {isConversationListVisible && sectorId && (
         <div className="px-3 pb-2">
           <ZappDisconnectedQrBanner
             sectorId={sectorId}
@@ -685,7 +690,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* Conversation list */}
       <ScrollArea className="flex-1">
-        {activeView === "inbox" && (
+        {isConversationListVisible && (
           <div className="divide-y divide-zapp-border">
             {filteredAssignments.length === 0 ? (() => {
               const activeTag = filterTagId !== "all"
@@ -916,7 +921,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "marketing" && (
           <ZappMarketingList sectorId={sectorId || undefined} />
         )}
-        {activeView === "sector" && (sectorId === "vendas" || currentUser?.role === "mentor") && (
+        {activeView === "sector" && !showConversationList && (sectorId === "vendas" || currentUser?.role === "mentor") && (
           <ZappCRMPanel 
             conversationPhone={selectedConversation?.zapp_conversation?.phone_e164 || selectedConversation?.zapp_conversation?.group_jid}
             conversationClientId={selectedConversation?.zapp_conversation?.client_id}

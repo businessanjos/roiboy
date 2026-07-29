@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { 
   ZappConversationPanel,
   ZappChatView,
+  ZappCRMPanel,
   Agent,
   ZappTag,
   Department,
@@ -49,6 +50,7 @@ import {
   X,
   Building2,
   RefreshCw,
+  Briefcase,
 } from "lucide-react";
 import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { Badge } from "@/components/ui/badge";
@@ -481,12 +483,14 @@ export default function RoyZapp() {
     }
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
+  const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
+  const keepsConversationSelection = activeView === "inbox" || isCrmSectorView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
   useEffect(() => {
-    if (activeView !== "inbox" && selectedConversation) {
+    if (!keepsConversationSelection && selectedConversation) {
       setSelectedConversation(null);
     }
-  }, [activeView, selectedConversation]);
+  }, [keepsConversationSelection, selectedConversation]);
   
   // Keep the open chat synced with the latest assignment object from the list
   useEffect(() => {
@@ -1496,6 +1500,7 @@ export default function RoyZapp() {
   }
   // Tag and conversation tag functions are now in crud hook
   const isInboxView = activeView === "inbox";
+  const showConversationList = isInboxView || isCrmSectorView;
 
   return (
     <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
@@ -1503,8 +1508,8 @@ export default function RoyZapp() {
       <div 
         className={cn(
           "flex flex-col overflow-hidden border-r border-zapp-border",
-          isInboxView ? "w-full lg:w-[440px] lg:min-w-[440px] lg:max-w-[440px]" : "w-full flex-1",
-          isInboxView && selectedConversation ? "hidden lg:flex" : "flex"
+          showConversationList ? "w-full lg:w-[440px] lg:min-w-[440px] lg:max-w-[440px]" : "w-full flex-1",
+          showConversationList && selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
         <ZappConversationPanel
@@ -1553,6 +1558,7 @@ export default function RoyZapp() {
           sectorName={currentSector?.name}
           sectorColor={currentSector?.color?.replace('text-', '').replace('-600', '')}
           selectedConversation={selectedConversation}
+          showConversationList={showConversationList}
           zappRole={zappRole}
           currentAgentId={currentAgent?.id || null}
           whatsappConnected={whatsappConnected}
@@ -1655,15 +1661,31 @@ export default function RoyZapp() {
         />
       </div>
 
-      {/* Right panel - Chat view or AI Agent Chat */}
-      {isInboxView && (
+      {/* Right panel - Chat view or CRM context */}
+      {showConversationList && (
       <div 
         className={cn(
           "flex-1 min-w-0 flex flex-col overflow-hidden",
           !selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
-        {(
+        {isCrmSectorView ? (
+          selectedConversation ? (
+            <ZappCRMPanel
+              conversationPhone={selectedConversation.zapp_conversation?.phone_e164 || selectedConversation.zapp_conversation?.group_jid}
+              conversationClientId={selectedConversation.zapp_conversation?.client_id}
+              conversationLeadId={selectedConversation.zapp_conversation?.lead_id}
+              conversationContactName={selectedConversation.zapp_conversation?.contact_name || selectedConversation.zapp_conversation?.client?.full_name || selectedConversation.zapp_conversation?.lead?.full_name}
+            />
+          ) : (
+            <div className="flex-1 flex items-center justify-center bg-zapp-bg px-6 text-center">
+              <div className="space-y-3 text-zapp-text-muted">
+                <Briefcase className="h-10 w-10 mx-auto opacity-40" />
+                <p className="text-sm">Selecione uma conversa na lista para ver o CRM</p>
+              </div>
+            </div>
+          )
+        ) : (
           <ZappChatView
             selectedConversation={selectedConversation}
           messages={messages}
