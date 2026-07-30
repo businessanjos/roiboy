@@ -185,7 +185,6 @@ export default function MentoriaEC() {
             account_id: accountId!,
             client_id: clientId,
             status,
-            updated_by: currentUser?.id ?? null,
           },
           { onConflict: "account_id,client_id" },
         );
