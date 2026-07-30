@@ -215,12 +215,18 @@ export default function MentoriaEC() {
 
   const recordMutation = useMutation({
     mutationFn: async ({ clientId, date, notes }: { clientId: string; date: string; notes: string }) => {
-      const { error } = await supabase.from("ec_mentoring_attendance").insert({
-        account_id: accountId!,
-        client_id: clientId,
-        session_date: date,
-        notes: notes || null,
-      });
+      if (!accountId) throw new Error("Conta não identificada. Recarregue a página.");
+      if (!date) throw new Error("Selecione a data da mentoria.");
+      // upsert: registrar a mesma data novamente apenas atualiza (nunca quebra)
+      const { error } = await supabase.from("ec_mentoring_attendance").upsert(
+        {
+          account_id: accountId,
+          client_id: clientId,
+          session_date: date,
+          notes: notes || null,
+        },
+        { onConflict: "client_id,session_date" },
+      );
       if (error) throw error;
     },
     onSuccess: () => {
