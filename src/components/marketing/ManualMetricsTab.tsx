@@ -41,7 +41,9 @@ export function ManualMetricsTab() {
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [profileId, setProfileId] = useState<string>('');
   const [values, setValues] = useState<Record<number, RowValues>>({});
+  const [goalValues, setGoalValues] = useState<RowValues>(emptyRow());
   const [saving, setSaving] = useState(false);
+
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
     queryKey: ['manual-metrics-profiles', accountId],
