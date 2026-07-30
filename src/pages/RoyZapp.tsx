@@ -1772,6 +1772,9 @@ export default function RoyZapp() {
           <ZappChatView
             selectedConversation={selectedConversation}
           messages={messages}
+          hasMoreMessages={hasMoreMessages}
+          isLoadingOlderMessages={isLoadingOlderMessages}
+          onLoadOlderMessages={loadOlderMessages}
           contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false, searchableText: "" }}
           clientProducts={selectedClientProducts}
           currentAgentId={currentAgent?.id || null}
