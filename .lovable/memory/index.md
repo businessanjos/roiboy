@@ -139,6 +139,7 @@
 - [Typeform/n8n Ingestion](mem://integrations/n8n-typeform-api-endpoints) — Edge functions for lead creation
 - [Google Calendar No-Show Sync](mem://integrations/calendar/no-show-sync) — Auto-syncs red calendar events
 - [YouTube Analytics Sync](mem://features/marketing/youtube-integration-pt) — Tracking videos/shorts/lives
+- [Meta Token Auto-Refresh](mem://integrations/meta-token-auto-refresh-pt) — Renovação automática do token longo da Meta + retomada do sync do Instagram
 - [Campaign Forms (Formulários Roy)](mem://features/marketing/campaign-forms-pt) — Substitui Typeform: /c/:slug + tracking funil/UTM/abandono na aba "Formulários Roy" de /marketing/trafego-pago
 - [Content HQ](mem://features/marketing/content-hq-pt) — Área /marketing/content-hq Bruna+Everton, multi-plataforma, IA gera estratégia/pautas/briefings
 - [External REST API](mem://integrations/external-rest-api-v1-pt) — `x-api-key` protected CRUD endpoints
