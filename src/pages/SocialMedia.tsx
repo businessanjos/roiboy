@@ -15,10 +15,10 @@ import { ManualMetricsTab } from '@/components/marketing/ManualMetricsTab';
 export default function SocialMedia() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | 'calendar' | null;
+  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual' | null;
   const urlPostId = searchParams.get('postId');
 
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube' | 'calendar'>(urlPlatform || 'instagram');
+  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual'>(urlPlatform || 'instagram');
   const [activeTab, setActiveTab] = useState('profiles');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
@@ -40,6 +40,7 @@ export default function SocialMedia() {
     tiktok: 'Gerencie e analise seus perfis do TikTok',
     youtube: 'Gerencie e analise seus canais do YouTube',
     calendar: 'Visualize os posts publicados nas redes sociais',
+    manual: 'Preencha manualmente os números semanais de cada perfil',
   };
 
   return (
@@ -66,6 +67,10 @@ export default function SocialMedia() {
           <TabsTrigger value="calendar" className="gap-2">
             <CalendarDays className="h-4 w-4" />
             Calendário
+          </TabsTrigger>
+          <TabsTrigger value="manual" className="gap-2">
+            <ClipboardEdit className="h-4 w-4" />
+            Números Manuais
           </TabsTrigger>
         </TabsList>
 
@@ -114,6 +119,11 @@ export default function SocialMedia() {
         {/* Content Calendar */}
         <TabsContent value="calendar" className="mt-0">
           <ContentCalendarView currentMonth={calendarMonth} onMonthChange={setCalendarMonth} />
+        </TabsContent>
+
+        {/* Manual weekly metrics */}
+        <TabsContent value="manual" className="mt-0">
+          <ManualMetricsTab />
         </TabsContent>
       </Tabs>
     </div>
