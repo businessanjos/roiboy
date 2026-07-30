@@ -280,15 +280,59 @@ export function ManualMetricsTab() {
                     <td key={m.key} className="p-3">{fmt(totals[m.key])}</td>
                   ))}
                 </tr>
+                <tr className="border-t bg-primary/5">
+                  <td className="p-3 font-medium whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Target className="h-4 w-4 text-primary" /> Meta do mês
+                    </span>
+                  </td>
+                  {METRICS.map((m) => (
+                    <td key={m.key} className="p-2">
+                      <Input
+                        inputMode="numeric"
+                        className="h-9 w-[130px]"
+                        placeholder="0"
+                        value={goalValues[m.key] ?? ''}
+                        onChange={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: e.target.value }))}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-primary/5 border-t">
+                  <td className="p-3 text-muted-foreground">Atingimento</td>
+                  {METRICS.map((m) => {
+                    const goal = parseNum(goalValues[m.key] ?? '');
+                    const pct = goal > 0 ? Math.round((totals[m.key] / goal) * 100) : null;
+                    return (
+                      <td
+                        key={m.key}
+                        className={`p-3 font-semibold ${
+                          pct === null ? 'text-muted-foreground' : pct >= 100 ? 'text-emerald-600' : 'text-amber-600'
+                        }`}
+                      >
+                        {pct === null ? '—' : `${pct}%`}
+                      </td>
+                    );
+                  })}
+                </tr>
               </tbody>
             </table>
           )}
         </CardContent>
       </Card>
 
+      <RecordsGoalsCharts
+        weekly={(yearRows ?? []) as any}
+        goals={(goalRows ?? []) as any}
+        year={Number(year)}
+        month={Number(month)}
+      />
+
       <p className="text-xs text-muted-foreground">
-        Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil.
+        Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil. As metas são mensais e
+        alimentam os gráficos comparativos (Hoje e 7d usam a semana corrente; 30d e “Este mês” usam as semanas do mês).
       </p>
     </div>
+
   );
 }
