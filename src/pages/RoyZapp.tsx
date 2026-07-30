@@ -301,6 +301,10 @@ export default function RoyZapp() {
     checkWhatsAppStatus,
     fetchData,
     fetchMessages,
+    loadOlderMessages,
+    hasMoreMessages,
+    isLoadingOlderMessages,
+
     setMessages,
   } = useZappData({
     sectorId: selectedSectorId || undefined,
