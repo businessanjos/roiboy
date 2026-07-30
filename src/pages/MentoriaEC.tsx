@@ -221,7 +221,6 @@ export default function MentoriaEC() {
         client_id: clientId,
         session_date: date,
         notes: notes || null,
-        recorded_by: currentUser?.id ?? null,
       });
       if (error) throw error;
     },
@@ -232,9 +231,10 @@ export default function MentoriaEC() {
       setSessionNotes("");
     },
     onError: (err: any) => {
-      const msg = err?.message?.includes("duplicate")
+      const msg = err?.code === "23505" || err?.message?.includes("duplicate")
         ? "Já existe registro para esta data"
-        : err?.message || "Erro ao registrar";
+        : "Não foi possível registrar a participação. Tente novamente.";
+      console.error("[MentoriaEC] Erro ao registrar participação:", err);
       toast.error(msg);
     },
   });
