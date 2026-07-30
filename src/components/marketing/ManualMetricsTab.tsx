@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,17 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
-
-const METRICS = [
-  { key: 'views', label: 'Visualizações' },
-  { key: 'reach', label: 'Contas alcançadas' },
-  { key: 'interactions', label: 'Interações' },
-  { key: 'followers', label: 'Seguidores' },
-  { key: 'profile_visits', label: 'Visitas ao perfil' },
-  { key: 'link_clicks', label: 'Cliques no link externo' },
-] as const;
-
-type MetricKey = (typeof METRICS)[number]['key'];
+import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -32,6 +22,7 @@ type RowValues = Record<MetricKey, string>;
 
 const emptyRow = (): RowValues =>
   METRICS.reduce((acc, m) => ({ ...acc, [m.key]: '' }), {} as RowValues);
+
 
 const parseNum = (v: string) => {
   const n = Number(String(v).replace(/\./g, '').replace(/,/g, '.').trim());
