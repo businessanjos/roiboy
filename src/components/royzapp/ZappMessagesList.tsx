@@ -1,5 +1,6 @@
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
-import { MessageSquare } from "lucide-react";
+import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
@@ -15,6 +16,12 @@ interface ZappMessagesListProps {
   searchQuery?: string;
   searchMatchIds?: string[];
   searchFocusId?: string | null;
+  /** Existem mensagens mais antigas no banco além das carregadas. */
+  hasMoreMessages?: boolean;
+  /** Está carregando o bloco anterior do histórico. */
+  isLoadingOlderMessages?: boolean;
+  /** Carrega o bloco anterior do histórico. */
+  onLoadOlderMessages?: () => void;
 }
 
 // Build a fallback mention map from sender_phone data in group messages
@@ -73,8 +80,17 @@ export function ZappMessagesList({
   searchQuery,
   searchMatchIds,
   searchFocusId,
+  hasMoreMessages = false,
+  isLoadingOlderMessages = false,
+  onLoadOlderMessages,
 }: ZappMessagesListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRootRef = useRef<HTMLDivElement>(null);
+  const topSentinelRef = useRef<HTMLDivElement>(null);
+  // Guarda a altura do scroll antes de carregar histórico, para manter a
+  // posição visual quando mensagens antigas são inseridas no topo.
+  const pendingRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
+  const firstMessageIdRef = useRef<string | null>(null);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
@@ -251,12 +267,63 @@ export function ZappMessagesList({
     });
   }, [enrichedMessages]);
 
-  // Auto-scroll to bottom when messages change
+  const getViewport = useCallback((): HTMLElement | null => {
+    const root = scrollRootRef.current;
+    if (!root) return null;
+    return root.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+  }, []);
+
+  const handleLoadOlder = useCallback(() => {
+    if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
+    const viewport = getViewport();
+    if (viewport) {
+      pendingRestoreRef.current = { scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop };
+    }
+    onLoadOlderMessages();
+  }, [onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages, getViewport]);
+
+  // Carrega automaticamente ao chegar no topo da conversa.
+  useEffect(() => {
+    const sentinel = topSentinelRef.current;
+    const viewport = getViewport();
+    if (!sentinel || !viewport || !hasMoreMessages) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) handleLoadOlder();
+      },
+      { root: viewport, rootMargin: "120px 0px 0px 0px" }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMoreMessages, handleLoadOlder, getViewport]);
+
+  // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
-    if (messagesEndRef.current && enrichedMessages.length > 0) {
+    if (enrichedMessages.length === 0) {
+      firstMessageIdRef.current = null;
+      return;
+    }
+
+    const newFirstId = enrichedMessages[0].id;
+    const prepended = firstMessageIdRef.current !== null && firstMessageIdRef.current !== newFirstId;
+    firstMessageIdRef.current = newFirstId;
+
+    if (prepended && pendingRestoreRef.current) {
+      const viewport = getViewport();
+      const saved = pendingRestoreRef.current;
+      pendingRestoreRef.current = null;
+      if (viewport) {
+        viewport.scrollTop = saved.scrollTop + (viewport.scrollHeight - saved.scrollHeight);
+        return;
+      }
+    }
+
+    if (prepended) return;
+
+    if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: "instant" });
     }
-  }, [enrichedMessages]);
+  }, [enrichedMessages, getViewport]);
 
   // Scroll to search focus
   useEffect(() => {
@@ -275,8 +342,35 @@ export function ZappMessagesList({
   const searchMatchSet = useMemo(() => new Set(searchMatchIds || []), [searchMatchIds]);
 
   return (
-    <ScrollArea className="flex-1 px-2 sm:px-4 py-2">
+    <ScrollArea ref={scrollRootRef} className="flex-1 px-2 sm:px-4 py-2">
       <div className="space-y-1 w-full min-w-0">
+        <div ref={topSentinelRef} />
+        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages) && (
+          <div className="flex justify-center py-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-xs text-zapp-text-muted"
+              disabled={isLoadingOlderMessages}
+              onClick={handleLoadOlder}
+            >
+              {isLoadingOlderMessages ? (
+                <>
+                  <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />
+                  Carregando histórico...
+                </>
+              ) : (
+                <>
+                  <ArrowUp className="h-3.5 w-3.5 mr-1.5" />
+                  Carregar mensagens anteriores
+                </>
+              )}
+            </Button>
+          </div>
+        )}
+        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && (
+          <p className="text-center text-[11px] text-zapp-text-muted py-2">Início da conversa</p>
+        )}
         {enrichedMessages.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
