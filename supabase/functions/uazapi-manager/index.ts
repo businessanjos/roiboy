@@ -903,18 +903,28 @@ Deno.serve(async (req) => {
     } else if (sector_id) {
       // CRITICAL: For sectors with multiple instances, prefer the connected one
       // ORDER BY status ASC puts 'connected' before 'disconnected' alphabetically
-      const { data } = await supabase.from("integrations").select("id, config, status, sector_id")
+      const { data: rawData } = await supabase.from("integrations").select("id, config, status, sector_id")
         .eq("account_id", accountId).eq("type", "whatsapp").eq("sector_id", sector_id)
         .order("status", { ascending: true })
         .limit(5);
-      
-      if (data && data.length > 1) {
+
+      // NEVER resolve to an incomplete ("ghost") integration: rows without an
+      // instance token cause intermittent "WhatsApp não configurado" drops when
+      // a sector accidentally has more than one row.
+      const data = (rawData || []).filter(
+        (i: any) => i?.config?.instance_token && i?.config?.instance_name,
+      );
+      if ((rawData?.length || 0) !== data.length) {
+        console.warn(`[uazapi-manager] Ignoring ${(rawData?.length || 0) - data.length} incomplete integration(s) for sector "${sector_id}"`);
+      }
+
+      if (data.length > 1) {
         // Multiple instances for this sector - prefer connected
         const connected = data.find((i: any) => i.status === "connected");
         intData = connected || data[0];
         console.warn(`[uazapi-manager] ⚠️ MULTI-INSTANCE sector "${sector_id}": ${data.length} instances found. Using: ${intData?.config?.instance_name} (${intData?.status}). Pass integration_id to be explicit.`);
       } else {
-        intData = data?.[0] || null;
+        intData = data[0] || null;
       }
     } else {
       const { data } = await supabase.from("integrations").select("id, config, status, sector_id").eq("account_id", accountId).eq("type", "whatsapp").is("sector_id", null).limit(1);
