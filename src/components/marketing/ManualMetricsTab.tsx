@@ -161,14 +161,34 @@ export function ManualMetricsTab() {
         .from('social_manual_weekly_metrics')
         .upsert(payload, { onConflict: 'profile_id,year,month,week' });
       if (error) throw error;
-      toast.success('Números do mês salvos');
+
+      const goalPayload = {
+        account_id: accountId,
+        profile_id: profileId,
+        platform: 'instagram',
+        year: Number(year),
+        month: Number(month),
+        ...METRICS.reduce((acc, m) => {
+          acc[m.key] = parseNum(goalValues[m.key] ?? '');
+          return acc;
+        }, {} as Record<MetricKey, number>),
+      };
+      const { error: goalError } = await supabase
+        .from('social_manual_monthly_goals')
+        .upsert(goalPayload, { onConflict: 'profile_id,year,month' });
+      if (goalError) throw goalError;
+
+      toast.success('Números e metas do mês salvos');
       queryClient.invalidateQueries({ queryKey: ['manual-metrics', profileId, year, month] });
+      queryClient.invalidateQueries({ queryKey: ['manual-metrics-year', profileId, year] });
+      queryClient.invalidateQueries({ queryKey: ['manual-metrics-goals', profileId, year] });
     } catch (e: any) {
       toast.error(e.message ?? 'Erro ao salvar');
     } finally {
       setSaving(false);
     }
   };
+
 
   const years = useMemo(() => {
     const y = now.getFullYear();
