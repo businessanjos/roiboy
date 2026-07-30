@@ -454,7 +454,12 @@ export function useSocialMediaData() {
   const syncProfiles = useMutation({
     mutationFn: async () => {
       if (!user?.account_id) throw new Error('Usuário não autenticado');
-      
+
+      // Garante tokens de longa duração válidos antes de sincronizar
+      await supabase.functions.invoke('refresh-meta-tokens', {
+        body: { accountId: user.account_id, resync: false },
+      });
+
       const { data, error } = await supabase.functions.invoke('sync-instagram-profiles', {
         body: { accountId: user.account_id },
       });
@@ -464,6 +469,7 @@ export function useSocialMediaData() {
       
       return data;
     },
+
     onSuccess: async (data) => {
       await Promise.all([
         queryClient.refetchQueries({ queryKey: ['instagram-profiles'] }),

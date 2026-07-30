@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { ensureFreshToken, isExpiredTokenError } from "../_shared/metaToken.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -139,17 +140,34 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // 0) Garante token de longa duração válido (renova se estiver perto de expirar)
+      const fresh = await ensureFreshToken(supabase, profile);
+      let token = fresh.token || profile.meta_access_token;
+
       // 1) Fetch profile info
-      const profRes = await fetchIGProfile(profile.ig_business_account_id, profile.meta_access_token);
+      let profRes = await fetchIGProfile(profile.ig_business_account_id, token);
+
+      // Se o token falhou por expiração, tenta renovar e refazer a chamada uma vez
+      if (profRes.error && isExpiredTokenError(profRes.error)) {
+        const forced = await ensureFreshToken(supabase, { ...profile, meta_access_token: token }, { force: true });
+        if (forced.token) {
+          token = forced.token;
+          profRes = await fetchIGProfile(profile.ig_business_account_id, token);
+        }
+      }
+
       if (profRes.error) {
         results.failed++;
         results.details.push({ username: profile.username, success: false, error: profRes.error });
         await supabase.from('instagram_profiles').update({
           last_synced_at: new Date().toISOString(),
-          sync_error: profRes.error,
+          sync_error: isExpiredTokenError(profRes.error)
+            ? `Token Meta expirado — reconecte em "Configurar Meta API"`
+            : profRes.error,
         }).eq('id', profile.id);
         continue;
       }
+
 
       const ig = profRes.data!;
       const isCustomAvatar = profile.profile_picture_url?.includes('supabase.co/storage');
@@ -169,7 +187,7 @@ Deno.serve(async (req) => {
       }).eq('id', profile.id);
 
       // 2) Fetch recent media
-      const mediaRes = await fetchIGMedia(profile.ig_business_account_id, profile.meta_access_token, 25);
+      const mediaRes = await fetchIGMedia(profile.ig_business_account_id, token, 25);
       if (mediaRes.error) {
         results.synced++;
         results.details.push({
@@ -182,7 +200,7 @@ Deno.serve(async (req) => {
 
       let postsSynced = 0;
       for (const media of mediaRes.data || []) {
-        const insights = await fetchMediaInsights(media.id, media.media_type, profile.meta_access_token);
+        const insights = await fetchMediaInsights(media.id, media.media_type, token);
         const post_type = mapMediaTypeToPostType(media.media_type, media.media_url);
 
         const postRow = {
