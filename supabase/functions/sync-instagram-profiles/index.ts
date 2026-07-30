@@ -187,7 +187,7 @@ Deno.serve(async (req) => {
       }).eq('id', profile.id);
 
       // 2) Fetch recent media
-      const mediaRes = await fetchIGMedia(profile.ig_business_account_id, profile.meta_access_token, 25);
+      const mediaRes = await fetchIGMedia(profile.ig_business_account_id, token, 25);
       if (mediaRes.error) {
         results.synced++;
         results.details.push({
@@ -200,7 +200,7 @@ Deno.serve(async (req) => {
 
       let postsSynced = 0;
       for (const media of mediaRes.data || []) {
-        const insights = await fetchMediaInsights(media.id, media.media_type, profile.meta_access_token);
+        const insights = await fetchMediaInsights(media.id, media.media_type, token);
         const post_type = mapMediaTypeToPostType(media.media_type, media.media_url);
 
         const postRow = {
