@@ -78,6 +78,35 @@ export function ManualMetricsTab() {
     enabled: !!profileId,
   });
 
+  // Dados do ano inteiro (para os gráficos comparativos)
+  const { data: yearRows = [] } = useQuery({
+    queryKey: ['manual-metrics-year', profileId, year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('social_manual_weekly_metrics')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('year', Number(year));
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+
+  const { data: goalRows = [] } = useQuery({
+    queryKey: ['manual-metrics-goals', profileId, year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('social_manual_monthly_goals')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('year', Number(year));
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+
   useEffect(() => {
     const next: Record<number, RowValues> = {};
     WEEKS.forEach((w) => {
@@ -89,6 +118,17 @@ export function ManualMetricsTab() {
     });
     setValues(next);
   }, [rows, profileId, year, month]);
+
+  useEffect(() => {
+    const g = (goalRows ?? []).find((r: any) => r.month === Number(month));
+    setGoalValues(
+      METRICS.reduce((acc, m) => {
+        acc[m.key] = g && Number(g[m.key]) ? String(g[m.key]) : '';
+        return acc;
+      }, {} as RowValues),
+    );
+  }, [goalRows, profileId, year, month]);
+
 
   const totals = useMemo(() => {
     return METRICS.reduce((acc, m) => {
