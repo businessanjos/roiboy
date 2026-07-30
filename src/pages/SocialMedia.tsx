@@ -40,7 +40,7 @@ export default function SocialMedia() {
     tiktok: 'Gerencie e analise seus perfis do TikTok',
     youtube: 'Gerencie e analise seus canais do YouTube',
     calendar: 'Visualize os posts publicados nas redes sociais',
-    manual: 'Preencha manualmente os números semanais de cada perfil no Eternum RECORDE',
+    manual: 'Preencha manualmente os números semanais de cada perfil no Eternum RECORDES',
   };
 
   return (
@@ -70,7 +70,7 @@ export default function SocialMedia() {
           </TabsTrigger>
           <TabsTrigger value="manual" className="gap-2">
             <ClipboardEdit className="h-4 w-4" />
-            Eternum RECORDE
+            Eternum RECORDES
           </TabsTrigger>
         </TabsList>
 
