@@ -60,6 +60,12 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const loadingOlderRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
+
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
   const [clientResponsibles, setClientResponsibles] = useState<Record<string, { id: string; name: string }>>({});
   const [convToClientId, setConvToClientId] = useState<Record<string, string>>({});
