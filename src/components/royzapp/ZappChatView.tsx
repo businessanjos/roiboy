@@ -22,6 +22,9 @@ interface ReplyingToMessage {
 interface ZappChatViewProps {
   selectedConversation: ConversationAssignment | null;
   messages: Message[];
+  hasMoreMessages?: boolean;
+  isLoadingOlderMessages?: boolean;
+  onLoadOlderMessages?: () => void;
   contactInfo: ContactInfo;
   clientProducts: { id: string; name: string; color?: string }[];
   currentAgentId: string | null;
@@ -106,6 +109,9 @@ interface ZappChatViewProps {
 export function ZappChatView({
   selectedConversation,
   messages,
+  hasMoreMessages,
+  isLoadingOlderMessages,
+  onLoadOlderMessages,
   contactInfo,
   clientProducts,
   currentAgentId,
@@ -355,6 +361,9 @@ export function ZappChatView({
       {/* Messages */}
       <ZappMessagesList 
         messages={messages} 
+        hasMoreMessages={hasMoreMessages}
+        isLoadingOlderMessages={isLoadingOlderMessages}
+        onLoadOlderMessages={onLoadOlderMessages}
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}
         onDeleteMessage={onDeleteMessage}

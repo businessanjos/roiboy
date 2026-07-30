@@ -60,6 +60,12 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
   const [assignments, setAssignments] = useState<ConversationAssignment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
+  const [hasMoreMessages, setHasMoreMessages] = useState(false);
+  const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const loadingOlderRef = useRef(false);
+  const messagesRef = useRef<Message[]>([]);
+  messagesRef.current = messages;
+
   const [clientProducts, setClientProducts] = useState<Record<string, { id: string; name: string; color?: string }[]>>({});
   const [clientResponsibles, setClientResponsibles] = useState<Record<string, { id: string; name: string }>>({});
   const [convToClientId, setConvToClientId] = useState<Record<string, string>>({});
@@ -398,87 +404,141 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   }, [fetchAssignmentsOnly]);
 
   // Fetch messages
+  const MESSAGES_PAGE_SIZE = 100;
+  const MESSAGE_COLUMNS = "id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, sender_phone, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited, transcription, mention_map";
+
+  const mapMessageRow = (m: any): Message => ({
+    id: m.id,
+    content: m.content,
+    is_from_client: m.direction === "inbound",
+    created_at: m.sent_at,
+    message_type: m.message_type || "text",
+    media_url: m.media_url,
+    media_type: m.media_type,
+    media_mimetype: m.media_mimetype,
+    media_filename: m.media_filename,
+    audio_duration_sec: m.audio_duration_sec,
+    sender_name: m.sender_name,
+    delivery_status: m.delivery_status,
+    media_download_status: m.media_download_status,
+    external_message_id: m.external_message_id,
+    is_deleted: m.is_deleted || false,
+    deleted_at: m.deleted_at,
+    quoted_message_id: m.quoted_message_id || null,
+    quoted_content: m.quoted_content || null,
+    quoted_sender_name: m.quoted_sender_name || null,
+    updated_at: m.updated_at || null,
+    is_edited: m.is_edited || false,
+    transcription: m.transcription || null,
+    mention_map: m.mention_map || null,
+    sender_phone: m.sender_phone || null,
+  });
+
+  const queuePendingMediaDownloads = useCallback((msgs: Message[]) => {
+    const pendingMediaMsgs = msgs.filter(
+      (m) => m.media_type && (
+        ((m.media_download_status === "pending" || m.media_download_status === "failed" || !m.media_download_status) && !m.media_url)
+        || (m.media_url && m.media_url.includes("supabase") && m.media_download_status !== "completed")
+      )
+    );
+    if (pendingMediaMsgs.length === 0) return;
+
+    const BATCH_SIZE = 10;
+    const allIds = pendingMediaMsgs.map((m) => m.id);
+    console.log(`[ZappConversations] Auto-downloading ${allIds.length} pending media in batches of ${BATCH_SIZE}`);
+
+    supabase.functions.invoke("download-media", { body: { message_ids: allIds.slice(0, BATCH_SIZE) } })
+      .catch((err) => console.error("[ZappConversations] Auto-download error:", err));
+
+    for (let i = BATCH_SIZE; i < allIds.length; i += BATCH_SIZE) {
+      const batch = allIds.slice(i, i + BATCH_SIZE);
+      const delay = Math.floor(i / BATCH_SIZE) * 2000;
+      setTimeout(() => {
+        supabase.functions.invoke("download-media", { body: { message_ids: batch } })
+          .catch((err) => console.error("[ZappConversations] Auto-download batch error:", err));
+      }, delay);
+    }
+  }, []);
+
   const fetchMessages = useCallback(async (zappConversationId: string) => {
     currentConversationIdRef.current = zappConversationId;
+    setHasMoreMessages(false);
 
     try {
       const { data, error } = await supabase
         .from("zapp_messages")
-        .select("id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, sender_phone, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited, transcription, mention_map")
+        .select(MESSAGE_COLUMNS)
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: false })
-        .limit(100);
+        .limit(MESSAGES_PAGE_SIZE);
 
       if (error) throw error;
 
-      const reversedData = (data || []).reverse();
-      const msgs: Message[] = reversedData.map((m: any) => ({
-        id: m.id,
-        content: m.content,
-        is_from_client: m.direction === "inbound",
-        created_at: m.sent_at,
-        message_type: m.message_type || "text",
-        media_url: m.media_url,
-        media_type: m.media_type,
-        media_mimetype: m.media_mimetype,
-        media_filename: m.media_filename,
-        audio_duration_sec: m.audio_duration_sec,
-        sender_name: m.sender_name,
-        delivery_status: m.delivery_status,
-        media_download_status: m.media_download_status,
-        external_message_id: m.external_message_id,
-        is_deleted: m.is_deleted || false,
-        deleted_at: m.deleted_at,
-        quoted_message_id: m.quoted_message_id || null,
-        quoted_content: m.quoted_content || null,
-        quoted_sender_name: m.quoted_sender_name || null,
-        updated_at: m.updated_at || null,
-        is_edited: m.is_edited || false,
-        mention_map: m.mention_map || null,
-        sender_phone: m.sender_phone || null,
-      }));
+      const rows = data || [];
+      const msgs: Message[] = rows.slice().reverse().map(mapMessageRow);
 
       setMessages(msgs);
-
-      // Auto-download pending media (no permanent URL yet)
-      // Also include messages with permanent URL but wrong status for auto-correction
-      const pendingMediaMsgs = msgs.filter(
-        (m) => m.media_type && (
-          // Needs actual download: pending/null/failed status, no permanent URL
-          ((m.media_download_status === "pending" || m.media_download_status === "failed" || !m.media_download_status) && !m.media_url)
-          // Needs auto-correction: has permanent URL but wrong status
-          || (m.media_url && m.media_url.includes("supabase") && m.media_download_status !== "completed")
-        )
-      );
-
-      if (pendingMediaMsgs.length > 0) {
-        const BATCH_SIZE = 10;
-        const allIds = pendingMediaMsgs.map((m) => m.id);
-        console.log(`[ZappConversations] Auto-downloading ${allIds.length} pending media in batches of ${BATCH_SIZE}`);
-
-        supabase.functions.invoke("download-media", { body: { message_ids: allIds.slice(0, BATCH_SIZE) } })
-          .catch((err) => console.error("[ZappConversations] Auto-download error:", err));
-
-        for (let i = BATCH_SIZE; i < allIds.length; i += BATCH_SIZE) {
-          const batch = allIds.slice(i, i + BATCH_SIZE);
-          const delay = Math.floor(i / BATCH_SIZE) * 2000;
-          setTimeout(() => {
-            supabase.functions.invoke("download-media", { body: { message_ids: batch } })
-              .catch((err) => console.error("[ZappConversations] Auto-download batch error:", err));
-          }, delay);
-        }
-      }
+      setHasMoreMessages(rows.length === MESSAGES_PAGE_SIZE);
+      queuePendingMediaDownloads(msgs);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
-  }, []);
+  }, [queuePendingMediaDownloads]);
+
+  // Carrega mensagens ANTERIORES (histórico completo, paginado para cima).
+  const loadOlderMessages = useCallback(async () => {
+    const conversationId = currentConversationIdRef.current;
+    if (!conversationId) return;
+    if (loadingOlderRef.current) return;
+
+    const oldest = messagesRef.current[0];
+    if (!oldest?.created_at) return;
+
+    loadingOlderRef.current = true;
+    setIsLoadingOlderMessages(true);
+    try {
+      const { data, error } = await supabase
+        .from("zapp_messages")
+        .select(MESSAGE_COLUMNS)
+        .eq("zapp_conversation_id", conversationId)
+        .lt("sent_at", oldest.created_at)
+        .order("sent_at", { ascending: false })
+        .limit(MESSAGES_PAGE_SIZE);
+
+      if (error) throw error;
+
+      // Conversa pode ter mudado durante o fetch
+      if (currentConversationIdRef.current !== conversationId) return;
+
+      const rows = data || [];
+      const older: Message[] = rows.slice().reverse().map(mapMessageRow);
+
+      if (older.length > 0) {
+        setMessages((prev) => {
+          const existing = new Set(prev.map((m) => m.id));
+          const unique = older.filter((m) => !existing.has(m.id));
+          return [...unique, ...prev];
+        });
+        queuePendingMediaDownloads(older);
+      }
+      setHasMoreMessages(rows.length === MESSAGES_PAGE_SIZE);
+    } catch (error) {
+      console.error("Error loading older messages:", error);
+    } finally {
+      loadingOlderRef.current = false;
+      setIsLoadingOlderMessages(false);
+    }
+  }, [queuePendingMediaDownloads]);
 
   fetchMessagesRef.current = fetchMessages;
 
   const clearCurrentConversation = useCallback(() => {
     currentConversationIdRef.current = null;
     setMessages([]);
+    setHasMoreMessages(false);
   }, []);
+
+
 
   // INSTANCE ISOLATION filter
   const filteredAssignments = useMemo(() => {
@@ -892,6 +952,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     fetchAssignmentsOnly,
     fetchAssignmentsForDepartment,
     fetchMessages,
+    loadOlderMessages,
+    hasMoreMessages,
+    isLoadingOlderMessages,
     setMessages,
     setAssignments,
     clearCurrentConversation,
