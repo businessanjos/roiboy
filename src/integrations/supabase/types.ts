@@ -21979,6 +21979,57 @@ export type Database = {
           },
         ]
       }
+      social_manual_monthly_goals: {
+        Row: {
+          account_id: string
+          created_at: string
+          followers: number
+          id: string
+          interactions: number
+          link_clicks: number
+          month: number
+          platform: string
+          profile_id: string
+          profile_visits: number
+          reach: number
+          updated_at: string
+          views: number
+          year: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          followers?: number
+          id?: string
+          interactions?: number
+          link_clicks?: number
+          month: number
+          platform?: string
+          profile_id: string
+          profile_visits?: number
+          reach?: number
+          updated_at?: string
+          views?: number
+          year: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          followers?: number
+          id?: string
+          interactions?: number
+          link_clicks?: number
+          month?: number
+          platform?: string
+          profile_id?: string
+          profile_visits?: number
+          reach?: number
+          updated_at?: string
+          views?: number
+          year?: number
+        }
+        Relationships: []
+      }
       social_manual_weekly_metrics: {
         Row: {
           account_id: string

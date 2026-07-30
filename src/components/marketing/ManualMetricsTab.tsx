@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Loader2 } from 'lucide-react';
+import { Save, Loader2, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,17 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
-
-const METRICS = [
-  { key: 'views', label: 'Visualizações' },
-  { key: 'reach', label: 'Contas alcançadas' },
-  { key: 'interactions', label: 'Interações' },
-  { key: 'followers', label: 'Seguidores' },
-  { key: 'profile_visits', label: 'Visitas ao perfil' },
-  { key: 'link_clicks', label: 'Cliques no link externo' },
-] as const;
-
-type MetricKey = (typeof METRICS)[number]['key'];
+import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -32,6 +22,7 @@ type RowValues = Record<MetricKey, string>;
 
 const emptyRow = (): RowValues =>
   METRICS.reduce((acc, m) => ({ ...acc, [m.key]: '' }), {} as RowValues);
+
 
 const parseNum = (v: string) => {
   const n = Number(String(v).replace(/\./g, '').replace(/,/g, '.').trim());
@@ -50,7 +41,9 @@ export function ManualMetricsTab() {
   const [month, setMonth] = useState(String(now.getMonth() + 1));
   const [profileId, setProfileId] = useState<string>('');
   const [values, setValues] = useState<Record<number, RowValues>>({});
+  const [goalValues, setGoalValues] = useState<RowValues>(emptyRow());
   const [saving, setSaving] = useState(false);
+
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
     queryKey: ['manual-metrics-profiles', accountId],
@@ -85,6 +78,35 @@ export function ManualMetricsTab() {
     enabled: !!profileId,
   });
 
+  // Dados do ano inteiro (para os gráficos comparativos)
+  const { data: yearRows = [] } = useQuery({
+    queryKey: ['manual-metrics-year', profileId, year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('social_manual_weekly_metrics')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('year', Number(year));
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+
+  const { data: goalRows = [] } = useQuery({
+    queryKey: ['manual-metrics-goals', profileId, year],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('social_manual_monthly_goals')
+        .select('*')
+        .eq('profile_id', profileId)
+        .eq('year', Number(year));
+      if (error) throw error;
+      return data ?? [];
+    },
+    enabled: !!profileId,
+  });
+
   useEffect(() => {
     const next: Record<number, RowValues> = {};
     WEEKS.forEach((w) => {
@@ -96,6 +118,17 @@ export function ManualMetricsTab() {
     });
     setValues(next);
   }, [rows, profileId, year, month]);
+
+  useEffect(() => {
+    const g = (goalRows ?? []).find((r: any) => r.month === Number(month));
+    setGoalValues(
+      METRICS.reduce((acc, m) => {
+        acc[m.key] = g && Number(g[m.key]) ? String(g[m.key]) : '';
+        return acc;
+      }, {} as RowValues),
+    );
+  }, [goalRows, profileId, year, month]);
+
 
   const totals = useMemo(() => {
     return METRICS.reduce((acc, m) => {
@@ -128,14 +161,34 @@ export function ManualMetricsTab() {
         .from('social_manual_weekly_metrics')
         .upsert(payload, { onConflict: 'profile_id,year,month,week' });
       if (error) throw error;
-      toast.success('Números do mês salvos');
+
+      const goalPayload = {
+        account_id: accountId,
+        profile_id: profileId,
+        platform: 'instagram',
+        year: Number(year),
+        month: Number(month),
+        ...METRICS.reduce((acc, m) => {
+          acc[m.key] = parseNum(goalValues[m.key] ?? '');
+          return acc;
+        }, {} as Record<MetricKey, number>),
+      };
+      const { error: goalError } = await supabase
+        .from('social_manual_monthly_goals')
+        .upsert(goalPayload, { onConflict: 'profile_id,year,month' });
+      if (goalError) throw goalError;
+
+      toast.success('Números e metas do mês salvos');
       queryClient.invalidateQueries({ queryKey: ['manual-metrics', profileId, year, month] });
+      queryClient.invalidateQueries({ queryKey: ['manual-metrics-year', profileId, year] });
+      queryClient.invalidateQueries({ queryKey: ['manual-metrics-goals', profileId, year] });
     } catch (e: any) {
       toast.error(e.message ?? 'Erro ao salvar');
     } finally {
       setSaving(false);
     }
   };
+
 
   const years = useMemo(() => {
     const y = now.getFullYear();
@@ -227,15 +280,59 @@ export function ManualMetricsTab() {
                     <td key={m.key} className="p-3">{fmt(totals[m.key])}</td>
                   ))}
                 </tr>
+                <tr className="border-t bg-primary/5">
+                  <td className="p-3 font-medium whitespace-nowrap">
+                    <span className="inline-flex items-center gap-1.5">
+                      <Target className="h-4 w-4 text-primary" /> Meta do mês
+                    </span>
+                  </td>
+                  {METRICS.map((m) => (
+                    <td key={m.key} className="p-2">
+                      <Input
+                        inputMode="numeric"
+                        className="h-9 w-[130px]"
+                        placeholder="0"
+                        value={goalValues[m.key] ?? ''}
+                        onChange={(e) => setGoalValues((prev) => ({ ...prev, [m.key]: e.target.value }))}
+                      />
+                    </td>
+                  ))}
+                </tr>
+                <tr className="bg-primary/5 border-t">
+                  <td className="p-3 text-muted-foreground">Atingimento</td>
+                  {METRICS.map((m) => {
+                    const goal = parseNum(goalValues[m.key] ?? '');
+                    const pct = goal > 0 ? Math.round((totals[m.key] / goal) * 100) : null;
+                    return (
+                      <td
+                        key={m.key}
+                        className={`p-3 font-semibold ${
+                          pct === null ? 'text-muted-foreground' : pct >= 100 ? 'text-emerald-600' : 'text-amber-600'
+                        }`}
+                      >
+                        {pct === null ? '—' : `${pct}%`}
+                      </td>
+                    );
+                  })}
+                </tr>
               </tbody>
             </table>
           )}
         </CardContent>
       </Card>
 
+      <RecordsGoalsCharts
+        weekly={(yearRows ?? []) as any}
+        goals={(goalRows ?? []) as any}
+        year={Number(year)}
+        month={Number(month)}
+      />
+
       <p className="text-xs text-muted-foreground">
-        Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil.
+        Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil. As metas são mensais e
+        alimentam os gráficos comparativos (Hoje e 7d usam a semana corrente; 30d e “Este mês” usam as semanas do mês).
       </p>
     </div>
+
   );
 }
