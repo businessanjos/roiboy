@@ -4,6 +4,7 @@ import {
   VisualFilter,
   FilterOperator,
   operatorNeedsValues,
+  filterDateBounds,
 } from "@/components/insights/visual-builder/types";
 import { filterByDealField } from "@/hooks/useDealFieldFilter";
 import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
@@ -100,8 +101,9 @@ function matchDate(value: string | null, filter: VisualFilter): boolean {
   if (filter.operator === 'is_set') return value !== null;
   if (value === null) return false;
   const ts = new Date(value).getTime();
-  const fromTs = filter.from ? new Date(`${filter.from}T00:00:00`).getTime() : -Infinity;
-  const toTs = filter.to ? new Date(`${filter.to}T23:59:59.999`).getTime() : Infinity;
+  const bounds = filterDateBounds(filter);
+  const fromTs = bounds.from ? new Date(`${bounds.from}T00:00:00`).getTime() : -Infinity;
+  const toTs = bounds.to ? new Date(`${bounds.to}T23:59:59.999`).getTime() : Infinity;
   return ts >= fromTs && ts <= toTs;
 }
 
@@ -182,7 +184,8 @@ export async function applyVisualFilters<T extends { id: string; lead_id?: strin
   for (const filter of filters) {
     if (operatorNeedsValues(filter.operator)) {
       const hasValues = filter.values.length > 0;
-      const hasRange = !!filter.from || !!filter.to;
+      const bounds = filter.type === 'date' ? filterDateBounds(filter) : { from: filter.from, to: filter.to };
+      const hasRange = !!bounds.from || !!bounds.to;
       if (!hasValues && !hasRange) continue;
     }
 
@@ -202,7 +205,8 @@ export function describeFilter(filter: VisualFilter): string {
   if (filter.operator === 'is_empty') return `${filter.label} está vazio`;
   if (filter.operator === 'is_set') return `${filter.label} está preenchido`;
   if (filter.type === 'date' || filter.operator === 'between') {
-    return `${filter.label}: ${filter.from || '...'} → ${filter.to || '...'}`;
+    const b = filterDateBounds(filter);
+    return `${filter.label}: ${b.from || '...'} → ${b.to || '...'}`;
   }
   const op = filter.operator === 'is_not' ? 'não é' : filter.operator === 'is_any' ? 'é qualquer' : 'é';
   return `${filter.label} ${op} ${filter.values.join(', ')}`;
