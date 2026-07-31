@@ -572,24 +572,45 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         }
         .insights-grid .react-grid-item > .react-resizable-handle {
           position: absolute;
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
         }
         .insights-grid .react-grid-item > .react-resizable-handle::after {
           content: "";
           position: absolute;
-          right: 3px;
-          bottom: 3px;
-          width: 8px;
-          height: 8px;
-          border-right: 2px solid rgba(0, 0, 0, 0.3);
-          border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+          right: 4px;
+          bottom: 4px;
+          width: 9px;
+          height: 9px;
+          border-right: 2px solid hsl(var(--muted-foreground));
+          border-bottom: 2px solid hsl(var(--muted-foreground));
+          opacity: 0.5;
+        }
+        .insights-grid.free-layout .react-grid-item {
+          outline: 1px dashed hsl(var(--border));
+          outline-offset: 2px;
+          border-radius: 0.5rem;
+        }
+        .insights-grid.free-layout .react-grid-item > .react-resizable-handle::after {
+          border-color: hsl(var(--primary));
+          opacity: 1;
+        }
+        .insights-grid.free-layout .widget-drag-handle {
+          cursor: move;
         }
         .insights-grid .react-grid-placeholder {
           display: none !important;
           opacity: 0 !important;
           visibility: hidden !important;
         }
+        .insights-grid.free-layout .react-grid-placeholder {
+          display: block !important;
+          opacity: 0.15 !important;
+          visibility: visible !important;
+          background: hsl(var(--primary)) !important;
+          border-radius: 0.5rem;
+        }
+
       `}</style>
     </div>
   );
