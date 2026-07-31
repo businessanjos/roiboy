@@ -496,6 +496,14 @@ async function fetchStackedLeadsData(
     allLeads = await filterByLeadFields(allLeads, accountId, leadFilters, 'leads');
   }
 
+  // Apply unified (Pipedrive-style) filters
+  const unifiedLeadFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedLeadFilters.length > 0) {
+    allLeads = await applyVisualFilters(allLeads as any, accountId, unifiedLeadFilters, 'leads') as any;
+  }
+
+
+
   // Enrich leads with custom field data if needed
   const needsFaturamento = dimensionField === 'faturamento_atual' || stackByField === 'faturamento_atual';
   const needsMql = dimensionField === 'mql' || stackByField === 'mql';
