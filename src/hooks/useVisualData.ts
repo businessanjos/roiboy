@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
-import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, VisualFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, VisualFilter, filterDateBounds, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -777,13 +777,26 @@ async function fetchDealsData(
   // Also handles the special 'deleted' pseudo-status (soft-deleted deals).
   query = applyDeletedFilter(query, dealStatusFilter, statusFilter ?? null);
 
-  // Determine which date field to use for filters based on dimension and status
+  // An explicit visual date filter is authoritative. Applying the dashboard
+  // range to another column first (e.g. created_at before filtering won_at)
+  // silently excludes deals that were created earlier but won in the period.
+  const explicitDateFilter = unifiedFilters?.find(filter =>
+    filter.source === 'native' &&
+    filter.type === 'date' &&
+    ['created_at', 'won_at', 'lost_at'].includes(filter.field)
+  );
+  const explicitDateBounds = explicitDateFilter ? filterDateBounds(explicitDateFilter) : null;
+
+  // Determine which date field to use for filters based on explicit filter,
+  // status and dimension, in that order.
   // Status filter takes priority for date filtering
   // The dimension field only controls grouping, not which records are included
   let dateFilterField: string;
   const singleDealStatus = dealStatusFilter && dealStatusFilter.length === 1 ? dealStatusFilter[0] : null;
 
-  if (statusFilter === 'won' || singleDealStatus === 'won') {
+  if (explicitDateFilter) {
+    dateFilterField = explicitDateFilter.field;
+  } else if (statusFilter === 'won' || singleDealStatus === 'won') {
     dateFilterField = 'won_at';
   } else if (statusFilter === 'lost' || singleDealStatus === 'lost') {
     dateFilterField = 'lost_at';
@@ -801,11 +814,19 @@ async function fetchDealsData(
   }
 
   // Apply date filters on the correct field
-  if (filters.startDate) {
-    query = query.gte(dateFilterField, filters.startDate);
+  const effectiveStartDate = explicitDateBounds?.from || filters.startDate;
+  const effectiveEndDate = explicitDateBounds?.to || filters.endDate;
+  if (effectiveStartDate) {
+    const startValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveStartDate)
+      ? `${effectiveStartDate}T00:00:00.000`
+      : effectiveStartDate;
+    query = query.gte(dateFilterField, startValue);
   }
-  if (filters.endDate) {
-    query = query.lte(dateFilterField, filters.endDate);
+  if (effectiveEndDate) {
+    const endValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveEndDate)
+      ? `${effectiveEndDate}T23:59:59.999`
+      : effectiveEndDate;
+    query = query.lte(dateFilterField, endValue);
   }
   if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);

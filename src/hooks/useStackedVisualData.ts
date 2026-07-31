@@ -2,7 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
-import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { VisualConfig, filterDateBounds, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay, getDaysInMonth } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
@@ -201,6 +201,12 @@ async function fetchStackedDealsData(
   const { measure, dimension, statusFilter } = config;
   const displayFormat = config.appearance?.dateDisplayFormat || 'monthYear';
   const isCategorical = isCategoricalField(dimension.field, dimension.type);
+  const explicitDateFilter = config.filters?.find(filter =>
+    filter.source === 'native' &&
+    filter.type === 'date' &&
+    ['created_at', 'won_at', 'lost_at'].includes(filter.field)
+  );
+  const explicitDateBounds = explicitDateFilter ? filterDateBounds(explicitDateFilter) : null;
 
   let query = supabase
     .from('deals')
@@ -214,7 +220,9 @@ async function fetchStackedDealsData(
 
   // Determine date field for temporal filtering (NOT the dimension field when categorical)
   let dateField: string;
-  if (!isCategorical && dimension.field && dimension.field !== 'created_at') {
+  if (explicitDateFilter) {
+    dateField = explicitDateFilter.field;
+  } else if (!isCategorical && dimension.field && dimension.field !== 'created_at') {
     dateField = dimension.field;
   } else if (statusFilter === 'won') {
     dateField = 'won_at';
@@ -230,8 +238,20 @@ async function fetchStackedDealsData(
     query = query.not('lost_at', 'is', null);
   }
 
-  if (filters.startDate) query = query.gte(dateField, filters.startDate);
-  if (filters.endDate) query = query.lte(dateField, filters.endDate);
+  const effectiveStartDate = explicitDateBounds?.from || filters.startDate;
+  const effectiveEndDate = explicitDateBounds?.to || filters.endDate;
+  if (effectiveStartDate) {
+    const startValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveStartDate)
+      ? `${effectiveStartDate}T00:00:00.000`
+      : effectiveStartDate;
+    query = query.gte(dateField, startValue);
+  }
+  if (effectiveEndDate) {
+    const endValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveEndDate)
+      ? `${effectiveEndDate}T23:59:59.999`
+      : effectiveEndDate;
+    query = query.lte(dateField, endValue);
+  }
   if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
   if (filters.stageId && filters.stageId !== 'all') query = query.eq('stage_id', filters.stageId);
 
