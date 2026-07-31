@@ -38,6 +38,7 @@ import {
   DEFAULT_APPEARANCE,
   VisualFilter,
   SegmentBy,
+  syncLegacyFilterKeys,
 } from "./types";
 import { FilterSection } from "./FilterSection";
 import { SegmentSection } from "./SegmentSection";
