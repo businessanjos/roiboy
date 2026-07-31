@@ -5,7 +5,7 @@ export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
-export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
+export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature' | 'gold' | 'midnight' | 'emerald' | 'ember' | 'slate' | 'ocean' | 'blush';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
 export type FontScale = 'small' | 'normal' | 'large' | 'xlarge' | 'xxlarge';
 
