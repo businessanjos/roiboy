@@ -822,8 +822,10 @@ async function fetchDealsData(
   // Apply date filters on the correct field
   const effectiveStartDate = explicitDateBounds?.from || filters.startDate;
   const effectiveEndDate = explicitDateBounds?.to || filters.endDate;
-  const aggregationDimension = explicitDateFilter && dimension.type === 'date'
-    ? { ...dimension, field: explicitDateFilter.field }
+  // Grouping must always use the same date column that filtered the records,
+  // otherwise a deal filtered by won_at would land in the created_at bucket.
+  const aggregationDimension = dimension.type === 'date' && dimension.field !== '_total'
+    ? { ...dimension, field: dateFilterField }
     : dimension;
   if (effectiveStartDate) {
     const startValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveStartDate)
