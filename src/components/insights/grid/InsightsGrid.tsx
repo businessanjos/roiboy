@@ -333,7 +333,7 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 // ── Main component ──
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
@@ -360,7 +360,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   // ResizeObserver with debounce
   useEffect(() => {
-    if (!containerRef.current || isMobile || readOnly) return;
+    if (!containerRef.current || isMobile) return;
 
     let rafId: number | null = null;
     let debounceTimer: ReturnType<typeof setTimeout> | null = null;
@@ -445,7 +445,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   if (readOnly) {
     return (
-      <div ref={containerRef} className="insights-grid pointer-events-auto relative">
+      <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${fitHeight ? "h-full min-h-0 overflow-hidden" : ""}`}>
         <ResponsiveInsightsGrid
           visuals={visuals}
           onUpdateVisual={undefined}
@@ -453,6 +453,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           containerWidth={containerWidth}
           readOnly
           minCardWidths={minCardWidths}
+          fitHeight={fitHeight}
         />
       </div>
     );
