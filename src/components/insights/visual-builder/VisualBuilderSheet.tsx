@@ -524,7 +524,33 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                   onDateGroupingChange={setDateGrouping}
                 />
 
+                {dataSource && (
+                  <>
+                    <Separator />
+
+                    {/* Segmentar por */}
+                    <SegmentSection
+                      catalog={fieldCatalog}
+                      value={segmentBy}
+                      onChange={setSegmentBy}
+                      excludeKey={dimensionField ?? undefined}
+                    />
+
+                    <Separator />
+
+                    {/* Filtros */}
+                    <FilterSection
+                      dataSource={dataSource}
+                      accountId={currentUser?.account_id ?? null}
+                      catalog={fieldCatalog}
+                      filters={visualFilters}
+                      onChange={setVisualFilters}
+                    />
+                  </>
+                )}
+
                 <Separator />
+
 
                 {/* Formatting */}
                 <FormattingSection
