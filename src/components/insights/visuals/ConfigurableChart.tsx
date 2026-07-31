@@ -77,7 +77,15 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
       }
       return <ConfigurableScorecard data={data} formatting={formatting} config={visualConfig} />;
     case 'ranking':
-      return <ConfigurableRanking data={data} formatting={formatting} appearance={config} />;
+      return (
+        <ConfigurableRanking
+          data={data}
+          formatting={formatting}
+          appearance={config}
+          dimensionLabel={getDimensionLabel(visualConfig)}
+          measureLabel={getMeasureLabel(visualConfig)}
+        />
+      );
     case 'call_commercial':
       return <ConfigurableCallCommercial data={data} formatting={formatting} hiddenUsers={visualConfig?.hiddenUsers} appearance={config} />;
     case 'gauge':
