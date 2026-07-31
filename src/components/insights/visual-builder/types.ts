@@ -125,6 +125,18 @@ export type FilterOperator =
   | 'lt'
   | 'between';    // numbers and dates
 
+export type DatePreset =
+  | 'custom'
+  | 'today'
+  | 'yesterday'
+  | 'last_7'
+  | 'last_30'
+  | 'this_month'
+  | 'last_month'
+  | 'this_quarter'
+  | 'this_year'
+  | 'last_year';
+
 export interface VisualFilter {
   id: string;
   source: FilterFieldSource;
@@ -138,12 +150,95 @@ export interface VisualFilter {
   /** Bounds for date/number operators */
   from?: string;
   to?: string;
+  /** Dynamic date range (recomputed on every render) */
+  preset?: DatePreset;
 }
 
 export interface SegmentBy {
   source: FilterFieldSource;
   field: string;
   label: string;
+}
+
+export const DATE_PRESETS: { value: DatePreset; label: string }[] = [
+  { value: 'today', label: 'Hoje' },
+  { value: 'yesterday', label: 'Ontem' },
+  { value: 'last_7', label: 'Últimos 7 dias' },
+  { value: 'last_30', label: 'Últimos 30 dias' },
+  { value: 'this_month', label: 'Este mês' },
+  { value: 'last_month', label: 'Mês passado' },
+  { value: 'this_quarter', label: 'Este trimestre' },
+  { value: 'this_year', label: 'Este ano' },
+  { value: 'last_year', label: 'Ano passado' },
+  { value: 'custom', label: 'Período personalizado' },
+];
+
+function isoDate(d: Date): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+/** Resolves a dynamic preset into concrete from/to ISO dates (local time). */
+export function resolveDatePreset(preset: DatePreset, now: Date = new Date()): { from?: string; to?: string } {
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  switch (preset) {
+    case 'today':
+      return { from: isoDate(today), to: isoDate(today) };
+    case 'yesterday': {
+      const y = new Date(today);
+      y.setDate(y.getDate() - 1);
+      return { from: isoDate(y), to: isoDate(y) };
+    }
+    case 'last_7': {
+      const s = new Date(today);
+      s.setDate(s.getDate() - 6);
+      return { from: isoDate(s), to: isoDate(today) };
+    }
+    case 'last_30': {
+      const s = new Date(today);
+      s.setDate(s.getDate() - 29);
+      return { from: isoDate(s), to: isoDate(today) };
+    }
+    case 'this_month':
+      return {
+        from: isoDate(new Date(now.getFullYear(), now.getMonth(), 1)),
+        to: isoDate(new Date(now.getFullYear(), now.getMonth() + 1, 0)),
+      };
+    case 'last_month':
+      return {
+        from: isoDate(new Date(now.getFullYear(), now.getMonth() - 1, 1)),
+        to: isoDate(new Date(now.getFullYear(), now.getMonth(), 0)),
+      };
+    case 'this_quarter': {
+      const q = Math.floor(now.getMonth() / 3);
+      return {
+        from: isoDate(new Date(now.getFullYear(), q * 3, 1)),
+        to: isoDate(new Date(now.getFullYear(), q * 3 + 3, 0)),
+      };
+    }
+    case 'this_year':
+      return {
+        from: isoDate(new Date(now.getFullYear(), 0, 1)),
+        to: isoDate(new Date(now.getFullYear(), 11, 31)),
+      };
+    case 'last_year':
+      return {
+        from: isoDate(new Date(now.getFullYear() - 1, 0, 1)),
+        to: isoDate(new Date(now.getFullYear() - 1, 11, 31)),
+      };
+    default:
+      return {};
+  }
+}
+
+/** Effective bounds for a filter, honouring dynamic presets. */
+export function filterDateBounds(filter: VisualFilter): { from?: string; to?: string } {
+  if (filter.type === 'date' && filter.preset && filter.preset !== 'custom') {
+    return resolveDatePreset(filter.preset);
+  }
+  return { from: filter.from, to: filter.to };
 }
 
 export const TEXT_OPERATORS: { value: FilterOperator; label: string }[] = [
@@ -176,6 +271,7 @@ export function operatorsForType(type: VisualFilter['type']) {
 export function operatorNeedsValues(operator: FilterOperator) {
   return operator !== 'is_empty' && operator !== 'is_set';
 }
+
 
 let filterIdSeq = 0;
 export function newFilterId(): string {
