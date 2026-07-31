@@ -234,7 +234,12 @@ export function VisualStudioDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartType, dataSource]);
   const selectedDimension = dimensionFields.find((f) => f.value === dimensionField);
-  const isDimensionDate = selectedDimension?.type === 'date';
+  const selectedCustomDimension = fieldCatalog.find(
+    (f) => f.source !== 'native' && `${f.source}::${f.key}` === dimensionField
+  );
+  const isDimensionDate =
+    selectedDimension?.type === 'date' || selectedCustomDimension?.type === 'date';
+
 
   const isTable = chartType === 'data_table';
   const isGauge = chartType === 'gauge';
