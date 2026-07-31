@@ -307,11 +307,18 @@ export function ManualMetricsTab() {
                       <td
                         key={m.key}
                         className={`p-3 font-semibold ${
-                          pct === null ? 'text-muted-foreground' : pct >= 100 ? 'text-emerald-600' : 'text-amber-600'
+                          pct === null
+                            ? 'text-muted-foreground'
+                            : pct >= 100
+                              ? 'text-emerald-600'
+                              : pct < 80
+                                ? 'text-destructive font-bold'
+                                : 'text-amber-600'
                         }`}
                       >
                         {pct === null ? '—' : `${pct}%`}
                       </td>
+
                     );
                   })}
                 </tr>
