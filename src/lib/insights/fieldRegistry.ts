@@ -208,7 +208,10 @@ export async function fetchNativeFieldValues(
       .eq('account_id', accountId)
       .not(field, 'is', null)
       .limit(1000);
-    return [...new Set((data || []).map((r: any) => String(r[field])).filter(Boolean))].sort();
+    const values = ((data || []) as any[])
+      .map((r) => String(r?.[field] ?? ''))
+      .filter((v) => v.length > 0);
+    return Array.from(new Set<string>(values)).sort();
   } catch (e) {
     console.error('Error loading native field values', field, e);
     return [];
