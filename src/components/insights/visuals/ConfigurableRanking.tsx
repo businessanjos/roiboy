@@ -18,6 +18,9 @@ interface ConfigurableRankingProps {
     decimals: number;
   };
   appearance?: AppearanceConfig;
+  /** Header labels follow the visual configuration ("Ver por" / "Medir por"). */
+  dimensionLabel?: string;
+  measureLabel?: string;
 }
 
 interface UserAvatar {
