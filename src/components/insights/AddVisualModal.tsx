@@ -697,7 +697,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           statusFilter: metricConfig.statusFilter,
           // For bar_stacked: add stackBy
           ...(chartType === 'bar_stacked' && isTemporalGrouping && { stackBy: 'responsible_name' }),
-          ...(chartType === 'bar_stacked' && !isTemporalGrouping && groupBy !== 'user' && { stackBy: 'responsible_name' }),
+          ...(chartType === 'bar_stacked' && !isTemporalGrouping && dimensionField !== 'responsible_name' && { stackBy: 'responsible_name' }),
         };
       }
 
