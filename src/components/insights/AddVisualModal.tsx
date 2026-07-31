@@ -1198,17 +1198,28 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           {step === 3 && (
             <div className="space-y-6">
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Como agrupar os dados?</p>
+                <p className="text-sm text-muted-foreground">Ver por (como agrupar os dados)</p>
                 <RadioGroup
                   value={groupBy || ""}
                   onValueChange={(value) => setGroupBy(value as GroupBy)}
                   className="space-y-2"
                 >
-                  {GROUP_BY_OPTIONS.filter((g) => {
-                    if (metric === 'tasks_count') return ['month', 'user', 'activity_type', 'status_task'].includes(g.value);
-                    if (metric === 'leads_count') return ['month', 'user', 'mql', 'faturamento_atual', 'canal'].includes(g.value);
-                    return ['month', 'user', 'stage', 'product'].includes(g.value);
-                  }).map((g) => (
+                  {(() => {
+                    const suggested = GROUP_BY_OPTIONS.filter((g) => {
+                      if (metric === 'tasks_count') return ['month', 'user', 'activity_type', 'status_task'].includes(g.value);
+                      if (metric === 'leads_count') return ['month', 'user', 'mql', 'faturamento_atual', 'canal'].includes(g.value);
+                      return ['month', 'user', 'stage', 'product'].includes(g.value);
+                    });
+                    const usedFields = new Set(suggested.map((g) => GROUP_BY_TO_DIMENSION[g.value]?.field));
+                    const extras = fieldCatalog
+                      .filter((f) => f.source === 'native' && f.groupable && !usedFields.has(f.key))
+                      .map((f) => ({
+                        value: f.key,
+                        label: `Por ${f.label}`,
+                        description: f.type === 'date' ? 'Agrupamento temporal' : 'Campo do catálogo',
+                      }));
+                    return [...suggested, ...extras];
+                  })().map((g) => (
                     <div
                       key={g.value}
                       className={cn(
@@ -1229,10 +1240,13 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                     </div>
                   ))}
                 </RadioGroup>
+                <p className="text-xs text-muted-foreground">
+                  Os mesmos campos ficam disponíveis em "Segmentar por" e em "Filtros".
+                </p>
               </div>
 
               {/* Seasonality selector for temporal groupings */}
-              {groupBy && GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date' && (
+              {groupBy && resolveGroupDimension(groupBy, fieldCatalog)?.type === 'date' && (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Sazonalidade</Label>
                   <div className="flex gap-2">
