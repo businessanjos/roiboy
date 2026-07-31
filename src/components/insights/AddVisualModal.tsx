@@ -16,7 +16,7 @@ import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS, VisualFilter, SegmentBy, syncLegacyFilterKeys } from "./visual-builder/types";
 import { FilterSection } from "./visual-builder/FilterSection";
 import { SegmentSection } from "./visual-builder/SegmentSection";
-import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
+import { useFieldCatalog, type CatalogField } from "@/lib/insights/fieldRegistry";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
@@ -35,7 +35,8 @@ interface AddVisualModalProps {
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count" | "sales_leads";
-type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
+/** Legacy shortcut keys OR any native catalog field key */
+type GroupBy = string;
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
@@ -111,6 +112,27 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   activity_type: { field: 'activity_type', type: 'text' },
   status_task: { field: 'status', type: 'text' },
 };
+
+type GroupDimension = { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' };
+
+/**
+ * Resolves the dimension for a "Ver por" selection. Legacy shortcut keys keep
+ * their mapping; any other key comes straight from the shared field catalog,
+ * so grouping and filtering always offer the same set of fields.
+ */
+function resolveGroupDimension(
+  groupBy: GroupBy | null,
+  catalog: CatalogField[]
+): GroupDimension | null {
+  if (!groupBy) return null;
+  if (GROUP_BY_TO_DIMENSION[groupBy]) return GROUP_BY_TO_DIMENSION[groupBy];
+  const field = catalog.find((f) => f.source === 'native' && f.key === groupBy);
+  if (!field) return null;
+  return field.type === 'date'
+    ? { field: field.key, type: 'date', dateGrouping: 'month' }
+    : { field: field.key, type: 'text' };
+}
+
 
 // Determines the correct date field based on the metric being measured
 const getDateFieldForMetric = (metric: Metric): string => {
@@ -303,12 +325,16 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
       const DATE_GROUPING_LABELS: Record<string, string> = { day: 'Diário', week: 'Semanal', month: 'Mensal', year: 'Anual' };
-      const isTemporalGroup = GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date';
+      const dim = resolveGroupDimension(groupBy, fieldCatalog);
+      const isTemporalGroup = dim?.type === 'date';
       const seasonalitySuffix = isTemporalGroup ? ` (${DATE_GROUPING_LABELS[dateGrouping]})` : '';
-      const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
+      const groupLabel =
+        GROUP_LABELS[groupBy] ||
+        `por ${fieldCatalog.find((f) => f.source === 'native' && f.key === groupBy)?.label ?? groupBy}`;
+      const generatedTitle = `${METRIC_LABELS[metric]} ${groupLabel}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
+  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource, fieldCatalog]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -631,12 +657,16 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           })() : {}),
         };
       } else {
-        const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
+        const baseDimensionConfig = resolveGroupDimension(groupBy, fieldCatalog);
+        if (!baseDimensionConfig) {
+          setIsCreating(false);
+          return;
+        }
         let dimensionField = baseDimensionConfig.type === 'date' 
           ? getDateFieldForMetric(metric) 
           : baseDimensionConfig.field;
         // For tasks, "user" maps to assigned_to instead of responsible_name
-        if (metric === 'tasks_count' && groupBy === 'user') {
+        if (metric === 'tasks_count' && baseDimensionConfig.field === 'responsible_name') {
           dimensionField = 'assigned_to';
         }
         const isTemporalGrouping = baseDimensionConfig.type === 'date';
@@ -667,7 +697,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           statusFilter: metricConfig.statusFilter,
           // For bar_stacked: add stackBy
           ...(chartType === 'bar_stacked' && isTemporalGrouping && { stackBy: 'responsible_name' }),
-          ...(chartType === 'bar_stacked' && !isTemporalGrouping && groupBy !== 'user' && { stackBy: 'responsible_name' }),
+          ...(chartType === 'bar_stacked' && !isTemporalGrouping && dimensionField !== 'responsible_name' && { stackBy: 'responsible_name' }),
         };
       }
 
@@ -1168,17 +1198,28 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           {step === 3 && (
             <div className="space-y-6">
               <div className="space-y-4">
-                <p className="text-sm text-muted-foreground">Como agrupar os dados?</p>
+                <p className="text-sm text-muted-foreground">Ver por (como agrupar os dados)</p>
                 <RadioGroup
                   value={groupBy || ""}
                   onValueChange={(value) => setGroupBy(value as GroupBy)}
                   className="space-y-2"
                 >
-                  {GROUP_BY_OPTIONS.filter((g) => {
-                    if (metric === 'tasks_count') return ['month', 'user', 'activity_type', 'status_task'].includes(g.value);
-                    if (metric === 'leads_count') return ['month', 'user', 'mql', 'faturamento_atual', 'canal'].includes(g.value);
-                    return ['month', 'user', 'stage', 'product'].includes(g.value);
-                  }).map((g) => (
+                  {(() => {
+                    const suggested = GROUP_BY_OPTIONS.filter((g) => {
+                      if (metric === 'tasks_count') return ['month', 'user', 'activity_type', 'status_task'].includes(g.value);
+                      if (metric === 'leads_count') return ['month', 'user', 'mql', 'faturamento_atual', 'canal'].includes(g.value);
+                      return ['month', 'user', 'stage', 'product'].includes(g.value);
+                    });
+                    const usedFields = new Set(suggested.map((g) => GROUP_BY_TO_DIMENSION[g.value]?.field));
+                    const extras = fieldCatalog
+                      .filter((f) => f.source === 'native' && f.groupable && !usedFields.has(f.key))
+                      .map((f) => ({
+                        value: f.key,
+                        label: `Por ${f.label}`,
+                        description: f.type === 'date' ? 'Agrupamento temporal' : 'Campo do catálogo',
+                      }));
+                    return [...suggested, ...extras];
+                  })().map((g) => (
                     <div
                       key={g.value}
                       className={cn(
@@ -1199,10 +1240,13 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                     </div>
                   ))}
                 </RadioGroup>
+                <p className="text-xs text-muted-foreground">
+                  Os mesmos campos ficam disponíveis em "Segmentar por" e em "Filtros".
+                </p>
               </div>
 
               {/* Seasonality selector for temporal groupings */}
-              {groupBy && GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date' && (
+              {groupBy && resolveGroupDimension(groupBy, fieldCatalog)?.type === 'date' && (
                 <div className="space-y-2">
                   <Label className="text-sm font-medium">Sazonalidade</Label>
                   <div className="flex gap-2">
@@ -1234,7 +1278,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                     catalog={fieldCatalog}
                     value={segmentBy}
                     onChange={setSegmentBy}
-                    excludeKey={groupBy ? GROUP_BY_TO_DIMENSION[groupBy]?.field : undefined}
+                    excludeKey={resolveGroupDimension(groupBy, fieldCatalog)?.field}
                   />
 
                   <FilterSection
