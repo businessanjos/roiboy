@@ -625,17 +625,27 @@ export function VisualStudioDialog({
                       <>
                         <Separator />
                         <div className="space-y-2">
-                          <Label className="text-base font-medium">4. Quer filtrar algo? (opcional)</Label>
+                          <Label className="text-base font-medium">
+                            {isCallCommercial ? '3. Período (opcional)' : '4. Quer filtrar algo? (opcional)'}
+                          </Label>
+                          {isCallCommercial && (
+                            <p className="text-xs text-muted-foreground">
+                              Layout fixo: já conta sozinho as "Call Comercial Agendada" em aberto (pela data prevista)
+                              e as "Call Comercial Concluída" (pela data de conclusão) de cada vendedor. Só o período
+                              precisa ser configurado.
+                            </p>
+                          )}
                           <FilterSection
                             dataSource={dataSource}
                             accountId={currentUser?.account_id ?? null}
-                            catalog={fieldCatalog}
+                            catalog={filterCatalog}
                             filters={visualFilters}
                             onChange={setVisualFilters}
                           />
                         </div>
                       </>
                     )}
+
 
                     <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode('advanced')}>
                       <Sliders className="mr-1.5 h-4 w-4" /> Ajustar detalhes avançados
