@@ -362,13 +362,26 @@ function HorizontalBarChartView({
             style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
           >
             {appearance.showDataLabels && (
-              <LabelList 
-                dataKey="value" 
-                position="right" 
-                formatter={(value: number) => formatValueCompact(value, formatting.type)}
-                style={{ fontSize: tickFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}
+              <LabelList
+                dataKey="value"
+                content={(props: any) => {
+                  const { x, y, width: w, height: h, value } = props;
+                  if (value === undefined || value === null) return null;
+                  return (
+                    <text
+                      x={Number(x) + Number(w) + 8}
+                      y={Number(y) + Number(h) / 2}
+                      dominantBaseline="central"
+                      textAnchor="start"
+                      style={{ fontSize: tickFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}
+                    >
+                      {formatValueCompact(Number(value), formatting.type)}
+                    </text>
+                  );
+                }}
               />
             )}
+
             {rows.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
