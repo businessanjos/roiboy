@@ -1284,11 +1284,20 @@ async function fetchLeadsData(
   }
 
 
+  // Custom fields as measure / dimension
+  if (isCustomFieldKey(measure.field)) {
+    allData = await enrichRecordsWithCustomField(allData as any, accountId, measure.field, 'leads') as any;
+  }
+  if (isCustomFieldKey(dimension.field)) {
+    allData = await enrichRecordsWithCustomField(allData as any, accountId, dimension.field, 'leads') as any;
+    return aggregateData(allData, measure, dimension, dateDisplayFormat);
+  }
 
   // For scorecard total with filter, return count after filtering
   if (dimension.field === '_total') {
-    return [{ name: 'Total', value: allData.length }];
+    return aggregateGlobalTotal(allData, measure);
   }
+
 
   // If grouping by MQL, fetch MQL field values and inject into leads
   if (dimension.field === 'mql') {
