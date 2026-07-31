@@ -33,6 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
+import { FilterSection } from "../visual-builder/FilterSection";
+import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 import { LeadFieldFilterSection } from "./LeadFieldFilterSection";
 import { DealFieldFilterSection } from "./DealFieldFilterSection";
 import { getColumnsForDataSource } from "./ConfigurableTable";
