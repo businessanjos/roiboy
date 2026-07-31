@@ -204,6 +204,14 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [dealStatusFilter, setDealStatusFilter] = useState<string[]>(
     config?.dealStatusFilter ?? []
   );
+
+  // Unified (Pipedrive-style) filters based on the shared field catalog
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>(config?.filters ?? []);
+  const { data: fieldCatalog = [] } = useFieldCatalog(
+    config?.dataSource ?? null,
+    currentUser?.account_id ?? null
+  );
+
   
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
