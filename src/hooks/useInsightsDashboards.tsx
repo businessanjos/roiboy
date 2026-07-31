@@ -82,7 +82,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     queryFn: async ({ signal }) => {
       if (!currentUser?.account_id) return [];
       
-      const { data, error } = await withQueryTimeout((supabase
+      const { data, error } = await withQueryTimeout<any>((supabase
         .from("insights_dashboards")
         .select("*")
         .eq("account_id", currentUser.account_id) as any)
@@ -102,7 +102,7 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
     queryFn: async ({ signal }) => {
       if (!activeDashboardId) return [];
       
-      const { data, error } = await withQueryTimeout(supabase
+      const { data, error } = await withQueryTimeout<any>(supabase
         .from("insights_visuals")
         .select("*")
         .eq("dashboard_id", activeDashboardId)

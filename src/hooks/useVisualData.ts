@@ -11,6 +11,7 @@ import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilte
 import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
+import { scheduleVisualQuery } from "@/lib/queryScheduler";
 
 export interface AggregatedDataPoint {
   name: string;
@@ -55,7 +56,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
   return useQuery({
     queryKey: ['visual-data', config, chartType, filters, accountId],
-    queryFn: ({ signal }): Promise<AggregatedDataPoint[]> => withQueryTimeout(async () => {
+    queryFn: ({ signal }): Promise<AggregatedDataPoint[]> => scheduleVisualQuery(() => withQueryTimeout(async () => {
       if (!config || !accountId) return [];
 
       const { dataSource, measure, dimension, appearance, statusFilter, dealStatusFilter } = config;
@@ -200,7 +201,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       }
 
       return result;
-    }, 25_000, signal),
+    }, 25_000, signal), signal),
     enabled: enabled && !!config && !!accountId,
     staleTime: 300000,
     gcTime: 1800000,
