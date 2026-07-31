@@ -26,6 +26,8 @@ interface InsightsGridProps {
   readOnly?: boolean;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  /** Optional per-surface override of the auto-fit minimum card widths (px). */
+  minCardWidths?: Partial<MinCardWidths>;
 }
 
 const ROW_HEIGHT = 20;
@@ -141,14 +143,39 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
 
 // ── Responsive static grid ──
 
-function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly }: {
+/** Minimum card widths (px) used by the auto-fit CSS grid. Parametrizable per surface. */
+export interface MinCardWidths {
+  /** scorecard / kpi / number */
+  scorecard: number;
+  gauge: number;
+  /** everything else */
+  default: number;
+}
+
+export const DEFAULT_MIN_CARD_WIDTHS: MinCardWidths = {
+  scorecard: 220,
+  gauge: 300,
+  default: 300,
+};
+
+const GRID_GAP = 12;
+
+function getRowMinWidth(row: VisualRow, mins: MinCardWidths): number {
+  if (row.isAllScorecards) return mins.scorecard;
+  if (row.isAllCompact) return mins.gauge;
+  return mins.default;
+}
+
+function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly, minCardWidths }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
   containerWidth: number;
   readOnly?: boolean;
+  minCardWidths?: Partial<MinCardWidths>;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
+  const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
   return (
     <div className="flex flex-col gap-3">
@@ -160,60 +187,49 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
           onUpdateVisual={onUpdateVisual}
           onRemoveVisual={onRemoveVisual}
           readOnly={readOnly}
+          minWidth={getRowMinWidth(row, mins)}
         />
       ))}
     </div>
   );
 }
 
-function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly }: {
+function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, readOnly, minWidth }: {
   row: VisualRow;
   containerWidth: number;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
   readOnly?: boolean;
+  minWidth: number;
 }) {
-  const { visuals, isAllScorecards, isAllCompact } = row;
+  const { visuals } = row;
 
-  // Calculate flex basis for each visual based on its w proportion
-  const totalW = visuals.reduce((sum, v) => sum + (v.layout?.w ?? 24), 0);
-
-  // Compact rows (scorecards or gauges): no wrap, distribute evenly
-  const shouldNotWrap = isAllScorecards || isAllCompact;
+  // How many columns the auto-fit grid will actually create at this width.
+  // Used only to translate col_span (1/1, 1/2, 1/3) into a real column span.
+  const effectiveCols = Math.max(
+    1,
+    Math.min(visuals.length, Math.floor((containerWidth + GRID_GAP) / (minWidth + GRID_GAP)) || 1)
+  );
 
   return (
     <div
-      className="flex gap-3"
-      style={{ flexWrap: shouldNotWrap ? "nowrap" : "wrap" }}
+      className="grid gap-3"
+      style={{ gridTemplateColumns: `repeat(auto-fit, minmax(${minWidth}px, 1fr))` }}
     >
       {visuals.map((visual) => {
-        const w = visual.layout?.w ?? 24;
         const minH = getMinHeight(visual);
-
-        // Map col_span to flex-grow for compact rows
         const colSpan = visual.layout?.col_span;
-        const flexGrow = shouldNotWrap
-          ? (colSpan === "1/2" ? 2 : colSpan === "1/3" ? 1.33 : 1)
-          : 1;
 
-        const flexStyle = shouldNotWrap
-          ? {
-              flex: `${flexGrow} 1 0`,
-              minWidth: 0,
-              minHeight: minH,
-            }
-          : {
-              flex: `1 1 ${(w / totalW) * 100}%`,
-              minWidth: 300,
-              minHeight: minH,
-              maxWidth: "100%" as const,
-            };
+        let span = 1;
+        if (colSpan === "1/1") span = effectiveCols;
+        else if (colSpan === "1/2") span = Math.max(1, Math.round(effectiveCols / 2));
+        else if (colSpan === "1/3") span = Math.max(1, Math.round(effectiveCols / 3));
 
         return (
           <div
             key={visual.id}
-            className="overflow-hidden rounded-lg"
-            style={flexStyle}
+            className="overflow-hidden rounded-lg min-w-0"
+            style={{ minHeight: minH, gridColumn: `span ${Math.min(span, effectiveCols)} / span ${Math.min(span, effectiveCols)}` }}
           >
             <ConfigurableVisualCard
               visual={visual}
@@ -223,6 +239,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
             />
           </div>
         );
+
       })}
     </div>
   );
@@ -297,7 +314,7 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 // ── Main component ──
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
@@ -416,6 +433,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           onRemoveVisual={undefined}
           containerWidth={containerWidth}
           readOnly
+          minCardWidths={minCardWidths}
         />
       </div>
     );
@@ -433,6 +451,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           onRemoveVisual={onRemoveVisual}
           containerWidth={containerWidth}
           readOnly={readOnly}
+          minCardWidths={minCardWidths}
         />
       )}
 

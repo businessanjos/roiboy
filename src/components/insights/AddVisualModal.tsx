@@ -19,12 +19,15 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 
 interface AddVisualModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   overrideDashboardId?: string | null;
   overrideAddVisual?: (visual: any) => Promise<void>;
+  /** Existing visuals of the target dashboard, used to place the new visual in a free slot. */
+  existingVisuals?: Array<{ layout?: StoredLayout | null }>;
 }
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
@@ -149,10 +152,13 @@ const GROUP_LABELS: Record<GroupBy, string> = {
   status_task: "por Status",
 };
 
-export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overrideAddVisual }: AddVisualModalProps) {
+export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overrideAddVisual, existingVisuals }: AddVisualModalProps) {
   const ctx = useInsightsDashboardsSafe();
   const activeDashboardId = overrideDashboardId ?? ctx?.activeDashboardId ?? null;
   const addVisual = overrideAddVisual ?? ctx?.addVisual ?? (async () => {});
+  const dashboardVisuals = existingVisuals ?? (ctx as any)?.visuals ?? [];
+  const nextLayout = (w: number, h: number) =>
+    buildNewVisualLayout(dashboardVisuals.map((v: any) => v?.layout), w, h);
   const { currentUser } = useCurrentUser();
   
   const [step, setStep] = useState(1);
@@ -336,7 +342,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: chartType,
           config,
-          layout: { x: 0, y: 0, w: 6, h: 5 },
+          layout: nextLayout(6, 5),
         });
         onOpenChange(false);
       } catch (error) {
@@ -363,7 +369,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'call_commercial',
           config,
-          layout: { x: 0, y: 0, w: 6, h: 4 },
+          layout: nextLayout(6, 4),
         });
         onOpenChange(false);
       } catch (error) {
@@ -391,7 +397,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'bubble_map',
           config,
-          layout: { x: 0, y: 0, w: 12, h: 6 },
+          layout: nextLayout(12, 6),
         });
         onOpenChange(false);
       } catch (error) {
@@ -451,7 +457,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'gauge',
           config,
-          layout: { x: 0, y: 0, w: 6, h: 4 },
+          layout: nextLayout(6, 4),
         });
         onOpenChange(false);
       } catch (error) {
@@ -492,7 +498,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'indicator',
           config,
-          layout: { x: 0, y: 0, w: 4, h: 4 },
+          layout: nextLayout(4, 4),
         });
         onOpenChange(false);
       } catch (error) {
@@ -520,7 +526,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'funnel',
           config,
-          layout: { x: 0, y: 0, w: 6, h: 5 },
+          layout: nextLayout(6, 5),
         });
         onOpenChange(false);
       } catch (error) {
@@ -548,7 +554,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           title: title.trim(),
           chart_type: 'data_table',
           config,
-          layout: { x: 0, y: 0, w: 12, h: 6 },
+          layout: nextLayout(12, 6),
         });
         onOpenChange(false);
       } catch (error) {
@@ -657,7 +663,10 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
         title: title.trim(),
         chart_type: chartType,
         config,
-        layout: { x: 0, y: 0, w: chartType === 'scorecard' ? 3 : (chartType === 'bar_stacked' ? 12 : 6), h: chartType === 'scorecard' ? 2 : (chartType === 'bar_stacked' ? 8 : 4) },
+        layout: nextLayout(
+          chartType === 'scorecard' ? 3 : (chartType === 'bar_stacked' ? 12 : 6),
+          chartType === 'scorecard' ? 2 : (chartType === 'bar_stacked' ? 8 : 4),
+        ),
       });
 
       onOpenChange(false);
