@@ -10,6 +10,7 @@ import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilte
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 
 export interface AggregatedDataPoint {
   name: string;
@@ -54,7 +55,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
   return useQuery({
     queryKey: ['visual-data', config, chartType, filters, accountId],
-    queryFn: async (): Promise<AggregatedDataPoint[]> => {
+    queryFn: ({ signal }): Promise<AggregatedDataPoint[]> => withQueryTimeout(async () => {
       if (!config || !accountId) return [];
 
       const { dataSource, measure, dimension, appearance, statusFilter, dealStatusFilter } = config;
@@ -199,10 +200,14 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
       }
 
       return result;
-    },
+    }, 25_000, signal),
     enabled: enabled && !!config && !!accountId,
-    staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)
+    staleTime: 300000,
+    gcTime: 1800000,
+    retry: 1,
+    retryDelay: 1_000,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 }
 

@@ -4,6 +4,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 
 // Types based on Supabase schema
 export interface InsightsDashboard {
@@ -78,16 +79,16 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
   // Fetch dashboards
   const { data: dashboards = [], isLoading } = useQuery({
     queryKey: ["insights-dashboards", currentUser?.account_id],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!currentUser?.account_id) return [];
       
-      const { data, error } = await (supabase
+      const { data, error } = await withQueryTimeout((supabase
         .from("insights_dashboards")
         .select("*")
         .eq("account_id", currentUser.account_id) as any)
         .eq("sector", "vendas")
         .order("display_order", { ascending: true })
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true }), 15_000, signal);
       
       if (error) throw error;
       return data as InsightsDashboard[];
@@ -98,14 +99,14 @@ export function InsightsDashboardsProvider({ children }: InsightsDashboardsProvi
   // Fetch visuals for active dashboard
   const { data: visuals = [], isLoading: isLoadingVisuals } = useQuery({
     queryKey: ["insights-visuals", activeDashboardId],
-    queryFn: async () => {
+    queryFn: async ({ signal }) => {
       if (!activeDashboardId) return [];
       
-      const { data, error } = await supabase
+      const { data, error } = await withQueryTimeout(supabase
         .from("insights_visuals")
         .select("*")
         .eq("dashboard_id", activeDashboardId)
-        .order("created_at", { ascending: true });
+        .order("created_at", { ascending: true }), 15_000, signal);
       
       if (error) throw error;
       return data.map(v => ({
