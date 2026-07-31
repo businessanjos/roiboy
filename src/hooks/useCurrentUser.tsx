@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { withQueryTimeout } from "@/lib/queryTimeout";
 
 interface CurrentUser {
   id: string;
@@ -32,10 +33,9 @@ const CurrentUserContext = createContext<CurrentUserContextType | undefined>(und
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
-
   const fetchUser = useCallback(async (attempt = 0): Promise<void> => {
     try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const { data: { user: authUser } } = await withQueryTimeout(supabase.auth.getUser(), 8_000);
 
       if (!authUser) {
         setCurrentUser(null);
@@ -44,18 +44,18 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
 
       // Fetch user profile
-      const { data, error } = await supabase
+      const { data, error } = await withQueryTimeout(supabase
         .from("users")
         .select("id, name, email, role, avatar_url, account_id, auth_user_id, is_also_admin, is_active, zapp_signature, zapp_signature_enabled, team_role_id, team_role:team_roles(name)")
         .eq("auth_user_id", authUser.id)
-        .maybeSingle();
+        .maybeSingle(), 8_000);
 
       if (error || !data) {
         console.error("[useCurrentUser] Error fetching user profile (attempt " + attempt + "):", error);
         // Retry up to 2 more times with exponential backoff. Transient
         // failures (network, cold RLS, refresh token race) were silently
         // leaving the whole app in a permanent loading state.
-        if (attempt < 2) {
+        if (attempt < 1) {
           await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
           return fetchUser(attempt + 1);
         }
@@ -65,10 +65,10 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       }
 
       // Fetch all roles from junction table (parallel-safe, no dependency on profile query besides user id)
-      const { data: userRolesData } = await supabase
+      const { data: userRolesData } = await withQueryTimeout(supabase
         .from("user_team_roles")
         .select("team_role_id, team_role:team_roles(name)")
-        .eq("user_id", data.id);
+        .eq("user_id", data.id), 8_000);
 
       const teamRoleNames = (userRolesData || []).map((ur: any) => ur.team_role?.name).filter(Boolean);
       const teamRoleIds = (userRolesData || []).map((ur: any) => ur.team_role_id);
@@ -90,7 +90,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       setLoading(false);
     } catch (error) {
       console.error("[useCurrentUser] Unexpected error (attempt " + attempt + "):", error);
-      if (attempt < 2) {
+      if (attempt < 1) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
         return fetchUser(attempt + 1);
       }
@@ -110,17 +110,6 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     fetchUser();
 
-    // Safety timeout - force loading to false after 5s
-    const safetyTimeout = setTimeout(() => {
-      setLoading(prev => {
-        if (prev) {
-          console.warn("[useCurrentUser] Safety timeout: forcing loading to false after 5s");
-          return false;
-        }
-        return prev;
-      });
-    }, 5000);
-
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
       if (event === "SIGNED_IN") {
@@ -131,7 +120,6 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
     });
 
     return () => {
-      clearTimeout(safetyTimeout);
       subscription.unsubscribe();
     };
   }, [fetchUser]);
