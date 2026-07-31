@@ -12,6 +12,8 @@ import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/f
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
+import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
+
 
 export interface AggregatedDataPoint {
   name: string;
