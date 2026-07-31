@@ -325,9 +325,13 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
     } else if (metric && groupBy) {
       const DATE_GROUPING_LABELS: Record<string, string> = { day: 'Diário', week: 'Semanal', month: 'Mensal', year: 'Anual' };
-      const isTemporalGroup = GROUP_BY_TO_DIMENSION[groupBy]?.type === 'date';
+      const dim = resolveGroupDimension(groupBy, fieldCatalog);
+      const isTemporalGroup = dim?.type === 'date';
       const seasonalitySuffix = isTemporalGroup ? ` (${DATE_GROUPING_LABELS[dateGrouping]})` : '';
-      const generatedTitle = `${METRIC_LABELS[metric]} ${GROUP_LABELS[groupBy]}${seasonalitySuffix}`;
+      const groupLabel =
+        GROUP_LABELS[groupBy] ||
+        `por ${fieldCatalog.find((f) => f.source === 'native' && f.key === groupBy)?.label ?? groupBy}`;
+      const generatedTitle = `${METRIC_LABELS[metric]} ${groupLabel}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
   }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
