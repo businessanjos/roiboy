@@ -12,6 +12,8 @@ import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/f
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
+import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
+
 
 export interface AggregatedDataPoint {
   name: string;
@@ -879,12 +881,21 @@ async function fetchDealsData(
     filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any;
   }
 
-
+  // Custom fields selected as measure and/or dimension: inject their values so
+  // aggregation can read them like native columns.
+  if (isCustomFieldKey(measure.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, measure.field, 'deals');
+  }
+  if (isCustomFieldKey(dimension.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, dimension.field, 'deals');
+    return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
+  }
 
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(filteredData, measure);
   }
+
 
   // If grouping by MQL, fetch MQL field values and inject into deals
   if (dimension.field === 'mql') {
@@ -1273,11 +1284,22 @@ async function fetchLeadsData(
   }
 
 
+  // Custom fields as measure / dimension
+  if (isCustomFieldKey(measure.field)) {
+    allData = await enrichRecordsWithCustomField(allData as any, accountId, measure.field, 'leads') as any;
+  }
+  if (isCustomFieldKey(dimension.field)) {
+    allData = await enrichRecordsWithCustomField(allData as any, accountId, dimension.field, 'leads') as any;
+    return aggregateData(allData, measure, dimension, dateDisplayFormat);
+  }
 
   // For scorecard total with filter, return count after filtering
   if (dimension.field === '_total') {
+    if (isCustomFieldKey(measure.field)) return aggregateGlobalTotal(allData, measure);
     return [{ name: 'Total', value: allData.length }];
   }
+
+
 
   // If grouping by MQL, fetch MQL field values and inject into leads
   if (dimension.field === 'mql') {

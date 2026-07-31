@@ -234,7 +234,12 @@ export function VisualStudioDialog({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [chartType, dataSource]);
   const selectedDimension = dimensionFields.find((f) => f.value === dimensionField);
-  const isDimensionDate = selectedDimension?.type === 'date';
+  const selectedCustomDimension = fieldCatalog.find(
+    (f) => f.source !== 'native' && `${f.source}::${f.key}` === dimensionField
+  );
+  const isDimensionDate =
+    selectedDimension?.type === 'date' || selectedCustomDimension?.type === 'date';
+
 
   const isTable = chartType === 'data_table';
   const isGauge = chartType === 'gauge';
@@ -696,6 +701,7 @@ export function VisualStudioDialog({
                         aggregation={aggregation}
                         onFieldChange={setMeasureField}
                         onAggregationChange={setAggregation}
+                        catalog={fieldCatalog}
                       />
 
                       {needsDimension && (
@@ -707,7 +713,9 @@ export function VisualStudioDialog({
                             dateGrouping={dateGrouping}
                             onFieldChange={setDimensionField}
                             onDateGroupingChange={setDateGrouping}
+                            catalog={fieldCatalog}
                           />
+
 
                           <Separator />
                           <SegmentSection

@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { DataSource, DateGrouping, DATA_SOURCE_FIELDS, DATE_GROUPING_OPTIONS } from "./types";
+import { CatalogField } from "@/lib/insights/fieldRegistry";
 
 interface DimensionSectionProps {
   dataSource: DataSource | null;
@@ -14,6 +15,8 @@ interface DimensionSectionProps {
   dateGrouping: DateGrouping;
   onFieldChange: (field: string) => void;
   onDateGroupingChange: (grouping: DateGrouping) => void;
+  /** Full field catalog (native + custom) — enables custom fields as dimension */
+  catalog?: CatalogField[];
 }
 
 export function DimensionSection({
@@ -22,10 +25,24 @@ export function DimensionSection({
   dateGrouping,
   onFieldChange,
   onDateGroupingChange,
+  catalog,
 }: DimensionSectionProps) {
-  const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
+  const nativeFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
+  const customFields = (catalog || [])
+    .filter((f) => f.source !== 'native' && f.groupable)
+    .map((f) => ({
+      value: `${f.source}::${f.key}`,
+      label: f.label,
+      type: f.type === 'date' ? 'date' : 'text',
+      badge: f.source === 'deal_custom' ? 'negócio' : 'lead',
+    }));
+  const dimensionFields = [
+    ...nativeFields.map((f) => ({ ...f, badge: undefined as string | undefined })),
+    ...customFields,
+  ];
   const selectedField = dimensionFields.find((f) => f.value === field);
   const isDateField = selectedField?.type === 'date';
+
 
   return (
     <div className="space-y-4">
@@ -45,8 +62,12 @@ export function DimensionSection({
             {dimensionFields.map((option) => (
               <SelectItem key={option.value} value={option.value}>
                 {option.label}
+                {option.badge && (
+                  <span className="ml-1 text-xs text-muted-foreground">({option.badge})</span>
+                )}
               </SelectItem>
             ))}
+
           </SelectContent>
         </Select>
       </div>
