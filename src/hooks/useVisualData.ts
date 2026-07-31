@@ -98,7 +98,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           } else if (chartType === 'funnel') {
             result = await fetchTasksFunnelData(accountId, filters);
           } else {
-            result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat);
+            result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat, unifiedFilters);
           }
           break;
         case 'sales_history':
@@ -1636,27 +1636,39 @@ async function fetchTasksFunnelData(
   return result;
 }
 
-// Generic task data fetcher supporting all dimensions
+// Generic task (Atividades) data fetcher supporting all Pipedrive-style dimensions
 async function fetchTasksData(
   accountId: string,
   measure: VisualConfig['measure'],
   dimension: VisualConfig['dimension'],
   filters: any,
-  dateDisplayFormat: DateDisplayFormat
+  dateDisplayFormat: DateDisplayFormat,
+  unifiedFilters: VisualFilter[] = []
 ): Promise<AggregatedDataPoint[]> {
+  // The global date range applies to the date field being analysed (like Pipedrive,
+  // where you pick "Marcado como feito em" / "Data de criação" / "Data de vencimento").
+  const dateFieldCandidates = ['due_date', 'created_at', 'completed_at'];
+  const filterDateFields = unifiedFilters
+    .filter((f) => f.source === 'native' && dateFieldCandidates.includes(f.field))
+    .map((f) => f.field);
+  const rangeField = dateFieldCandidates.includes(dimension.field)
+    ? dimension.field
+    : filterDateFields[0] || 'due_date';
+
   let baseQuery = supabase
     .from('internal_tasks')
-    .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
+    .select(
+      'id, title, activity_type_id, completed_at, assigned_to, created_by, priority, due_date, created_at, deal_id, client_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)'
+    )
     .eq('account_id', accountId);
 
-  // Apply date filters on due_date
   if (filters.startDate) {
-    const startDate = filters.startDate.split('T')[0];
-    baseQuery = baseQuery.gte('due_date', startDate);
+    const startDate = rangeField === 'due_date' ? filters.startDate.split('T')[0] : filters.startDate;
+    baseQuery = baseQuery.gte(rangeField, startDate);
   }
   if (filters.endDate) {
-    const endDate = filters.endDate.split('T')[0];
-    baseQuery = baseQuery.lte('due_date', endDate);
+    const endDate = rangeField === 'due_date' ? filters.endDate.split('T')[0] : filters.endDate;
+    baseQuery = baseQuery.lte(rangeField, endDate);
   }
   if (filters.userId && filters.userId !== 'all') {
     baseQuery = baseQuery.eq('assigned_to', filters.userId);
@@ -1668,43 +1680,101 @@ async function fetchTasksData(
   const pageSize = 1000;
 
   while (true) {
-    const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+    const { data, error } = await baseQuery.order(rangeField, { ascending: false }).range(from, from + pageSize - 1);
     if (error) { console.error('Error fetching tasks:', error); return []; }
     allTasks = allTasks.concat(data || []);
     if (!data || data.length < pageSize) break;
     from += pageSize;
   }
 
+  // Resolve related labels (responsável, criador, negócio, pessoa de contato)
+  const userIds = Array.from(new Set(allTasks.flatMap((t) => [t.assigned_to, t.created_by]).filter(Boolean)));
+  const dealIds = Array.from(new Set(allTasks.map((t) => t.deal_id).filter(Boolean)));
+  const clientIds = Array.from(new Set(allTasks.map((t) => t.client_id).filter(Boolean)));
+  const leadIds = Array.from(new Set(allTasks.map((t) => t.lead_id).filter(Boolean)));
+
+  const [usersRes, dealsRes, clientsRes, leadsRes] = await Promise.all([
+    userIds.length ? supabase.from('users').select('id, name').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
+    dealIds.length ? supabase.from('deals').select('id, title').in('id', dealIds) : Promise.resolve({ data: [] as any[] }),
+    clientIds.length ? supabase.from('clients').select('id, name').in('id', clientIds) : Promise.resolve({ data: [] as any[] }),
+    leadIds.length ? supabase.from('leads').select('id, name').in('id', leadIds) : Promise.resolve({ data: [] as any[] }),
+  ]);
+
+  const userNames = new Map((usersRes.data || []).map((u: any) => [u.id, u.name]));
+  const dealTitles = new Map((dealsRes.data || []).map((d: any) => [d.id, d.title]));
+  const clientNames = new Map((clientsRes.data || []).map((c: any) => [c.id, c.name]));
+  const leadNames = new Map((leadsRes.data || []).map((l: any) => [l.id, l.name]));
+
+  const priorityLabels: Record<string, string> = {
+    low: 'Baixa', medium: 'Média', high: 'Alta', urgent: 'Urgente',
+  };
+  const todayStr = new Date().toISOString().split('T')[0];
+
+  // Flatten computed dimensions so filters and grouping read the same values
+  const rows = allTasks.map((t) => ({
+    ...t,
+    activity_type: (t.activity_types as any)?.name || 'Sem Tipo',
+    assigned_to_name: userNames.get(t.assigned_to) || 'Sem Responsável',
+    created_by_name: userNames.get(t.created_by) || 'Sem Criador',
+    status_label: t.completed_at ? 'Concluída' : 'Pendente',
+    priority_label: priorityLabels[t.priority] || 'Sem Prioridade',
+    overdue_label: t.completed_at
+      ? 'Concluída'
+      : !t.due_date
+        ? 'Sem Vencimento'
+        : t.due_date < todayStr
+          ? 'Em atraso'
+          : 'A vencer',
+    deal_title_label: dealTitles.get(t.deal_id) || 'Sem Negócio',
+    contact_name_label: clientNames.get(t.client_id) || leadNames.get(t.lead_id) || 'Sem Contato',
+  }));
+
+  // Unified (Pipedrive-style) filters
+  let filtered = rows;
+  for (const f of unifiedFilters) {
+    if (f.source !== 'native') continue;
+    const readValue = (r: any): string | null => {
+      const v = readTaskDimension(r, f.field);
+      return v ?? null;
+    };
+    filtered = filtered.filter((r) => {
+      const value = readValue(r);
+      const set = new Set((f.values || []).map((v) => v.toLowerCase()));
+      const lower = value?.toLowerCase() ?? null;
+      switch (f.operator) {
+        case 'is':
+        case 'is_any':
+          return set.size === 0 || (lower !== null && set.has(lower));
+        case 'is_not':
+          return set.size === 0 || lower === null || !set.has(lower);
+        case 'is_empty':
+          return lower === null;
+        case 'is_set':
+          return lower !== null;
+        default:
+          return true;
+      }
+    });
+  }
+
   // Scorecard (global total)
   if (dimension.field === '_total') {
-    return [{ name: 'Total', value: allTasks.length, count: allTasks.length }];
+    return [{ name: 'Total', value: filtered.length, count: filtered.length }];
   }
 
   // Group by dimension
   const groups = new Map<string, number>();
 
-  for (const task of allTasks) {
+  for (const task of filtered) {
     let groupKey: string;
 
-    switch (dimension.field) {
-      case 'activity_type':
-        groupKey = (task.activity_types as any)?.name || 'Sem Tipo';
-        break;
-      case 'assigned_to':
-        groupKey = (task.users as any)?.name || 'Sem Responsável';
-        break;
-      case 'status':
-        groupKey = task.completed_at ? 'Concluída' : 'Pendente';
-        break;
-      case 'due_date':
-      case 'created_at': {
-        const dateVal = task[dimension.field];
-        if (!dateVal) { groupKey = 'Sem Data'; break; }
-        groupKey = formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat);
-        break;
-      }
-      default:
-        groupKey = 'Outros';
+    if (dateFieldCandidates.includes(dimension.field)) {
+      const dateVal = (task as any)[dimension.field];
+      groupKey = dateVal
+        ? formatDateGroup(dateVal, dimension.dateGrouping || 'month', dateDisplayFormat)
+        : 'Sem Data';
+    } else {
+      groupKey = readTaskDimension(task, dimension.field) || 'Outros';
     }
 
     groups.set(groupKey, (groups.get(groupKey) || 0) + 1);
@@ -1724,6 +1794,26 @@ async function fetchTasksData(
 
   return result;
 }
+
+// Reads a task dimension value from a flattened task row
+function readTaskDimension(task: any, field: string): string | null {
+  switch (field) {
+    case 'activity_type': return task.activity_type;
+    case 'assigned_to': return task.assigned_to_name;
+    case 'created_by': return task.created_by_name;
+    case 'status': return task.status_label;
+    case 'priority': return task.priority_label;
+    case 'overdue_status': return task.overdue_label;
+    case 'deal_title': return task.deal_title_label;
+    case 'contact_name': return task.contact_name_label;
+    case 'title': return task.title || 'Sem Assunto';
+    default: {
+      const raw = task?.[field];
+      return raw === null || raw === undefined || raw === '' ? null : String(raw);
+    }
+  }
+}
+
 
 // Fetch tasks data for Call Comercial visual (legacy, used by call_commercial chart type)
 async function fetchTasksCallCommercialData(

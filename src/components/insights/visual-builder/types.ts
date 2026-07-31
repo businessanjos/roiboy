@@ -483,13 +483,21 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
   tasks: {
     numeric: [],
     dimension: [
-      { value: 'activity_type', label: 'Tipo de Atividade', type: 'text' },
-      { value: 'assigned_to', label: 'Vendedor', type: 'text' },
+      { value: 'title', label: 'Assunto', type: 'text' },
+      { value: 'activity_type', label: 'Tipo', type: 'text' },
+      { value: 'assigned_to', label: 'Usuário responsável', type: 'text' },
+      { value: 'created_by', label: 'Criador', type: 'text' },
       { value: 'status', label: 'Status (Pendente/Concluída)', type: 'text' },
+      { value: 'priority', label: 'Prioridade', type: 'text' },
+      { value: 'overdue_status', label: 'Em atraso/A vencer', type: 'text' },
+      { value: 'deal_title', label: 'Negócio', type: 'text' },
+      { value: 'contact_name', label: 'Pessoa de contato', type: 'text' },
       { value: 'due_date', label: 'Data de Vencimento', type: 'date' },
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
+      { value: 'completed_at', label: 'Marcado como feito em', type: 'date' },
     ],
   },
+
   sales_history: {
     numeric: [
       { value: 'sale_value', label: 'Valor da Venda', type: 'numeric' },
