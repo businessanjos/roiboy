@@ -816,6 +816,9 @@ async function fetchDealsData(
   // Apply date filters on the correct field
   const effectiveStartDate = explicitDateBounds?.from || filters.startDate;
   const effectiveEndDate = explicitDateBounds?.to || filters.endDate;
+  const aggregationDimension = explicitDateFilter && dimension.type === 'date'
+    ? { ...dimension, field: explicitDateFilter.field }
+    : dimension;
   if (effectiveStartDate) {
     const startValue = /^\d{4}-\d{2}-\d{2}$/.test(effectiveStartDate)
       ? `${effectiveStartDate}T00:00:00.000`
@@ -878,13 +881,13 @@ async function fetchDealsData(
   // If grouping by MQL, fetch MQL field values and inject into deals
   if (dimension.field === 'mql') {
     const enrichedData = await enrichDealsWithMql(accountId, filteredData);
-    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
+    return aggregateData(enrichedData, measure, aggregationDimension, dateDisplayFormat);
   }
 
   // If grouping by Canal, fetch Canal de Venda custom field and inject into deals
   if (dimension.field === 'canal') {
     const enrichedData = await enrichDealsWithCanal(accountId, filteredData);
-    return aggregateData(enrichedData, measure, dimension, dateDisplayFormat);
+    return aggregateData(enrichedData, measure, aggregationDimension, dateDisplayFormat);
   }
 
   // If grouping by Product, fetch Item da Venda custom field and resolve product names
@@ -897,7 +900,7 @@ async function fetchDealsData(
   // Enrich deals with "Valor Recebido da Venda" custom field for tiebreaker
   const enrichedWithEntryValue = await enrichDealsWithReceivedValue(accountId, filteredData);
 
-  return aggregateData(enrichedWithEntryValue, measure, dimension, dateDisplayFormat);
+  return aggregateData(enrichedWithEntryValue, measure, aggregationDimension, dateDisplayFormat);
 }
 
 // Calculate conversion rate as (won deals / total deals) * 100
