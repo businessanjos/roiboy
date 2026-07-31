@@ -1231,6 +1231,13 @@ async function fetchLeadsData(
     allData = allData.filter(lead => matchingLeadIds.has(lead.id));
   }
 
+  // Apply unified (Pipedrive-style) filters
+  if (unifiedFilters && unifiedFilters.length > 0) {
+    allData = await applyVisualFilters(allData as any, accountId, unifiedFilters, 'leads') as any;
+  }
+
+
+
   // For scorecard total with filter, return count after filtering
   if (dimension.field === '_total') {
     return [{ name: 'Total', value: allData.length }];
