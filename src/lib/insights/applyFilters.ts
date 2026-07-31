@@ -207,3 +207,16 @@ export function describeFilter(filter: VisualFilter): string {
   const op = filter.operator === 'is_not' ? 'não é' : filter.operator === 'is_any' ? 'é qualquer' : 'é';
   return `${filter.label} ${op} ${filter.values.join(', ')}`;
 }
+
+/**
+ * Filters already mirrored into the legacy lead/deal filter arrays are applied
+ * by the existing engine. This returns only the ones that still need explicit
+ * evaluation (native fields and negative/emptiness operators).
+ */
+export function selectUnmirroredFilters(filters: VisualFilter[] | undefined): VisualFilter[] {
+  if (!filters?.length) return [];
+  return filters.filter((f) => {
+    if (f.source === 'native') return true;
+    return !(f.operator !== 'is_not' && operatorNeedsValues(f.operator));
+  });
+}
