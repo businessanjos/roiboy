@@ -5,7 +5,7 @@ export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
-export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature';
+export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature' | 'gold' | 'midnight' | 'emerald' | 'ember' | 'slate' | 'ocean' | 'blush';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
 export type FontScale = 'small' | 'normal' | 'large' | 'xlarge' | 'xxlarge';
 
@@ -481,6 +481,14 @@ export const COLOR_PALETTES: Record<ColorPalette, string[]> = {
   vibrant: ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#22d3ee'],
   alert: ['#dc2626', '#ea580c', '#f59e0b', '#fbbf24', '#fcd34d'],
   nature: ['#16a34a', '#22c55e', '#4ade80', '#86efac', '#a3e635'],
+  // Elegantes
+  gold: ['#c9a84c', '#e0c273', '#f0d78c', '#8a6f2e', '#4a3c1a'],
+  midnight: ['#4f46e5', '#6366f1', '#818cf8', '#312e81', '#1e1b4b'],
+  emerald: ['#0d7a5f', '#10b981', '#34d399', '#064e3b', '#c9a84c'],
+  ember: ['#e85d3a', '#f2865f', '#f7b295', '#7c2d12', '#4a4a4a'],
+  slate: ['#334155', '#475569', '#64748b', '#94a3b8', '#cbd5e1'],
+  ocean: ['#0c2340', '#1a4a6e', '#2d8a9e', '#5cbdb9', '#a5e0dd'],
+  blush: ['#9b72cf', '#c9a0dc', '#e8c5d0', '#c45c7c', '#6d4a8a'],
 };
 
 // Color palette options for UI
@@ -490,7 +498,15 @@ export const COLOR_PALETTE_OPTIONS: { value: ColorPalette; label: string }[] = [
   { value: 'vibrant', label: 'Vibrante' },
   { value: 'alert', label: 'Alerta' },
   { value: 'nature', label: 'Natureza' },
+  { value: 'gold', label: 'Ouro' },
+  { value: 'midnight', label: 'Meia-noite' },
+  { value: 'emerald', label: 'Esmeralda' },
+  { value: 'ember', label: 'Brasa' },
+  { value: 'slate', label: 'Grafite' },
+  { value: 'ocean', label: 'Oceano' },
+  { value: 'blush', label: 'Lavanda' },
 ];
+
 
 // Display scale options for scorecards
 export const DISPLAY_SCALE_OPTIONS: { value: DisplayScale; label: string }[] = [
