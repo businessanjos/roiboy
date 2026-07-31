@@ -46,6 +46,7 @@ import {
   FontScale,
   DisplayScale,
   FieldFilter,
+  VisualFilter,
   getLeadFilters,
   getDealFilters,
   DEFAULT_APPEARANCE,
