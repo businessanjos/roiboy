@@ -104,8 +104,9 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
           {displayValue}
         </text>
       </svg>
-      <p className="font-medium text-foreground mt-1" style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
-      {sublabel && <p className="text-muted-foreground" style={{ fontSize: `${Math.round(12 * fontScale)}px` }}>{sublabel}</p>}
+      <p className="font-medium text-foreground mt-1 max-w-full truncate whitespace-nowrap" title={label} style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
+      {sublabel && <p className="text-muted-foreground max-w-full truncate whitespace-nowrap tabular-nums" title={sublabel} style={{ fontSize: `${Math.round(12 * fontScale)}px` }}>{sublabel}</p>}
+
     </div>
   );
 }
