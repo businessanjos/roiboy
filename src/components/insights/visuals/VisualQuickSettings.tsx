@@ -233,6 +233,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setLeadFilters(config ? getLeadFilters(config) : []);
       setDealFilters(config ? getDealFilters(config) : []);
       setDealStatusFilter(config?.dealStatusFilter ?? []);
+      setVisualFilters(config?.filters ?? []);
       setTableColumns(config?.tableConfig?.columns ?? []);
       setSeriesColors(config?.seriesColors ?? {});
       setStackByCustomField(config?.stackByCustomField || null);
