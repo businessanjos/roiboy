@@ -102,7 +102,87 @@ export interface VisualConfig {
     startDate: string; // ISO string
     endDate: string;   // ISO string
   };
+  // Unified Pipedrive-style filters (Campo · Operador · Valor). When present,
+  // this supersedes the legacy lead/deal field filter arrays.
+  filters?: VisualFilter[];
+  // Unified segmentation ("Segmentar por") descriptor
+  segmentBy?: SegmentBy;
 }
+
+// ---------------------------------------------------------------------------
+// Unified filter model ("Campo · Operador · Valor") — Pipedrive-style builder
+// ---------------------------------------------------------------------------
+
+export type FilterFieldSource = 'native' | 'deal_custom' | 'lead_custom';
+
+export type FilterOperator =
+  | 'is'          // equals a single value
+  | 'is_any'      // matches any of the selected values
+  | 'is_not'      // matches none of the selected values
+  | 'is_empty'
+  | 'is_set'
+  | 'gt'
+  | 'lt'
+  | 'between';    // numbers and dates
+
+export interface VisualFilter {
+  id: string;
+  source: FilterFieldSource;
+  /** Native field key (e.g. "canal") or custom field UUID */
+  field: string;
+  label: string;
+  type: 'text' | 'number' | 'date';
+  operator: FilterOperator;
+  /** Selected labels for text fields */
+  values: string[];
+  /** Bounds for date/number operators */
+  from?: string;
+  to?: string;
+}
+
+export interface SegmentBy {
+  source: FilterFieldSource;
+  field: string;
+  label: string;
+}
+
+export const TEXT_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: 'is', label: 'é' },
+  { value: 'is_any', label: 'é qualquer' },
+  { value: 'is_not', label: 'não é' },
+  { value: 'is_empty', label: 'está vazio' },
+  { value: 'is_set', label: 'está preenchido' },
+];
+
+export const NUMBER_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: 'is', label: 'é' },
+  { value: 'gt', label: 'maior que' },
+  { value: 'lt', label: 'menor que' },
+  { value: 'between', label: 'entre' },
+];
+
+export const DATE_OPERATORS: { value: FilterOperator; label: string }[] = [
+  { value: 'between', label: 'entre' },
+  { value: 'is_empty', label: 'está vazio' },
+  { value: 'is_set', label: 'está preenchido' },
+];
+
+export function operatorsForType(type: VisualFilter['type']) {
+  if (type === 'number') return NUMBER_OPERATORS;
+  if (type === 'date') return DATE_OPERATORS;
+  return TEXT_OPERATORS;
+}
+
+export function operatorNeedsValues(operator: FilterOperator) {
+  return operator !== 'is_empty' && operator !== 'is_set';
+}
+
+let filterIdSeq = 0;
+export function newFilterId(): string {
+  filterIdSeq += 1;
+  return `f${Date.now().toString(36)}${filterIdSeq}`;
+}
+
 
 // Special virtual field id used to filter deals by their creation date
 export const DEAL_CREATED_AT_FIELD_ID = '__deal_created_at__';
