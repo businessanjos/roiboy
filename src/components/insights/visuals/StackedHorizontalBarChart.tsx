@@ -218,58 +218,81 @@ export function StackedHorizontalBarChart({
   }
 
 
-  // Horizontal layout (original)
-  const barHeight = 40;
-  const minHeight = 300;
-  const calculatedHeight = Math.max(minHeight, data.length * barHeight + 80);
+  // Horizontal layout
+  const tickFont = Math.round(11 * m);
+  const barHeight = Math.round(30 * m);
+  const longestLabel = data.reduce((max, d) => Math.max(max, String(d.name ?? '').length), 0);
+  const yWidth = Math.round(Math.min(180, Math.max(70, longestLabel * tickFont * 0.58 + 12)));
+  // legenda pode quebrar em várias linhas: reserva altura por linha estimada
+  const legendChars = seriesKeys.reduce((s, k) => s + k.length + 6, 0);
+  const legendLines = Math.max(1, Math.ceil((legendChars * tickFont * 0.55) / 520));
+  const legendHeight = seriesKeys.length > 1 ? legendLines * Math.round(20 * m) + 8 : 0;
+  const chartHeight = data.length * barHeight + legendHeight + Math.round(48 * m);
 
   return (
-    <ResponsiveContainer width="100%" height={calculatedHeight}>
-      <BarChart
-        layout="vertical"
-        data={data}
-        margin={{ top: 10, right: 30, left: 0, bottom: 10 }}
-      >
-        <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
-        <XAxis
-          type="number"
-          tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-          tick={{ fontSize: Math.round(11 * m) }}
-          className="text-muted-foreground"
-        />
-        <YAxis
-          dataKey="name"
-          type="category"
-          tick={{ fontSize: Math.round(11 * m) }}
-          className="text-muted-foreground"
-          width={90}
-          interval={0}
-        />
-        <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
-        {seriesKeys.length >= 1 && (
-          <Legend
-            verticalAlign="top"
-            height={36}
-            wrapperStyle={{ fontSize: Math.round(12 * m) }}
-          />
-        )}
-        {seriesKeys.map((key, index) => (
-          <Bar
-            key={key}
-            dataKey={key}
-            stackId="stack"
-            fill={getSeriesColor(key, index)}
-            radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
+    <div className="h-full w-full overflow-y-auto overflow-x-hidden">
+      <div style={{ height: chartHeight, minHeight: '100%' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart
+            layout="vertical"
+            data={data}
+            margin={{ top: 4, right: 28, left: 0, bottom: 4 }}
+            barCategoryGap="22%"
           >
-            {safeAppearance.showDataLabels && (
-              <LabelList
-                dataKey={key}
-                content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} horizontal={false} />
+            <XAxis
+              type="number"
+              tickFormatter={(value) => formatValueCompact(value, safeFormatting.type)}
+              tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={{ stroke: 'hsl(var(--border))' }}
+              height={22}
+            />
+            <YAxis
+              dataKey="name"
+              type="category"
+              tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+              tickLine={false}
+              axisLine={false}
+              width={yWidth}
+              interval={0}
+            />
+            <Tooltip cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.25 }} content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
+            {seriesKeys.length > 1 && (
+              <Legend
+                verticalAlign="top"
+                align="center"
+                height={legendHeight}
+                iconSize={9}
+                wrapperStyle={{
+                  fontSize: tickFont,
+                  color: 'hsl(var(--muted-foreground))',
+                  paddingBottom: 6,
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                }}
               />
             )}
-          </Bar>
-        ))}
-      </BarChart>
-    </ResponsiveContainer>
+            {seriesKeys.map((key, index) => (
+              <Bar
+                key={key}
+                dataKey={key}
+                stackId="stack"
+                fill={getSeriesColor(key, index)}
+                radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
+              >
+                {safeAppearance.showDataLabels && (
+                  <LabelList
+                    dataKey={key}
+                    content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
+                  />
+                )}
+              </Bar>
+            ))}
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
   );
 }
+
