@@ -326,7 +326,7 @@ async function calculateSalesCycle(
   }
 
   if (dimension.type === 'date') {
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) => compareDateLabels(a.name, b.name));
   } else {
     result.sort((a, b) => a.value - b.value);
   }
@@ -1103,7 +1103,7 @@ async function calculateConversionRateByPeriod(
   }));
 
   // Sort by period name for chronological order
-  result.sort((a, b) => a.name.localeCompare(b.name));
+  result.sort((a, b) => compareDateLabels(a.name, b.name));
 
   return result;
 }
@@ -1363,7 +1363,7 @@ function aggregateData(
 
   // Sort results: primary by value, tiebreaker by secondaryValue (entry_value)
   if (dimension.type === 'date') {
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) => compareDateLabels(a.name, b.name));
   } else {
     result.sort((a, b) => {
       const diff = b.value - a.value;
@@ -1862,7 +1862,7 @@ async function fetchTasksData(
   }));
 
   if (dimension.type === 'date') {
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) => compareDateLabels(a.name, b.name));
   } else {
     result.sort((a, b) => b.value - a.value);
   }
@@ -2035,7 +2035,7 @@ async function fetchRoyZappData(
     result.push({ name, value, count });
   }
 
-  if (dimension.type === 'date') result.sort((a, b) => a.name.localeCompare(b.name));
+  if (dimension.type === 'date') result.sort((a, b) => compareDateLabels(a.name, b.name));
   else result.sort((a, b) => b.value - a.value);
 
   return result;
@@ -2107,7 +2107,7 @@ async function fetchSalesHistoryData(
   }
 
   if (dimension.type === 'date') {
-    result.sort((a, b) => a.name.localeCompare(b.name));
+    result.sort((a, b) => compareDateLabels(a.name, b.name));
   } else {
     result.sort((a, b) => b.value - a.value);
   }
