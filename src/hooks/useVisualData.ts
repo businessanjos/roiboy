@@ -78,12 +78,15 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           ? ['open']
           : dealStatusFilter;
 
+      // Unified (Pipedrive-style) filters that the legacy engine can't express
+      const unifiedFilters = selectUnmirroredFilters(config.filters);
+
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter);
+          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter, unifiedFilters);
           break;
         case 'leads':
-          result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
+          result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter, unifiedFilters);
           break;
         case 'products':
           result = await fetchProductsData(accountId, measure, dimension, filters, dateDisplayFormat);
