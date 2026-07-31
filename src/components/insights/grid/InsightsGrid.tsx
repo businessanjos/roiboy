@@ -190,7 +190,7 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
   return (
-    <div className={fitHeight ? "flex flex-col gap-3 h-full min-h-0" : "flex flex-col gap-3"}>
+    <div className={fitHeight ? "flex flex-col gap-4 h-full min-h-0" : "flex flex-col gap-3"}>
       {rows.map((row, rowIdx) => (
         <ResponsiveRow
           key={rowIdx}
@@ -220,7 +220,11 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   // How many columns the auto-fit grid will actually create at this width.
   // Used only to translate col_span (1/1, 1/2, 1/3) into a real column span.
-  const fitMinWidth = fitHeight ? Math.min(minWidth, 200) : minWidth;
+  // Na TV cards largos são mais legíveis do que muitos cards estreitos.
+  const fitMinWidth = fitHeight
+    ? (row.isAllScorecards ? 210 : row.isAllCompact ? 320 : 430)
+    : minWidth;
+
   const effectiveCols = Math.max(
     1,
     Math.min(visuals.length, Math.floor((containerWidth + GRID_GAP) / (fitMinWidth + GRID_GAP)) || 1)
@@ -228,7 +232,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   return (
     <div
-      className={fitHeight ? "grid gap-3 min-h-0" : "grid gap-3"}
+      className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
       style={{
         gridTemplateColumns: `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight

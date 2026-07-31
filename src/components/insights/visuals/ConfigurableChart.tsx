@@ -29,6 +29,8 @@ import { ConfigurableTable } from "./ConfigurableTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
+import { useTvMode } from "../TvModeContext";
+
 
 interface AggregatedDataPoint {
   name: string;
@@ -76,8 +78,31 @@ function getMeasureLabel(visualConfig?: VisualConfig): string | undefined {
   return measure.aggregation === 'sum' ? fieldLabel : `${aggLabel} de ${fieldLabel}`;
 }
 
-export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
-  const config = appearance || DEFAULT_APPEARANCE;
+/** Categorias demais viram ruído na TV: mantém o topo e agrupa o resto em "Outros". */
+function capCategories(data: AggregatedDataPoint[], max: number): AggregatedDataPoint[] {
+  if (!data || max <= 0 || data.length <= max) return data;
+  const sorted = [...data].sort((a, b) => (b.value || 0) - (a.value || 0));
+  const top = sorted.slice(0, max - 1);
+  const rest = sorted.slice(max - 1);
+  const others = rest.reduce(
+    (acc, d) => ({ ...acc, value: acc.value + (d.value || 0), count: (acc.count || 0) + (d.count || 0) }),
+    { name: 'Outros', value: 0, count: 0 } as AggregatedDataPoint
+  );
+  return [...top, others];
+}
+
+export function ConfigurableChart({ type, data: rawData, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
+  const tv = useTvMode();
+  const baseConfig = appearance || DEFAULT_APPEARANCE;
+  // Na TV o gráfico é lido de longe: rótulos de valor sempre visíveis.
+  const config: AppearanceConfig = tv.tv ? { ...baseConfig, showDataLabels: true } : baseConfig;
+
+  const isDateDimension = !!(visualConfig?.dimension as any)?.granularity;
+  const cappable = type === 'bar' || type === 'bar_horizontal' || type === 'pie';
+  const data =
+    tv.tv && cappable && !isDateDimension ? capCategories(rawData, tv.maxCategories) : rawData;
+
+
   
   if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
@@ -176,7 +201,8 @@ function BarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const tickFont = Math.round(10 * m);
@@ -227,7 +253,7 @@ function BarChartView({
           <Bar 
             dataKey="value" 
             radius={[6, 6, 0, 0]}
-            maxBarSize={64}
+            maxBarSize={tv.tv ? 120 : 64}
             onClick={(data) => onDrilldown?.(data.name)}
             style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
           >
@@ -263,7 +289,7 @@ function BarChartView({
 }
 
 function HorizontalBarChartView({ 
-  data, 
+  data: allData, 
   formatting, 
   appearance,
   onDrilldown 
@@ -274,35 +300,41 @@ function HorizontalBarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const tickFont = Math.round(11 * m);
   const rowHeight = Math.max(26, Math.round(26 * m));
   const axisArea = 34;
 
-  // Altura mínima por barra: se não couber, o card rola verticalmente
-  const needed = data.length * rowHeight + axisArea;
-  const scroll = height > 0 && needed > height;
+  // Na TV não há rolagem: mostramos apenas as linhas que cabem na altura do card.
+  const maxRows = tv.tv && height > 0 ? Math.max(3, Math.floor((height - axisArea) / rowHeight)) : Infinity;
+  const rows = allData.length > maxRows ? allData.slice(0, maxRows) : allData;
+
+  // Altura mínima por barra: se não couber, o card rola verticalmente (fora da TV)
+  const needed = rows.length * rowHeight + axisArea;
+  const scroll = !tv.tv && height > 0 && needed > height;
   const chartHeight = scroll ? needed : '100%';
 
-  const longest = data.reduce((a, d) => Math.max(a, String(d.name ?? '').length), 0);
-  const maxLabelWidth = Math.max(70, Math.min(width * 0.34, 200));
+  const longest = rows.reduce((a, d) => Math.max(a, String(d.name ?? '').length), 0);
+  const maxLabelWidth = Math.max(70, Math.min(width * (tv.tv ? 0.3 : 0.34), tv.tv ? 300 : 200));
   const maxChars = Math.max(6, Math.floor(maxLabelWidth / (tickFont * 0.58)));
   const yWidth = Math.min(maxLabelWidth, approxTextWidth('x'.repeat(Math.min(longest, maxChars)), tickFont) + 12);
 
-  const maxValueText = data.reduce(
+  const maxValueText = rows.reduce(
     (a, d) => Math.max(a, formatValueCompact(d.value, formatting.type).length),
     0
   );
   const rightMargin = appearance.showDataLabels
-    ? Math.min(140, Math.round(maxValueText * tickFont * 0.62) + 16)
+    ? Math.min(200, Math.round(maxValueText * tickFont * 0.62) + 16)
     : 16;
 
   return (
     <div ref={ref} className={`h-full w-full ${scroll ? 'overflow-y-auto overflow-x-hidden' : ''}`}>
       <ResponsiveContainer width="100%" height={chartHeight}>
-        <BarChart layout="vertical" data={data} margin={{ top: 8, right: rightMargin, left: 4, bottom: 8 }} barCategoryGap="22%">
+        <BarChart layout="vertical" data={rows} margin={{ top: 8, right: rightMargin, left: 4, bottom: 8 }} barCategoryGap="22%">
+
           <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             type="number"
@@ -325,7 +357,7 @@ function HorizontalBarChartView({
           <Bar 
             dataKey="value" 
             radius={[0, 6, 6, 0]}
-            maxBarSize={28}
+            maxBarSize={tv.tv ? 46 : 28}
             onClick={(data) => onDrilldown?.(data.name)}
             style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
           >
@@ -337,7 +369,7 @@ function HorizontalBarChartView({
                 style={{ fontSize: tickFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}
               />
             )}
-            {data.map((entry, index) => (
+            {rows.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={entry.color || colors[index % colors.length]}
@@ -363,7 +395,8 @@ function LineChartView({
 }) {
   const colors = getChartColors(appearance.colorPalette);
   const primaryColor = colors[0];
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width } = useChartSize();
 
   const tickFont = Math.round(10 * m);
@@ -410,7 +443,7 @@ function LineChartView({
             type="monotone"
             dataKey="value"
             stroke={primaryColor}
-            strokeWidth={2.5}
+            strokeWidth={tv.tv ? 4 : 2.5}
             dot={data.length > 40 ? false : { r: 3, fill: primaryColor, strokeWidth: 0 }}
             activeDot={{ r: 6, fill: primaryColor, onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
           >
@@ -452,7 +485,8 @@ function PieChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const compact = width > 0 && (width < 320 || height < 240 || data.length > 6);

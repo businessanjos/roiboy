@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2 } from "lucide-react";
+import { Trash2, Tv } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -25,6 +25,7 @@ import { FilterSection } from "./visual-builder/FilterSection";
 import { AppearanceSection } from "./visual-builder/AppearanceSection";
 import { FormattingSection } from "./visual-builder/FormattingSection";
 import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
+import { TvModeProvider } from "./TvModeContext";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 import {
@@ -330,6 +331,8 @@ export function VisualStudioDialog({
   const [debouncedConfig, setDebouncedConfig] = useState<VisualConfig | null>(config);
   const [debouncedType, setDebouncedType] = useState<ChartType>(chartType);
   const [isPreviewStale, setIsPreviewStale] = useState(false);
+  // Prévia no mesmo formato do painel de TV (16:9, fontes ampliadas).
+  const [tvPreview, setTvPreview] = useState(false);
 
   useEffect(() => {
     setIsPreviewStale(true);
@@ -586,20 +589,43 @@ export function VisualStudioDialog({
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col bg-muted/30 p-6">
-            <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
-              Prévia ao vivo
-              {isPreviewStale && (
-                <span className="normal-case tracking-normal text-[11px] text-muted-foreground/70">
-                  atualizando…
-                </span>
-              )}
-            </p>
+            <div className="mb-3 flex items-center justify-between gap-2">
+              <p className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Prévia ao vivo
+                {isPreviewStale && (
+                  <span className="normal-case tracking-normal text-[11px] text-muted-foreground/70">
+                    atualizando…
+                  </span>
+                )}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                variant={tvPreview ? 'default' : 'outline'}
+                className="h-7 gap-1.5 text-xs"
+                onClick={() => setTvPreview((v) => !v)}
+              >
+                <Tv className="h-3.5 w-3.5" />
+                {tvPreview ? 'Modo TV' : 'Ver como na TV'}
+              </Button>
+            </div>
             <div className="min-h-0 flex-1">
               {debouncedConfig ? (
-                <div className={cn('h-full [&>*]:h-full transition-opacity', isPreviewStale && 'opacity-60')}>
-                  <ConfigurableVisualCard visual={previewVisual as any} readOnly />
-                </div>
-
+                tvPreview ? (
+                  <div className="flex h-full items-center justify-center">
+                    <div className="aspect-video w-full max-h-full overflow-hidden rounded-xl border border-border/60 bg-card/40 p-4 shadow-lg">
+                      <TvModeProvider>
+                        <div className={cn('h-full [&>*]:h-full transition-opacity', isPreviewStale && 'opacity-60')}>
+                          <ConfigurableVisualCard visual={previewVisual as any} readOnly />
+                        </div>
+                      </TvModeProvider>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={cn('h-full [&>*]:h-full transition-opacity', isPreviewStale && 'opacity-60')}>
+                    <ConfigurableVisualCard visual={previewVisual as any} readOnly />
+                  </div>
+                )
               ) : (
                 <div className="flex h-full items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
                   Escolha uma fonte de dados para ver a prévia.

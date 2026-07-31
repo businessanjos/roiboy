@@ -1,6 +1,8 @@
 import { forwardRef } from "react";
 import { AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { formatValueCompact } from "@/lib/formula-evaluator";
+import { useTvMode } from "../TvModeContext";
+import { useChartSize } from "./useChartSize";
 
 interface AggregatedDataPoint {
   name: string;
@@ -24,7 +26,16 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
 ) {
   const config = appearance || DEFAULT_APPEARANCE;
   const colors = COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional;
-  const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'] * tv.scale;
+  const { ref: sizeRef, height } = useChartSize();
+
+  // Altura das barras cabe sempre no card: nada de etapa cortada no rodapé.
+  const steps = Math.max(data?.length || 1, 1);
+  const available = Math.max(height - 16, 0);
+  const barHeight = available
+    ? Math.max(22, Math.min(Math.round(48 * m), Math.floor(available / steps) - 6))
+    : Math.round(40 * m);
 
   if (!data || data.length === 0) {
     return (
@@ -47,7 +58,8 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   const maxValue = cumulativeCounts[0] || 1;
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
+    <div ref={ref} className="h-full w-full">
+      <div ref={sizeRef} className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
         const widthPct = Math.max((Math.sqrt(cumValue) / Math.sqrt(maxValue)) * 100, 15);
@@ -62,13 +74,13 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
 
         return (
           <div key={item.name} className="w-full flex justify-center items-center">
-            <div className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: '120px' }}>
-              <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+            <div className="flex items-center gap-1.5" style={{ width: `${widthPct}%`, minWidth: `${Math.round(160 * m)}px` }}>
+              <span className="text-xs font-semibold text-muted-foreground text-right shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
                 {stagePct}%
               </span>
               <div
-                className="h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
-                style={{ backgroundColor: bgColor }}
+                className="rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
+                style={{ backgroundColor: bgColor, height: barHeight }}
               >
                 <span className="text-sm font-medium text-white truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   {item.name}
@@ -77,7 +89,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                   {formatValueCompact(cumValue, formatting.type)}
                 </span>
               </div>
-              <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
                 {overallPct}%
               </span>
             </div>
@@ -91,13 +103,13 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
         const ganhosWidthPct = Math.max((Math.sqrt(ganhosItem.value) / Math.sqrt(maxValue)) * 100, 15);
         return (
           <div className="w-full flex justify-center items-center">
-            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: '120px' }}>
-              <span className="text-xs font-semibold text-muted-foreground w-10 text-right shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+            <div className="flex items-center gap-1.5" style={{ width: `${ganhosWidthPct}%`, minWidth: `${Math.round(160 * m)}px` }}>
+              <span className="text-xs font-semibold text-muted-foreground text-right shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
                 {ganhosStagePct}%
               </span>
               <div
-                className="h-10 rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden"
-                style={{ backgroundColor: '#10b981' }}
+                className="rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden"
+                style={{ backgroundColor: '#10b981', height: barHeight }}
               >
                 <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   🏆 {ganhosItem.name}
@@ -106,13 +118,14 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                   {formatValueCompact(ganhosItem.value, formatting.type)}
                 </span>
               </div>
-              <span className="text-xs font-semibold text-muted-foreground w-10 shrink-0" style={{ fontSize: Math.round(11 * m) }}>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
                 {ganhosOverallPct}%
               </span>
             </div>
           </div>
         );
       })()}
+      </div>
     </div>
   );
 });

@@ -1,4 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { TvModeProvider } from "./TvModeContext";
+
 
 /** Canvas nominal de uma TV 42" Full HD (16:9). */
 export const TV_STAGE_WIDTH = 1920;
@@ -58,9 +60,12 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
               )}
             </div>
           )}
-          <div className="flex-1 min-h-0 px-6 pb-6">{children}</div>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            <TvModeProvider>{children}</TvModeProvider>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+

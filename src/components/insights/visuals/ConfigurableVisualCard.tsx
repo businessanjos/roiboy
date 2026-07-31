@@ -29,6 +29,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { useTvMode } from "../TvModeContext";
 
 const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
   { type: 'bar', icon: BarChart3, label: 'Barras' },
@@ -57,6 +58,7 @@ interface ConfigurableVisualCardProps {
 }
 
 export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual, readOnly = false }: ConfigurableVisualCardProps) {
+  const tv = useTvMode();
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
   const [drilldownOpen, setDrilldownOpen] = useState(false);
@@ -209,9 +211,16 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   return (
     <VisualErrorBoundary title={visual.title || "Visual"}>
       <>
-        <Card className="flex flex-col h-full">
-          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2")}>
-            <CardTitle className={cn("text-base flex items-center justify-between gap-1", isScorecard && "text-sm")}>
+        <Card className={cn("flex flex-col h-full", tv.tv && "border-border/70 bg-card/80 shadow-lg")}>
+          <CardHeader className={cn("pb-2 flex-shrink-0", isScorecard && "px-3 py-2", tv.tv && "px-5 pt-4 pb-1")}>
+            <CardTitle
+              className={cn(
+                "text-base flex items-center justify-between gap-1",
+                isScorecard && "text-sm",
+                tv.tv && "font-semibold tracking-tight text-muted-foreground",
+              )}
+              style={tv.tv ? { fontSize: isScorecard ? 18 : 22 } : undefined}
+            >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
                 <span className="truncate" title={visual.title || "Visual"}>{visual.title || "Visual"}</span>
@@ -351,7 +360,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               )}
             </CardTitle>
           </CardHeader>
-          <CardContent className="flex-1 min-h-0 overflow-auto">
+          <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-4" : "overflow-auto")}>
            <ConfigurableChart
               type={effectiveChartType}
               data={processedData}
