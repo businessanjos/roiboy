@@ -154,10 +154,11 @@ export function StackedHorizontalBarChart({
           {seriesKeys.length >= 1 && (
             <Legend
               verticalAlign="top"
-              align="left"
-              height={24}
+              align="center"
+              height={26}
               iconSize={9}
-              wrapperStyle={{ fontSize: Math.round(11 * m), color: 'hsl(var(--muted-foreground))', paddingBottom: 4 }}
+              wrapperStyle={{ fontSize: Math.round(11 * m), color: 'hsl(var(--muted-foreground))', paddingBottom: 6, textAlign: 'center' }}
+
             />
           )}
           {seriesKeys.map((key, index) => (
