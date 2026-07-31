@@ -1278,7 +1278,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                     catalog={fieldCatalog}
                     value={segmentBy}
                     onChange={setSegmentBy}
-                    excludeKey={groupBy ? GROUP_BY_TO_DIMENSION[groupBy]?.field : undefined}
+                    excludeKey={resolveGroupDimension(groupBy, fieldCatalog)?.field}
                   />
 
                   <FilterSection
