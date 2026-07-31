@@ -78,8 +78,31 @@ function getMeasureLabel(visualConfig?: VisualConfig): string | undefined {
   return measure.aggregation === 'sum' ? fieldLabel : `${aggLabel} de ${fieldLabel}`;
 }
 
-export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
-  const config = appearance || DEFAULT_APPEARANCE;
+/** Categorias demais viram ruído na TV: mantém o topo e agrupa o resto em "Outros". */
+function capCategories(data: AggregatedDataPoint[], max: number): AggregatedDataPoint[] {
+  if (!data || max <= 0 || data.length <= max) return data;
+  const sorted = [...data].sort((a, b) => (b.value || 0) - (a.value || 0));
+  const top = sorted.slice(0, max - 1);
+  const rest = sorted.slice(max - 1);
+  const others = rest.reduce(
+    (acc, d) => ({ ...acc, value: acc.value + (d.value || 0), count: (acc.count || 0) + (d.count || 0) }),
+    { name: 'Outros', value: 0, count: 0 } as AggregatedDataPoint
+  );
+  return [...top, others];
+}
+
+export function ConfigurableChart({ type, data: rawData, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
+  const tv = useTvMode();
+  const baseConfig = appearance || DEFAULT_APPEARANCE;
+  // Na TV o gráfico é lido de longe: rótulos de valor sempre visíveis.
+  const config: AppearanceConfig = tv.tv ? { ...baseConfig, showDataLabels: true } : baseConfig;
+
+  const isDateDimension = !!(visualConfig?.dimension as any)?.granularity;
+  const cappable = type === 'bar' || type === 'bar_horizontal' || type === 'pie';
+  const data =
+    tv.tv && cappable && !isDateDimension ? capCategories(rawData, tv.maxCategories) : rawData;
+
+
   
   if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
