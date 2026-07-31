@@ -1469,6 +1469,63 @@ function aggregateGlobalTotal(
   return [{ name: 'Total', value, count: data.length }];
 }
 
+const PT_MONTHS: Record<string, number> = {
+  jan: 1, fev: 2, mar: 3, abr: 4, mai: 5, jun: 6,
+  jul: 7, ago: 8, set: 9, out: 10, nov: 11, dez: 12,
+  janeiro: 1, fevereiro: 2, março: 3, marco: 3, abril: 4, maio: 5, junho: 6,
+  julho: 7, agosto: 8, setembro: 9, outubro: 10, novembro: 11, dezembro: 12,
+};
+
+/**
+ * Converte um rótulo de data já formatado (ex.: "abr/26", "Sem 12/2026", "05", "2026")
+ * em uma chave numérica ordenável cronologicamente.
+ */
+function dateLabelSortKey(label: string): number {
+  const raw = (label || '').trim().toLowerCase().replace(/\.$/, '');
+
+  // "Sem 12/2026"
+  const week = raw.match(/^sem\s+(\d{1,2})\/(\d{4})$/);
+  if (week) return Number(week[2]) * 10000 + Number(week[1]) * 100;
+
+  // "abr/26" ou "abril/2026"
+  const monthYear = raw.match(/^([a-zç]+)\.?\/(\d{2,4})$/);
+  if (monthYear) {
+    const m = PT_MONTHS[monthYear[1]];
+    if (m) {
+      const y = Number(monthYear[2]);
+      const year = y < 100 ? 2000 + y : y;
+      return year * 10000 + m * 100;
+    }
+  }
+
+  // "abril 2026"
+  const fullMonth = raw.match(/^([a-zç]+)\.?\s+(\d{4})$/);
+  if (fullMonth) {
+    const m = PT_MONTHS[fullMonth[1]];
+    if (m) return Number(fullMonth[2]) * 10000 + m * 100;
+  }
+
+  // "abr" (mês isolado, sem ano)
+  const monthOnly = PT_MONTHS[raw.replace(/\.$/, '')];
+  if (monthOnly) return monthOnly * 100;
+
+  // "2026"
+  if (/^\d{4}$/.test(raw)) return Number(raw) * 10000;
+
+  // "05" (dia)
+  if (/^\d{1,2}$/.test(raw)) return Number(raw);
+
+  return Number.POSITIVE_INFINITY;
+}
+
+/** Ordena rótulos de data cronologicamente (com fallback alfabético). */
+export function compareDateLabels(a: string, b: string): number {
+  const ka = dateLabelSortKey(a);
+  const kb = dateLabelSortKey(b);
+  if (ka !== kb) return ka - kb;
+  return a.localeCompare(b);
+}
+
 function formatDateGroup(dateString: string, grouping: DateGrouping, displayFormat: DateDisplayFormat = 'monthYear'): string {
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : new Date(dateString);
