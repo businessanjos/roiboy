@@ -199,6 +199,8 @@ export async function fetchNativeFieldValues(
     products: 'products',
     tasks: 'internal_tasks',
     sales_history: 'sales_history',
+    royzapp: 'zapp_conversations',
+    royzapp_messages: 'zapp_messages',
   };
   const table = tableBySource[dataSource];
   try {

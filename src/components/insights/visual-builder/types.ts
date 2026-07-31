@@ -1,4 +1,4 @@
-export type DataSource = 'deals' | 'leads' | 'products' | 'tasks' | 'sales_history';
+export type DataSource = 'deals' | 'leads' | 'products' | 'tasks' | 'sales_history' | 'royzapp' | 'royzapp_messages';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
@@ -324,8 +324,10 @@ export const DATA_SOURCE_OPTIONS: { value: DataSource; label: string }[] = [
   { value: 'deals', label: 'Negócios' },
   { value: 'leads', label: 'Leads' },
   { value: 'products', label: 'Produtos' },
-  { value: 'tasks', label: 'Tarefas' },
+  { value: 'tasks', label: 'Atividades' },
   { value: 'sales_history', label: 'Histórico de Vendas' },
+  { value: 'royzapp', label: 'RoyZapp - Conversas' },
+  { value: 'royzapp_messages', label: 'RoyZapp - Mensagens' },
 ];
 
 // Aggregation options
@@ -502,6 +504,31 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'sale_date', label: 'Data da Venda', type: 'date' },
     ],
   },
+  royzapp: {
+    numeric: [
+      { value: 'unread_count', label: 'Mensagens Não Lidas', type: 'numeric' },
+    ],
+    dimension: [
+      { value: 'sector_id', label: 'Setor', type: 'text' },
+      { value: 'channel', label: 'Canal', type: 'text' },
+      { value: 'contact_name', label: 'Contato', type: 'text' },
+      { value: 'is_group', label: 'É Grupo', type: 'text' },
+      { value: 'created_at', label: 'Data de Criação', type: 'date' },
+      { value: 'last_message_at', label: 'Última Mensagem', type: 'date' },
+    ],
+  },
+  royzapp_messages: {
+    numeric: [
+      { value: 'audio_duration_sec', label: 'Duração do Áudio (s)', type: 'numeric' },
+    ],
+    dimension: [
+      { value: 'direction', label: 'Direção (Enviada/Recebida)', type: 'text' },
+      { value: 'message_type', label: 'Tipo de Mensagem', type: 'text' },
+      { value: 'sender_name', label: 'Remetente', type: 'text' },
+      { value: 'delivery_status', label: 'Status de Entrega', type: 'text' },
+      { value: 'sent_at', label: 'Data de Envio', type: 'date' },
+    ],
+  },
 };
 
 // Generate default title based on selections
@@ -515,8 +542,10 @@ export function generateVisualTitle(
     deals: 'Negócios',
     leads: 'Leads',
     products: 'Produtos',
-    tasks: 'Tarefas',
+    tasks: 'Atividades',
     sales_history: 'Histórico de Vendas',
+    royzapp: 'Conversas RoyZapp',
+    royzapp_messages: 'Mensagens RoyZapp',
   };
 
   const aggLabels: Record<Aggregation, string> = {
