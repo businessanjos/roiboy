@@ -1,4 +1,6 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
+import { TvModeProvider } from "./TvModeContext";
+
 
 /** Canvas nominal de uma TV 42" Full HD (16:9). */
 export const TV_STAGE_WIDTH = 1920;
