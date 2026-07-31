@@ -392,12 +392,13 @@ export function syncLegacyFilterKeys(
     } else if (f.source === 'native' && f.field === 'status' && f.operator !== 'is_not') {
       dealStatusFilter = f.values;
     } else if (f.source === 'native' && f.field === 'created_at' && f.operator === 'between') {
+      const b = filterDateBounds(f);
       dealFieldFilters.push({
         fieldId: DEAL_CREATED_AT_FIELD_ID,
         fieldName: 'Data de Criação',
         selectedValues: [],
-        dateFrom: f.from,
-        dateTo: f.to,
+        dateFrom: b.from,
+        dateTo: b.to,
       });
     }
   }
