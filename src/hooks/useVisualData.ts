@@ -264,25 +264,17 @@ async function calculateSalesCycle(
   }
 
   if (allDeals.length === 0) return [{ name: 'Total', value: 0, count: 0 }];
+
+  // 2. Fetch first contact dates for these deals
+  const dealIds = allDeals.map(d => d.id);
+  let allFieldValues: any[] = [];
+  // Paginate field values too (in batches of IDs due to `in` limit)
   const batchSize = 500;
-  const fvPromises = [];
   for (let i = 0; i < dealIds.length; i += batchSize) {
     const batch = dealIds.slice(i, i + batchSize);
-    fvPromises.push(
-      supabase
-        .from("deal_field_values")
-        .select("deal_id, value_date")
-        .eq("field_id", FIRST_CONTACT_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("deal_id", batch)
-    );
-  }
-
-  const fvResults = await Promise.all(fvPromises);
-  for (const { data: fvData, error: fvError } of fvResults) {
-    if (fvError) { console.error("Error fetching first contact dates:", fvError); continue; }
-    allFieldValues = allFieldValues.concat(fvData || []);
-  }
+    const { data: fvData, error: fvError } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_date')
       .eq('field_id', FIRST_CONTACT_FIELD_ID)
       .eq('account_id', accountId)
       .in('deal_id', batch);
@@ -353,28 +345,23 @@ const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
   nao_abaixo_30k: { label: 'NÃO - Abaixo de 30k', color: '#ef4444' },
 };
 
-  const batchSize = 500;
-  const promises = [];
-  for (let i = 0; i < leadIds.length; i += batchSize) {
-    const batch = leadIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("lead_field_values")
-        .select("lead_id, value_text")
-        .eq("field_id", LEAD_FATURAMENTO_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("lead_id", batch)
-    );
-  }
+const LEAD_MQL_FIELD_ID = 'e4270e93-e9b9-4d9b-9589-d614ce335bcd';
 
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching lead faturamento values:", error);
-      continue;
-    }
-    allValues = allValues.concat(data || []);
-  }
+const LEAD_MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
+  opt_1: { label: 'SIM - Acima de 30k', color: '#22c55e' },
+  opt_2: { label: 'NAO - Abaixo de 30k', color: '#ef4444' },
+};
+
+const LEAD_FATURAMENTO_FIELD_ID = 'e352a1ca-cfbc-435a-95f7-2f53b5cac041';
+
+export async function enrichLeadsWithFaturamento(accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
+  const leadIds = leads.map(l => l.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < leadIds.length; i += batchSize) {
     const batch = leadIds.slice(i, i + batchSize);
     const { data, error } = await supabase
       .from('lead_field_values')
@@ -389,28 +376,23 @@ const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
     }
     allValues = allValues.concat(data || []);
   }
-  const batchSize = 500;
-  const promises = [];
-  for (let i = 0; i < leadIds.length; i += batchSize) {
-    const batch = leadIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("lead_field_values")
-        .select("lead_id, value_text")
-        .eq("field_id", LEAD_MQL_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("lead_id", batch)
-    );
+
+  const fatMap = new Map<string, string>();
+  for (const row of allValues) {
+    if (row.value_text) {
+      fatMap.set(row.lead_id, row.value_text);
+    }
   }
 
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching lead MQL values:", error);
-      continue;
-    }
-    allMqlValues = allMqlValues.concat(data || []);
-  }
+  return leads.map(lead => ({
+    ...lead,
+    faturamento_atual: fatMap.get(lead.id) || 'Não informado',
+  }));
+}
+
+export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promise<any[]> {
+  if (leads.length === 0) return leads;
+
   const leadIds = leads.map(l => l.id);
   let allMqlValues: any[] = [];
   const batchSize = 500;
@@ -431,26 +413,22 @@ const MQL_VALUE_MAP: Record<string, { label: string; color: string }> = {
     allMqlValues = allMqlValues.concat(data || []);
   }
 
-  const promises = [];
-  for (let i = 0; i < leadIds.length; i += batchSize) {
-    const batch = leadIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("deals")
-        .select("id, lead_id, responsible_user_id, created_at")
-        .eq("account_id", accountId)
-        .in("lead_id", batch)
-    );
+  const mqlMap = new Map<string, { label: string; color: string }>();
+  for (const row of allMqlValues) {
+    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    if (mapped) {
+      mqlMap.set(row.lead_id, mapped);
+    }
   }
 
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching deals for lead owners:", error);
-      continue;
-    }
-    allDeals = allDeals.concat(data || []);
-  }
+  return leads.map(lead => {
+    const mql = mqlMap.get(lead.id);
+    return {
+      ...lead,
+      _mql_label: mql?.label || 'Não informado',
+      _mql_color: mql?.color || undefined,
+    };
+  });
 }
 
 async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<any[]> {
@@ -469,27 +447,21 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
       .eq('account_id', accountId)
       .in('lead_id', batch);
 
-  const userPromises = [];
-  for (let i = 0; i < userIds.length; i += batchSize) {
-    const batch = userIds.slice(i, i + batchSize);
-    userPromises.push(
-      supabase
-        .from("users")
-        .select("id, name")
-        .in("id", batch)
-    );
-  }
-
-  const userResults = await Promise.all(userPromises);
-  for (const { data, error } of userResults) {
     if (error) {
-      console.error("Error fetching user names for lead owners:", error);
+      console.error('Error fetching deals for lead owners:', error);
       continue;
     }
-    for (const user of data || []) {
-      userNameMap.set(user.id, user.name);
-    }
+    allDeals = allDeals.concat(data || []);
   }
+
+  // 2. For each lead, find the most recent deal
+  const latestDealByLead = new Map<string, { responsible_user_id: string }>();
+  for (const deal of allDeals) {
+    if (!deal.lead_id || !deal.responsible_user_id) continue;
+    const existing = latestDealByLead.get(deal.lead_id);
+    if (!existing) {
+      latestDealByLead.set(deal.lead_id, deal);
+    } else {
       // Compare created_at to keep the most recent
       if (new Date(deal.created_at) > new Date((existing as any).created_at)) {
         latestDealByLead.set(deal.lead_id, deal);
@@ -505,27 +477,23 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
   const userNameMap = new Map<string, string>();
   for (let i = 0; i < userIds.length; i += batchSize) {
     const batch = userIds.slice(i, i + batchSize);
-  const promises = [];
-  for (let i = 0; i < dealIds.length; i += batchSize) {
-    const batch = dealIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("deal_field_values")
-        .select("deal_id, value_number")
-        .eq("field_id", DEAL_VALOR_RECEBIDO_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("deal_id", batch)
-    );
-  }
+    const { data, error } = await supabase
+      .from('users')
+      .select('id, name')
+      .in('id', batch);
 
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
     if (error) {
-      console.error("Error fetching deal received values:", error);
+      console.error('Error fetching user names for lead owners:', error);
       continue;
     }
-    allValues = allValues.concat(data || []);
+    for (const user of data || []) {
+      userNameMap.set(user.id, user.name);
+    }
   }
+
+  // 4. Inject responsible_name into each lead
+  return leads.map(lead => {
+    const deal = latestDealByLead.get(lead.id);
     const userName = deal ? userNameMap.get(deal.responsible_user_id) : null;
     return {
       ...lead,
@@ -556,27 +524,23 @@ async function enrichDealsWithReceivedValue(accountId: string, deals: any[]): Pr
 
     if (error) {
       console.error('Error fetching deal received values:', error);
-  const promises = [];
-  for (let i = 0; i < dealIds.length; i += batchSize) {
-    const batch = dealIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("deal_field_values")
-        .select("deal_id, value_text")
-        .eq("field_id", DEAL_CANAL_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("deal_id", batch)
-    );
-  }
-
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching deal canal values:", error);
       continue;
     }
     allValues = allValues.concat(data || []);
   }
+
+  const valueMap = new Map<string, number>();
+  for (const row of allValues) {
+    if (row.value_number != null) {
+      valueMap.set(row.deal_id, row.value_number);
+    }
+  }
+
+  return deals.map(deal => ({
+    ...deal,
+    entry_value: valueMap.get(deal.id) || 0,
+  }));
+}
 
 export async function enrichDealsWithCanal(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
@@ -623,27 +587,23 @@ export async function enrichDealsWithCanal(accountId: string, deals: any[]): Pro
       // Split comma-separated values and resolve each to its label
       const parts = row.value_text.split(',').map((v: string) => v.trim()).filter(Boolean);
       const labels = parts.map((part: string) => optionLabels.get(part) || part);
-  const promises = [];
-  for (let i = 0; i < dealIds.length; i += batchSize) {
-    const batch = dealIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from("deal_field_values")
-        .select("deal_id, value_text")
-        .eq("field_id", DEAL_ITEM_VENDA_FIELD_ID)
-        .eq("account_id", accountId)
-        .in("deal_id", batch)
-    );
+      const existing = canalMap.get(row.deal_id) || [];
+      canalMap.set(row.deal_id, [...existing, ...labels]);
+    }
   }
 
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching deal product values:", error);
-      continue;
-    }
-    allValues = allValues.concat(data || []);
-  }
+  // Expand deals: one copy per canal value for proper segmentation
+  const expanded: any[] = [];
+  for (const deal of deals) {
+    const canals = canalMap.get(deal.id);
+    if (canals && canals.length > 0) {
+      // Deduplicate canal values for the same deal
+      const unique = [...new Set(canals)];
+      for (const canal of unique) {
+        expanded.push({ ...deal, canal });
+      }
+    } else {
+      expanded.push({ ...deal, canal: 'Não informado' });
     }
   }
   return expanded;
@@ -658,27 +618,21 @@ export async function enrichDealsWithProduct(accountId: string, deals: any[]): P
     .select('options')
     .eq('id', DEAL_ITEM_VENDA_FIELD_ID)
     .single();
-  const productPromises = [];
-  for (let i = 0; i < uuidArray.length; i += batchSize) {
-    const batch = uuidArray.slice(i, i + batchSize);
-    productPromises.push(
-      supabase
-        .from("products")
-        .select("id, name")
-        .in("id", batch)
-    );
+
+  const optionLabels = new Map<string, string>();
+  if (fieldDef?.options && Array.isArray(fieldDef.options)) {
+    for (const opt of fieldDef.options as { value: string; label: string }[]) {
+      optionLabels.set(opt.value, opt.label);
+    }
   }
 
-  const productResults = await Promise.all(productPromises);
-  for (const { data, error } of productResults) {
-    if (error) {
-      console.error("Error fetching product names:", error);
-      continue;
-    }
-    for (const p of data || []) {
-      productNameMap.set(p.id, p.name);
-    }
-  }
+  // 2. Fetch product field values for all deals in batches
+  const dealIds = deals.map(d => d.id);
+  let allValues: any[] = [];
+  const batchSize = 500;
+
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
     const { data, error } = await supabase
       .from('deal_field_values')
       .select('deal_id, value_text')
