@@ -100,6 +100,7 @@
 - [AI Cancellation Analysis](mem://features/dashboard/cancellation-ai-analysis-pt) — Gemini qualitative analysis of churn
 - [Shared Dashboards Scale](mem://features/insights/shared-dashboard-links-v3-pt) — Zoom-based CSS scaling
 - [Insights External Access](mem://features/insights/external-access-credentials-pt) — Password-protected viewer panels
+- [Insights Entity Sources](mem://features/insights/entity-sources-pt) — Negócios, Leads (=Pessoas), Atividades, RoyZapp (conversas/mensagens); sem Organizações
 - [Financial Reconciliation](mem://features/financial/reconciliation-usability-pt) — Mandatory client/origin display
 - [Financial Sidebar Layout](mem://style/navigation/financial-sidebar-unification-v2-pt) — Main sidebar unification
 - [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Financeiro nativo pós-remoção Omie; dados vêm de Comercial/CS + lançamentos manuais + importadores
