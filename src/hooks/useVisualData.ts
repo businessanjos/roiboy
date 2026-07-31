@@ -104,6 +104,10 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         case 'sales_history':
           result = await fetchSalesHistoryData(accountId, measure, dimension, filters, dateDisplayFormat);
           break;
+        case 'royzapp':
+        case 'royzapp_messages':
+          result = await fetchRoyZappData(accountId, dataSource, measure, dimension, filters, dateDisplayFormat);
+          break;
         default:
           result = [];
       }
@@ -1791,6 +1795,83 @@ async function fetchTasksCallCommercialData(
     result.push({ name, value: scheduledDeals.size, count: completedDeals.size });
   }
   result.sort((a, b) => (b.count ?? 0) - (a.count ?? 0));
+
+  return result;
+}
+
+// ==================== ROYZAPP (WHATSAPP) ====================
+async function fetchRoyZappData(
+  accountId: string,
+  dataSource: 'royzapp' | 'royzapp_messages',
+  measure: VisualConfig['measure'],
+  dimension: VisualConfig['dimension'],
+  filters: any,
+  dateDisplayFormat: string
+): Promise<AggregatedDataPoint[]> {
+  const isMessages = dataSource === 'royzapp_messages';
+  const table = isMessages ? 'zapp_messages' : 'zapp_conversations';
+  const dateField = dimension.type === 'date' ? dimension.field : (isMessages ? 'sent_at' : 'created_at');
+  const columns = isMessages
+    ? 'id, sent_at, created_at, direction, message_type, sender_name, delivery_status, audio_duration_sec'
+    : 'id, created_at, last_message_at, sector_id, channel, contact_name, is_group, unread_count';
+
+  let query = (supabase as any).from(table).select(columns).eq('account_id', accountId);
+  if (filters.startDate) query = query.gte(dateField, filters.startDate);
+  if (filters.endDate) query = query.lte(dateField, filters.endDate);
+
+  let allRecords: any[] = [];
+  let from = 0;
+  const pageSize = 1000;
+  while (true) {
+    const { data, error } = await query.range(from, from + pageSize - 1);
+    if (error) { console.error(`Error fetching ${table}:`, error); return []; }
+    allRecords = allRecords.concat(data || []);
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+
+  if (allRecords.length === 0) return [];
+
+  const groups = new Map<string, { total: number; count: number }>();
+  for (const record of allRecords) {
+    let groupKey: string;
+    if (dimension.field === '_total') {
+      groupKey = 'Total';
+    } else if (dimension.type === 'date') {
+      const dateStr = record[dimension.field] || record[dateField];
+      if (!dateStr) continue;
+      groupKey = formatDateGroup(dateStr, dimension.dateGrouping || 'month', dateDisplayFormat as any);
+    } else {
+      const raw = record[dimension.field];
+      if (dimension.field === 'direction') {
+        groupKey = raw === 'outbound' || raw === 'team_to_client' ? 'Enviadas' : raw ? 'Recebidas' : 'Não informado';
+      } else if (typeof raw === 'boolean') {
+        groupKey = raw ? 'Sim' : 'Não';
+      } else {
+        groupKey = raw ? String(raw) : 'Não informado';
+      }
+    }
+
+    if (!groups.has(groupKey)) groups.set(groupKey, { total: 0, count: 0 });
+    const g = groups.get(groupKey)!;
+    const numeric = measure.field && measure.field !== '_count' ? Number(record[measure.field]) || 0 : 0;
+    g.total += numeric;
+    g.count += 1;
+  }
+
+  const result: AggregatedDataPoint[] = [];
+  for (const [name, { total, count }] of groups) {
+    let value: number;
+    switch (measure.aggregation) {
+      case 'sum': value = total; break;
+      case 'avg': value = count > 0 ? total / count : 0; break;
+      default: value = count;
+    }
+    result.push({ name, value, count });
+  }
+
+  if (dimension.type === 'date') result.sort((a, b) => a.name.localeCompare(b.name));
+  else result.sort((a, b) => b.value - a.value);
 
   return result;
 }

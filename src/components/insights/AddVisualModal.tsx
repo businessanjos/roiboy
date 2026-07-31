@@ -34,7 +34,7 @@ interface AddVisualModalProps {
 }
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
-type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count" | "sales_leads";
+type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count" | "sales_leads" | "zapp_conversations_count" | "zapp_messages_count";
 /** Legacy shortcut keys OR any native catalog field key */
 type GroupBy = string;
 
@@ -66,6 +66,8 @@ const METRICS = [
   { value: "tasks_count" as const, label: "Quantidade de Tarefas", description: "Contagem de tarefas por tipo, vendedor ou status" },
   { value: "sales_leads" as const, label: "Vendas/Leads", description: "Conversões vs total de leads no período" },
   { value: "meta" as const, label: "Meta", description: "Meta de faturamento configurada manualmente" },
+  { value: "zapp_conversations_count" as const, label: "Conversas (RoyZapp)", description: "Contagem de conversas de WhatsApp por setor, canal ou período" },
+  { value: "zapp_messages_count" as const, label: "Mensagens (RoyZapp)", description: "Contagem de mensagens enviadas e recebidas no WhatsApp" },
 ];
 
 const GROUP_BY_OPTIONS = [
@@ -82,7 +84,7 @@ const GROUP_BY_OPTIONS = [
 
 // Mapping from simplified selections to full VisualConfig
 const METRIC_TO_CONFIG: Record<Metric, { 
-  dataSource: 'deals' | 'leads' | 'tasks'; 
+  dataSource: DataSource; 
   measureField: string | null; 
   aggregation: 'sum' | 'count' | 'avg' | 'conversion_rate' | 'sales_cycle'; 
   formatType: 'currency' | 'decimal' | 'percentage';
@@ -99,6 +101,8 @@ const METRIC_TO_CONFIG: Record<Metric, {
   tasks_count: { dataSource: 'tasks', measureField: null, aggregation: 'count', formatType: 'decimal' },
   sales_leads: { dataSource: 'deals', measureField: null, aggregation: 'count', formatType: 'decimal' },
   meta: { dataSource: 'deals', measureField: 'meta', aggregation: 'sum', formatType: 'currency' },
+  zapp_conversations_count: { dataSource: 'royzapp', measureField: null, aggregation: 'count', formatType: 'decimal' },
+  zapp_messages_count: { dataSource: 'royzapp_messages', measureField: null, aggregation: 'count', formatType: 'decimal' },
 };
 
 const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' }> = {
@@ -146,6 +150,8 @@ const getDateFieldForMetric = (metric: Metric): string => {
       return 'lost_at';
     case 'tasks_count':
       return 'due_date';
+    case 'zapp_messages_count':
+      return 'sent_at';
     default:
       return 'created_at';
   }
@@ -163,6 +169,8 @@ const METRIC_LABELS: Record<Metric, string> = {
   tasks_count: "Tarefas",
   sales_leads: "Vendas/Leads",
   meta: "Meta",
+  zapp_conversations_count: "Conversas RoyZapp",
+  zapp_messages_count: "Mensagens RoyZapp",
 };
 
 const GROUP_LABELS: Record<GroupBy, string> = {
