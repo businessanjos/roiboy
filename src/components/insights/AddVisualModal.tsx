@@ -191,6 +191,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [metric, setMetric] = useState<Metric | null>(null);
   const [groupBy, setGroupBy] = useState<GroupBy | null>(null);
   const [title, setTitle] = useState("");
+  const [titleTouched, setTitleTouched] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
   const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
@@ -281,6 +282,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setVisualFilters([]);
       setSegmentBy(null);
       setTitle("");
+      setTitleTouched(false);
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
       setMonthlyGoals({});
@@ -301,6 +303,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
 
   // Auto-generate title when selections change
   useEffect(() => {
+    if (titleTouched) return;
     if (chartType === 'ranking') {
       setTitle("Ranking de Vendedores");
     } else if (chartType === 'bubble_map') {
@@ -334,7 +337,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       const generatedTitle = `${METRIC_LABELS[metric]} ${groupLabel}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource, fieldCatalog]);
+  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource, fieldCatalog, titleTouched]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
@@ -807,7 +810,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title-simple"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder={chartType === 'ranking' ? 'Ex: Ranking de Vendedores' : 'Ex: Calls Comerciais'}
                 />
               </div>
@@ -897,7 +900,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title-indicator"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder="Ex: Indicador de Faturamento"
                 />
               </div>
@@ -975,7 +978,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title-gauge"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder="Ex: Dias Corridos do Mês"
                 />
               </div>
@@ -1016,7 +1019,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title-funnel"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder="Ex: Funil de Vendas"
                 />
               </div>
@@ -1110,7 +1113,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title-table"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder="Ex: Tabela de Negócios"
                 />
               </div>
@@ -1185,7 +1188,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                     <Input
                       id="visual-title-scorecard"
                       value={title}
-                      onChange={(e) => setTitle(e.target.value)}
+                      onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                       placeholder="Ex: Faturamento Total"
                     />
                   </div>
@@ -1296,7 +1299,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 <Input
                   id="visual-title"
                   value={title}
-                  onChange={(e) => setTitle(e.target.value)}
+                  onChange={(e) => { setTitleTouched(true); setTitle(e.target.value); }}
                   placeholder="Ex: Faturamento por Mês"
                 />
               </div>
