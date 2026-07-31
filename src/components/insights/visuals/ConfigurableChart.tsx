@@ -55,6 +55,27 @@ function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professiona
   return COLOR_PALETTES[palette] || COLOR_PALETTES.professional;
 }
 
+/** Header label for the grouping field ("Ver por") of the current visual. */
+function getDimensionLabel(visualConfig?: VisualConfig): string | undefined {
+  const ds = visualConfig?.dataSource as keyof typeof DATA_SOURCE_FIELDS | undefined;
+  const field = visualConfig?.dimension?.field;
+  if (!ds || !field || field === '_total') return undefined;
+  if (visualConfig?.segmentBy && visualConfig.segmentBy.field === field) return visualConfig.segmentBy.label;
+  return DATA_SOURCE_FIELDS[ds]?.dimension.find((f) => f.value === field)?.label || undefined;
+}
+
+/** Header label for the measure ("Medir por") of the current visual. */
+function getMeasureLabel(visualConfig?: VisualConfig): string | undefined {
+  const ds = visualConfig?.dataSource as keyof typeof DATA_SOURCE_FIELDS | undefined;
+  const measure = visualConfig?.measure;
+  if (!measure) return undefined;
+  const aggLabel = AGGREGATION_OPTIONS.find((a) => a.value === measure.aggregation)?.label;
+  if (measure.aggregation === 'count' || !measure.field) return aggLabel || undefined;
+  const fieldLabel = ds ? DATA_SOURCE_FIELDS[ds]?.numeric.find((f) => f.value === measure.field)?.label : undefined;
+  if (!fieldLabel) return aggLabel || undefined;
+  return measure.aggregation === 'sum' ? fieldLabel : `${aggLabel} de ${fieldLabel}`;
+}
+
 export function ConfigurableChart({ type, data, formatting, appearance, visualConfig, stackedData, stackedSeriesKeys, onDrilldown }: ConfigurableChartProps) {
   const config = appearance || DEFAULT_APPEARANCE;
   
