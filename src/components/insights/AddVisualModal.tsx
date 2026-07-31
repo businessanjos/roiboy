@@ -657,12 +657,16 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           })() : {}),
         };
       } else {
-        const baseDimensionConfig = GROUP_BY_TO_DIMENSION[groupBy!];
+        const baseDimensionConfig = resolveGroupDimension(groupBy, fieldCatalog);
+        if (!baseDimensionConfig) {
+          setIsCreating(false);
+          return;
+        }
         let dimensionField = baseDimensionConfig.type === 'date' 
           ? getDateFieldForMetric(metric) 
           : baseDimensionConfig.field;
         // For tasks, "user" maps to assigned_to instead of responsible_name
-        if (metric === 'tasks_count' && groupBy === 'user') {
+        if (metric === 'tasks_count' && baseDimensionConfig.field === 'responsible_name') {
           dimensionField = 'assigned_to';
         }
         const isTemporalGrouping = baseDimensionConfig.type === 'date';
