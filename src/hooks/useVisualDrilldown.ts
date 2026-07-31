@@ -9,6 +9,7 @@ import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
+import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 
 export interface DrilldownRecord {
   id: string;
@@ -166,6 +167,11 @@ async function fetchDealsRecords(
   const hasProductColumn = config.tableConfig?.columns?.includes('product');
   if (isProductDimension || hasProductColumn) {
     filteredData = await enrichDealsWithProduct(accountId, filteredData);
+  }
+
+  // Custom field dimension: inject values so grouping matches the chart
+  if (isCustomFieldKey(config.dimension?.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'deals') as any[];
   }
 
   // Apply hiddenCategories filter
@@ -347,6 +353,11 @@ async function fetchLeadsRecords(
   const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), filters.globalFieldFilter);
   if (leadFilters.length > 0) {
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
+  }
+
+  // Custom field dimension: inject values so grouping matches the chart
+  if (isCustomFieldKey(config.dimension?.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
   }
 
   // Apply hiddenCategories filter
