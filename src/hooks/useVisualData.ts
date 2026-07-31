@@ -98,7 +98,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           } else if (chartType === 'funnel') {
             result = await fetchTasksFunnelData(accountId, filters);
           } else {
-            result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat);
+            result = await fetchTasksData(accountId, measure, dimension, filters, dateDisplayFormat, unifiedFilters);
           }
           break;
         case 'sales_history':
