@@ -13,7 +13,7 @@ import {
   CartesianGrid,
   LabelList,
 } from "recharts";
-import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS, DATA_SOURCE_FIELDS, AGGREGATION_OPTIONS } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
