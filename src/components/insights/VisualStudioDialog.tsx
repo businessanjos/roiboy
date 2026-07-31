@@ -243,6 +243,23 @@ export function VisualStudioDialog({
   const isFixed = FIXED_TYPES.includes(chartType);
   const needsDimension = !isScorecard && !isTable && !isFixed;
 
+  // "Calls Comerciais" é um layout fixo: ele já busca sozinho as atividades
+  // "Call Comercial Agendada" (em aberto, por data prevista) e "Call Comercial
+  // Concluída" (por data de conclusão). Só o período faz sentido como filtro.
+  const isCallCommercial = chartType === 'call_commercial';
+  const filterCatalog = isCallCommercial
+    ? fieldCatalog.filter((f) => f.source === 'native' && f.type === 'date')
+    : fieldCatalog;
+
+  useEffect(() => {
+    if (!isCallCommercial) return;
+    setVisualFilters((prev) => {
+      const next = prev.filter((f) => f.source === 'native' && f.type === 'date');
+      return next.length === prev.length ? prev : next;
+    });
+  }, [isCallCommercial]);
+
+
   // Auto title (stops as soon as the user types their own)
   useEffect(() => {
     if (titleTouched || !dataSource) return;
