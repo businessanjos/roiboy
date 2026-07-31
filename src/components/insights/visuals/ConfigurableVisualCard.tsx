@@ -373,13 +373,17 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           groupName={drilldownGroup}
         />
 
-        <VisualStudioDialog
-          visual={visual as any}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          overrideUpdateVisual={onUpdateVisual}
-          overrideRemoveVisual={onRemoveVisual}
-        />
+        {settingsOpen && (
+          <Suspense fallback={null}>
+            <VisualStudioDialog
+              visual={visual as any}
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              overrideUpdateVisual={onUpdateVisual}
+              overrideRemoveVisual={onRemoveVisual}
+            />
+          </Suspense>
+        )}
 
         {chartType === 'ranking' && (
           <>
