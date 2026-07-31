@@ -258,6 +258,14 @@ async function fetchStackedDealsData(
     allDeals = await filterByDealFields(allDeals, accountId, dealFilters);
   }
 
+  // Apply unified (Pipedrive-style) filters
+  const unifiedDealFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedDealFilters.length > 0) {
+    allDeals = await applyVisualFilters(allDeals as any, accountId, unifiedDealFilters, 'deals') as any;
+  }
+
+
+
   // Enrich deals with Canal de Venda if needed
   const needsCanal = config.stackBy === 'canal' || config.dimension.field === 'canal';
   if (needsCanal) {
