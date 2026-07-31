@@ -174,6 +174,10 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
   const activeDataSource: DataSource | null = metric ? (METRIC_TO_CONFIG[metric].dataSource as DataSource) : null;
   const { data: fieldCatalog = [] } = useFieldCatalog(activeDataSource, currentUser?.account_id ?? null);
+  useEffect(() => {
+    setVisualFilters([]);
+    setSegmentBy(null);
+  }, [activeDataSource]);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
