@@ -248,19 +248,22 @@ export function InsightsMainContent() {
 
           {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
           {tvFit ? (
-            <div className="flex-1 min-h-0 overflow-hidden p-4">
+            <div className="flex-1 min-h-0 overflow-hidden p-4 bg-gradient-to-b from-background to-muted/20">
               {hasVisuals && (
-                <InsightsGrid
-                  visuals={filteredVisuals}
-                  onLayoutChange={() => {}}
-                  readOnly
-                  fitHeight
-                  onUpdateVisual={updateVisual}
-                  onRemoveVisual={removeVisual}
-                />
+                <TvFitStage title={activeDashboard.name}>
+                  <InsightsGrid
+                    visuals={filteredVisuals}
+                    onLayoutChange={() => {}}
+                    readOnly
+                    fitHeight
+                    onUpdateVisual={updateVisual}
+                    onRemoveVisual={removeVisual}
+                  />
+                </TvFitStage>
               )}
             </div>
           ) : (
+
             <div className="flex-1 overflow-auto p-6">
               <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
                 {hasVisuals && (
