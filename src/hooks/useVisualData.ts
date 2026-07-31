@@ -727,7 +727,8 @@ async function fetchDealsData(
   statusFilter?: 'won' | 'lost' | 'open',
   leadFilters?: FieldFilter[],
   dealFilters?: FieldFilter[],
-  dealStatusFilter?: string[]
+  dealStatusFilter?: string[],
+  unifiedFilters?: VisualFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
