@@ -1648,12 +1648,12 @@ async function fetchTasksData(
   // The global date range applies to the date field being analysed (like Pipedrive,
   // where you pick "Marcado como feito em" / "Data de criação" / "Data de vencimento").
   const dateFieldCandidates = ['due_date', 'created_at', 'completed_at'];
-  const filterDateFields = unifiedFilters
-    .filter((f) => f.source === 'native' && dateFieldCandidates.includes(f.field))
-    .map((f) => f.field);
+  const dateFilters = unifiedFilters.filter(
+    (f) => f.source === 'native' && f.type === 'date' && dateFieldCandidates.includes(f.field)
+  );
   const rangeField = dateFieldCandidates.includes(dimension.field)
     ? dimension.field
-    : filterDateFields[0] || 'due_date';
+    : dateFilters[0]?.field || 'due_date';
 
   let baseQuery = supabase
     .from('internal_tasks')
@@ -1662,17 +1662,35 @@ async function fetchTasksData(
     )
     .eq('account_id', accountId);
 
-  if (filters.startDate) {
-    const startDate = rangeField === 'due_date' ? filters.startDate.split('T')[0] : filters.startDate;
-    baseQuery = baseQuery.gte(rangeField, startDate);
+  const toDay = (v: string) => v.split('T')[0];
+
+  // Per-filter date bounds ("Marcado como feito em entre X e Y") are pushed to the query.
+  for (const f of dateFilters) {
+    if (f.operator === 'between' || f.operator === 'gt') {
+      if (f.from) baseQuery = baseQuery.gte(f.field, toDay(f.from));
+    }
+    if (f.operator === 'between' || f.operator === 'lt') {
+      const upper = f.operator === 'between' ? f.to : f.from;
+      if (upper) baseQuery = baseQuery.lte(f.field, `${toDay(upper)}T23:59:59`);
+    }
+    if (f.operator === 'is_empty') baseQuery = baseQuery.is(f.field, null);
+    if (f.operator === 'is_set') baseQuery = baseQuery.not(f.field, 'is', null);
   }
-  if (filters.endDate) {
-    const endDate = rangeField === 'due_date' ? filters.endDate.split('T')[0] : filters.endDate;
-    baseQuery = baseQuery.lte(rangeField, endDate);
+
+  // The global period only applies when the analysed field has no explicit filter of its own.
+  const rangeFieldHasOwnFilter = dateFilters.some((f) => f.field === rangeField);
+  if (!rangeFieldHasOwnFilter) {
+    if (filters.startDate) {
+      baseQuery = baseQuery.gte(rangeField, rangeField === 'due_date' ? toDay(filters.startDate) : filters.startDate);
+    }
+    if (filters.endDate) {
+      baseQuery = baseQuery.lte(rangeField, rangeField === 'due_date' ? toDay(filters.endDate) : filters.endDate);
+    }
   }
   if (filters.userId && filters.userId !== 'all') {
     baseQuery = baseQuery.eq('assigned_to', filters.userId);
   }
+
 
   // Paginate
   let allTasks: any[] = [];
