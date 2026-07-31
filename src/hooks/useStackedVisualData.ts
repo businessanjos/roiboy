@@ -6,6 +6,7 @@ import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insig
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay, getDaysInMonth } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
