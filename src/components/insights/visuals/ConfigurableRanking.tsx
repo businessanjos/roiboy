@@ -18,6 +18,9 @@ interface ConfigurableRankingProps {
     decimals: number;
   };
   appearance?: AppearanceConfig;
+  /** Header labels follow the visual configuration ("Ver por" / "Medir por"). */
+  dimensionLabel?: string;
+  measureLabel?: string;
 }
 
 interface UserAvatar {
@@ -130,7 +133,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data, formatting, appearance }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel }: ConfigurableRankingProps) {
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
@@ -196,11 +199,11 @@ export function ConfigurableRanking({ data, formatting, appearance }: Configurab
       {/* Table - right side */}
       <div className="flex-1 min-w-0">
         <table className="w-full" style={{ fontSize: `${Math.round(14 * m)}px` }}>
-          <thead>
+          <thead className="sticky top-0 z-10 bg-card">
             <tr className="text-muted-foreground border-b" style={{ fontSize: `${Math.round(12 * m)}px` }}>
               <th className="text-left py-2 px-1 w-8">#</th>
-              <th className="text-left py-2 px-1">Vendedor</th>
-              <th className="text-right py-2 px-1">Faturamento</th>
+              <th className="text-left py-2 px-1 truncate">{dimensionLabel || 'Item'}</th>
+              <th className="text-right py-2 px-1 truncate">{measureLabel || 'Valor'}</th>
             </tr>
           </thead>
           <tbody>
