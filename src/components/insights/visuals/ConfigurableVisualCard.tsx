@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { lazy, Suspense, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -10,7 +10,11 @@ import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
-import { VisualStudioDialog } from "../VisualStudioDialog";
+// Lazy + deferred: VisualStudioDialog renders this same card as its live preview,
+// so a static import creates a circular module dependency (blank/never-loading preview).
+const VisualStudioDialog = lazy(() =>
+  import("../VisualStudioDialog").then((m) => ({ default: m.VisualStudioDialog }))
+);
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
@@ -369,13 +373,17 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           groupName={drilldownGroup}
         />
 
-        <VisualStudioDialog
-          visual={visual as any}
-          open={settingsOpen}
-          onOpenChange={setSettingsOpen}
-          overrideUpdateVisual={onUpdateVisual}
-          overrideRemoveVisual={onRemoveVisual}
-        />
+        {settingsOpen && (
+          <Suspense fallback={null}>
+            <VisualStudioDialog
+              visual={visual as any}
+              open={settingsOpen}
+              onOpenChange={setSettingsOpen}
+              overrideUpdateVisual={onUpdateVisual}
+              overrideRemoveVisual={onRemoveVisual}
+            />
+          </Suspense>
+        )}
 
         {chartType === 'ranking' && (
           <>
