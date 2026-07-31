@@ -9,8 +9,9 @@ const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
  * product; for charts each renewal must keep its own product name.
  */
 const LABEL_SLUG_TO_PRODUCT_ID: Record<string, string> = {
-  rykas_mentoring: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", // RM l Rykas Mentoring
-  ren_rykas_mentoring: "eae406e9-6076-41eb-96ed-df0ab187a11c", // REN. RM l Rykas Mentoring
+  rykas_mentoring: "f48e141b-e3da-4547-9b4a-70548fcdfe2c", // EM l Eternum Mentoring (rebranding de RM)
+  ren_rykas_mentoring: "27d83762-7ce0-49d5-a12b-b51571303096", // REN. EM l Eternum Mentoring
+
   eternum_club: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", // EC l Eternum Club
   ren_eternum_club: "6f74bb43-a1be-410f-a708-6abab066bb38", // REN. EC l Eternum Club
   eternum_private: "ab609e84-9c61-4e0b-9559-212010d9be83", // EP l Eternum Private
