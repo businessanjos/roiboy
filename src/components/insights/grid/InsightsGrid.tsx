@@ -26,6 +26,8 @@ interface InsightsGridProps {
   readOnly?: boolean;
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
+  /** Optional per-surface override of the auto-fit minimum card widths (px). */
+  minCardWidths?: Partial<MinCardWidths>;
 }
 
 const ROW_HEIGHT = 20;
@@ -312,7 +314,7 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 // ── Main component ──
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
@@ -431,6 +433,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           onRemoveVisual={undefined}
           containerWidth={containerWidth}
           readOnly
+          minCardWidths={minCardWidths}
         />
       </div>
     );
@@ -448,6 +451,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           onRemoveVisual={onRemoveVisual}
           containerWidth={containerWidth}
           readOnly={readOnly}
+          minCardWidths={minCardWidths}
         />
       )}
 
