@@ -33,17 +33,11 @@ const CurrentUserContext = createContext<CurrentUserContextType | undefined>(und
 export function CurrentUserProvider({ children }: { children: ReactNode }) {
   const [currentUser, setCurrentUser] = useState<CurrentUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [requestVersion, setRequestVersion] = useState(0);
-
-  const fetchUser = useCallback(async (attempt = 0, version?: number): Promise<void> => {
-    const activeVersion = version ?? requestVersion + 1;
-    if (version === undefined) setRequestVersion(activeVersion);
-
+  const fetchUser = useCallback(async (attempt = 0): Promise<void> => {
     try {
       const { data: { user: authUser } } = await withQueryTimeout(supabase.auth.getUser(), 8_000);
 
       if (!authUser) {
-        if (activeVersion !== requestVersion + (version === undefined ? 1 : 0)) return;
         setCurrentUser(null);
         setLoading(false);
         return;
@@ -63,7 +57,7 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
         // leaving the whole app in a permanent loading state.
         if (attempt < 1) {
           await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
-          return fetchUser(attempt + 1, activeVersion);
+          return fetchUser(attempt + 1);
         }
         setCurrentUser(null);
         setLoading(false);
@@ -98,12 +92,12 @@ export function CurrentUserProvider({ children }: { children: ReactNode }) {
       console.error("[useCurrentUser] Unexpected error (attempt " + attempt + "):", error);
       if (attempt < 1) {
         await new Promise((r) => setTimeout(r, 500 * Math.pow(2, attempt)));
-        return fetchUser(attempt + 1, activeVersion);
+        return fetchUser(attempt + 1);
       }
       setCurrentUser(null);
       setLoading(false);
     }
-  }, [requestVersion]);
+  }, []);
 
   const refetchUser = useCallback(async () => {
     await fetchUser();
