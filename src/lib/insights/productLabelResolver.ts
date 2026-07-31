@@ -35,9 +35,13 @@ export async function resolveProductLabels(rawValues: string[]): Promise<Map<str
 
   const rawToProductId = new Map<string, string>();
   for (const raw of coded) {
-    const id = UUID_RE.test(raw.trim()) ? raw.trim() : resolveItemVendaToProductId(raw);
+    const trimmed = raw.trim();
+    const id = UUID_RE.test(trimmed)
+      ? trimmed
+      : LABEL_SLUG_TO_PRODUCT_ID[trimmed.toLowerCase()] || resolveItemVendaToProductId(raw);
     if (id) rawToProductId.set(raw, id);
   }
+
 
   const ids = Array.from(new Set(rawToProductId.values()));
   if (ids.length === 0) return map;
