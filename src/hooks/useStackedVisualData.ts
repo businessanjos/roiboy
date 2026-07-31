@@ -9,6 +9,8 @@ import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
+import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
+
 
 export interface StackedDataPoint {
   name: string;
