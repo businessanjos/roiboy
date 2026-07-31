@@ -192,6 +192,25 @@ export async function fetchNativeFieldValues(
     }
   }
 
+  if (dataSource === 'tasks') {
+    if (field === 'activity_type') {
+      const { data } = await supabase
+        .from('activity_types')
+        .select('name')
+        .eq('account_id', accountId)
+        .order('name');
+      return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))];
+    }
+    if (field === 'assigned_to' || field === 'created_by') {
+      const { data } = await supabase.from('users').select('name').eq('account_id', accountId);
+      return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))].sort();
+    }
+    if (field === 'status') return ['Pendente', 'Concluída'];
+    if (field === 'priority') return ['Baixa', 'Média', 'Alta', 'Urgente'];
+    if (field === 'overdue_status') return ['Em atraso', 'A vencer', 'Concluída', 'Sem Vencimento'];
+    if (field === 'deal_title' || field === 'contact_name' || field === 'title') return [];
+  }
+
   // Generic fallback: distinct values straight from the base table column
   const tableBySource: Record<DataSource, string> = {
     deals: 'deals',
