@@ -220,7 +220,11 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   // How many columns the auto-fit grid will actually create at this width.
   // Used only to translate col_span (1/1, 1/2, 1/3) into a real column span.
-  const fitMinWidth = fitHeight ? Math.min(minWidth, 200) : minWidth;
+  // Na TV cards largos são mais legíveis do que muitos cards estreitos.
+  const fitMinWidth = fitHeight
+    ? (row.isAllScorecards ? 210 : row.isAllCompact ? 320 : 430)
+    : minWidth;
+
   const effectiveCols = Math.max(
     1,
     Math.min(visuals.length, Math.floor((containerWidth + GRID_GAP) / (fitMinWidth + GRID_GAP)) || 1)
