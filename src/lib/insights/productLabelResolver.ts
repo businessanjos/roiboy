@@ -21,6 +21,12 @@ const LABEL_SLUG_TO_PRODUCT_ID: Record<string, string> = {
   rykas_pass: "51f88404-c59f-41bf-a3f5-b71ad209b94d", // E-Pass l Eternum Pass
 };
 
+/** Produtos renomeados: id antigo -> id atual (rebranding RM -> EM). */
+const PRODUCT_ID_ALIAS: Record<string, string> = {
+  "8d3e9bb6-054b-44b3-952f-5920e0ed8775": "f48e141b-e3da-4547-9b4a-70548fcdfe2c", // RM -> EM
+  "eae406e9-6076-41eb-96ed-df0ab187a11c": "27d83762-7ce0-49d5-a12b-b51571303096", // REN. RM -> REN. EM
+};
+
 const looksCoded = (v: string) => UUID_RE.test(v.trim()) || /^[a-z0-9]+(_[a-z0-9]+)+$/.test(v.trim());
 
 
@@ -40,7 +46,8 @@ export async function resolveProductLabels(rawValues: string[]): Promise<Map<str
     const id = UUID_RE.test(trimmed)
       ? trimmed
       : LABEL_SLUG_TO_PRODUCT_ID[trimmed.toLowerCase()] || resolveItemVendaToProductId(raw);
-    if (id) rawToProductId.set(raw, id);
+    const finalId = id ? PRODUCT_ID_ALIAS[id.toLowerCase()] || id : id;
+    if (finalId) rawToProductId.set(raw, finalId);
   }
 
 
