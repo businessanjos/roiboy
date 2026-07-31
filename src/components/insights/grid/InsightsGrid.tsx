@@ -115,12 +115,18 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
       return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
     });
 
+    const isFullWidth = (v: InsightsVisual) => v.layout?.col_span === "1/1";
+
     let currentRow: InsightsVisual[] = [sorted[0]];
     let currentY = sorted[0].layout?.y ?? 0;
 
     for (let i = 1; i < sorted.length; i++) {
       const vy = sorted[i].layout?.y ?? 0;
-      if (Math.abs(vy - currentY) <= 5) {
+      const breaksRow =
+        isFullWidth(sorted[i]) ||
+        currentRow.some(isFullWidth) ||
+        Math.abs(vy - currentY) > 5;
+      if (!breaksRow) {
         currentRow.push(sorted[i]);
       } else {
         rows.push({
@@ -132,6 +138,7 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
         currentY = vy;
       }
     }
+
 
     rows.push({
       visuals: currentRow,
