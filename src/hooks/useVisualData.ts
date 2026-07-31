@@ -96,7 +96,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           break;
         case 'tasks':
           if (chartType === 'call_commercial') {
-            result = await fetchTasksCallCommercialData(accountId, filters);
+            result = await fetchTasksCallCommercialData(accountId, filters, unifiedFilters);
           } else if (chartType === 'funnel') {
             result = await fetchTasksFunnelData(accountId, filters);
           } else {
@@ -1925,12 +1925,13 @@ function readTaskDimension(task: any, field: string): string | null {
 }
 
 
-// Fetch tasks data for Call Comercial visual (legacy, used by call_commercial chart type)
+// Fetch tasks data for Call Comercial visual (fixed layout: agendadas em aberto x concluídas).
+// Each metric uses its own natural date column: agendadas -> due_date, concluídas -> completed_at.
 async function fetchTasksCallCommercialData(
   accountId: string,
-  filters: any
+  filters: any,
+  unifiedFilters?: VisualFilter[]
 ): Promise<AggregatedDataPoint[]> {
-  // Fetch activity types for "Call Comercial Agendada" and "Call Comercial Concluida"
   const { data: activityTypes, error: atError } = await supabase
     .from('activity_types')
     .select('id, name')
@@ -1944,50 +1945,69 @@ async function fetchTasksCallCommercialData(
 
   const agendadaType = activityTypes.find(at => at.name === 'Call Comercial Agendada');
   const concluidaType = activityTypes.find(at => at.name === 'Call Comercial Concluída');
-
   if (!agendadaType && !concluidaType) return [];
 
-  const typeIds = [agendadaType?.id, concluidaType?.id].filter(Boolean) as string[];
+  // Período: filtro de data do próprio visual (com presets dinâmicos) > período global.
+  const dateFilter = (unifiedFilters || []).find(
+    (f) => f.source === 'native' && f.type === 'date'
+  );
+  const bounds = dateFilter ? filterDateBounds(dateFilter) : null;
+  const toDay = (v?: string | null) => (v ? v.split('T')[0] : null);
+  const startDay = toDay(bounds?.from) || toDay(filters.startDate);
+  const endDay = toDay(bounds?.to) || toDay(filters.endDate);
 
-  let baseQuery = supabase
-    .from('internal_tasks')
-    .select('id, activity_type_id, completed_at, assigned_to, due_date, deal_id, users!internal_tasks_assigned_to_fkey(name)')
-    .eq('account_id', accountId)
-    .in('activity_type_id', typeIds)
-    .not('assigned_to', 'is', null);
+  const fetchAll = async (typeId: string, dateField: 'due_date' | 'completed_at') => {
+    let query = supabase
+      .from('internal_tasks')
+      .select('id, completed_at, assigned_to, deal_id, users!internal_tasks_assigned_to_fkey(name)')
+      .eq('account_id', accountId)
+      .eq('activity_type_id', typeId)
+      .not('assigned_to', 'is', null);
 
-  if (filters.startDate) {
-    const startDate = filters.startDate.split('T')[0];
-    baseQuery = baseQuery.gte('due_date', startDate);
-  }
-  if (filters.endDate) {
-    const endDate = filters.endDate.split('T')[0];
-    baseQuery = baseQuery.lte('due_date', endDate);
-  }
-  if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
+    if (dateField === 'completed_at') {
+      query = query.not('completed_at', 'is', null);
+      if (startDay) query = query.gte('completed_at', startDay);
+      if (endDay) query = query.lte('completed_at', `${endDay}T23:59:59`);
+    } else {
+      query = query.is('completed_at', null);
+      if (startDay) query = query.gte('due_date', startDay);
+      if (endDay) query = query.lte('due_date', endDay);
+    }
+    if (filters.userId && filters.userId !== 'all') query = query.eq('assigned_to', filters.userId);
 
-  let allTasks: any[] = [];
-  let from = 0;
-  const pageSize = 1000;
+    const rows: any[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    while (true) {
+      const { data, error } = await query.order(dateField, { ascending: false }).range(from, from + pageSize - 1);
+      if (error) { console.error('Error fetching call comercial tasks:', error); break; }
+      rows.push(...(data || []));
+      if (!data || data.length < pageSize) break;
+      from += pageSize;
+    }
+    return rows;
+  };
 
-  while (true) {
-    const { data, error: tasksError } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
-    if (tasksError) { console.error('Error fetching tasks:', tasksError); return []; }
-    allTasks = allTasks.concat(data || []);
-    if (!data || data.length < pageSize) break;
-    from += pageSize;
-  }
+  const [scheduledRows, completedRows] = await Promise.all([
+    agendadaType ? fetchAll(agendadaType.id, 'due_date') : Promise.resolve([]),
+    concluidaType ? fetchAll(concluidaType.id, 'completed_at') : Promise.resolve([]),
+  ]);
 
   const userMap = new Map<string, { scheduledDeals: Set<string>; completedDeals: Set<string> }>();
+  const ensure = (name: string) => {
+    if (!userMap.has(name)) userMap.set(name, { scheduledDeals: new Set(), completedDeals: new Set() });
+    return userMap.get(name)!;
+  };
 
-  for (const task of allTasks) {
+  for (const task of scheduledRows) {
     const userName = (task.users as any)?.name;
     if (!userName) continue;
-    if (!userMap.has(userName)) userMap.set(userName, { scheduledDeals: new Set(), completedDeals: new Set() });
-    const entry = userMap.get(userName)!;
-    const dedupeKey = task.deal_id || task.id; // fallback to task id if no deal
-    if (task.activity_type_id === agendadaType?.id && !task.completed_at) entry.scheduledDeals.add(dedupeKey);
-    else if (task.activity_type_id === concluidaType?.id && task.completed_at) entry.completedDeals.add(dedupeKey);
+    ensure(userName).scheduledDeals.add(task.deal_id || task.id);
+  }
+  for (const task of completedRows) {
+    const userName = (task.users as any)?.name;
+    if (!userName) continue;
+    ensure(userName).completedDeals.add(task.deal_id || task.id);
   }
 
   const result: AggregatedDataPoint[] = [];
@@ -1998,6 +2018,7 @@ async function fetchTasksCallCommercialData(
 
   return result;
 }
+
 
 // ==================== ROYZAPP (WHATSAPP) ====================
 async function fetchRoyZappData(

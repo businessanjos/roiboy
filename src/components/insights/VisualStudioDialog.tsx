@@ -243,6 +243,23 @@ export function VisualStudioDialog({
   const isFixed = FIXED_TYPES.includes(chartType);
   const needsDimension = !isScorecard && !isTable && !isFixed;
 
+  // "Calls Comerciais" é um layout fixo: ele já busca sozinho as atividades
+  // "Call Comercial Agendada" (em aberto, por data prevista) e "Call Comercial
+  // Concluída" (por data de conclusão). Só o período faz sentido como filtro.
+  const isCallCommercial = chartType === 'call_commercial';
+  const filterCatalog = isCallCommercial
+    ? fieldCatalog.filter((f) => f.source === 'native' && f.type === 'date')
+    : fieldCatalog;
+
+  useEffect(() => {
+    if (!isCallCommercial) return;
+    setVisualFilters((prev) => {
+      const next = prev.filter((f) => f.source === 'native' && f.type === 'date');
+      return next.length === prev.length ? prev : next;
+    });
+  }, [isCallCommercial]);
+
+
   // Auto title (stops as soon as the user types their own)
   useEffect(() => {
     if (titleTouched || !dataSource) return;
@@ -608,17 +625,27 @@ export function VisualStudioDialog({
                       <>
                         <Separator />
                         <div className="space-y-2">
-                          <Label className="text-base font-medium">4. Quer filtrar algo? (opcional)</Label>
+                          <Label className="text-base font-medium">
+                            {isCallCommercial ? '3. Período (opcional)' : '4. Quer filtrar algo? (opcional)'}
+                          </Label>
+                          {isCallCommercial && (
+                            <p className="text-xs text-muted-foreground">
+                              Layout fixo: já conta sozinho as "Call Comercial Agendada" em aberto (pela data prevista)
+                              e as "Call Comercial Concluída" (pela data de conclusão) de cada vendedor. Só o período
+                              precisa ser configurado.
+                            </p>
+                          )}
                           <FilterSection
                             dataSource={dataSource}
                             accountId={currentUser?.account_id ?? null}
-                            catalog={fieldCatalog}
+                            catalog={filterCatalog}
                             filters={visualFilters}
                             onChange={setVisualFilters}
                           />
                         </div>
                       </>
                     )}
+
 
                     <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode('advanced')}>
                       <Sliders className="mr-1.5 h-4 w-4" /> Ajustar detalhes avançados
@@ -751,15 +778,22 @@ export function VisualStudioDialog({
               {dataSource && (
                 <>
                   <Separator />
+                  {isCallCommercial && (
+                    <p className="text-xs text-muted-foreground">
+                      Layout fixo: agendadas em aberto (data prevista) x concluídas (data de conclusão) por vendedor.
+                      Apenas filtros de período se aplicam.
+                    </p>
+                  )}
                   <FilterSection
                     dataSource={dataSource}
                     accountId={currentUser?.account_id ?? null}
-                    catalog={fieldCatalog}
+                    catalog={filterCatalog}
                     filters={visualFilters}
                     onChange={setVisualFilters}
                   />
                 </>
               )}
+
 
               <Separator />
               <FormattingSection value={formatType} onChange={setFormatType} />
