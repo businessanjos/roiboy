@@ -473,6 +473,162 @@ export function VisualStudioDialog({
         {/* Body: config + live preview */}
         <div className="flex min-h-0 flex-1">
           <aside className="w-[400px] shrink-0 overflow-y-auto border-r p-5">
+            {/* Alternador simples x avançado */}
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+              {([
+                { id: 'simple' as const, label: 'Simples', icon: Wand2 },
+                { id: 'advanced' as const, label: 'Avançado', icon: Sliders },
+              ]).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMode(opt.id)}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    mode === opt.id
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <opt.icon className="h-4 w-4" />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {mode === 'simple' && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-base font-medium">1. O que você quer ver?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Escolha uma pergunta. A gente monta o gráfico pronto.
+                    </p>
+                  </div>
+
+                  {RECIPE_GROUPS.map((group) => {
+                    const recipes = VISUAL_RECIPES.filter((r) => r.group === group);
+                    if (!recipes.length) return null;
+                    return (
+                      <div key={group} className="space-y-1.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group}
+                        </p>
+                        {recipes.map((recipe) => (
+                          <button
+                            key={recipe.id}
+                            type="button"
+                            onClick={() => applyRecipe(recipe)}
+                            className={cn(
+                              'flex w-full items-start gap-2.5 rounded-lg border-2 p-2.5 text-left transition-all',
+                              recipeId === recipe.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            )}
+                          >
+                            <span className="text-lg leading-none">{recipe.emoji}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium leading-snug">{recipe.question}</span>
+                              <span className="block text-xs text-muted-foreground">{recipe.hint}</span>
+                            </span>
+                            {recipeId === recipe.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {activeRecipe && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">2. Como mostrar?</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'bar' as ChartType, label: 'Colunas' },
+                          { value: 'bar_horizontal' as ChartType, label: 'Barras' },
+                          { value: 'line' as ChartType, label: 'Linha' },
+                          { value: 'pie' as ChartType, label: 'Pizza' },
+                          { value: 'ranking' as ChartType, label: 'Ranking' },
+                          { value: 'scorecard' as ChartType, label: 'Número' },
+                        ]).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setChartType(opt.value)}
+                            className={cn(
+                              'rounded-lg border-2 px-2 py-2 text-xs font-medium transition-all',
+                              chartType === opt.value
+                                ? 'border-primary bg-primary/5 text-primary'
+                                : 'border-border text-muted-foreground hover:border-primary/50'
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {needsDimension && (
+                      <div className="space-y-2">
+                        <Label className="text-base font-medium">3. Separado por quê?</Label>
+                        <Select
+                          value={dimensionField ?? undefined}
+                          onValueChange={(v) => setDimensionField(v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolha" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dimensionFields.map((f) => (
+                              <SelectItem key={f.value} value={f.value}>
+                                {f.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isDimensionDate && (
+                          <Select value={dateGrouping} onValueChange={(v) => setDateGrouping(v as DateGrouping)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="day">Por dia</SelectItem>
+                              <SelectItem value="week">Por semana</SelectItem>
+                              <SelectItem value="month">Por mês</SelectItem>
+                              <SelectItem value="year">Por ano</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    )}
+
+                    {dataSource && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <Label className="text-base font-medium">4. Quer filtrar algo? (opcional)</Label>
+                          <FilterSection
+                            dataSource={dataSource}
+                            accountId={currentUser?.account_id ?? null}
+                            catalog={fieldCatalog}
+                            filters={visualFilters}
+                            onChange={setVisualFilters}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode('advanced')}>
+                      <Sliders className="mr-1.5 h-4 w-4" /> Ajustar detalhes avançados
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {mode === 'advanced' && (
             <div className="space-y-6">
               <ChartTypeSelector value={chartType} onChange={setChartType} />
 
@@ -625,6 +781,7 @@ export function VisualStudioDialog({
                 onValueColorChange={setValueColor}
               />
             </div>
+            )}
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col bg-muted/30 p-6">
