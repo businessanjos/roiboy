@@ -61,7 +61,9 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
             </div>
           )}
           <div className="flex-1 min-h-0 px-6 pb-6">
-            <TvModeProvider>{children}</TvModeProvider>
+            {/* Mantemos o palco 1920x1080, mas os visuais renderizam exatamente
+                como fora do modo TV (sem overrides de fonte/corte de categorias). */}
+            <TvModeProvider enabled={false}>{children}</TvModeProvider>
           </div>
         </div>
       </div>
