@@ -36,7 +36,12 @@ import {
   DATA_SOURCE_FIELDS,
   generateVisualTitle,
   DEFAULT_APPEARANCE,
+  VisualFilter,
+  SegmentBy,
 } from "./types";
+import { FilterSection } from "./FilterSection";
+import { SegmentSection } from "./SegmentSection";
+import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 
 interface VisualBuilderSheetProps {
   open: boolean;
