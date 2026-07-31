@@ -225,7 +225,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
         ...(fitHeight
           ? {
               // Compact rows (scorecards / gauges) take less vertical space than charts
-              flex: `${row.isAllScorecards ? 0.45 : row.isAllCompact ? 0.7 : 1} 1 0%`,
+              flex: `${row.isAllScorecards ? 0.55 : row.isAllCompact ? 0.9 : 1} 1 0%`,
               gridAutoRows: "1fr",
             }
           : {}),
