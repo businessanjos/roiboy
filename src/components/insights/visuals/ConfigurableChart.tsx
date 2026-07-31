@@ -344,6 +344,7 @@ function LineChartView({
   const maxChars = flat ? longest : Math.max(5, Math.floor(52 / (tickFont * 0.62)));
   const tickInterval = flat ? 0 : 'preserveStartEnd';
   const labelStep = Math.max(1, Math.ceil(52 / Math.max(slot, 1)));
+  const yWidth = yAxisWidth(data, formatting, Math.round(11 * m));
 
   return (
     <div ref={ref} className="h-full w-full">
