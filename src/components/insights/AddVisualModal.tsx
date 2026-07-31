@@ -113,6 +113,27 @@ const GROUP_BY_TO_DIMENSION: Record<GroupBy, { field: string; type: 'date' | 'te
   status_task: { field: 'status', type: 'text' },
 };
 
+type GroupDimension = { field: string; type: 'date' | 'text'; dateGrouping?: 'day' | 'week' | 'month' | 'year' };
+
+/**
+ * Resolves the dimension for a "Ver por" selection. Legacy shortcut keys keep
+ * their mapping; any other key comes straight from the shared field catalog,
+ * so grouping and filtering always offer the same set of fields.
+ */
+function resolveGroupDimension(
+  groupBy: GroupBy | null,
+  catalog: CatalogField[]
+): GroupDimension | null {
+  if (!groupBy) return null;
+  if (GROUP_BY_TO_DIMENSION[groupBy]) return GROUP_BY_TO_DIMENSION[groupBy];
+  const field = catalog.find((f) => f.source === 'native' && f.key === groupBy);
+  if (!field) return null;
+  return field.type === 'date'
+    ? { field: field.key, type: 'date', dateGrouping: 'month' }
+    : { field: field.key, type: 'text' };
+}
+
+
 // Determines the correct date field based on the metric being measured
 const getDateFieldForMetric = (metric: Metric): string => {
   switch (metric) {
