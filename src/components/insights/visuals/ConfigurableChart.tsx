@@ -289,7 +289,7 @@ function BarChartView({
 }
 
 function HorizontalBarChartView({ 
-  data, 
+  data: allData, 
   formatting, 
   appearance,
   onDrilldown 
@@ -369,7 +369,7 @@ function HorizontalBarChartView({
                 style={{ fontSize: tickFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}
               />
             )}
-            {data.map((entry, index) => (
+            {rows.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
                 fill={entry.color || colors[index % colors.length]}
