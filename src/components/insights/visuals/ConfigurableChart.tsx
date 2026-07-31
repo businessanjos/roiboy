@@ -29,6 +29,8 @@ import { ConfigurableTable } from "./ConfigurableTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
+import { useTvMode } from "../TvModeContext";
+
 
 interface AggregatedDataPoint {
   name: string;
