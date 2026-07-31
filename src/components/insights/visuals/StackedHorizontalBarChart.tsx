@@ -10,6 +10,7 @@ import {
   LabelList,
 } from "recharts";
 import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, DEFAULT_APPEARANCE } from "../visual-builder/types";
+import { useTvMode } from "../TvModeContext";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 
@@ -102,7 +103,8 @@ export function StackedHorizontalBarChart({
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
   const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
-  const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'];
+  const tvMode = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'] * tvMode.scale;
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
     return (

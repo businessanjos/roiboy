@@ -4,6 +4,7 @@ import { FormatType, DisplayScale, FONT_SCALE_MULTIPLIERS } from "../visual-buil
 import { VisualConfig } from "../visual-builder/types";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { sumGoalsInRange } from "@/lib/monthRange";
+import { useTvMode } from "../TvModeContext";
 
 
 interface ConfigurableScorecardProps {
@@ -41,7 +42,8 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
         formatting.displayScale || 'auto'
       );
 
-  const m = FONT_SCALE_MULTIPLIERS[config?.appearance?.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[config?.appearance?.fontScale || 'normal'] * tv.scale;
 
   // Font size derived from the real container width (not the string length)
   const containerRef = useRef<HTMLDivElement>(null);
@@ -58,7 +60,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
     return () => ro.disconnect();
   }, []);
 
-  const MAX_FONT = 28 * m;
+  const MAX_FONT = (tv.tv ? 46 : 28) * m;
   const MIN_FONT = Math.max(11, 12 * m);
   const suffixSize = Math.round(14 * m);
   const subtitleSize = Math.round(11 * m);
