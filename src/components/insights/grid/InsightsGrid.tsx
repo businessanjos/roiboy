@@ -340,15 +340,34 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 // ── Main component ──
 
+const FREE_LAYOUT_KEY = "insights:free-layout-mode";
+
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [freeLayout, setFreeLayout] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(FREE_LAYOUT_KEY) === "1";
+  });
+
+  const toggleFreeLayout = useCallback(() => {
+    setFreeLayout((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(FREE_LAYOUT_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() =>
     visuals.map((v, i) => visualToLayoutItem(v, i))
   );
+
 
   const prevVisualIdsRef = useRef<string>(visuals.map(v => v.id).sort().join(","));
   const isMountedRef = useRef(false);
