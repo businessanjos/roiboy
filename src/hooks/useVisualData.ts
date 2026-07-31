@@ -1295,8 +1295,10 @@ async function fetchLeadsData(
 
   // For scorecard total with filter, return count after filtering
   if (dimension.field === '_total') {
-    return aggregateGlobalTotal(allData, measure);
+    if (isCustomFieldKey(measure.field)) return aggregateGlobalTotal(allData, measure);
+    return [{ name: 'Total', value: allData.length }];
   }
+
 
 
   // If grouping by MQL, fetch MQL field values and inject into leads
