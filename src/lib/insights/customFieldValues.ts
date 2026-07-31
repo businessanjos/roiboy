@@ -130,16 +130,18 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
     return records;
   }
 
-  // Text-like: resolve option labels and product codes to readable names
+  // Text-like: keep the RAW stored value so legacy product slugs can be resolved
+  // against the products table. The product name always wins over the (often
+  // outdated) option label saved in the custom field definition.
   const rawByEntity = new Map<string, string[]>();
   for (const row of rows) {
     const entityId = row[idColumn];
     if (isMultiSelect && Array.isArray(row.value_json)) {
-      rawByEntity.set(entityId, row.value_json.map((v: string) => valueToLabel.get(v) || v));
+      rawByEntity.set(entityId, row.value_json.map((v: string) => String(v)));
     } else if (isDate && row.value_date) {
       rawByEntity.set(entityId, [String(row.value_date)]);
     } else if (row.value_text) {
-      rawByEntity.set(entityId, [valueToLabel.get(row.value_text) || row.value_text]);
+      rawByEntity.set(entityId, [String(row.value_text)]);
     }
   }
 
@@ -147,11 +149,15 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   for (const vals of rawByEntity.values()) allRaw.push(...vals);
   const productLabels = await resolveProductLabels(allRaw);
 
+  const labelFor = (raw: string) =>
+    productLabels.get(raw) || valueToLabel.get(raw) || raw;
+
   for (const [entityId, recs] of entityToRecords) {
     const vals = rawByEntity.get(entityId);
-    const label = vals ? applyProductLabels(vals, productLabels) : 'Não informado';
+    const label = vals ? vals.map(labelFor).join(', ') : 'Não informado';
     for (const r of recs) (r as any)[key] = label;
   }
+
 
   return records;
 }

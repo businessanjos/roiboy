@@ -113,14 +113,15 @@ async function enrichWithCustomField(
     allValues = allValues.concat(data || []);
   }
 
-  // Collect raw values so coded ones (product UUIDs / legacy slugs) can be resolved to names
+  // Collect RAW values so coded ones (product UUIDs / legacy slugs) resolve to
+  // the current product name — which wins over the stale option label.
   const rawByEntity = new Map<string, string[]>();
   for (const row of allValues) {
     const entityId = row[idColumn];
     if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
-      rawByEntity.set(entityId, row.value_json.map((v: string) => valueToLabel.get(v) || v));
+      rawByEntity.set(entityId, row.value_json.map((v: string) => String(v)));
     } else if (row.value_text) {
-      rawByEntity.set(entityId, [valueToLabel.get(row.value_text) || row.value_text]);
+      rawByEntity.set(entityId, [String(row.value_text)]);
     }
   }
 
@@ -128,11 +129,14 @@ async function enrichWithCustomField(
   for (const vals of rawByEntity.values()) allRaw.push(...vals);
   const productLabels = await resolveProductLabels(allRaw);
 
+  const labelFor = (raw: string) => productLabels.get(raw) || valueToLabel.get(raw) || raw;
+
   // Build entityId -> label map
   const entityLabelMap = new Map<string, string>();
   for (const [entityId, vals] of rawByEntity) {
-    entityLabelMap.set(entityId, applyProductLabels(vals, productLabels));
+    entityLabelMap.set(entityId, vals.map(labelFor).join(', '));
   }
+
 
 
   // Inject _custom_stack_label into records
