@@ -96,7 +96,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           break;
         case 'tasks':
           if (chartType === 'call_commercial') {
-            result = await fetchTasksCallCommercialData(accountId, filters);
+            result = await fetchTasksCallCommercialData(accountId, filters, unifiedFilters);
           } else if (chartType === 'funnel') {
             result = await fetchTasksFunnelData(accountId, filters);
           } else {
