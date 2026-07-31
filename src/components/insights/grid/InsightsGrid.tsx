@@ -486,12 +486,29 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     );
   }
 
-  // Always show responsive CSS grid, with an invisible react-grid-layout
-  // overlay that activates only during drag/resize
+  const gridVisible = freeLayout || isEditing;
+
+  // Responsive CSS grid by default; free layout mode keeps the draggable/resizable grid visible
   return (
-    <div ref={containerRef} className="insights-grid pointer-events-auto relative">
-      {/* Responsive CSS grid — always visible when not dragging */}
-      {!isEditing && (
+    <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${freeLayout ? "free-layout" : ""}`}>
+      <div className="flex justify-end pb-2">
+        <button
+          type="button"
+          onClick={toggleFreeLayout}
+          className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+            freeLayout
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted/50"
+          }`}
+          title="Redimensionar e posicionar os cards livremente"
+        >
+          <Move className="h-3.5 w-3.5" />
+          {freeLayout ? "Concluir layout" : "Ajustar layout"}
+        </button>
+      </div>
+
+      {/* Responsive CSS grid — visible when not in free/edit mode */}
+      {!gridVisible && (
         <ResponsiveInsightsGrid
           visuals={visuals}
           onUpdateVisual={onUpdateVisual}
@@ -502,11 +519,11 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         />
       )}
 
-      {/* React-grid-layout — hidden but interactive for drag handles,
-          becomes visible during active drag/resize */}
-      <div className={isEditing ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
-        style={!isEditing ? { height: 0, overflow: "hidden" } : undefined}
+      {/* React-grid-layout — interactive drag/resize surface */}
+      <div className={gridVisible ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
+        style={!gridVisible ? { height: 0, overflow: "hidden" } : undefined}
       >
+
         <GridLayout
           className="layout"
           layout={localLayout}
