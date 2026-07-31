@@ -309,17 +309,36 @@ export function VisualStudioDialog({
     (!isTable || tableColumns.length > 0) &&
     (aggregation === 'count' || !!measureField);
 
+  // Debounce the config that feeds the preview: every keystroke/toggle would
+  // otherwise re-run the data fetch and re-render the whole chart.
+  const configKey = useMemo(() => JSON.stringify(config), [config]);
+  const [debouncedConfig, setDebouncedConfig] = useState<VisualConfig | null>(config);
+  const [debouncedType, setDebouncedType] = useState<ChartType>(chartType);
+  const [isPreviewStale, setIsPreviewStale] = useState(false);
+
+  useEffect(() => {
+    setIsPreviewStale(true);
+    const t = window.setTimeout(() => {
+      setDebouncedConfig(config);
+      setDebouncedType(chartType);
+      setIsPreviewStale(false);
+    }, 500);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [configKey, chartType]);
+
   const previewVisual = useMemo(
     () => ({
       id: visual?.id ?? 'preview',
       dashboard_id: visual?.dashboard_id,
-      title: title || 'Prévia',
-      chart_type: chartType,
-      config,
+      title: 'Prévia',
+      chart_type: debouncedType,
+      config: debouncedConfig,
       layout: null,
     }),
-    [visual?.id, visual?.dashboard_id, title, chartType, config]
+    [visual?.id, visual?.dashboard_id, debouncedType, debouncedConfig]
   );
+
 
   const handleSave = async () => {
     if (!canSave || !config) return;
