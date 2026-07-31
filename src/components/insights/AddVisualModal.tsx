@@ -1219,6 +1219,26 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 </div>
               )}
 
+
+              {activeDataSource && (
+                <>
+                  <SegmentSection
+                    catalog={fieldCatalog}
+                    value={segmentBy}
+                    onChange={setSegmentBy}
+                    excludeKey={groupBy ? GROUP_BY_TO_DIMENSION[groupBy]?.field : undefined}
+                  />
+
+                  <FilterSection
+                    dataSource={activeDataSource}
+                    accountId={currentUser?.account_id ?? null}
+                    catalog={fieldCatalog}
+                    filters={visualFilters}
+                    onChange={setVisualFilters}
+                  />
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="visual-title">Título do Visual</Label>
                 <Input
@@ -1228,6 +1248,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                   placeholder="Ex: Faturamento por Mês"
                 />
               </div>
+
             </div>
           )}
         </div>
