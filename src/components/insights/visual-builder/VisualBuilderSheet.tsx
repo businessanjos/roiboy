@@ -77,6 +77,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
   const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
 
+  // Unified filters + segmentation (Pipedrive-style)
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
+  const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
+  const { data: fieldCatalog = [] } = useFieldCatalog(dataSource, currentUser?.account_id ?? null);
+
+
   // Auto-fetch ALL company goals when selecting revenue gauge
   useEffect(() => {
     if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
