@@ -1148,7 +1148,8 @@ async function fetchLeadsData(
   dateDisplayFormat: DateDisplayFormat,
   leadFilters?: FieldFilter[],
   dealFilters?: FieldFilter[],
-  dealStatusFilter?: string[]
+  dealStatusFilter?: string[],
+  unifiedFilters?: VisualFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Determine if we need lead field filtering or deal-based filtering
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
