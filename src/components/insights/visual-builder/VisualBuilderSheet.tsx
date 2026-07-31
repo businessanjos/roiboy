@@ -125,6 +125,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   useEffect(() => {
     if (!open) {
       setDataSource(null);
+      setVisualFilters([]);
+      setSegmentBy(null);
       setMeasureField(null);
       setAggregation('sum');
       setDimensionField(null);
