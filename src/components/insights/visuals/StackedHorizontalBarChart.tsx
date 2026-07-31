@@ -130,7 +130,7 @@ export function StackedHorizontalBarChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 24, right: 12, left: 4, bottom: 4 }}
+          margin={{ top: 34, right: 12, left: 4, bottom: 4 }}
           barCategoryGap="18%"
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
@@ -178,23 +178,36 @@ export function StackedHorizontalBarChart({
                     const idx = props.index ?? 0;
                     const total = totals[idx] || 0;
                     if (!total) return null;
-                    const fs = Math.max(9, Math.round(10 * m));
+
+                    const text = formatValueCompact(total, safeFormatting.type);
+                    const slot = (props.width || 0) / 0.82; // barCategoryGap 18%
+                    let fs = Math.max(9, Math.round(10 * m));
+                    // reduz a fonte até um mínimo legível para caber no slot
+                    while (fs > 8 && text.length * fs * 0.58 > slot) fs -= 1;
+
+                    // se ainda não couber, alterna a altura do rótulo (zigue-zague)
+                    const fits = text.length * fs * 0.58 <= slot;
+                    const hasNeighbor =
+                      (totals[idx - 1] || 0) > 0 || (totals[idx + 1] || 0) > 0;
+                    const stagger = !fits && hasNeighbor && idx % 2 === 1;
+
                     return (
                       <text
                         x={props.x + props.width / 2}
-                        y={props.y - 6}
+                        y={props.y - 6 - (stagger ? fs + 4 : 0)}
                         fill="hsl(var(--foreground))"
                         textAnchor="middle"
                         fontSize={fs}
                         fontWeight={600}
                         style={{ fontVariantNumeric: 'tabular-nums' }}
                       >
-                        {formatValueCompact(total, safeFormatting.type)}
+                        {text}
                       </text>
                     );
                   }}
                 />
               )}
+
             </Bar>
           ))}
         </BarChart>
