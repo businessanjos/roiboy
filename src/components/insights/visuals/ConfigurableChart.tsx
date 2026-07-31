@@ -192,7 +192,7 @@ function BarChartView({
             tick={{ fontSize: Math.round(11 * m), ...AXIS_TICK }}
             tickLine={false}
             axisLine={false}
-            width={Math.round(58 * m)}
+            width={yWidth}
           />
           <Tooltip cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.35 }} content={<ChartTooltip formatting={formatting} showCount />} />
           <Bar 
@@ -373,7 +373,7 @@ function LineChartView({
             tick={{ fontSize: Math.round(11 * m), ...AXIS_TICK }}
             tickLine={false}
             axisLine={false}
-            width={Math.round(58 * m)}
+            width={yWidth}
           />
           <Tooltip cursor={{ stroke: 'hsl(var(--border))' }} content={<ChartTooltip formatting={formatting} showCount />} />
           <Line
