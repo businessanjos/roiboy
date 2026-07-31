@@ -66,8 +66,12 @@ export function MeasureSection({
               {numericFields.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
+                  {option.badge && (
+                    <span className="ml-1 text-xs text-muted-foreground">({option.badge})</span>
+                  )}
                 </SelectItem>
               ))}
+
             </SelectContent>
           </Select>
         </div>
