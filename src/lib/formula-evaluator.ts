@@ -98,20 +98,32 @@ export function formatValueCompact(
   }
 
   if (formatType === 'percentage') {
-    return `${Math.round(value)}%`;
+    const rounded = Math.abs(value) < 10 ? Math.round(value * 10) / 10 : Math.round(value);
+    return `${rounded.toLocaleString('pt-BR', { maximumFractionDigits: 1 })}%`;
   }
 
-  const formatted = new Intl.NumberFormat('pt-BR', {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 0,
-  }).format(Math.round(value));
+  const abs = Math.abs(value);
+  const prefix = formatType === 'currency' ? 'R$ ' : '';
 
-  if (formatType === 'currency') {
-    return `R$${formatted}`;
-  }
+  const short = (n: number, suffix: string) => {
+    const scaled = n;
+    // 1 casa decimal só quando o número curto é pequeno (ex.: 9,4 mi)
+    const decimals = Math.abs(scaled) < 100 ? 1 : 0;
+    const text = scaled.toLocaleString('pt-BR', {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: decimals,
+    });
+    return `${prefix}${text}${suffix}`;
+  };
 
-  return formatted;
+  if (abs >= 1_000_000_000) return short(value / 1_000_000_000, ' bi');
+  if (abs >= 1_000_000) return short(value / 1_000_000, ' mi');
+  if (abs >= 1_000) return short(value / 1_000, ' mil');
+
+  const decimals = Number.isInteger(value) ? 0 : 1;
+  return `${prefix}${value.toLocaleString('pt-BR', { minimumFractionDigits: 0, maximumFractionDigits: decimals })}`;
 }
+
 
 // Alias for backward compatibility
 export const formatValueDisplay = formatValue;
