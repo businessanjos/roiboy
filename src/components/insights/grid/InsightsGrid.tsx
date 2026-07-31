@@ -445,11 +445,12 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h, scale: 48 },
       }));
       onLayoutChange(layoutUpdates);
-      // Exit editing mode after drag/resize
-      setTimeout(() => setIsEditing(false), 100);
+      // In free layout mode the grid stays visible/editable
+      if (!freeLayout) setTimeout(() => setIsEditing(false), 100);
     },
-    [onLayoutChange]
+    [onLayoutChange, freeLayout]
   );
+
 
   const handleDragStart = useCallback(() => setIsEditing(true), []);
   const handleResizeStart = useCallback(() => setIsEditing(true), []);
