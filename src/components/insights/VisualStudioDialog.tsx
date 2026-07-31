@@ -696,6 +696,7 @@ export function VisualStudioDialog({
                         aggregation={aggregation}
                         onFieldChange={setMeasureField}
                         onAggregationChange={setAggregation}
+                        catalog={fieldCatalog}
                       />
 
                       {needsDimension && (
@@ -707,7 +708,9 @@ export function VisualStudioDialog({
                             dateGrouping={dateGrouping}
                             onFieldChange={setDimensionField}
                             onDateGroupingChange={setDateGrouping}
+                            catalog={fieldCatalog}
                           />
+
 
                           <Separator />
                           <SegmentSection
