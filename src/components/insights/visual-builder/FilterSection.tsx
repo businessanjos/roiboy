@@ -18,6 +18,9 @@ import {
   operatorsForType,
   operatorNeedsValues,
   newFilterId,
+  DATE_PRESETS,
+  DatePreset,
+  filterDateBounds,
 } from "./types";
 import {
   CatalogField,
@@ -180,18 +183,53 @@ function FilterRow({
       )}
 
       {needsValues && filter.type === 'date' && (
-        <div className="flex items-center gap-2">
-          <Input
-            type="date"
-            value={filter.from || ''}
-            onChange={(e) => onUpdate(index, { ...filter, from: e.target.value })}
-          />
-          <span className="text-muted-foreground text-sm">até</span>
-          <Input
-            type="date"
-            value={filter.to || ''}
-            onChange={(e) => onUpdate(index, { ...filter, to: e.target.value })}
-          />
+        <div className="space-y-2">
+          <Select
+            value={filter.preset || 'custom'}
+            onValueChange={(p) => {
+              const preset = p as DatePreset;
+              if (preset === 'custom') {
+                const b = filterDateBounds(filter);
+                onUpdate(index, { ...filter, preset: 'custom', from: b.from, to: b.to });
+              } else {
+                onUpdate(index, { ...filter, preset });
+              }
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              {DATE_PRESETS.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          {(!filter.preset || filter.preset === 'custom') ? (
+            <div className="flex items-center gap-2">
+              <Input
+                type="date"
+                value={filter.from || ''}
+                onChange={(e) => onUpdate(index, { ...filter, preset: 'custom', from: e.target.value })}
+              />
+              <span className="text-muted-foreground text-sm">até</span>
+              <Input
+                type="date"
+                value={filter.to || ''}
+                onChange={(e) => onUpdate(index, { ...filter, preset: 'custom', to: e.target.value })}
+              />
+            </div>
+          ) : (
+            <p className="text-xs text-muted-foreground">
+              {(() => {
+                const b = filterDateBounds(filter);
+                return `${b.from || '...'} até ${b.to || '...'} (atualiza automaticamente)`;
+              })()}
+            </p>
+          )}
         </div>
       )}
 
