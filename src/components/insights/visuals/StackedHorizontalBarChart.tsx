@@ -115,30 +115,49 @@ export function StackedHorizontalBarChart({
   const isVertical = orientation === 'vertical';
 
   if (isVertical) {
+    const tickFont = Math.round(11 * m);
+    // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
+    const totals = data.map((d) =>
+      seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
+    );
+    const maxTotal = Math.max(0, ...totals);
+    const longestTick = formatValueCompact(maxTotal, safeFormatting.type);
+    const yWidth = Math.round(Math.min(120, Math.max(48, longestTick.length * tickFont * 0.62 + 16)));
+    const lastKey = seriesKeys[seriesKeys.length - 1];
+    const showTotals = safeAppearance.showDataLabels && data.length <= 40;
+
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 10, right: 20, left: 0, bottom: 30 }}
+          margin={{ top: 24, right: 12, left: 4, bottom: 4 }}
+          barCategoryGap="18%"
         >
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             dataKey="name"
-            tick={{ fontSize: Math.round(11 * m) }}
-            className="text-muted-foreground"
+            tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+            tickLine={false}
+            axisLine={{ stroke: 'hsl(var(--border))' }}
             interval={0}
+            tickMargin={6}
+            height={24}
           />
           <YAxis
-            tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-            tick={{ fontSize: Math.round(11 * m) }}
-            className="text-muted-foreground"
+            tickFormatter={(value) => formatValueCompact(value, safeFormatting.type)}
+            tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+            tickLine={false}
+            axisLine={false}
+            width={yWidth}
           />
-          <Tooltip content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
+          <Tooltip cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.25 }} content={<CustomTooltip formatting={safeFormatting} singleSeries={seriesKeys.length <= 1} />} />
           {seriesKeys.length >= 1 && (
             <Legend
               verticalAlign="top"
-              height={36}
-              wrapperStyle={{ fontSize: Math.round(12 * m) }}
+              align="left"
+              height={24}
+              iconSize={9}
+              wrapperStyle={{ fontSize: Math.round(11 * m), color: 'hsl(var(--muted-foreground))', paddingBottom: 4 }}
             />
           )}
           {seriesKeys.map((key, index) => (
@@ -149,10 +168,30 @@ export function StackedHorizontalBarChart({
               fill={getSeriesColor(key, index)}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
             >
-              {safeAppearance.showDataLabels && (
+              {showTotals && key === lastKey && (
                 <LabelList
                   dataKey={key}
-                  content={(props: any) => renderInsideLabel(props, safeFormatting, m)}
+                  position="top"
+                  offset={6}
+                  content={(props: any) => {
+                    const idx = props.index ?? 0;
+                    const total = totals[idx] || 0;
+                    if (!total) return null;
+                    const fs = Math.max(9, Math.round(10 * m));
+                    return (
+                      <text
+                        x={props.x + props.width / 2}
+                        y={props.y - 6}
+                        fill="hsl(var(--foreground))"
+                        textAnchor="middle"
+                        fontSize={fs}
+                        fontWeight={600}
+                        style={{ fontVariantNumeric: 'tabular-nums' }}
+                      >
+                        {formatValueCompact(total, safeFormatting.type)}
+                      </text>
+                    );
+                  }}
                 />
               )}
             </Bar>
@@ -161,6 +200,7 @@ export function StackedHorizontalBarChart({
       </ResponsiveContainer>
     );
   }
+
 
   // Horizontal layout (original)
   const barHeight = 40;
