@@ -1165,7 +1165,7 @@ async function fetchLeadsData(
   const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
   // For scorecard total count WITHOUT any filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !unifiedFilters?.length) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
