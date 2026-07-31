@@ -1754,17 +1754,20 @@ async function fetchTasksData(
   const toDay = (v: string) => v.split('T')[0];
 
   // Per-filter date bounds ("Marcado como feito em entre X e Y") are pushed to the query.
+  // Dynamic presets ("Este ano", "Este mês", ...) are resolved here too.
   for (const f of dateFilters) {
+    const bounds = filterDateBounds(f);
     if (f.operator === 'between' || f.operator === 'gt') {
-      if (f.from) baseQuery = baseQuery.gte(f.field, toDay(f.from));
+      if (bounds.from) baseQuery = baseQuery.gte(f.field, toDay(bounds.from));
     }
     if (f.operator === 'between' || f.operator === 'lt') {
-      const upper = f.operator === 'between' ? f.to : f.from;
+      const upper = f.operator === 'between' ? bounds.to : bounds.from;
       if (upper) baseQuery = baseQuery.lte(f.field, `${toDay(upper)}T23:59:59`);
     }
     if (f.operator === 'is_empty') baseQuery = baseQuery.is(f.field, null);
     if (f.operator === 'is_set') baseQuery = baseQuery.not(f.field, 'is', null);
   }
+
 
   // The global period only applies when the analysed field has no explicit filter of its own.
   const rangeFieldHasOwnFilter = dateFilters.some((f) => f.field === rangeField);
