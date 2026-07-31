@@ -330,7 +330,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
     } else if (chartType === 'funnel') {
       setTitle(funnelProcess === 'deal_stages' ? 'Funil de Vendas' : funnelProcess === 'task_status' ? 'Funil de Tarefas' : 'Funil');
     } else if (chartType === 'data_table') {
-      const sourceLabels: Record<DataSource, string> = { deals: 'Negócios', leads: 'Leads', tasks: 'Tarefas', products: 'Produtos', sales_history: 'Histórico de Vendas' };
+      const sourceLabels: Record<DataSource, string> = { deals: 'Negócios', leads: 'Leads', tasks: 'Atividades', products: 'Produtos', sales_history: 'Histórico de Vendas', royzapp: 'Conversas RoyZapp', royzapp_messages: 'Mensagens RoyZapp' };
       setTitle(`Tabela de ${sourceLabels[tableDataSource]}`);
     } else if (chartType === 'scorecard' && metric) {
       setTitle(metric === 'meta' ? 'Meta' : METRIC_LABELS[metric]);
