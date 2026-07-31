@@ -33,6 +33,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Trash2 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { AppearanceSection } from "../visual-builder/AppearanceSection";
+import { FilterSection } from "../visual-builder/FilterSection";
+import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 import { LeadFieldFilterSection } from "./LeadFieldFilterSection";
 import { DealFieldFilterSection } from "./DealFieldFilterSection";
 import { getColumnsForDataSource } from "./ConfigurableTable";
@@ -44,6 +46,7 @@ import {
   FontScale,
   DisplayScale,
   FieldFilter,
+  VisualFilter,
   getLeadFilters,
   getDealFilters,
   DEFAULT_APPEARANCE,
@@ -201,6 +204,15 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
   const [dealStatusFilter, setDealStatusFilter] = useState<string[]>(
     config?.dealStatusFilter ?? []
   );
+
+  // Unified (Pipedrive-style) filters based on the shared field catalog
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>(config?.filters ?? []);
+  const { data: fieldCatalog = [] } = useFieldCatalog(
+    config?.dataSource ?? null,
+    currentUser?.account_id ?? null
+  );
+  const isLeadOrDealSource = !config?.dataSource || config.dataSource === 'deals' || config.dataSource === 'leads';
+
   
   // Monthly goals state for gauge revenue_vs_goal
   const [monthlyGoals, setMonthlyGoals] = useState<Record<string, string>>({});
@@ -222,6 +234,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
       setLeadFilters(config ? getLeadFilters(config) : []);
       setDealFilters(config ? getDealFilters(config) : []);
       setDealStatusFilter(config?.dealStatusFilter ?? []);
+      setVisualFilters(config?.filters ?? []);
       setTableColumns(config?.tableConfig?.columns ?? []);
       setSeriesColors(config?.seriesColors ?? {});
       setStackByCustomField(config?.stackByCustomField || null);
@@ -327,6 +340,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
         leadFieldFilters: leadFilters.filter(f => f.fieldId && (f.selectedValues.length > 0 || !!f.dateFrom || !!f.dateTo)),
         dealFieldFilters: dealFilters.filter(f => f.fieldId && (f.selectedValues.length > 0 || !!f.dateFrom || !!f.dateTo)),
         dealStatusFilter: dealStatusFilter.length > 0 ? dealStatusFilter : undefined,
+        filters: visualFilters,
         stackByCustomField: stackByCustomField || undefined,
         seriesColors: Object.keys(seriesColors).length > 0 ? seriesColors : undefined,
         // When custom field segmentation is active, set stackBy to '_custom' to trigger stacked mode
@@ -620,18 +634,35 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <Separator />
             </div>
           )}
-          {/* Lead field filter for all visuals */}
-          <LeadFieldFilterSection
-            filters={leadFilters}
-            onFiltersChange={setLeadFilters}
-          />
-          {/* Deal field filter for all visuals */}
-          <DealFieldFilterSection
-            filters={dealFilters}
-            onFiltersChange={setDealFilters}
-            dealStatusFilter={dealStatusFilter}
-            onDealStatusFilterChange={setDealStatusFilter}
-          />
+          {/* Unified catalog filters (all data sources, incl. Atividades / RoyZapp) */}
+          {config?.dataSource && (
+            <>
+              <FilterSection
+                dataSource={config.dataSource}
+                accountId={currentUser?.account_id ?? null}
+                catalog={fieldCatalog}
+                filters={visualFilters}
+                onChange={setVisualFilters}
+              />
+              <Separator />
+            </>
+          )}
+          {isLeadOrDealSource && (
+            <>
+              {/* Lead field filter */}
+              <LeadFieldFilterSection
+                filters={leadFilters}
+                onFiltersChange={setLeadFilters}
+              />
+              {/* Deal field filter */}
+              <DealFieldFilterSection
+                filters={dealFilters}
+                onFiltersChange={setDealFilters}
+                dealStatusFilter={dealStatusFilter}
+                onDealStatusFilterChange={setDealStatusFilter}
+              />
+            </>
+          )}
           {/* Custom field segmentation/breakdown — single grouped dropdown */}
           {supportsStacking && (
             <div className="space-y-3">
