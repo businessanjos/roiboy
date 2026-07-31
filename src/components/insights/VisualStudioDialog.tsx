@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Tv } from "lucide-react";
+import { Trash2, Tv, Wand2, Sliders, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,6 +26,14 @@ import { AppearanceSection } from "./visual-builder/AppearanceSection";
 import { FormattingSection } from "./visual-builder/FormattingSection";
 import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
 import { TvModeProvider } from "./TvModeContext";
+import { VISUAL_RECIPES, RECIPE_GROUPS, VisualRecipe } from "./visual-builder/visualRecipes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 import {
@@ -120,8 +128,12 @@ export function VisualStudioDialog({
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [indicatorMin, setIndicatorMin] = useState('0');
   const [indicatorMax, setIndicatorMax] = useState('100');
+  const [statusFilter, setStatusFilter] = useState<'won' | 'lost' | 'open' | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [titleTouched, setTitleTouched] = useState(false);
+  // Modo simples (perguntas prontas) x avançado (todos os controles)
+  const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
+  const [recipeId, setRecipeId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Appearance
@@ -151,6 +163,9 @@ export function VisualStudioDialog({
       setGaugeSubType(baseConfig.gaugeConfig?.subType ?? 'days_elapsed');
       setIndicatorMin(String(baseConfig.indicatorConfig?.minValue ?? 0));
       setIndicatorMax(String(baseConfig.indicatorConfig?.maxValue ?? 100));
+      setStatusFilter(baseConfig.statusFilter);
+      setMode('advanced');
+      setRecipeId(null);
       setTitle(visual.title ?? '');
       setTitleTouched(true);
       setShowDataLabels(baseConfig.appearance?.showDataLabels ?? DEFAULT_APPEARANCE.showDataLabels);
@@ -173,6 +188,9 @@ export function VisualStudioDialog({
       setGaugeSubType('days_elapsed');
       setIndicatorMin('0');
       setIndicatorMax('100');
+      setStatusFilter(undefined);
+      setMode('simple');
+      setRecipeId(null);
       setTitle('');
       setTitleTouched(false);
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
@@ -196,6 +214,7 @@ export function VisualStudioDialog({
     setSegmentBy(null);
     setVisualFilters([]);
     setTableColumns(getDefaultColumns(next));
+    setStatusFilter(undefined);
   };
 
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
@@ -272,6 +291,7 @@ export function VisualStudioDialog({
         decimals: formatType === 'currency' ? 2 : formatType === 'percentage' ? 1 : 0,
       },
       appearance,
+      statusFilter,
     };
 
     if (isTable) {
@@ -314,7 +334,7 @@ export function VisualStudioDialog({
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
     formatType, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
-    visualFilters, segmentBy,
+    visualFilters, segmentBy, statusFilter,
   ]);
 
   const canSave =
@@ -357,6 +377,25 @@ export function VisualStudioDialog({
     [visual?.id, visual?.dashboard_id, debouncedType, debouncedConfig]
   );
 
+
+  const activeRecipe = VISUAL_RECIPES.find((r) => r.id === recipeId) ?? null;
+
+  const applyRecipe = (recipe: VisualRecipe) => {
+    setRecipeId(recipe.id);
+    setChartType(recipe.chartType);
+    setDataSource(recipe.dataSource);
+    setMeasureField(recipe.measureField);
+    setAggregation(recipe.aggregation);
+    setDimensionField(recipe.dimensionField);
+    if (recipe.dateGrouping) setDateGrouping(recipe.dateGrouping);
+    setFormatType(recipe.formatType);
+    setStatusFilter(recipe.statusFilter);
+    setSegmentBy(null);
+    setVisualFilters([]);
+    setTableColumns(getDefaultColumns(recipe.dataSource));
+    setTitle(recipe.title);
+    setTitleTouched(true);
+  };
 
   const handleSave = async () => {
     if (!canSave || !config) return;
