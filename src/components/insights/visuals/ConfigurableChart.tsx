@@ -28,6 +28,7 @@ import { ConfigurableFunnel } from "./ConfigurableFunnel";
 import { ConfigurableTable } from "./ConfigurableTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
+import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
 
 interface AggregatedDataPoint {
   name: string;
