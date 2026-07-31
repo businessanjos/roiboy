@@ -252,6 +252,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setChartType(null);
       setMetric(null);
       setGroupBy(null);
+      setVisualFilters([]);
+      setSegmentBy(null);
       setTitle("");
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
