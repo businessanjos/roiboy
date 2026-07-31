@@ -253,7 +253,7 @@ function BarChartView({
           <Bar 
             dataKey="value" 
             radius={[6, 6, 0, 0]}
-            maxBarSize={64}
+            maxBarSize={tv.tv ? 120 : 64}
             onClick={(data) => onDrilldown?.(data.name)}
             style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
           >
@@ -352,7 +352,7 @@ function HorizontalBarChartView({
           <Bar 
             dataKey="value" 
             radius={[0, 6, 6, 0]}
-            maxBarSize={28}
+            maxBarSize={tv.tv ? 46 : 28}
             onClick={(data) => onDrilldown?.(data.name)}
             style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
           >
@@ -438,7 +438,7 @@ function LineChartView({
             type="monotone"
             dataKey="value"
             stroke={primaryColor}
-            strokeWidth={2.5}
+            strokeWidth={tv.tv ? 4 : 2.5}
             dot={data.length > 40 ? false : { r: 3, fill: primaryColor, strokeWidth: 0 }}
             activeDot={{ r: 6, fill: primaryColor, onClick: (_, e: any) => onDrilldown?.(e?.payload?.name) }}
           >
