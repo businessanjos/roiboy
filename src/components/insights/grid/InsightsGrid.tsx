@@ -28,6 +28,8 @@ interface InsightsGridProps {
   onRemoveVisual?: (id: string) => Promise<void>;
   /** Optional per-surface override of the auto-fit minimum card widths (px). */
   minCardWidths?: Partial<MinCardWidths>;
+  /** TV mode: fit every visual inside the available height (no page scroll). */
+  fitHeight?: boolean;
 }
 
 const ROW_HEIGHT = 20;
