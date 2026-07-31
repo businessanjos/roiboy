@@ -838,6 +838,13 @@ async function fetchDealsData(
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters);
   }
 
+  // Apply unified (Pipedrive-style) filters
+  if (unifiedFilters && unifiedFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any;
+  }
+
+
+
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(filteredData, measure);
