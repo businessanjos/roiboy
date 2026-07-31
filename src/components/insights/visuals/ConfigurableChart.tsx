@@ -155,6 +155,7 @@ function BarChartView({
   const tickInterval = flat ? 0 : Math.max(0, Math.ceil((data.length * (tickFont + 6)) / Math.max(width - 100, 1)) - 1);
   const barSlot = data.length ? Math.max(width - 100, 1) / data.length : 0;
   const labelStep = Math.max(1, Math.ceil(48 / Math.max(barSlot, 1)));
+  const yWidth = yAxisWidth(data, formatting, Math.round(11 * m));
 
   return (
     <div ref={ref} className="h-full w-full">
