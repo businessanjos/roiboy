@@ -778,15 +778,22 @@ export function VisualStudioDialog({
               {dataSource && (
                 <>
                   <Separator />
+                  {isCallCommercial && (
+                    <p className="text-xs text-muted-foreground">
+                      Layout fixo: agendadas em aberto (data prevista) x concluídas (data de conclusão) por vendedor.
+                      Apenas filtros de período se aplicam.
+                    </p>
+                  )}
                   <FilterSection
                     dataSource={dataSource}
                     accountId={currentUser?.account_id ?? null}
-                    catalog={fieldCatalog}
+                    catalog={filterCatalog}
                     filters={visualFilters}
                     onChange={setVisualFilters}
                   />
                 </>
               )}
+
 
               <Separator />
               <FormattingSection value={formatType} onChange={setFormatType} />
