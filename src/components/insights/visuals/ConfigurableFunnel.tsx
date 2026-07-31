@@ -2,6 +2,7 @@ import { forwardRef } from "react";
 import { AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { useTvMode } from "../TvModeContext";
+import { useChartSize } from "./useChartSize";
 
 interface AggregatedDataPoint {
   name: string;
@@ -27,7 +28,14 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   const colors = COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional;
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'] * tv.scale;
-  const barHeight = Math.round(40 * m);
+  const { ref: sizeRef, height } = useChartSize();
+
+  // Altura das barras cabe sempre no card: nada de etapa cortada no rodapé.
+  const steps = Math.max(data?.length || 1, 1);
+  const available = Math.max(height - 16, 0);
+  const barHeight = available
+    ? Math.max(22, Math.min(Math.round(48 * m), Math.floor(available / steps) - 6))
+    : Math.round(40 * m);
 
   if (!data || data.length === 0) {
     return (
@@ -50,7 +58,8 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   const maxValue = cumulativeCounts[0] || 1;
 
   return (
-    <div ref={ref} className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
+    <div ref={ref} className="h-full w-full">
+      <div ref={sizeRef} className="flex flex-col items-center justify-center gap-1.5 h-full w-full px-4 py-2 overflow-hidden">
       {regularData.map((item, index) => {
         const cumValue = cumulativeCounts[index];
         const widthPct = Math.max((Math.sqrt(cumValue) / Math.sqrt(maxValue)) * 100, 15);
@@ -116,6 +125,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
           </div>
         );
       })()}
+      </div>
     </div>
   );
 });
