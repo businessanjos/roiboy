@@ -1,5 +1,7 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { Move } from "lucide-react";
 import GridLayout from "react-grid-layout";
+
 import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
