@@ -633,18 +633,35 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
               <Separator />
             </div>
           )}
-          {/* Lead field filter for all visuals */}
-          <LeadFieldFilterSection
-            filters={leadFilters}
-            onFiltersChange={setLeadFilters}
-          />
-          {/* Deal field filter for all visuals */}
-          <DealFieldFilterSection
-            filters={dealFilters}
-            onFiltersChange={setDealFilters}
-            dealStatusFilter={dealStatusFilter}
-            onDealStatusFilterChange={setDealStatusFilter}
-          />
+          {/* Unified catalog filters (all data sources, incl. Atividades / RoyZapp) */}
+          {config?.dataSource && (
+            <>
+              <FilterSection
+                dataSource={config.dataSource}
+                accountId={currentUser?.account_id ?? null}
+                catalog={fieldCatalog}
+                filters={visualFilters}
+                onChange={setVisualFilters}
+              />
+              <Separator />
+            </>
+          )}
+          {isLeadOrDealSource && (
+            <>
+              {/* Lead field filter */}
+              <LeadFieldFilterSection
+                filters={leadFilters}
+                onFiltersChange={setLeadFilters}
+              />
+              {/* Deal field filter */}
+              <DealFieldFilterSection
+                filters={dealFilters}
+                onFiltersChange={setDealFilters}
+                dealStatusFilter={dealStatusFilter}
+                onDealStatusFilterChange={setDealStatusFilter}
+              />
+            </>
+          )}
           {/* Custom field segmentation/breakdown — single grouped dropdown */}
           {supportsStacking && (
             <div className="space-y-3">
