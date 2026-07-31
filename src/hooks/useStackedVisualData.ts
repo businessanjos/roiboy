@@ -89,15 +89,25 @@ async function enrichWithCustomField(
   const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
   let allValues: any[] = [];
   const batchSize = 500;
+  const promises = [];
   for (let i = 0; i < entityIds.length; i += batchSize) {
     const batch = entityIds.slice(i, i + batchSize);
-    const { data, error } = await (supabase
-      .from(table as any)
-      .select(selectColumns)
-      .eq('field_id', fieldId)
-      .eq('account_id', accountId)
-      .in(idColumn, batch) as any);
-    if (error) { console.error('Error fetching custom field values for enrichment:', error); continue; }
+    promises.push(
+      supabase
+        .from(table as any)
+        .select(selectColumns)
+        .eq("field_id", fieldId)
+        .eq("account_id", accountId)
+        .in(idColumn, batch) as any
+    );
+  }
+
+  const results = await Promise.all(promises);
+  for (const { data, error } of results) {
+    if (error) {
+      console.error("Error fetching custom field values for enrichment:", error);
+      continue;
+    }
     allValues = allValues.concat(data || []);
   }
 

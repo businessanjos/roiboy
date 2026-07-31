@@ -66,17 +66,26 @@ export function useMapVisualData({ enabled = true }: { enabled?: boolean } = {})
       const dealIds = allDeals.map(d => d.id);
       let allFieldValues: any[] = [];
       const batchSize = 500;
+      const promises = [];
       for (let i = 0; i < dealIds.length; i += batchSize) {
         const batch = dealIds.slice(i, i + batchSize);
-        const { data, error } = await supabase
-          .from('deal_field_values')
-          .select('deal_id, value_json')
-          .eq('field_id', CIDADE_FIELD_ID)
-          .eq('account_id', accountId)
-          .in('deal_id', batch)
-          .not('value_json', 'is', null);
+        promises.push(
+          supabase
+            .from("deal_field_values")
+            .select("deal_id, value_json")
+            .eq("field_id", CIDADE_FIELD_ID)
+            .eq("account_id", accountId)
+            .in("deal_id", batch)
+            .not("value_json", "is", null)
+        );
+      }
 
-        if (error) { console.error('Error fetching city values:', error); continue; }
+      const results = await Promise.all(promises);
+      for (const { data, error } of results) {
+        if (error) {
+          console.error("Error fetching city values:", error);
+          continue;
+        }
         allFieldValues = allFieldValues.concat(data || []);
       }
 
