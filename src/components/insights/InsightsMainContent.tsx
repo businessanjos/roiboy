@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VisualStudioDialog } from "./VisualStudioDialog";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
+import { TvFitStage } from "./TvFitStage";
+
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 import { startOfMonth, endOfMonth } from "date-fns";
 import { hasExactRole } from "@/lib/roles";
