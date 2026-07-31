@@ -201,7 +201,8 @@ function BarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const tickFont = Math.round(10 * m);
@@ -299,7 +300,8 @@ function HorizontalBarChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const tickFont = Math.round(11 * m);
@@ -388,7 +390,8 @@ function LineChartView({
 }) {
   const colors = getChartColors(appearance.colorPalette);
   const primaryColor = colors[0];
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width } = useChartSize();
 
   const tickFont = Math.round(10 * m);
@@ -477,7 +480,8 @@ function PieChartView({
   onDrilldown?: (groupName?: string) => void;
 }) {
   const colors = getChartColors(appearance.colorPalette);
-  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
   const compact = width > 0 && (width < 320 || height < 240 || data.length > 6);
