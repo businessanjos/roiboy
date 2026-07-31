@@ -818,7 +818,7 @@ export function VisualStudioDialog({
                 tvPreview ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="aspect-video w-full max-h-full overflow-hidden rounded-xl border border-border/60 bg-card/40 p-4 shadow-lg">
-                      <TvModeProvider>
+                      <TvModeProvider enabled={false}>
                         <div className={cn('h-full [&>*]:h-full transition-opacity', isPreviewStale && 'opacity-60')}>
                           <ConfigurableVisualCard visual={previewVisual as any} readOnly />
                         </div>
