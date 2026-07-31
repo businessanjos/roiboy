@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
+import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2, Tv } from "lucide-react";
 import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -39,6 +39,7 @@ export function InsightsMainContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
+  const [tvFit, setTvFit] = useState(true);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
@@ -217,7 +218,17 @@ export function InsightsMainContent() {
               <h1 className="text-2xl font-bold">{activeDashboard.name}</h1>
             </div>
             <div className="flex items-center gap-3">
-              <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
+              <Button
+                variant={tvFit ? "default" : "outline"}
+                size="sm"
+                onClick={() => setTvFit((v) => !v)}
+              >
+                <Tv className="h-4 w-4 mr-2" />
+                {tvFit ? "Ajustado à TV" : "Ajustar à TV"}
+              </Button>
+              {!tvFit && (
+                <ZoomControls zoom={focusZoom} onZoomChange={setFocusZoom} min={50} max={250} step={10} />
+              )}
               <Button variant="outline" size="icon" onClick={toggleFullscreen}>
                 {isFullscreen ? (
                   <Minimize2 className="h-4 w-4" />
@@ -235,20 +246,36 @@ export function InsightsMainContent() {
             </div>
           </div>
 
-          {/* Scrollable content with zoom */}
-          <div className="flex-1 overflow-auto p-6">
-            <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
-            {hasVisuals && (
-              <InsightsGrid 
-                visuals={visuals} 
-                onLayoutChange={() => {}} 
-                readOnly
-                onUpdateVisual={updateVisual}
-                onRemoveVisual={removeVisual}
-              />
-            )}
+          {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
+          {tvFit ? (
+            <div className="flex-1 min-h-0 overflow-hidden p-4">
+              {hasVisuals && (
+                <InsightsGrid
+                  visuals={filteredVisuals}
+                  onLayoutChange={() => {}}
+                  readOnly
+                  fitHeight
+                  onUpdateVisual={updateVisual}
+                  onRemoveVisual={removeVisual}
+                />
+              )}
             </div>
-          </div>
+          ) : (
+            <div className="flex-1 overflow-auto p-6">
+              <div style={{ transform: `scale(${focusZoom / 100})`, transformOrigin: 'top left', width: `${10000 / focusZoom}%` }}>
+                {hasVisuals && (
+                  <InsightsGrid
+                    visuals={filteredVisuals}
+                    onLayoutChange={() => {}}
+                    readOnly
+                    onUpdateVisual={updateVisual}
+                    onRemoveVisual={removeVisual}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+
         </div>,
         document.body
       )
