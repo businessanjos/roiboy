@@ -60,9 +60,12 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
               )}
             </div>
           )}
-          <div className="flex-1 min-h-0 px-6 pb-6">{children}</div>
+          <div className="flex-1 min-h-0 px-6 pb-6">
+            <TvModeProvider>{children}</TvModeProvider>
+          </div>
         </div>
       </div>
     </div>
   );
 }
+
