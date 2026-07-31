@@ -130,7 +130,7 @@ export function StackedHorizontalBarChart({
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 24, right: 12, left: 4, bottom: 4 }}
+          margin={{ top: 34, right: 12, left: 4, bottom: 4 }}
           barCategoryGap="18%"
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
