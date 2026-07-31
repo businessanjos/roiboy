@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
   name: string;
@@ -100,7 +101,7 @@ function Podium({
             style={{ order: config.order }}
           >
             {/* Avatar */}
-            <Avatar className={`h-12 w-12 shrink-0 border-[3px] ${config.borderColor} mb-1.5`}>
+            <Avatar className={`shrink-0 border-[3px] ${config.borderColor} mb-1.5`} style={{ height: Math.round(48 * fontMultiplier), width: Math.round(48 * fontMultiplier) }}>
               <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
               <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                 {getInitials(item.name)}
@@ -108,7 +109,7 @@ function Podium({
             </Avatar>
 
             {/* Name */}
-            <span className="font-medium text-foreground truncate max-w-[80px] text-center leading-tight" style={{ fontSize: `${Math.round(11 * fontMultiplier)}px` }}>
+            <span className="font-medium text-foreground truncate text-center leading-tight"  style={{ fontSize: `${Math.round(11 * fontMultiplier)}px`, maxWidth: `${Math.round(80 * fontMultiplier)}px` }}>
               {item.name.split(' ')[0]}
             </span>
 
@@ -119,8 +120,8 @@ function Podium({
 
             {/* Podium base */}
             <div
-              className={`w-[72px] rounded-t-lg bg-gradient-to-t ${config.gradient} flex items-center justify-center`}
-              style={{ height: `${config.height}px` }}
+              className={`rounded-t-lg bg-gradient-to-t ${config.gradient} flex items-center justify-center`}
+              style={{ height: `${Math.round(config.height * Math.min(fontMultiplier, 1.4))}px`, width: `${Math.round(72 * fontMultiplier)}px` }}
             >
               <span className="text-white font-bold text-lg drop-shadow-sm">
                 {originalIndex + 1}º
@@ -134,18 +135,21 @@ function Podium({
 }
 
 export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel }: ConfigurableRankingProps) {
-  const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
+  const tv = useTvMode();
+  const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'] * tv.scale;
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
   const containerRef = useRef<HTMLDivElement>(null);
   const [showPodium, setShowPodium] = useState(true);
+  const [boxHeight, setBoxHeight] = useState(0);
 
-  // Detect container width for responsive podium
+  // Detect container size for responsive podium / row fitting
   useEffect(() => {
     if (!containerRef.current) return;
     const observer = new ResizeObserver((entries) => {
       for (const entry of entries) {
         setShowPodium(entry.contentRect.width >= 500);
+        setBoxHeight(entry.contentRect.height);
       }
     });
     observer.observe(containerRef.current);
@@ -187,8 +191,17 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
   const maxValue = Math.max(...data.map(d => d.value), 1);
   const hasPodiumData = data.length >= 2;
 
+  // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
+  const rowHeight = Math.round(44 * m);
+  const headerHeight = Math.round(30 * m);
+  const visibleRows =
+    tv.tv && boxHeight > 0
+      ? Math.max(3, Math.floor((boxHeight - headerHeight) / rowHeight))
+      : data.length;
+  const rows = data.slice(0, visibleRows);
+
   return (
-    <div ref={containerRef} className="h-full overflow-auto px-1 flex gap-4">
+    <div ref={containerRef} className={`h-full px-1 flex gap-4 ${tv.tv ? 'overflow-hidden' : 'overflow-auto'}`}>
       {/* Podium - left side */}
       {showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
@@ -207,7 +220,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
             </tr>
           </thead>
           <tbody>
-            {data.map((item, index) => {
+            {rows.map((item, index) => {
               const medal = MEDAL_STYLES[index];
               const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
               const userAvatar = avatars[item.name];
@@ -230,14 +243,14 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                   </td>
                   <td className="py-2.5 px-1">
                     <div className="flex items-center gap-2.5">
-                      <Avatar className="h-8 w-8 shrink-0">
+                      <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
                         <AvatarFallback className="text-[10px] font-medium bg-primary/10 text-primary">
                           {getInitials(item.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <span className={`font-medium text-sm block truncate ${medal ? medal.text : 'text-foreground'}`}>
+                        <span className={`font-medium block truncate ${medal ? medal.text : 'text-foreground'}`} style={{ fontSize: `${Math.round(14 * m)}px` }}>
                           {item.name}
                         </span>
                         <div className="w-full h-1.5 bg-muted rounded-full mt-1">
