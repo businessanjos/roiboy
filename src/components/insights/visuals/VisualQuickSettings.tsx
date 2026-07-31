@@ -211,6 +211,7 @@ export function VisualQuickSettings({ visual, open, onOpenChange, overrideUpdate
     config?.dataSource ?? null,
     currentUser?.account_id ?? null
   );
+  const isLeadOrDealSource = !config?.dataSource || config.dataSource === 'deals' || config.dataSource === 'leads';
 
   
   // Monthly goals state for gauge revenue_vs_goal
