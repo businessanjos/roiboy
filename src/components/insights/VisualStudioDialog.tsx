@@ -69,7 +69,7 @@ interface VisualStudioDialogProps {
 
 /** Chart types that don't take a measure/dimension pair. */
 const NO_DIMENSION_TYPES: ChartType[] = ['number', 'scorecard', 'indicator'];
-const FIXED_TYPES: ChartType[] = ['ranking', 'call_commercial', 'gauge', 'bubble_map'];
+const FIXED_TYPES: ChartType[] = ['call_commercial', 'gauge', 'bubble_map'];
 
 const DEFAULT_LAYOUT_SIZE: Partial<Record<ChartType, { w: number; h: number }>> = {
   number: { w: 3, h: 2 },
@@ -198,6 +198,21 @@ export function VisualStudioDialog({
   };
 
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
+
+  // Ranking/funnel are "por entidade" charts: default the grouping to a person
+  // field (vendedor/responsável) instead of a date, which produced month rows.
+  useEffect(() => {
+    if (!dataSource) return;
+    if (chartType !== 'ranking' && chartType !== 'funnel') return;
+    const fields = DATA_SOURCE_FIELDS[dataSource].dimension;
+    const current = fields.find((f) => f.value === dimensionField);
+    if (current && current.type !== 'date') return;
+    const person = fields.find((f) =>
+      /user|respons|owner|vendedor|assigned|creator/i.test(f.value + ' ' + f.label)
+    );
+    if (person) setDimensionField(person.value);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chartType, dataSource]);
   const selectedDimension = dimensionFields.find((f) => f.value === dimensionField);
   const isDimensionDate = selectedDimension?.type === 'date';
 
