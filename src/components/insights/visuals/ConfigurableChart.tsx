@@ -158,11 +158,11 @@ function BarChartView({
   const flat = approxTextWidth('x'.repeat(longest), tickFont) <= slot - 6;
   const maxChars = flat
     ? longest
-    : Math.max(6, Math.floor(Math.min(90, (height || 240) * 0.35) / (tickFont * 0.62)));
+    : Math.max(6, Math.floor(Math.min(120, (height || 240) * 0.42) / (tickFont * 0.62)));
 
   const axisHeight = flat
     ? Math.round(tickFont * 2.2)
-    : Math.min(96, Math.round(approxTextWidth('x'.repeat(maxChars), tickFont) * 0.72) + 12);
+    : Math.min(112, Math.round(approxTextWidth('x'.repeat(maxChars), tickFont) * 0.72) + 12);
 
   // Evita rótulos de eixo colados quando há muitas categorias
   const tickInterval = flat ? 0 : Math.max(0, Math.ceil((data.length * (tickFont + 6)) / Math.max(width - 100, 1)) - 1);
