@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, Tv } from "lucide-react";
+import { Trash2, Tv, Wand2, Sliders, Check } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -26,6 +26,14 @@ import { AppearanceSection } from "./visual-builder/AppearanceSection";
 import { FormattingSection } from "./visual-builder/FormattingSection";
 import { ConfigurableVisualCard } from "./visuals/ConfigurableVisualCard";
 import { TvModeProvider } from "./TvModeContext";
+import { VISUAL_RECIPES, RECIPE_GROUPS, VisualRecipe } from "./visual-builder/visualRecipes";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 import {
@@ -120,8 +128,12 @@ export function VisualStudioDialog({
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [indicatorMin, setIndicatorMin] = useState('0');
   const [indicatorMax, setIndicatorMax] = useState('100');
+  const [statusFilter, setStatusFilter] = useState<'won' | 'lost' | 'open' | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [titleTouched, setTitleTouched] = useState(false);
+  // Modo simples (perguntas prontas) x avançado (todos os controles)
+  const [mode, setMode] = useState<'simple' | 'advanced'>('simple');
+  const [recipeId, setRecipeId] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
 
   // Appearance
@@ -151,6 +163,9 @@ export function VisualStudioDialog({
       setGaugeSubType(baseConfig.gaugeConfig?.subType ?? 'days_elapsed');
       setIndicatorMin(String(baseConfig.indicatorConfig?.minValue ?? 0));
       setIndicatorMax(String(baseConfig.indicatorConfig?.maxValue ?? 100));
+      setStatusFilter(baseConfig.statusFilter);
+      setMode('advanced');
+      setRecipeId(null);
       setTitle(visual.title ?? '');
       setTitleTouched(true);
       setShowDataLabels(baseConfig.appearance?.showDataLabels ?? DEFAULT_APPEARANCE.showDataLabels);
@@ -173,6 +188,9 @@ export function VisualStudioDialog({
       setGaugeSubType('days_elapsed');
       setIndicatorMin('0');
       setIndicatorMax('100');
+      setStatusFilter(undefined);
+      setMode('simple');
+      setRecipeId(null);
       setTitle('');
       setTitleTouched(false);
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
@@ -196,6 +214,7 @@ export function VisualStudioDialog({
     setSegmentBy(null);
     setVisualFilters([]);
     setTableColumns(getDefaultColumns(next));
+    setStatusFilter(undefined);
   };
 
   const dimensionFields = dataSource ? DATA_SOURCE_FIELDS[dataSource].dimension : [];
@@ -272,6 +291,7 @@ export function VisualStudioDialog({
         decimals: formatType === 'currency' ? 2 : formatType === 'percentage' ? 1 : 0,
       },
       appearance,
+      statusFilter,
     };
 
     if (isTable) {
@@ -314,7 +334,7 @@ export function VisualStudioDialog({
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
     formatType, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
-    visualFilters, segmentBy,
+    visualFilters, segmentBy, statusFilter,
   ]);
 
   const canSave =
@@ -357,6 +377,25 @@ export function VisualStudioDialog({
     [visual?.id, visual?.dashboard_id, debouncedType, debouncedConfig]
   );
 
+
+  const activeRecipe = VISUAL_RECIPES.find((r) => r.id === recipeId) ?? null;
+
+  const applyRecipe = (recipe: VisualRecipe) => {
+    setRecipeId(recipe.id);
+    setChartType(recipe.chartType);
+    setDataSource(recipe.dataSource);
+    setMeasureField(recipe.measureField);
+    setAggregation(recipe.aggregation);
+    setDimensionField(recipe.dimensionField);
+    if (recipe.dateGrouping) setDateGrouping(recipe.dateGrouping);
+    setFormatType(recipe.formatType);
+    setStatusFilter(recipe.statusFilter);
+    setSegmentBy(null);
+    setVisualFilters([]);
+    setTableColumns(getDefaultColumns(recipe.dataSource));
+    setTitle(recipe.title);
+    setTitleTouched(true);
+  };
 
   const handleSave = async () => {
     if (!canSave || !config) return;
@@ -434,6 +473,162 @@ export function VisualStudioDialog({
         {/* Body: config + live preview */}
         <div className="flex min-h-0 flex-1">
           <aside className="w-[400px] shrink-0 overflow-y-auto border-r p-5">
+            {/* Alternador simples x avançado */}
+            <div className="mb-5 grid grid-cols-2 gap-1 rounded-lg bg-muted p-1">
+              {([
+                { id: 'simple' as const, label: 'Simples', icon: Wand2 },
+                { id: 'advanced' as const, label: 'Avançado', icon: Sliders },
+              ]).map((opt) => (
+                <button
+                  key={opt.id}
+                  type="button"
+                  onClick={() => setMode(opt.id)}
+                  className={cn(
+                    'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                    mode === opt.id
+                      ? 'bg-background text-foreground shadow-sm'
+                      : 'text-muted-foreground hover:text-foreground'
+                  )}
+                >
+                  <opt.icon className="h-4 w-4" />
+                  {opt.label}
+                </button>
+              ))}
+            </div>
+
+            {mode === 'simple' && (
+              <div className="space-y-6">
+                <div className="space-y-3">
+                  <div>
+                    <Label className="text-base font-medium">1. O que você quer ver?</Label>
+                    <p className="text-xs text-muted-foreground">
+                      Escolha uma pergunta. A gente monta o gráfico pronto.
+                    </p>
+                  </div>
+
+                  {RECIPE_GROUPS.map((group) => {
+                    const recipes = VISUAL_RECIPES.filter((r) => r.group === group);
+                    if (!recipes.length) return null;
+                    return (
+                      <div key={group} className="space-y-1.5">
+                        <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                          {group}
+                        </p>
+                        {recipes.map((recipe) => (
+                          <button
+                            key={recipe.id}
+                            type="button"
+                            onClick={() => applyRecipe(recipe)}
+                            className={cn(
+                              'flex w-full items-start gap-2.5 rounded-lg border-2 p-2.5 text-left transition-all',
+                              recipeId === recipe.id
+                                ? 'border-primary bg-primary/5'
+                                : 'border-border hover:border-primary/50'
+                            )}
+                          >
+                            <span className="text-lg leading-none">{recipe.emoji}</span>
+                            <span className="min-w-0 flex-1">
+                              <span className="block text-sm font-medium leading-snug">{recipe.question}</span>
+                              <span className="block text-xs text-muted-foreground">{recipe.hint}</span>
+                            </span>
+                            {recipeId === recipe.id && <Check className="h-4 w-4 shrink-0 text-primary" />}
+                          </button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+
+                {activeRecipe && (
+                  <>
+                    <Separator />
+                    <div className="space-y-2">
+                      <Label className="text-base font-medium">2. Como mostrar?</Label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {([
+                          { value: 'bar' as ChartType, label: 'Colunas' },
+                          { value: 'bar_horizontal' as ChartType, label: 'Barras' },
+                          { value: 'line' as ChartType, label: 'Linha' },
+                          { value: 'pie' as ChartType, label: 'Pizza' },
+                          { value: 'ranking' as ChartType, label: 'Ranking' },
+                          { value: 'scorecard' as ChartType, label: 'Número' },
+                        ]).map((opt) => (
+                          <button
+                            key={opt.value}
+                            type="button"
+                            onClick={() => setChartType(opt.value)}
+                            className={cn(
+                              'rounded-lg border-2 px-2 py-2 text-xs font-medium transition-all',
+                              chartType === opt.value
+                                ? 'border-primary bg-primary/5 text-primary'
+                                : 'border-border text-muted-foreground hover:border-primary/50'
+                            )}
+                          >
+                            {opt.label}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    {needsDimension && (
+                      <div className="space-y-2">
+                        <Label className="text-base font-medium">3. Separado por quê?</Label>
+                        <Select
+                          value={dimensionField ?? undefined}
+                          onValueChange={(v) => setDimensionField(v)}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Escolha" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {dimensionFields.map((f) => (
+                              <SelectItem key={f.value} value={f.value}>
+                                {f.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        {isDimensionDate && (
+                          <Select value={dateGrouping} onValueChange={(v) => setDateGrouping(v as DateGrouping)}>
+                            <SelectTrigger>
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="day">Por dia</SelectItem>
+                              <SelectItem value="week">Por semana</SelectItem>
+                              <SelectItem value="month">Por mês</SelectItem>
+                              <SelectItem value="year">Por ano</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        )}
+                      </div>
+                    )}
+
+                    {dataSource && (
+                      <>
+                        <Separator />
+                        <div className="space-y-2">
+                          <Label className="text-base font-medium">4. Quer filtrar algo? (opcional)</Label>
+                          <FilterSection
+                            dataSource={dataSource}
+                            accountId={currentUser?.account_id ?? null}
+                            catalog={fieldCatalog}
+                            filters={visualFilters}
+                            onChange={setVisualFilters}
+                          />
+                        </div>
+                      </>
+                    )}
+
+                    <Button variant="ghost" size="sm" className="w-full" onClick={() => setMode('advanced')}>
+                      <Sliders className="mr-1.5 h-4 w-4" /> Ajustar detalhes avançados
+                    </Button>
+                  </>
+                )}
+              </div>
+            )}
+
+            {mode === 'advanced' && (
             <div className="space-y-6">
               <ChartTypeSelector value={chartType} onChange={setChartType} />
 
@@ -586,6 +781,7 @@ export function VisualStudioDialog({
                 onValueColorChange={setValueColor}
               />
             </div>
+            )}
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col bg-muted/30 p-6">
@@ -610,7 +806,15 @@ export function VisualStudioDialog({
               </Button>
             </div>
             <div className="min-h-0 flex-1">
-              {debouncedConfig ? (
+              {mode === 'simple' && !activeRecipe ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center">
+                  <Wand2 className="h-8 w-8 text-muted-foreground/60" />
+                  <p className="text-sm font-medium">Escolha uma pergunta ao lado</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    O gráfico aparece aqui na hora, já pronto. Depois é só ajustar o que quiser.
+                  </p>
+                </div>
+              ) : debouncedConfig ? (
                 tvPreview ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="aspect-video w-full max-h-full overflow-hidden rounded-xl border border-border/60 bg-card/40 p-4 shadow-lg">
