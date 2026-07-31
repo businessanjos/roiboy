@@ -199,11 +199,11 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
       {/* Table - right side */}
       <div className="flex-1 min-w-0">
         <table className="w-full" style={{ fontSize: `${Math.round(14 * m)}px` }}>
-          <thead>
+          <thead className="sticky top-0 z-10 bg-card">
             <tr className="text-muted-foreground border-b" style={{ fontSize: `${Math.round(12 * m)}px` }}>
               <th className="text-left py-2 px-1 w-8">#</th>
-              <th className="text-left py-2 px-1">Vendedor</th>
-              <th className="text-right py-2 px-1">Faturamento</th>
+              <th className="text-left py-2 px-1 truncate">{dimensionLabel || 'Item'}</th>
+              <th className="text-right py-2 px-1 truncate">{measureLabel || 'Valor'}</th>
             </tr>
           </thead>
           <tbody>
