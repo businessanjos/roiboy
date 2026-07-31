@@ -334,7 +334,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       const generatedTitle = `${METRIC_LABELS[metric]} ${groupLabel}${seasonalitySuffix}`;
       setTitle(generatedTitle);
     }
-  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource]);
+  }, [chartType, metric, groupBy, gaugeSubType, goalPeriod, dateGrouping, indicatorMetric, funnelProcess, tableDataSource, fieldCatalog]);
 
   const canProceedStep1 = chartType !== null;
   const canProceedStep2 = metric !== null;
