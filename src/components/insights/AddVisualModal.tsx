@@ -35,7 +35,8 @@ interface AddVisualModalProps {
 
 type ChartType = "bar" | "bar_horizontal" | "bar_stacked" | "line" | "pie" | "scorecard" | "ranking" | "call_commercial" | "gauge" | "indicator" | "bubble_map" | "funnel" | "data_table";
 type Metric = "revenue" | "deals_count" | "won_deals_count" | "avg_ticket" | "conversion" | "lost_reasons" | "leads_count" | "sales_cycle" | "meta" | "tasks_count" | "sales_leads";
-type GroupBy = "month" | "user" | "stage" | "product" | "mql" | "faturamento_atual" | "canal" | "activity_type" | "status_task";
+/** Legacy shortcut keys OR any native catalog field key */
+type GroupBy = string;
 
 const CHART_TYPES = [
   { value: "bar" as const, label: "Gráfico de Barras", description: "Comparar valores entre categorias", icon: BarChart3 },
