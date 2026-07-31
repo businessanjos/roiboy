@@ -228,16 +228,20 @@ async function fetchStackedDealsData(
 
   query = applyDeletedFilter(query, config.dealStatusFilter, statusFilter ?? null);
 
-  // Determine date field for temporal filtering (NOT the dimension field when categorical)
+  // Determine date field for temporal filtering AND grouping (same column, always).
+  // Priority: explicit date filter > status (won/lost) > date dimension > created_at.
+  const singleDealStatus = config.dealStatusFilter && config.dealStatusFilter.length === 1
+    ? config.dealStatusFilter[0]
+    : null;
   let dateField: string;
   if (explicitDateFilter) {
     dateField = explicitDateFilter.field;
-  } else if (!isCategorical && dimension.field && dimension.field !== 'created_at') {
-    dateField = dimension.field;
-  } else if (statusFilter === 'won') {
+  } else if (statusFilter === 'won' || singleDealStatus === 'won') {
     dateField = 'won_at';
-  } else if (statusFilter === 'lost') {
+  } else if (statusFilter === 'lost' || singleDealStatus === 'lost') {
     dateField = 'lost_at';
+  } else if (!isCategorical && dimension.field && ['created_at', 'won_at', 'lost_at'].includes(dimension.field)) {
+    dateField = dimension.field;
   } else {
     dateField = 'created_at';
   }
