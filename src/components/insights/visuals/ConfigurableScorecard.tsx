@@ -43,26 +43,58 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
 
   const m = FONT_SCALE_MULTIPLIERS[config?.appearance?.fontScale || 'normal'];
 
-  // Calculate responsive font size based on value length and font scale
-  const baseFontSize = formattedValue.length > 15 
-    ? 16 
-    : formattedValue.length > 10 
-      ? 20 
-      : formattedValue.length > 6
-        ? 24
-        : 28;
-  const scaledFontSize = Math.round(baseFontSize * m);
-  const subtitleSize = Math.round(11 * m);
+  // Font size derived from the real container width (not the string length)
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerWidth, setContainerWidth] = useState(0);
+
+  useEffect(() => {
+    const el = containerRef.current;
+    if (!el) return;
+    setContainerWidth(el.clientWidth);
+    const ro = new ResizeObserver((entries) => {
+      for (const entry of entries) setContainerWidth(entry.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+
+  const MAX_FONT = 28 * m;
+  const MIN_FONT = Math.max(11, 12 * m);
   const suffixSize = Math.round(14 * m);
+  const subtitleSize = Math.round(11 * m);
+
+  const [fittedFontSize, setFittedFontSize] = useState(MAX_FONT);
+  const [isTruncated, setIsTruncated] = useState(false);
+
+  useLayoutEffect(() => {
+    const el = containerRef.current;
+    if (!el || !containerWidth) return;
+    const available = Math.max(containerWidth - 12 - (isSalesCycle ? suffixSize * 2.6 : 0), 40);
+    const canvas = document.createElement("canvas");
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const family = getComputedStyle(el).fontFamily || "sans-serif";
+    ctx.font = `700 100px ${family}`;
+    const widthAt100 = ctx.measureText(formattedValue).width || 1;
+    const ideal = Math.floor((available / widthAt100) * 100);
+    const next = Math.max(MIN_FONT, Math.min(MAX_FONT, ideal));
+    setFittedFontSize(next);
+    setIsTruncated(ideal < MIN_FONT);
+  }, [formattedValue, containerWidth, MAX_FONT, MIN_FONT, isSalesCycle, suffixSize]);
 
   const valueColor = config?.appearance?.valueColor;
 
   return (
-    <div className="flex flex-col items-center justify-center h-full py-1 px-1 overflow-hidden">
-      <p className="font-bold mb-1 text-center break-words w-full" style={{ fontSize: `${scaledFontSize}px`, lineHeight: 1.1, color: valueColor || undefined }}>
+    <div ref={containerRef} className="flex flex-col items-center justify-center h-full py-1 px-1 overflow-hidden">
+      <p
+        className={`font-bold mb-1 text-center w-full whitespace-nowrap tabular-nums ${isTruncated ? "truncate" : ""}`}
+        title={isTruncated ? formattedValue : undefined}
+        style={{ fontSize: `${Math.round(fittedFontSize)}px`, lineHeight: 1.1, color: valueColor || undefined }}
+      >
         {formattedValue}
         {isSalesCycle && <span className="font-normal text-muted-foreground ml-1" style={{ fontSize: `${suffixSize}px` }}>dias</span>}
       </p>
+
       {isMetaScorecard && (
         <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
           {(() => {
