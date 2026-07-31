@@ -10,7 +10,7 @@ import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
-import { VisualQuickSettings } from "./VisualQuickSettings";
+import { VisualStudioDialog } from "../VisualStudioDialog";
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
@@ -369,8 +369,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           groupName={drilldownGroup}
         />
 
-        <VisualQuickSettings
-          visual={visual}
+        <VisualStudioDialog
+          visual={visual as any}
           open={settingsOpen}
           onOpenChange={setSettingsOpen}
           overrideUpdateVisual={onUpdateVisual}

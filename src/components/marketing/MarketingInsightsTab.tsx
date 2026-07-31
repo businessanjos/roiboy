@@ -5,7 +5,7 @@ import { startOfMonth, endOfMonth } from "date-fns";
 import { useMarketingDashboards } from "@/hooks/useMarketingDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { InsightsGrid } from "@/components/insights/grid/InsightsGrid";
-import { AddVisualModal } from "@/components/insights/AddVisualModal";
+import { VisualStudioDialog } from "@/components/insights/VisualStudioDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -315,7 +315,7 @@ export default function MarketingInsightsTab() {
       </AlertDialog>
 
       {/* Add Visual Modal - uses overrides to bypass InsightsDashboardsProvider */}
-      <AddVisualModal
+      <VisualStudioDialog
         open={builderOpen}
         onOpenChange={setBuilderOpen}
         overrideDashboardId={activeDashboardId}

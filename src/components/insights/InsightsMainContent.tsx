@@ -8,7 +8,7 @@ import { InsightsFilterBar } from "./InsightsFilterBar";
 import { MarketingDateFilter } from "@/components/marketing/MarketingDateFilter";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { AddVisualModal } from "./AddVisualModal";
+import { VisualStudioDialog } from "./VisualStudioDialog";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
@@ -193,7 +193,7 @@ export function InsightsMainContent() {
   if (isWhatsAppDashboard && !isLoadingVisuals) {
     return (
       <div className="flex-1 overflow-auto">
-        <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+        <VisualStudioDialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
         <WhatsAppDashboardPanel
           onAddVisual={() => setIsBuilderOpen(true)}
           visuals={visuals || []}
@@ -284,7 +284,7 @@ export function InsightsMainContent() {
   return (
     <div className="flex-1 overflow-auto">
       {focusModeOverlay}
-      <AddVisualModal open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+      <VisualStudioDialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
       {activeDashboard && (
         <ShareDashboardModal
           open={isShareOpen}
