@@ -571,14 +571,20 @@ export function VisualStudioDialog({
           </aside>
 
           <section className="flex min-w-0 flex-1 flex-col bg-muted/30 p-6">
-            <p className="mb-3 text-xs font-medium uppercase tracking-wide text-muted-foreground">
+            <p className="mb-3 flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-muted-foreground">
               Prévia ao vivo
+              {isPreviewStale && (
+                <span className="normal-case tracking-normal text-[11px] text-muted-foreground/70">
+                  atualizando…
+                </span>
+              )}
             </p>
             <div className="min-h-0 flex-1">
-              {config ? (
-                <div className="h-full [&>*]:h-full">
+              {debouncedConfig ? (
+                <div className={cn('h-full [&>*]:h-full transition-opacity', isPreviewStale && 'opacity-60')}>
                   <ConfigurableVisualCard visual={previewVisual as any} readOnly />
                 </div>
+
               ) : (
                 <div className="flex h-full items-center justify-center rounded-lg border border-dashed text-sm text-muted-foreground">
                   Escolha uma fonte de dados para ver a prévia.
