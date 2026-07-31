@@ -133,7 +133,7 @@ function Podium({
   );
 }
 
-export function ConfigurableRanking({ data, formatting, appearance }: ConfigurableRankingProps) {
+export function ConfigurableRanking({ data, formatting, appearance, dimensionLabel, measureLabel }: ConfigurableRankingProps) {
   const m = FONT_SCALE_MULTIPLIERS[appearance?.fontScale || 'normal'];
   const { currentUser } = useCurrentUser();
   const [avatars, setAvatars] = useState<Record<string, UserAvatar>>({});
