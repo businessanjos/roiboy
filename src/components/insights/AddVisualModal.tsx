@@ -658,6 +658,29 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
         };
       }
 
+      // Unified filters + segmentation (Pipedrive-style builder)
+      if (visualFilters.length > 0) {
+        config = syncLegacyFilterKeys({ ...config, filters: visualFilters }, visualFilters);
+      }
+      if (segmentBy) {
+        config = {
+          ...config,
+          segmentBy,
+          ...(segmentBy.source === 'native'
+            ? { stackBy: segmentBy.field, stackByCustomField: undefined }
+            : {
+                stackBy: undefined,
+                stackByCustomField: {
+                  fieldId: segmentBy.field,
+                  fieldName: segmentBy.label,
+                  source: segmentBy.source === 'deal_custom' ? ('deal' as const) : ('lead' as const),
+                },
+              }),
+        };
+      }
+
+
+
       await addVisual({
         dashboard_id: activeDashboardId,
         title: title.trim(),
