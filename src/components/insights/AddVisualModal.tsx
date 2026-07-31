@@ -13,7 +13,10 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { BarChart3, LineChart, PieChart, Hash, Check, ChevronLeft, ChevronRight, Trophy, Phone, Gauge, Activity, MapPin, Filter, Table } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
-import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS } from "./visual-builder/types";
+import { VisualConfig, DEFAULT_APPEARANCE, DataSource, DATA_SOURCE_OPTIONS, VisualFilter, SegmentBy, syncLegacyFilterKeys } from "./visual-builder/types";
+import { FilterSection } from "./visual-builder/FilterSection";
+import { SegmentSection } from "./visual-builder/SegmentSection";
+import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useQuery } from "@tanstack/react-query";
@@ -167,6 +170,14 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [groupBy, setGroupBy] = useState<GroupBy | null>(null);
   const [title, setTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
+  const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
+  const activeDataSource: DataSource | null = metric ? (METRIC_TO_CONFIG[metric].dataSource as DataSource) : null;
+  const { data: fieldCatalog = [] } = useFieldCatalog(activeDataSource, currentUser?.account_id ?? null);
+  useEffect(() => {
+    setVisualFilters([]);
+    setSegmentBy(null);
+  }, [activeDataSource]);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
@@ -245,6 +256,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
       setChartType(null);
       setMetric(null);
       setGroupBy(null);
+      setVisualFilters([]);
+      setSegmentBy(null);
       setTitle("");
       setGaugeSubType('days_elapsed');
       setGaugeGoal("");
@@ -657,6 +670,29 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
           ...(chartType === 'bar_stacked' && !isTemporalGrouping && groupBy !== 'user' && { stackBy: 'responsible_name' }),
         };
       }
+
+      // Unified filters + segmentation (Pipedrive-style builder)
+      if (visualFilters.length > 0) {
+        config = syncLegacyFilterKeys({ ...config, filters: visualFilters }, visualFilters);
+      }
+      if (segmentBy) {
+        config = {
+          ...config,
+          segmentBy,
+          ...(segmentBy.source === 'native'
+            ? { stackBy: segmentBy.field, stackByCustomField: undefined }
+            : {
+                stackBy: undefined,
+                stackByCustomField: {
+                  fieldId: segmentBy.field,
+                  fieldName: segmentBy.label,
+                  source: segmentBy.source === 'deal_custom' ? ('deal' as const) : ('lead' as const),
+                },
+              }),
+        };
+      }
+
+
 
       await addVisual({
         dashboard_id: activeDashboardId,
@@ -1191,6 +1227,26 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                 </div>
               )}
 
+
+              {activeDataSource && (
+                <>
+                  <SegmentSection
+                    catalog={fieldCatalog}
+                    value={segmentBy}
+                    onChange={setSegmentBy}
+                    excludeKey={groupBy ? GROUP_BY_TO_DIMENSION[groupBy]?.field : undefined}
+                  />
+
+                  <FilterSection
+                    dataSource={activeDataSource}
+                    accountId={currentUser?.account_id ?? null}
+                    catalog={fieldCatalog}
+                    filters={visualFilters}
+                    onChange={setVisualFilters}
+                  />
+                </>
+              )}
+
               <div className="space-y-2">
                 <Label htmlFor="visual-title">Título do Visual</Label>
                 <Input
@@ -1200,6 +1256,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
                   placeholder="Ex: Faturamento por Mês"
                 />
               </div>
+
             </div>
           )}
         </div>

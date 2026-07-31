@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
-import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { VisualConfig, DateGrouping, DateDisplayFormat, FieldFilter, VisualFilter, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval, eachDayOfInterval, eachYearOfInterval, startOfMonth, startOfYear, startOfDay, endOfDay, getDaysInMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
@@ -78,12 +79,15 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           ? ['open']
           : dealStatusFilter;
 
+      // Unified (Pipedrive-style) filters that the legacy engine can't express
+      const unifiedFilters = selectUnmirroredFilters(config.filters);
+
       switch (dataSource) {
         case 'deals':
-          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter);
+          result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter, unifiedFilters);
           break;
         case 'leads':
-          result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter);
+          result = await fetchLeadsData(accountId, measure, dimension, filters, dateDisplayFormat, leadFilters, dealFilters, dealStatusFilter, unifiedFilters);
           break;
         case 'products':
           result = await fetchProductsData(accountId, measure, dimension, filters, dateDisplayFormat);
@@ -724,7 +728,8 @@ async function fetchDealsData(
   statusFilter?: 'won' | 'lost' | 'open',
   leadFilters?: FieldFilter[],
   dealFilters?: FieldFilter[],
-  dealStatusFilter?: string[]
+  dealStatusFilter?: string[],
+  unifiedFilters?: VisualFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -832,6 +837,13 @@ async function fetchDealsData(
   if (dealFilters && dealFilters.length > 0) {
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters);
   }
+
+  // Apply unified (Pipedrive-style) filters
+  if (unifiedFilters && unifiedFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any;
+  }
+
+
 
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
@@ -1145,14 +1157,15 @@ async function fetchLeadsData(
   dateDisplayFormat: DateDisplayFormat,
   leadFilters?: FieldFilter[],
   dealFilters?: FieldFilter[],
-  dealStatusFilter?: string[]
+  dealStatusFilter?: string[],
+  unifiedFilters?: VisualFilter[]
 ): Promise<AggregatedDataPoint[]> {
   // Determine if we need lead field filtering or deal-based filtering
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
   const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
   // For scorecard total count WITHOUT any filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter) {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !unifiedFilters?.length) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -1217,6 +1230,13 @@ async function fetchLeadsData(
     const matchingLeadIds = await getLeadIdsByDealConstraints(accountId, dealFilters, dealStatusFilter);
     allData = allData.filter(lead => matchingLeadIds.has(lead.id));
   }
+
+  // Apply unified (Pipedrive-style) filters
+  if (unifiedFilters && unifiedFilters.length > 0) {
+    allData = await applyVisualFilters(allData as any, accountId, unifiedFilters, 'leads') as any;
+  }
+
+
 
   // For scorecard total with filter, return count after filtering
   if (dimension.field === '_total') {

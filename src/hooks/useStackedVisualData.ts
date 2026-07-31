@@ -6,6 +6,7 @@ import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insig
 import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInterval, eachYearOfInterval, startOfMonth, endOfMonth, startOfYear, endOfYear, startOfWeek, endOfWeek, endOfDay, getDaysInMonth } from "date-fns";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
+import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 
@@ -258,6 +259,14 @@ async function fetchStackedDealsData(
     allDeals = await filterByDealFields(allDeals, accountId, dealFilters);
   }
 
+  // Apply unified (Pipedrive-style) filters
+  const unifiedDealFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedDealFilters.length > 0) {
+    allDeals = await applyVisualFilters(allDeals as any, accountId, unifiedDealFilters, 'deals') as any;
+  }
+
+
+
   // Enrich deals with Canal de Venda if needed
   const needsCanal = config.stackBy === 'canal' || config.dimension.field === 'canal';
   if (needsCanal) {
@@ -486,6 +495,14 @@ async function fetchStackedLeadsData(
   if (leadFilters.length > 0) {
     allLeads = await filterByLeadFields(allLeads, accountId, leadFilters, 'leads');
   }
+
+  // Apply unified (Pipedrive-style) filters
+  const unifiedLeadFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedLeadFilters.length > 0) {
+    allLeads = await applyVisualFilters(allLeads as any, accountId, unifiedLeadFilters, 'leads') as any;
+  }
+
+
 
   // Enrich leads with custom field data if needed
   const needsFaturamento = dimensionField === 'faturamento_atual' || stackByField === 'faturamento_atual';

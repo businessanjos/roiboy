@@ -36,7 +36,13 @@ import {
   DATA_SOURCE_FIELDS,
   generateVisualTitle,
   DEFAULT_APPEARANCE,
+  VisualFilter,
+  SegmentBy,
+  syncLegacyFilterKeys,
 } from "./types";
+import { FilterSection } from "./FilterSection";
+import { SegmentSection } from "./SegmentSection";
+import { useFieldCatalog } from "@/lib/insights/fieldRegistry";
 
 interface VisualBuilderSheetProps {
   open: boolean;
@@ -77,6 +83,12 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
   const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
 
+  // Unified filters + segmentation (Pipedrive-style)
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
+  const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
+  const { data: fieldCatalog = [] } = useFieldCatalog(dataSource, currentUser?.account_id ?? null);
+
+
   // Auto-fetch ALL company goals when selecting revenue gauge
   useEffect(() => {
     if (open && gaugeSubType === 'revenue_vs_goal' && !companyGoalLoaded && currentUser?.account_id) {
@@ -113,6 +125,8 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
   useEffect(() => {
     if (!open) {
       setDataSource(null);
+      setVisualFilters([]);
+      setSegmentBy(null);
       setMeasureField(null);
       setAggregation('sum');
       setDimensionField(null);
@@ -314,6 +328,29 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
         };
       }
 
+      // Attach unified filters + segmentation (keeps legacy keys in sync)
+      if (visualFilters.length > 0) {
+        config = syncLegacyFilterKeys({ ...config, filters: visualFilters }, visualFilters);
+      }
+      if (segmentBy) {
+        config = {
+          ...config,
+          segmentBy,
+          ...(segmentBy.source === 'native'
+            ? { stackBy: segmentBy.field, stackByCustomField: undefined }
+            : {
+                stackBy: undefined,
+                stackByCustomField: {
+                  fieldId: segmentBy.field,
+                  fieldName: segmentBy.label,
+                  source: segmentBy.source === 'deal_custom' ? ('deal' as const) : ('lead' as const),
+                },
+              }),
+        };
+      }
+
+
+
       await addVisual({
         dashboard_id: activeDashboardId,
         title: title.trim(),
@@ -513,7 +550,33 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
                   onDateGroupingChange={setDateGrouping}
                 />
 
+                {dataSource && (
+                  <>
+                    <Separator />
+
+                    {/* Segmentar por */}
+                    <SegmentSection
+                      catalog={fieldCatalog}
+                      value={segmentBy}
+                      onChange={setSegmentBy}
+                      excludeKey={dimensionField ?? undefined}
+                    />
+
+                    <Separator />
+
+                    {/* Filtros */}
+                    <FilterSection
+                      dataSource={dataSource}
+                      accountId={currentUser?.account_id ?? null}
+                      catalog={fieldCatalog}
+                      filters={visualFilters}
+                      onChange={setVisualFilters}
+                    />
+                  </>
+                )}
+
                 <Separator />
+
 
                 {/* Formatting */}
                 <FormattingSection
