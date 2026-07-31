@@ -210,6 +210,115 @@ export function getDealFilters(config: VisualConfig): FieldFilter[] {
   return [];
 }
 
+/**
+ * Converts any visual config (legacy or new) into the unified filter array.
+ * Legacy shapes handled: leadFieldFilter(s), dealFieldFilter(s), dealStatusFilter
+ * and the virtual deal created_at range field.
+ */
+export function normalizeVisualFilters(config: VisualConfig): VisualFilter[] {
+  if (config.filters?.length) return config.filters;
+
+  const result: VisualFilter[] = [];
+
+  for (const f of getDealFilters(config)) {
+    if (f.fieldId === DEAL_CREATED_AT_FIELD_ID) {
+      if (!f.dateFrom && !f.dateTo) continue;
+      result.push({
+        id: newFilterId(),
+        source: 'native',
+        field: 'created_at',
+        label: 'Data de Criação',
+        type: 'date',
+        operator: 'between',
+        values: [],
+        from: f.dateFrom,
+        to: f.dateTo,
+      });
+      continue;
+    }
+    if (!f.selectedValues?.length) continue;
+    result.push({
+      id: newFilterId(),
+      source: 'deal_custom',
+      field: f.fieldId,
+      label: f.fieldName,
+      type: 'text',
+      operator: f.selectedValues.length > 1 ? 'is_any' : 'is',
+      values: f.selectedValues,
+    });
+  }
+
+  for (const f of getLeadFilters(config)) {
+    if (!f.selectedValues?.length) continue;
+    result.push({
+      id: newFilterId(),
+      source: 'lead_custom',
+      field: f.fieldId,
+      label: f.fieldName,
+      type: 'text',
+      operator: f.selectedValues.length > 1 ? 'is_any' : 'is',
+      values: f.selectedValues,
+    });
+  }
+
+  if (config.dealStatusFilter?.length) {
+    result.push({
+      id: newFilterId(),
+      source: 'native',
+      field: 'status',
+      label: 'Status',
+      type: 'text',
+      operator: config.dealStatusFilter.length > 1 ? 'is_any' : 'is',
+      values: config.dealStatusFilter,
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Mirrors unified filters back into the legacy config keys so that visuals and
+ * code paths that were not migrated yet keep working exactly as before.
+ */
+export function syncLegacyFilterKeys(
+  config: VisualConfig,
+  filters: VisualFilter[]
+): VisualConfig {
+  const dealFieldFilters: FieldFilter[] = [];
+  const leadFieldFilters: FieldFilter[] = [];
+  let dealStatusFilter: string[] | undefined;
+
+  for (const f of filters) {
+    if (f.source === 'deal_custom' && f.operator !== 'is_not' && operatorNeedsValues(f.operator)) {
+      dealFieldFilters.push({ fieldId: f.field, fieldName: f.label, selectedValues: f.values });
+    } else if (f.source === 'lead_custom' && f.operator !== 'is_not' && operatorNeedsValues(f.operator)) {
+      leadFieldFilters.push({ fieldId: f.field, fieldName: f.label, selectedValues: f.values });
+    } else if (f.source === 'native' && f.field === 'status' && f.operator !== 'is_not') {
+      dealStatusFilter = f.values;
+    } else if (f.source === 'native' && f.field === 'created_at' && f.operator === 'between') {
+      dealFieldFilters.push({
+        fieldId: DEAL_CREATED_AT_FIELD_ID,
+        fieldName: 'Data de Criação',
+        selectedValues: [],
+        dateFrom: f.from,
+        dateTo: f.to,
+      });
+    }
+  }
+
+  return {
+    ...config,
+    filters,
+    dealFieldFilters,
+    leadFieldFilters,
+    dealFieldFilter: undefined,
+    leadFieldFilter: undefined,
+    dealStatusFilter,
+  };
+}
+
+
+
 // Data source options
 export const DATA_SOURCE_OPTIONS: { value: DataSource; label: string }[] = [
   { value: 'deals', label: 'Negócios' },
