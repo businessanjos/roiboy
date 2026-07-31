@@ -806,7 +806,15 @@ export function VisualStudioDialog({
               </Button>
             </div>
             <div className="min-h-0 flex-1">
-              {debouncedConfig ? (
+              {mode === 'simple' && !activeRecipe ? (
+                <div className="flex h-full flex-col items-center justify-center gap-2 rounded-lg border border-dashed p-6 text-center">
+                  <Wand2 className="h-8 w-8 text-muted-foreground/60" />
+                  <p className="text-sm font-medium">Escolha uma pergunta ao lado</p>
+                  <p className="max-w-sm text-sm text-muted-foreground">
+                    O gráfico aparece aqui na hora, já pronto. Depois é só ajustar o que quiser.
+                  </p>
+                </div>
+              ) : debouncedConfig ? (
                 tvPreview ? (
                   <div className="flex h-full items-center justify-center">
                     <div className="aspect-video w-full max-h-full overflow-hidden rounded-xl border border-border/60 bg-card/40 p-4 shadow-lg">
