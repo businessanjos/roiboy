@@ -1042,7 +1042,7 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
               <div className="space-y-2">
                 <Label>Fonte de Dados</Label>
                 <div className="grid grid-cols-2 gap-2">
-                  {DATA_SOURCE_OPTIONS.map((opt) => (
+                  {DATA_SOURCE_OPTIONS.filter((o) => !o.value.startsWith('royzapp')).map((opt) => (
                     <button
                       key={opt.value}
                       onClick={() => {
