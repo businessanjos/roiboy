@@ -167,6 +167,8 @@ export function AddVisualModal({ open, onOpenChange, overrideDashboardId, overri
   const [groupBy, setGroupBy] = useState<GroupBy | null>(null);
   const [title, setTitle] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
+  const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
   const [gaugeSubType, setGaugeSubType] = useState<'days_elapsed' | 'revenue_vs_goal'>('days_elapsed');
   const [gaugeGoal, setGaugeGoal] = useState("");
   const [companyGoalLoaded, setCompanyGoalLoaded] = useState(false);
