@@ -122,6 +122,19 @@ export function ConfigurableChart({ type, data, formatting, appearance, visualCo
 
 const AXIS_TICK = { fill: 'hsl(var(--muted-foreground))' };
 
+/** Largura do eixo de valores calculada pelo maior rótulo formatado (evita corte). */
+function yAxisWidth(
+  data: AggregatedDataPoint[],
+  formatting: ConfigurableChartProps['formatting'],
+  fontSize: number
+) {
+  const longest = data.reduce((acc, d) => {
+    const t = formatValueCompact(d.value, formatting.type);
+    return t.length > acc.length ? t : acc;
+  }, '0');
+  return Math.round(Math.min(120, Math.max(44, approxTextWidth(longest, fontSize) + 16)));
+}
+
 function BarChartView({ 
   data, 
   formatting, 
