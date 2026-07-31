@@ -881,12 +881,21 @@ async function fetchDealsData(
     filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any;
   }
 
-
+  // Custom fields selected as measure and/or dimension: inject their values so
+  // aggregation can read them like native columns.
+  if (isCustomFieldKey(measure.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, measure.field, 'deals');
+  }
+  if (isCustomFieldKey(dimension.field)) {
+    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, dimension.field, 'deals');
+    return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
+  }
 
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
     return aggregateGlobalTotal(filteredData, measure);
   }
+
 
   // If grouping by MQL, fetch MQL field values and inject into deals
   if (dimension.field === 'mql') {
