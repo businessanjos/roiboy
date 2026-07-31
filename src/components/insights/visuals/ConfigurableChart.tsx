@@ -346,13 +346,26 @@ function HorizontalBarChartView({
           <YAxis
             dataKey="name"
             type="category"
-            tick={{ fontSize: tickFont, ...AXIS_TICK }}
-            tickFormatter={(v: string) => truncateLabel(String(v ?? ''), maxChars)}
+            tick={(props: any) => {
+              const { x, y, payload } = props;
+              return (
+                <text
+                  x={x}
+                  y={y}
+                  dy={4}
+                  textAnchor="end"
+                  style={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
+                >
+                  {truncateLabel(String(payload?.value ?? ''), maxChars)}
+                </text>
+              );
+            }}
             tickLine={false}
             axisLine={false}
             width={Math.round(yWidth)}
             interval={0}
           />
+
           <Tooltip cursor={{ fill: 'hsl(var(--muted))', fillOpacity: 0.35 }} content={<ChartTooltip formatting={formatting} showCount />} />
           <Bar 
             dataKey="value" 
