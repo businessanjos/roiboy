@@ -1,5 +1,7 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { Move } from "lucide-react";
 import GridLayout from "react-grid-layout";
+
 import { getCompactor } from "react-grid-layout/core";
 import { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { ConfigurableVisualCard } from "../visuals/ConfigurableVisualCard";
@@ -340,15 +342,34 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 // ── Main component ──
 
+const FREE_LAYOUT_KEY = "insights:free-layout-mode";
+
 export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight }: InsightsGridProps) {
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [freeLayout, setFreeLayout] = useState<boolean>(() => {
+    if (typeof window === "undefined") return false;
+    return window.localStorage.getItem(FREE_LAYOUT_KEY) === "1";
+  });
+
+  const toggleFreeLayout = useCallback(() => {
+    setFreeLayout((prev) => {
+      const next = !prev;
+      try {
+        window.localStorage.setItem(FREE_LAYOUT_KEY, next ? "1" : "0");
+      } catch {
+        /* ignore */
+      }
+      return next;
+    });
+  }, []);
 
   const [localLayout, setLocalLayout] = useState<LayoutItem[]>(() =>
     visuals.map((v, i) => visualToLayoutItem(v, i))
   );
+
 
   const prevVisualIdsRef = useRef<string>(visuals.map(v => v.id).sort().join(","));
   const isMountedRef = useRef(false);
@@ -426,11 +447,12 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         layout: { i: item.i, x: item.x, y: item.y, w: item.w, h: item.h, scale: 48 },
       }));
       onLayoutChange(layoutUpdates);
-      // Exit editing mode after drag/resize
-      setTimeout(() => setIsEditing(false), 100);
+      // In free layout mode the grid stays visible/editable
+      if (!freeLayout) setTimeout(() => setIsEditing(false), 100);
     },
-    [onLayoutChange]
+    [onLayoutChange, freeLayout]
   );
+
 
   const handleDragStart = useCallback(() => setIsEditing(true), []);
   const handleResizeStart = useCallback(() => setIsEditing(true), []);
@@ -466,12 +488,29 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     );
   }
 
-  // Always show responsive CSS grid, with an invisible react-grid-layout
-  // overlay that activates only during drag/resize
+  const gridVisible = freeLayout || isEditing;
+
+  // Responsive CSS grid by default; free layout mode keeps the draggable/resizable grid visible
   return (
-    <div ref={containerRef} className="insights-grid pointer-events-auto relative">
-      {/* Responsive CSS grid — always visible when not dragging */}
-      {!isEditing && (
+    <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${freeLayout ? "free-layout" : ""}`}>
+      <div className="flex justify-end pb-2">
+        <button
+          type="button"
+          onClick={toggleFreeLayout}
+          className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+            freeLayout
+              ? "border-primary bg-primary/10 text-primary"
+              : "border-border text-muted-foreground hover:bg-muted/50"
+          }`}
+          title="Redimensionar e posicionar os cards livremente"
+        >
+          <Move className="h-3.5 w-3.5" />
+          {freeLayout ? "Concluir layout" : "Ajustar layout"}
+        </button>
+      </div>
+
+      {/* Responsive CSS grid — visible when not in free/edit mode */}
+      {!gridVisible && (
         <ResponsiveInsightsGrid
           visuals={visuals}
           onUpdateVisual={onUpdateVisual}
@@ -482,11 +521,11 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         />
       )}
 
-      {/* React-grid-layout — hidden but interactive for drag handles,
-          becomes visible during active drag/resize */}
-      <div className={isEditing ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
-        style={!isEditing ? { height: 0, overflow: "hidden" } : undefined}
+      {/* React-grid-layout — interactive drag/resize surface */}
+      <div className={gridVisible ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
+        style={!gridVisible ? { height: 0, overflow: "hidden" } : undefined}
       >
+
         <GridLayout
           className="layout"
           layout={localLayout}
@@ -533,24 +572,45 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         }
         .insights-grid .react-grid-item > .react-resizable-handle {
           position: absolute;
-          width: 20px;
-          height: 20px;
+          width: 22px;
+          height: 22px;
         }
         .insights-grid .react-grid-item > .react-resizable-handle::after {
           content: "";
           position: absolute;
-          right: 3px;
-          bottom: 3px;
-          width: 8px;
-          height: 8px;
-          border-right: 2px solid rgba(0, 0, 0, 0.3);
-          border-bottom: 2px solid rgba(0, 0, 0, 0.3);
+          right: 4px;
+          bottom: 4px;
+          width: 9px;
+          height: 9px;
+          border-right: 2px solid hsl(var(--muted-foreground));
+          border-bottom: 2px solid hsl(var(--muted-foreground));
+          opacity: 0.5;
+        }
+        .insights-grid.free-layout .react-grid-item {
+          outline: 1px dashed hsl(var(--border));
+          outline-offset: 2px;
+          border-radius: 0.5rem;
+        }
+        .insights-grid.free-layout .react-grid-item > .react-resizable-handle::after {
+          border-color: hsl(var(--primary));
+          opacity: 1;
+        }
+        .insights-grid.free-layout .widget-drag-handle {
+          cursor: move;
         }
         .insights-grid .react-grid-placeholder {
           display: none !important;
           opacity: 0 !important;
           visibility: hidden !important;
         }
+        .insights-grid.free-layout .react-grid-placeholder {
+          display: block !important;
+          opacity: 0.15 !important;
+          visibility: visible !important;
+          background: hsl(var(--primary)) !important;
+          border-radius: 0.5rem;
+        }
+
       `}</style>
     </div>
   );
