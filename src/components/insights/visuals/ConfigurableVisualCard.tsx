@@ -10,7 +10,11 @@ import { useStackedVisualData } from "@/hooks/useStackedVisualData";
 import { useMapVisualData } from "@/hooks/useMapVisualData";
 import { ConfigurableChart } from "./ConfigurableChart";
 import { DrilldownDialog } from "./DrilldownDialog";
-import { VisualStudioDialog } from "../VisualStudioDialog";
+// Lazy + deferred: VisualStudioDialog renders this same card as its live preview,
+// so a static import creates a circular module dependency (blank/never-loading preview).
+const VisualStudioDialog = lazy(() =>
+  import("../VisualStudioDialog").then((m) => ({ default: m.VisualStudioDialog }))
+);
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import {
