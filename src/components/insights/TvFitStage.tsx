@@ -40,6 +40,12 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
     return () => ro.disconnect();
   }, []);
 
+  // Largura real (em px de tela) que o palco 1920x1080 ocupa depois da escala.
+  // Abaixo de ~1100px os rótulos ficam pequenos demais: entramos em modo compacto
+  // (fontes levemente maiores e menos categorias) automaticamente.
+  const renderedWidth = TV_STAGE_WIDTH * scale;
+  const compact = renderedWidth > 0 && renderedWidth < 1100;
+
   return (
     <div ref={wrapperRef} className="w-full h-full flex items-center justify-center overflow-hidden">
       <div
@@ -61,9 +67,12 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
             </div>
           )}
           <div className="flex-1 min-h-0 px-6 pb-6">
-            {/* Mantemos o palco 1920x1080, mas os visuais renderizam exatamente
-                como fora do modo TV (sem overrides de fonte/corte de categorias). */}
-            <TvModeProvider enabled={false}>{children}</TvModeProvider>
+            {/* Palco 1920x1080. Em telas amplas os visuais renderizam exatamente
+                como fora do modo TV; quando o palco encolhe muito, ativamos o
+                modo compacto para manter tudo legível. */}
+            <TvModeProvider enabled={compact} compact scale={1.2} maxCategories={8}>
+              {children}
+            </TvModeProvider>
           </div>
         </div>
       </div>
