@@ -190,7 +190,7 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
 
   return (
-    <div className={fitHeight ? "flex flex-col gap-3 h-full min-h-0" : "flex flex-col gap-3"}>
+    <div className={fitHeight ? "flex flex-col gap-4 h-full min-h-0" : "flex flex-col gap-3"}>
       {rows.map((row, rowIdx) => (
         <ResponsiveRow
           key={rowIdx}
@@ -232,7 +232,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
 
   return (
     <div
-      className={fitHeight ? "grid gap-3 min-h-0" : "grid gap-3"}
+      className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
       style={{
         gridTemplateColumns: `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight
