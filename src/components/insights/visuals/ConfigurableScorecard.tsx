@@ -1,8 +1,10 @@
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { formatValueWithScale } from "@/lib/formula-evaluator";
 import { FormatType, DisplayScale, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { VisualConfig } from "../visual-builder/types";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { sumGoalsInRange } from "@/lib/monthRange";
+
 
 interface ConfigurableScorecardProps {
   data: Array<{ name: string; value: number; count?: number }>;
