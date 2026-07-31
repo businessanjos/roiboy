@@ -1,93 +1,55 @@
+# Construtor de visuais no modelo Pipedrive
 
-## Situação atual
+Objetivo: mudar a lógica de criação de gráficos do Insights para o mesmo modelo mental do relatório do Pipedrive descrito no SOP — **Entidade → Medir por → Ver por → Segmentar por → Filtros** — valendo para todas as fontes de dados (Negócios, Leads, Produtos, Tarefas, Histórico de Vendas).
 
-Auditei o backend e encontrei uma lacuna clara:
+## Diagnóstico do que existe hoje
 
-- **Frontend**: já bloqueia rotas/UI de Vendas via `useSectorAccess.hasVendasAccess` (ok).
-- **Backend (RLS)**: as tabelas `deals`, `leads`, `pipelines`, `deal_stages`, `sales_meetings`, `sales_history`, `commission_deal_entries`, `sales_goals`, `sales_monthly_goals` só filtram por `account_id`. Ou seja, **qualquer usuário logado da conta consegue ler dados do Comercial via API**, mesmo sem acesso ao setor "vendas". As páginas do dashboard só escondem — não protegem.
-- Não existe função `has_sector_access` no banco. Setor não é coluna em nenhuma dessas tabelas — o vínculo é conceitual (todas essas tabelas são do domínio Comercial).
+- O fluxo atual do `AddVisualModal` começa pelo formato do gráfico e depois oferece uma **métrica pré-definida** (Faturamento, Nº de negócios, Ticket médio...) e um **agrupamento** de lista fixa. Não existe o conceito livre de "medir por campo X".
+- **Segmentar por** existe (`stackBy` / `stackByCustomField`), mas só aparece no ajuste rápido do card e praticamente só funciona em barra empilhada com Negócios/Leads. Não é oferecido na criação.
+- **Filtros** só existem para campos personalizados (`dealFieldFilters` / `leadFieldFilters`) mais status do negócio e um intervalo de datas virtual. Campos nativos como Canal de Venda, Origem da Venda, Etapa, Vendedor e Produto **não podem ser usados como filtro**, apenas como dimensão.
+- Não existe operador: todo filtro hoje é "é qualquer um destes valores". O SOP usa **é**, **é qualquer** e **intervalo de datas** de forma explícita.
+- Cada fonte tem uma lista de campos escrita à mão em pontos diferentes do código, o que faz Ver por / Segmentar por / Filtros oferecerem conjuntos de campos diferentes entre si.
 
-## O que vou fazer
+## O que muda
 
-### 1. Função `SECURITY DEFINER` no banco
+### 1. Catálogo único de campos por fonte
+Um registro central que descreve, para cada fonte, todos os campos disponíveis (nativos + personalizados carregados do banco) com nome, tipo (texto / número / data) e como buscar os valores possíveis. Ver por, Segmentar por e Filtros passam a ler desse mesmo catálogo — acabam as divergências.
 
-Criar `public.user_has_sector_access(_user_auth_id uuid, _sector_id text)` que retorna `true` se:
-- usuário for `role='admin'` ou `is_also_admin=true` em `public.users`, ou
-- for super admin (`public.super_admins`), ou
-- tiver linha ativa em `user_sector_access` para o setor.
+### 2. Novo fluxo de criação (mesma sequência do SOP)
+1. **Entidade + formato** — fonte de dados e tipo de visual.
+2. **Medir por** — contagem de registros, soma, média ou ciclo de vendas sobre um campo numérico da fonte (ex.: "Número de negócios", "Soma do valor").
+3. **Ver por** — dimensão que forma o eixo (com agrupamento por dia/semana/mês/ano quando for data).
+4. **Segmentar por** (opcional) — qualquer campo do catálogo. Se preenchido em gráfico de barras, o visual passa a empilhar automaticamente com legenda colorida.
+5. **Filtros** — linhas no formato **Campo · Operador · Valor(es)**, com botão "Adicionar filtro" e combinação E entre elas.
 
-Sem recursão (lê tabelas diferentes das que serão protegidas).
+Os presets atuais (Faturamento, Nº de negócios etc.) continuam disponíveis como atalho que apenas pré-preenche Medir por / Ver por — nada do que já existe deixa de funcionar.
 
-### 2. Reforço de RLS nas tabelas do domínio Comercial
+### 3. Operadores de filtro
+- Texto/seleção: **é**, **é qualquer**, **não é**, **está vazio / preenchido**
+- Data: **é** (hoje, esta semana, este mês, este ano, período personalizado) e **entre**
+- Número: **maior que**, **menor que**, **entre**
 
-Adicionar à cláusula `USING`/`WITH CHECK` de SELECT/INSERT/UPDATE/DELETE:
-`AND public.user_has_sector_access(auth.uid(), 'vendas')`
+### 4. Segmentação liberada para todas as fontes
+O motor de dados empilhados hoje só cobre Negócios e Leads. Passa a cobrir também Produtos, Tarefas e Histórico de Vendas, e a aceitar qualquer campo do catálogo como segmentação.
 
-Tabelas afetadas:
-- `deals`, `deal_stages`, `deal_activities`, `deal_field_values`, `deal_loss_reasons`, `deal_loss_sub_reasons`, `deal_operation_briefings`
-- `leads`, `lead_field_values`, `lead_timeline`, `lead_duplicate_attempts`
-- `pipelines`, `pipeline_filters`
-- `sales_meetings`, `sales_history`, `sales_records`
-- `sales_goals`, `sales_monthly_goals`, `sales_product_goals`, `sales_goal_metrics`, `sales_quotas`, `sales_user_ote`
-- `commission_deal_entries`, `commission_periods`, `commission_plans`, `commission_tiers`, `commission_triggers`, `commission_sales_levels`, `commission_approval_history`
-- `sales_incentive_plans`, `sales_incentive_tiers`, `sales_incentive_product_rates`, `sales_spiffs`, `spiff_spins`, `spiff_spin_requests`
-- `sales_call_analyses`, `sales_chat_sessions`, `sales_chat_messages`, `sales_dashboard_pinned_kpis`, `sales_team_careers`
-- `renewal_outcomes` (fluxo Renovações usa acesso próprio; será excluído se conflitar)
+### 5. Compatibilidade
+Nenhuma mudança no banco. Os visuais já salvos continuam funcionando: os formatos antigos de filtro são convertidos em memória para o novo formato quando o visual é lido, e só são regravados no formato novo se o usuário editar o visual.
 
-Não afeta:
-- `clients`, `client_contracts`, `financial_*` (compartilhados entre CS e Financeiro; têm regras próprias).
-- `zapp_*` (já isolado por setor).
-- Webhooks/edge functions que rodam como `service_role` (bypassa RLS por design).
-
-### 3. Edge functions sensíveis
-
-Auditar e reforçar validação de setor nas functions que expõem dados de vendas para usuários finais (não webhooks):
-- `create-lead-core`, `sales-team-*`, `pipeline-*` — checar se validam identidade e adicionar `user_has_sector_access(auth.uid(), 'vendas')` quando escrevem/leem em nome do usuário.
-- Webhooks externos (`uazapi-webhook`, `typeform-*`, integrações) continuam com `service_role` — sem impacto.
-
-### 4. Verificação
-
-Após aprovar a migração:
-1. Rodar linter Supabase.
-2. Testar como um usuário SEM `vendas` (ex.: Arthur Mudri) — leitura de `deals` deve retornar 0 linhas.
-3. Testar como Jonathan (com `vendas`) — leitura normal.
-4. Testar como admin — leitura total.
+### 6. Validação com o caso real do SOP
+Ao final, montar no Insights o relatório do SOP para conferir a paridade: negócios criados este ano · Canal de Venda = Orgânico · Origem da Venda é qualquer [ORG-EVER], [ORG-EC], [ORG-BP] · barras verticais · Medir por Número de negócios · Ver por Origem da Venda · Segmentar por MQL. Antes disso, confirmo no banco onde estão hoje "Canal de Venda", "Origem da Venda" e "MQL" (campo nativo do negócio ou campo personalizado vindo do Pipedrive) — essa checagem é o primeiro passo da execução, porque define se o catálogo precisa mesclar campos personalizados por conta.
 
 ## Detalhes técnicos
 
-```sql
-CREATE OR REPLACE FUNCTION public.user_has_sector_access(_auth_user_id uuid, _sector_id text)
-RETURNS boolean LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.users u
-    WHERE u.auth_user_id = _auth_user_id
-      AND (u.role = 'admin' OR u.is_also_admin = true)
-  ) OR EXISTS (
-    SELECT 1 FROM public.super_admins sa
-    JOIN public.users u ON u.id = sa.user_id
-    WHERE u.auth_user_id = _auth_user_id
-  ) OR EXISTS (
-    SELECT 1 FROM public.user_sector_access usa
-    JOIN public.users u ON u.id = usa.user_id
-    WHERE u.auth_user_id = _auth_user_id
-      AND usa.sector_id = _sector_id
-      AND usa.is_active = true
-  );
-$$;
-```
+- Novo `src/lib/insights/fieldRegistry.ts`: catálogo de campos por `DataSource`, unindo `DATA_SOURCE_FIELDS` com `custom_fields` (entidade lead/deal) e campos virtuais (`__deal_created_at__`, status).
+- Novo tipo `VisualFilter { source: 'native' | 'custom'; field: string; label: string; type: 'text'|'number'|'date'; operator: FilterOperator; values: string[]; from?: string; to?: string }` em `visual-builder/types.ts`, com `normalizeFilters(config)` para converter `leadFieldFilter(s)`, `dealFieldFilter(s)`, `dealStatusFilter` e `fixedDateRange`.
+- Novo `src/lib/insights/applyFilters.ts` com duas metades: predicados de query (campos nativos → `.eq/.in/.gte/.lte` no Supabase) e predicado em memória (campos personalizados, já carregados via `*_field_values`). Consumido por `useVisualData`, `useStackedVisualData`, `useMapVisualData` e pelo drilldown, para o filtro valer também no detalhamento.
+- Novo componente `visual-builder/FilterSection.tsx` (linhas campo/operador/valor) substituindo `DealFieldFilterSection` e `LeadFieldFilterSection`, que passam a ser wrappers finos até a migração dos usos.
+- `AddVisualModal`: reorganização dos passos para Medir por / Ver por / Segmentar por / Filtros, mantendo os atalhos de métrica e o cálculo de posição livre do `layoutPlacement`.
+- `VisualQuickSettings`: passa a usar o mesmo catálogo e o mesmo componente de filtros, para o card e o modal não divergirem.
+- `useStackedVisualData`: generalizar a resolução de série para qualquer fonte/campo, hoje limitada a deals/leads.
+- Sem migração de banco; `insights_visuals.config` continua JSON livre.
 
-Cada política atualizada vira algo como:
-```sql
-USING (
-  account_id = get_user_account_id()
-  AND public.user_has_sector_access(auth.uid(), 'vendas')
-)
-```
+## Fora de escopo
 
-## Riscos
-
-- **Quebra de listagens** para usuários sem `vendas` que hoje acessam páginas por engano — é justamente o objetivo. Verifico que apenas os 7 autorizados + admins mantenham acesso antes de finalizar.
-- **Webhooks**: rodam via `service_role`, não são afetados.
-- **Renovações**: usa lista `RENEWALS_FULL_ACCESS_USER_IDS` no frontend; adiciono exceção via `hr_allow_renewals` se conflitar com quem não tem `vendas`.
-
-Confirma que posso avançar com a migração?
+- Importar relatórios prontos do Pipedrive via conector.
+- Mudança visual dos gráficos já entregues (eixos, rótulos, modo TV).
