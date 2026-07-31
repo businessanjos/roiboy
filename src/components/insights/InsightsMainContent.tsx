@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2 } from "lucide-react";
+import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2, Tv } from "lucide-react";
 import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -39,6 +39,7 @@ export function InsightsMainContent() {
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
+  const [tvFit, setTvFit] = useState(true);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
 
