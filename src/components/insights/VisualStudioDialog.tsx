@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Trash2, X } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -365,7 +365,6 @@ export function VisualStudioDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         className="max-w-[1240px] w-[96vw] h-[90vh] p-0 gap-0 overflow-hidden flex flex-col"
-        hideCloseButton
       >
         <DialogTitle className="sr-only">{isEdit ? 'Editar visual' : 'Adicionar visual'}</DialogTitle>
         <DialogDescription className="sr-only">
@@ -380,7 +379,7 @@ export function VisualStudioDialog({
             placeholder="Nome do visual"
             className="h-9 max-w-md text-base font-medium"
           />
-          <div className="ml-auto flex items-center gap-2">
+          <div className="ml-auto mr-6 flex items-center gap-2">
             {isEdit && (
               <Button variant="ghost" size="sm" onClick={handleDelete} disabled={isSaving}>
                 <Trash2 className="mr-1.5 h-4 w-4" /> Excluir
@@ -391,9 +390,6 @@ export function VisualStudioDialog({
             </Button>
             <Button size="sm" onClick={handleSave} disabled={!canSave || isSaving}>
               {isSaving ? 'Salvando...' : isEdit ? 'Salvar alterações' : 'Adicionar ao painel'}
-            </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onOpenChange(false)}>
-              <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
