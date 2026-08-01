@@ -129,6 +129,7 @@ export function VisualStudioDialog({
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [indicatorMin, setIndicatorMin] = useState('0');
   const [indicatorMax, setIndicatorMax] = useState('100');
+  const [dailyPerf, setDailyPerf] = useState<DailyPerformanceSettings>({});
   const [statusFilter, setStatusFilter] = useState<'won' | 'lost' | 'open' | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [titleTouched, setTitleTouched] = useState(false);
