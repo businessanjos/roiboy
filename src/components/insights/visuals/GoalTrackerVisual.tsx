@@ -30,6 +30,8 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useInsightsGoal, isCurrencyMetric, InsightsGoal } from "@/hooks/useInsightsGoals";
+import { COLOR_PALETTES } from "../visual-builder/types";
+
 
 interface Bucket {
   key: string;
