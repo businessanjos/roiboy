@@ -171,7 +171,10 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
         endDate: config.fixedDateRange.endDate,
       };
     }
-    if (config?.dimension?.dateGrouping === 'day') {
+    // Daily grouping only falls back to the current month when the dashboard
+    // has no explicit period selected. Overriding an explicit range (e.g.
+    // "Este Ano") would empty the chart on the first days of a month.
+    if (config?.dimension?.dateGrouping === 'day' && !globalFilters.startDate && !globalFilters.endDate) {
       const now = new Date();
       return {
         ...globalFilters,
@@ -426,7 +429,7 @@ async function fetchStackedDealsData(
         const weekStart = startOfWeek(date, { weekStartsOn: 1 });
         return format(weekStart, 'yyyy-MM-dd');
       }
-      default: return format(date, 'dd');
+      default: return format(date, 'yyyy-MM-dd');
     }
   };
 
@@ -440,7 +443,7 @@ async function fetchStackedDealsData(
       }
       case 'week': return `Sem ${format(date, 'II')}`;
       default:
-        return format(date, 'dd');
+        return format(date, 'dd/MM');
     }
   };
 
@@ -455,13 +458,11 @@ async function fetchStackedDealsData(
     case 'week':
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
-    default: {
-      const today = new Date().getDate();
-      for (let d = 1; d <= today; d++) {
-        const key = String(d).padStart(2, '0');
-        allPeriods.push({ key, label: key });
-      }
-    }
+    default:
+      eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+        allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) })
+      );
+      break;
   }
 
   const periodMap = new Map<string, Map<string, number>>();
