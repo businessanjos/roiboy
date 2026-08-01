@@ -918,8 +918,10 @@ async function fetchDealsData(
 
   // Apply lead field filters if configured (AND logic)
   let filteredData = data || [];
+  console.debug('[vfdbg] raw deals', filteredData.length, 'leadFilters', JSON.stringify(leadFilters));
   if (leadFilters && leadFilters.length > 0) {
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'deals');
+    console.debug('[vfdbg] after lead filters', filteredData.length);
   }
 
   // Apply deal field filters if configured (AND logic)
@@ -929,7 +931,9 @@ async function fetchDealsData(
 
   // Apply unified (Pipedrive-style) filters
   if (unifiedFilters && unifiedFilters.length > 0) {
+    console.debug('[vfdbg] before unified', filteredData.length, JSON.stringify(unifiedFilters));
     filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any;
+    console.debug('[vfdbg] after unified', filteredData.length);
   }
 
   // Custom fields selected as measure and/or dimension: inject their values so
