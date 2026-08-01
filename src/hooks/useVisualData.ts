@@ -1412,9 +1412,12 @@ async function fetchProductsData(
     .select('id, name, price, billing_period, is_active, created_at')
     .eq('account_id', accountId);
 
-  // O período do dashboard também vale para produtos (data de cadastro).
-  if (filters.startDate) query = query.gte('created_at', filters.startDate);
-  if (filters.endDate) query = query.lte('created_at', filters.endDate);
+  // O catálogo só é recortado pelo período quando o visual é temporal
+  // (ex.: produtos cadastrados por mês). Contagens de catálogo seguem globais.
+  if (dimension.type === 'date') {
+    if (filters.startDate) query = query.gte('created_at', filters.startDate);
+    if (filters.endDate) query = query.lte('created_at', filters.endDate);
+  }
 
   const data: any[] = [];
   {
