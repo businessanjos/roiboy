@@ -9,6 +9,7 @@ import {
   Legend,
   LabelList,
 } from "recharts";
+import { ChartLegendContent } from './ChartLegendContent';
 import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
 import { formatValueCompact } from "@/lib/formula-evaluator";
@@ -158,9 +159,10 @@ export function StackedHorizontalBarChart({
               verticalAlign="top"
               align="center"
               height={26}
-              iconSize={9}
-              wrapperStyle={{ fontSize: Math.round(11 * m), color: 'hsl(var(--muted-foreground))', paddingBottom: 6, textAlign: 'center' }}
-
+              wrapperStyle={{ paddingBottom: 6 }}
+              content={(props: any) => (
+                <ChartLegendContent payload={props?.payload} fontSize={Math.round(11 * m)} />
+              )}
             />
           )}
           {seriesKeys.map((key, index) => (
@@ -263,14 +265,10 @@ export function StackedHorizontalBarChart({
                 verticalAlign="top"
                 align="center"
                 height={legendHeight}
-                iconSize={9}
-                wrapperStyle={{
-                  fontSize: tickFont,
-                  color: 'hsl(var(--muted-foreground))',
-                  paddingBottom: 6,
-                  lineHeight: 1.5,
-                  textAlign: 'center',
-                }}
+                wrapperStyle={{ paddingBottom: 6 }}
+                content={(props: any) => (
+                  <ChartLegendContent payload={props?.payload} fontSize={tickFont} />
+                )}
               />
             )}
             {seriesKeys.map((key, index) => (
