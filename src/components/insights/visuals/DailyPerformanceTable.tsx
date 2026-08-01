@@ -104,6 +104,20 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (pipelineId) stagesQuery = stagesQuery.eq("pipeline_id", pipelineId);
       const { data: stages } = await stagesQuery;
 
+      // O funil de Repescagem / Cadência recebe pessoas que já receberam proposta.
+      // Quando o visual está filtrado por um funil, esses negócios entram junto e
+      // são contabilizados na etapa de "Proposta enviada" do funil selecionado.
+      let repescagemPipelineId: string | null = null;
+      if (pipelineId) {
+        const { data: pls } = await supabase
+          .from("pipelines")
+          .select("id, name")
+          .eq("account_id", accountId);
+        repescagemPipelineId =
+          (pls || []).find((p: any) => /repescagem/i.test(p.name || ""))?.id || null;
+        if (repescagemPipelineId === pipelineId) repescagemPipelineId = null;
+      }
+
       // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas).
       // Paginação obrigatória: o PostgREST corta em 1.000 linhas e os totais viriam menores.
       const PAGE = 1000;
@@ -117,7 +131,11 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
           .is("deleted_at", null)
           .order("id")
           .range(page * PAGE, page * PAGE + PAGE - 1);
-        if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
+        if (pipelineId) {
+          dealsQuery = repescagemPipelineId
+            ? dealsQuery.in("pipeline_id", [pipelineId, repescagemPipelineId])
+            : dealsQuery.eq("pipeline_id", pipelineId);
+        }
         if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
         const { data: chunk, error } = await dealsQuery;
         if (error) throw error;
@@ -126,6 +144,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       }
 
       const dealIds = new Set(deals.map((d: any) => d.id));
+      const repescagemDealIds = new Set(
+        deals.filter((d: any) => repescagemPipelineId && d.pipeline_id === repescagemPipelineId).map((d: any) => d.id),
+      );
+
 
       // Movimentações de etapa no período (também paginadas)
       const activities: any[] = [];
