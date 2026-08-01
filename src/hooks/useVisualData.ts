@@ -854,11 +854,16 @@ async function fetchDealsData(
     dateFilterField = 'created_at';
   }
 
-  // For specific date fields (won_at, lost_at), filter out records with null values
+  // For specific date fields (won_at, lost_at), filter out records with null values.
+  // Um negócio reaberto e depois perdido mantém o `won_at` antigo, então quando não
+  // há filtro de status explícito garantimos que a data usada casa com o status real.
+  const hasExplicitStatus = !!statusFilter || !!(dealStatusFilter && dealStatusFilter.length > 0);
   if (dateFilterField === 'won_at') {
     query = query.not('won_at', 'is', null);
+    if (!hasExplicitStatus) query = query.eq('status', 'won');
   } else if (dateFilterField === 'lost_at') {
     query = query.not('lost_at', 'is', null);
+    if (!hasExplicitStatus) query = query.eq('status', 'lost');
   }
 
   // Apply date filters on the correct field
