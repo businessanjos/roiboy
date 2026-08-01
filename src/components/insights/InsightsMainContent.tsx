@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { VisualStudioDialog } from "./VisualStudioDialog";
 import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
+import { DashboardPaletteSelector } from "./DashboardPaletteSelector";
 import { TvFitStage } from "./TvFitStage";
 
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
