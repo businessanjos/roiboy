@@ -649,6 +649,11 @@ async function fetchStackedLeadsData(
     return lead[field] || 'Não informado';
   };
 
+  const getSeriesValues = (lead: any, field: string): string[] => {
+    if (config.stackByCustomField) return seriesValuesOf(lead, 'Não informado');
+    return [getFieldValue(lead, field)];
+  };
+
   if (isTemporalDimension) {
     // Temporal grouping for leads (similar to deals logic)
     const periodMap = new Map<string, Map<string, number>>();
@@ -672,13 +677,15 @@ async function fetchStackedLeadsData(
         default: periodKey = format(date, 'yyyy-MM-dd'); break;
       }
 
-      const seriesValue = getFieldValue(lead, stackByField);
-      allSeries.add(seriesValue);
-
       if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
       const seriesMap = periodMap.get(periodKey)!;
-      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+
+      for (const seriesValue of getSeriesValues(lead, stackByField)) {
+        allSeries.add(seriesValue);
+        seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+      }
     }
+
 
     const seriesKeys = Array.from(allSeries).sort();
 
