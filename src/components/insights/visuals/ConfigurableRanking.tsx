@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS, COLOR_PALETTES } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
@@ -29,17 +29,20 @@ interface UserAvatar {
   avatar_url: string | null;
 }
 
-const MEDAL_STYLES: Record<number, { bg: string; text: string; border: string; emoji: string }> = {
-  0: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 dark:border-amber-700', emoji: '🥇' },
-  1: { bg: 'bg-slate-100 dark:bg-slate-800/50', text: 'text-slate-600 dark:text-slate-300', border: 'border-slate-300 dark:border-slate-600', emoji: '🥈' },
-  2: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-300 dark:border-orange-700', emoji: '🥉' },
+const MEDAL_EMOJI: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' };
+
+const PODIUM_LAYOUT: Record<number, { height: number; order: number }> = {
+  0: { height: 160, order: 2 },
+  1: { height: 120, order: 1 },
+  2: { height: 90, order: 3 },
 };
 
-const PODIUM_CONFIG: Record<number, { height: number; gradient: string; borderColor: string; order: number }> = {
-  0: { height: 160, gradient: 'from-amber-400 to-amber-500', borderColor: 'border-amber-400', order: 2 },
-  1: { height: 120, gradient: 'from-slate-300 to-slate-400', borderColor: 'border-slate-400', order: 1 },
-  2: { height: 90, gradient: 'from-orange-400 to-orange-500', borderColor: 'border-orange-400', order: 3 },
-};
+/** Ranking colours follow the dashboard palette so the visual never clashes. */
+function paletteColors(appearance?: AppearanceConfig): string[] {
+  const palette = COLOR_PALETTES[appearance?.colorPalette || 'professional'];
+  return palette?.length ? palette : COLOR_PALETTES.professional;
+}
+
 
 function getInitials(name: string): string {
   return name
@@ -74,11 +77,13 @@ function Podium({
   avatars,
   formatting,
   fontMultiplier,
+  colors,
 }: {
   data: AggregatedDataPoint[];
   avatars: Record<string, UserAvatar>;
   formatting: ConfigurableRankingProps['formatting'];
   fontMultiplier: number;
+  colors: string[];
 }) {
   const top3 = data.slice(0, 3);
   // Reorder: 2nd, 1st, 3rd
@@ -90,9 +95,10 @@ function Podium({
     <div className="flex items-end justify-center gap-2 px-2 pb-2 pt-4">
       {podiumOrder.map((item) => {
         const originalIndex = top3.indexOf(item);
-        const config = PODIUM_CONFIG[originalIndex];
+        const config = PODIUM_LAYOUT[originalIndex];
         if (!config) return null;
         const userAvatar = avatars[item.name];
+        const color = colors[originalIndex % colors.length];
 
         return (
           <div
@@ -101,9 +107,12 @@ function Podium({
             style={{ order: config.order }}
           >
             {/* Avatar */}
-            <Avatar className={`shrink-0 border-[3px] ${config.borderColor} mb-1.5`} style={{ height: Math.round(48 * fontMultiplier), width: Math.round(48 * fontMultiplier) }}>
+            <Avatar
+              className="shrink-0 border-[3px] mb-1.5"
+              style={{ height: Math.round(48 * fontMultiplier), width: Math.round(48 * fontMultiplier), borderColor: color }}
+            >
               <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
-              <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+              <AvatarFallback className="text-xs font-semibold" style={{ backgroundColor: `${color}22`, color }}>
                 {getInitials(item.name)}
               </AvatarFallback>
             </Avatar>
@@ -120,10 +129,14 @@ function Podium({
 
             {/* Podium base */}
             <div
-              className={`rounded-t-lg bg-gradient-to-t ${config.gradient} flex items-center justify-center`}
-              style={{ height: `${Math.round(config.height * Math.min(fontMultiplier, 1.4))}px`, width: `${Math.round(72 * fontMultiplier)}px` }}
+              className="rounded-t-lg flex items-center justify-center"
+              style={{
+                height: `${Math.round(config.height * Math.min(fontMultiplier, 1.4))}px`,
+                width: `${Math.round(72 * fontMultiplier)}px`,
+                backgroundImage: `linear-gradient(to top, ${color}, ${color}b3)`,
+              }}
             >
-              <span className="text-white font-bold text-lg drop-shadow-sm">
+              <span className="font-bold text-lg drop-shadow-sm text-white">
                 {originalIndex + 1}º
               </span>
             </div>
@@ -190,6 +203,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
 
   const maxValue = Math.max(...data.map(d => d.value), 1);
   const hasPodiumData = data.length >= 2;
+  const colors = paletteColors(appearance);
 
   // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
   const rowHeight = Math.round(44 * m);
@@ -205,7 +219,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
       {/* Podium - left side */}
       {showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
-          <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} />
+          <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} colors={colors} />
         </div>
       )}
 
@@ -221,20 +235,21 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
           </thead>
           <tbody>
             {rows.map((item, index) => {
-              const medal = MEDAL_STYLES[index];
+              const emoji = MEDAL_EMOJI[index];
+              const rowColor = colors[index % colors.length];
+              const isTop = index < 3;
               const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
               const userAvatar = avatars[item.name];
 
               return (
                 <tr
                   key={item.name}
-                  className={`border-b border-border/50 transition-colors ${
-                    medal ? medal.bg : 'hover:bg-muted/30'
-                  }`}
+                  className="border-b border-border/50 transition-colors hover:bg-muted/30"
+                  style={isTop ? { backgroundColor: `${rowColor}1f` } : undefined}
                 >
                   <td className="py-2.5 px-1">
-                    {medal ? (
-                      <span className="text-base">{medal.emoji}</span>
+                    {emoji ? (
+                      <span className="text-base">{emoji}</span>
                     ) : (
                       <span className="text-muted-foreground font-medium text-xs ml-0.5">
                         {index + 1}º
@@ -245,25 +260,31 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                     <div className="flex items-center gap-2.5">
                       <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
-                        <AvatarFallback className="text-[10px] font-medium bg-primary/10 text-primary">
+                        <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                           {getInitials(item.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <span className={`font-medium block truncate ${medal ? medal.text : 'text-foreground'}`} style={{ fontSize: `${Math.round(14 * m)}px` }}>
+                        <span
+                          className="font-medium block truncate"
+                          style={{ fontSize: `${Math.round(14 * m)}px`, color: isTop ? rowColor : undefined }}
+                        >
                           {item.name}
                         </span>
                         <div className="w-full h-1.5 bg-muted rounded-full mt-1">
                           <div
-                            className="h-full rounded-full bg-primary/70 transition-all duration-500"
-                            style={{ width: `${progress}%` }}
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-2.5 px-1 text-right">
-                    <span className={`font-semibold tabular-nums ${medal ? medal.text : 'text-foreground'}`}>
+                    <span
+                      className="font-semibold tabular-nums"
+                      style={{ color: isTop ? rowColor : undefined }}
+                    >
                       {formatCurrency(item.value, formatting.type, formatting.decimals)}
                     </span>
                   </td>
