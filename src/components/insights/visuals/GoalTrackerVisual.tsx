@@ -298,6 +298,30 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               activeDot={false}
               isAnimationActive={false}
             />
+            <Line
+              type="linear"
+              dataKey="MetaAcumulada"
+              name={`Meta anual acumulada (${fmt(totalMeta, currency)})`}
+              stroke="hsl(var(--chart-4, var(--destructive)))"
+              strokeWidth={2}
+              strokeDasharray="4 6"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+            <ReferenceLine
+              y={totalMeta}
+              ifOverflow="extendDomain"
+              stroke="hsl(var(--chart-4, var(--destructive)))"
+              strokeOpacity={0.45}
+              strokeDasharray="2 4"
+              label={{
+                value: `Meta anual ${fmt(totalMeta, currency)}`,
+                position: "insideTopRight",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 10,
+              }}
+            />
             <ReferenceLine
               y={target}
               ifOverflow="extendDomain"
@@ -305,6 +329,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               strokeOpacity={0.35}
               strokeDasharray="2 4"
             />
+
           </ComposedChart>
         </ResponsiveContainer>
       </div>
