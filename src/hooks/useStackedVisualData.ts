@@ -131,15 +131,14 @@ async function enrichWithCustomField(
 
   const labelFor = (raw: string) => productLabels.get(raw) || valueToLabel.get(raw) || raw;
 
-  // Build entityId -> label map
-  const entityLabelMap = new Map<string, string>();
+  // Build entityId -> labels map (multi_select keeps each option as its own series)
+  const entityLabelMap = new Map<string, string[]>();
   for (const [entityId, vals] of rawByEntity) {
-    entityLabelMap.set(entityId, vals.map(labelFor).join(', '));
+    const labels = Array.from(new Set(vals.map(labelFor).filter(Boolean)));
+    if (labels.length) entityLabelMap.set(entityId, labels);
   }
 
-
-
-  // Inject _custom_stack_label into records
+  // Inject _custom_stack_label(s) into records
   return records.map(r => {
     let entityId: string;
     if (source === 'lead' && dataSource === 'deals') {
@@ -147,8 +146,10 @@ async function enrichWithCustomField(
     } else {
       entityId = r.id;
     }
-    return { ...r, _custom_stack_label: entityLabelMap.get(entityId) || 'Não informado' };
+    const labels = entityLabelMap.get(entityId) || ['Não informado'];
+    return { ...r, _custom_stack_label: labels[0], _custom_stack_labels: labels };
   });
+
 }
 
 interface UseStackedVisualDataParams {
