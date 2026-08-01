@@ -109,6 +109,21 @@ function matchDate(value: string | null, filter: VisualFilter): boolean {
   return ts >= fromTs && ts <= toTs;
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const customFieldSourceCache = new Map<string, 'deal_custom' | 'lead_custom' | null>();
+
+async function resolveCustomFieldSource(fieldId: string): Promise<'deal_custom' | 'lead_custom' | null> {
+  if (customFieldSourceCache.has(fieldId)) return customFieldSourceCache.get(fieldId)!;
+  const { data } = await supabase
+    .from('custom_fields')
+    .select('show_in_deals, show_in_leads')
+    .eq('id', fieldId)
+    .maybeSingle();
+  const source = data ? (data.show_in_deals ? 'deal_custom' : data.show_in_leads ? 'lead_custom' : null) : null;
+  customFieldSourceCache.set(fieldId, source);
+  return source;
+}
+
 async function applyNativeFilter<T extends { id: string }>(
   records: T[],
   accountId: string,
@@ -121,6 +136,17 @@ async function applyNativeFilter<T extends { id: string }>(
     if (!fieldId) return records;
     return applyCustomFilter(records, accountId, { ...filter, source: 'deal_custom', field: fieldId }, 'deals');
   }
+
+  // Legacy/mis-saved filters: a custom field UUID stored with source "native".
+  // Without this guard the record lookup returns null and everything is filtered out.
+  if (UUID_RE.test(filter.field)) {
+    const source = await resolveCustomFieldSource(filter.field);
+    if (!source) return records;
+    const mode: 'deals' | 'leads' = dataSource === 'leads' ? 'leads' : 'deals';
+    return applyCustomFilter(records as any, accountId, { ...filter, source }, mode);
+  }
+
+
 
   return records.filter((r) => {
     const value = readNativeValue(r, filter.field);
