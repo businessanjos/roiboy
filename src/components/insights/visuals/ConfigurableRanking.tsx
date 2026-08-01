@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
+import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS, COLOR_PALETTES } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
