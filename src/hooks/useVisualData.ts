@@ -8,7 +8,7 @@ import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval,
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
+import { buildFunnelStageData, detectDuplicateStagesInPipeline, normalizeStageName } from "@/hooks/funnelData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
@@ -129,13 +129,37 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       // For funnel with stage_name, sort by pipeline display_order
       if (chartType === 'funnel' && dimension.field === 'stage_name') {
-        const { data: stages, error: stagesError } = await supabase
+        // Respect an active "Funil" (pipeline) filter: only stages of the
+        // selected pipeline(s) should compose the funnel skeleton.
+        const pipelineFilter = (config.filters || []).find(
+          (f: any) => f.field === 'pipeline_name' && (f.operator === 'is' || f.operator === 'is_any') && (f.values?.length || 0) > 0
+        );
+        let allowedPipelineIds: string[] | null = null;
+        if (pipelineFilter) {
+          const { data: pipelineRows } = await supabase
+            .from('pipelines')
+            .select('id, name')
+            .eq('account_id', accountId);
+          const wanted = new Set(pipelineFilter.values.map((v: string) => v.toLowerCase()));
+          allowedPipelineIds = (pipelineRows || [])
+            .filter((p: any) => wanted.has(String(p.name).toLowerCase()))
+            .map((p: any) => p.id);
+        }
+
+        let stagesQuery = supabase
           .from('deal_stages')
           .select('id, name, display_order, color, pipeline_id')
           .eq('account_id', accountId)
           .order('display_order', { ascending: true });
 
+        if (allowedPipelineIds && allowedPipelineIds.length > 0) {
+          stagesQuery = stagesQuery.in('pipeline_id', allowedPipelineIds);
+        }
+
+        const { data: stages, error: stagesError } = await stagesQuery;
+
         if (stagesError) console.error('Error fetching stages order:', stagesError);
+
 
         if (stages && stages.length > 0) {
           // Validate: same stage name MUST NOT appear twice in the same pipeline.
@@ -176,7 +200,17 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           }
 
           result = buildFunnelStageData(result, stages);
+
+          // When restricted to specific pipeline(s), drop any stage that does
+          // not belong to them (avoids stages of other funnels leaking in).
+          if (allowedPipelineIds && allowedPipelineIds.length > 0) {
+            const allowedNames = new Set(
+              (stages as any[]).map((s) => normalizeStageName(s.name))
+            );
+            result = result.filter((r) => allowedNames.has(normalizeStageName(r.name)));
+          }
         }
+
 
         // Append "Ganhos" (won deals) using the same filters as regular stages
         const wonResult = await fetchDealsData(
