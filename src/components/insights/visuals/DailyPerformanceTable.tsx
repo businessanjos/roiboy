@@ -25,6 +25,8 @@ interface MetricRow {
   label: string;
   color: string;
   isCurrency?: boolean;
+  /** Classe fixa de cor (Venda/Receita verde, Perdido vermelho). */
+  valueClass?: string;
   days: DayCell;
   total: number;
 }
@@ -43,6 +45,7 @@ function achievementClass(value: number, dailyGoal: number | null) {
   if (pct >= 0.6) return "text-amber-400";
   return "text-red-400";
 }
+
 
 export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const { currentUser } = useCurrentUser();
@@ -157,6 +160,8 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
     // a linha mede negócios que passaram pela etapa, não movimentações.
     const seen = new Set<string>();
+    // Negócios únicos que passaram por cada etapa (base do total em formato funil).
+    const stageDeals = new Map<string, Set<string>>();
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
@@ -168,12 +173,24 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
       row.days[key] += 1;
-      row.total += 1;
+      if (!stageDeals.has(row.key)) stageDeals.set(row.key, new Set());
+      stageDeals.get(row.key)!.add(act.deal_id);
     }
 
-    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", days: emptyDays(), total: 0 };
-    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", days: emptyDays(), total: 0 };
-    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", isCurrency: true, days: emptyDays(), total: 0 };
+    // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
+    // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
+    const orderedStages = [...stageRows.values()];
+    for (let i = 0; i < orderedStages.length; i++) {
+      const acc = new Set<string>();
+      for (let j = i; j < orderedStages.length; j++) {
+        for (const id of stageDeals.get(orderedStages[j].key) || []) acc.add(id);
+      }
+      orderedStages[i].total = acc.size;
+    }
+
+    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", valueClass: "text-emerald-400", days: emptyDays(), total: 0 };
+    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", valueClass: "text-red-400", days: emptyDays(), total: 0 };
+    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", valueClass: "text-emerald-400", isCurrency: true, days: emptyDays(), total: 0 };
 
     // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
@@ -198,8 +215,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     }
 
 
-    return [...stageRows.values(), won, lost, revenue];
+    return [...orderedStages, won, lost, revenue];
   }, [data, days, range.start, range.end]);
+
 
   if (isLoading) {
     return (
@@ -256,20 +274,21 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
                       {v === 0 ? (
                         <span className="text-muted-foreground/40">—</span>
                       ) : (
-                        <span className={achievementClass(v, dailyGoal)}>
+                        <span className={row.valueClass || achievementClass(v, dailyGoal)}>
                           {formatCompactNumber(v, !!row.isCurrency)}
                         </span>
                       )}
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-right font-semibold">
+                <td className={cn("px-3 py-2 text-right font-semibold", row.valueClass)}>
                   {row.total === 0 ? (
                     <span className="text-muted-foreground/40">—</span>
                   ) : (
                     formatCompactNumber(row.total, !!row.isCurrency)
                   )}
                 </td>
+
                 <td className={cn("px-3 py-2 text-right", pct === null ? "text-muted-foreground/40" : achievementClass(pct, 100))}>
                   {pct === null ? "—" : `${pct}%`}
                 </td>
