@@ -169,6 +169,8 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
       return <ConfigurableFunnel data={data} formatting={formatting} appearance={config} />;
     case 'data_table':
       return <ConfigurableTable config={visualConfig!} />;
+    case 'daily_performance':
+      return <DailyPerformanceTable config={visualConfig!} />;
     default:
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
   }
