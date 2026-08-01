@@ -1686,7 +1686,9 @@ function formatDateGroup(dateString: string, grouping: DateGrouping, displayForm
 
     switch (grouping) {
       case 'day':
-        return format(date, 'dd');
+        // Inclui mês/ano: com períodos maiores que um mês, apenas "dd"
+        // colapsaria dias de meses diferentes no mesmo rótulo.
+        return format(date, 'dd/MM');
       case 'week':
         const weekStart = startOfWeek(date, { locale: ptBR });
         return format(weekStart, "'Sem' w/yyyy", { locale: ptBR });
