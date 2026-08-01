@@ -259,10 +259,15 @@ async function fetchStackedDealsData(
     dateField = 'created_at';
   }
 
+  // Negócio reaberto e depois perdido mantém `won_at`: sem filtro de status
+  // explícito, casamos a data com o status real para não inflar receita.
+  const hasExplicitStatus = !!statusFilter || !!(config.dealStatusFilter && config.dealStatusFilter.length > 0);
   if (dateField === 'won_at') {
     query = query.not('won_at', 'is', null);
+    if (!hasExplicitStatus) query = query.eq('status', 'won');
   } else if (dateField === 'lost_at') {
     query = query.not('lost_at', 'is', null);
+    if (!hasExplicitStatus) query = query.eq('status', 'lost');
   }
 
   const effectiveStartDate = explicitDateBounds?.from || filters.startDate;
