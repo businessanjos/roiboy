@@ -102,6 +102,8 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
           .from("deals")
           .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
           .eq("account_id", accountId)
+          // Negócios excluídos (soft delete) nunca entram na auditoria.
+          .is("deleted_at", null)
           .order("id")
           .range(page * PAGE, page * PAGE + PAGE - 1);
         if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
