@@ -125,7 +125,8 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
     enabled: !!goal && !!accountId,
     staleTime: 30_000,
     queryFn: async () => {
-      const g = goal!;
+      if (!goal || !accountId) throw new Error("Meta ou conta não disponível");
+      const g = goal;
       const totals: Record<string, number> = {};
       const openTotals: Record<string, number> = {};
 
@@ -145,7 +146,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
           let q = supabase
             .from("internal_tasks")
             .select("id, completed_at, assigned_to, activity_type_id")
-            .eq("account_id", accountId!)
+            .eq("account_id", accountId)
             .not("completed_at", "is", null)
             .gte("completed_at", g.period_start)
             .lte("completed_at", `${g.period_end}T23:59:59`)
@@ -167,7 +168,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
         let q = supabase
           .from("deals")
           .select("id, value, status, won_at, expected_close_date, responsible_user_id, pipeline_id, stage_id")
-          .eq("account_id", accountId!)
+          .eq("account_id", accountId)
           .is("deleted_at", null)
           .not(dateField, "is", null)
           .gte(dateField, g.period_start)
@@ -184,7 +185,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
       // Os filtros configurados no próprio visual também precisam limitar o realizado.
       // Sem isso, selecionar "Item da Venda = EM" alterava a UI, mas o gráfico somava
       // todos os negócios ganhos do período.
-      let scopedRows = await applyVisualFilters(rows, accountId!, visualFilters, "deals");
+      let scopedRows = await applyVisualFilters(rows, accountId, visualFilters, "deals");
 
       // Escopo por produto: o produto do negócio vive no campo personalizado "Item da venda".
       if (g.scope_type === "product" && g.scope_id) {
@@ -198,7 +199,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             .from("deal_field_values")
             .select("deal_id, value_text")
             .eq("field_id", ITEM_VENDA_FIELD_ID)
-            .eq("account_id", accountId!)
+            .eq("account_id", accountId)
             .in("deal_id", batch);
           for (const row of fv || []) {
             const raw = String(row.value_text || "").trim();
@@ -217,7 +218,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
         const { data: stages } = await supabase
           .from("deal_stages")
           .select("id, probability")
-          .eq("account_id", accountId!);
+          .eq("account_id", accountId);
         probabilities = Object.fromEntries((stages || []).map((s: any) => [s.id, Number(s.probability) || 0]));
       }
 
