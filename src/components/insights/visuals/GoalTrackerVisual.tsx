@@ -208,7 +208,15 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
   }
 
   const currency = isCurrencyMetric(goal.metric);
+  const palette =
+    COLOR_PALETTES[(config.appearance?.colorPalette as keyof typeof COLOR_PALETTES) || "professional"] ||
+    COLOR_PALETTES.professional;
+  const colorRealizado = palette[0];
+  const colorAcumulado = palette[2] || palette[1];
+  const colorMetaPeriodo = palette[4] || palette[1];
+  const colorMetaAnual = palette[1];
   const target = Number(goal.target_value) || 0;
+
   let cumulative = 0;
   let cumulativeTarget = 0;
   const chartData = buckets.map((b) => {
