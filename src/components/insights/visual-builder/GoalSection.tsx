@@ -17,6 +17,7 @@ import {
   GoalFrequency,
   GoalMetric,
   GoalScopeType,
+  isCurrencyMetric,
   useInsightsGoals,
 } from "@/hooks/useInsightsGoals";
 
@@ -28,6 +29,38 @@ interface Props {
   value: GoalVisualSettings;
   onChange: (next: GoalVisualSettings) => void;
 }
+
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+
+/** Máscara de digitação: moeda BRL (centavos) ou inteiro com separador de milhar */
+function maskTarget(raw: string, currency: boolean) {
+  const digits = onlyDigits(raw);
+  if (!digits) return "";
+  if (currency) {
+    const cents = Number(digits);
+    return (cents / 100).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+  return Number(digits).toLocaleString("pt-BR");
+}
+
+function parseTarget(raw: string, currency: boolean) {
+  const digits = onlyDigits(raw);
+  if (!digits) return 0;
+  return currency ? Number(digits) / 100 : Number(digits);
+}
+
+function targetToMasked(value: number, currency: boolean) {
+  if (!value) return "";
+  return currency
+    ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })
+    : Math.round(value).toLocaleString("pt-BR");
+}
+
 
 export function GoalSection({ value, onChange }: Props) {
   const { currentUser } = useCurrentUser();
@@ -47,7 +80,7 @@ export function GoalSection({ value, onChange }: Props) {
   const [frequency, setFrequency] = useState<GoalFrequency>("monthly");
   const [periodStart, setPeriodStart] = useState(`${year}-01-01`);
   const [periodEnd, setPeriodEnd] = useState(`${year}-12-31`);
-  const [targetValue, setTargetValue] = useState("0");
+  const [targetValue, setTargetValue] = useState("");
 
   const { data: pipelines = [] } = useQuery({
     queryKey: ["goal-pipelines", accountId],
@@ -81,9 +114,15 @@ export function GoalSection({ value, onChange }: Props) {
     },
   });
 
+  const changeMetric = (m: GoalMetric) => {
+    const prev = parseTarget(targetValue, isCurrencyMetric(metric));
+    setMetric(m);
+    setTargetValue(targetToMasked(prev, isCurrencyMetric(m)));
+  };
+
   const handleEntity = (e: GoalEntity) => {
     setEntity(e);
-    setMetric(GOAL_METRIC_BY_ENTITY[e][0].value);
+    changeMetric(GOAL_METRIC_BY_ENTITY[e][0].value);
   };
 
   const handleCreate = async () => {
@@ -97,7 +136,7 @@ export function GoalSection({ value, onChange }: Props) {
       frequency,
       period_start: periodStart,
       period_end: periodEnd,
-      target_value: Number(String(targetValue).replace(/\./g, "").replace(",", ".")) || 0,
+      target_value: parseTarget(targetValue, isCurrencyMetric(metric)),
     } as any);
     if (created?.id) onChange({ goalId: created.id });
     setCreating(false);
@@ -164,15 +203,25 @@ export function GoalSection({ value, onChange }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Valor por período</Label>
+              <Label className="text-xs text-muted-foreground">
+                {isCurrencyMetric(selectedGoal.metric) ? "Valor por período (R$)" : "Quantidade por período"}
+              </Label>
               <Input
-                inputMode="decimal"
-                value={editTarget ?? String(selectedGoal.target_value ?? 0)}
-                onChange={(e) => setEditTarget(e.target.value)}
+                inputMode="numeric"
+                placeholder={isCurrencyMetric(selectedGoal.metric) ? "R$ 0,00" : "0"}
+                value={
+                  editTarget ??
+                  targetToMasked(
+                    Number(selectedGoal.target_value ?? 0),
+                    isCurrencyMetric(selectedGoal.metric),
+                  )
+                }
+                onChange={(e) =>
+                  setEditTarget(maskTarget(e.target.value, isCurrencyMetric(selectedGoal.metric)))
+                }
                 onBlur={() => {
                   if (editTarget === null) return;
-                  const parsed =
-                    Number(String(editTarget).replace(/\./g, "").replace(",", ".")) || 0;
+                  const parsed = parseTarget(editTarget, isCurrencyMetric(selectedGoal.metric));
                   if (parsed !== Number(selectedGoal.target_value ?? 0)) {
                     updateGoal.mutate({ id: selectedGoal.id, target_value: parsed });
                   }
@@ -180,6 +229,7 @@ export function GoalSection({ value, onChange }: Props) {
                 }}
               />
             </div>
+
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
@@ -239,7 +289,7 @@ export function GoalSection({ value, onChange }: Props) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Métrica</Label>
-              <Select value={metric} onValueChange={(v) => setMetric(v as GoalMetric)}>
+              <Select value={metric} onValueChange={(v) => changeMetric(v as GoalMetric)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {GOAL_METRIC_BY_ENTITY[entity].map((o) => (
@@ -321,8 +371,16 @@ export function GoalSection({ value, onChange }: Props) {
               <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Valor por período</Label>
-              <Input value={targetValue} onChange={(e) => setTargetValue(e.target.value)} inputMode="decimal" />
+              <Label className="text-xs text-muted-foreground">
+                {isCurrencyMetric(metric) ? "Valor por período (R$)" : "Quantidade por período"}
+              </Label>
+              <Input
+                value={targetValue}
+                placeholder={isCurrencyMetric(metric) ? "R$ 0,00" : "0"}
+                onChange={(e) => setTargetValue(maskTarget(e.target.value, isCurrencyMetric(metric)))}
+                inputMode="numeric"
+              />
+
             </div>
           </div>
 
