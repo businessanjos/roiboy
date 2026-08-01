@@ -235,9 +235,87 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
   const goals = dp.goals || {};
 
+  const fixedKeys = new Set([WON_ROW, LOST_ROW, REVENUE_ROW]);
+  const stageOnlyRows = rows.filter((r) => !fixedKeys.has(r.key));
+  const wonRow = rows.find((r) => r.key === WON_ROW);
+  const conversionSteps = wonRow ? [...stageOnlyRows, wonRow] : stageOnlyRows;
+  const topTotal = conversionSteps[0]?.total || 0;
+
+  const tabs = (
+    <div className="flex items-center gap-1 px-3 pt-2">
+      {[
+        { id: "volume" as const, label: "Volume" },
+        { id: "conversion" as const, label: "Taxa de conversão" },
+      ].map((t) => (
+        <button
+          key={t.id}
+          type="button"
+          onClick={() => setTab(t.id)}
+          className={cn(
+            "rounded-md px-2.5 py-1 text-[11px] font-medium transition-colors",
+            tab === t.id ? "bg-primary/15 text-primary" : "text-muted-foreground hover:text-foreground",
+          )}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
+  );
+
+  if (tab === "conversion") {
+    return (
+      <div className="h-full w-full overflow-auto">
+        {tabs}
+        <table className="w-full border-collapse text-xs tabular-nums">
+          <thead>
+            <tr className="text-muted-foreground">
+              <th className="px-3 py-2 text-left font-medium uppercase tracking-wide">Etapa</th>
+              <th className="px-3 py-2 text-right font-medium uppercase">Negócios</th>
+              <th className="px-3 py-2 text-right font-medium uppercase">Conv. etapa anterior</th>
+              <th className="px-3 py-2 text-right font-medium uppercase">Conv. do topo</th>
+            </tr>
+          </thead>
+          <tbody>
+            {conversionSteps.map((row, i) => {
+              const prev = i > 0 ? conversionSteps[i - 1].total : null;
+              const stepPct = prev && prev > 0 ? (row.total / prev) * 100 : null;
+              const topPct = topTotal > 0 ? (row.total / topTotal) * 100 : null;
+              return (
+                <tr key={row.key} className="border-t border-border/50">
+                  <td className="px-3 py-2 whitespace-nowrap">
+                    <span className="flex items-center gap-2">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: row.color }} />
+                      <span className="truncate">{row.label}</span>
+                    </span>
+                  </td>
+                  <td className={cn("px-3 py-2 text-right font-semibold", row.valueClass)}>{row.total}</td>
+                  <td className="px-3 py-2 text-right">
+                    {stepPct === null ? (
+                      <span className="text-muted-foreground/40">—</span>
+                    ) : (
+                      `${stepPct.toFixed(1).replace(".", ",")}%`
+                    )}
+                  </td>
+                  <td className="px-3 py-2 text-right text-muted-foreground">
+                    {topPct === null ? "—" : `${topPct.toFixed(1).replace(".", ",")}%`}
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+        <p className="px-3 py-2 text-[11px] text-muted-foreground">
+          Conversão calculada sobre negócios únicos que chegaram em cada etapa (ou em etapas posteriores) no período.
+        </p>
+      </div>
+    );
+  }
+
   return (
     <div className="h-full w-full overflow-auto">
+      {tabs}
       <table className="w-full border-collapse text-xs tabular-nums">
+
         <thead>
           <tr className="text-muted-foreground">
             <th className="sticky left-0 z-10 bg-card px-3 py-2 text-left font-medium uppercase tracking-wide">
