@@ -10,6 +10,8 @@ import {
   ComposedChart,
   Bar,
   Line,
+  LabelList,
+
   ReferenceLine,
   XAxis,
   YAxis,
