@@ -13678,6 +13678,88 @@ export type Database = {
           },
         ]
       }
+      insights_goals: {
+        Row: {
+          account_id: string
+          activity_type_id: string | null
+          created_at: string
+          created_by: string | null
+          entity: string
+          frequency: string
+          id: string
+          metric: string
+          name: string
+          notes: string | null
+          period_end: string
+          period_start: string
+          pipeline_id: string | null
+          scope_id: string | null
+          scope_type: string
+          target_value: number
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          activity_type_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity?: string
+          frequency?: string
+          id?: string
+          metric?: string
+          name?: string
+          notes?: string | null
+          period_end: string
+          period_start: string
+          pipeline_id?: string | null
+          scope_id?: string | null
+          scope_type?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          activity_type_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          entity?: string
+          frequency?: string
+          id?: string
+          metric?: string
+          name?: string
+          notes?: string | null
+          period_end?: string
+          period_start?: string
+          pipeline_id?: string | null
+          scope_id?: string | null
+          scope_type?: string
+          target_value?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "insights_goals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_goals_activity_type_id_fkey"
+            columns: ["activity_type_id"]
+            isOneToOne: false
+            referencedRelation: "activity_types"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "insights_goals_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       insights_layouts: {
         Row: {
           account_id: string
