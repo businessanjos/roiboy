@@ -434,10 +434,77 @@ export const ZappMessageInput = memo(function ZappMessageInput({
         </div>
       )}
 
+      {/* Quick actions (mobile only) */}
+      {!isRecording && !audioPreview && !imagePreview && !filePreview && (
+        <div className="sm:hidden bg-zapp-panel border-t border-zapp-border px-2 pt-2 pb-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={onOpenQuickReplies}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <Zap className="h-3.5 w-3.5 text-[#ffb000]" />
+              Respostas
+            </button>
+            {onOpenPlaybook && (
+              <button
+                type="button"
+                onClick={onOpenPlaybook}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-zapp-accent" />
+                Playbook
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => imageInputRef?.current?.click()}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <ImageIcon className="h-3.5 w-3.5 text-[#007bfc]" />
+              Foto
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef?.current?.click()}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <FileText className="h-3.5 w-3.5 text-[#7f66ff]" />
+              Arquivo
+            </button>
+            {isMetaChannel && onOpenTemplates && (
+              <button
+                type="button"
+                onClick={onOpenTemplates}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              >
+                <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Template
+              </button>
+            )}
+            {hasSignature && (
+              <button
+                type="button"
+                onClick={onToggleSignature}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
+                  signatureEnabled
+                    ? "bg-zapp-accent/20 text-zapp-accent"
+                    : "bg-zapp-hover text-zapp-text"
+                )}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                Assinatura
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Message input */}
       <div 
         className={cn(
-          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-1 sm:gap-2 relative",
+          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-3 flex items-end sm:items-center gap-1 sm:gap-2 relative",
           isDragging && "ring-2 ring-zapp-accent ring-inset"
         )}
         onDrop={handleDrop}
@@ -809,9 +876,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   onKeyDown={onKeyPress}
                   onPaste={handlePaste}
                   disabled={sendingMessage}
-                  rows={2}
+                  rows={1}
                   maxLength={SECURITY_LIMITS.MESSAGE_MAX}
-                  className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg min-h-[52px] max-h-[120px] py-2.5 resize-none overflow-y-auto"
+                  className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-2xl sm:rounded-lg min-h-[40px] sm:min-h-[52px] max-h-[120px] py-2 sm:py-2.5 resize-none overflow-y-auto"
                 />
                 {/* Character count warning */}
                 {messageInput.length > SECURITY_LIMITS.MESSAGE_MAX * 0.8 && (
@@ -832,7 +899,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
+                className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-accent text-white hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
                 onClick={(e) => {
                   e.preventDefault();
                   onSendMessage();
@@ -840,9 +907,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 disabled={sendingMessage}
               >
                 {sendingMessage ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
                 ) : (
-                  <Send className="h-6 w-6" />
+                  <Send className="h-5 w-5 sm:h-6 sm:w-6" />
                 )}
               </Button>
             ) : (
@@ -851,11 +918,11 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                    className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-hover text-zapp-text sm:bg-transparent sm:text-zapp-text-muted sm:hover:bg-zapp-hover"
                     onClick={onStartRecording}
                     disabled={uploadingMedia}
                   >
-                    <Mic className="h-6 w-6" />
+                    <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">Gravar áudio</TooltipContent>

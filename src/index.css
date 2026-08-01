@@ -396,3 +396,12 @@
 .pt-safe {
   padding-top: env(safe-area-inset-top);
 }
+
+/* Hide scrollbars for horizontal quick-action rows (mobile chat composer) */
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
