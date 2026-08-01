@@ -3,11 +3,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { VisualConfig } from "../visual-builder/types";
+import { normalizeVisualFilters, VisualConfig } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Target, CircleDollarSign } from "lucide-react";
 import { normalizeProductId, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
+import { applyVisualFilters } from "@/lib/insights/applyFilters";
 
 const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
@@ -112,13 +113,15 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
   const { filters } = useInsightsFilters();
   const accountId = filters.accountIdOverride || currentUser?.account_id || null;
   const goalId = config.goalConfig?.goalId || null;
+  const visualFilters = useMemo(() => normalizeVisualFilters(config), [config]);
+  const visualFiltersKey = useMemo(() => JSON.stringify(visualFilters), [visualFilters]);
 
   const { data: goal, isLoading: loadingGoal } = useInsightsGoal(goalId, accountId);
 
   const buckets = useMemo(() => (goal ? buildBuckets(goal) : []), [goal]);
 
   const { data: actuals, isLoading } = useQuery({
-    queryKey: ["goal-tracker", goal?.id, accountId, goal?.updated_at],
+    queryKey: ["goal-tracker", goal?.id, accountId, goal?.updated_at, visualFiltersKey],
     enabled: !!goal && !!accountId,
     staleTime: 30_000,
     queryFn: async () => {
@@ -178,11 +181,15 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
         return q;
       });
 
+      // Os filtros configurados no próprio visual também precisam limitar o realizado.
+      // Sem isso, selecionar "Item da Venda = EM" alterava a UI, mas o gráfico somava
+      // todos os negócios ganhos do período.
+      let scopedRows = await applyVisualFilters(rows, accountId!, visualFilters, "deals");
+
       // Escopo por produto: o produto do negócio vive no campo personalizado "Item da venda".
-      let scopedRows = rows;
       if (g.scope_type === "product" && g.scope_id) {
         const targetId = normalizeProductId(g.scope_id);
-        const ids = rows.map((r: any) => r.id);
+        const ids = scopedRows.map((r: any) => r.id);
         const allowed = new Set<string>();
         for (let i = 0; i < ids.length; i += 500) {
           const batch = ids.slice(i, i + 500);
@@ -202,7 +209,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
           }
 
         }
-        scopedRows = rows.filter((r: any) => allowed.has(r.id));
+        scopedRows = scopedRows.filter((r: any) => allowed.has(r.id));
       }
 
       let probabilities: Record<string, number> = {};
