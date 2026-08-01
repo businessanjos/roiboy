@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { resolveNamesToProductIds, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
 import { VisualConfig, FieldFilter, DEAL_CREATED_AT_FIELD_ID } from "@/components/insights/visual-builder/types";
 
 /**
