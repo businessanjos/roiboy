@@ -16,7 +16,7 @@ const VisualStudioDialog = lazy(() =>
   import("../VisualStudioDialog").then((m) => ({ default: m.VisualStudioDialog }))
 );
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
-import { evaluateFormula } from "@/lib/formula-evaluator";
+import { evaluateFormula, formatValue } from "@/lib/formula-evaluator";
 import {
   Tooltip,
   TooltipContent,
@@ -40,6 +40,9 @@ const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: strin
 ];
 
 const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
+
+/** Tipos em que a soma/média das séries faz sentido no cabeçalho. */
+const SUMMARIZABLE_TYPES = new Set<ChartType>(['bar', 'bar_horizontal', 'bar_stacked', 'line', 'pie', 'funnel']);
 
 interface InsightsVisual {
   id: string;
@@ -141,6 +144,29 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     }
     return result;
   }, [data, config?.customFormula, config?.hiddenCategories]);
+
+  // Resumo do topo: soma e média das barras/pontos exibidos, para "bater o olho".
+  // Percentual não soma (a soma de porcentagens não significa nada), então mostra só a média.
+  const summary = useMemo(() => {
+    if (!SUMMARIZABLE_TYPES.has(chartType)) return null;
+    const values: number[] = isStacked
+      ? (processedStackedData?.data || []).map((row: any) =>
+          (processedStackedData?.seriesKeys || []).reduce((acc, k) => acc + (Number(row[k]) || 0), 0),
+        )
+      : (processedData || []).map((d: any) => Number(d.value) || 0);
+    if (!values.length) return null;
+    const total = values.reduce((a, b) => a + b, 0);
+    const formatType = (config?.formatting?.type || 'decimal') as FormatType;
+    const decimals = config?.formatting?.decimals ?? 0;
+    return {
+      showTotal: formatType !== 'percentage',
+      total: formatValue(total, formatType, decimals),
+      average: formatValue(total / values.length, formatType, Math.max(decimals, formatType === 'decimal' ? 1 : decimals)),
+      count: values.length,
+    };
+  }, [chartType, isStacked, processedStackedData, processedData, config?.formatting]);
+
+
 
   // Generate info tooltip content
   const infoContent = useMemo(() => {
@@ -363,6 +389,22 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
               )}
             </CardTitle>
+            {summary && (
+              <div
+                className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
+                style={tv.tv ? { fontSize: 15 } : undefined}
+              >
+                {summary.showTotal && (
+                  <span>
+                    Total <span className="font-semibold text-foreground">{summary.total}</span>
+                  </span>
+                )}
+                <span>
+                  Média <span className="font-semibold text-foreground">{summary.average}</span>
+                </span>
+                <span className="opacity-70">{summary.count} {summary.count === 1 ? "item" : "itens"}</span>
+              </div>
+            )}
           </CardHeader>
           <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-4" : "overflow-auto")}>
            <ConfigurableChart
