@@ -127,7 +127,7 @@ const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/sales/contracts",
 ]);
 
-function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
