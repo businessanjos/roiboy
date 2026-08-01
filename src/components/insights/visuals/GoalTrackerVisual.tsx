@@ -175,6 +175,28 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
         return q;
       });
 
+      // Escopo por produto: o produto do negócio vive no campo personalizado "Item da venda".
+      let scopedRows = rows;
+      if (g.scope_type === "product" && g.scope_id) {
+        const targetId = normalizeProductId(g.scope_id);
+        const ids = rows.map((r: any) => r.id);
+        const allowed = new Set<string>();
+        for (let i = 0; i < ids.length; i += 500) {
+          const batch = ids.slice(i, i + 500);
+          if (batch.length === 0) break;
+          const { data: fv } = await (supabase as any)
+            .from("deal_field_values")
+            .select("deal_id, value_text")
+            .eq("field_id", ITEM_VENDA_FIELD_ID)
+            .eq("account_id", accountId!)
+            .in("deal_id", batch);
+          for (const row of fv || []) {
+            if (resolveRawToProductId(row.value_text) === targetId) allowed.add(row.deal_id);
+          }
+        }
+        scopedRows = rows.filter((r: any) => allowed.has(r.id));
+      }
+
       let probabilities: Record<string, number> = {};
       if (g.entity === "forecast") {
         const { data: stages } = await supabase
@@ -183,6 +205,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
           .eq("account_id", accountId!);
         probabilities = Object.fromEntries((stages || []).map((s: any) => [s.id, Number(s.probability) || 0]));
       }
+
 
       for (const r of rows) {
         const iso = (g.entity === "forecast" ? r.expected_close_date : r.won_at) as string;
