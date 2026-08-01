@@ -29,6 +29,8 @@ interface MetricRow {
   valueClass?: string;
   days: DayCell;
   total: number;
+  /** Negócios que chegaram nesta etapa e hoje estão perdidos (só etapas do funil). */
+  lostCount?: number;
 }
 
 function formatCompactNumber(v: number, isCurrency: boolean) {
@@ -203,12 +205,20 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
     // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
     const orderedStages = [...stageRows.values()];
+    const lostDealIds = new Set<string>(
+      (data.deals as any[]).filter((d) => d.status === "lost").map((d) => d.id),
+    );
     for (let i = 0; i < orderedStages.length; i++) {
       const acc = new Set<string>();
       for (let j = i; j < orderedStages.length; j++) {
         for (const id of stageDeals.get(orderedStages[j].key) || []) acc.add(id);
       }
       orderedStages[i].total = acc.size;
+      // Perdidos continuam contando no volume da etapa: aqui medimos quantos
+      // desses negócios acabaram perdidos, sem tirá-los da base de conversão.
+      let lostHere = 0;
+      for (const id of acc) if (lostDealIds.has(id)) lostHere += 1;
+      orderedStages[i].lostCount = lostHere;
     }
 
     const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", valueClass: "text-emerald-400", days: emptyDays(), total: 0 };
@@ -294,6 +304,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
             <tr className="text-muted-foreground">
               <th className="px-3 py-2 text-left font-medium uppercase tracking-wide">Etapa</th>
               <th className="px-3 py-2 text-right font-medium uppercase">Negócios</th>
+              <th className="px-3 py-2 text-right font-medium uppercase">Perdidos</th>
               <th className="px-3 py-2 text-right font-medium uppercase">Conv. etapa anterior</th>
               <th className="px-3 py-2 text-right font-medium uppercase">Conv. do topo</th>
             </tr>
@@ -312,6 +323,18 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
                     </span>
                   </td>
                   <td className={cn("px-3 py-2 text-right font-semibold", row.valueClass)}>{row.total}</td>
+                  <td className="px-3 py-2 text-right text-red-400">
+                    {row.lostCount === undefined || row.total === 0 ? (
+                      <span className="text-muted-foreground/40">—</span>
+                    ) : (
+                      <>
+                        {row.lostCount}
+                        <span className="ml-1 text-[10px] text-red-400/70">
+                          {((row.lostCount / row.total) * 100).toFixed(1).replace(".", ",")}%
+                        </span>
+                      </>
+                    )}
+                  </td>
                   <td className="px-3 py-2 text-right">
                     {stepPct === null ? (
                       <span className="text-muted-foreground/40">—</span>
@@ -329,6 +352,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         </table>
         <p className="px-3 py-2 text-[11px] text-muted-foreground">
           Conversão calculada sobre negócios únicos que chegaram em cada etapa (ou em etapas posteriores) no período.
+          Negócios perdidos permanecem na contagem da etapa — a coluna Perdidos mostra quantos deles acabaram perdidos, sem alterar as taxas de conversão.
         </p>
       </div>
     );
