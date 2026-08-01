@@ -31,6 +31,9 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
+  // Dashboards compartilhados leem os dados da conta dona do painel.
+  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
+
   // Apply fixedDateRange override if set on the visual config
   const filters = (() => {
     if (config?.fixedDateRange?.startDate && config?.fixedDateRange?.endDate) {
@@ -44,28 +47,28 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   })();
 
   return useQuery({
-    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id, extraCfColumns],
+    queryKey: ['visual-drilldown', config, groupName, filters, accountId, extraCfColumns],
     queryFn: async (): Promise<DrilldownRecord[]> => {
-      if (!config || !currentUser?.account_id) return [];
+      if (!config || !accountId) return [];
 
       const { dataSource } = config;
 
       switch (dataSource) {
         case 'deals':
-          return fetchDealsRecords(currentUser.account_id, config, filters, groupName, extraCfColumns);
+          return fetchDealsRecords(accountId, config, filters, groupName, extraCfColumns);
         case 'leads':
-          return fetchLeadsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchLeadsRecords(accountId, config, filters, groupName);
         case 'products':
-          return fetchProductsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchProductsRecords(accountId, config, filters, groupName);
         case 'tasks':
-          return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
+          return fetchTasksRecords(accountId, config, filters, groupName);
         case 'sales_history':
-          return fetchSalesHistoryRecords(currentUser.account_id, config, filters, groupName);
+          return fetchSalesHistoryRecords(accountId, config, filters, groupName);
         default:
           return [];
       }
     },
-    enabled: enabled && !!config && !!currentUser?.account_id,
+    enabled: enabled && !!config && !!accountId,
     staleTime: 120000,
     refetchOnWindowFocus: false,
   });
@@ -125,12 +128,16 @@ async function fetchDealsRecords(
     query = query.not('lost_at', 'is', null);
   }
 
+  // Datas puras (YYYY-MM-DD) precisam cobrir o dia inteiro, igual ao agregado.
+  const normalizeStart = (v: string) => (v.length === 10 ? `${v}T00:00:00.000` : v);
+  const normalizeEnd = (v: string) => (v.length === 10 ? `${v}T23:59:59.999` : v);
+
   // Apply date filters on the correct field
   if (filters.startDate) {
-    query = query.gte(dateFilterField, filters.startDate);
+    query = query.gte(dateFilterField, normalizeStart(filters.startDate));
   }
   if (filters.endDate) {
-    query = query.lte(dateFilterField, filters.endDate);
+    query = query.lte(dateFilterField, normalizeEnd(filters.endDate));
   }
   if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
