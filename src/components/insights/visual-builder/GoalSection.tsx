@@ -80,7 +80,7 @@ export function GoalSection({ value, onChange }: Props) {
   const [frequency, setFrequency] = useState<GoalFrequency>("monthly");
   const [periodStart, setPeriodStart] = useState(`${year}-01-01`);
   const [periodEnd, setPeriodEnd] = useState(`${year}-12-31`);
-  const [targetValue, setTargetValue] = useState("0");
+  const [targetValue, setTargetValue] = useState("");
 
   const { data: pipelines = [] } = useQuery({
     queryKey: ["goal-pipelines", accountId],
