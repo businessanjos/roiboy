@@ -88,6 +88,7 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       switch (dataSource) {
         case 'deals':
+        case 'sale_items':
           result = await fetchDealsData(accountId, measure, dimension, filters, dateDisplayFormat, effectiveStatusFilter, leadFilters, dealFilters, effectiveDealStatusFilter, unifiedFilters);
           break;
         case 'leads':

@@ -1,4 +1,4 @@
-export type DataSource = 'deals' | 'leads' | 'products' | 'tasks' | 'sales_history' | 'royzapp' | 'royzapp_messages';
+export type DataSource = 'deals' | 'leads' | 'products' | 'sale_items' | 'tasks' | 'sales_history' | 'royzapp' | 'royzapp_messages';
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
@@ -432,6 +432,7 @@ export const DATA_SOURCE_OPTIONS: { value: DataSource; label: string }[] = [
   { value: 'deals', label: 'Negócios' },
   { value: 'leads', label: 'Leads' },
   { value: 'products', label: 'Produtos' },
+  { value: 'sale_items', label: 'Itens da Venda' },
   { value: 'tasks', label: 'Atividades' },
   { value: 'sales_history', label: 'Histórico de Vendas' },
   { value: 'royzapp', label: 'RoyZapp - Conversas' },
@@ -607,6 +608,25 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
     ],
   },
+  sale_items: {
+    numeric: [
+      { value: 'value', label: 'Valor do Negócio', type: 'numeric' },
+      { value: 'probability', label: 'Probabilidade (%)', type: 'numeric' },
+    ],
+    dimension: [
+      { value: 'product', label: 'Item da Venda', type: 'text' },
+      { value: 'status', label: 'Status', type: 'text' },
+      { value: 'pipeline_name', label: 'Funil', type: 'text' },
+      { value: 'stage_name', label: 'Etapa do Funil', type: 'text' },
+      { value: 'responsible_name', label: 'Vendedor', type: 'text' },
+      { value: 'canal', label: 'Canal', type: 'text' },
+      { value: 'source', label: 'Origem', type: 'text' },
+      { value: 'lost_reason', label: 'Motivo de Perda', type: 'text' },
+      { value: 'created_at', label: 'Data de Criação', type: 'date' },
+      { value: 'won_at', label: 'Data de Ganho', type: 'date' },
+      { value: 'lost_at', label: 'Data de Perda', type: 'date' },
+    ],
+  },
   tasks: {
     numeric: [],
     dimension: [
@@ -677,6 +697,7 @@ export function generateVisualTitle(
     deals: 'Negócios',
     leads: 'Leads',
     products: 'Produtos',
+    sale_items: 'Itens da Venda',
     tasks: 'Atividades',
     sales_history: 'Histórico de Vendas',
     royzapp: 'Conversas RoyZapp',

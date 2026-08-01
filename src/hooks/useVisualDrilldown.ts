@@ -56,6 +56,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
 
       switch (dataSource) {
         case 'deals':
+        case 'sale_items':
           return fetchDealsRecords(accountId, config, filters, groupName, extraCfColumns);
         case 'leads':
           return fetchLeadsRecords(accountId, config, filters, groupName);

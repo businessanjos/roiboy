@@ -48,13 +48,13 @@ function nativeFieldsFor(dataSource: DataSource): CatalogField[] {
     source: 'native' as const,
     measurable: true,
   }));
-  const extra = dataSource === 'deals' ? DEAL_EXTRA_NATIVE : [];
+  const extra = dataSource === 'deals' || dataSource === 'sale_items' ? DEAL_EXTRA_NATIVE : [];
   return [...dims, ...extra, ...nums];
 }
 
 /** Which custom-field entity applies to each data source */
 export function customEntityFor(dataSource: DataSource): FilterFieldSource[] {
-  if (dataSource === 'deals') return ['deal_custom', 'lead_custom'];
+  if (dataSource === 'deals' || dataSource === 'sale_items') return ['deal_custom', 'lead_custom'];
   if (dataSource === 'leads') return ['lead_custom'];
   // Atividades herdam os campos do negócio / lead vinculado
   if (dataSource === 'tasks') return ['deal_custom', 'lead_custom'];
@@ -163,7 +163,7 @@ export async function fetchNativeFieldValues(
 ): Promise<string[]> {
   if (NATIVE_STATIC_VALUES[field]) return NATIVE_STATIC_VALUES[field];
 
-  if (dataSource === 'deals') {
+  if (dataSource === 'deals' || dataSource === 'sale_items') {
     if (field === 'pipeline_name') {
       const { data } = await supabase
         .from('pipelines')
@@ -226,6 +226,7 @@ export async function fetchNativeFieldValues(
     deals: 'deals',
     leads: 'leads',
     products: 'products',
+    sale_items: 'deals',
     tasks: 'internal_tasks',
     sales_history: 'sales_history',
     royzapp: 'zapp_conversations',
