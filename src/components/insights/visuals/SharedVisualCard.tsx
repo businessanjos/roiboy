@@ -5,6 +5,7 @@ import { ConfigurableChart } from "./ConfigurableChart";
 import { VisualConfig, ChartType } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import { getColumnsForDataSource, getDefaultColumns, type TableColumnDef } from "./ConfigurableTable";
+import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
