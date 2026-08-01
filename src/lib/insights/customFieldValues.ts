@@ -37,7 +37,7 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   records: T[],
   accountId: string,
   key: string,
-  dataSource: 'deals' | 'leads'
+  dataSource: 'deals' | 'leads' | 'tasks'
 ): Promise<T[]> {
   const parsed = parseCustomFieldKey(key);
   if (!parsed || records.length === 0) return records;
@@ -67,20 +67,28 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
 
   // Map entity id -> record ids
   const entityToRecords = new Map<string, T[]>();
+  const pushBy = (foreignKey: string) => {
+    for (const r of records) {
+      const fk = (r as any)[foreignKey];
+      if (!fk) continue;
+      const list = entityToRecords.get(fk) || [];
+      list.push(r);
+      entityToRecords.set(fk, list);
+    }
+  };
   if (entity === 'deal' && dataSource === 'deals') {
     for (const r of records) entityToRecords.set(r.id, [r]);
   } else if (entity === 'lead' && dataSource === 'leads') {
     for (const r of records) entityToRecords.set(r.id, [r]);
   } else if (entity === 'lead' && dataSource === 'deals') {
-    for (const r of records) {
-      if (!r.lead_id) continue;
-      const list = entityToRecords.get(r.lead_id) || [];
-      list.push(r);
-      entityToRecords.set(r.lead_id, list);
-    }
+    pushBy('lead_id');
+  } else if (dataSource === 'tasks') {
+    // Atividades herdam os campos personalizados do negócio / lead vinculado
+    pushBy(entity === 'deal' ? 'deal_id' : 'lead_id');
   } else {
     return records;
   }
+
 
   const entityIds = Array.from(entityToRecords.keys());
   if (entityIds.length === 0) return records;
