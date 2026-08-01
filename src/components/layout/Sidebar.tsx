@@ -62,6 +62,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
 import { royZappSectorLabel } from "@/lib/royZappSectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
   Sheet,
   SheetContent,
