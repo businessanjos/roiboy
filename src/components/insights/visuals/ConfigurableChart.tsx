@@ -104,7 +104,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
 
 
   
-  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
+  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'daily_performance' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
