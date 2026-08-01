@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
-import { Sidebar, MobileHeader } from "./Sidebar";
+import { Sidebar } from "./Sidebar";
+import { MobileAppHeader } from "./MobileAppHeader";
+import { MobileTabBar } from "./MobileTabBar";
 import { GlobalHeader } from "./GlobalHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
@@ -155,16 +157,20 @@ export function AppLayout() {
     <PlanLimitsProvider>
       <NotificationsProvider>
         <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
-          <GlobalHeader />
+          <div className="hidden lg:block">
+            <GlobalHeader />
+          </div>
           <TrialBanner />
-          <MobileHeader />
+          <MobileAppHeader />
           <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
             <Sidebar />
-            <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto">
+            <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
               <Outlet />
             </main>
           </div>
           
+          <MobileTabBar />
+
           {/* Global Search Dialog */}
           <GlobalSearch open={searchOpen} onOpenChange={setSearchOpen} />
           
