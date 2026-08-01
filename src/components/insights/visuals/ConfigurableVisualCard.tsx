@@ -16,7 +16,7 @@ const VisualStudioDialog = lazy(() =>
   import("../VisualStudioDialog").then((m) => ({ default: m.VisualStudioDialog }))
 );
 import { VisualConfig, ChartType, DATA_SOURCE_OPTIONS, AGGREGATION_OPTIONS, FormatType, DEFAULT_APPEARANCE } from "../visual-builder/types";
-import { evaluateFormula } from "@/lib/formula-evaluator";
+import { evaluateFormula, formatValue } from "@/lib/formula-evaluator";
 import {
   Tooltip,
   TooltipContent,
