@@ -320,19 +320,35 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                     <TooltipContent>Explorar Dados</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button 
-                        onClick={() => setSettingsOpen(true)}
-                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Ajustes do Visual</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                 {canDuplicate && (
+                   <TooltipProvider>
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <button
+                           onClick={handleDuplicate}
+                           disabled={duplicating}
+                           className="text-muted-foreground hover:text-foreground transition-colors p-1 disabled:opacity-50"
+                         >
+                           <Copy className="h-4 w-4" />
+                         </button>
+                       </TooltipTrigger>
+                       <TooltipContent>Duplicar Visual</TooltipContent>
+                     </Tooltip>
+                   </TooltipProvider>
+                 )}
+                 <TooltipProvider>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <button 
+                         onClick={() => setSettingsOpen(true)}
+                         className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                       >
+                         <Settings className="h-4 w-4" />
+                       </button>
+                     </TooltipTrigger>
+                     <TooltipContent>Ajustes do Visual</TooltipContent>
+                   </Tooltip>
+                 </TooltipProvider>
                 {isCompactType && onUpdateVisual && (
                   <Popover>
                     <TooltipProvider>
