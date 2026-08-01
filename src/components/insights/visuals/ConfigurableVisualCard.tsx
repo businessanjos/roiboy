@@ -69,6 +69,34 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presentDialogOpen, setPresentDialogOpen] = useState(false);
   const [presentationOptions, setPresentationOptions] = useState<PresentationOptions | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const dashboardsCtx = useInsightsDashboardsSafe();
+  const canDuplicate = !readOnly && !!dashboardsCtx?.addVisual && !!(visual.dashboard_id ?? dashboardsCtx?.activeDashboardId);
+
+  const handleDuplicate = async () => {
+    if (!dashboardsCtx?.addVisual || duplicating) return;
+    const dashboardId = visual.dashboard_id ?? dashboardsCtx.activeDashboardId;
+    if (!dashboardId) return;
+    setDuplicating(true);
+    try {
+      const existing = ((dashboardsCtx as any)?.visuals ?? []).map((v: any) => v?.layout);
+      const current = visual.layout;
+      const legacyW = current?.w ? Math.max(1, Math.round(current.w / ((current.scale ?? 48) / 12))) : 6;
+      const legacyH = current?.h ? Math.max(1, Math.round(current.h / 5)) : 4;
+      await dashboardsCtx.addVisual({
+        dashboard_id: dashboardId,
+        title: `${visual.title || "Visual"} (cópia)`,
+        chart_type: visual.chart_type,
+        config: JSON.parse(JSON.stringify(visual.config ?? {})),
+        layout: { ...buildNewVisualLayout(existing, legacyW, legacyH), col_span: current?.col_span },
+      } as any);
+    } catch (e) {
+      console.error("Erro ao duplicar visual:", e);
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
