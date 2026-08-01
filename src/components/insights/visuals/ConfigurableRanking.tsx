@@ -77,11 +77,13 @@ function Podium({
   avatars,
   formatting,
   fontMultiplier,
+  colors,
 }: {
   data: AggregatedDataPoint[];
   avatars: Record<string, UserAvatar>;
   formatting: ConfigurableRankingProps['formatting'];
   fontMultiplier: number;
+  colors: string[];
 }) {
   const top3 = data.slice(0, 3);
   // Reorder: 2nd, 1st, 3rd
@@ -93,9 +95,10 @@ function Podium({
     <div className="flex items-end justify-center gap-2 px-2 pb-2 pt-4">
       {podiumOrder.map((item) => {
         const originalIndex = top3.indexOf(item);
-        const config = PODIUM_CONFIG[originalIndex];
+        const config = PODIUM_LAYOUT[originalIndex];
         if (!config) return null;
         const userAvatar = avatars[item.name];
+        const color = colors[originalIndex % colors.length];
 
         return (
           <div
@@ -104,9 +107,12 @@ function Podium({
             style={{ order: config.order }}
           >
             {/* Avatar */}
-            <Avatar className={`shrink-0 border-[3px] ${config.borderColor} mb-1.5`} style={{ height: Math.round(48 * fontMultiplier), width: Math.round(48 * fontMultiplier) }}>
+            <Avatar
+              className="shrink-0 border-[3px] mb-1.5"
+              style={{ height: Math.round(48 * fontMultiplier), width: Math.round(48 * fontMultiplier), borderColor: color }}
+            >
               <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
-              <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
+              <AvatarFallback className="text-xs font-semibold" style={{ backgroundColor: `${color}22`, color }}>
                 {getInitials(item.name)}
               </AvatarFallback>
             </Avatar>
@@ -123,10 +129,14 @@ function Podium({
 
             {/* Podium base */}
             <div
-              className={`rounded-t-lg bg-gradient-to-t ${config.gradient} flex items-center justify-center`}
-              style={{ height: `${Math.round(config.height * Math.min(fontMultiplier, 1.4))}px`, width: `${Math.round(72 * fontMultiplier)}px` }}
+              className="rounded-t-lg flex items-center justify-center"
+              style={{
+                height: `${Math.round(config.height * Math.min(fontMultiplier, 1.4))}px`,
+                width: `${Math.round(72 * fontMultiplier)}px`,
+                backgroundImage: `linear-gradient(to top, ${color}, ${color}b3)`,
+              }}
             >
-              <span className="text-white font-bold text-lg drop-shadow-sm">
+              <span className="font-bold text-lg drop-shadow-sm text-white">
                 {originalIndex + 1}º
               </span>
             </div>
