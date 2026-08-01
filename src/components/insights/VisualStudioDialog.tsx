@@ -282,6 +282,8 @@ export function VisualStudioDialog({
       setTitle('Ranking de Vendedores');
     } else if (chartType === 'call_commercial') {
       setTitle('Calls Comerciais');
+    } else if (chartType === 'daily_performance') {
+      setTitle('Performance Diária');
     } else if (isTable) {
       setTitle('Tabela de ' + (DATA_SOURCE_FIELDS[dataSource] ? dataSource : dataSource));
     } else if (dimensionField || isScorecard) {
