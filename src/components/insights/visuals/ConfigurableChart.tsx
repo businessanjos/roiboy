@@ -26,6 +26,7 @@ import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
 import { ConfigurableBubbleMap } from "./ConfigurableBubbleMap";
 import { ConfigurableFunnel } from "./ConfigurableFunnel";
 import { ConfigurableTable } from "./ConfigurableTable";
+import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
