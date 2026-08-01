@@ -20,6 +20,11 @@ import {
   isCurrencyMetric,
   useInsightsGoals,
 } from "@/hooks/useInsightsGoals";
+import { resolveProductLabels, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
+
+const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
+
+
 
 export interface GoalVisualSettings {
   goalId?: string | null;
