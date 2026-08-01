@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
-import { VisualConfig, getLeadFilters, getDealFilters, getUnifiedFilters } from "@/components/insights/visual-builder/types";
+import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
@@ -527,7 +528,7 @@ async function fetchTasksRecords(
   // Usa o mesmo campo de data do agregado (vencimento / criação / conclusão),
   // senão o detalhamento traz um volume diferente do gráfico.
   const dateFieldCandidates = ['due_date', 'created_at', 'completed_at'];
-  const taskDateFilters = (getUnifiedFilters(config) || []).filter(
+  const taskDateFilters = (selectUnmirroredFilters(config.filters) || []).filter(
     (f: any) => f.source === 'native' && f.type === 'date' && dateFieldCandidates.includes(f.field)
   );
   const rangeField = dateFieldCandidates.includes(config.dimension?.field as string)
