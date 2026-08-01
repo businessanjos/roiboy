@@ -52,6 +52,8 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const [tab, setTab] = useState<"volume" | "conversion">("volume");
 
   const { filters } = useInsightsFilters();
+  // Dashboards compartilhados leem a conta dona do painel.
+  const accountId = filters.accountIdOverride || currentUser?.account_id;
 
   const dp = config.dailyPerformanceConfig || {};
   const pipelineId = dp.pipelineId || null;
@@ -82,14 +84,13 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
 
   const { data, isLoading } = useQuery({
-    queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
-    enabled: !!currentUser?.account_id && days.length > 0,
+    queryKey: ["daily-performance", accountId, pipelineId, userId, range.start, range.end],
+    enabled: !!accountId && days.length > 0,
     // Etapas renomeadas/removidas no sistema precisam refletir rápido no visual.
     staleTime: 30000,
     refetchOnMount: true,
     refetchOnWindowFocus: true,
     queryFn: async () => {
-      const accountId = currentUser!.account_id;
 
       // Etapas do funil selecionado (ou de todos, se nenhum)
       let stagesQuery = supabase
