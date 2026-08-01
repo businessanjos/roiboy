@@ -210,7 +210,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
       }
 
 
-      for (const r of rows) {
+      for (const r of scopedRows) {
         const iso = (g.entity === "forecast" ? r.expected_close_date : r.won_at) as string;
         const b = bucketOf(buckets, iso);
         if (!b) continue;
