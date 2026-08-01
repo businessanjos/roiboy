@@ -54,6 +54,7 @@ import {
   VisualConfig,
   VisualFilter,
   generateVisualTitle,
+  normalizeVisualFilters,
   syncLegacyFilterKeys,
 } from "./visual-builder/types";
 
@@ -164,7 +165,10 @@ export function VisualStudioDialog({
       setDateGrouping(baseConfig.dimension?.dateGrouping ?? 'month');
       setFormatType(baseConfig.formatting?.type ?? 'decimal');
       setSegmentBy(baseConfig.segmentBy ?? null);
-      setVisualFilters(baseConfig.filters ?? []);
+      // Existing visuals may still persist filters only in the legacy keys.
+      // Normalize them before the preview config is rebuilt; otherwise
+      // syncLegacyFilterKeys receives an empty list and silently clears them.
+      setVisualFilters(normalizeVisualFilters(baseConfig));
       setTableColumns(baseConfig.tableConfig?.columns ?? []);
       setGaugeSubType(baseConfig.gaugeConfig?.subType ?? 'days_elapsed');
       setIndicatorMin(String(baseConfig.indicatorConfig?.minValue ?? 0));
