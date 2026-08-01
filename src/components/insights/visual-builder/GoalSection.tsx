@@ -105,14 +105,38 @@ export function GoalSection({ value, onChange }: Props) {
     },
   });
 
+  // Itens da venda realmente usados nos negócios (campo personalizado "Item da venda"),
+  // resolvidos para o produto atual — mais assertivo do que listar a tabela de produtos.
   const { data: products = [] } = useQuery({
-    queryKey: ["goal-products", accountId],
+    queryKey: ["goal-sale-items", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data } = await supabase.from("products").select("id, name").eq("account_id", accountId!).order("name");
-      return data || [];
+      const { data } = await (supabase as any)
+        .from("deal_field_values")
+        .select("value_text")
+        .eq("field_id", ITEM_VENDA_FIELD_ID)
+        .eq("account_id", accountId!)
+        .not("value_text", "is", null)
+        .limit(20000);
+
+      const raws = Array.from(
+        new Set((data || []).map((r: any) => String(r.value_text || "").trim()).filter(Boolean))
+      );
+      if (raws.length === 0) return [];
+
+      const labels = await resolveProductLabels(raws);
+      const byId = new Map<string, string>();
+      for (const raw of raws) {
+        const id = resolveRawToProductId(raw) || raw;
+        const name = labels.get(raw) || raw;
+        if (!byId.has(id)) byId.set(id, name);
+      }
+      return Array.from(byId.entries())
+        .map(([id, name]) => ({ id, name }))
+        .sort((a, b) => a.name.localeCompare(b.name));
     },
   });
+
 
   const changeMetric = (m: GoalMetric) => {
     const prev = parseTarget(targetValue, isCurrencyMetric(metric));
