@@ -49,6 +49,8 @@ function achievementClass(value: number, dailyGoal: number | null) {
 
 export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const { currentUser } = useCurrentUser();
+  const [tab, setTab] = useState<"volume" | "conversion">("volume");
+
   const { filters } = useInsightsFilters();
 
   const dp = config.dailyPerformanceConfig || {};
