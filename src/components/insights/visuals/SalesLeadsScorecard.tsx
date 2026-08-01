@@ -26,6 +26,7 @@ export function SalesLeadsScorecard({ fontScale = "normal", valueColor }: SalesL
         .from("deals")
         .select("*", { count: "exact", head: true })
         .eq("account_id", currentUser.account_id)
+        .is("deleted_at", null)
         .gte("created_at", filters.startDate)
         .lte("created_at", filters.endDate);
 
@@ -34,6 +35,7 @@ export function SalesLeadsScorecard({ fontScale = "normal", valueColor }: SalesL
         .from("deals")
         .select("*", { count: "exact", head: true })
         .eq("account_id", currentUser.account_id)
+        .is("deleted_at", null)
         .eq("status", "won")
         .gte("won_at", filters.startDate)
         .lte("won_at", filters.endDate);
