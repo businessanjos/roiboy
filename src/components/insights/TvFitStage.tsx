@@ -22,6 +22,7 @@ interface TvFitStageProps {
 export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
+  const [stageWidth, setStageWidth] = useState(TV_STAGE_WIDTH);
 
   useEffect(() => {
     const el = wrapperRef.current;
@@ -30,7 +31,15 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
     const update = () => {
       const { width, height } = el.getBoundingClientRect();
       if (!width || !height) return;
-      const next = Math.min(width / TV_STAGE_WIDTH, height / TV_STAGE_HEIGHT);
+      // O palco mantém a altura nominal de 1080 e adapta a largura ao formato
+      // real da janela — assim não sobram faixas laterais vazias em telas
+      // mais largas que 16:9 (ultrawide, janelas baixas, etc).
+      const aspect = width / height;
+      const nextWidth = Math.round(
+        Math.min(Math.max(TV_STAGE_HEIGHT * aspect, TV_STAGE_WIDTH), TV_STAGE_HEIGHT * 3)
+      );
+      const next = Math.min(width / nextWidth, height / TV_STAGE_HEIGHT);
+      setStageWidth((prev) => (Math.abs(prev - nextWidth) < 2 ? prev : nextWidth));
       setScale((prev) => (Math.abs(prev - next) < 0.001 ? prev : next));
     };
 
@@ -40,23 +49,24 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
     return () => ro.disconnect();
   }, []);
 
-  // Largura real (em px de tela) que o palco 1920x1080 ocupa depois da escala.
+  // Largura real (em px de tela) que o palco ocupa depois da escala.
   // Abaixo de ~1100px os rótulos ficam pequenos demais: entramos em modo compacto
   // (fontes levemente maiores e menos categorias) automaticamente.
-  const renderedWidth = TV_STAGE_WIDTH * scale;
+  const renderedWidth = stageWidth * scale;
   const compact = renderedWidth > 0 && renderedWidth < 1100;
 
   return (
     <div ref={wrapperRef} className="w-full h-full flex items-center justify-center overflow-hidden">
       <div
         style={{
-          width: TV_STAGE_WIDTH,
+          width: stageWidth,
           height: TV_STAGE_HEIGHT,
           transform: `scale(${scale})`,
           transformOrigin: "center center",
         }}
         className="shrink-0"
       >
+
         <div className="w-full h-full flex flex-col rounded-2xl border border-border/60 bg-card/40 shadow-2xl overflow-hidden">
           {(title || subtitle) && (
             <div className="flex items-baseline justify-between gap-6 px-8 pt-6 pb-4 shrink-0">
