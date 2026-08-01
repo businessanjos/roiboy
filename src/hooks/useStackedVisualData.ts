@@ -608,7 +608,7 @@ async function fetchStackedLeadsData(
           periodKey = format(weekStart, 'yyyy-MM-dd');
           break;
         }
-        default: periodKey = format(date, 'dd'); break; // day of month
+        default: periodKey = format(date, 'yyyy-MM-dd'); break;
       }
 
       const seriesValue = getFieldValue(lead, stackByField);
@@ -624,13 +624,7 @@ async function fetchStackedLeadsData(
     // Generate all periods
     const allPeriods: { key: string; label: string }[] = [];
 
-    if (dateGrouping === 'day') {
-      const today = new Date().getDate();
-      for (let d = 1; d <= today; d++) {
-        const key = String(d).padStart(2, '0');
-        allPeriods.push({ key, label: key });
-      }
-    } else {
+    {
       // Determine range from filters
       let rangeStart: Date;
       let rangeEnd: Date;
@@ -665,6 +659,11 @@ async function fetchStackedLeadsData(
             const ws = startOfWeek(d, { weekStartsOn: 1 });
             allPeriods.push({ key: format(ws, 'yyyy-MM-dd'), label: `Sem ${format(ws, 'II')}` });
           });
+          break;
+        default:
+          eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+            allPeriods.push({ key: format(d, 'yyyy-MM-dd'), label: format(d, 'dd/MM') })
+          );
           break;
       }
     }
