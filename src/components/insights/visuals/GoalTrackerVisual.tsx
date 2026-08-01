@@ -1,0 +1,306 @@
+import { useMemo } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useInsightsFilters } from "@/hooks/useInsightsFilters";
+import { VisualConfig } from "../visual-builder/types";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import {
+  ComposedChart,
+  Bar,
+  Line,
+  ReferenceLine,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from "recharts";
+import {
+  addDays,
+  addMonths,
+  format,
+  parseISO,
+  startOfMonth,
+  startOfQuarter,
+  startOfWeek,
+  startOfYear,
+} from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useInsightsGoal, isCurrencyMetric, InsightsGoal } from "@/hooks/useInsightsGoals";
+
+interface Bucket {
+  key: string;
+  label: string;
+  start: string;
+  end: string;
+}
+
+function buildBuckets(goal: InsightsGoal): Bucket[] {
+  const start = parseISO(goal.period_start);
+  const end = parseISO(goal.period_end);
+  const buckets: Bucket[] = [];
+  let cursor =
+    goal.frequency === "weekly"
+      ? startOfWeek(start, { weekStartsOn: 1 })
+      : goal.frequency === "monthly"
+        ? startOfMonth(start)
+        : goal.frequency === "quarterly"
+          ? startOfQuarter(start)
+          : startOfYear(start);
+
+  let guard = 0;
+  while (cursor <= end && guard < 400) {
+    guard += 1;
+    const next =
+      goal.frequency === "weekly"
+        ? addDays(cursor, 7)
+        : goal.frequency === "monthly"
+          ? addMonths(cursor, 1)
+          : goal.frequency === "quarterly"
+            ? addMonths(cursor, 3)
+            : addMonths(cursor, 12);
+    const bucketEnd = addDays(next, -1);
+    buckets.push({
+      key: format(cursor, "yyyy-MM-dd"),
+      label:
+        goal.frequency === "weekly"
+          ? `${format(cursor, "dd/MM", { locale: ptBR })}`
+          : goal.frequency === "monthly"
+            ? format(cursor, "MMM/yy", { locale: ptBR })
+            : goal.frequency === "quarterly"
+              ? `T${Math.floor(cursor.getMonth() / 3) + 1}/${format(cursor, "yy")}`
+              : format(cursor, "yyyy"),
+      start: format(cursor, "yyyy-MM-dd"),
+      end: format(bucketEnd, "yyyy-MM-dd"),
+    });
+    cursor = next;
+  }
+  return buckets;
+}
+
+function bucketOf(buckets: Bucket[], iso: string) {
+  const day = iso.slice(0, 10);
+  for (const b of buckets) if (day >= b.start && day <= b.end) return b.key;
+  return null;
+}
+
+function fmt(value: number, currency: boolean) {
+  if (currency) {
+    if (Math.abs(value) >= 1_000_000) return `R$ ${(value / 1_000_000).toFixed(1).replace(".", ",")} mi`;
+    if (Math.abs(value) >= 1000) return `R$ ${(value / 1000).toFixed(1).replace(".", ",")} mil`;
+    return `R$ ${value.toFixed(0)}`;
+  }
+  return String(Math.round(value));
+}
+
+const PAGE = 1000;
+
+export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
+  const { currentUser } = useCurrentUser();
+  const { filters } = useInsightsFilters();
+  const accountId = filters.accountIdOverride || currentUser?.account_id || null;
+  const goalId = config.goalConfig?.goalId || null;
+
+  const { data: goal, isLoading: loadingGoal } = useInsightsGoal(goalId, accountId);
+
+  const buckets = useMemo(() => (goal ? buildBuckets(goal) : []), [goal]);
+
+  const { data: actuals, isLoading } = useQuery({
+    queryKey: ["goal-tracker", goal?.id, accountId, goal?.updated_at],
+    enabled: !!goal && !!accountId,
+    staleTime: 30_000,
+    queryFn: async () => {
+      const g = goal!;
+      const totals: Record<string, number> = {};
+      const openTotals: Record<string, number> = {};
+
+      const pushRows = async (build: (from: number) => any) => {
+        const rows: any[] = [];
+        for (let from = 0; from < 20000; from += PAGE) {
+          const { data, error } = await build(from);
+          if (error) throw error;
+          rows.push(...(data || []));
+          if (!data || data.length < PAGE) break;
+        }
+        return rows;
+      };
+
+      if (g.entity === "activity") {
+        const rows = await pushRows((from) => {
+          let q = supabase
+            .from("internal_tasks")
+            .select("id, completed_at, assigned_to, activity_type_id")
+            .eq("account_id", accountId!)
+            .not("completed_at", "is", null)
+            .gte("completed_at", g.period_start)
+            .lte("completed_at", `${g.period_end}T23:59:59`)
+            .range(from, from + PAGE - 1);
+          if (g.scope_type === "user" && g.scope_id) q = q.eq("assigned_to", g.scope_id);
+          if (g.activity_type_id) q = q.eq("activity_type_id", g.activity_type_id);
+          return q;
+        });
+        for (const r of rows) {
+          const b = bucketOf(buckets, r.completed_at);
+          if (b) totals[b] = (totals[b] || 0) + 1;
+        }
+        return { totals, openTotals };
+      }
+
+      // Negócios / previsão
+      const dateField = g.entity === "forecast" ? "expected_close_date" : "won_at";
+      const rows = await pushRows((from) => {
+        let q = supabase
+          .from("deals")
+          .select("id, value, status, won_at, expected_close_date, responsible_user_id, pipeline_id, stage_id")
+          .eq("account_id", accountId!)
+          .is("deleted_at", null)
+          .not(dateField, "is", null)
+          .gte(dateField, g.period_start)
+          .lte(dateField, `${g.period_end}T23:59:59`)
+          .range(from, from + PAGE - 1);
+        if (g.entity === "forecast") q = q.eq("status", "open");
+        else q = q.eq("status", "won");
+        if (g.scope_type === "user" && g.scope_id) q = q.eq("responsible_user_id", g.scope_id);
+        if (g.pipeline_id) q = q.eq("pipeline_id", g.pipeline_id);
+        if (g.scope_type === "pipeline" && g.scope_id) q = q.eq("pipeline_id", g.scope_id);
+        return q;
+      });
+
+      let probabilities: Record<string, number> = {};
+      if (g.entity === "forecast") {
+        const { data: stages } = await supabase
+          .from("deal_stages")
+          .select("id, probability")
+          .eq("account_id", accountId!);
+        probabilities = Object.fromEntries((stages || []).map((s: any) => [s.id, Number(s.probability) || 0]));
+      }
+
+      for (const r of rows) {
+        const iso = (g.entity === "forecast" ? r.expected_close_date : r.won_at) as string;
+        const b = bucketOf(buckets, iso);
+        if (!b) continue;
+        if (g.metric === "deal_count") totals[b] = (totals[b] || 0) + 1;
+        else if (g.metric === "forecast_revenue") {
+          const p = (probabilities[r.stage_id] ?? 100) / 100;
+          totals[b] = (totals[b] || 0) + Number(r.value || 0) * p;
+        } else totals[b] = (totals[b] || 0) + Number(r.value || 0);
+      }
+
+      return { totals, openTotals };
+    },
+  });
+
+  if (loadingGoal || isLoading) {
+    return <Skeleton className="h-full w-full" />;
+  }
+
+  if (!goal) {
+    return (
+      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        Selecione uma meta na configuração do visual.
+      </div>
+    );
+  }
+
+  const currency = isCurrencyMetric(goal.metric);
+  const target = Number(goal.target_value) || 0;
+  let cumulative = 0;
+  let cumulativeTarget = 0;
+  const chartData = buckets.map((b) => {
+    const value = actuals?.totals[b.key] || 0;
+    cumulative += value;
+    cumulativeTarget += target;
+    return {
+      name: b.label,
+      Realizado: value,
+      Acumulado: cumulative,
+      Meta: target,
+      MetaAcumulada: cumulativeTarget,
+    };
+  });
+
+  const totalRealizado = cumulative;
+  const totalMeta = target * buckets.length;
+  const diff = totalRealizado - totalMeta;
+  const pct = totalMeta > 0 ? (totalRealizado / totalMeta) * 100 : 0;
+
+  return (
+    <div className="flex h-full flex-col gap-2">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-1 text-xs">
+        <div>
+          <span className="text-muted-foreground">Meta: </span>
+          <span className="font-semibold">{fmt(totalMeta, currency)}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Realizado: </span>
+          <span className="font-semibold text-emerald-400">{fmt(totalRealizado, currency)}</span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Diferença: </span>
+          <span className={cn("font-semibold", diff >= 0 ? "text-emerald-400" : "text-red-400")}>
+            {diff >= 0 ? "+" : "-"}
+            {fmt(Math.abs(diff), currency)}
+          </span>
+        </div>
+        <div>
+          <span className="text-muted-foreground">Atingimento: </span>
+          <span
+            className={cn(
+              "font-semibold",
+              pct >= 100 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400",
+            )}
+          >
+            {pct.toFixed(0)}%
+          </span>
+        </div>
+      </div>
+
+      <div className="min-h-0 flex-1">
+        <ResponsiveContainer width="100%" height="100%">
+          <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+            <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+            <YAxis
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tickFormatter={(v) => fmt(Number(v), currency)}
+              width={70}
+            />
+            <Tooltip
+              contentStyle={{
+                background: "hsl(var(--popover))",
+                border: "1px solid hsl(var(--border))",
+                borderRadius: 8,
+                color: "hsl(var(--popover-foreground))",
+                fontSize: 12,
+              }}
+              formatter={(v: any, name: any) => [fmt(Number(v), currency), name]}
+            />
+            <Legend wrapperStyle={{ fontSize: 11 }} />
+            <Bar dataKey="Realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Line
+              type="monotone"
+              dataKey="Acumulado"
+              stroke="hsl(var(--chart-2, var(--primary)))"
+              strokeWidth={2}
+              dot={false}
+            />
+            <ReferenceLine
+              y={target}
+              stroke="hsl(var(--destructive))"
+              strokeDasharray="6 4"
+              label={{
+                value: `Meta ${fmt(target, currency)}`,
+                position: "right",
+                fill: "hsl(var(--muted-foreground))",
+                fontSize: 10,
+              }}
+            />
+          </ComposedChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+}
