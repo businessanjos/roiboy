@@ -287,16 +287,23 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               strokeWidth={2}
               dot={false}
             />
+            <Line
+              type="stepAfter"
+              dataKey="Meta"
+              name={`Meta do período (${fmt(target, currency)})`}
+              stroke="hsl(var(--destructive))"
+              strokeWidth={2}
+              strokeDasharray="6 4"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
             <ReferenceLine
               y={target}
+              ifOverflow="extendDomain"
               stroke="hsl(var(--destructive))"
-              strokeDasharray="6 4"
-              label={{
-                value: `Meta ${fmt(target, currency)}`,
-                position: "right",
-                fill: "hsl(var(--muted-foreground))",
-                fontSize: 10,
-              }}
+              strokeOpacity={0.35}
+              strokeDasharray="2 4"
             />
           </ComposedChart>
         </ResponsiveContainer>
