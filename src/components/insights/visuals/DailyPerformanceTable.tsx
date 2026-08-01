@@ -148,6 +148,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       });
     }
 
+    // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
+    // a linha mede negócios que passaram pela etapa, não movimentações.
+    const seen = new Set<string>();
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
@@ -155,6 +158,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (!row) continue;
       const key = format(parseISO(act.created_at), "yyyy-MM-dd");
       if (!(key in row.days)) continue;
+      const dedupeKey = `${act.deal_id}|${act.new_value}|${key}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
       row.days[key] += 1;
       row.total += 1;
     }
@@ -163,33 +169,26 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", days: emptyDays(), total: 0 };
     const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", isCurrency: true, days: emptyDays(), total: 0 };
 
-    const startMs = parseISO(range.start).getTime();
-    const endMs = parseISO(range.end).getTime();
-
+    // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
       if (d.won_at) {
-        const ms = parseISO(d.won_at).getTime();
-        if (ms >= startMs && ms <= endMs) {
-          const key = format(parseISO(d.won_at), "yyyy-MM-dd");
-          if (key in won.days) {
-            won.days[key] += 1;
-            won.total += 1;
-            revenue.days[key] += Number(d.value || 0);
-            revenue.total += Number(d.value || 0);
-          }
+        const key = format(parseISO(d.won_at), "yyyy-MM-dd");
+        if (key in won.days) {
+          won.days[key] += 1;
+          won.total += 1;
+          revenue.days[key] += Number(d.value || 0);
+          revenue.total += Number(d.value || 0);
         }
       }
       if (d.lost_at) {
-        const ms = parseISO(d.lost_at).getTime();
-        if (ms >= startMs && ms <= endMs) {
-          const key = format(parseISO(d.lost_at), "yyyy-MM-dd");
-          if (key in lost.days) {
-            lost.days[key] += 1;
-            lost.total += 1;
-          }
+        const key = format(parseISO(d.lost_at), "yyyy-MM-dd");
+        if (key in lost.days) {
+          lost.days[key] += 1;
+          lost.total += 1;
         }
       }
     }
+
 
     return [...stageRows.values(), won, lost, revenue];
   }, [data, days, range.start, range.end]);
