@@ -90,6 +90,9 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
   const lastFetchRef = useRef<number>(0);
   const CACHE_DURATION_MS = 5 * 60 * 1000; // 5 minutes cache
 
+  const dataRef = useRef<PlanLimitsData | null>(null);
+  const inFlightRef = useRef<Promise<void> | null>(null);
+
   const fetchLimits = useCallback(async (force = false) => {
     if (!currentUser) {
       setData(null);
@@ -99,102 +102,58 @@ export function PlanLimitsProvider({ children }: { children: ReactNode }) {
 
     // Skip if cached data is fresh (unless forced)
     const now = Date.now();
-    if (!force && data && now - lastFetchRef.current < CACHE_DURATION_MS) {
+    if (!force && dataRef.current && now - lastFetchRef.current < CACHE_DURATION_MS) {
       setLoading(false);
       return;
     }
 
-    try {
-      setError(null);
+    // Dedupe concurrent calls (multiple consumers mounting at once)
+    if (inFlightRef.current) return inFlightRef.current;
 
-      // Get account info with plan
-      const { data: accountData, error: accountError } = await supabase
-        .from("accounts")
-        .select("id, plan_id, subscription_status")
-        .eq("id", currentUser.account_id)
-        .single();
-
-      if (accountError) throw accountError;
-
-      let planLimits = DEFAULT_LIMITS;
-      let planName = "Trial";
-      let planFeatures: PlanFeatures = {};
-
-      // If has a plan, get the plan limits
-      if (accountData.plan_id) {
-        const { data: planData, error: planError } = await supabase
-          .from("subscription_plans")
-          .select("*")
-          .eq("id", accountData.plan_id)
-          .single();
-
-        if (!planError && planData) {
-          planName = planData.name;
-          planLimits = {
-            max_clients: planData.max_clients ?? DEFAULT_LIMITS.max_clients,
-            max_users: planData.max_users ?? DEFAULT_LIMITS.max_users,
-            max_events: planData.max_events ?? DEFAULT_LIMITS.max_events,
-            max_products: planData.max_products ?? DEFAULT_LIMITS.max_products,
-            max_forms: planData.max_forms ?? DEFAULT_LIMITS.max_forms,
-            max_ai_analyses: planData.max_ai_analyses ?? DEFAULT_LIMITS.max_ai_analyses,
-            max_storage_mb: planData.max_storage_mb ?? DEFAULT_LIMITS.max_storage_mb,
-            max_whatsapp_connections: planData.max_whatsapp_connections ?? DEFAULT_LIMITS.max_whatsapp_connections,
-          };
-          planFeatures = (planData.features as PlanFeatures) || {};
-        }
-      }
-
-      // Count current usage in parallel
-      const [clientsRes, usersRes, eventsRes, productsRes, formsRes, aiRes] = await Promise.all([
-        supabase.from("clients").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
-        supabase.from("users").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
-        supabase.from("events").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
-        supabase.from("products").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
-        supabase.from("forms").select("id", { count: "exact", head: true }).eq("account_id", currentUser.account_id),
-        supabase
-          .from("ai_usage_logs")
-          .select("id", { count: "exact", head: true })
-          .eq("account_id", currentUser.account_id)
-          .gte("created_at", new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()),
-      ]);
-
-      // Count WhatsApp integrations separately (table may not be in types yet)
-      let whatsappCount = 0;
+    const run = (async () => {
       try {
-        const { count } = await (supabase as any).from("whatsapp_integrations")
-          .select("id", { count: "exact", head: true })
-          .eq("account_id", currentUser.account_id);
-        whatsappCount = count || 0;
-      } catch {
-        whatsappCount = 0;
+        setError(null);
+
+        // Single round-trip: plan + limits + usage counters are computed server-side
+        const { data: rpcData, error: rpcError } = await supabase.rpc("get_account_limits");
+        if (rpcError) throw rpcError;
+
+        const payload = (rpcData || {}) as any;
+        if (payload.error) throw new Error(payload.error);
+
+        const next: PlanLimitsData = {
+          account_id: payload.account_id ?? currentUser.account_id,
+          plan_id: payload.plan_id ?? null,
+          plan_name: payload.plan_name ?? "Trial",
+          limits: { ...DEFAULT_LIMITS, ...(payload.limits || {}) },
+          usage: {
+            clients: payload.usage?.clients ?? 0,
+            users: payload.usage?.users ?? 0,
+            events: payload.usage?.events ?? 0,
+            products: payload.usage?.products ?? 0,
+            forms: payload.usage?.forms ?? 0,
+            ai_analyses: payload.usage?.ai_analyses ?? 0,
+            whatsapp_connections: payload.usage?.whatsapp_connections ?? 0,
+          },
+          features: (payload.features || {}) as PlanFeatures,
+        };
+
+        lastFetchRef.current = Date.now();
+        dataRef.current = next;
+        setData(next);
+      } catch (err) {
+        console.error("Error fetching plan limits:", err);
+        setError(err instanceof Error ? err.message : "Error fetching plan limits");
+      } finally {
+        setLoading(false);
+        inFlightRef.current = null;
       }
+    })();
 
-      const usage: PlanUsage = {
-        clients: clientsRes.count || 0,
-        users: usersRes.count || 0,
-        events: eventsRes.count || 0,
-        products: productsRes.count || 0,
-        forms: formsRes.count || 0,
-        ai_analyses: aiRes.count || 0,
-        whatsapp_connections: whatsappCount,
-      };
+    inFlightRef.current = run;
+    return run;
+  }, [currentUser]);
 
-      lastFetchRef.current = now;
-      setData({
-        account_id: currentUser.account_id,
-        plan_id: accountData.plan_id,
-        plan_name: planName,
-        limits: planLimits,
-        usage,
-        features: planFeatures,
-      });
-    } catch (err) {
-      console.error("Error fetching plan limits:", err);
-      setError(err instanceof Error ? err.message : "Error fetching plan limits");
-    } finally {
-      setLoading(false);
-    }
-  }, [currentUser, data]);
 
   useEffect(() => {
     if (!userLoading) {
