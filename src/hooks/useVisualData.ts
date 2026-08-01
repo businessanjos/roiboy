@@ -776,6 +776,7 @@ async function fetchDealsData(
       won_at,
       lost_at,
       deal_stages!deals_stage_id_fkey(name, color),
+      pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
   .eq('account_id', accountId);
@@ -999,6 +1000,7 @@ async function calculateConversionRateByTextDimension(
     .select(`
       id, status, source, lost_reason, created_at, won_at,
       deal_stages!deals_stage_id_fkey(name, color),
+      pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
     .eq('account_id', accountId);
@@ -1037,6 +1039,8 @@ async function calculateConversionRateByTextDimension(
     } else if (dimension.field === 'stage_name') {
       groupName = (deal.deal_stages as any)?.name || 'Sem Etapa';
       groupColor = (deal.deal_stages as any)?.color;
+    } else if (dimension.field === 'pipeline_name') {
+      groupName = (deal as any).pipelines?.name || 'Sem Funil';
     } else if (dimension.field === 'source') {
       groupName = deal.source || 'Não informado';
     } else if (dimension.field === 'lost_reason') {
@@ -1440,6 +1444,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], dateDispla
   // Handle special field mappings
   if (field === 'stage_name') {
     return item.deal_stages?.name || 'Sem Etapa';
+  }
+  if (field === 'pipeline_name') {
+    return item.pipelines?.name || item.pipeline_name || 'Sem Funil';
   }
   if (field === 'responsible_name') {
     return item.responsible_name || item.users?.name || 'Sem Responsável';
