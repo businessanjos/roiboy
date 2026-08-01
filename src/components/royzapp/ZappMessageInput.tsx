@@ -434,10 +434,77 @@ export const ZappMessageInput = memo(function ZappMessageInput({
         </div>
       )}
 
+      {/* Quick actions (mobile only) */}
+      {!isRecording && !audioPreview && !imagePreview && !filePreview && (
+        <div className="sm:hidden bg-zapp-panel border-t border-zapp-border px-2 pt-2 pb-0.5">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar">
+            <button
+              type="button"
+              onClick={onOpenQuickReplies}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <Zap className="h-3.5 w-3.5 text-[#ffb000]" />
+              Respostas
+            </button>
+            {onOpenPlaybook && (
+              <button
+                type="button"
+                onClick={onOpenPlaybook}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              >
+                <BookOpen className="h-3.5 w-3.5 text-zapp-accent" />
+                Playbook
+              </button>
+            )}
+            <button
+              type="button"
+              onClick={() => imageInputRef?.current?.click()}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <ImageIcon className="h-3.5 w-3.5 text-[#007bfc]" />
+              Foto
+            </button>
+            <button
+              type="button"
+              onClick={() => fileInputRef?.current?.click()}
+              className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+            >
+              <FileText className="h-3.5 w-3.5 text-[#7f66ff]" />
+              Arquivo
+            </button>
+            {isMetaChannel && onOpenTemplates && (
+              <button
+                type="button"
+                onClick={onOpenTemplates}
+                className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
+              >
+                <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
+                Template
+              </button>
+            )}
+            {hasSignature && (
+              <button
+                type="button"
+                onClick={onToggleSignature}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
+                  signatureEnabled
+                    ? "bg-zapp-accent/20 text-zapp-accent"
+                    : "bg-zapp-hover text-zapp-text"
+                )}
+              >
+                <PenLine className="h-3.5 w-3.5" />
+                Assinatura
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Message input */}
       <div 
         className={cn(
-          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-1 sm:gap-2 relative",
+          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-3 flex items-end sm:items-center gap-1 sm:gap-2 relative",
           isDragging && "ring-2 ring-zapp-accent ring-inset"
         )}
         onDrop={handleDrop}
