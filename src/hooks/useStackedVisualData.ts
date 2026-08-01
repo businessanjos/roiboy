@@ -156,6 +156,19 @@ interface UseStackedVisualDataParams {
   enabled?: boolean;
 }
 
+
+/**
+ * Agrupamento diário em janelas longas (ex.: "Este Ano") gera centenas de
+ * barras ilegíveis. Acima de ~2 meses o gráfico passa a agrupar por mês.
+ */
+function rollUpLongDayGroupingStacked<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string): T {
+  if (!cfg || (cfg as any).dimension?.dateGrouping !== 'day') return cfg;
+  if (!startDate || !endDate) return cfg;
+  const days = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000;
+  if (days <= 62) return cfg;
+  return { ...(cfg as any), dimension: { ...(cfg as any).dimension, dateGrouping: 'month' } } as T;
+}
+
 export function useStackedVisualData({ config, enabled = true }: UseStackedVisualDataParams) {
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
@@ -185,17 +198,19 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
     return globalFilters;
   })();
 
+  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate);
+
   return useQuery({
-    queryKey: ['stacked-visual-data', config, filters, accountId],
+    queryKey: ['stacked-visual-data', effectiveConfig, filters, accountId],
     queryFn: async (): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> => {
       if (!config || !accountId || (!config.stackBy && !config.stackByCustomField)) {
         return { data: [], seriesKeys: [] };
       }
 
-      if (config.dataSource === 'leads') {
-        return fetchStackedLeadsData(accountId, config, filters);
+      if (effectiveConfig!.dataSource === 'leads') {
+        return fetchStackedLeadsData(accountId, effectiveConfig!, filters);
       }
-      return fetchStackedDealsData(accountId, config, filters);
+      return fetchStackedDealsData(accountId, effectiveConfig!, filters);
     },
     enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!accountId,
     staleTime: 120000,
