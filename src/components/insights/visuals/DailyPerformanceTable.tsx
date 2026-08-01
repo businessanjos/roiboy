@@ -25,6 +25,8 @@ interface MetricRow {
   label: string;
   color: string;
   isCurrency?: boolean;
+  /** Classe fixa de cor (Venda/Receita verde, Perdido vermelho). */
+  valueClass?: string;
   days: DayCell;
   total: number;
 }
@@ -43,6 +45,7 @@ function achievementClass(value: number, dailyGoal: number | null) {
   if (pct >= 0.6) return "text-amber-400";
   return "text-red-400";
 }
+
 
 export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const { currentUser } = useCurrentUser();
