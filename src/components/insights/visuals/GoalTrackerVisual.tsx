@@ -423,6 +423,17 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               activeDot={{ r: 5 }}
             />
             <Line
+              type="stepAfter"
+              dataKey="Meta"
+              name="Meta do período"
+              stroke={colorMetaPeriodo}
+              strokeWidth={2}
+              strokeDasharray="3 3"
+              dot={false}
+              activeDot={false}
+              isAnimationActive={false}
+            />
+            <Line
               type="linear"
               dataKey="MetaAcumulada"
               name={`Meta anual acumulada (${fmt(totalMeta, currency)})`}
@@ -433,6 +444,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               activeDot={false}
               isAnimationActive={false}
             />
+
           </ComposedChart>
         </ResponsiveContainer>
       </div>
