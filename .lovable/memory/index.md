@@ -123,6 +123,7 @@
 - [Company Benefits Catalog](mem://features/rh/company-benefits-catalog-pt) — /rh/benefits: catálogo oficial de benefícios, base das vagas e do benchmark
 
 ### UI, Forms & General Architecture
+- [Mobile App Shell](mem://style/mobile-app-shell-pt) — Header compacto + bottom tab bar (lg:hidden), `useSectorNavItems` como fonte única, PWA instalável
 - [Sidebar Navigation Pattern](mem://style/universal-sidebar-navigation-pattern-pt) — Vertical sub-navigation
 - [Sidebar Visual Layout](mem://style/sidebar-visual-layout-v2-pt) — Simplified layout
 - [Product Badge Color Rule](mem://style/product-badge-color-rule-pt) — Toda exibição de produto usa Badge colorida

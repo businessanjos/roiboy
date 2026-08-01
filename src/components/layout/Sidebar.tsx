@@ -62,6 +62,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
 import { royZappSectorLabel } from "@/lib/royZappSectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
   Sheet,
   SheetContent,
@@ -126,7 +127,7 @@ const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/sales/contracts",
 ]);
 
-function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
   const { currentUser, updateUser } = useCurrentUser();
   const { user } = useAuth();
   const { unreadCount } = useNotifications();
@@ -144,82 +145,8 @@ function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; onNavig
   // Hook for ROY zAPP instance selection
   const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
 
-  // Filter nav items based on permissions, super admin status, and current sector
-  const filteredNavItems = useMemo(() => {
-    const teamRoleName = currentUser?.team_role_name;
-    
-    // Only explicit permissions/admin flags may show items; role labels cannot bypass admin-panel settings.
-    const showAllItems = isAdmin || isSuperAdmin || currentUser?.role === "admin" || currentUser?.is_also_admin;
-    const isSalesRepUser = roleNameMatches(teamRoleName, SALES_REP_ROLES) && !showAllItems;
-    
-    // No sector selected - return empty (sidebar won't render)
-    if (!currentSector) return [];
-
-    // Traffic-agency users only ever see the portal entry, regardless of sector.
-    if (isTrafficAgencyUser(currentUser)) {
-      return [
-        { to: "/marketing/portal-agencia", icon: Building2, label: "Portal da Agência" },
-      ] as typeof currentSector.navItems;
-    }
-
-    // Super admins have access to everything
-    if (isSuperAdmin) {
-      return currentSector.navItems.filter(item => item.to !== "/notifications");
-    }
-    
-    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems;
-
-    let sectorItems = currentSector.navItems.filter(item => item.to !== "/notifications");
-
-    // SDRs in the Vendas sector see only the explicit allowlist.
-    if (isSdrUser && currentSector.id === "vendas") {
-      sectorItems = sectorItems.filter(item => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
-    }
-
-    const userName = (currentUser?.name || "").toLowerCase();
-    const userEmail = (currentUser?.email || "").toLowerCase();
-
-    // Premiação & Bônus: restrito a Maikol, Jonathan, Everton e Bruna
-    const BONUS_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
-    const canSeeConsultantBonus = BONUS_VIEWERS.some(
-      (k) => userName.includes(k) || userEmail.includes(k)
-    );
-    if (!canSeeConsultantBonus) {
-      sectorItems = sectorItems.filter(item => item.to !== "/operations/consultant-bonus");
-    }
-
-    // Ranking Instagram: restrito a Maikol, Bruna, Everton, Jonathan e Andreia
-    const IG_RANKING_VIEWERS = ["maikol", "bruna", "everton", "jonathan", "andreia"];
-    const canSeeIgRanking = IG_RANKING_VIEWERS.some(
-      (k) => userName.includes(k) || userEmail.includes(k)
-    );
-    if (!canSeeIgRanking) {
-      sectorItems = sectorItems.filter(item => item.to !== "/operations/instagram-ranking");
-    }
-
-    // Sales Dashboard: exclusivo para gestão (Head/Gerente/Diretor/C-level/Sócio) ou admin.
-    const canSeeSalesDashboard = isManagementUser(currentUser, isSuperAdmin);
-    if (!canSeeSalesDashboard) {
-      sectorItems = sectorItems.filter(item => item.to !== "/sales-dashboard");
-    }
-
-    // Market Intelligence: restrito a m.quintana@me.com por enquanto
-    if (userEmail !== "m.quintana@me.com") {
-      sectorItems = sectorItems.filter(item => item.to !== "/marketing/market-intelligence");
-    }
-
-    // Admins can see all sector items. Everyone else must pass explicit permissions.
-    if (showAllItems) return sectorItems;
-    
-    return sectorItems.filter((item) => {
-      if (isSalesRepUser && item.to === "/sales-team") return false;
-      // Closers/Executivos de Vendas não enxergam Insights
-      if (isSalesRepUser && item.to === "/insights") return false;
-      if (!item.permission) return true;
-      if (permissionsLoading) return false;
-      return hasPermission(item.permission);
-    });
-  }, [hasPermission, permissionsLoading, isSuperAdmin, isAdmin, currentSector, currentUser?.role, currentUser?.is_also_admin, currentUser?.team_role_name, currentUser?.name]);
+  // Itens do setor filtrados por permissão (fonte compartilhada com o mobile).
+  const filteredNavItems = useSectorNavItems();
 
   const SALES_REP_ALLOWED_SECTORS: SectorId[] = ["vendas", "royzapp", "configuracoes"];
 
