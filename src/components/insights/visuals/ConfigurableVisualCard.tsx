@@ -389,6 +389,22 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               </div>
               )}
             </CardTitle>
+            {summary && (
+              <div
+                className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
+                style={tv.tv ? { fontSize: 15 } : undefined}
+              >
+                {summary.showTotal && (
+                  <span>
+                    Total <span className="font-semibold text-foreground">{summary.total}</span>
+                  </span>
+                )}
+                <span>
+                  Média <span className="font-semibold text-foreground">{summary.average}</span>
+                </span>
+                <span className="opacity-70">{summary.count} {summary.count === 1 ? "item" : "itens"}</span>
+              </div>
+            )}
           </CardHeader>
           <CardContent className={cn("flex-1 min-h-0", tv.tv ? "overflow-hidden px-4 pb-4" : "overflow-auto")}>
            <ConfigurableChart
