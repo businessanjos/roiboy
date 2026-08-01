@@ -535,19 +535,18 @@ async function fetchStackedDealsData(
 
     const date = parseISO(dateStr);
     const periodKey = getPeriodKey(date);
-    const seriesValue = getSeriesValue(deal);
-
-    allSeries.add(seriesValue);
 
     if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
     const seriesMap = periodMap.get(periodKey)!;
 
-    const currentVal = seriesMap.get(seriesValue) || 0;
-
-    if (measure.aggregation === 'count') {
-      seriesMap.set(seriesValue, currentVal + 1);
-    } else {
-      seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+    for (const seriesValue of getSeriesValues(deal)) {
+      allSeries.add(seriesValue);
+      const currentVal = seriesMap.get(seriesValue) || 0;
+      if (measure.aggregation === 'count') {
+        seriesMap.set(seriesValue, currentVal + 1);
+      } else {
+        seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+      }
     }
   }
 
@@ -570,7 +569,8 @@ async function fetchStackedDealsData(
     result.push(point);
   }
 
-  return { data: result, seriesKeys };
+  return collapseSeries(result, seriesKeys);
+
 }
 
 async function fetchStackedLeadsData(
