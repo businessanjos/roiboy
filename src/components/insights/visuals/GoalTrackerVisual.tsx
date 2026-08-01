@@ -289,15 +289,75 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             />
             <Tooltip
               cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.15 }}
-              contentStyle={{
-                background: "hsl(var(--popover))",
-                border: "1px solid hsl(var(--border))",
-                borderRadius: 8,
-                color: "hsl(var(--popover-foreground))",
-                fontSize: 12,
+              content={({ active, payload, label }: any) => {
+                if (!active || !payload?.length) return null;
+                const row = payload[0]?.payload || {};
+                const realizado = Number(row.Realizado || 0);
+                const metaPeriodo = Number(row.Meta || 0);
+                const acumulado = Number(row.Acumulado || 0);
+                const metaAcum = Number(row.MetaAcumulada || 0);
+                const dif = realizado - metaPeriodo;
+                return (
+                  <div className="min-w-[240px] rounded-lg border border-border bg-popover p-3 text-popover-foreground shadow-lg">
+                    <div className="mb-2 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                      {label}
+                    </div>
+                    <div className="flex items-center justify-between gap-6 text-sm">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <Target className="h-4 w-4 text-muted-foreground" />
+                        Meta
+                      </span>
+                      <span className="font-semibold">{fmt(metaPeriodo, currency)}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-6 text-sm">
+                      <span className="flex items-center gap-2 font-semibold">
+                        <CircleDollarSign className="h-4 w-4 text-muted-foreground" />
+                        Total
+                      </span>
+                      <span className="font-semibold">{fmt(realizado, currency)}</span>
+                    </div>
+                    <div className="mt-1.5 flex items-center justify-between gap-6 pl-6 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{ background: colorRealizado }}
+                        />
+                        Realizado
+                      </span>
+                      <span>{fmt(realizado, currency)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-6 pl-6 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{ background: colorAcumulado }}
+                        />
+                        Acumulado
+                      </span>
+                      <span>{fmt(acumulado, currency)}</span>
+                    </div>
+                    <div className="mt-1 flex items-center justify-between gap-6 pl-6 text-xs text-muted-foreground">
+                      <span className="flex items-center gap-2">
+                        <span
+                          className="inline-block h-2.5 w-2.5 rounded-full"
+                          style={{ background: colorMetaAnual }}
+                        />
+                        Meta acumulada
+                      </span>
+                      <span>{fmt(metaAcum, currency)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between gap-6 border-t border-border pt-2 text-sm">
+                      <span className="font-semibold">Diferença</span>
+                      <span className={cn("font-semibold", dif >= 0 ? "text-emerald-500" : "text-red-500")}>
+                        {dif >= 0 ? "+" : "-"}
+                        {fmt(Math.abs(dif), currency)}
+                      </span>
+                    </div>
+                  </div>
+                );
               }}
-              formatter={(v: any, name: any) => [fmt(Number(v), currency), name]}
             />
+
             <Legend
               verticalAlign="top"
               align="right"
