@@ -37,7 +37,7 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   records: T[],
   accountId: string,
   key: string,
-  dataSource: 'deals' | 'leads'
+  dataSource: 'deals' | 'leads' | 'tasks'
 ): Promise<T[]> {
   const parsed = parseCustomFieldKey(key);
   if (!parsed || records.length === 0) return records;
