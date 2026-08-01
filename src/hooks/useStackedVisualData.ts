@@ -17,6 +17,49 @@ export interface StackedDataPoint {
   [key: string]: string | number;
 }
 
+/** Máximo de séries legíveis num gráfico empilhado — o excedente vira "Outros". */
+const MAX_STACK_SERIES = 12;
+
+/** Séries de um registro (multi_select gera uma série por opção, nunca combinações). */
+function seriesValuesOf(record: any, fallback: string): string[] {
+  const arr = record?._custom_stack_labels;
+  if (Array.isArray(arr) && arr.length) return arr;
+  const single = record?._custom_stack_label;
+  return [single || fallback];
+}
+
+/** Mantém as maiores séries e agrupa o restante em "Outros" para evitar legendas ilegíveis. */
+function collapseSeries(
+  data: StackedDataPoint[],
+  seriesKeys: string[],
+  max = MAX_STACK_SERIES,
+): { data: StackedDataPoint[]; seriesKeys: string[] } {
+  if (seriesKeys.length <= max) return { data, seriesKeys };
+
+  const totals = new Map<string, number>();
+  for (const key of seriesKeys) {
+    let sum = 0;
+    for (const point of data) sum += Number(point[key]) || 0;
+    totals.set(key, sum);
+  }
+
+  const kept = [...seriesKeys]
+    .sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0))
+    .slice(0, max - 1);
+  const keptSet = new Set(kept);
+  const rest = seriesKeys.filter((k) => !keptSet.has(k));
+
+  const newData = data.map((point) => {
+    const next: StackedDataPoint = { name: point.name };
+    for (const key of kept) next[key] = Number(point[key]) || 0;
+    next['Outros'] = rest.reduce((sum, k) => sum + (Number(point[k]) || 0), 0);
+    return next;
+  });
+
+  return { data: newData, seriesKeys: [...kept, 'Outros'] };
+}
+
+
 /**
  * Enrich records with a custom field label for stacking/segmentation.
  * Fetches deal_field_values or lead_field_values, resolves labels, and injects `_custom_stack_label`.
@@ -131,15 +174,14 @@ async function enrichWithCustomField(
 
   const labelFor = (raw: string) => productLabels.get(raw) || valueToLabel.get(raw) || raw;
 
-  // Build entityId -> label map
-  const entityLabelMap = new Map<string, string>();
+  // Build entityId -> labels map (multi_select keeps each option as its own series)
+  const entityLabelMap = new Map<string, string[]>();
   for (const [entityId, vals] of rawByEntity) {
-    entityLabelMap.set(entityId, vals.map(labelFor).join(', '));
+    const labels = Array.from(new Set(vals.map(labelFor).filter(Boolean)));
+    if (labels.length) entityLabelMap.set(entityId, labels);
   }
 
-
-
-  // Inject _custom_stack_label into records
+  // Inject _custom_stack_label(s) into records
   return records.map(r => {
     let entityId: string;
     if (source === 'lead' && dataSource === 'deals') {
@@ -147,8 +189,10 @@ async function enrichWithCustomField(
     } else {
       entityId = r.id;
     }
-    return { ...r, _custom_stack_label: entityLabelMap.get(entityId) || 'Não informado' };
+    const labels = entityLabelMap.get(entityId) || ['Não informado'];
+    return { ...r, _custom_stack_label: labels[0], _custom_stack_labels: labels };
   });
+
 }
 
 interface UseStackedVisualDataParams {
@@ -364,11 +408,11 @@ async function fetchStackedDealsData(
     }
   }
 
-  const getSeriesValue = (record: any): string => {
+  const getSeriesValues = (record: any): string[] => {
     if (config.stackByCustomField) {
-      return record._custom_stack_label || 'Não informado';
+      return seriesValuesOf(record, 'Não informado');
     }
-    return (record.users as any)?.name || 'Sem Responsável';
+    return [(record.users as any)?.name || 'Sem Responsável'];
   };
 
   // === CATEGORICAL DIMENSION PATH ===
@@ -378,17 +422,18 @@ async function fetchStackedDealsData(
 
     for (const deal of allDeals) {
       const catValue = getCategoryValue(deal, dimension.field || 'product');
-      const seriesValue = getSeriesValue(deal);
-      allSeries.add(seriesValue);
 
       if (!categoryMap.has(catValue)) categoryMap.set(catValue, new Map());
       const seriesMap = categoryMap.get(catValue)!;
-      const currentVal = seriesMap.get(seriesValue) || 0;
 
-      if (measure.aggregation === 'count') {
-        seriesMap.set(seriesValue, currentVal + 1);
-      } else {
-        seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+      for (const seriesValue of getSeriesValues(deal)) {
+        allSeries.add(seriesValue);
+        const currentVal = seriesMap.get(seriesValue) || 0;
+        if (measure.aggregation === 'count') {
+          seriesMap.set(seriesValue, currentVal + 1);
+        } else {
+          seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+        }
       }
     }
 
@@ -413,7 +458,8 @@ async function fetchStackedDealsData(
       return totalB - totalA;
     });
 
-    return { data: result, seriesKeys };
+    return collapseSeries(result, seriesKeys);
+
   }
 
   // === TEMPORAL DIMENSION PATH ===
@@ -489,19 +535,18 @@ async function fetchStackedDealsData(
 
     const date = parseISO(dateStr);
     const periodKey = getPeriodKey(date);
-    const seriesValue = getSeriesValue(deal);
-
-    allSeries.add(seriesValue);
 
     if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
     const seriesMap = periodMap.get(periodKey)!;
 
-    const currentVal = seriesMap.get(seriesValue) || 0;
-
-    if (measure.aggregation === 'count') {
-      seriesMap.set(seriesValue, currentVal + 1);
-    } else {
-      seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+    for (const seriesValue of getSeriesValues(deal)) {
+      allSeries.add(seriesValue);
+      const currentVal = seriesMap.get(seriesValue) || 0;
+      if (measure.aggregation === 'count') {
+        seriesMap.set(seriesValue, currentVal + 1);
+      } else {
+        seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+      }
     }
   }
 
@@ -524,7 +569,8 @@ async function fetchStackedDealsData(
     result.push(point);
   }
 
-  return { data: result, seriesKeys };
+  return collapseSeries(result, seriesKeys);
+
 }
 
 async function fetchStackedLeadsData(
@@ -603,6 +649,11 @@ async function fetchStackedLeadsData(
     return lead[field] || 'Não informado';
   };
 
+  const getSeriesValues = (lead: any, field: string): string[] => {
+    if (config.stackByCustomField) return seriesValuesOf(lead, 'Não informado');
+    return [getFieldValue(lead, field)];
+  };
+
   if (isTemporalDimension) {
     // Temporal grouping for leads (similar to deals logic)
     const periodMap = new Map<string, Map<string, number>>();
@@ -626,13 +677,15 @@ async function fetchStackedLeadsData(
         default: periodKey = format(date, 'yyyy-MM-dd'); break;
       }
 
-      const seriesValue = getFieldValue(lead, stackByField);
-      allSeries.add(seriesValue);
-
       if (!periodMap.has(periodKey)) periodMap.set(periodKey, new Map());
       const seriesMap = periodMap.get(periodKey)!;
-      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+
+      for (const seriesValue of getSeriesValues(lead, stackByField)) {
+        allSeries.add(seriesValue);
+        seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+      }
     }
+
 
     const seriesKeys = Array.from(allSeries).sort();
 
@@ -693,7 +746,7 @@ async function fetchStackedLeadsData(
       result.push(point);
     }
 
-    return { data: result, seriesKeys };
+    return collapseSeries(result, seriesKeys);
   }
 
   // Categorical grouping (existing logic)
@@ -703,14 +756,16 @@ async function fetchStackedLeadsData(
 
   for (const lead of allLeads) {
     const categoryValue = getFieldValue(lead, dimensionField);
-    const seriesValue = getFieldValue(lead, stackByField);
-
-    allSeriesCat.add(seriesValue);
 
     if (!categoryMap.has(categoryValue)) categoryMap.set(categoryValue, new Map());
     const seriesMap = categoryMap.get(categoryValue)!;
-    seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+
+    for (const seriesValue of getSeriesValues(lead, stackByField)) {
+      allSeriesCat.add(seriesValue);
+      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+    }
   }
+
 
   const seriesKeys = Array.from(allSeriesCat).sort();
 
@@ -731,5 +786,5 @@ async function fetchStackedLeadsData(
     return totalB - totalA;
   });
 
-  return { data: result, seriesKeys };
+  return collapseSeries(result, seriesKeys);
 }
