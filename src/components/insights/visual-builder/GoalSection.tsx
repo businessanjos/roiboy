@@ -197,15 +197,25 @@ export function GoalSection({ value, onChange }: Props) {
               />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Valor por período</Label>
+              <Label className="text-xs text-muted-foreground">
+                {isCurrencyMetric(selectedGoal.metric) ? "Valor por período (R$)" : "Quantidade por período"}
+              </Label>
               <Input
-                inputMode="decimal"
-                value={editTarget ?? String(selectedGoal.target_value ?? 0)}
-                onChange={(e) => setEditTarget(e.target.value)}
+                inputMode="numeric"
+                placeholder={isCurrencyMetric(selectedGoal.metric) ? "R$ 0,00" : "0"}
+                value={
+                  editTarget ??
+                  targetToMasked(
+                    Number(selectedGoal.target_value ?? 0),
+                    isCurrencyMetric(selectedGoal.metric),
+                  )
+                }
+                onChange={(e) =>
+                  setEditTarget(maskTarget(e.target.value, isCurrencyMetric(selectedGoal.metric)))
+                }
                 onBlur={() => {
                   if (editTarget === null) return;
-                  const parsed =
-                    Number(String(editTarget).replace(/\./g, "").replace(",", ".")) || 0;
+                  const parsed = parseTarget(editTarget, isCurrencyMetric(selectedGoal.metric));
                   if (parsed !== Number(selectedGoal.target_value ?? 0)) {
                     updateGoal.mutate({ id: selectedGoal.id, target_value: parsed });
                   }
@@ -213,6 +223,7 @@ export function GoalSection({ value, onChange }: Props) {
                 }}
               />
             </div>
+
           </div>
           <div className="grid grid-cols-2 gap-2">
             <div className="space-y-1">
