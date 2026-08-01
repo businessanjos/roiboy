@@ -29,17 +29,20 @@ interface UserAvatar {
   avatar_url: string | null;
 }
 
-const MEDAL_STYLES: Record<number, { bg: string; text: string; border: string; emoji: string }> = {
-  0: { bg: 'bg-amber-100 dark:bg-amber-900/30', text: 'text-amber-700 dark:text-amber-400', border: 'border-amber-300 dark:border-amber-700', emoji: '🥇' },
-  1: { bg: 'bg-slate-100 dark:bg-slate-800/50', text: 'text-slate-600 dark:text-slate-300', border: 'border-slate-300 dark:border-slate-600', emoji: '🥈' },
-  2: { bg: 'bg-orange-100 dark:bg-orange-900/30', text: 'text-orange-700 dark:text-orange-400', border: 'border-orange-300 dark:border-orange-700', emoji: '🥉' },
+const MEDAL_EMOJI: Record<number, string> = { 0: '🥇', 1: '🥈', 2: '🥉' };
+
+const PODIUM_LAYOUT: Record<number, { height: number; order: number }> = {
+  0: { height: 160, order: 2 },
+  1: { height: 120, order: 1 },
+  2: { height: 90, order: 3 },
 };
 
-const PODIUM_CONFIG: Record<number, { height: number; gradient: string; borderColor: string; order: number }> = {
-  0: { height: 160, gradient: 'from-amber-400 to-amber-500', borderColor: 'border-amber-400', order: 2 },
-  1: { height: 120, gradient: 'from-slate-300 to-slate-400', borderColor: 'border-slate-400', order: 1 },
-  2: { height: 90, gradient: 'from-orange-400 to-orange-500', borderColor: 'border-orange-400', order: 3 },
-};
+/** Ranking colours follow the dashboard palette so the visual never clashes. */
+function paletteColors(appearance?: AppearanceConfig): string[] {
+  const palette = COLOR_PALETTES[appearance?.colorPalette || 'professional'];
+  return palette?.length ? palette : COLOR_PALETTES.professional;
+}
+
 
 function getInitials(name: string): string {
   return name
