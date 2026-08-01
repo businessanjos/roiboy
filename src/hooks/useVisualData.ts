@@ -1666,8 +1666,13 @@ function dateLabelSortKey(label: string): number {
   // "2026"
   if (/^\d{4}$/.test(raw)) return Number(raw) * 10000;
 
+  // "05/04" (dia/mês)
+  const dayMonth = raw.match(/^(\d{1,2})\/(\d{1,2})$/);
+  if (dayMonth) return Number(dayMonth[2]) * 100 + Number(dayMonth[1]);
+
   // "05" (dia)
   if (/^\d{1,2}$/.test(raw)) return Number(raw);
+
 
   return Number.POSITIVE_INFINITY;
 }
