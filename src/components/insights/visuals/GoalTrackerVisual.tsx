@@ -6,6 +6,7 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { normalizeVisualFilters, VisualConfig } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { ChartLegendContent } from "./ChartLegendContent";
 import { Target, CircleDollarSign } from "lucide-react";
 import { normalizeProductId, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
 import { applyVisualFilters } from "@/lib/insights/applyFilters";
@@ -402,8 +403,10 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             <Legend
               verticalAlign="top"
               align="right"
-              iconType="square"
-              wrapperStyle={{ fontSize: 11, paddingBottom: 8 }}
+              wrapperStyle={{ paddingBottom: 10 }}
+              content={(props: any) => (
+                <ChartLegendContent payload={props?.payload} align="right" fontSize={11} />
+              )}
             />
             <Bar dataKey="Realizado" fill={colorRealizado} radius={[3, 3, 0, 0]} maxBarSize={46}>
               <LabelList
