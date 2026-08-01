@@ -142,6 +142,29 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     return result;
   }, [data, config?.customFormula, config?.hiddenCategories]);
 
+  // Resumo do topo: soma e média das barras/pontos exibidos, para "bater o olho".
+  // Percentual não soma (a soma de porcentagens não significa nada), então mostra só a média.
+  const summary = useMemo(() => {
+    if (!SUMMARIZABLE_TYPES.has(chartType)) return null;
+    const values: number[] = isStacked
+      ? (processedStackedData?.data || []).map((row: any) =>
+          (processedStackedData?.seriesKeys || []).reduce((acc, k) => acc + (Number(row[k]) || 0), 0),
+        )
+      : (processedData || []).map((d: any) => Number(d.value) || 0);
+    if (!values.length) return null;
+    const total = values.reduce((a, b) => a + b, 0);
+    const formatType = (config?.formatting?.type || 'decimal') as FormatType;
+    const decimals = config?.formatting?.decimals ?? 0;
+    return {
+      showTotal: formatType !== 'percentage',
+      total: formatValue(total, formatType, decimals),
+      average: formatValue(total / values.length, formatType, Math.max(decimals, formatType === 'decimal' ? 1 : decimals)),
+      count: values.length,
+    };
+  }, [chartType, isStacked, processedStackedData, processedData, config?.formatting]);
+
+
+
   // Generate info tooltip content
   const infoContent = useMemo(() => {
     if (!config) return null;
