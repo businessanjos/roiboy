@@ -150,6 +150,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           .from('deal_stages')
           .select('id, name, display_order, color, pipeline_id')
           .eq('account_id', accountId)
+          // Etapas desativadas no sistema não devem compor o funil.
+          .eq('is_active', true)
           .order('display_order', { ascending: true });
 
         if (allowedPipelineIds && allowedPipelineIds.length > 0) {
