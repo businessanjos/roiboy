@@ -199,6 +199,12 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         .map((d: any) => [d.id, stageNameById.get(d.stage_id)!])
     );
 
+    // Negócios vindos do funil de Repescagem já receberam proposta: qualquer
+    // movimentação deles é atribuída à etapa de "Proposta enviada" do funil atual.
+    const proposalStageName =
+      (data.stages as any[]).find((s: any) => /proposta/i.test(s.name || ""))?.name || null;
+    const repescagemIds: Set<string> = (data as any).repescagemDealIds || new Set();
+
     // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
     // a linha mede negócios que passaram pela etapa, não movimentações.
     const seen = new Set<string>();
@@ -207,10 +213,12 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
-      const stageName =
-        stageRows.has(act.new_value)
+      const stageName = repescagemIds.has(act.deal_id)
+        ? proposalStageName
+        : stageRows.has(act.new_value)
           ? act.new_value
           : currentStageByDeal.get(act.deal_id);
+
       const row = stageName ? stageRows.get(stageName) : undefined;
       if (!row) continue;
       const key = format(parseISO(act.created_at), "yyyy-MM-dd");
