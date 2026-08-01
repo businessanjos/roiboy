@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
+import { DailyPerformanceSection, type DailyPerformanceSettings } from "./visual-builder/DailyPerformanceSection";
 import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 import {
   Aggregation,
