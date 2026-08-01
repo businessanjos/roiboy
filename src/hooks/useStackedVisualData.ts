@@ -408,11 +408,11 @@ async function fetchStackedDealsData(
     }
   }
 
-  const getSeriesValue = (record: any): string => {
+  const getSeriesValues = (record: any): string[] => {
     if (config.stackByCustomField) {
-      return record._custom_stack_label || 'Não informado';
+      return seriesValuesOf(record, 'Não informado');
     }
-    return (record.users as any)?.name || 'Sem Responsável';
+    return [(record.users as any)?.name || 'Sem Responsável'];
   };
 
   // === CATEGORICAL DIMENSION PATH ===
@@ -422,17 +422,18 @@ async function fetchStackedDealsData(
 
     for (const deal of allDeals) {
       const catValue = getCategoryValue(deal, dimension.field || 'product');
-      const seriesValue = getSeriesValue(deal);
-      allSeries.add(seriesValue);
 
       if (!categoryMap.has(catValue)) categoryMap.set(catValue, new Map());
       const seriesMap = categoryMap.get(catValue)!;
-      const currentVal = seriesMap.get(seriesValue) || 0;
 
-      if (measure.aggregation === 'count') {
-        seriesMap.set(seriesValue, currentVal + 1);
-      } else {
-        seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+      for (const seriesValue of getSeriesValues(deal)) {
+        allSeries.add(seriesValue);
+        const currentVal = seriesMap.get(seriesValue) || 0;
+        if (measure.aggregation === 'count') {
+          seriesMap.set(seriesValue, currentVal + 1);
+        } else {
+          seriesMap.set(seriesValue, currentVal + (deal.value || 0));
+        }
       }
     }
 
@@ -457,7 +458,8 @@ async function fetchStackedDealsData(
       return totalB - totalA;
     });
 
-    return { data: result, seriesKeys };
+    return collapseSeries(result, seriesKeys);
+
   }
 
   // === TEMPORAL DIMENSION PATH ===
