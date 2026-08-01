@@ -109,7 +109,6 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         let dealsQuery = supabase
           .from("deals")
           .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id, stage_id")
-
           .eq("account_id", accountId)
           // Negócios excluídos (soft delete) nunca entram na auditoria.
           .is("deleted_at", null)
