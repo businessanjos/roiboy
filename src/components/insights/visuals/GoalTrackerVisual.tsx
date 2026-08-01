@@ -30,6 +30,8 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useInsightsGoal, isCurrencyMetric, InsightsGoal } from "@/hooks/useInsightsGoals";
+import { COLOR_PALETTES } from "../visual-builder/types";
+
 
 interface Bucket {
   key: string;
@@ -206,7 +208,15 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
   }
 
   const currency = isCurrencyMetric(goal.metric);
+  const palette =
+    COLOR_PALETTES[(config.appearance?.colorPalette as keyof typeof COLOR_PALETTES) || "professional"] ||
+    COLOR_PALETTES.professional;
+  const colorRealizado = palette[0];
+  const colorAcumulado = palette[2] || palette[1];
+  const colorMetaPeriodo = palette[4] || palette[1];
+  const colorMetaAnual = palette[1];
   const target = Number(goal.target_value) || 0;
+
   let cumulative = 0;
   let cumulativeTarget = 0;
   const chartData = buckets.map((b) => {
@@ -279,11 +289,11 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               formatter={(v: any, name: any) => [fmt(Number(v), currency), name]}
             />
             <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Realizado" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Realizado" fill={colorRealizado} radius={[4, 4, 0, 0]} />
             <Line
               type="monotone"
               dataKey="Acumulado"
-              stroke="hsl(var(--chart-2, var(--primary)))"
+              stroke={colorAcumulado}
               strokeWidth={2}
               dot={false}
             />
@@ -291,7 +301,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               type="stepAfter"
               dataKey="Meta"
               name={`Meta do período (${fmt(target, currency)})`}
-              stroke="hsl(var(--destructive))"
+              stroke={colorMetaPeriodo}
               strokeWidth={2}
               strokeDasharray="6 4"
               dot={false}
@@ -302,7 +312,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               type="linear"
               dataKey="MetaAcumulada"
               name={`Meta anual acumulada (${fmt(totalMeta, currency)})`}
-              stroke="hsl(var(--chart-4, var(--destructive)))"
+              stroke={colorMetaAnual}
               strokeWidth={2}
               strokeDasharray="4 6"
               dot={false}
@@ -312,7 +322,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             <ReferenceLine
               y={totalMeta}
               ifOverflow="extendDomain"
-              stroke="hsl(var(--chart-4, var(--destructive)))"
+              stroke={colorMetaAnual}
               strokeOpacity={0.45}
               strokeDasharray="2 4"
               label={{
@@ -325,8 +335,9 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             <ReferenceLine
               y={target}
               ifOverflow="extendDomain"
-              stroke="hsl(var(--destructive))"
+              stroke={colorMetaPeriodo}
               strokeOpacity={0.35}
+
               strokeDasharray="2 4"
             />
 
