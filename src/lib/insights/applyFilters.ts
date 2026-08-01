@@ -44,6 +44,8 @@ function readNativeValue(record: any, field: string): string | null {
   switch (field) {
     case 'stage_name':
       return record?.deal_stages?.name ?? record?.stage_name ?? null;
+    case 'pipeline_name':
+      return record?.pipelines?.name ?? record?.pipeline_name ?? null;
     case 'responsible_name':
       return record?.users?.name ?? record?.responsible_name ?? null;
     default: {
