@@ -270,15 +270,23 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
 
       <div className="min-h-0 flex-1">
         <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={chartData} margin={{ top: 8, right: 12, left: 4, bottom: 4 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-            <XAxis dataKey="name" tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }} />
+          <ComposedChart data={chartData} margin={{ top: 16, right: 16, left: 4, bottom: 8 }}>
+            <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.5} vertical={false} />
+            <XAxis
+              dataKey="name"
+              tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
+              tickLine={false}
+              axisLine={false}
+            />
             <YAxis
               tick={{ fill: "hsl(var(--muted-foreground))", fontSize: 11 }}
               tickFormatter={(v) => fmt(Number(v), currency)}
+              tickLine={false}
+              axisLine={false}
               width={70}
             />
             <Tooltip
+              cursor={{ fill: "hsl(var(--muted))", fillOpacity: 0.15 }}
               contentStyle={{
                 background: "hsl(var(--popover))",
                 border: "1px solid hsl(var(--border))",
@@ -288,25 +296,28 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               }}
               formatter={(v: any, name: any) => [fmt(Number(v), currency), name]}
             />
-            <Legend wrapperStyle={{ fontSize: 11 }} />
-            <Bar dataKey="Realizado" fill={colorRealizado} radius={[4, 4, 0, 0]} />
+            <Legend
+              verticalAlign="top"
+              align="right"
+              iconType="square"
+              wrapperStyle={{ fontSize: 11, paddingBottom: 8 }}
+            />
+            <Bar dataKey="Realizado" fill={colorRealizado} radius={[3, 3, 0, 0]} maxBarSize={46}>
+              <LabelList
+                dataKey="Realizado"
+                position="top"
+                offset={6}
+                formatter={(v: any) => fmt(Number(v), currency)}
+                style={{ fill: "hsl(var(--foreground))", fontSize: 10, fontWeight: 600 }}
+              />
+            </Bar>
             <Line
-              type="monotone"
+              type="linear"
               dataKey="Acumulado"
               stroke={colorAcumulado}
               strokeWidth={2}
-              dot={false}
-            />
-            <Line
-              type="stepAfter"
-              dataKey="Meta"
-              name={`Meta do período (${fmt(target, currency)})`}
-              stroke={colorMetaPeriodo}
-              strokeWidth={2}
-              strokeDasharray="6 4"
-              dot={false}
-              activeDot={false}
-              isAnimationActive={false}
+              dot={{ r: 3, fill: colorAcumulado, strokeWidth: 0 }}
+              activeDot={{ r: 5 }}
             />
             <Line
               type="linear"
@@ -314,36 +325,15 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               name={`Meta anual acumulada (${fmt(totalMeta, currency)})`}
               stroke={colorMetaAnual}
               strokeWidth={2}
-              strokeDasharray="4 6"
+              strokeDasharray="5 5"
               dot={false}
               activeDot={false}
               isAnimationActive={false}
             />
-            <ReferenceLine
-              y={totalMeta}
-              ifOverflow="extendDomain"
-              stroke={colorMetaAnual}
-              strokeOpacity={0.45}
-              strokeDasharray="2 4"
-              label={{
-                value: `Meta anual ${fmt(totalMeta, currency)}`,
-                position: "insideTopRight",
-                fill: "hsl(var(--muted-foreground))",
-                fontSize: 10,
-              }}
-            />
-            <ReferenceLine
-              y={target}
-              ifOverflow="extendDomain"
-              stroke={colorMetaPeriodo}
-              strokeOpacity={0.35}
-
-              strokeDasharray="2 4"
-            />
-
           </ComposedChart>
         </ResponsiveContainer>
       </div>
+
     </div>
   );
 }
