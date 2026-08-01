@@ -786,5 +786,5 @@ async function fetchStackedLeadsData(
     return totalB - totalA;
   });
 
-  return { data: result, seriesKeys };
+  return collapseSeries(result, seriesKeys);
 }
