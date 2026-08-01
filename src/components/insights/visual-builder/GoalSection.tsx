@@ -124,9 +124,10 @@ export function GoalSection({ value, onChange }: Props) {
         .not("value_text", "is", null)
         .limit(20000);
 
-      const raws = Array.from(
+      const raws: string[] = Array.from(
         new Set((data || []).map((r: any) => String(r.value_text || "").trim()).filter(Boolean))
-      );
+      ) as string[];
+
       if (raws.length === 0) return [];
 
       const labels = await resolveProductLabels(raws);
