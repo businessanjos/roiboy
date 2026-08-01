@@ -104,6 +104,20 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (pipelineId) stagesQuery = stagesQuery.eq("pipeline_id", pipelineId);
       const { data: stages } = await stagesQuery;
 
+      // O funil de Repescagem / Cadência recebe pessoas que já receberam proposta.
+      // Quando o visual está filtrado por um funil, esses negócios entram junto e
+      // são contabilizados na etapa de "Proposta enviada" do funil selecionado.
+      let repescagemPipelineId: string | null = null;
+      if (pipelineId) {
+        const { data: pls } = await supabase
+          .from("pipelines")
+          .select("id, name")
+          .eq("account_id", accountId);
+        repescagemPipelineId =
+          (pls || []).find((p: any) => /repescagem/i.test(p.name || ""))?.id || null;
+        if (repescagemPipelineId === pipelineId) repescagemPipelineId = null;
+      }
+
       // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas).
       // Paginação obrigatória: o PostgREST corta em 1.000 linhas e os totais viriam menores.
       const PAGE = 1000;
@@ -117,7 +131,11 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
           .is("deleted_at", null)
           .order("id")
           .range(page * PAGE, page * PAGE + PAGE - 1);
-        if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
+        if (pipelineId) {
+          dealsQuery = repescagemPipelineId
+            ? dealsQuery.in("pipeline_id", [pipelineId, repescagemPipelineId])
+            : dealsQuery.eq("pipeline_id", pipelineId);
+        }
         if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
         const { data: chunk, error } = await dealsQuery;
         if (error) throw error;
@@ -126,6 +144,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       }
 
       const dealIds = new Set(deals.map((d: any) => d.id));
+      const repescagemDealIds = new Set(
+        deals.filter((d: any) => repescagemPipelineId && d.pipeline_id === repescagemPipelineId).map((d: any) => d.id),
+      );
+
 
       // Movimentações de etapa no período (também paginadas)
       const activities: any[] = [];
@@ -144,7 +166,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         if (!chunk || chunk.length < PAGE) break;
       }
 
-      return { stages: stages || [], deals, activities, dealIds };
+      return { stages: stages || [], deals, activities, dealIds, repescagemDealIds };
     },
   });
 
@@ -177,6 +199,12 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         .map((d: any) => [d.id, stageNameById.get(d.stage_id)!])
     );
 
+    // Negócios vindos do funil de Repescagem já receberam proposta: qualquer
+    // movimentação deles é atribuída à etapa de "Proposta enviada" do funil atual.
+    const proposalStageName =
+      (data.stages as any[]).find((s: any) => /proposta/i.test(s.name || ""))?.name || null;
+    const repescagemIds: Set<string> = (data as any).repescagemDealIds || new Set();
+
     // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
     // a linha mede negócios que passaram pela etapa, não movimentações.
     const seen = new Set<string>();
@@ -185,10 +213,12 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
-      const stageName =
-        stageRows.has(act.new_value)
+      const stageName = repescagemIds.has(act.deal_id)
+        ? proposalStageName
+        : stageRows.has(act.new_value)
           ? act.new_value
           : currentStageByDeal.get(act.deal_id);
+
       const row = stageName ? stageRows.get(stageName) : undefined;
       if (!row) continue;
       const key = format(parseISO(act.created_at), "yyyy-MM-dd");
