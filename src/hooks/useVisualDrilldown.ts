@@ -3,11 +3,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
 import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { enrichDealsWithProduct, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 
@@ -31,6 +32,9 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
+  // Dashboards compartilhados leem os dados da conta dona do painel.
+  const accountId = globalFilters.accountIdOverride || currentUser?.account_id;
+
   // Apply fixedDateRange override if set on the visual config
   const filters = (() => {
     if (config?.fixedDateRange?.startDate && config?.fixedDateRange?.endDate) {
@@ -44,28 +48,28 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   })();
 
   return useQuery({
-    queryKey: ['visual-drilldown', config, groupName, filters, currentUser?.account_id, extraCfColumns],
+    queryKey: ['visual-drilldown', config, groupName, filters, accountId, extraCfColumns],
     queryFn: async (): Promise<DrilldownRecord[]> => {
-      if (!config || !currentUser?.account_id) return [];
+      if (!config || !accountId) return [];
 
       const { dataSource } = config;
 
       switch (dataSource) {
         case 'deals':
-          return fetchDealsRecords(currentUser.account_id, config, filters, groupName, extraCfColumns);
+          return fetchDealsRecords(accountId, config, filters, groupName, extraCfColumns);
         case 'leads':
-          return fetchLeadsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchLeadsRecords(accountId, config, filters, groupName);
         case 'products':
-          return fetchProductsRecords(currentUser.account_id, config, filters, groupName);
+          return fetchProductsRecords(accountId, config, filters, groupName);
         case 'tasks':
-          return fetchTasksRecords(currentUser.account_id, config, filters, groupName);
+          return fetchTasksRecords(accountId, config, filters, groupName);
         case 'sales_history':
-          return fetchSalesHistoryRecords(currentUser.account_id, config, filters, groupName);
+          return fetchSalesHistoryRecords(accountId, config, filters, groupName);
         default:
           return [];
       }
     },
-    enabled: enabled && !!config && !!currentUser?.account_id,
+    enabled: enabled && !!config && !!accountId,
     staleTime: 120000,
     refetchOnWindowFocus: false,
   });
@@ -125,12 +129,16 @@ async function fetchDealsRecords(
     query = query.not('lost_at', 'is', null);
   }
 
+  // Datas puras (YYYY-MM-DD) precisam cobrir o dia inteiro, igual ao agregado.
+  const normalizeStart = (v: string) => (v.length === 10 ? `${v}T00:00:00.000` : v);
+  const normalizeEnd = (v: string) => (v.length === 10 ? `${v}T23:59:59.999` : v);
+
   // Apply date filters on the correct field
   if (filters.startDate) {
-    query = query.gte(dateFilterField, filters.startDate);
+    query = query.gte(dateFilterField, normalizeStart(filters.startDate));
   }
   if (filters.endDate) {
-    query = query.lte(dateFilterField, filters.endDate);
+    query = query.lte(dateFilterField, normalizeEnd(filters.endDate));
   }
   if (filters.userId && filters.userId !== 'all') {
     query = query.eq('responsible_user_id', filters.userId);
@@ -356,6 +364,14 @@ async function fetchLeadsRecords(
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
   }
 
+  // Restrições vindas de negócios (campos do deal / status) — mesmo recorte do gráfico.
+  const leadDealFilters = getDealFilters(config);
+  const leadDealStatus = config.dealStatusFilter;
+  if ((leadDealFilters && leadDealFilters.length > 0) || (leadDealStatus && leadDealStatus.length > 0)) {
+    const allowedLeadIds = await getLeadIdsByDealConstraints(accountId, leadDealFilters, leadDealStatus);
+    filteredData = filteredData.filter((l: any) => allowedLeadIds.has(l.id));
+  }
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
@@ -509,13 +525,26 @@ async function fetchTasksRecords(
     .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
     .eq('account_id', accountId);
 
+  // Usa o mesmo campo de data do agregado (vencimento / criação / conclusão),
+  // senão o detalhamento traz um volume diferente do gráfico.
+  const dateFieldCandidates = ['due_date', 'created_at', 'completed_at'];
+  const taskDateFilters = (selectUnmirroredFilters(config.filters) || []).filter(
+    (f: any) => f.source === 'native' && f.type === 'date' && dateFieldCandidates.includes(f.field)
+  );
+  const rangeField = dateFieldCandidates.includes(config.dimension?.field as string)
+    ? (config.dimension!.field as string)
+    : taskDateFilters[0]?.field || 'due_date';
+
   if (filters.startDate) {
     const startDate = filters.startDate.split('T')[0];
-    baseQuery = baseQuery.gte('due_date', startDate);
+    baseQuery = baseQuery.gte(rangeField, startDate);
   }
   if (filters.endDate) {
     const endDate = filters.endDate.split('T')[0];
-    baseQuery = baseQuery.lte('due_date', endDate);
+    baseQuery = baseQuery.lte(rangeField, `${endDate}T23:59:59`);
+  }
+  if (rangeField === 'completed_at') {
+    baseQuery = baseQuery.not('completed_at', 'is', null);
   }
   if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
 
@@ -525,7 +554,7 @@ async function fetchTasksRecords(
   const pageSize = 1000;
 
   while (true) {
-    const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+    const { data, error } = await baseQuery.order(rangeField, { ascending: false }).range(from, from + pageSize - 1);
     if (error) { console.error('Error fetching tasks drilldown:', error); return []; }
     allData = allData.concat(data || []);
     if (!data || data.length < pageSize) break;

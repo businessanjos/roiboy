@@ -150,6 +150,8 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           .from('deal_stages')
           .select('id, name, display_order, color, pipeline_id')
           .eq('account_id', accountId)
+          // Etapas desativadas no sistema não devem compor o funil.
+          .eq('is_active', true)
           .order('display_order', { ascending: true });
 
         if (allowedPipelineIds && allowedPipelineIds.length > 0) {
@@ -284,6 +286,8 @@ async function calculateSalesCycle(
     .from('deals')
     .select('id, won_at, users!deals_responsible_user_id_fkey(name)')
     .eq('account_id', accountId)
+    // Negócios excluídos (soft delete) nunca entram em métricas.
+    .is('deleted_at', null)
     .eq('status', 'won')
     .not('won_at', 'is', null);
 
@@ -486,6 +490,7 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
       .from('deals')
       .select('id, lead_id, responsible_user_id, created_at')
       .eq('account_id', accountId)
+      .is('deleted_at', null)
       .in('lead_id', batch);
 
     if (error) {
@@ -976,13 +981,15 @@ async function calculateConversionRate(
   let totalQuery = supabase
     .from('deals')
     .select('*', { count: 'exact', head: true })
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   // Build query for won deals in period
   let wonQuery = supabase
     .from('deals')
     .select('*', { count: 'exact', head: true })
     .eq('account_id', accountId)
+    .is('deleted_at', null)
     .eq('status', 'won')
     .not('won_at', 'is', null);
 
@@ -1047,7 +1054,8 @@ async function calculateConversionRateByTextDimension(
       pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   // Apply date filters using created_at for total
   if (filters.startDate) {
@@ -1063,11 +1071,22 @@ async function calculateConversionRateByTextDimension(
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching deals for conversion by text:', error);
-    return [];
+  // Paginação obrigatória: sem ela o PostgREST corta em 1.000 linhas
+  // e a taxa de conversão é calculada sobre uma amostra parcial.
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching deals for conversion by text:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // Group by text dimension
@@ -1145,7 +1164,8 @@ async function calculateConversionRateByPeriod(
   let query = supabase
     .from('deals')
     .select('id, status, created_at, won_at')
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   if (filters.startDate) {
     query = query.gte('created_at', filters.startDate);
@@ -1160,11 +1180,20 @@ async function calculateConversionRateByPeriod(
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching deals for conversion:', error);
-    return [];
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching deals for conversion:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // Group by period
@@ -1202,7 +1231,7 @@ async function calculateConversionRateByPeriod(
 /**
  * Cross-resource filter: find lead IDs that have deals matching deal field filters and/or deal status filter.
  */
-async function getLeadIdsByDealConstraints(
+export async function getLeadIdsByDealConstraints(
   accountId: string,
   dealFilters?: FieldFilter[],
   dealStatusFilter?: string[]
@@ -1383,19 +1412,35 @@ async function fetchProductsData(
     .select('id, name, price, billing_period, is_active, created_at')
     .eq('account_id', accountId);
 
-  const { data, error } = await query;
+  // O catálogo só é recortado pelo período quando o visual é temporal
+  // (ex.: produtos cadastrados por mês). Contagens de catálogo seguem globais.
+  if (dimension.type === 'date') {
+    if (filters.startDate) query = query.gte('created_at', filters.startDate);
+    if (filters.endDate) query = query.lte('created_at', filters.endDate);
+  }
 
-  if (error) {
-    console.error('Error fetching products:', error);
-    return [];
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching products:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
-    return aggregateGlobalTotal(data || [], measure);
+    return aggregateGlobalTotal(data, measure);
   }
 
-  return aggregateData(data || [], measure, dimension, dateDisplayFormat);
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
 }
 
 function aggregateData(
@@ -1755,11 +1800,13 @@ async function fetchTasksFunnelData(
     .eq('account_id', accountId)
     .not('completed_at', 'is', null);
 
+  // Atividades concluídas são medidas pela data de conclusão (não pelo vencimento),
+  // igual ao visual de Call Comercial — evita divergência entre os dois gráficos.
   if (filters.startDate) {
-    baseQuery = baseQuery.gte('due_date', filters.startDate.split('T')[0]);
+    baseQuery = baseQuery.gte('completed_at', filters.startDate.split('T')[0]);
   }
   if (filters.endDate) {
-    baseQuery = baseQuery.lte('due_date', filters.endDate.split('T')[0]);
+    baseQuery = baseQuery.lte('completed_at', `${filters.endDate.split('T')[0]}T23:59:59.999`);
   }
   if (filters.userId && filters.userId !== 'all') {
     baseQuery = baseQuery.eq('assigned_to', filters.userId);
