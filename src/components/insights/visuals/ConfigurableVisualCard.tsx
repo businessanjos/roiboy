@@ -41,6 +41,9 @@ const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: strin
 
 const SWITCHABLE_SET = new Set(SWITCHABLE_TYPES.map(t => t.type));
 
+/** Tipos em que a soma/média das séries faz sentido no cabeçalho. */
+const SUMMARIZABLE_TYPES = new Set<ChartType>(['bar', 'bar_horizontal', 'bar_stacked', 'line', 'pie', 'funnel']);
+
 interface InsightsVisual {
   id: string;
   dashboard_id?: string;
