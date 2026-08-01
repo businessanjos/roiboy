@@ -1231,7 +1231,7 @@ async function calculateConversionRateByPeriod(
 /**
  * Cross-resource filter: find lead IDs that have deals matching deal field filters and/or deal status filter.
  */
-async function getLeadIdsByDealConstraints(
+export async function getLeadIdsByDealConstraints(
   accountId: string,
   dealFilters?: FieldFilter[],
   dealStatusFilter?: string[]

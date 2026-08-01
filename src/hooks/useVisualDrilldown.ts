@@ -2,12 +2,12 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
-import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
+import { VisualConfig, getLeadFilters, getDealFilters, getUnifiedFilters } from "@/components/insights/visual-builder/types";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { enrichDealsWithProduct, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 
@@ -363,6 +363,14 @@ async function fetchLeadsRecords(
     filteredData = await filterByLeadFields(filteredData, accountId, leadFilters, 'leads');
   }
 
+  // Restrições vindas de negócios (campos do deal / status) — mesmo recorte do gráfico.
+  const leadDealFilters = getDealFilters(config);
+  const leadDealStatus = config.dealStatusFilter;
+  if ((leadDealFilters && leadDealFilters.length > 0) || (leadDealStatus && leadDealStatus.length > 0)) {
+    const allowedLeadIds = await getLeadIdsByDealConstraints(accountId, leadDealFilters, leadDealStatus);
+    filteredData = filteredData.filter((l: any) => allowedLeadIds.has(l.id));
+  }
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
@@ -516,13 +524,26 @@ async function fetchTasksRecords(
     .select('id, title, activity_type_id, completed_at, assigned_to, due_date, created_at, users!internal_tasks_assigned_to_fkey(name), activity_types!internal_tasks_activity_type_id_fkey(name)')
     .eq('account_id', accountId);
 
+  // Usa o mesmo campo de data do agregado (vencimento / criação / conclusão),
+  // senão o detalhamento traz um volume diferente do gráfico.
+  const dateFieldCandidates = ['due_date', 'created_at', 'completed_at'];
+  const taskDateFilters = (getUnifiedFilters(config) || []).filter(
+    (f: any) => f.source === 'native' && f.type === 'date' && dateFieldCandidates.includes(f.field)
+  );
+  const rangeField = dateFieldCandidates.includes(config.dimension?.field as string)
+    ? (config.dimension!.field as string)
+    : taskDateFilters[0]?.field || 'due_date';
+
   if (filters.startDate) {
     const startDate = filters.startDate.split('T')[0];
-    baseQuery = baseQuery.gte('due_date', startDate);
+    baseQuery = baseQuery.gte(rangeField, startDate);
   }
   if (filters.endDate) {
     const endDate = filters.endDate.split('T')[0];
-    baseQuery = baseQuery.lte('due_date', endDate);
+    baseQuery = baseQuery.lte(rangeField, `${endDate}T23:59:59`);
+  }
+  if (rangeField === 'completed_at') {
+    baseQuery = baseQuery.not('completed_at', 'is', null);
   }
   if (filters.userId && filters.userId !== 'all') baseQuery = baseQuery.eq('assigned_to', filters.userId);
 
@@ -532,7 +553,7 @@ async function fetchTasksRecords(
   const pageSize = 1000;
 
   while (true) {
-    const { data, error } = await baseQuery.order('due_date', { ascending: false }).range(from, from + pageSize - 1);
+    const { data, error } = await baseQuery.order(rangeField, { ascending: false }).range(from, from + pageSize - 1);
     if (error) { console.error('Error fetching tasks drilldown:', error); return []; }
     allData = allData.concat(data || []);
     if (!data || data.length < pageSize) break;
