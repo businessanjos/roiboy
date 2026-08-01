@@ -586,33 +586,44 @@ export function VisualStudioDialog({
                 {activeRecipe && (
                   <>
                     <Separator />
-                    <div className="space-y-2">
-                      <Label className="text-base font-medium">2. Como mostrar?</Label>
-                      <div className="grid grid-cols-3 gap-2">
-                        {([
-                          { value: 'bar' as ChartType, label: 'Colunas' },
-                          { value: 'bar_horizontal' as ChartType, label: 'Barras' },
-                          { value: 'line' as ChartType, label: 'Linha' },
-                          { value: 'pie' as ChartType, label: 'Pizza' },
-                          { value: 'ranking' as ChartType, label: 'Ranking' },
-                          { value: 'scorecard' as ChartType, label: 'Número' },
-                        ]).map((opt) => (
-                          <button
-                            key={opt.value}
-                            type="button"
-                            onClick={() => setChartType(opt.value)}
-                            className={cn(
-                              'rounded-lg border-2 px-2 py-2 text-xs font-medium transition-all',
-                              chartType === opt.value
-                                ? 'border-primary bg-primary/5 text-primary'
-                                : 'border-border text-muted-foreground hover:border-primary/50'
-                            )}
-                          >
-                            {opt.label}
-                          </button>
-                        ))}
+                    {isGoalTracker ? (
+                      <div className="space-y-2">
+                        <Label className="text-base font-medium">2. Qual meta acompanhar?</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Escolha uma meta existente ou crie uma nova com o valor por período.
+                        </p>
+                        <GoalSection value={goalSettings} onChange={setGoalSettings} />
                       </div>
-                    </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label className="text-base font-medium">2. Como mostrar?</Label>
+                        <div className="grid grid-cols-3 gap-2">
+                          {([
+                            { value: 'bar' as ChartType, label: 'Colunas' },
+                            { value: 'bar_horizontal' as ChartType, label: 'Barras' },
+                            { value: 'line' as ChartType, label: 'Linha' },
+                            { value: 'pie' as ChartType, label: 'Pizza' },
+                            { value: 'ranking' as ChartType, label: 'Ranking' },
+                            { value: 'scorecard' as ChartType, label: 'Número' },
+                          ]).map((opt) => (
+                            <button
+                              key={opt.value}
+                              type="button"
+                              onClick={() => setChartType(opt.value)}
+                              className={cn(
+                                'rounded-lg border-2 px-2 py-2 text-xs font-medium transition-all',
+                                chartType === opt.value
+                                  ? 'border-primary bg-primary/5 text-primary'
+                                  : 'border-border text-muted-foreground hover:border-primary/50'
+                              )}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
 
                     {needsDimension && (
                       <div className="space-y-2">
