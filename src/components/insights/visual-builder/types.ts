@@ -107,6 +107,13 @@ export interface VisualConfig {
   filters?: VisualFilter[];
   // Unified segmentation ("Segmentar por") descriptor
   segmentBy?: SegmentBy;
+  // Daily performance table configuration
+  dailyPerformanceConfig?: {
+    pipelineId?: string | null;
+    userId?: string | null;
+    /** Meta total do período por linha (nome da etapa ou __won__/__lost__/__revenue__) */
+    goals?: Record<string, number>;
+  };
 }
 
 // ---------------------------------------------------------------------------
