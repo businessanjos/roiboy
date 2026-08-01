@@ -1071,11 +1071,22 @@ async function calculateConversionRateByTextDimension(
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching deals for conversion by text:', error);
-    return [];
+  // Paginação obrigatória: sem ela o PostgREST corta em 1.000 linhas
+  // e a taxa de conversão é calculada sobre uma amostra parcial.
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching deals for conversion by text:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // Group by text dimension
@@ -1169,11 +1180,20 @@ async function calculateConversionRateByPeriod(
     query = query.eq('stage_id', filters.stageId);
   }
 
-  const { data, error } = await query;
-
-  if (error) {
-    console.error('Error fetching deals for conversion:', error);
-    return [];
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching deals for conversion:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // Group by period
@@ -1392,19 +1412,32 @@ async function fetchProductsData(
     .select('id, name, price, billing_period, is_active, created_at')
     .eq('account_id', accountId);
 
-  const { data, error } = await query;
+  // O período do dashboard também vale para produtos (data de cadastro).
+  if (filters.startDate) query = query.gte('created_at', filters.startDate);
+  if (filters.endDate) query = query.lte('created_at', filters.endDate);
 
-  if (error) {
-    console.error('Error fetching products:', error);
-    return [];
+  const data: any[] = [];
+  {
+    const pageSize = 1000;
+    let from = 0;
+    while (true) {
+      const { data: chunk, error } = await query.range(from, from + pageSize - 1);
+      if (error) {
+        console.error('Error fetching products:', error);
+        return [];
+      }
+      data.push(...(chunk || []));
+      if (!chunk || chunk.length < pageSize) break;
+      from += pageSize;
+    }
   }
 
   // If dimension is _total, return global aggregation (for Scorecards)
   if (dimension.field === '_total') {
-    return aggregateGlobalTotal(data || [], measure);
+    return aggregateGlobalTotal(data, measure);
   }
 
-  return aggregateData(data || [], measure, dimension, dateDisplayFormat);
+  return aggregateData(data, measure, dimension, dateDisplayFormat);
 }
 
 function aggregateData(
