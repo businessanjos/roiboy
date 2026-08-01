@@ -78,6 +78,7 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
   return useQuery({
     queryKey: ['visual-data', effectiveConfig, chartType, filters, accountId],
     queryFn: ({ signal }): Promise<AggregatedDataPoint[]> => scheduleVisualQuery(() => withQueryTimeout(async () => {
+      const config = effectiveConfig;
       if (!config || !accountId) return [];
 
       const { dataSource, measure, dimension, appearance, statusFilter, dealStatusFilter } = config;
