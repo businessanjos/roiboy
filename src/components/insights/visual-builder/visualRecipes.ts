@@ -18,7 +18,7 @@ export interface VisualRecipe {
   /** Explicação de uma linha */
   hint: string;
   emoji: string;
-  group: 'Vendas' | 'Time' | 'Atividades' | 'Leads' | 'WhatsApp';
+  group: 'Vendas' | 'Metas' | 'Time' | 'Atividades' | 'Leads' | 'WhatsApp';
   title: string;
   chartType: ChartType;
   dataSource: DataSource;
@@ -266,6 +266,70 @@ export const VISUAL_RECIPES: VisualRecipe[] = [
     dimensionField: 'sector_id',
     formatType: 'decimal',
   },
+  {
+    id: 'meta_faturamento',
+    question: 'Estamos batendo a meta de faturamento?',
+    hint: 'Meta x realizado dos negócios ganhos, com linha anual acumulada',
+    emoji: '🎯',
+    group: 'Metas',
+    title: 'Meta de faturamento',
+    chartType: 'goal_tracker',
+    dataSource: 'deals',
+    measureField: 'value',
+    aggregation: 'sum',
+    dimensionField: 'won_at',
+    dateGrouping: 'month',
+    formatType: 'currency',
+    statusFilter: 'won',
+  },
+  {
+    id: 'meta_negocios_fechados',
+    question: 'Estamos batendo a meta de negócios fechados?',
+    hint: 'Quantidade de vendas ganhas x meta do período',
+    emoji: '🏁',
+    group: 'Metas',
+    title: 'Meta de negócios fechados',
+    chartType: 'goal_tracker',
+    dataSource: 'deals',
+    measureField: null,
+    aggregation: 'count',
+    dimensionField: 'won_at',
+    dateGrouping: 'month',
+    formatType: 'decimal',
+    statusFilter: 'won',
+  },
+  {
+    id: 'meta_previsao_receita',
+    question: 'A previsão de receita alcança a meta?',
+    hint: 'Pipeline ponderado por probabilidade x meta',
+    emoji: '🔮',
+    group: 'Metas',
+    title: 'Meta de previsão de receita',
+    chartType: 'goal_tracker',
+    dataSource: 'deals',
+    measureField: 'value',
+    aggregation: 'sum',
+    dimensionField: 'expected_close_date',
+    dateGrouping: 'month',
+    formatType: 'currency',
+    statusFilter: 'open',
+  },
+  {
+    id: 'meta_atividades',
+    question: 'O time está batendo a meta de atividades?',
+    hint: 'Atividades concluídas x meta do período',
+    emoji: '✅',
+    group: 'Metas',
+    title: 'Meta de atividades',
+    chartType: 'goal_tracker',
+    dataSource: 'tasks',
+    measureField: null,
+    aggregation: 'count',
+    dimensionField: 'completed_at',
+    dateGrouping: 'month',
+    formatType: 'decimal',
+  },
 ];
 
-export const RECIPE_GROUPS = ['Vendas', 'Time', 'Atividades', 'Leads', 'WhatsApp'] as const;
+export const RECIPE_GROUPS = ['Vendas', 'Metas', 'Time', 'Atividades', 'Leads', 'WhatsApp'] as const;
+
