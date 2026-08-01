@@ -68,6 +68,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
   const businessDays = days.filter((d) => !isWeekend(d)).length || 1;
 
+  // O período é inclusivo: sem o fim do dia, o último dia do intervalo some da tabela.
+  const rangeStartIso = `${range.start}T00:00:00`;
+  const rangeEndIso = `${range.end}T23:59:59.999`;
+
   const { data, isLoading } = useQuery({
     queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
     enabled: !!currentUser?.account_id && days.length > 0,
@@ -85,30 +89,48 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (pipelineId) stagesQuery = stagesQuery.eq("pipeline_id", pipelineId);
       const { data: stages } = await stagesQuery;
 
-      // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas)
-      let dealsQuery = supabase
-        .from("deals")
-        .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
-        .eq("account_id", accountId);
-      if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
-      if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
-      const { data: deals } = await dealsQuery;
+      // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas).
+      // Paginação obrigatória: o PostgREST corta em 1.000 linhas e os totais viriam menores.
+      const PAGE = 1000;
+      const deals: any[] = [];
+      for (let page = 0; page < 50; page++) {
+        let dealsQuery = supabase
+          .from("deals")
+          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
+          .eq("account_id", accountId)
+          .order("id")
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
+        if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
+        const { data: chunk, error } = await dealsQuery;
+        if (error) throw error;
+        deals.push(...(chunk || []));
+        if (!chunk || chunk.length < PAGE) break;
+      }
 
-      const dealIds = new Set((deals || []).map((d: any) => d.id));
+      const dealIds = new Set(deals.map((d: any) => d.id));
 
-      // Movimentações de etapa no período
-      const { data: activities } = await supabase
-        .from("deal_activities")
-        .select("deal_id, new_value, created_at, type, title")
-        .eq("account_id", accountId)
-        .eq("type", "stage_change")
-        .gte("created_at", range.start)
-        .lte("created_at", range.end)
-        .limit(20000);
+      // Movimentações de etapa no período (também paginadas)
+      const activities: any[] = [];
+      for (let page = 0; page < 50; page++) {
+        const { data: chunk, error } = await supabase
+          .from("deal_activities")
+          .select("deal_id, new_value, created_at, type, title")
+          .eq("account_id", accountId)
+          .eq("type", "stage_change")
+          .gte("created_at", rangeStartIso)
+          .lte("created_at", rangeEndIso)
+          .order("created_at")
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (error) throw error;
+        activities.push(...(chunk || []));
+        if (!chunk || chunk.length < PAGE) break;
+      }
 
-      return { stages: stages || [], deals: deals || [], activities: activities || [], dealIds };
+      return { stages: stages || [], deals, activities, dealIds };
     },
   });
+
 
   const rows: MetricRow[] = useMemo(() => {
     if (!data) return [];
