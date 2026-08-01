@@ -200,7 +200,17 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
           }
 
           result = buildFunnelStageData(result, stages);
+
+          // When restricted to specific pipeline(s), drop any stage that does
+          // not belong to them (avoids stages of other funnels leaking in).
+          if (allowedPipelineIds && allowedPipelineIds.length > 0) {
+            const allowedNames = new Set(
+              (stages as any[]).map((s) => normalizeStageName(s.name))
+            );
+            result = result.filter((r) => allowedNames.has(normalizeStageName(r.name)));
+          }
         }
+
 
         // Append "Ganhos" (won deals) using the same filters as regular stages
         const wonResult = await fetchDealsData(
