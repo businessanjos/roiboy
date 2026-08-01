@@ -472,6 +472,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'bubble_map', label: 'Mapa de Bolhas' },
   { value: 'funnel', label: 'Funil' },
   { value: 'data_table', label: 'Tabela' },
+  { value: 'daily_performance', label: 'Performance Diária' },
 ];
 
 // Date display format options
