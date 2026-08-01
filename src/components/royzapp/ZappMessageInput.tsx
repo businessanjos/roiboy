@@ -876,7 +876,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   onKeyDown={onKeyPress}
                   onPaste={handlePaste}
                   disabled={sendingMessage}
-                  rows={2}
+                  rows={1}
                   maxLength={SECURITY_LIMITS.MESSAGE_MAX}
                   className="flex-1 w-full bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-2xl sm:rounded-lg min-h-[40px] sm:min-h-[52px] max-h-[120px] py-2 sm:py-2.5 resize-none overflow-y-auto"
                 />
