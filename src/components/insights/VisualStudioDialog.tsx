@@ -166,6 +166,7 @@ export function VisualStudioDialog({
       setGaugeSubType(baseConfig.gaugeConfig?.subType ?? 'days_elapsed');
       setIndicatorMin(String(baseConfig.indicatorConfig?.minValue ?? 0));
       setIndicatorMax(String(baseConfig.indicatorConfig?.maxValue ?? 100));
+      setDailyPerf(baseConfig.dailyPerformanceConfig ?? {});
       setStatusFilter(baseConfig.statusFilter);
       setMode('advanced');
       setRecipeId(null);
@@ -191,6 +192,7 @@ export function VisualStudioDialog({
       setGaugeSubType('days_elapsed');
       setIndicatorMin('0');
       setIndicatorMax('100');
+      setDailyPerf({});
       setStatusFilter(undefined);
       setMode('simple');
       setRecipeId(null);
@@ -247,6 +249,7 @@ export function VisualStudioDialog({
   const isTable = chartType === 'data_table';
   const isGauge = chartType === 'gauge';
   const isIndicator = chartType === 'indicator';
+  const isDailyPerformance = chartType === 'daily_performance';
   const isScorecard = NO_DIMENSION_TYPES.includes(chartType);
   const isFixed = FIXED_TYPES.includes(chartType);
   const needsDimension = !isScorecard && !isTable && !isFixed;
@@ -332,6 +335,9 @@ export function VisualStudioDialog({
         maxValue: Number(indicatorMax) || 100,
       };
     }
+    if (isDailyPerformance) {
+      next.dailyPerformanceConfig = { ...(baseConfig?.dailyPerformanceConfig ?? {}), ...dailyPerf };
+    }
 
     next = syncLegacyFilterKeys({ ...next, filters: visualFilters }, visualFilters);
 
@@ -359,7 +365,7 @@ export function VisualStudioDialog({
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
     formatType, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
-    visualFilters, segmentBy, statusFilter,
+    visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf,
   ]);
 
   const canSave =
@@ -786,6 +792,12 @@ export function VisualStudioDialog({
                 </>
               )}
 
+              {isDailyPerformance && (
+                <>
+                  <Separator />
+                  <DailyPerformanceSection value={dailyPerf} onChange={setDailyPerf} />
+                </>
+              )}
               {dataSource && (
                 <>
                   <Separator />
