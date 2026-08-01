@@ -127,7 +127,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     }
 
     for (const act of data.activities as any[]) {
-      if (!(act.title === "Mudança de etapa" || act.title === "Transferido entre funis")) continue;
+      if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
       const row = stageRows.get(act.new_value);
       if (!row) continue;
