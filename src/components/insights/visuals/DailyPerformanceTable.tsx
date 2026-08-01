@@ -84,7 +84,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const { data, isLoading } = useQuery({
     queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
     enabled: !!currentUser?.account_id && days.length > 0,
-    staleTime: 120000,
+    // Etapas renomeadas/removidas no sistema precisam refletir rápido no visual.
+    staleTime: 30000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const accountId = currentUser!.account_id;
 
