@@ -1959,13 +1959,30 @@ async function fetchTasksData(
     contact_name_label: clientNames.get(t.client_id) || leadNames.get(t.lead_id) || 'Sem Contato',
   }));
 
-  // Unified (Pipedrive-style) filters
-  let filtered = rows;
+  // Campos personalizados (do negócio / lead vinculado) usados como filtro ou dimensão
+  const customKeys = new Set<string>();
   for (const f of unifiedFilters) {
-    if (f.source !== 'native') continue;
+    if (f.source !== 'native') customKeys.add(`${f.source}::${f.field}`);
+  }
+  if (isCustomFieldKey(dimension.field)) customKeys.add(dimension.field);
+
+  let enrichedRows: any[] = rows;
+  for (const key of customKeys) {
+    enrichedRows = await enrichRecordsWithCustomField(enrichedRows, accountId, key, 'tasks');
+  }
+
+  // Unified (Pipedrive-style) filters
+  let filtered = enrichedRows;
+  for (const f of unifiedFilters) {
+    const isCustom = f.source !== 'native';
+    const customKey = `${f.source}::${f.field}`;
+    if (isCustom && f.type === 'date') continue;
     const readValue = (r: any): string | null => {
-      const v = readTaskDimension(r, f.field);
-      return v ?? null;
+      if (isCustom) {
+        const v = r[customKey];
+        return v === undefined || v === null || v === '' || v === 'Não informado' ? null : String(v);
+      }
+      return readTaskDimension(r, f.field) ?? null;
     };
     filtered = filtered.filter((r) => {
       const value = readValue(r);
@@ -1991,6 +2008,7 @@ async function fetchTasksData(
   if (dimension.field === '_total') {
     return [{ name: 'Total', value: filtered.length, count: filtered.length }];
   }
+
 
   // Group by dimension
   const groups = new Map<string, number>();
