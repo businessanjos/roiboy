@@ -4,6 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { VisualConfig, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 
 interface ConfigurableGaugeProps {
   value: number;
@@ -152,6 +153,9 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
   const currentYear = now.getFullYear();
   const currentMonth = now.getMonth(); // 0-indexed
   const { currentUser } = useCurrentUser();
+  const { filters: insightsFilters } = useInsightsFilters();
+  // Dashboards compartilhados leem a conta dona do painel.
+  const gaugeAccountId = insightsFilters.accountIdOverride || currentUser?.account_id;
 
   const { goal: companyGoal } = useCompanyGoals(currentYear);
   const monthlyGoals = companyGoal?.monthly_goals as Record<string, number> | undefined;
@@ -177,13 +181,13 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
 
   // Fetch won deals revenue for the exact period
   const { data: periodRevenue } = useQuery({
-    queryKey: ['gauge-revenue', currentUser?.account_id, goalPeriod, periodStart.toISOString(), periodEnd.toISOString()],
+    queryKey: ['gauge-revenue', gaugeAccountId, goalPeriod, periodStart.toISOString(), periodEnd.toISOString()],
     queryFn: async () => {
-      if (!currentUser?.account_id) return 0;
+      if (!gaugeAccountId) return 0;
       const { data: deals, error } = await supabase
         .from('deals')
         .select('value')
-        .eq('account_id', currentUser.account_id)
+        .eq('account_id', gaugeAccountId)
         .is('deleted_at', null)
         .eq('status', 'won')
         .gte('won_at', periodStart.toISOString())
@@ -191,7 +195,7 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
       if (error) throw error;
       return (deals || []).reduce((sum, d) => sum + (d.value || 0), 0);
     },
-    enabled: !!currentUser?.account_id,
+    enabled: !!gaugeAccountId,
   });
 
   const totalRevenue = periodRevenue ?? 0;
