@@ -29,6 +29,38 @@ interface Props {
   onChange: (next: GoalVisualSettings) => void;
 }
 
+const onlyDigits = (s: string) => s.replace(/\D/g, "");
+
+/** Máscara de digitação: moeda BRL (centavos) ou inteiro com separador de milhar */
+function maskTarget(raw: string, currency: boolean) {
+  const digits = onlyDigits(raw);
+  if (!digits) return "";
+  if (currency) {
+    const cents = Number(digits);
+    return (cents / 100).toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }
+  return Number(digits).toLocaleString("pt-BR");
+}
+
+function parseTarget(raw: string, currency: boolean) {
+  const digits = onlyDigits(raw);
+  if (!digits) return 0;
+  return currency ? Number(digits) / 100 : Number(digits);
+}
+
+function targetToMasked(value: number, currency: boolean) {
+  if (!value) return "";
+  return currency
+    ? value.toLocaleString("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 2 })
+    : Math.round(value).toLocaleString("pt-BR");
+}
+
+
 export function GoalSection({ value, onChange }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id ?? null;
