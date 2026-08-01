@@ -184,6 +184,7 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
         .from('deals')
         .select('value')
         .eq('account_id', currentUser.account_id)
+        .is('deleted_at', null)
         .eq('status', 'won')
         .gte('won_at', periodStart.toISOString())
         .lte('won_at', periodEnd.toISOString());

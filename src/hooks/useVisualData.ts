@@ -284,6 +284,8 @@ async function calculateSalesCycle(
     .from('deals')
     .select('id, won_at, users!deals_responsible_user_id_fkey(name)')
     .eq('account_id', accountId)
+    // Negócios excluídos (soft delete) nunca entram em métricas.
+    .is('deleted_at', null)
     .eq('status', 'won')
     .not('won_at', 'is', null);
 
@@ -486,6 +488,7 @@ async function enrichLeadsWithOwner(accountId: string, leads: any[]): Promise<an
       .from('deals')
       .select('id, lead_id, responsible_user_id, created_at')
       .eq('account_id', accountId)
+      .is('deleted_at', null)
       .in('lead_id', batch);
 
     if (error) {
@@ -976,13 +979,15 @@ async function calculateConversionRate(
   let totalQuery = supabase
     .from('deals')
     .select('*', { count: 'exact', head: true })
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   // Build query for won deals in period
   let wonQuery = supabase
     .from('deals')
     .select('*', { count: 'exact', head: true })
     .eq('account_id', accountId)
+    .is('deleted_at', null)
     .eq('status', 'won')
     .not('won_at', 'is', null);
 
@@ -1047,7 +1052,8 @@ async function calculateConversionRateByTextDimension(
       pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   // Apply date filters using created_at for total
   if (filters.startDate) {
@@ -1145,7 +1151,8 @@ async function calculateConversionRateByPeriod(
   let query = supabase
     .from('deals')
     .select('id, status, created_at, won_at')
-    .eq('account_id', accountId);
+    .eq('account_id', accountId)
+    .is('deleted_at', null);
 
   if (filters.startDate) {
     query = query.gte('created_at', filters.startDate);
