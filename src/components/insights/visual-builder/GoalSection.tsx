@@ -114,9 +114,15 @@ export function GoalSection({ value, onChange }: Props) {
     },
   });
 
+  const changeMetric = (m: GoalMetric) => {
+    const prev = parseTarget(targetValue, isCurrencyMetric(metric));
+    setMetric(m);
+    setTargetValue(targetToMasked(prev, isCurrencyMetric(m)));
+  };
+
   const handleEntity = (e: GoalEntity) => {
     setEntity(e);
-    setMetric(GOAL_METRIC_BY_ENTITY[e][0].value);
+    changeMetric(GOAL_METRIC_BY_ENTITY[e][0].value);
   };
 
   const handleCreate = async () => {
