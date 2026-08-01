@@ -130,7 +130,7 @@ export function GoalSection({ value, onChange }: Props) {
       frequency,
       period_start: periodStart,
       period_end: periodEnd,
-      target_value: Number(String(targetValue).replace(/\./g, "").replace(",", ".")) || 0,
+      target_value: parseTarget(targetValue, isCurrencyMetric(metric)),
     } as any);
     if (created?.id) onChange({ goalId: created.id });
     setCreating(false);
