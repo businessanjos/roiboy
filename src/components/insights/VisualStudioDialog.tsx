@@ -827,7 +827,7 @@ export function VisualStudioDialog({
                 aggregation={aggregation}
                 onUseCount={() => {
                   setAggregation('count');
-                  setFormatType('number');
+                  setFormatType('decimal');
                 }}
               />
 
