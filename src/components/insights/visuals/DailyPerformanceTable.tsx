@@ -68,6 +68,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
   const businessDays = days.filter((d) => !isWeekend(d)).length || 1;
 
+  // O período é inclusivo: sem o fim do dia, o último dia do intervalo some da tabela.
+  const rangeStartIso = `${range.start}T00:00:00`;
+  const rangeEndIso = `${range.end}T23:59:59.999`;
+
   const { data, isLoading } = useQuery({
     queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
     enabled: !!currentUser?.account_id && days.length > 0,
@@ -85,30 +89,48 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (pipelineId) stagesQuery = stagesQuery.eq("pipeline_id", pipelineId);
       const { data: stages } = await stagesQuery;
 
-      // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas)
-      let dealsQuery = supabase
-        .from("deals")
-        .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
-        .eq("account_id", accountId);
-      if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
-      if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
-      const { data: deals } = await dealsQuery;
+      // Negócios do funil (para filtrar movimentações e calcular ganhos/perdas).
+      // Paginação obrigatória: o PostgREST corta em 1.000 linhas e os totais viriam menores.
+      const PAGE = 1000;
+      const deals: any[] = [];
+      for (let page = 0; page < 50; page++) {
+        let dealsQuery = supabase
+          .from("deals")
+          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
+          .eq("account_id", accountId)
+          .order("id")
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (pipelineId) dealsQuery = dealsQuery.eq("pipeline_id", pipelineId);
+        if (userId) dealsQuery = dealsQuery.eq("responsible_user_id", userId);
+        const { data: chunk, error } = await dealsQuery;
+        if (error) throw error;
+        deals.push(...(chunk || []));
+        if (!chunk || chunk.length < PAGE) break;
+      }
 
-      const dealIds = new Set((deals || []).map((d: any) => d.id));
+      const dealIds = new Set(deals.map((d: any) => d.id));
 
-      // Movimentações de etapa no período
-      const { data: activities } = await supabase
-        .from("deal_activities")
-        .select("deal_id, new_value, created_at, type, title")
-        .eq("account_id", accountId)
-        .eq("type", "stage_change")
-        .gte("created_at", range.start)
-        .lte("created_at", range.end)
-        .limit(20000);
+      // Movimentações de etapa no período (também paginadas)
+      const activities: any[] = [];
+      for (let page = 0; page < 50; page++) {
+        const { data: chunk, error } = await supabase
+          .from("deal_activities")
+          .select("deal_id, new_value, created_at, type, title")
+          .eq("account_id", accountId)
+          .eq("type", "stage_change")
+          .gte("created_at", rangeStartIso)
+          .lte("created_at", rangeEndIso)
+          .order("created_at")
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (error) throw error;
+        activities.push(...(chunk || []));
+        if (!chunk || chunk.length < PAGE) break;
+      }
 
-      return { stages: stages || [], deals: deals || [], activities: activities || [], dealIds };
+      return { stages: stages || [], deals, activities, dealIds };
     },
   });
+
 
   const rows: MetricRow[] = useMemo(() => {
     if (!data) return [];
@@ -126,6 +148,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       });
     }
 
+    // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
+    // a linha mede negócios que passaram pela etapa, não movimentações.
+    const seen = new Set<string>();
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
@@ -133,6 +158,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (!row) continue;
       const key = format(parseISO(act.created_at), "yyyy-MM-dd");
       if (!(key in row.days)) continue;
+      const dedupeKey = `${act.deal_id}|${act.new_value}|${key}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
       row.days[key] += 1;
       row.total += 1;
     }
@@ -141,33 +169,26 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", days: emptyDays(), total: 0 };
     const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", isCurrency: true, days: emptyDays(), total: 0 };
 
-    const startMs = parseISO(range.start).getTime();
-    const endMs = parseISO(range.end).getTime();
-
+    // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
       if (d.won_at) {
-        const ms = parseISO(d.won_at).getTime();
-        if (ms >= startMs && ms <= endMs) {
-          const key = format(parseISO(d.won_at), "yyyy-MM-dd");
-          if (key in won.days) {
-            won.days[key] += 1;
-            won.total += 1;
-            revenue.days[key] += Number(d.value || 0);
-            revenue.total += Number(d.value || 0);
-          }
+        const key = format(parseISO(d.won_at), "yyyy-MM-dd");
+        if (key in won.days) {
+          won.days[key] += 1;
+          won.total += 1;
+          revenue.days[key] += Number(d.value || 0);
+          revenue.total += Number(d.value || 0);
         }
       }
       if (d.lost_at) {
-        const ms = parseISO(d.lost_at).getTime();
-        if (ms >= startMs && ms <= endMs) {
-          const key = format(parseISO(d.lost_at), "yyyy-MM-dd");
-          if (key in lost.days) {
-            lost.days[key] += 1;
-            lost.total += 1;
-          }
+        const key = format(parseISO(d.lost_at), "yyyy-MM-dd");
+        if (key in lost.days) {
+          lost.days[key] += 1;
+          lost.total += 1;
         }
       }
     }
+
 
     return [...stageRows.values(), won, lost, revenue];
   }, [data, days, range.start, range.end]);
