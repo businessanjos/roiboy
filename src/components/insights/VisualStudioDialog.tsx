@@ -35,6 +35,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { getColumnsForDataSource, getDefaultColumns } from "./visuals/ConfigurableTable";
+import { DailyPerformanceSection, type DailyPerformanceSettings } from "./visual-builder/DailyPerformanceSection";
 import { buildNewVisualLayout, StoredLayout } from "./grid/layoutPlacement";
 import {
   Aggregation,
@@ -78,7 +79,7 @@ interface VisualStudioDialogProps {
 
 /** Chart types that don't take a measure/dimension pair. */
 const NO_DIMENSION_TYPES: ChartType[] = ['number', 'scorecard', 'indicator'];
-const FIXED_TYPES: ChartType[] = ['call_commercial', 'gauge', 'bubble_map'];
+const FIXED_TYPES: ChartType[] = ['call_commercial', 'gauge', 'bubble_map', 'daily_performance'];
 
 const DEFAULT_LAYOUT_SIZE: Partial<Record<ChartType, { w: number; h: number }>> = {
   number: { w: 3, h: 2 },
@@ -90,6 +91,7 @@ const DEFAULT_LAYOUT_SIZE: Partial<Record<ChartType, { w: number; h: number }>> 
   bar_stacked: { w: 12, h: 8 },
   bubble_map: { w: 12, h: 6 },
   data_table: { w: 12, h: 6 },
+  daily_performance: { w: 12, h: 8 },
 };
 
 export function VisualStudioDialog({
@@ -128,6 +130,7 @@ export function VisualStudioDialog({
   const [gaugeSubType, setGaugeSubType] = useState<GaugeSubType>('days_elapsed');
   const [indicatorMin, setIndicatorMin] = useState('0');
   const [indicatorMax, setIndicatorMax] = useState('100');
+  const [dailyPerf, setDailyPerf] = useState<DailyPerformanceSettings>({});
   const [statusFilter, setStatusFilter] = useState<'won' | 'lost' | 'open' | undefined>(undefined);
   const [title, setTitle] = useState('');
   const [titleTouched, setTitleTouched] = useState(false);
@@ -163,6 +166,7 @@ export function VisualStudioDialog({
       setGaugeSubType(baseConfig.gaugeConfig?.subType ?? 'days_elapsed');
       setIndicatorMin(String(baseConfig.indicatorConfig?.minValue ?? 0));
       setIndicatorMax(String(baseConfig.indicatorConfig?.maxValue ?? 100));
+      setDailyPerf(baseConfig.dailyPerformanceConfig ?? {});
       setStatusFilter(baseConfig.statusFilter);
       setMode('advanced');
       setRecipeId(null);
@@ -188,6 +192,7 @@ export function VisualStudioDialog({
       setGaugeSubType('days_elapsed');
       setIndicatorMin('0');
       setIndicatorMax('100');
+      setDailyPerf({});
       setStatusFilter(undefined);
       setMode('simple');
       setRecipeId(null);
@@ -244,6 +249,7 @@ export function VisualStudioDialog({
   const isTable = chartType === 'data_table';
   const isGauge = chartType === 'gauge';
   const isIndicator = chartType === 'indicator';
+  const isDailyPerformance = chartType === 'daily_performance';
   const isScorecard = NO_DIMENSION_TYPES.includes(chartType);
   const isFixed = FIXED_TYPES.includes(chartType);
   const needsDimension = !isScorecard && !isTable && !isFixed;
@@ -276,6 +282,8 @@ export function VisualStudioDialog({
       setTitle('Ranking de Vendedores');
     } else if (chartType === 'call_commercial') {
       setTitle('Calls Comerciais');
+    } else if (chartType === 'daily_performance') {
+      setTitle('Performance Diária');
     } else if (isTable) {
       setTitle('Tabela de ' + (DATA_SOURCE_FIELDS[dataSource] ? dataSource : dataSource));
     } else if (dimensionField || isScorecard) {
@@ -329,6 +337,9 @@ export function VisualStudioDialog({
         maxValue: Number(indicatorMax) || 100,
       };
     }
+    if (isDailyPerformance) {
+      next.dailyPerformanceConfig = { ...(baseConfig?.dailyPerformanceConfig ?? {}), ...dailyPerf };
+    }
 
     next = syncLegacyFilterKeys({ ...next, filters: visualFilters }, visualFilters);
 
@@ -356,7 +367,7 @@ export function VisualStudioDialog({
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
     formatType, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
-    visualFilters, segmentBy, statusFilter,
+    visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf,
   ]);
 
   const canSave =
@@ -783,6 +794,12 @@ export function VisualStudioDialog({
                 </>
               )}
 
+              {isDailyPerformance && (
+                <>
+                  <Separator />
+                  <DailyPerformanceSection value={dailyPerf} onChange={setDailyPerf} />
+                </>
+              )}
               {dataSource && (
                 <>
                   <Separator />

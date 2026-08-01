@@ -2,7 +2,7 @@ export type DataSource = 'deals' | 'leads' | 'products' | 'tasks' | 'sales_histo
 export type Aggregation = 'sum' | 'avg' | 'count' | 'conversion_rate' | 'sales_cycle';
 export type FormatType = 'currency' | 'percentage' | 'decimal';
 export type DateGrouping = 'day' | 'week' | 'month' | 'year';
-export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table';
+export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table' | 'daily_performance';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
 export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature' | 'gold' | 'midnight' | 'emerald' | 'ember' | 'slate' | 'ocean' | 'blush';
@@ -107,6 +107,13 @@ export interface VisualConfig {
   filters?: VisualFilter[];
   // Unified segmentation ("Segmentar por") descriptor
   segmentBy?: SegmentBy;
+  // Daily performance table configuration
+  dailyPerformanceConfig?: {
+    pipelineId?: string | null;
+    userId?: string | null;
+    /** Meta total do período por linha (nome da etapa ou __won__/__lost__/__revenue__) */
+    goals?: Record<string, number>;
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -465,6 +472,7 @@ export const CHART_TYPE_OPTIONS: { value: ChartType; label: string }[] = [
   { value: 'bubble_map', label: 'Mapa de Bolhas' },
   { value: 'funnel', label: 'Funil' },
   { value: 'data_table', label: 'Tabela' },
+  { value: 'daily_performance', label: 'Performance Diária' },
 ];
 
 // Date display format options

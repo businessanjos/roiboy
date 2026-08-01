@@ -75,13 +75,14 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
   const isDataTable = chartType === 'data_table';
+  const isDailyPerformance = chartType === 'daily_performance';
   const isCompactType = isScorecard || chartType === 'gauge';
   const currentColSpan = (visual as any).layout?.col_span || "1/4";
 
   const { data, isLoading, error } = useVisualData({
     config,
     chartType,
-    enabled: !!config && !isGaugeDaysElapsed && !isSalesLeads && !isStacked && !isBubbleMap && !isDataTable,
+    enabled: !!config && !isGaugeDaysElapsed && !isSalesLeads && !isStacked && !isBubbleMap && !isDataTable && !isDailyPerformance,
   });
 
   const { data: stackedResult, isLoading: stackedLoading, error: stackedError } = useStackedVisualData({

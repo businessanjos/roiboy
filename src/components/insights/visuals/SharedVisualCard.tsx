@@ -5,6 +5,7 @@ import { ConfigurableChart } from "./ConfigurableChart";
 import { VisualConfig, ChartType } from "../visual-builder/types";
 import { evaluateFormula } from "@/lib/formula-evaluator";
 import { getColumnsForDataSource, getDefaultColumns, type TableColumnDef } from "./ConfigurableTable";
+import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import type { DrilldownRecord } from "@/hooks/useVisualDrilldown";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
@@ -239,6 +240,21 @@ export function SharedVisualCard({ visual, data, stackedData, stackedSeriesKeys,
   }
 
   const hasStackedData = stackedData && stackedData.length > 0 && stackedSeriesKeys && stackedSeriesKeys.length > 0;
+
+  if (chartType === 'daily_performance') {
+    return (
+      <CardErrorBoundary title={title}>
+        <Card className="h-full flex flex-col overflow-hidden">
+          <CardHeader className="pb-1 pt-3 px-3 flex-shrink-0">
+            <CardTitle className="text-sm font-semibold truncate">{title}</CardTitle>
+          </CardHeader>
+          <CardContent className="flex-1 min-h-0 overflow-hidden p-0 px-2 pb-2">
+            <DailyPerformanceTable config={config} />
+          </CardContent>
+        </Card>
+      </CardErrorBoundary>
+    );
+  }
 
   if (chartType === 'data_table') {
     return (

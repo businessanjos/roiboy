@@ -26,6 +26,7 @@ import { StackedHorizontalBarChart } from "./StackedHorizontalBarChart";
 import { ConfigurableBubbleMap } from "./ConfigurableBubbleMap";
 import { ConfigurableFunnel } from "./ConfigurableFunnel";
 import { ConfigurableTable } from "./ConfigurableTable";
+import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
@@ -104,7 +105,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
 
 
   
-  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
+  if (type !== 'gauge' && type !== 'indicator' && type !== 'bar_stacked' && type !== 'bubble_map' && type !== 'funnel' && type !== 'data_table' && type !== 'daily_performance' && type !== 'scorecard' && type !== 'number' && (!data || data.length === 0)) {
     return (
       <div className="flex items-center justify-center h-full text-muted-foreground">
         Sem dados para exibir
@@ -169,6 +170,8 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
       return <ConfigurableFunnel data={data} formatting={formatting} appearance={config} />;
     case 'data_table':
       return <ConfigurableTable config={visualConfig!} />;
+    case 'daily_performance':
+      return <DailyPerformanceTable config={visualConfig!} />;
     default:
       return <BarChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
   }
