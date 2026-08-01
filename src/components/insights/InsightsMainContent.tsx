@@ -313,6 +313,12 @@ export function InsightsMainContent() {
                 <span className="hidden md:inline ml-2">Compartilhar</span>
               </Button>
             )}
+            {hasVisuals && (
+              <DashboardPaletteSelector
+                visuals={filteredVisuals}
+                onUpdateVisual={updateVisual}
+              />
+            )}
             {!isMobile && (
               <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
                 <Monitor className="h-4 w-4 mr-2" />
