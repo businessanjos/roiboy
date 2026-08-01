@@ -7,6 +7,9 @@ import { VisualConfig } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
 import { Target, CircleDollarSign } from "lucide-react";
+import { normalizeProductId, resolveRawToProductId } from "@/lib/insights/productLabelResolver";
+
+const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 import {
   ComposedChart,
