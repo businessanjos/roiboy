@@ -1764,11 +1764,13 @@ async function fetchTasksFunnelData(
     .eq('account_id', accountId)
     .not('completed_at', 'is', null);
 
+  // Atividades concluídas são medidas pela data de conclusão (não pelo vencimento),
+  // igual ao visual de Call Comercial — evita divergência entre os dois gráficos.
   if (filters.startDate) {
-    baseQuery = baseQuery.gte('due_date', filters.startDate.split('T')[0]);
+    baseQuery = baseQuery.gte('completed_at', filters.startDate.split('T')[0]);
   }
   if (filters.endDate) {
-    baseQuery = baseQuery.lte('due_date', filters.endDate.split('T')[0]);
+    baseQuery = baseQuery.lte('completed_at', `${filters.endDate.split('T')[0]}T23:59:59.999`);
   }
   if (filters.userId && filters.userId !== 'all') {
     baseQuery = baseQuery.eq('assigned_to', filters.userId);
