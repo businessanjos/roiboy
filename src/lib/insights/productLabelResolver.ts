@@ -76,3 +76,24 @@ export function applyProductLabels(values: string[], map: Map<string, string>): 
 }
 
 export { looksCoded };
+
+/** Normaliza um id de produto legado para o id atual (rebranding). */
+export function normalizeProductId(id: string | null | undefined): string | null {
+  if (!id) return null;
+  const trimmed = id.trim();
+  return PRODUCT_ID_ALIAS[trimmed.toLowerCase()] || trimmed;
+}
+
+/**
+ * Resolve um valor bruto de "Item da venda" (UUID, slug legado ou label)
+ * para o id de produto atual.
+ */
+export function resolveRawToProductId(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = String(raw).trim();
+  if (!trimmed) return null;
+  const id = UUID_RE.test(trimmed)
+    ? trimmed
+    : LABEL_SLUG_TO_PRODUCT_ID[trimmed.toLowerCase()] || resolveItemVendaToProductId(trimmed);
+  return normalizeProductId(id);
+}
