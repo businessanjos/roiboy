@@ -93,6 +93,7 @@ async function fetchDealsRecords(
       won_at,
       lost_at,
       deal_stages!deals_stage_id_fkey(name),
+      pipelines!deals_pipeline_id_fkey(name),
       users!deals_responsible_user_id_fkey(name)
     `)
     .eq('account_id', accountId);
@@ -440,6 +441,9 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
 
   if (field === 'stage_name') {
     return item.deal_stages?.name || 'Sem Etapa';
+  }
+  if (field === 'pipeline_name') {
+    return item.pipelines?.name || 'Sem Funil';
   }
   if (field === 'responsible_name') {
     return item.users?.name || 'Sem Responsável';

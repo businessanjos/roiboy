@@ -162,6 +162,14 @@ export async function fetchNativeFieldValues(
   if (NATIVE_STATIC_VALUES[field]) return NATIVE_STATIC_VALUES[field];
 
   if (dataSource === 'deals') {
+    if (field === 'pipeline_name') {
+      const { data } = await supabase
+        .from('pipelines')
+        .select('name')
+        .eq('account_id', accountId)
+        .order('display_order');
+      return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))];
+    }
     if (field === 'stage_name') {
       const { data } = await supabase
         .from('deal_stages')
