@@ -251,7 +251,7 @@ export function InsightsMainContent() {
 
           {/* Content: fits the whole dashboard on screen (TV) or scrolls with zoom */}
           {tvFit ? (
-            <div className="flex-1 min-h-0 overflow-hidden p-4 bg-gradient-to-b from-background to-muted/20">
+            <div className="flex-1 min-h-0 overflow-hidden p-1 bg-gradient-to-b from-background to-muted/20">
               {hasVisuals && (
                 <TvFitStage title={activeDashboard.name}>
                   <InsightsGrid
