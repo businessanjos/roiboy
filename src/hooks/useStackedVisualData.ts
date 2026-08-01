@@ -17,6 +17,49 @@ export interface StackedDataPoint {
   [key: string]: string | number;
 }
 
+/** Máximo de séries legíveis num gráfico empilhado — o excedente vira "Outros". */
+const MAX_STACK_SERIES = 12;
+
+/** Séries de um registro (multi_select gera uma série por opção, nunca combinações). */
+function seriesValuesOf(record: any, fallback: string): string[] {
+  const arr = record?._custom_stack_labels;
+  if (Array.isArray(arr) && arr.length) return arr;
+  const single = record?._custom_stack_label;
+  return [single || fallback];
+}
+
+/** Mantém as maiores séries e agrupa o restante em "Outros" para evitar legendas ilegíveis. */
+function collapseSeries(
+  data: StackedDataPoint[],
+  seriesKeys: string[],
+  max = MAX_STACK_SERIES,
+): { data: StackedDataPoint[]; seriesKeys: string[] } {
+  if (seriesKeys.length <= max) return { data, seriesKeys };
+
+  const totals = new Map<string, number>();
+  for (const key of seriesKeys) {
+    let sum = 0;
+    for (const point of data) sum += Number(point[key]) || 0;
+    totals.set(key, sum);
+  }
+
+  const kept = [...seriesKeys]
+    .sort((a, b) => (totals.get(b) || 0) - (totals.get(a) || 0))
+    .slice(0, max - 1);
+  const keptSet = new Set(kept);
+  const rest = seriesKeys.filter((k) => !keptSet.has(k));
+
+  const newData = data.map((point) => {
+    const next: StackedDataPoint = { name: point.name };
+    for (const key of kept) next[key] = Number(point[key]) || 0;
+    next['Outros'] = rest.reduce((sum, k) => sum + (Number(point[k]) || 0), 0);
+    return next;
+  });
+
+  return { data: newData, seriesKeys: [...kept, 'Outros'] };
+}
+
+
 /**
  * Enrich records with a custom field label for stacking/segmentation.
  * Fetches deal_field_values or lead_field_values, resolves labels, and injects `_custom_stack_label`.
