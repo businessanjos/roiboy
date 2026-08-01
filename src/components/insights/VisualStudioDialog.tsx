@@ -78,7 +78,7 @@ interface VisualStudioDialogProps {
 
 /** Chart types that don't take a measure/dimension pair. */
 const NO_DIMENSION_TYPES: ChartType[] = ['number', 'scorecard', 'indicator'];
-const FIXED_TYPES: ChartType[] = ['call_commercial', 'gauge', 'bubble_map'];
+const FIXED_TYPES: ChartType[] = ['call_commercial', 'gauge', 'bubble_map', 'daily_performance'];
 
 const DEFAULT_LAYOUT_SIZE: Partial<Record<ChartType, { w: number; h: number }>> = {
   number: { w: 3, h: 2 },
@@ -90,6 +90,7 @@ const DEFAULT_LAYOUT_SIZE: Partial<Record<ChartType, { w: number; h: number }>> 
   bar_stacked: { w: 12, h: 8 },
   bubble_map: { w: 12, h: 6 },
   data_table: { w: 12, h: 6 },
+  daily_performance: { w: 12, h: 8 },
 };
 
 export function VisualStudioDialog({
