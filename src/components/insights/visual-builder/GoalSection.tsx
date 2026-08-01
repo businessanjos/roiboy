@@ -17,6 +17,7 @@ import {
   GoalFrequency,
   GoalMetric,
   GoalScopeType,
+  isCurrencyMetric,
   useInsightsGoals,
 } from "@/hooks/useInsightsGoals";
 
