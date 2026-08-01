@@ -57,7 +57,7 @@ export const GOAL_SCOPE_OPTIONS: { value: GoalScopeType; label: string }[] = [
   { value: "company", label: "Empresa (todos)" },
   { value: "user", label: "Vendedor" },
   { value: "pipeline", label: "Funil" },
-  { value: "product", label: "Produto" },
+  { value: "product", label: "Item da venda" },
 ];
 
 export function isCurrencyMetric(metric: GoalMetric) {

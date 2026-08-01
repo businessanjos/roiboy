@@ -194,8 +194,13 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
             .eq("account_id", accountId!)
             .in("deal_id", batch);
           for (const row of fv || []) {
-            if (resolveRawToProductId(row.value_text) === targetId) allowed.add(row.deal_id);
+            const raw = String(row.value_text || "").trim();
+            const matches =
+              resolveRawToProductId(raw) === targetId ||
+              raw.toLowerCase() === String(g.scope_id).trim().toLowerCase();
+            if (matches) allowed.add(row.deal_id);
           }
+
         }
         scopedRows = rows.filter((r: any) => allowed.has(r.id));
       }
