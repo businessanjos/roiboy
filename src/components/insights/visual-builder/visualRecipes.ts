@@ -18,7 +18,7 @@ export interface VisualRecipe {
   /** Explicação de uma linha */
   hint: string;
   emoji: string;
-  group: 'Vendas' | 'Time' | 'Atividades' | 'Leads' | 'WhatsApp';
+  group: 'Vendas' | 'Metas' | 'Time' | 'Atividades' | 'Leads' | 'WhatsApp';
   title: string;
   chartType: ChartType;
   dataSource: DataSource;
