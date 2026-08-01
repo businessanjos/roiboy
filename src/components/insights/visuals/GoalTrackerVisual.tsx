@@ -6,6 +6,8 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { VisualConfig } from "../visual-builder/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
+import { Target, CircleDollarSign } from "lucide-react";
+
 import {
   ComposedChart,
   Bar,
