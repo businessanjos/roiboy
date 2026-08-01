@@ -364,3 +364,35 @@
 .leaflet-container {
   z-index: 0;
 }
+
+/* ---- Experiência mobile estilo app ---- */
+@supports (-webkit-touch-callout: none) {
+  html,
+  body {
+    -webkit-tap-highlight-color: transparent;
+  }
+}
+
+@media (max-width: 1023px) {
+  body {
+    overscroll-behavior-y: none;
+  }
+  /* Rolagem com inércia nativa dentro dos containers do app */
+  main,
+  [data-scroll-area] {
+    -webkit-overflow-scrolling: touch;
+  }
+  /* Evita zoom automático do iOS ao focar campos */
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
