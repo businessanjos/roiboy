@@ -274,20 +274,21 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
                       {v === 0 ? (
                         <span className="text-muted-foreground/40">—</span>
                       ) : (
-                        <span className={achievementClass(v, dailyGoal)}>
+                        <span className={row.valueClass || achievementClass(v, dailyGoal)}>
                           {formatCompactNumber(v, !!row.isCurrency)}
                         </span>
                       )}
                     </td>
                   );
                 })}
-                <td className="px-3 py-2 text-right font-semibold">
+                <td className={cn("px-3 py-2 text-right font-semibold", row.valueClass)}>
                   {row.total === 0 ? (
                     <span className="text-muted-foreground/40">—</span>
                   ) : (
                     formatCompactNumber(row.total, !!row.isCurrency)
                   )}
                 </td>
+
                 <td className={cn("px-3 py-2 text-right", pct === null ? "text-muted-foreground/40" : achievementClass(pct, 100))}>
                   {pct === null ? "—" : `${pct}%`}
                 </td>
