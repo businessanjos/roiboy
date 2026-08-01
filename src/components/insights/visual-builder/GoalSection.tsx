@@ -365,8 +365,16 @@ export function GoalSection({ value, onChange }: Props) {
               <Input type="date" value={periodEnd} onChange={(e) => setPeriodEnd(e.target.value)} />
             </div>
             <div className="space-y-1">
-              <Label className="text-xs text-muted-foreground">Valor por período</Label>
-              <Input value={targetValue} onChange={(e) => setTargetValue(e.target.value)} inputMode="decimal" />
+              <Label className="text-xs text-muted-foreground">
+                {isCurrencyMetric(metric) ? "Valor por período (R$)" : "Quantidade por período"}
+              </Label>
+              <Input
+                value={targetValue}
+                placeholder={isCurrencyMetric(metric) ? "R$ 0,00" : "0"}
+                onChange={(e) => setTargetValue(maskTarget(e.target.value, isCurrencyMetric(metric)))}
+                inputMode="numeric"
+              />
+
             </div>
           </div>
 
