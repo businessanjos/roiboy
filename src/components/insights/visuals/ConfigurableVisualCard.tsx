@@ -71,7 +71,10 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
   const isScorecard = ['number', 'scorecard', 'kpi'].includes(chartType);
   const isSalesLeads = isScorecard && config?.gaugeConfig?.subType === 'sales_leads';
-  const isStacked = (chartType === 'bar_stacked' && !!config?.stackBy) || !!config?.stackByCustomField;
+  // Segmentação (stackBy) vale para qualquer tipo de barra: sem isso o gráfico
+  // vira uma série única sem cores/legenda por categoria.
+  const isSegmentable = chartType === 'bar' || chartType === 'bar_horizontal' || chartType === 'bar_stacked';
+  const isStacked = isSegmentable && (!!config?.stackBy || !!config?.stackByCustomField);
   const effectiveChartType = isStacked && (chartType === 'bar' || chartType === 'bar_horizontal') ? 'bar_stacked' : chartType;
   const isBubbleMap = chartType === 'bubble_map';
   const isDataTable = chartType === 'data_table';
