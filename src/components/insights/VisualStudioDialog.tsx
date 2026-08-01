@@ -220,7 +220,8 @@ export function VisualStudioDialog({
     const nextMeasure = fields.numeric[0]?.value ?? null;
     setMeasureField(nextMeasure);
     if (!fields.numeric.length) setAggregation('count');
-    setDimensionField(null);
+    // Itens da Venda já nasce agrupado pelo item da venda
+    setDimensionField(next === 'sale_items' ? 'product' : null);
     setSegmentBy(null);
     setVisualFilters([]);
     setTableColumns(getDefaultColumns(next));

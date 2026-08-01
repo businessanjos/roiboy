@@ -94,7 +94,8 @@ const SALES_HISTORY_COLUMNS: TableColumnDef[] = [
 
 export function getColumnsForDataSource(dataSource: DataSource): TableColumnDef[] {
   switch (dataSource) {
-    case 'deals': return DEAL_COLUMNS;
+    case 'deals':
+    case 'sale_items': return DEAL_COLUMNS;
     case 'leads': return LEAD_COLUMNS;
     case 'tasks': return TASK_COLUMNS;
     case 'products': return PRODUCT_COLUMNS;
@@ -127,7 +128,8 @@ export function buildCustomFieldColumns(cfKeys: string[], records: DrilldownReco
 
 export function getDefaultColumns(dataSource: DataSource): string[] {
   switch (dataSource) {
-    case 'deals': return ['name', 'value', 'status', 'stage', 'responsible'];
+    case 'deals':
+    case 'sale_items': return ['name', 'value', 'status', 'stage', 'responsible'];
     case 'leads': return ['name', 'status', 'source', 'date'];
     case 'tasks': return ['name', 'status', 'activity_type', 'responsible', 'date'];
     case 'products': return ['name', 'value', 'status', 'date'];
