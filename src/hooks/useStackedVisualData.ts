@@ -156,6 +156,19 @@ interface UseStackedVisualDataParams {
   enabled?: boolean;
 }
 
+
+/**
+ * Agrupamento diário em janelas longas (ex.: "Este Ano") gera centenas de
+ * barras ilegíveis. Acima de ~2 meses o gráfico passa a agrupar por mês.
+ */
+function rollUpLongDayGroupingStacked<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string): T {
+  if (!cfg || (cfg as any).dimension?.dateGrouping !== 'day') return cfg;
+  if (!startDate || !endDate) return cfg;
+  const days = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000;
+  if (days <= 62) return cfg;
+  return { ...(cfg as any), dimension: { ...(cfg as any).dimension, dateGrouping: 'month' } } as T;
+}
+
 export function useStackedVisualData({ config, enabled = true }: UseStackedVisualDataParams) {
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
@@ -171,7 +184,10 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
         endDate: config.fixedDateRange.endDate,
       };
     }
-    if (config?.dimension?.dateGrouping === 'day') {
+    // Daily grouping only falls back to the current month when the dashboard
+    // has no explicit period selected. Overriding an explicit range (e.g.
+    // "Este Ano") would empty the chart on the first days of a month.
+    if (config?.dimension?.dateGrouping === 'day' && !globalFilters.startDate && !globalFilters.endDate) {
       const now = new Date();
       return {
         ...globalFilters,
@@ -182,17 +198,19 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
     return globalFilters;
   })();
 
+  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate);
+
   return useQuery({
-    queryKey: ['stacked-visual-data', config, filters, accountId],
+    queryKey: ['stacked-visual-data', effectiveConfig, filters, accountId],
     queryFn: async (): Promise<{ data: StackedDataPoint[]; seriesKeys: string[] }> => {
       if (!config || !accountId || (!config.stackBy && !config.stackByCustomField)) {
         return { data: [], seriesKeys: [] };
       }
 
-      if (config.dataSource === 'leads') {
-        return fetchStackedLeadsData(accountId, config, filters);
+      if (effectiveConfig!.dataSource === 'leads') {
+        return fetchStackedLeadsData(accountId, effectiveConfig!, filters);
       }
-      return fetchStackedDealsData(accountId, config, filters);
+      return fetchStackedDealsData(accountId, effectiveConfig!, filters);
     },
     enabled: enabled && !!config && (!!config.stackBy || !!config.stackByCustomField) && !!accountId,
     staleTime: 120000,
@@ -426,7 +444,7 @@ async function fetchStackedDealsData(
         const weekStart = startOfWeek(date, { weekStartsOn: 1 });
         return format(weekStart, 'yyyy-MM-dd');
       }
-      default: return format(date, 'dd');
+      default: return format(date, 'yyyy-MM-dd');
     }
   };
 
@@ -440,7 +458,7 @@ async function fetchStackedDealsData(
       }
       case 'week': return `Sem ${format(date, 'II')}`;
       default:
-        return format(date, 'dd');
+        return format(date, 'dd/MM');
     }
   };
 
@@ -455,13 +473,11 @@ async function fetchStackedDealsData(
     case 'week':
       eachWeekOfInterval({ start: rangeStart, end: rangeEnd }, { weekStartsOn: 1 }).forEach(d => allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) }));
       break;
-    default: {
-      const today = new Date().getDate();
-      for (let d = 1; d <= today; d++) {
-        const key = String(d).padStart(2, '0');
-        allPeriods.push({ key, label: key });
-      }
-    }
+    default:
+      eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+        allPeriods.push({ key: getPeriodKey(d), label: getPeriodLabel(d) })
+      );
+      break;
   }
 
   const periodMap = new Map<string, Map<string, number>>();
@@ -607,7 +623,7 @@ async function fetchStackedLeadsData(
           periodKey = format(weekStart, 'yyyy-MM-dd');
           break;
         }
-        default: periodKey = format(date, 'dd'); break; // day of month
+        default: periodKey = format(date, 'yyyy-MM-dd'); break;
       }
 
       const seriesValue = getFieldValue(lead, stackByField);
@@ -623,13 +639,7 @@ async function fetchStackedLeadsData(
     // Generate all periods
     const allPeriods: { key: string; label: string }[] = [];
 
-    if (dateGrouping === 'day') {
-      const today = new Date().getDate();
-      for (let d = 1; d <= today; d++) {
-        const key = String(d).padStart(2, '0');
-        allPeriods.push({ key, label: key });
-      }
-    } else {
+    {
       // Determine range from filters
       let rangeStart: Date;
       let rangeEnd: Date;
@@ -664,6 +674,11 @@ async function fetchStackedLeadsData(
             const ws = startOfWeek(d, { weekStartsOn: 1 });
             allPeriods.push({ key: format(ws, 'yyyy-MM-dd'), label: `Sem ${format(ws, 'II')}` });
           });
+          break;
+        default:
+          eachDayOfInterval({ start: rangeStart, end: rangeEnd }).forEach(d =>
+            allPeriods.push({ key: format(d, 'yyyy-MM-dd'), label: format(d, 'dd/MM') })
+          );
           break;
       }
     }
