@@ -821,7 +821,15 @@ export function VisualStudioDialog({
 
 
               <Separator />
-              <FormattingSection value={formatType} onChange={setFormatType} />
+              <FormattingSection
+                value={formatType}
+                onChange={setFormatType}
+                aggregation={aggregation}
+                onUseCount={() => {
+                  setAggregation('count');
+                  setFormatType('number');
+                }}
+              />
 
               <Separator />
               <AppearanceSection
