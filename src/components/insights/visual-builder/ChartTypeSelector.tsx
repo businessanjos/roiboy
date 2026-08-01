@@ -23,6 +23,7 @@ const ICON_MAP: Record<ChartType, React.ElementType> = {
   bubble_map: MapPin,
   funnel: Filter,
   data_table: Table,
+  daily_performance: CalendarRange,
 };
 
 export function ChartTypeSelector({ value, onChange }: ChartTypeSelectorProps) {
