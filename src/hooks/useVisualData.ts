@@ -129,13 +129,37 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
 
       // For funnel with stage_name, sort by pipeline display_order
       if (chartType === 'funnel' && dimension.field === 'stage_name') {
-        const { data: stages, error: stagesError } = await supabase
+        // Respect an active "Funil" (pipeline) filter: only stages of the
+        // selected pipeline(s) should compose the funnel skeleton.
+        const pipelineFilter = (config.filters || []).find(
+          (f: any) => f.field === 'pipeline_name' && (f.operator === 'is' || f.operator === 'is_any') && (f.values?.length || 0) > 0
+        );
+        let allowedPipelineIds: string[] | null = null;
+        if (pipelineFilter) {
+          const { data: pipelineRows } = await supabase
+            .from('pipelines')
+            .select('id, name')
+            .eq('account_id', accountId);
+          const wanted = new Set(pipelineFilter.values.map((v: string) => v.toLowerCase()));
+          allowedPipelineIds = (pipelineRows || [])
+            .filter((p: any) => wanted.has(String(p.name).toLowerCase()))
+            .map((p: any) => p.id);
+        }
+
+        let stagesQuery = supabase
           .from('deal_stages')
           .select('id, name, display_order, color, pipeline_id')
           .eq('account_id', accountId)
           .order('display_order', { ascending: true });
 
+        if (allowedPipelineIds && allowedPipelineIds.length > 0) {
+          stagesQuery = stagesQuery.in('pipeline_id', allowedPipelineIds);
+        }
+
+        const { data: stages, error: stagesError } = await stagesQuery;
+
         if (stagesError) console.error('Error fetching stages order:', stagesError);
+
 
         if (stages && stages.length > 0) {
           // Validate: same stage name MUST NOT appear twice in the same pipeline.
