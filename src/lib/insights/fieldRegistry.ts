@@ -56,6 +56,8 @@ function nativeFieldsFor(dataSource: DataSource): CatalogField[] {
 export function customEntityFor(dataSource: DataSource): FilterFieldSource[] {
   if (dataSource === 'deals') return ['deal_custom', 'lead_custom'];
   if (dataSource === 'leads') return ['lead_custom'];
+  // Atividades herdam os campos do negócio / lead vinculado
+  if (dataSource === 'tasks') return ['deal_custom', 'lead_custom'];
   return [];
 }
 
