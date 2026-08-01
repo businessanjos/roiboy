@@ -177,7 +177,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
     // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
-      if (d.won_at) {
+      // Um negócio reaberto e depois perdido mantém o `won_at` antigo:
+      // só conta como Venda/Receita quem está de fato com status ganho.
+      if (d.status === "won" && d.won_at) {
         const key = format(parseISO(d.won_at), "yyyy-MM-dd");
         if (key in won.days) {
           won.days[key] += 1;
@@ -186,7 +188,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
           revenue.total += Number(d.value || 0);
         }
       }
-      if (d.lost_at) {
+      if (d.status === "lost" && d.lost_at) {
         const key = format(parseISO(d.lost_at), "yyyy-MM-dd");
         if (key in lost.days) {
           lost.days[key] += 1;
