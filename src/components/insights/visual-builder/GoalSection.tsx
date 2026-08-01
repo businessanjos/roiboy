@@ -289,7 +289,7 @@ export function GoalSection({ value, onChange }: Props) {
             </div>
             <div className="space-y-1">
               <Label className="text-xs text-muted-foreground">Métrica</Label>
-              <Select value={metric} onValueChange={(v) => setMetric(v as GoalMetric)}>
+              <Select value={metric} onValueChange={(v) => changeMetric(v as GoalMetric)}>
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   {GOAL_METRIC_BY_ENTITY[entity].map((o) => (
