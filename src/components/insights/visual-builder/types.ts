@@ -568,6 +568,7 @@ export const DATA_SOURCE_FIELDS: Record<DataSource, {
     dimension: [
       { value: 'status', label: 'Status', type: 'text' },
       { value: 'source', label: 'Origem', type: 'text' },
+      { value: 'pipeline_name', label: 'Funil', type: 'text' },
       { value: 'stage_name', label: 'Etapa do Funil', type: 'text' },
       { value: 'responsible_name', label: 'Vendedor', type: 'text' },
       { value: 'created_at', label: 'Data de Criação', type: 'date' },
