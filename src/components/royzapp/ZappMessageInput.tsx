@@ -899,7 +899,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0"
+                className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-accent text-white hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
                 onClick={(e) => {
                   e.preventDefault();
                   onSendMessage();
@@ -907,9 +907,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 disabled={sendingMessage}
               >
                 {sendingMessage ? (
-                  <Loader2 className="h-6 w-6 animate-spin" />
+                  <Loader2 className="h-5 w-5 sm:h-6 sm:w-6 animate-spin" />
                 ) : (
-                  <Send className="h-6 w-6" />
+                  <Send className="h-5 w-5 sm:h-6 sm:w-6" />
                 )}
               </Button>
             ) : (
@@ -918,11 +918,11 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0"
+                    className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-hover text-zapp-text sm:bg-transparent sm:text-zapp-text-muted sm:hover:bg-zapp-hover"
                     onClick={onStartRecording}
                     disabled={uploadingMedia}
                   >
-                    <Mic className="h-6 w-6" />
+                    <Mic className="h-5 w-5 sm:h-6 sm:w-6" />
                   </Button>
                 </TooltipTrigger>
                 <TooltipContent side="top">Gravar áudio</TooltipContent>
