@@ -212,23 +212,28 @@ export function useVisualData({ config, chartType, enabled = true }: UseVisualDa
         }
 
 
-        // Append "Ganhos" (won deals) using the same filters as regular stages
+        // Append "Ganhos" (won deals) using the same measure and filters
+        // as the regular stages (including the pipeline/funil filter).
         const wonResult = await fetchDealsData(
           accountId,
-          { field: 'value', aggregation: 'count' },
+          measure,
           { field: '_total', type: 'text' },
           { ...filters, startDate: filters.startDate, endDate: filters.endDate },
           dateDisplayFormat,
           'won',
-           leadFilters,
-           dealFilters
+          leadFilters,
+          dealFilters,
+          ['won'],
+          unifiedFilters
         );
-        const wonCount = wonResult.length > 0 ? wonResult[0].value : 0;
+        const wonValue = wonResult.length > 0 ? wonResult[0].value : 0;
         result.push({
           name: 'Ganhos',
-          value: wonCount,
+          value: wonValue,
+          count: wonResult.length > 0 ? wonResult[0].count : undefined,
           color: '#10b981',
         });
+
       } else if (chartType === 'funnel' && dataSource === 'tasks') {
         // Task funnel: order is already fixed by TASK_FUNNEL_ORDER, skip sorting
       } else if (chartType === 'funnel' && dimension.type !== 'date') {
