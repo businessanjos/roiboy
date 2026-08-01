@@ -32,8 +32,10 @@ interface Props {
 export function GoalSection({ value, onChange }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id ?? null;
-  const { goals, createGoal, deleteGoal } = useInsightsGoals();
+  const { goals, createGoal, updateGoal, deleteGoal } = useInsightsGoals();
   const [creating, setCreating] = useState(false);
+  const selectedGoal = goals.find((g) => g.id === value.goalId) || null;
+  const [editTarget, setEditTarget] = useState<string | null>(null);
 
   const year = new Date().getFullYear();
   const [name, setName] = useState("Nova meta");
@@ -137,6 +139,87 @@ export function GoalSection({ value, onChange }: Props) {
           </Button>
         )}
       </div>
+
+      {selectedGoal && !creating && (
+        <div className="space-y-3 rounded-lg border border-border p-3">
+          <div className="grid grid-cols-3 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Início</Label>
+              <Input
+                type="date"
+                value={selectedGoal.period_start}
+                onChange={(e) =>
+                  updateGoal.mutate({ id: selectedGoal.id, period_start: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Fim</Label>
+              <Input
+                type="date"
+                value={selectedGoal.period_end}
+                onChange={(e) =>
+                  updateGoal.mutate({ id: selectedGoal.id, period_end: e.target.value })
+                }
+              />
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Valor por período</Label>
+              <Input
+                inputMode="decimal"
+                value={editTarget ?? String(selectedGoal.target_value ?? 0)}
+                onChange={(e) => setEditTarget(e.target.value)}
+                onBlur={() => {
+                  if (editTarget === null) return;
+                  const parsed =
+                    Number(String(editTarget).replace(/\./g, "").replace(",", ".")) || 0;
+                  if (parsed !== Number(selectedGoal.target_value ?? 0)) {
+                    updateGoal.mutate({ id: selectedGoal.id, target_value: parsed });
+                  }
+                  setEditTarget(null);
+                }}
+              />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Frequência</Label>
+              <Select
+                value={selectedGoal.frequency}
+                onValueChange={(v) =>
+                  updateGoal.mutate({ id: selectedGoal.id, frequency: v as GoalFrequency })
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {GOAL_FREQUENCY_OPTIONS.map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">Métrica</Label>
+              <Select
+                value={selectedGoal.metric}
+                onValueChange={(v) =>
+                  updateGoal.mutate({ id: selectedGoal.id, metric: v as GoalMetric })
+                }
+              >
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {GOAL_METRIC_BY_ENTITY[selectedGoal.entity].map((o) => (
+                    <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            O valor é a meta de cada período (ex.: por mês) e alimenta a linha tracejada do gráfico.
+          </p>
+        </div>
+      )}
 
       {creating && (
         <div className="space-y-3 rounded-lg border border-border p-3">
