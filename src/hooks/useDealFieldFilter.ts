@@ -109,6 +109,21 @@ export async function filterByDealField<T extends { id: string; created_at?: str
   // Match values
   const matchingDealIds = new Set<string>();
 
+  // Produtos ("Item da Venda") são gravados de várias formas: slug legado
+  // (rykas_mentoring), uuid antigo (RM) e uuid atual (EM). Resolvemos tudo para
+  // o produto atual para que uma seleção capture todas as variações.
+  const targetProductIds = await resolveNamesToProductIds([
+    ...dealFieldFilter.selectedValues,
+    ...(dealFieldFilter.selectedValues
+      .map((label) => optionLabelToValue.get(label))
+      .filter(Boolean) as string[]),
+  ]);
+  const matchesProduct = (raw: any) => {
+    if (!raw || targetProductIds.size === 0) return false;
+    const id = resolveRawToProductId(String(raw));
+    return !!id && targetProductIds.has(id);
+  };
+
   if (isMultiSelect) {
     // Map selected labels to their option value keys
     const selectedValueKeys = new Set(
@@ -120,7 +135,7 @@ export async function filterByDealField<T extends { id: string; created_at?: str
     for (const row of allValues) {
       if (row.value_json && Array.isArray(row.value_json)) {
         for (const val of row.value_json) {
-          if (selectedValueKeys.has(val)) {
+          if (selectedValueKeys.has(val) || matchesProduct(val)) {
             matchingDealIds.add(row.deal_id);
             break;
           }
@@ -135,14 +150,14 @@ export async function filterByDealField<T extends { id: string; created_at?: str
     );
 
     for (const row of allValues) {
-      if (row.value_text && selectedValueKeys.has(row.value_text)) {
+      if (row.value_text && (selectedValueKeys.has(row.value_text) || matchesProduct(row.value_text))) {
         matchingDealIds.add(row.deal_id);
       }
     }
   } else {
     const selectedSet = new Set(dealFieldFilter.selectedValues);
     for (const row of allValues) {
-      if (row.value_text && selectedSet.has(row.value_text)) {
+      if (row.value_text && (selectedSet.has(row.value_text) || matchesProduct(row.value_text))) {
         matchingDealIds.add(row.deal_id);
       }
     }
@@ -150,6 +165,7 @@ export async function filterByDealField<T extends { id: string; created_at?: str
 
   return records.filter(r => matchingDealIds.has(r.id));
 }
+
 
 /**
  * Apply multiple deal field filters sequentially (AND logic).
