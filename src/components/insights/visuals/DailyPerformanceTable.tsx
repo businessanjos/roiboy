@@ -166,7 +166,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
         if (!chunk || chunk.length < PAGE) break;
       }
 
-      return { stages: stages || [], deals, activities, dealIds };
+      return { stages: stages || [], deals, activities, dealIds, repescagemDealIds };
     },
   });
 
