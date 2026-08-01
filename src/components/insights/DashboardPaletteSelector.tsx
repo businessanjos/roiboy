@@ -28,7 +28,11 @@ export function DashboardPaletteSelector({
 
   // Current palette = the one shared by all visuals (if any)
   const palettes = new Set(
-    visuals.map((v) => ((v.config as any)?.colorPalette as string) || "professional")
+    visuals.map(
+      (v) =>
+        (((v.config as any)?.appearance?.colorPalette ??
+          (v.config as any)?.colorPalette) as string) || "professional"
+    )
   );
   const currentPalette = palettes.size === 1 ? ([...palettes][0] as ColorPalette) : null;
 
@@ -38,9 +42,13 @@ export function DashboardPaletteSelector({
     try {
       for (const v of visuals) {
         const cfg = (v.config as any) || {};
-        if (cfg.colorPalette === palette) continue;
+        if (cfg?.appearance?.colorPalette === palette) continue;
         await onUpdateVisual(v.id, {
-          config: { ...cfg, colorPalette: palette },
+          config: {
+            ...cfg,
+            colorPalette: palette,
+            appearance: { ...(cfg.appearance || {}), colorPalette: palette },
+          },
         });
       }
       toast.success("Paleta aplicada a todos os visuais");
@@ -52,6 +60,7 @@ export function DashboardPaletteSelector({
       setApplying(null);
     }
   };
+
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
