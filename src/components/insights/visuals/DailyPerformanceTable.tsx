@@ -53,8 +53,11 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const userId = dp.userId && dp.userId !== "all" ? dp.userId : (filters.userId !== "all" ? filters.userId : null);
 
   const range = useMemo(() => {
-    const start = config.fixedDateRange?.startDate || filters.startDate;
-    const end = config.fixedDateRange?.endDate || filters.endDate;
+    // Os filtros globais podem entregar ISO completo ("2026-01-01T00:00:00.000Z");
+    // normalizamos para YYYY-MM-DD antes de montar os limites do período.
+    const toDay = (v?: string) => (v ? String(v).slice(0, 10) : "");
+    const start = toDay(config.fixedDateRange?.startDate || filters.startDate);
+    const end = toDay(config.fixedDateRange?.endDate || filters.endDate);
     return { start, end };
   }, [config.fixedDateRange, filters.startDate, filters.endDate]);
 
@@ -71,6 +74,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   // O período é inclusivo: sem o fim do dia, o último dia do intervalo some da tabela.
   const rangeStartIso = `${range.start}T00:00:00`;
   const rangeEndIso = `${range.end}T23:59:59.999`;
+
 
   const { data, isLoading } = useQuery({
     queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
