@@ -32,8 +32,10 @@ interface Props {
 export function GoalSection({ value, onChange }: Props) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id ?? null;
-  const { goals, createGoal, deleteGoal } = useInsightsGoals();
+  const { goals, createGoal, updateGoal, deleteGoal } = useInsightsGoals();
   const [creating, setCreating] = useState(false);
+  const selectedGoal = goals.find((g) => g.id === value.goalId) || null;
+  const [editTarget, setEditTarget] = useState<string | null>(null);
 
   const year = new Date().getFullYear();
   const [name, setName] = useState("Nova meta");
