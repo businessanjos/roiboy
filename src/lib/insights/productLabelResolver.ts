@@ -97,3 +97,29 @@ export function resolveRawToProductId(raw: string | null | undefined): string | 
     : LABEL_SLUG_TO_PRODUCT_ID[trimmed.toLowerCase()] || resolveItemVendaToProductId(trimmed);
   return normalizeProductId(id);
 }
+
+/**
+ * Resolve nomes de produtos (labels exibidos nos filtros) para os ids atuais.
+ * Usado para casar seleções como "EM l Eternum Mentoring" com todos os valores
+ * brutos equivalentes (slug legado, uuid antigo do RM, uuid atual).
+ */
+export async function resolveNamesToProductIds(names: string[]): Promise<Set<string>> {
+  const out = new Set<string>();
+  const clean = Array.from(new Set(names.map((n) => String(n || "").trim()).filter(Boolean)));
+  if (clean.length === 0) return out;
+
+  for (const n of clean) {
+    const direct = resolveRawToProductId(n);
+    if (direct) out.add(direct);
+  }
+
+  const { data } = await supabase.from("products").select("id, name");
+  const lower = new Set(clean.map((n) => n.toLowerCase()));
+  for (const p of data || []) {
+    if (lower.has(String(p.name || "").trim().toLowerCase())) {
+      const id = normalizeProductId(p.id);
+      if (id) out.add(id);
+    }
+  }
+  return out;
+}
