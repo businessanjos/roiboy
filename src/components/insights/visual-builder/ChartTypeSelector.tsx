@@ -1,4 +1,4 @@
-import { BarChart3, LineChart, PieChart, Hash, Trophy, Phone, Gauge, Activity, MapPin, Filter, Table } from "lucide-react";
+import { BarChart3, LineChart, PieChart, Hash, Trophy, Phone, Gauge, Activity, MapPin, Filter, Table, CalendarRange } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Label } from "@/components/ui/label";
 import { ChartType, CHART_TYPE_OPTIONS } from "./types";
