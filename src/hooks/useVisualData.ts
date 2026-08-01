@@ -8,7 +8,7 @@ import { format, parseISO, startOfWeek, eachMonthOfInterval, eachWeekOfInterval,
 import { ptBR } from "date-fns/locale";
 import { filterByLeadField, filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealField, filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { buildFunnelStageData, detectDuplicateStagesInPipeline } from "@/hooks/funnelData";
+import { buildFunnelStageData, detectDuplicateStagesInPipeline, normalizeStageName } from "@/hooks/funnelData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
