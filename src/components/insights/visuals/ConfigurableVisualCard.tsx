@@ -2,7 +2,9 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns, Copy } from "lucide-react";
+import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
+import { buildNewVisualLayout } from "../grid/layoutPlacement";
 import { RankingPresentationDialog, PresentationOptions } from "./RankingPresentationDialog";
 import { RankingPresentationView } from "./RankingPresentationView";
 import { useVisualData } from "@/hooks/useVisualData";
@@ -69,6 +71,34 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presentDialogOpen, setPresentDialogOpen] = useState(false);
   const [presentationOptions, setPresentationOptions] = useState<PresentationOptions | null>(null);
+  const [duplicating, setDuplicating] = useState(false);
+
+  const dashboardsCtx = useInsightsDashboardsSafe();
+  const canDuplicate = !readOnly && !!dashboardsCtx?.addVisual && !!(visual.dashboard_id ?? dashboardsCtx?.activeDashboardId);
+
+  const handleDuplicate = async () => {
+    if (!dashboardsCtx?.addVisual || duplicating) return;
+    const dashboardId = visual.dashboard_id ?? dashboardsCtx.activeDashboardId;
+    if (!dashboardId) return;
+    setDuplicating(true);
+    try {
+      const existing = ((dashboardsCtx as any)?.visuals ?? []).map((v: any) => v?.layout);
+      const current = visual.layout;
+      const legacyW = current?.w ? Math.max(1, Math.round(current.w / ((current.scale ?? 48) / 12))) : 6;
+      const legacyH = current?.h ? Math.max(1, Math.round(current.h / 5)) : 4;
+      await dashboardsCtx.addVisual({
+        dashboard_id: dashboardId,
+        title: `${visual.title || "Visual"} (cópia)`,
+        chart_type: visual.chart_type,
+        config: JSON.parse(JSON.stringify(visual.config ?? {})),
+        layout: { ...buildNewVisualLayout(existing, legacyW, legacyH), col_span: current?.col_span },
+      } as any);
+    } catch (e) {
+      console.error("Erro ao duplicar visual:", e);
+    } finally {
+      setDuplicating(false);
+    }
+  };
 
   // Days elapsed gauge doesn't need data from the database
   const isGaugeDaysElapsed = chartType === 'gauge' && config?.gaugeConfig?.subType === 'days_elapsed';
@@ -320,19 +350,35 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                     <TooltipContent>Explorar Dados</TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <button 
-                        onClick={() => setSettingsOpen(true)}
-                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
-                      >
-                        <Settings className="h-4 w-4" />
-                      </button>
-                    </TooltipTrigger>
-                    <TooltipContent>Ajustes do Visual</TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
+                 {canDuplicate && (
+                   <TooltipProvider>
+                     <Tooltip>
+                       <TooltipTrigger asChild>
+                         <button
+                           onClick={handleDuplicate}
+                           disabled={duplicating}
+                           className="text-muted-foreground hover:text-foreground transition-colors p-1 disabled:opacity-50"
+                         >
+                           <Copy className="h-4 w-4" />
+                         </button>
+                       </TooltipTrigger>
+                       <TooltipContent>Duplicar Visual</TooltipContent>
+                     </Tooltip>
+                   </TooltipProvider>
+                 )}
+                 <TooltipProvider>
+                   <Tooltip>
+                     <TooltipTrigger asChild>
+                       <button 
+                         onClick={() => setSettingsOpen(true)}
+                         className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                       >
+                         <Settings className="h-4 w-4" />
+                       </button>
+                     </TooltipTrigger>
+                     <TooltipContent>Ajustes do Visual</TooltipContent>
+                   </Tooltip>
+                 </TooltipProvider>
                 {isCompactType && onUpdateVisual && (
                   <Popover>
                     <TooltipProvider>
