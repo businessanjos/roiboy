@@ -160,6 +160,8 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
     // a linha mede negócios que passaram pela etapa, não movimentações.
     const seen = new Set<string>();
+    // Negócios únicos que passaram por cada etapa (base do total em formato funil).
+    const stageDeals = new Map<string, Set<string>>();
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
@@ -171,12 +173,24 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
       row.days[key] += 1;
-      row.total += 1;
+      if (!stageDeals.has(row.key)) stageDeals.set(row.key, new Set());
+      stageDeals.get(row.key)!.add(act.deal_id);
     }
 
-    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", days: emptyDays(), total: 0 };
-    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", days: emptyDays(), total: 0 };
-    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", isCurrency: true, days: emptyDays(), total: 0 };
+    // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
+    // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
+    const orderedStages = [...stageRows.values()];
+    for (let i = 0; i < orderedStages.length; i++) {
+      const acc = new Set<string>();
+      for (let j = i; j < orderedStages.length; j++) {
+        for (const id of stageDeals.get(orderedStages[j].key) || []) acc.add(id);
+      }
+      orderedStages[i].total = acc.size;
+    }
+
+    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", valueClass: "text-emerald-400", days: emptyDays(), total: 0 };
+    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", valueClass: "text-red-400", days: emptyDays(), total: 0 };
+    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", valueClass: "text-emerald-400", isCurrency: true, days: emptyDays(), total: 0 };
 
     // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
@@ -201,8 +215,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     }
 
 
-    return [...stageRows.values(), won, lost, revenue];
+    return [...orderedStages, won, lost, revenue];
   }, [data, days, range.start, range.end]);
+
 
   if (isLoading) {
     return (
