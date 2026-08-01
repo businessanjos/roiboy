@@ -84,7 +84,10 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const { data, isLoading } = useQuery({
     queryKey: ["daily-performance", currentUser?.account_id, pipelineId, userId, range.start, range.end],
     enabled: !!currentUser?.account_id && days.length > 0,
-    staleTime: 120000,
+    // Etapas renomeadas/removidas no sistema precisam refletir rápido no visual.
+    staleTime: 30000,
+    refetchOnMount: true,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const accountId = currentUser!.account_id;
 
@@ -105,7 +108,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       for (let page = 0; page < 50; page++) {
         let dealsQuery = supabase
           .from("deals")
-          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id")
+          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id, stage_id")
           .eq("account_id", accountId)
           // Negócios excluídos (soft delete) nunca entram na auditoria.
           .is("deleted_at", null)
@@ -159,6 +162,18 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       });
     }
 
+    // Etapas removidas/renomeadas no sistema deixam histórico com o nome antigo.
+    // Nesses casos, o movimento é atribuído à etapa atual do negócio (para onde
+    // ele foi migrado), mantendo o funil coerente com a configuração vigente.
+    const stageNameById = new Map<string, string>(
+      (data.stages as any[]).map((s: any) => [s.id, s.name])
+    );
+    const currentStageByDeal = new Map<string, string>(
+      (data.deals as any[])
+        .filter((d: any) => d.stage_id && stageNameById.has(d.stage_id))
+        .map((d: any) => [d.id, stageNameById.get(d.stage_id)!])
+    );
+
     // Um negócio que volta para a mesma etapa no mesmo dia conta uma vez só:
     // a linha mede negócios que passaram pela etapa, não movimentações.
     const seen = new Set<string>();
@@ -167,17 +182,22 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     for (const act of data.activities as any[]) {
       if (act.title === "Transferência de responsável") continue;
       if (!data.dealIds.has(act.deal_id)) continue;
-      const row = stageRows.get(act.new_value);
+      const stageName =
+        stageRows.has(act.new_value)
+          ? act.new_value
+          : currentStageByDeal.get(act.deal_id);
+      const row = stageName ? stageRows.get(stageName) : undefined;
       if (!row) continue;
       const key = format(parseISO(act.created_at), "yyyy-MM-dd");
       if (!(key in row.days)) continue;
-      const dedupeKey = `${act.deal_id}|${act.new_value}|${key}`;
+      const dedupeKey = `${act.deal_id}|${row.key}|${key}`;
       if (seen.has(dedupeKey)) continue;
       seen.add(dedupeKey);
       row.days[key] += 1;
       if (!stageDeals.has(row.key)) stageDeals.set(row.key, new Set());
       stageDeals.get(row.key)!.add(act.deal_id);
     }
+
 
     // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
     // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
