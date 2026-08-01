@@ -351,7 +351,7 @@ export function GoalSection({ value, onChange }: Props) {
             {scopeType !== "company" && (
               <div className="space-y-1">
                 <Label className="text-xs text-muted-foreground">
-                  {scopeType === "user" ? "Vendedor" : scopeType === "pipeline" ? "Funil" : "Produto"}
+                  {scopeType === "user" ? "Vendedor" : scopeType === "pipeline" ? "Funil" : "Item da venda"}
                 </Label>
                 <Select value={scopeId || ""} onValueChange={setScopeId}>
                   <SelectTrigger><SelectValue placeholder="Selecionar" /></SelectTrigger>
