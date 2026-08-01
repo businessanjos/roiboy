@@ -203,6 +203,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
 
   const maxValue = Math.max(...data.map(d => d.value), 1);
   const hasPodiumData = data.length >= 2;
+  const colors = paletteColors(appearance);
 
   // Na TV não existe rolagem: exibe só as posições que cabem na altura do card.
   const rowHeight = Math.round(44 * m);
@@ -218,7 +219,7 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
       {/* Podium - left side */}
       {showPodium && hasPodiumData && (
         <div className="w-[40%] shrink-0 flex items-end justify-center">
-          <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} />
+          <Podium data={data} avatars={avatars} formatting={formatting} fontMultiplier={m} colors={colors} />
         </div>
       )}
 
@@ -234,20 +235,21 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
           </thead>
           <tbody>
             {rows.map((item, index) => {
-              const medal = MEDAL_STYLES[index];
+              const emoji = MEDAL_EMOJI[index];
+              const rowColor = colors[index % colors.length];
+              const isTop = index < 3;
               const progress = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
               const userAvatar = avatars[item.name];
 
               return (
                 <tr
                   key={item.name}
-                  className={`border-b border-border/50 transition-colors ${
-                    medal ? medal.bg : 'hover:bg-muted/30'
-                  }`}
+                  className="border-b border-border/50 transition-colors hover:bg-muted/30"
+                  style={isTop ? { backgroundColor: `${rowColor}1f` } : undefined}
                 >
                   <td className="py-2.5 px-1">
-                    {medal ? (
-                      <span className="text-base">{medal.emoji}</span>
+                    {emoji ? (
+                      <span className="text-base">{emoji}</span>
                     ) : (
                       <span className="text-muted-foreground font-medium text-xs ml-0.5">
                         {index + 1}º
@@ -258,25 +260,31 @@ export function ConfigurableRanking({ data, formatting, appearance, dimensionLab
                     <div className="flex items-center gap-2.5">
                       <Avatar className="shrink-0" style={{ height: Math.round(32 * m), width: Math.round(32 * m) }}>
                         <AvatarImage src={userAvatar?.avatar_url || undefined} alt={item.name} />
-                        <AvatarFallback className="text-[10px] font-medium bg-primary/10 text-primary">
+                        <AvatarFallback className="text-[10px] font-medium" style={{ backgroundColor: `${rowColor}22`, color: rowColor }}>
                           {getInitials(item.name)}
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <span className={`font-medium block truncate ${medal ? medal.text : 'text-foreground'}`} style={{ fontSize: `${Math.round(14 * m)}px` }}>
+                        <span
+                          className="font-medium block truncate"
+                          style={{ fontSize: `${Math.round(14 * m)}px`, color: isTop ? rowColor : undefined }}
+                        >
                           {item.name}
                         </span>
                         <div className="w-full h-1.5 bg-muted rounded-full mt-1">
                           <div
-                            className="h-full rounded-full bg-primary/70 transition-all duration-500"
-                            style={{ width: `${progress}%` }}
+                            className="h-full rounded-full transition-all duration-500"
+                            style={{ width: `${progress}%`, backgroundColor: rowColor }}
                           />
                         </div>
                       </div>
                     </div>
                   </td>
                   <td className="py-2.5 px-1 text-right">
-                    <span className={`font-semibold tabular-nums ${medal ? medal.text : 'text-foreground'}`}>
+                    <span
+                      className="font-semibold tabular-nums"
+                      style={{ color: isTop ? rowColor : undefined }}
+                    >
                       {formatCurrency(item.value, formatting.type, formatting.decimals)}
                     </span>
                   </td>
