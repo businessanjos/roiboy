@@ -746,7 +746,7 @@ async function fetchStackedLeadsData(
       result.push(point);
     }
 
-    return { data: result, seriesKeys };
+    return collapseSeries(result, seriesKeys);
   }
 
   // Categorical grouping (existing logic)
@@ -756,14 +756,16 @@ async function fetchStackedLeadsData(
 
   for (const lead of allLeads) {
     const categoryValue = getFieldValue(lead, dimensionField);
-    const seriesValue = getFieldValue(lead, stackByField);
-
-    allSeriesCat.add(seriesValue);
 
     if (!categoryMap.has(categoryValue)) categoryMap.set(categoryValue, new Map());
     const seriesMap = categoryMap.get(categoryValue)!;
-    seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+
+    for (const seriesValue of getSeriesValues(lead, stackByField)) {
+      allSeriesCat.add(seriesValue);
+      seriesMap.set(seriesValue, (seriesMap.get(seriesValue) || 0) + 1);
+    }
   }
+
 
   const seriesKeys = Array.from(allSeriesCat).sort();
 
