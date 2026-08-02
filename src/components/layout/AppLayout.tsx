@@ -176,8 +176,7 @@ export function AppLayout() {
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
-          {/* Aviso de nova versão publicada */}
-          <NewVersionDialog />
+          {/* Aviso de nova versão é renderizado globalmente em App.tsx */}
 
           {/* 3C Plus Embedded Panel — oculto temporariamente a pedido do usuário */}
           {/* {isInVendas && <ThreeCPlusPanel />} */}
