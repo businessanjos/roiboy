@@ -7,6 +7,8 @@ import { ZappMessageBubble } from "./ZappMessageBubble";
 
 interface ZappMessagesListProps {
   messages: Message[];
+  /** Id da conversa aberta — usado para detectar troca de conversa. */
+  conversationId?: string | null;
   isGroup: boolean;
   onReplyMessage?: (message: Message) => void;
   onDeleteMessage?: (messageId: string) => void;
