@@ -309,18 +309,14 @@ export function ZappMessagesList({
     (messageId: string) => {
       const index = indexById.get(messageId);
       if (index === undefined) return;
-      const ensureVisible = () => {
+      pinBottomUntilRef.current = 0;
+      rowVirtualizer.scrollToIndex(index, { align: "center" });
+      requestAnimationFrame(() => {
         const el = viewportRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(messageId)}"]`);
         el?.scrollIntoView({ block: "center" });
-      };
-      if (index < Math.max(0, enrichedMessages.length - windowSize)) {
-        setWindowSize(enrichedMessages.length - index + WINDOW_STEP);
-        requestAnimationFrame(ensureVisible);
-      } else {
-        ensureVisible();
-      }
+      });
     },
-    [indexById, enrichedMessages.length, windowSize]
+    [indexById, rowVirtualizer]
   );
 
   // Scroll to quoted message handler
@@ -336,26 +332,18 @@ export function ZappMessagesList({
   );
 
   const handleLoadOlder = useCallback(() => {
-    // Evita expansões em cascata antes de restaurar a posição da anterior.
     if (pendingRestoreRef.current) return;
-    // Primeiro expande a janela local; só busca no servidor quando tudo já está renderizado.
-    if (windowStart > 0) {
-      saveScrollAnchor();
-      setWindowSize((s) => s + WINDOW_STEP);
-      return;
-    }
-
     if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
     saveScrollAnchor();
     onLoadOlderMessages();
-  }, [windowStart, saveScrollAnchor, onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages]);
+  }, [saveScrollAnchor, onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages]);
 
 
   // Carrega automaticamente ao chegar no topo da conversa.
   useEffect(() => {
     const sentinel = topSentinelRef.current;
     const viewport = viewportRef.current;
-    if (!sentinel || !viewport || (!hasMoreMessages && windowStart === 0)) return;
+    if (!sentinel || !viewport || !hasMoreMessages) return;
     const observer = new IntersectionObserver(
       (entries) => {
         // Enquanto a conversa ainda está se ajustando ao fim, ignorar o topo.
@@ -366,7 +354,8 @@ export function ZappMessagesList({
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMoreMessages, windowStart, handleLoadOlder]);
+  }, [hasMoreMessages, handleLoadOlder]);
+
 
   // Troca de conversa: reseta âncoras e prende no fim enquanto o layout
   // (mídias, áudios) ainda muda de altura.
