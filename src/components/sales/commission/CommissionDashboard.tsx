@@ -239,7 +239,7 @@ export function CommissionDashboard({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
+                <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>Vendedor</TableHead>
@@ -355,7 +355,7 @@ export function CommissionDashboard({
                         </TableRow>
                       ))}
                   </TableBody>
-                </Table>
+                </Table></div>
               </CardContent>
             </Card>
           )}
@@ -372,7 +372,7 @@ export function CommissionDashboard({
                 </CardTitle>
               </CardHeader>
               <CardContent className="p-0">
-                <Table>
+                <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead>SDR</TableHead>
@@ -453,7 +453,7 @@ export function CommissionDashboard({
                         );
                       })}
                   </TableBody>
-                </Table>
+                </Table></div>
               </CardContent>
             </Card>
           )}

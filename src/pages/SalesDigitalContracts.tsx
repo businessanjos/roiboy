@@ -355,6 +355,22 @@ export default function SalesDigitalContracts() {
     }
   };
 
+  const openContract = (contract: DigitalContractListItem) => {
+    if (contract.deal_id) {
+      openDealContractEditor(contract.deal_id);
+    } else {
+      setEditorDeal({
+        id: null,
+        clientId: contract.client_id ?? null,
+        clientName: contract.client_name || contract.contract_number,
+        value: contract.total_value ?? null,
+        contractId: contract.id,
+      });
+    }
+  };
+
+
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
@@ -444,96 +460,92 @@ export default function SalesDigitalContracts() {
             </Button>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Contrato</TableHead>
-                <TableHead>Cliente</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Atualizado</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
+          <>
+            {/* Mobile: lista em cards */}
+            <div className="md:hidden divide-y divide-border">
               {filteredContracts.map((contract) => (
-                <TableRow key={contract.id}>
-                  <TableCell className="font-medium">
-                    {contract.contract_number ?? "Sem número"}
-                    {contract.installments ? (
-                      <p className="text-xs text-muted-foreground">
-                        {contract.installments}x de {formatCurrency(contract.installment_value)}
+                <div key={contract.id} className="p-3 space-y-2">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <p className="font-medium text-sm truncate">{contract.client_name}</p>
+                      <p className="text-xs text-muted-foreground truncate">
+                        {contract.contract_number ?? "Sem número"}
+                        {contract.installments
+                          ? ` · ${contract.installments}x de ${formatCurrency(contract.installment_value)}`
+                          : ""}
                       </p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{contract.client_name}</TableCell>
-                  <TableCell>
-                    <Badge variant={statusVariants[contract.status] ?? "outline"}>
+                    </div>
+                    <Badge variant={statusVariants[contract.status] ?? "outline"} className="shrink-0 text-[10px]">
                       {statusLabels[contract.status] ?? contract.status}
                     </Badge>
-                    {contract.signed_at ? (
-                      <p className="mt-1 text-xs text-muted-foreground">Assinado em {formatDate(contract.signed_at)}</p>
-                    ) : null}
-                  </TableCell>
-                  <TableCell>{formatCurrency(contract.total_value)}</TableCell>
-                  <TableCell>{formatDate(contract.updated_at)}</TableCell>
-                  <TableCell>
-                    <div className="flex justify-end gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => copyPublicLink(contract.share_token)}
-                        aria-label="Copiar link público"
-                        title="Copiar link público"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => duplicateContract(contract.id)}
-                        aria-label="Duplicar contrato"
-                        title="Duplicar como novo rascunho"
-                      >
-                        <Files className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          if (contract.deal_id) {
-                            openDealContractEditor(contract.deal_id);
-                          } else {
-                             setEditorDeal({
-                              id: null,
-                              clientId: contract.client_id ?? null,
-                              clientName: contract.client_name || contract.contract_number,
-                              value: contract.total_value ?? null,
-                              contractId: contract.id,
-                            });
-                          }
-                        }}
-                        aria-label="Abrir contrato"
-                        title={contract.deal_id ? "Abrir contrato" : "Abrir contrato (sem negócio vinculado)"}
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => deleteContract(contract.id, contract.contract_number, contract.status)}
-                        aria-label="Excluir contrato"
-                        title="Excluir contrato"
-                        className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
-                </TableRow>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="text-sm font-semibold">{formatCurrency(contract.total_value)}</div>
+                    <ContractRowActions
+                      contract={contract}
+                      onCopy={copyPublicLink}
+                      onDuplicate={duplicateContract}
+                      onOpen={openContract}
+                      onDelete={deleteContract}
+                    />
+                  </div>
+                </div>
               ))}
-            </TableBody>
-          </Table>
+            </div>
+
+            {/* Desktop: tabela */}
+            <div className="hidden md:block overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Contrato</TableHead>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Valor</TableHead>
+                    <TableHead>Atualizado</TableHead>
+                    <TableHead className="text-right">Ações</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filteredContracts.map((contract) => (
+                    <TableRow key={contract.id}>
+                      <TableCell className="font-medium">
+                        {contract.contract_number ?? "Sem número"}
+                        {contract.installments ? (
+                          <p className="text-xs text-muted-foreground">
+                            {contract.installments}x de {formatCurrency(contract.installment_value)}
+                          </p>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>{contract.client_name}</TableCell>
+                      <TableCell>
+                        <Badge variant={statusVariants[contract.status] ?? "outline"}>
+                          {statusLabels[contract.status] ?? contract.status}
+                        </Badge>
+                        {contract.signed_at ? (
+                          <p className="mt-1 text-xs text-muted-foreground">Assinado em {formatDate(contract.signed_at)}</p>
+                        ) : null}
+                      </TableCell>
+                      <TableCell>{formatCurrency(contract.total_value)}</TableCell>
+                      <TableCell>{formatDate(contract.updated_at)}</TableCell>
+                      <TableCell>
+                        <div className="flex justify-end">
+                          <ContractRowActions
+                            contract={contract}
+                            onCopy={copyPublicLink}
+                            onDuplicate={duplicateContract}
+                            onOpen={openContract}
+                            onDelete={deleteContract}
+                          />
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          </>
+
         )}
       </Card>
 
@@ -625,6 +637,64 @@ export default function SalesDigitalContracts() {
           </div>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+function ContractRowActions({
+  contract,
+  onCopy,
+  onDuplicate,
+  onOpen,
+  onDelete,
+}: {
+  contract: DigitalContractListItem;
+  onCopy: (token: string) => void;
+  onDuplicate: (id: string) => void;
+  onOpen: (contract: DigitalContractListItem) => void;
+  onDelete: (id: string, contractNumber: string, status: string) => void;
+}) {
+  return (
+    <div className="flex items-center gap-1">
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onCopy(contract.share_token)}
+        aria-label="Copiar link público"
+        title="Copiar link público"
+      >
+        <Copy className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onDuplicate(contract.id)}
+        aria-label="Duplicar contrato"
+        title="Duplicar como novo rascunho"
+      >
+        <Files className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8"
+        onClick={() => onOpen(contract)}
+        aria-label="Abrir contrato"
+        title={contract.deal_id ? "Abrir contrato" : "Abrir contrato (sem negócio vinculado)"}
+      >
+        <ExternalLink className="h-4 w-4" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+        onClick={() => onDelete(contract.id, contract.contract_number ?? "Sem número", contract.status)}
+        aria-label="Excluir contrato"
+        title="Excluir contrato"
+      >
+        <Trash2 className="h-4 w-4" />
+      </Button>
     </div>
   );
 }

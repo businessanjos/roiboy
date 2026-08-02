@@ -425,7 +425,7 @@ export function QuotasSection() {
             </div>
           </CardHeader>
           <CardContent>
-            <Table>
+            <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Produto</TableHead>
@@ -472,7 +472,7 @@ export function QuotasSection() {
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
             <div className="mt-4 pt-3 border-t flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Total da Meta:</span>
               <span className="font-bold text-lg">
