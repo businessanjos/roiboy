@@ -176,6 +176,9 @@ export function AppLayout() {
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
 
+          {/* Aviso de nova versão publicada */}
+          <NewVersionDialog />
+
           {/* 3C Plus Embedded Panel — oculto temporariamente a pedido do usuário */}
           {/* {isInVendas && <ThreeCPlusPanel />} */}
         </div>
