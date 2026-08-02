@@ -1,21 +1,63 @@
-import { useEffect, useRef } from "react";
-import { toast } from "sonner";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 /**
  * Polls /version.json on a schedule. When the version reported by the server
- * differs from the one bundled into the running app, we know a new deploy is
- * live and the assets the browser cached are stale.
+ * differs from the one the app booted with, a new deploy is live and the
+ * assets cached by the browser are stale.
  *
- * On change we surface a non-dismissable toast giving the user the option to
- * reload manually, so we never interrupt form entry or discard unsaved work.
+ * The hook only exposes state — the UI (NewVersionDialog) decides how to ask
+ * the user, offering "Atualizar agora" or "Atualizar depois" (até 5 adiamentos
+ * de 30 minutos, depois a atualização passa a ser obrigatória).
  *
  * Dev mode is a no-op — Vite's HMR already handles freshness.
  */
 
 const VERSION_URL = "/version.json";
 const POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
-const TOAST_ID = "app-version-update";
 const STORAGE_KEY = "app:initial-version";
+const DEFER_STATE_KEY = "app:version-defer-state";
+export const MAX_DEFERS = 5;
+const DEFER_INTERVAL_MS = 30 * 60 * 1000; // 30 min
+
+interface DeferState {
+  version: string;
+  count: number;
+  nextRemindAt: number;
+}
+
+function readDeferState(remoteVersion: string): { count: number; nextRemindAt: number } {
+  try {
+    const raw = localStorage.getItem(DEFER_STATE_KEY);
+    if (!raw) return { count: 0, nextRemindAt: 0 };
+    const parsed = JSON.parse(raw) as Partial<DeferState>;
+    if (
+      typeof parsed.version === "string" &&
+      typeof parsed.count === "number" &&
+      typeof parsed.nextRemindAt === "number" &&
+      parsed.version === remoteVersion
+    ) {
+      return { count: parsed.count, nextRemindAt: parsed.nextRemindAt };
+    }
+  } catch {
+    /* ignore */
+  }
+  return { count: 0, nextRemindAt: 0 };
+}
+
+function persistDefer(remoteVersion: string): number {
+  const current = readDeferState(remoteVersion);
+  const next: DeferState = {
+    version: remoteVersion,
+    count: current.count + 1,
+    nextRemindAt: Date.now() + DEFER_INTERVAL_MS,
+  };
+  try {
+    localStorage.setItem(DEFER_STATE_KEY, JSON.stringify(next));
+  } catch {
+    /* ignore */
+  }
+  return next.count;
+}
 
 export async function fetchAppVersion(): Promise<string | null> {
   try {
@@ -41,6 +83,11 @@ export function hardReloadApp() {
   } catch {
     /* ignore */
   }
+  try {
+    localStorage.removeItem(DEFER_STATE_KEY);
+  } catch {
+    /* ignore */
+  }
   // Reload with a fresh URL so the browser/CDN cannot reuse stale HTML/chunks.
   const url = new URL(window.location.href);
   url.searchParams.set("app_reload", Date.now().toString());
@@ -56,9 +103,19 @@ export function getInitialAppVersion(): string | null {
   }
 }
 
-export function useAppVersionCheck() {
+export interface UseAppVersionCheckResult {
+  hasNewVersion: boolean;
+  remoteVersion: string | null;
+  canDefer: boolean;
+  deferUpdate: () => void;
+}
+
+export function useAppVersionCheck(): UseAppVersionCheckResult {
   const initialVersionRef = useRef<string | null>(null);
-  const promptedRef = useRef(false);
+  const [hasNewVersion, setHasNewVersion] = useState(false);
+  const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
+  const [deferCount, setDeferCount] = useState(0);
+  const reminderTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     // Skip in development — assets are not hashed and version.json may not exist.
@@ -67,10 +124,16 @@ export function useAppVersionCheck() {
     let cancelled = false;
     let timer: number | undefined;
 
+    const clearReminder = () => {
+      if (reminderTimeoutRef.current) {
+        clearTimeout(reminderTimeoutRef.current);
+        reminderTimeoutRef.current = null;
+      }
+    };
+
     const init = async () => {
       const current = await fetchAppVersion();
-      if (cancelled) return;
-      if (!current) return; // no version.json shipped yet — nothing to compare against
+      if (cancelled || !current) return;
       initialVersionRef.current = current;
       try {
         sessionStorage.setItem(STORAGE_KEY, current);
@@ -80,41 +143,61 @@ export function useAppVersionCheck() {
     };
 
     const check = async () => {
-      if (promptedRef.current) return;
       const latest = await fetchAppVersion();
       if (cancelled || !latest) return;
+
       const initial = initialVersionRef.current;
       if (!initial) {
         initialVersionRef.current = latest;
         return;
       }
-      if (latest !== initial) {
-        promptedRef.current = true;
-        toast("Nova versão disponível", {
-          id: TOAST_ID,
-          description: "Recarregue para aplicar as últimas atualizações.",
-          duration: Infinity,
-          action: {
-            label: "Recarregar agora",
-            onClick: () => hardReloadApp(),
-          },
-        });
+      if (latest === initial) return;
+
+      const { count, nextRemindAt } = readDeferState(latest);
+      const now = Date.now();
+      const forced = count >= MAX_DEFERS;
+
+      setRemoteVersion(latest);
+      setDeferCount(count);
+
+      if (!forced && nextRemindAt > now) {
+        clearReminder();
+        reminderTimeoutRef.current = setTimeout(() => {
+          void check();
+        }, nextRemindAt - now);
+        return;
       }
+
+      setHasNewVersion(true);
     };
 
     const onFocus = () => {
-      // When the user returns to the tab, check immediately.
-      check();
+      void check();
     };
 
-    init();
+    void init();
     timer = window.setInterval(check, POLL_INTERVAL_MS);
     window.addEventListener("focus", onFocus);
 
     return () => {
       cancelled = true;
       if (timer) window.clearInterval(timer);
+      clearReminder();
       window.removeEventListener("focus", onFocus);
     };
   }, []);
+
+  const deferUpdate = useCallback(() => {
+    if (!remoteVersion) return;
+    const count = persistDefer(remoteVersion);
+    setDeferCount(count);
+    setHasNewVersion(false);
+  }, [remoteVersion]);
+
+  return {
+    hasNewVersion,
+    remoteVersion,
+    canDefer: deferCount < MAX_DEFERS,
+    deferUpdate,
+  };
 }

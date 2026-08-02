@@ -22,7 +22,7 @@ import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isSkippedRoute } from "@/lib/access/routeAccess";
-import { useAppVersionCheck } from "@/hooks/useAppVersionCheck";
+import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
 
 export function AppLayout() {
@@ -39,8 +39,7 @@ export function AppLayout() {
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
-  // Background poll for new deploys → toast + auto-reload to bust stale assets.
-  useAppVersionCheck();
+  // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
   // Check if user is external (viewer role with external dashboard access)
   const { data: externalAccess } = useQuery({
@@ -176,6 +175,9 @@ export function AppLayout() {
           
           {/* Keyboard Shortcuts Help */}
           <KeyboardShortcutsHelp open={helpOpen} onOpenChange={setHelpOpen} />
+
+          {/* Aviso de nova versão publicada */}
+          <NewVersionDialog />
 
           {/* 3C Plus Embedded Panel — oculto temporariamente a pedido do usuário */}
           {/* {isInVendas && <ThreeCPlusPanel />} */}
