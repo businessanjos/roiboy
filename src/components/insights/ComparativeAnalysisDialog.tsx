@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { subYears, differenceInCalendarDays, subDays, format, parseISO } from "date-fns";
+import { subYears, differenceInCalendarDays, subDays, format, parseISO, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowDownRight, ArrowUpRight, Minus, Loader2 } from "lucide-react";
 import {
@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { useVisualData, compareDateLabels } from "@/hooks/useVisualData";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
@@ -351,15 +352,30 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
   const { filters } = useInsightsFilters();
   const [mode, setMode] = useState<CompareMode>("previous_year");
 
-  const currentRange: Range = useMemo(
+  const [sameElapsed, setSameElapsed] = useState(true);
+
+  const rawRange: Range = useMemo(
     () => ({ startDate: filters.startDate, endDate: filters.endDate }),
     [filters.startDate, filters.endDate],
   );
+
+  // Se o período atual ainda está em curso, cortar em hoje para não comparar
+  // um ano inteiro contra um ano parcial (ex.: 2025 completo vs 2026 até agosto).
+  const isOngoing = useMemo(
+    () => parseISO(rawRange.endDate).getTime() > endOfDay(new Date()).getTime(),
+    [rawRange.endDate],
+  );
+  const currentRange: Range = useMemo(() => {
+    if (!sameElapsed || !isOngoing) return rawRange;
+    return { ...rawRange, endDate: endOfDay(new Date()).toISOString() };
+  }, [rawRange, sameElapsed, isOngoing]);
+
   const previousRange = useMemo(() => shiftRange(currentRange, mode), [currentRange, mode]);
 
   const currentLabel = format(parseISO(currentRange.startDate), "yyyy", { locale: ptBR });
   const previousLabel = format(parseISO(previousRange.startDate), "yyyy", { locale: ptBR });
   const isYearMode = mode === "previous_year" && currentLabel !== previousLabel;
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -381,6 +397,12 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
               <SelectItem value="previous_period">Período anterior</SelectItem>
             </SelectContent>
           </Select>
+          {isOngoing && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Switch checked={sameElapsed} onCheckedChange={setSameElapsed} />
+              Mesmo intervalo decorrido (até hoje)
+            </label>
+          )}
           <div className="text-xs text-muted-foreground">
             {labelRange(previousRange)} <span className="mx-1">vs</span> {labelRange(currentRange)}
           </div>
