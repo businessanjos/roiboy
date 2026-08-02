@@ -101,6 +101,7 @@ export function ZappMessagesList({
   searchFocusId,
   hasMoreMessages = false,
   isLoadingOlderMessages = false,
+  isLoadingMessages = false,
   onLoadOlderMessages,
 }: ZappMessagesListProps) {
   const viewportRef = useRef<HTMLDivElement>(null);
