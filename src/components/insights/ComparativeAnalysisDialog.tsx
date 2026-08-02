@@ -17,6 +17,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { useVisualData, compareDateLabels } from "@/hooks/useVisualData";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
