@@ -225,6 +225,36 @@ function ComparisonCard({
     ? Math.min(460, Math.max(300, series.length * 42 + 70))
     : 300;
 
+  // Tag de crescimento (ano a ano) por barra/categoria.
+  const renderGrowthLabel = (props: any) => {
+    const { x, y, width, height, value } = props;
+    if (value === undefined || value === null) return null;
+    const g = Number(value);
+    if (!Number.isFinite(g)) return null;
+    const text = `${g > 0 ? "+" : ""}${g.toFixed(g > -10 && g < 10 ? 1 : 0)}%`;
+    const color =
+      Math.abs(g) < 0.05
+        ? "hsl(var(--muted-foreground))"
+        : g > 0
+          ? "hsl(142 70% 40%)"
+          : "hsl(var(--destructive))";
+    const cx = horizontal ? Number(x) + Number(width) + 4 : Number(x) + Number(width) / 2;
+    const cy = horizontal ? Number(y) + Number(height) / 2 - 8 : Number(y) - 6;
+    return (
+      <text
+        x={cx}
+        y={cy}
+        textAnchor={horizontal ? "start" : "middle"}
+        dominantBaseline={horizontal ? "middle" : "auto"}
+        style={{ fontSize: 10, fontWeight: 600, fill: color }}
+      >
+        {text}
+      </text>
+    );
+  };
+
+
+
   return (
     <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
 
