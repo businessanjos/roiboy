@@ -80,9 +80,11 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
   const businessDays = days.filter((d) => !isWeekend(d)).length || 1;
 
-  // O período é inclusivo: sem o fim do dia, o último dia do intervalo some da tabela.
-  const rangeStartIso = `${range.start}T00:00:00`;
-  const rangeEndIso = `${range.end}T23:59:59.999`;
+  // O período é inclusivo e usa o fuso local: sem isso, movimentações da noite
+  // (ex.: 22h no Brasil = 01h UTC do dia seguinte) caíam fora das colunas.
+  const rangeStartIso = range.start ? new Date(`${range.start}T00:00:00`).toISOString() : "";
+  const rangeEndIso = range.end ? new Date(`${range.end}T23:59:59.999`).toISOString() : "";
+
 
 
   const { data, isLoading } = useQuery({
