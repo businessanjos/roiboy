@@ -18,27 +18,27 @@ import {
   Pencil,
   X,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
-import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Textarea } from "@/components/ui/textarea";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
 // Evita transcrições duplicadas quando o componente remonta (scroll/virtualização)
 const autoTranscribedIds = new Set<string>();
+
+// Fila sequencial de transcrição: evita disparar N chamadas de edge function
+// ao mesmo tempo quando uma conversa cheia de áudios é aberta.
+let transcriptionQueue: Promise<void> = Promise.resolve();
+function enqueueTranscription(task: () => Promise<void>) {
+  transcriptionQueue = transcriptionQueue
+    .then(() => task())
+    .catch(() => undefined)
+    .then(() => new Promise<void>((resolve) => setTimeout(resolve, 250)));
+  return transcriptionQueue;
+}
+
 
 interface ZappMessageBubbleProps {
   message: Message;
@@ -251,8 +251,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [isDeleting, setIsDeleting] = useState(false);
+
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(
@@ -332,16 +331,8 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     );
   }
 
-  const handleDelete = async () => {
-    if (!onDelete) return;
-    setIsDeleting(true);
-    try {
-      await onDelete(message.id);
-    } finally {
-      setIsDeleting(false);
-      setShowDeleteConfirm(false);
-    }
-  };
+
+
 
   // Handle audio transcription
   const handleTranscribe = useCallback(async (silent = false) => {
@@ -376,7 +367,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   }, [message.id, toast]);
 
   // Auto-transcreve áudios assim que a mídia estiver disponível no storage.
-  // Evita depender do clique manual em "Transcrever" (que o time de CS não usava).
+  // Roda em fila sequencial para não disparar várias edge functions de uma vez.
   useEffect(() => {
     if (transcription) return;
     if (message.media_type !== "audio" && message.message_type !== "ptt") return;
@@ -385,7 +376,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
     if (message.media_download_status && message.media_download_status !== "completed") return;
     if (autoTranscribedIds.has(message.id)) return;
     autoTranscribedIds.add(message.id);
-    void handleTranscribe(true);
+    void enqueueTranscription(() => handleTranscribe(true));
   }, [
     transcription,
     message.id,
@@ -413,12 +404,14 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         )}
         onMouseEnter={() => setShowActions(true)}
         onMouseLeave={() => setShowActions(false)}
+        onTouchStart={() => setShowActions(true)}
       >
           {/* Container with bubble + actions - uses flexbox for relative positioning */}
         <div className={cn(
-          "flex items-center gap-1 max-w-[65%]",
+          "flex items-center gap-1 max-w-[85%] sm:max-w-[65%]",
           message.is_from_client ? "flex-row" : "flex-row-reverse"
         )}>
+
           {/* Message bubble */}
           <div className={cn(
             "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0 transition-all duration-300",
@@ -534,9 +527,12 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               <img 
                 src={message.media_url} 
                 alt="Imagem"
+                loading="lazy"
+                decoding="async"
                 className="max-w-full w-full max-h-72 object-contain cursor-pointer hover:opacity-90 transition-opacity"
                 onClick={() => window.open(message.media_url!, '_blank')}
               />
+
             </div>
           )}
           
@@ -584,22 +580,15 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
                 </Button>
               )}
               
-              {/* Transcribed Text - shown with smooth animation */}
-              <AnimatePresence>
-                {transcription && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: "auto" }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="mt-2 pt-2 border-t border-white/10"
-                  >
-                    <p className="text-xs text-zapp-text-muted/80 italic leading-relaxed">
-                      "{transcription}"
-                    </p>
-                  </motion.div>
-                )}
-              </AnimatePresence>
+              {/* Transcribed Text */}
+              {transcription && (
+                <div className="mt-2 pt-2 border-t border-white/10">
+                  <p className="text-xs text-zapp-text-muted/80 italic leading-relaxed">
+                    "{transcription}"
+                  </p>
+                </div>
+              )}
+
             </div>
           )}
           
@@ -608,8 +597,10 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             <div className="mb-2 rounded-lg overflow-hidden">
               <video 
                 controls 
+                preload="none"
                 className="max-w-full max-h-72"
               >
+
                 <source src={message.media_url} type={message.media_mimetype || "video/mp4"} />
               </video>
             </div>
@@ -621,8 +612,11 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               <img 
                 src={message.media_url} 
                 alt="Sticker"
+                loading="lazy"
+                decoding="async"
                 className="max-w-[150px] max-h-[150px] object-contain"
               />
+
             </div>
           )}
           
@@ -799,105 +793,59 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             </div>
           )}
         </div>
-          
-        {/* Action buttons - now positioned relative to message */}
-        <AnimatePresence>
-          {showActions && !isEditing && (onReply || (onEdit && canEdit) || (onDelete && canDelete)) && (
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              transition={{ duration: 0.15 }}
-              className="flex items-center gap-1 flex-shrink-0"
-            >
-              {onReply && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                      onClick={() => onReply(message)}
-                    >
-                      <Reply className="h-4 w-4 text-zapp-text-muted" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Responder</TooltipContent>
-                </Tooltip>
-              )}
-              {onEdit && canEdit && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                      onClick={() => {
-                        setEditContent(message.content || "");
-                        setIsEditing(true);
-                      }}
-                    >
-                      <Pencil className="h-4 w-4 text-zapp-text-muted" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Editar</TooltipContent>
-                </Tooltip>
-              )}
-              {onDelete && canDelete && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
-                      onClick={() => setShowDeleteConfirm(true)}
-                      disabled={isDeleting}
-                    >
-                      {isDeleting ? (
-                        <Loader2 className="h-4 w-4 text-zapp-text-muted animate-spin" />
-                      ) : (
-                        <Trash2 className="h-4 w-4 text-red-400" />
-                      )}
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="top">Apagar para todos</TooltipContent>
-                </Tooltip>
-              )}
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+        {/* Action buttons — CSS only (sem portais/animações por mensagem) */}
+        {!isEditing && (onReply || (onEdit && canEdit) || (onDelete && canDelete)) && (
+          <div
+            className={cn(
+              "flex items-center gap-1 flex-shrink-0 transition-opacity duration-150",
+              showActions ? "opacity-100" : "opacity-0 pointer-events-none"
+            )}
+          >
+            {onReply && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Responder"
+                aria-label="Responder"
+                className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                onClick={() => onReply(message)}
+              >
+                <Reply className="h-4 w-4 text-zapp-text-muted" />
+              </Button>
+            )}
+            {onEdit && canEdit && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Editar"
+                aria-label="Editar"
+                className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                onClick={() => {
+                  setEditContent(message.content || "");
+                  setIsEditing(true);
+                }}
+              >
+                <Pencil className="h-4 w-4 text-zapp-text-muted" />
+              </Button>
+            )}
+            {onDelete && canDelete && (
+              <Button
+                variant="ghost"
+                size="icon"
+                title="Apagar para todos"
+                aria-label="Apagar para todos"
+                className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                onClick={() => onDelete(message.id)}
+              >
+                <Trash2 className="h-4 w-4 text-red-400" />
+              </Button>
+            )}
+          </div>
+        )}
       </div>
     </div>
-
-      {/* Delete confirmation dialog */}
-      <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Apagar mensagem para todos?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta mensagem será apagada para você e para todos os participantes da conversa. 
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Apagando...
-                </>
-              ) : (
-                "Apagar para todos"
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
     </div>
   );
 });
+
