@@ -378,7 +378,7 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] xl:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[97vw] max-w-[97vw] h-[94vh] max-h-[94vh] overflow-hidden flex flex-col sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Análise comparativa</DialogTitle>
           <DialogDescription>
