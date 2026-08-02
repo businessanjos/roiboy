@@ -106,6 +106,9 @@ export function StackedHorizontalBarChart({
   const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
   const tvMode = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'] * tvMode.scale;
+  // Largura real do container: permite adaptar eixos/legenda em telas estreitas (mobile).
+  const { ref: sizeRef, width: containerWidth } = useChartSize();
+
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
     return (
