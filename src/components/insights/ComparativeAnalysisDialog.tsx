@@ -21,6 +21,16 @@ import { useInsightsFilters } from "@/hooks/useInsightsFilters";
 import { useVisualData } from "@/hooks/useVisualData";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { cn } from "@/lib/utils";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 type CompareMode = "previous_year" | "previous_period";
 
