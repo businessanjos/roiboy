@@ -393,12 +393,25 @@ export function ZappMessagesList({
     if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
-  // A altura total muda conforme o virtualizer mede as linhas reais.
-  // Reancora no fim enquanto a conversa acabou de abrir ou se o usuário já está no fim.
-  useLayoutEffect(() => {
-    if (pendingRestoreRef.current) return;
-    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
-  }, [totalSize, scrollToBottom]);
+  // Enquanto o virtualizer mede as linhas reais logo após abrir a conversa,
+  // mantém a rolagem no fim via rAF (fora do ciclo de render, sem loop).
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      if (Date.now() >= pinBottomUntilRef.current) return;
+      if (!pendingRestoreRef.current && atBottomRef.current) {
+        const viewport = viewportRef.current;
+        if (viewport) {
+          const target = viewport.scrollHeight - viewport.clientHeight;
+          if (Math.abs(viewport.scrollTop - target) > 4) viewport.scrollTop = target;
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [conversationId]);
+
 
 
 
