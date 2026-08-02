@@ -26,6 +26,7 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
