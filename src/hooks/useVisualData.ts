@@ -13,6 +13,8 @@ import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
+import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
+
 
 
 export interface AggregatedDataPoint {
