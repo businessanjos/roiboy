@@ -83,9 +83,51 @@ export function InsightsDashboardTabs() {
 
   if (dashboards.length === 0) return null;
 
+  const activeDashboard = dashboards.find((d) => d.id === activeDashboardId);
+
   return (
     <>
       <div className="flex items-center gap-1 border-b bg-muted/30 px-2">
+        {/* Mobile: seletor em dropdown (evita carrossel de abas em tela estreita) */}
+        <div className="flex sm:hidden flex-1 min-w-0 py-1.5">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" className="h-9 w-full justify-between gap-2 min-w-0">
+                <span className="truncate font-semibold">{activeDashboard?.name || "Selecionar painel"}</span>
+                <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto bg-popover z-50">
+              {dashboards.map((d) => (
+                <DropdownMenuItem
+                  key={d.id}
+                  onClick={() => navigateToDashboard(d.id)}
+                  className={cn(d.id === activeDashboardId && "font-semibold text-primary")}
+                >
+                  <span className="truncate">{d.name}</span>
+                </DropdownMenuItem>
+              ))}
+              {activeDashboard && (
+                <>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => { setRenameId(activeDashboard.id); setRenameName(activeDashboard.name); }}>
+                    <Pencil className="h-4 w-4 mr-2" /> Renomear
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => duplicateDashboard(activeDashboard.id)}>
+                    <Copy className="h-4 w-4 mr-2" /> Duplicar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteId(activeDashboard.id)}>
+                    <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                  </DropdownMenuItem>
+                </>
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+
+        {/* Desktop: abas com scroll */}
+        <div className="hidden sm:contents">
+
         {/* Scroll left */}
         {canScrollLeft && (
           <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => scroll("left")}>
