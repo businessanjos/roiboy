@@ -387,6 +387,8 @@ export function InsightsMainContent() {
           <InsightsFilterBar />
         </div>
 
+
+
         {/* Grid or Empty State */}
         {isLoadingVisuals ? (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -399,6 +401,7 @@ export function InsightsMainContent() {
             onLayoutChange={handleLayoutChange}
             onUpdateVisual={updateVisual}
             onRemoveVisual={removeVisual}
+            toolbarSlotId="insights-layout-toggle"
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">

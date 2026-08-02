@@ -1,4 +1,5 @@
 import { useMemo, useRef, useEffect, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import { Move } from "lucide-react";
 import GridLayout from "react-grid-layout";
 
@@ -32,6 +33,8 @@ interface InsightsGridProps {
   minCardWidths?: Partial<MinCardWidths>;
   /** TV mode: fit every visual inside the available height (no page scroll). */
   fitHeight?: boolean;
+  /** Optional DOM element id to portal the "Ajustar layout" toggle into (e.g. the filters row). */
+  toolbarSlotId?: string;
 }
 
 const ROW_HEIGHT = 20;
@@ -355,7 +358,15 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 const FREE_LAYOUT_KEY = "insights:free-layout-mode";
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight, toolbarSlotId }: InsightsGridProps) {
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!toolbarSlotId) {
+      setToolbarSlot(null);
+      return;
+    }
+    setToolbarSlot(document.getElementById(toolbarSlotId));
+  }, [toolbarSlotId, visuals.length]);
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
@@ -501,24 +512,32 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   const gridVisible = freeLayout || isEditing;
 
+  const layoutToggle = (
+    <button
+      type="button"
+      onClick={toggleFreeLayout}
+      className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+        freeLayout
+          ? "border-primary bg-primary/10 text-primary"
+          : "border-border text-muted-foreground hover:bg-muted/50"
+      }`}
+      title="Redimensionar e posicionar os cards livremente"
+    >
+      <Move className="h-3.5 w-3.5" />
+      <span className={toolbarSlot ? "hidden 2xl:inline" : ""}>
+        {freeLayout ? "Concluir layout" : "Ajustar layout"}
+      </span>
+    </button>
+  );
+
   // Responsive CSS grid by default; free layout mode keeps the draggable/resizable grid visible
   return (
     <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${freeLayout ? "free-layout" : ""}`}>
-      <div className="flex justify-end pb-2">
-        <button
-          type="button"
-          onClick={toggleFreeLayout}
-          className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
-            freeLayout
-              ? "border-primary bg-primary/10 text-primary"
-              : "border-border text-muted-foreground hover:bg-muted/50"
-          }`}
-          title="Redimensionar e posicionar os cards livremente"
-        >
-          <Move className="h-3.5 w-3.5" />
-          {freeLayout ? "Concluir layout" : "Ajustar layout"}
-        </button>
-      </div>
+      {toolbarSlot ? (
+        createPortal(layoutToggle, toolbarSlot)
+      ) : (
+        <div className="flex justify-end pb-2">{layoutToggle}</div>
+      )}
 
       {/* Responsive CSS grid — visible when not in free/edit mode */}
       {!gridVisible && (

@@ -292,6 +292,8 @@ export function InsightsFilterBar() {
           Limpar filtros
         </Button>
       )}
+
+      <div id="insights-layout-toggle" className="ml-auto flex items-center shrink-0 sticky right-0 bg-card pl-2" />
     </div>
   );
 }
