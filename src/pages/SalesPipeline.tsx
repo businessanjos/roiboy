@@ -2175,7 +2175,8 @@ export default function SalesPipeline() {
         {/* Main Tabs */}
         <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <TabsList className="grid grid-cols-2 sm:flex">
+            <TabsList className="grid grid-cols-2 w-full sm:w-auto sm:flex">
+
               <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
                 <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                 Prospecção
