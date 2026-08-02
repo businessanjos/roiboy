@@ -127,7 +127,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       for (let page = 0; page < 50; page++) {
         let dealsQuery = supabase
           .from("deals")
-          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id, stage_id")
+          .select("id, value, status, won_at, lost_at, created_at, pipeline_id, responsible_user_id, stage_id")
           .eq("account_id", accountId)
           // Negócios excluídos (soft delete) nunca entram na auditoria.
           .is("deleted_at", null)
@@ -156,7 +156,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       for (let page = 0; page < 50; page++) {
         const { data: chunk, error } = await supabase
           .from("deal_activities")
-          .select("deal_id, new_value, created_at, type, title")
+          .select("deal_id, old_value, new_value, created_at, type, title")
           .eq("account_id", accountId)
           .eq("type", "stage_change")
           .gte("created_at", rangeStartIso)
