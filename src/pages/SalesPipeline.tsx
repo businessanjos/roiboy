@@ -2301,8 +2301,8 @@ export default function SalesPipeline() {
                   </div>
                 )}
 
-                <div className="w-full">
-                  <div className="hidden" />
+
+
 
 
                   {!filtersCollapsed && (
