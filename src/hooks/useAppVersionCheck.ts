@@ -182,15 +182,29 @@ export function useAppVersionCheck(): UseAppVersionCheckResult {
       void check();
     };
 
+    // Em PWA instalado (standalone) o app quase nunca recebe "focus": ele é
+    // suspenso/retomado. visibilitychange e pageshow são os eventos que
+    // realmente disparam ao voltar do background no iOS/Android.
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") void check();
+    };
+    const onPageShow = () => {
+      void check();
+    };
+
     void init();
     timer = window.setInterval(check, POLL_INTERVAL_MS);
     window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+    window.addEventListener("pageshow", onPageShow);
 
     return () => {
       cancelled = true;
       if (timer) window.clearInterval(timer);
       clearReminder();
       window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+      window.removeEventListener("pageshow", onPageShow);
     };
   }, []);
 
