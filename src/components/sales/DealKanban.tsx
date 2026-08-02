@@ -22,6 +22,9 @@ import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { resolveProductMap } from "./productColorResolver";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ChevronDown, Check } from "lucide-react";
 
 interface DealKanbanProps {
   stages: DealStage[];
