@@ -73,6 +73,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
 
 export function ZappMessagesList({
   messages,
+  conversationId = null,
   isGroup,
   onReplyMessage,
   onDeleteMessage,
