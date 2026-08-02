@@ -24,6 +24,7 @@ interface ZappChatViewProps {
   messages: Message[];
   hasMoreMessages?: boolean;
   isLoadingOlderMessages?: boolean;
+  isLoadingMessages?: boolean;
   onLoadOlderMessages?: () => void;
   contactInfo: ContactInfo;
   clientProducts: { id: string; name: string; color?: string }[];
@@ -111,6 +112,7 @@ export function ZappChatView({
   messages,
   hasMoreMessages,
   isLoadingOlderMessages,
+  isLoadingMessages,
   onLoadOlderMessages,
   contactInfo,
   clientProducts,
@@ -364,6 +366,7 @@ export function ZappChatView({
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.id ?? null}
         hasMoreMessages={hasMoreMessages}
         isLoadingOlderMessages={isLoadingOlderMessages}
+        isLoadingMessages={isLoadingMessages}
         onLoadOlderMessages={onLoadOlderMessages}
         isGroup={contactInfo.isGroup}
         onReplyMessage={onReplyMessage}

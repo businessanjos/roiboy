@@ -36,6 +36,8 @@ interface ZappMessagesListProps {
   searchFocusId?: string | null;
   /** Existem mensagens mais antigas no banco além das carregadas. */
   hasMoreMessages?: boolean;
+  /** Está carregando o bloco inicial de mensagens da conversa. */
+  isLoadingMessages?: boolean;
   /** Está carregando o bloco anterior do histórico. */
   isLoadingOlderMessages?: boolean;
   /** Carrega o bloco anterior do histórico. */
@@ -511,7 +513,18 @@ export function ZappMessagesList({
           <p className="text-center text-[11px] text-zapp-text-muted py-2">Início da conversa</p>
         )}
 
-        {enrichedMessages.length === 0 ? (
+        {enrichedMessages.length === 0 && isLoadingMessages ? (
+          <div className="flex flex-col gap-3 py-4 px-1">
+            {[0, 1, 2, 3, 4, 5].map((i) => (
+              <div key={i} className={i % 2 === 0 ? "flex justify-start" : "flex justify-end"}>
+                <div
+                  className="h-12 rounded-2xl bg-muted/40 animate-pulse"
+                  style={{ width: `${45 + ((i * 13) % 35)}%` }}
+                />
+              </div>
+            ))}
+          </div>
+        ) : enrichedMessages.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>

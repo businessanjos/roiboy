@@ -164,6 +164,7 @@ export function useZappData(options: UseZappDataOptions = {}) {
     loadOlderMessages: conversations.loadOlderMessages,
     hasMoreMessages: conversations.hasMoreMessages,
     isLoadingOlderMessages: conversations.isLoadingOlderMessages,
+    isLoadingMessages: conversations.isLoadingMessages,
 
     setMessages: conversations.setMessages,
     setAssignments: conversations.setAssignments,

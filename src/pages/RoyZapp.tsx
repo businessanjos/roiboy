@@ -303,6 +303,7 @@ export default function RoyZapp() {
     loadOlderMessages,
     hasMoreMessages,
     isLoadingOlderMessages,
+    isLoadingMessages,
 
     setMessages,
   } = useZappData({
@@ -1802,6 +1803,7 @@ export default function RoyZapp() {
           messages={messages}
           hasMoreMessages={hasMoreMessages}
           isLoadingOlderMessages={isLoadingOlderMessages}
+          isLoadingMessages={isLoadingMessages}
           onLoadOlderMessages={loadOlderMessages}
           contactInfo={selectedContactInfo || { name: "", phone: "", avatar: null, clientId: null, isClient: false, isGroup: false, lastMessage: null, lastMessagePreview: "", unreadCount: 0, lastMessageAt: "", isPinned: false, isMuted: false, isArchived: false, isFavorite: false, isBlocked: false, searchableText: "" }}
           clientProducts={selectedClientProducts}
