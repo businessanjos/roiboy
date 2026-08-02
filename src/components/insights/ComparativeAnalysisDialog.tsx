@@ -221,7 +221,7 @@ function ComparisonCard({
         {!loading && <DeltaBadge pct={pct} positive={positive} neutral={neutral} />}
       </div>
 
-      <div className="mt-3 h-[220px]">
+      <div className="mt-3" style={{ height: chartHeight }}>
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -232,22 +232,57 @@ function ComparisonCard({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                interval={0}
-                angle={series.length > 6 ? -35 : 0}
-                textAnchor={series.length > 6 ? "end" : "middle"}
-                height={series.length > 6 ? 60 : 30}
+            <BarChart
+              data={series}
+              layout={horizontal ? "vertical" : "horizontal"}
+              barCategoryGap={horizontal ? "18%" : "22%"}
+              margin={
+                horizontal
+                  ? { top: 4, right: 56, left: 4, bottom: 4 }
+                  : { top: 8, right: 12, left: 4, bottom: 4 }
+              }
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--border))"
+                horizontal={horizontal}
+                vertical={!horizontal}
               />
-              <YAxis
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                width={70}
-                tickFormatter={(v) => formatValue(Number(v), config?.formatting)}
-              />
+              {horizontal ? (
+                <>
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickFormatter={(v) => compactValue(Number(v), config?.formatting)}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    interval={0}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickFormatter={(v: string) =>
+                      String(v).length > 22 ? `${String(v).slice(0, 21)}…` : String(v)
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <XAxis
+                    dataKey="name"
+                    interval={0}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    height={28}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    width={62}
+                    tickFormatter={(v) => compactValue(Number(v), config?.formatting)}
+                  />
+                </>
+              )}
               <Tooltip
+                cursor={{ fill: "hsl(var(--muted) / 0.35)" }}
                 formatter={(v: any) => formatValue(Number(v), config?.formatting)}
                 contentStyle={{
                   background: "hsl(var(--popover))",
@@ -257,12 +292,45 @@ function ComparisonCard({
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="anterior" name={previousLabel} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="atual" name={currentLabel} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="anterior"
+                name={previousLabel}
+                fill="hsl(var(--muted-foreground))"
+                radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+              >
+                {horizontal && (
+                  <LabelList
+                    dataKey="anterior"
+                    position="right"
+                    style={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                  />
+                )}
+              </Bar>
+              <Bar
+                dataKey="atual"
+                name={currentLabel}
+                fill="hsl(var(--primary))"
+                radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+              >
+                {horizontal && (
+                  <LabelList
+                    dataKey="atual"
+                    position="right"
+                    style={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                  />
+                )}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
       </div>
+      {hiddenCount > 0 && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          +{hiddenCount} categorias com menor volume não exibidas.
+        </p>
+      )}
     </div>
   );
 }
