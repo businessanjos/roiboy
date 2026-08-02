@@ -2278,7 +2278,22 @@ export default function SalesPipeline() {
                   
                   
                   {/* Filters toolbar */}
-                  <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full">
+                  <div className="w-full">
+                    <div className="flex items-center justify-between gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 gap-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                        onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                        aria-expanded={!filtersCollapsed}
+                      >
+                        <SlidersHorizontal className="h-3.5 w-3.5" />
+                        Filtros e busca
+                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
+                      </Button>
+                    </div>
+                  {!filtersCollapsed && (
+                  <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
                     {activeTab === 'open' && (
                       <div className="flex flex-col gap-1">
                         <label className="text-[10px] font-semibold uppercase tracking-wider text-muted-foreground px-1">Avançado</label>
