@@ -246,18 +246,26 @@ export function ZappMessagesList({
     return map;
   }, [enrichedMessages]);
 
-  // ---- Janela local de renderização (evita montar centenas de bolhas) ----
-  const [windowSize, setWindowSize] = useState(WINDOW_STEP);
+  // ---- Virtualização (padrão validado no zApp da RYKA) ----
+  const rowVirtualizer = useVirtualizer({
+    count: enrichedMessages.length,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: (i) => {
+      const m = enrichedMessages[i];
+      if (!m) return 72;
+      const t = m.message_type;
+      if (t === "image" || t === "video" || t === "sticker") return 260;
+      if (t === "document") return 110;
+      if (t === "audio" || t === "ptt") return 84;
+      if (m.quoted_message_id) return 128;
+      return 64;
+    },
+    overscan: 8,
+    getItemKey: (i) => enrichedMessages[i]?.id ?? i,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
 
-  useEffect(() => {
-    setWindowSize(WINDOW_STEP);
-  }, [conversationId]);
-
-  const windowStart = Math.max(0, enrichedMessages.length - windowSize);
-  const visibleMessages = useMemo(
-    () => enrichedMessages.slice(windowStart),
-    [enrichedMessages, windowStart]
-  );
 
   const atBottomRef = useRef(true);
 
