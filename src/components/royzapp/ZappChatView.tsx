@@ -361,6 +361,7 @@ export function ZappChatView({
       {/* Messages */}
       <ZappMessagesList 
         messages={messages} 
+        conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.id ?? null}
         hasMoreMessages={hasMoreMessages}
         isLoadingOlderMessages={isLoadingOlderMessages}
         onLoadOlderMessages={onLoadOlderMessages}
