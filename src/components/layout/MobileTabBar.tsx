@@ -1,6 +1,8 @@
 import { useMemo, useState } from "react";
 import { NavLink, useLocation } from "react-router-dom";
-import { MoreHorizontal, X } from "lucide-react";
+import { MoreHorizontal, X, MessageSquare } from "lucide-react";
+import { buildRoyZappUrl } from "@/lib/royZappRoutes";
+
 import { cn } from "@/lib/utils";
 import { useSector } from "@/contexts/SectorContext";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
