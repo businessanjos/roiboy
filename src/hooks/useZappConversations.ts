@@ -359,7 +359,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
       // Product, consultant and deal-stage badges are progressive enhancement.
       // Do not block the initial conversation list while these extra queries run.
-      void fetchSupplementaryData(result.assignments);
+      void fetchSupplementaryData(result.assignments).catch((error) => {
+        console.error("Error fetching supplementary zapp data:", error);
+      });
     } catch (error) {
       console.error("Error fetching assignments:", error);
     }
@@ -389,7 +391,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       const result = applyRecencyFloor(dedupeAssignments(data || []));
       seedHWMFromAssignments(result);
       setAssignments(result);
-      void fetchSupplementaryData(result);
+      void fetchSupplementaryData(result).catch((error) => {
+        console.error("Error fetching supplementary zapp data:", error);
+      });
       return result;
     } catch (error) {
       console.error("Error fetching assignments for department:", error);

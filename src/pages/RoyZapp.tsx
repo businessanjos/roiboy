@@ -298,7 +298,6 @@ export default function RoyZapp() {
     whatsappConnecting,
     whatsappInstanceName,
     toggleWhatsAppConnection,
-    checkWhatsAppStatus,
     fetchData,
     fetchMessages,
     loadOlderMessages,
