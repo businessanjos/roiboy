@@ -1054,7 +1054,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
                     onClick={() => onMarkAsWon(deal.id)}
                     disabled={processingWonDealId === deal.id}
                   >
@@ -1068,7 +1068,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     onClick={() => setLostDialogOpen(true)}
                     disabled={!!processingWonDealId}
                   >
@@ -1081,14 +1081,14 @@ export function DealDetailSheet({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2.5"
+                  className="h-8 px-2.5 flex-1 sm:flex-none"
                   onClick={() => onReopen(deal.id)}
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Reabrir
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="h-8" onClick={onEdit}>
+              <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none" onClick={onEdit}>
                 <Edit className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>
