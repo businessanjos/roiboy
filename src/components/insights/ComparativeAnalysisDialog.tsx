@@ -199,10 +199,21 @@ function ComparisonCard({
   const positive = diff > 0;
   const neutral = Math.abs(diff) < 0.0001;
 
-  const series = useMemo(
+  const allSeries = useMemo(
     () => buildSeries(current.data as any, previous.data as any),
     [current.data, previous.data],
   );
+  const dateLike = useMemo(() => isDateLike(allSeries), [allSeries]);
+  const MAX_BARS = dateLike ? 24 : 12;
+  const series = useMemo(() => allSeries.slice(0, MAX_BARS), [allSeries, MAX_BARS]);
+  const hiddenCount = Math.max(0, allSeries.length - series.length);
+  // Categorical labels are long → horizontal bars keep every label readable.
+  const horizontal = !dateLike && series.length > 4;
+  const chartHeight = horizontal
+    ? Math.max(220, series.length * 46 + 60)
+    : series.length > 12
+      ? 260
+      : 230;
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
