@@ -330,7 +330,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
           )}
 
           {/* Tags compact */}
-          <div className="flex items-center gap-1 overflow-hidden">
+          <div className="flex items-center gap-1 flex-wrap min-w-0 overflow-hidden">
             {faturamentoLabel && (
               <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 truncate max-w-[80px]">
                 $ {faturamentoLabel}
