@@ -233,7 +233,7 @@ function ComparisonCard({
         {!loading && <DeltaBadge pct={pct} positive={positive} neutral={neutral} />}
       </div>
 
-      <div className="mt-3" style={{ height: chartHeight }}>
+      <div className="mt-3 w-full min-w-0 flex-1" style={{ minHeight: chartHeight }}>
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
