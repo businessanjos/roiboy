@@ -1,5 +1,7 @@
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
+
 
 import { Button } from "@/components/ui/button";
 import {
@@ -15,8 +17,8 @@ import {
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
 
-/** Quantas mensagens são montadas por vez (janela local de renderização). */
-const WINDOW_STEP = 40;
+
+
 
 
 
@@ -246,18 +248,26 @@ export function ZappMessagesList({
     return map;
   }, [enrichedMessages]);
 
-  // ---- Janela local de renderização (evita montar centenas de bolhas) ----
-  const [windowSize, setWindowSize] = useState(WINDOW_STEP);
+  // ---- Virtualização (padrão validado no zApp da RYKA) ----
+  const rowVirtualizer = useVirtualizer({
+    count: enrichedMessages.length,
+    getScrollElement: () => viewportRef.current,
+    estimateSize: (i) => {
+      const m = enrichedMessages[i];
+      if (!m) return 72;
+      const t = m.message_type;
+      if (t === "image" || t === "video" || t === "sticker") return 260;
+      if (t === "document") return 110;
+      if (t === "audio" || t === "ptt") return 84;
+      if (m.quoted_message_id) return 128;
+      return 64;
+    },
+    overscan: 8,
+    getItemKey: (i) => enrichedMessages[i]?.id ?? i,
+  });
+  const virtualItems = rowVirtualizer.getVirtualItems();
+  const totalSize = rowVirtualizer.getTotalSize();
 
-  useEffect(() => {
-    setWindowSize(WINDOW_STEP);
-  }, [conversationId]);
-
-  const windowStart = Math.max(0, enrichedMessages.length - windowSize);
-  const visibleMessages = useMemo(
-    () => enrichedMessages.slice(windowStart),
-    [enrichedMessages, windowStart]
-  );
 
   const atBottomRef = useRef(true);
 
@@ -301,18 +311,14 @@ export function ZappMessagesList({
     (messageId: string) => {
       const index = indexById.get(messageId);
       if (index === undefined) return;
-      const ensureVisible = () => {
+      pinBottomUntilRef.current = 0;
+      rowVirtualizer.scrollToIndex(index, { align: "center" });
+      requestAnimationFrame(() => {
         const el = viewportRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(messageId)}"]`);
         el?.scrollIntoView({ block: "center" });
-      };
-      if (index < Math.max(0, enrichedMessages.length - windowSize)) {
-        setWindowSize(enrichedMessages.length - index + WINDOW_STEP);
-        requestAnimationFrame(ensureVisible);
-      } else {
-        ensureVisible();
-      }
+      });
     },
-    [indexById, enrichedMessages.length, windowSize]
+    [indexById, rowVirtualizer]
   );
 
   // Scroll to quoted message handler
@@ -328,26 +334,18 @@ export function ZappMessagesList({
   );
 
   const handleLoadOlder = useCallback(() => {
-    // Evita expansões em cascata antes de restaurar a posição da anterior.
     if (pendingRestoreRef.current) return;
-    // Primeiro expande a janela local; só busca no servidor quando tudo já está renderizado.
-    if (windowStart > 0) {
-      saveScrollAnchor();
-      setWindowSize((s) => s + WINDOW_STEP);
-      return;
-    }
-
     if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
     saveScrollAnchor();
     onLoadOlderMessages();
-  }, [windowStart, saveScrollAnchor, onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages]);
+  }, [saveScrollAnchor, onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages]);
 
 
   // Carrega automaticamente ao chegar no topo da conversa.
   useEffect(() => {
     const sentinel = topSentinelRef.current;
     const viewport = viewportRef.current;
-    if (!sentinel || !viewport || (!hasMoreMessages && windowStart === 0)) return;
+    if (!sentinel || !viewport || !hasMoreMessages) return;
     const observer = new IntersectionObserver(
       (entries) => {
         // Enquanto a conversa ainda está se ajustando ao fim, ignorar o topo.
@@ -358,7 +356,8 @@ export function ZappMessagesList({
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMoreMessages, windowStart, handleLoadOlder]);
+  }, [hasMoreMessages, handleLoadOlder]);
+
 
   // Troca de conversa: reseta âncoras e prende no fim enquanto o layout
   // (mídias, áudios) ainda muda de altura.
@@ -394,6 +393,15 @@ export function ZappMessagesList({
     if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
+  // A altura total muda conforme o virtualizer mede as linhas reais.
+  // Reancora no fim enquanto a conversa acabou de abrir ou se o usuário já está no fim.
+  useLayoutEffect(() => {
+    if (pendingRestoreRef.current) return;
+    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
+  }, [totalSize, scrollToBottom]);
+
+
+
   // Reancora no fim quando a altura muda (mídia carregando, painel de sugestões
   // abrindo, teclado) — apenas se o usuário estiver no fim ou na janela de "pin".
   useEffect(() => {
@@ -416,16 +424,6 @@ export function ZappMessagesList({
   }, [scrollToBottom]);
 
 
-
-  // Restaurar posição ao expandir a janela local de mensagens
-  useLayoutEffect(() => {
-    const saved = pendingRestoreRef.current;
-    const viewport = viewportRef.current;
-    if (saved && viewport) {
-      pendingRestoreRef.current = null;
-      viewport.scrollTop = saved.scrollTop + (viewport.scrollHeight - saved.scrollHeight);
-    }
-  }, [windowSize]);
 
 
   // Scroll to search focus
@@ -472,7 +470,7 @@ export function ZappMessagesList({
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-2 sm:px-4 py-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
       >
         <div ref={topSentinelRef} />
-        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages || windowStart > 0) && (
+        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages) && (
           <div className="flex justify-center py-2">
             <Button
               variant="ghost"
@@ -495,7 +493,7 @@ export function ZappMessagesList({
             </Button>
           </div>
         )}
-        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && windowStart === 0 && (
+        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && (
           <p className="text-center text-[11px] text-zapp-text-muted py-2">Início da conversa</p>
         )}
 
@@ -505,15 +503,30 @@ export function ZappMessagesList({
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          <div className="w-full min-w-0">
-            {visibleMessages.map((message, i) => {
-              const prev = i === 0 ? enrichedMessages[windowStart - 1] : visibleMessages[i - 1];
+          <div className="w-full min-w-0 relative" style={{ height: `${totalSize}px` }}>
+            {virtualItems.map((virtualRow) => {
+              const message = enrichedMessages[virtualRow.index];
+              if (!message) return null;
+              const prev = enrichedMessages[virtualRow.index - 1];
               const showTimestamp =
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
               return (
-                <div key={message.id} data-msg-id={message.id} className="w-full min-w-0">
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  data-msg-id={message.id}
+                  ref={rowVirtualizer.measureElement}
+                  className="w-full min-w-0"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -532,6 +545,7 @@ export function ZappMessagesList({
             })}
           </div>
         )}
+
 
       </div>
 
