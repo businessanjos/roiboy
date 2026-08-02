@@ -22,7 +22,7 @@ import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isSkippedRoute } from "@/lib/access/routeAccess";
-import { useAppVersionCheck } from "@/hooks/useAppVersionCheck";
+import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
 
 export function AppLayout() {
