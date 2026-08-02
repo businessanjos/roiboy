@@ -1827,7 +1827,7 @@ export default function RoyZapp() {
            onlineAgents={onlineAgents}
            totalQueueConversations={totalQueueConversations}
            activeConversations={activeConversations}
-           onBack={() => setSelectedConversation(null)}
+           onBack={closeConversation}
            onOpenClientEdit={(id) => {
              setEditingClientId(id);
              setClientEditSheetOpen(true);
