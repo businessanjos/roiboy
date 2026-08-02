@@ -69,15 +69,16 @@ export function FinancialKpiCard({
       )}
       onClick={onClick}
     >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between gap-3">
+      <CardContent className="p-3.5 sm:p-5">
+        <div className="flex items-start justify-between gap-2 sm:gap-3">
           <div className="space-y-1 min-w-0 flex-1">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               {label}
             </p>
-            <p className="text-2xl font-semibold tabular-nums text-foreground truncate">
+            <p className="text-lg sm:text-2xl font-semibold tabular-nums text-foreground leading-tight break-words">
               {value}
             </p>
+
             {(hint || delta) && (
               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                 {delta && (
