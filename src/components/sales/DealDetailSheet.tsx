@@ -962,18 +962,19 @@ export function DealDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
-        <SheetHeader className="px-5 py-4 border-b bg-muted/30">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Avatar className="h-10 w-10 border border-primary/20">
+        <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
+              <Avatar className="h-10 w-10 shrink-0 border border-primary/20">
                 <AvatarImage src={deal.client?.avatar_url || deal.lead?.avatar_url || undefined} />
                 <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                   {getInitials(contactName)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <SheetTitle className="text-base font-semibold truncate flex items-center gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <SheetTitle className="text-sm sm:text-base font-semibold truncate flex items-center gap-1.5 min-w-0 max-w-full text-left">
+
                     <span className="truncate">{deal.title}</span>
                     <VipBadge clientId={deal.client_id} size="md" />
                   </SheetTitle>
@@ -1003,7 +1004,7 @@ export function DealDetailSheet({
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 flex-wrap min-w-0">
                   {(deal.lead_id || resolvedLeadId) ? (
                     <button
                       onClick={() => {
@@ -1047,13 +1048,13 @@ export function DealDetailSheet({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 mr-8">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto sm:mr-8">
               {!isClosed && (
                 <>
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
                     onClick={() => onMarkAsWon(deal.id)}
                     disabled={processingWonDealId === deal.id}
                   >
@@ -1067,7 +1068,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-red-500 hover:text-red-600 hover:bg-red-500/10"
                     onClick={() => setLostDialogOpen(true)}
                     disabled={!!processingWonDealId}
                   >
@@ -1080,14 +1081,14 @@ export function DealDetailSheet({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2.5"
+                  className="h-8 px-2.5 flex-1 sm:flex-none"
                   onClick={() => onReopen(deal.id)}
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Reabrir
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="h-8" onClick={onEdit}>
+              <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none" onClick={onEdit}>
                 <Edit className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>
