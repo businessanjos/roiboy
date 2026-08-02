@@ -292,17 +292,16 @@ export function ZappMessagesList({
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
-      const index = indexById.get(messageId);
-      if (index === undefined) return;
+      if (!indexById.has(messageId)) return;
       pinBottomUntilRef.current = 0;
-      rowVirtualizer.scrollToIndex(index, { align: "center" });
       requestAnimationFrame(() => {
         const el = viewportRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(messageId)}"]`);
         el?.scrollIntoView({ block: "center" });
       });
     },
-    [indexById, rowVirtualizer]
+    [indexById]
   );
+
 
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback(
