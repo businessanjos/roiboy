@@ -241,7 +241,9 @@ export function StackedHorizontalBarChart({
           ))}
         </BarChart>
       </ResponsiveContainer>
+      </div>
     );
+
   }
 
 
