@@ -124,7 +124,9 @@ export function InsightsDashboardTabs() {
               )}
             </DropdownMenuContent>
           </DropdownMenu>
+          <div id="insights-mobile-actions" className="flex items-center gap-1.5 shrink-0" />
         </div>
+
 
         {/* Desktop: abas com scroll */}
         <div className="hidden sm:contents">
