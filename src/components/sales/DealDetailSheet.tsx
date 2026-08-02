@@ -1004,7 +1004,7 @@ export function DealDetailSheet({
                     </Badge>
                   )}
                 </div>
-                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5">
+                <div className="flex items-center gap-1.5 text-xs text-muted-foreground mt-0.5 flex-wrap min-w-0">
                   {(deal.lead_id || resolvedLeadId) ? (
                     <button
                       onClick={() => {
