@@ -651,7 +651,7 @@ function ContractRowActions({
   onCopy: (token: string) => void;
   onDuplicate: (id: string) => void;
   onOpen: (contract: DigitalContractListItem) => void;
-  onDelete: (id: string, contractNumber: string | null, status: string) => void;
+  onDelete: (id: string, contractNumber: string, status: string) => void;
 }) {
   return (
     <div className="flex items-center gap-1">
@@ -689,7 +689,7 @@ function ContractRowActions({
         variant="ghost"
         size="icon"
         className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-        onClick={() => onDelete(contract.id, contract.contract_number, contract.status)}
+        onClick={() => onDelete(contract.id, contract.contract_number ?? "Sem número", contract.status)}
         aria-label="Excluir contrato"
         title="Excluir contrato"
       >
