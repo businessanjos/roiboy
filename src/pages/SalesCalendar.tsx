@@ -437,7 +437,7 @@ function MonthGrid({
             <div
               key={key}
               className={cn(
-                "min-h-[112px] border-r border-b p-1.5 flex flex-col gap-1 last:border-r-0 transition-colors",
+                "min-h-[62px] md:min-h-[112px] border-r border-b p-1 md:p-1.5 flex flex-col gap-1 last:border-r-0 transition-colors",
                 !isCurrentMonth && "bg-muted/20",
               )}
             >
@@ -455,13 +455,28 @@ function MonthGrid({
                   <span className="text-[10px] text-muted-foreground">{dayEvents.length}</span>
                 )}
               </div>
-              <div className="flex flex-col gap-0.5">
+              {/* Mobile: apenas pontos coloridos (toque abre o evento) */}
+              <div className="md:hidden flex flex-wrap gap-1 mt-auto">
+                {dayEvents.slice(0, 4).map((e) => (
+                  <button
+                    key={e.id}
+                    onClick={() => onSelect(e)}
+                    aria-label={e.title}
+                    className={cn("h-2 w-2 rounded-full", SOURCE_STYLES[e.source].dot)}
+                  />
+                ))}
+                {dayEvents.length > 4 && (
+                  <span className="text-[9px] text-muted-foreground leading-none">+{dayEvents.length - 4}</span>
+                )}
+              </div>
+              <div className="hidden md:flex flex-col gap-0.5">
                 {visible.map((e) => (
                   <EventChip key={e.id} event={e} onSelect={onSelect} />
                 ))}
                 {more > 0 && (
                   <div className="text-[10px] text-muted-foreground px-1">+{more} mais</div>
                 )}
+
               </div>
             </div>
           );
