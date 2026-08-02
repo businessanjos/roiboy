@@ -282,10 +282,14 @@ function ComparisonCard({
                 <>
                   <XAxis
                     dataKey="name"
-                    interval={0}
+                    interval={series.length > 12 ? "preserveStartEnd" : 0}
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    height={28}
+                    tickMargin={6}
+                    height={36}
+                    angle={series.length > 8 ? -30 : 0}
+                    textAnchor={series.length > 8 ? "end" : "middle"}
                   />
+
                   <YAxis
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                     width={62}
