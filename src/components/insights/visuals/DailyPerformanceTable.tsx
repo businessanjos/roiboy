@@ -234,12 +234,42 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     }
 
 
+    // Entrada no funil: um negócio recém-criado não gera "mudança de etapa",
+    // então sem isso a primeira linha ficava zerada mesmo com negócios novos.
+    const orderedStageNames = [...stageRows.keys()];
+    const firstStageName = orderedStageNames[0] || null;
+    const firstActByDeal = new Map<string, any>();
+    for (const act of data.activities as any[]) {
+      if (!firstActByDeal.has(act.deal_id)) firstActByDeal.set(act.deal_id, act);
+    }
+    for (const d of data.deals as any[]) {
+      if (!d.created_at) continue;
+      const key = format(parseISO(d.created_at), "yyyy-MM-dd");
+      const entryStage = repescagemIds.has(d.id)
+        ? proposalStageName
+        : (() => {
+            const old = firstActByDeal.get(d.id)?.old_value;
+            if (old && stageRows.has(old)) return old;
+            return currentStageByDeal.get(d.id) || firstStageName;
+          })();
+      const row = entryStage ? stageRows.get(entryStage) : undefined;
+      if (!row) continue;
+      if (!(key in row.days)) continue;
+      const dedupeKey = `${d.id}|${row.key}|${key}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      row.days[key] += 1;
+      if (!stageDeals.has(row.key)) stageDeals.set(row.key, new Set());
+      stageDeals.get(row.key)!.add(d.id);
+    }
+
     // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
     // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
     const orderedStages = [...stageRows.values()];
     const lostDealIds = new Set<string>(
       (data.deals as any[]).filter((d) => d.status === "lost").map((d) => d.id),
     );
+
     for (let i = 0; i < orderedStages.length; i++) {
       const acc = new Set<string>();
       for (let j = i; j < orderedStages.length; j++) {
