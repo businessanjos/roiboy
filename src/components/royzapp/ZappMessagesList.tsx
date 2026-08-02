@@ -336,7 +336,7 @@ export function ZappMessagesList({
   useLayoutEffect(() => {
     firstMessageIdRef.current = null;
     pendingRestoreRef.current = null;
-    pinBottomUntilRef.current = Date.now() + 1200;
+    pinBottomUntilRef.current = Date.now() + 2500;
     scrollToBottom();
   }, [conversationId, scrollToBottom]);
 
