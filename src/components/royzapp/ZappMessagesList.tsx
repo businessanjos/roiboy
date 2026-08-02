@@ -516,30 +516,15 @@ export function ZappMessagesList({
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          <div className="w-full min-w-0 relative" style={{ height: `${totalSize}px` }}>
-            {virtualItems.map((virtualRow) => {
-              const message = enrichedMessages[virtualRow.index];
-              if (!message) return null;
-              const prev = enrichedMessages[virtualRow.index - 1];
+          <div className="w-full min-w-0">
+            {enrichedMessages.map((message, index) => {
+              const prev = enrichedMessages[index - 1];
               const showTimestamp =
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
               return (
-                <div
-                  key={virtualRow.key}
-                  data-index={virtualRow.index}
-                  data-msg-id={message.id}
-                  ref={rowVirtualizer.measureElement}
-                  className="w-full min-w-0"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
+                <div key={message.id} data-index={index} data-msg-id={message.id} className="w-full min-w-0">
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -558,6 +543,7 @@ export function ZappMessagesList({
             })}
           </div>
         )}
+
 
 
       </div>
