@@ -301,38 +301,51 @@ export function InsightsMainContent() {
       )}
       <div className="p-3 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <BarChart3 className="h-5 w-5 text-primary shrink-0" />
-            <h1 className="text-xl md:text-2xl font-bold truncate">{activeDashboard.name}</h1>
-          </div>
-          <div className="flex items-center gap-1.5 md:gap-2 shrink-0">
-            {canShare && (
-              <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
-                <Share2 className="h-4 w-4" />
-                <span className="hidden md:inline ml-2">Compartilhar</span>
-              </Button>
-            )}
-            {hasVisuals && (
-              <DashboardPaletteSelector
-                visuals={filteredVisuals}
-                onUpdateVisual={updateVisual}
-              />
-            )}
-            {!isMobile && (
-              <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
-                <Monitor className="h-4 w-4 mr-2" />
-                Modo Foco
-              </Button>
-            )}
-            {hasVisuals && (
-              <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
-                <Plus className="h-4 w-4" />
-                <span className="hidden md:inline ml-2">Adicionar Visual</span>
-              </Button>
-            )}
-          </div>
-        </div>
+        {(() => {
+          const actions = (
+            <>
+              {canShare && (
+                <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
+                  <Share2 className="h-4 w-4" />
+                  <span className="hidden md:inline ml-2">Compartilhar</span>
+                </Button>
+              )}
+              {hasVisuals && (
+                <DashboardPaletteSelector
+                  visuals={filteredVisuals}
+                  onUpdateVisual={updateVisual}
+                />
+              )}
+              {!isMobile && (
+                <Button variant="outline" size="sm" onClick={() => setIsFocusMode(true)}>
+                  <Monitor className="h-4 w-4 mr-2" />
+                  Modo Foco
+                </Button>
+              )}
+              {hasVisuals && (
+                <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
+                  <Plus className="h-4 w-4" />
+                  <span className="hidden md:inline ml-2">Adicionar Visual</span>
+                </Button>
+              )}
+            </>
+          );
+
+          if (isMobile) {
+            return mobileActionsSlot ? createPortal(actions, mobileActionsSlot) : null;
+          }
+
+          return (
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <BarChart3 className="h-5 w-5 text-primary shrink-0" />
+                <h1 className="text-xl md:text-2xl font-bold truncate">{activeDashboard.name}</h1>
+              </div>
+              <div className="flex items-center gap-1.5 md:gap-2 shrink-0">{actions}</div>
+            </div>
+          );
+        })()}
+
 
         {/* Filters */}
         <div className="flex items-center gap-3 flex-wrap">
