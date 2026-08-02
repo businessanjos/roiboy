@@ -62,6 +62,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [isLoadingOlderMessages, setIsLoadingOlderMessages] = useState(false);
+  const [isLoadingMessages, setIsLoadingMessages] = useState(false);
   const loadingOlderRef = useRef(false);
   const messagesRef = useRef<Message[]>([]);
   messagesRef.current = messages;
@@ -476,6 +477,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const fetchMessages = useCallback(async (zappConversationId: string) => {
     currentConversationIdRef.current = zappConversationId;
     setHasMoreMessages(false);
+    setIsLoadingMessages(true);
     // Limpa imediatamente para não exibir a conversa anterior enquanto a nova
     // carrega — era isso que dava a sensação de "delay" ao abrir.
     setMessages([]);
@@ -497,11 +499,13 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       const msgs: Message[] = rows.slice().reverse().map(mapMessageRow);
 
       setMessages(msgs);
+      setIsLoadingMessages(false);
       setHasMoreMessages(rows.length === INITIAL_MESSAGES_PAGE_SIZE);
       // Downloads de mídia pendentes não devem competir com a renderização.
       setTimeout(() => queuePendingMediaDownloads(msgs), 400);
     } catch (error) {
       console.error("Error fetching messages:", error);
+      if (currentConversationIdRef.current === zappConversationId) setIsLoadingMessages(false);
     }
   }, [queuePendingMediaDownloads]);
 
@@ -975,6 +979,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     loadOlderMessages,
     hasMoreMessages,
     isLoadingOlderMessages,
+    isLoadingMessages,
     setMessages,
     setAssignments,
     clearCurrentConversation,
