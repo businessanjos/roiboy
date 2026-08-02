@@ -326,7 +326,14 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                       {(dealsByStage[activeStageId || ""] || []).length}
                     </span>
                   </span>
-                  <ChevronDown className="h-4 w-4 opacity-60 flex-shrink-0" />
+                  <span className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" }).format(
+                        (dealsByStage[activeStageId || ""] || []).reduce((sum, d) => sum + (Number(d.value) || 0), 0)
+                      )}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-60" />
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto bg-popover z-50">
