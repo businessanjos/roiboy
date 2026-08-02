@@ -356,6 +356,10 @@ export default function RoyZapp() {
   const ZAPP_VIEW_STORAGE_KEY = "royzapp:activeView";
   const [activeView, setActiveView] = useState<ZappView>(() => {
     if (ZAPP_VIEWS.has(viewFromUrl as ZappView)) return viewFromUrl as ZappView;
+    // No celular o app sempre abre nas Conversas: restaurar a última view
+    // (ex.: Departamentos) fazia a tela "passar" por outra antes do inbox.
+    const isNarrow = typeof window !== "undefined" && window.innerWidth < 1024;
+    if (isNarrow) return "inbox";
     try {
       const stored = localStorage.getItem(ZAPP_VIEW_STORAGE_KEY);
       if (stored && ZAPP_VIEWS.has(stored as ZappView)) return stored as ZappView;
