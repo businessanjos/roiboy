@@ -396,6 +396,12 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
               <SelectItem value="previous_period">Período anterior</SelectItem>
             </SelectContent>
           </Select>
+          {isOngoing && (
+            <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+              <Switch checked={sameElapsed} onCheckedChange={setSameElapsed} />
+              Mesmo intervalo decorrido (até hoje)
+            </label>
+          )}
           <div className="text-xs text-muted-foreground">
             {labelRange(previousRange)} <span className="mx-1">vs</span> {labelRange(currentRange)}
           </div>
