@@ -157,9 +157,8 @@ export default function SalesPipeline() {
   const [isDeletedDrawerOpen, setIsDeletedDrawerOpen] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
   const canSeeDeleted = isManagementUser(currentUser as any, !!isSuperAdmin);
-  // Kanban por padrão (no celular usa seletor de etapa em tela cheia)
+  // Kanban por padrão: no celular usa seletor de etapa em tela cheia.
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
-
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
 
@@ -2256,53 +2255,50 @@ export default function SalesPipeline() {
             <div className="space-y-3">
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <PipelineSelector
-                      pipelines={pipelines}
-                      activePipelineId={activePipelineId}
-                      onSelect={setActivePipelineId}
-                      onCreate={createPipeline}
-                      onUpdate={updatePipeline}
-                      onDelete={deletePipeline}
-                    />
+                <div className="flex flex-col gap-2">
+                  <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <PipelineSelector
+                        pipelines={pipelines}
+                        activePipelineId={activePipelineId}
+                        onSelect={setActivePipelineId}
+                        onCreate={createPipeline}
+                        onUpdate={updatePipeline}
+                        onDelete={deletePipeline}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                      aria-expanded={!filtersCollapsed}
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      Filtros
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
+                    </Button>
                   </div>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                    onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                    aria-expanded={!filtersCollapsed}
-                  >
-                    <SlidersHorizontal className="h-3.5 w-3.5" />
-                    <span className="hidden xs:inline sm:inline">Filtros e busca</span>
-                    <span className="xs:hidden sm:hidden">Filtros</span>
-                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
-                  </Button>
-                </div>
-
-                {activeTab === 'open' && (
-                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                      <span className="text-muted-foreground truncate">{filteredOpenDeals.length} negócios</span>
+                  {activeTab === 'open' && (
+                    <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length} negócios</span>
+                      </div>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-1.5">
+                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Ponderado:</span>
+                        <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1.5 min-w-0">
-                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                      <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
-                    </div>
-                    <div className="hidden sm:flex items-center gap-1.5">
-                      <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="text-muted-foreground">Ponderado:</span>
-                      <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
-                    </div>
-                  </div>
-                )}
+                  )}
 
-
-
-
+                  <div className="w-full">
 
                   {!filtersCollapsed && (
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
@@ -2700,10 +2696,10 @@ export default function SalesPipeline() {
                 )}
 
               </div>
-              )}
 
+              {/* Resumo agora vive na linha do botão de filtros (sem duplicar) */}
 
-
+            </div>
 
             {/* Status sub-tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
