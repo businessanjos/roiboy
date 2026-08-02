@@ -624,13 +624,27 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       </div>
       )}
 
-      {/* Escopo da aba "Minhas": próprias, de um colega ou de toda a equipe do setor */}
-      {isConversationListVisible && inboxTab === "mine" && canSeeAllSectorConversations && (
-        <div className="px-3 py-2 bg-zapp-bg border-b border-zapp-border flex items-center gap-2">
-          <span className="text-xs text-zapp-text-muted whitespace-nowrap">Exibir:</span>
+      {/* Linha única: busca + escopo + puxar da fila */}
+      {isConversationListVisible && (
+      <div className="px-3 py-2 bg-zapp-bg flex items-center gap-2">
+        <div className="relative flex-1 min-w-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
+          <Input
+            placeholder="Pesquisar conversa..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
+          />
+        </div>
+
+        {inboxTab === "mine" && canSeeAllSectorConversations && (
           <Select value={filterAgentId} onValueChange={setFilterAgentId}>
-            <SelectTrigger className="h-8 flex-1 bg-zapp-input border-0 text-zapp-text text-xs focus:ring-0">
-              <SelectValue placeholder="Minhas conversas" />
+            <SelectTrigger
+              className="h-9 w-auto max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
+              title="Exibir conversas de"
+            >
+              <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
+              <SelectValue placeholder="Minhas" />
             </SelectTrigger>
             <SelectContent className="bg-zapp-panel border-zapp-border">
               <SelectItem value="all" className="text-zapp-text text-xs">Somente minhas conversas</SelectItem>
@@ -644,39 +658,23 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               ))}
             </SelectContent>
           </Select>
-        </div>
-      )}
+        )}
 
-
-      {/* Pull from queue button - shows when there are unassigned conversations */}
-      {isConversationListVisible && inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
-        <div className="px-3 py-2 bg-zapp-bg-dark border-b border-zapp-border">
+        {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
           <Button
             variant="outline"
             size="sm"
-            className="w-full bg-zapp-accent/10 border-zapp-accent/30 text-zapp-accent hover:bg-zapp-accent/20 hover:text-zapp-accent"
+            className="h-9 shrink-0 gap-1 px-2 bg-zapp-accent/10 border-zapp-accent/30 text-zapp-accent hover:bg-zapp-accent/20 hover:text-zapp-accent"
             onClick={onPullFromQueue}
+            title={`Puxar da fila (${totalQueueConversations})`}
           >
-            <ArrowDownToLine className="h-4 w-4 mr-2" />
-            Puxar da Fila ({totalQueueConversations})
+            <ArrowDownToLine className="h-4 w-4" />
+            <span className="text-[11px] font-semibold">{totalQueueConversations}</span>
           </Button>
-        </div>
-      )}
-
-      {/* Search */}
-      {isConversationListVisible && (
-      <div className="px-3 py-2 bg-zapp-bg">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
-          <Input
-            placeholder="Pesquisar conversa..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
-          />
-        </div>
+        )}
       </div>
       )}
+
 
       {/* Faixa de chips de etiquetas removida — filtro continua disponível pelo seletor de etiquetas */}
 
