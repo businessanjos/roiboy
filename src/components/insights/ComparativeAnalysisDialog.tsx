@@ -212,13 +212,12 @@ function ComparisonCard({
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
   const chartHeight = horizontal
-    ? Math.max(220, series.length * 46 + 60)
-    : series.length > 12
-      ? 260
-      : 230;
+    ? Math.min(460, Math.max(300, series.length * 42 + 70))
+    : 300;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold truncate">{visual.title || "Sem título"}</p>
@@ -234,7 +233,7 @@ function ComparisonCard({
         {!loading && <DeltaBadge pct={pct} positive={positive} neutral={neutral} />}
       </div>
 
-      <div className="mt-3" style={{ height: chartHeight }}>
+      <div className="mt-3 w-full min-w-0 flex-1" style={{ minHeight: chartHeight }}>
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -283,10 +282,14 @@ function ComparisonCard({
                 <>
                   <XAxis
                     dataKey="name"
-                    interval={0}
+                    interval={series.length > 12 ? "preserveStartEnd" : 0}
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                    height={28}
+                    tickMargin={6}
+                    height={36}
+                    angle={series.length > 8 ? -30 : 0}
+                    textAnchor={series.length > 8 ? "end" : "middle"}
                   />
+
                   <YAxis
                     tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
                     width={62}
@@ -379,7 +382,7 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[92vw] xl:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
+      <DialogContent className="w-[97vw] max-w-[97vw] h-[94vh] max-h-[94vh] overflow-hidden flex flex-col sm:rounded-xl">
         <DialogHeader>
           <DialogTitle>Análise comparativa</DialogTitle>
           <DialogDescription>
@@ -414,7 +417,7 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
               Este painel não tem visuais para comparar.
             </p>
           ) : (
-            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch auto-rows-fr">
               {open &&
                 visuals.map((v) => (
                   <ComparisonCard
