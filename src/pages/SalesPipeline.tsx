@@ -2176,19 +2176,20 @@ export default function SalesPipeline() {
             <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
 
 
-              <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
-                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Prospecção
+              <TabsTrigger value="prospeccao" className="flex-1 min-w-0 gap-1 px-2 text-[11px] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-sm">
+                <Users className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                <span className="truncate">Prospecção</span>
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="pipeline" className="gap-1.5 text-xs sm:text-sm">
-                <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                Pipeline
+              <TabsTrigger value="pipeline" className="flex-1 min-w-0 gap-1 px-2 text-[11px] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-sm">
+                <Target className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
+                <span className="truncate">Pipeline</span>
                 <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
               </TabsTrigger>
             </TabsList>
 
-            <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto sm:flex-shrink-0">
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
+
               {mainTab === 'pipeline' && (
                 <>
                   <div className="flex items-center gap-1.5 sm:gap-2">
