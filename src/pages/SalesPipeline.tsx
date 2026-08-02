@@ -2256,8 +2256,8 @@ export default function SalesPipeline() {
             <div className="space-y-3">
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className={cn("gap-3", filtersCollapsed ? "flex flex-wrap items-center" : "flex flex-col")}>
-                  <div className="flex items-center gap-3">
+                <div className={cn("gap-2 sm:gap-3", filtersCollapsed ? "flex flex-wrap items-center" : "flex flex-col")}>
+                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-none">
                   <PipelineSelector
                     pipelines={pipelines}
                     activePipelineId={activePipelineId}
@@ -2270,12 +2270,12 @@ export default function SalesPipeline() {
                   
                   
                   {/* Filters toolbar */}
-                  <div className={filtersCollapsed ? "flex-1 min-w-0" : "w-full"}>
-                    <div className="flex items-center gap-3 flex-wrap">
+                  <div className={filtersCollapsed ? "flex-1 min-w-0 w-full sm:w-auto" : "w-full"}>
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:flex-wrap">
                       <Button
                         variant="ghost"
                         size="sm"
-                        className="h-8 gap-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                        className="h-8 w-full sm:w-auto justify-center sm:justify-start gap-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                         onClick={() => setFiltersCollapsed(!filtersCollapsed)}
                         aria-expanded={!filtersCollapsed}
                       >
@@ -2284,7 +2284,7 @@ export default function SalesPipeline() {
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
                       </Button>
                       {activeTab === 'open' && (
-                        <div className="flex items-center gap-3 sm:gap-5 text-xs sm:text-sm">
+                        <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-5 text-xs sm:text-sm w-full sm:w-auto">
                           <div className="flex items-center gap-1.5">
                             <div className="h-2 w-2 rounded-full bg-primary" />
                             <span className="text-muted-foreground">{filteredOpenDeals.length} negócios</span>
@@ -2301,6 +2301,7 @@ export default function SalesPipeline() {
                         </div>
                       )}
                     </div>
+
                   {!filtersCollapsed && (
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
                     {activeTab === 'open' && (
