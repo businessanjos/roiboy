@@ -516,7 +516,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     <button
       type="button"
       onClick={toggleFreeLayout}
-      className={`inline-flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+      className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
         freeLayout
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:bg-muted/50"
