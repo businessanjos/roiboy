@@ -80,9 +80,11 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
 
   const businessDays = days.filter((d) => !isWeekend(d)).length || 1;
 
-  // O período é inclusivo: sem o fim do dia, o último dia do intervalo some da tabela.
-  const rangeStartIso = `${range.start}T00:00:00`;
-  const rangeEndIso = `${range.end}T23:59:59.999`;
+  // O período é inclusivo e usa o fuso local: sem isso, movimentações da noite
+  // (ex.: 22h no Brasil = 01h UTC do dia seguinte) caíam fora das colunas.
+  const rangeStartIso = range.start ? new Date(`${range.start}T00:00:00`).toISOString() : "";
+  const rangeEndIso = range.end ? new Date(`${range.end}T23:59:59.999`).toISOString() : "";
+
 
 
   const { data, isLoading } = useQuery({
@@ -125,7 +127,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       for (let page = 0; page < 50; page++) {
         let dealsQuery = supabase
           .from("deals")
-          .select("id, value, status, won_at, lost_at, pipeline_id, responsible_user_id, stage_id")
+          .select("id, value, status, won_at, lost_at, created_at, pipeline_id, responsible_user_id, stage_id")
           .eq("account_id", accountId)
           // Negócios excluídos (soft delete) nunca entram na auditoria.
           .is("deleted_at", null)
@@ -154,7 +156,7 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       for (let page = 0; page < 50; page++) {
         const { data: chunk, error } = await supabase
           .from("deal_activities")
-          .select("deal_id, new_value, created_at, type, title")
+          .select("deal_id, old_value, new_value, created_at, type, title")
           .eq("account_id", accountId)
           .eq("type", "stage_change")
           .gte("created_at", rangeStartIso)
@@ -232,12 +234,42 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
     }
 
 
+    // Entrada no funil: um negócio recém-criado não gera "mudança de etapa",
+    // então sem isso a primeira linha ficava zerada mesmo com negócios novos.
+    const orderedStageNames = [...stageRows.keys()];
+    const firstStageName = orderedStageNames[0] || null;
+    const firstActByDeal = new Map<string, any>();
+    for (const act of data.activities as any[]) {
+      if (!firstActByDeal.has(act.deal_id)) firstActByDeal.set(act.deal_id, act);
+    }
+    for (const d of data.deals as any[]) {
+      if (!d.created_at) continue;
+      const key = format(parseISO(d.created_at), "yyyy-MM-dd");
+      const entryStage = repescagemIds.has(d.id)
+        ? proposalStageName
+        : (() => {
+            const old = firstActByDeal.get(d.id)?.old_value;
+            if (old && stageRows.has(old)) return old;
+            return currentStageByDeal.get(d.id) || firstStageName;
+          })();
+      const row = entryStage ? stageRows.get(entryStage) : undefined;
+      if (!row) continue;
+      if (!(key in row.days)) continue;
+      const dedupeKey = `${d.id}|${row.key}|${key}`;
+      if (seen.has(dedupeKey)) continue;
+      seen.add(dedupeKey);
+      row.days[key] += 1;
+      if (!stageDeals.has(row.key)) stageDeals.set(row.key, new Set());
+      stageDeals.get(row.key)!.add(d.id);
+    }
+
     // Total em lógica de funil: cada etapa conta os negócios únicos que chegaram
     // nela OU em qualquer etapa posterior. Assim o total nunca cresce para baixo.
     const orderedStages = [...stageRows.values()];
     const lostDealIds = new Set<string>(
       (data.deals as any[]).filter((d) => d.status === "lost").map((d) => d.id),
     );
+
     for (let i = 0; i < orderedStages.length; i++) {
       const acc = new Set<string>();
       for (let j = i; j < orderedStages.length; j++) {
