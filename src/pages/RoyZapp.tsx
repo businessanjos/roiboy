@@ -518,8 +518,35 @@ export default function RoyZapp() {
     [selectedSectorId, selectedIntegrationId]
   );
 
+  // Em telas estreitas (< lg) o chat ocupa a tela toda: restaurar a conversa
+  // automaticamente prenderia o usuário dentro dela ao voltar.
+  const isNarrowScreen = useSyncExternalStore(
+    (onChange) => {
+      const mql = window.matchMedia("(max-width: 1023px)");
+      mql.addEventListener("change", onChange);
+      return () => mql.removeEventListener("change", onChange);
+    },
+    () => window.matchMedia("(max-width: 1023px)").matches,
+    () => false
+  );
+
+  // Quando o usuário fecha a conversa manualmente, não restaurar de novo.
+  const suppressRestoreRef = useRef(false);
+
+  const closeConversation = useCallback(() => {
+    suppressRestoreRef.current = true;
+    lastSelectedAssignmentIdRef.current = null;
+    try {
+      localStorage.removeItem(selectionStorageKey);
+    } catch {
+      // ignore
+    }
+    setSelectedConversation(null);
+  }, [selectionStorageKey]);
+
   useEffect(() => {
     if (selectedConversation?.id) {
+      suppressRestoreRef.current = false;
       lastSelectedAssignmentIdRef.current = selectedConversation.id;
       try {
         localStorage.setItem(selectionStorageKey, selectedConversation.id);
@@ -537,6 +564,7 @@ export default function RoyZapp() {
 
   // Reapply the remembered conversation when returning to a view that shows the list
   useEffect(() => {
+    if (isNarrowScreen || suppressRestoreRef.current) return;
     if (!keepsConversationSelection || selectedConversation) return;
     if (!assignments.length) return;
 
@@ -554,7 +582,7 @@ export default function RoyZapp() {
     if (remembered) {
       setSelectedConversation(remembered);
     }
-  }, [keepsConversationSelection, selectedConversation, assignments, selectionStorageKey]);
+  }, [isNarrowScreen, keepsConversationSelection, selectedConversation, assignments, selectionStorageKey]);
 
   // Keep the open chat synced with the latest assignment object from the list
   useEffect(() => {
