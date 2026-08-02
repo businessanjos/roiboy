@@ -70,8 +70,8 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
       ref={setNodeRef}
       className={cn(
         fullWidth
-          ? "w-full min-w-0 max-w-none flex flex-col transition-all duration-200"
-          : "flex-1 min-w-[78vw] sm:min-w-[200px] max-w-[78vw] sm:max-w-[320px] flex flex-col transition-all duration-200",
+          ? "w-full min-w-0 max-w-none h-full min-h-0 flex flex-col transition-all duration-200"
+          : "flex-1 min-w-[78vw] sm:min-w-[200px] max-w-[78vw] sm:max-w-[320px] h-full min-h-0 flex flex-col transition-all duration-200",
         // When drag is active but NOT over this column — subtle pulse hint
         isDragActive && !isOver && "opacity-80",
         // When hovering over this column — strong highlight
@@ -130,7 +130,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 space-y-2 p-1.5 rounded-lg transition-all duration-200 overflow-y-auto overflow-x-hidden border-2 border-transparent",
+          "flex-1 min-h-0 space-y-2 p-1.5 rounded-lg transition-all duration-200 overflow-y-auto overflow-x-hidden overscroll-contain border-2 border-transparent",
           // Drop target highlight
           isOver && "border-dashed bg-primary/5",
           // Drag active but not over — show it's a valid drop target
