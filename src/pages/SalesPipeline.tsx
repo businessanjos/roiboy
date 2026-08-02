@@ -2190,8 +2190,10 @@ export default function SalesPipeline() {
             <div className="flex items-center justify-between sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto sm:flex-shrink-0">
               {mainTab === 'pipeline' && (
                 <>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
                   {/* View toggle - desktop only */}
                   <div className="flex items-center border rounded-lg overflow-hidden">
+
                     <Button
                       variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                       size="sm"
