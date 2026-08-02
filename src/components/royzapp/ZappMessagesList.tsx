@@ -7,6 +7,8 @@ import { ZappMessageBubble } from "./ZappMessageBubble";
 
 interface ZappMessagesListProps {
   messages: Message[];
+  /** Id da conversa aberta — usado para detectar troca de conversa. */
+  conversationId?: string | null;
   isGroup: boolean;
   onReplyMessage?: (message: Message) => void;
   onDeleteMessage?: (messageId: string) => void;
@@ -71,6 +73,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
 
 export function ZappMessagesList({
   messages,
+  conversationId = null,
   isGroup,
   onReplyMessage,
   onDeleteMessage,
@@ -313,29 +316,28 @@ export function ZappMessagesList({
     messagesEndRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
   }, [getViewport]);
 
+  // Troca de conversa: reseta âncoras e prende no fim enquanto o layout
+  // (mídias, áudios) ainda muda de altura. Rodar antes do efeito de scroll
+  // garante que a primeira leva de mensagens nunca seja tratada como
+  // "histórico carregado no topo".
+  useLayoutEffect(() => {
+    conversationKeyRef.current = conversationId;
+    firstMessageIdRef.current = null;
+    pendingRestoreRef.current = null;
+    pinBottomUntilRef.current = Date.now() + 1500;
+    const viewport = getViewport();
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
+  }, [conversationId, getViewport]);
+
   // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
     if (enrichedMessages.length === 0) {
       firstMessageIdRef.current = null;
-      conversationKeyRef.current = null;
       return;
-    }
-
-    const conversationKey =
-      (enrichedMessages[enrichedMessages.length - 1] as any)?.conversation_id ?? null;
-    const conversationChanged =
-      conversationKey !== null && conversationKeyRef.current !== conversationKey;
-    if (conversationChanged) {
-      conversationKeyRef.current = conversationKey;
-      firstMessageIdRef.current = null;
-      pendingRestoreRef.current = null;
-      // Mantém preso ao fim por um instante enquanto imagens/áudios carregam.
-      pinBottomUntilRef.current = Date.now() + 1500;
     }
 
     const newFirstId = enrichedMessages[0].id;
     const prepended =
-      !conversationChanged &&
       firstMessageIdRef.current !== null &&
       firstMessageIdRef.current !== newFirstId;
     firstMessageIdRef.current = newFirstId;

@@ -415,6 +415,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
 
   // Fetch messages
   const MESSAGES_PAGE_SIZE = 100;
+  // Primeira leva menor: a conversa abre quase instantaneamente e o restante
+  // do histórico entra sob demanda ao rolar para cima.
+  const INITIAL_MESSAGES_PAGE_SIZE = 30;
   const MESSAGE_COLUMNS = "id, content, direction, sent_at, message_type, media_url, media_type, media_mimetype, media_filename, audio_duration_sec, sender_name, sender_phone, delivery_status, media_download_status, external_message_id, is_deleted, deleted_at, quoted_message_id, quoted_content, quoted_sender_name, updated_at, is_edited, transcription, mention_map";
 
   const mapMessageRow = (m: any): Message => ({
@@ -473,6 +476,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
   const fetchMessages = useCallback(async (zappConversationId: string) => {
     currentConversationIdRef.current = zappConversationId;
     setHasMoreMessages(false);
+    // Limpa imediatamente para não exibir a conversa anterior enquanto a nova
+    // carrega — era isso que dava a sensação de "delay" ao abrir.
+    setMessages([]);
 
     try {
       const { data, error } = await supabase
@@ -480,16 +486,20 @@ export function useZappConversations(options: UseZappConversationsOptions) {
         .select(MESSAGE_COLUMNS)
         .eq("zapp_conversation_id", zappConversationId)
         .order("sent_at", { ascending: false })
-        .limit(MESSAGES_PAGE_SIZE);
+        .limit(INITIAL_MESSAGES_PAGE_SIZE);
 
       if (error) throw error;
+
+      // Conversa pode ter mudado durante o fetch
+      if (currentConversationIdRef.current !== zappConversationId) return;
 
       const rows = data || [];
       const msgs: Message[] = rows.slice().reverse().map(mapMessageRow);
 
       setMessages(msgs);
-      setHasMoreMessages(rows.length === MESSAGES_PAGE_SIZE);
-      queuePendingMediaDownloads(msgs);
+      setHasMoreMessages(rows.length === INITIAL_MESSAGES_PAGE_SIZE);
+      // Downloads de mídia pendentes não devem competir com a renderização.
+      setTimeout(() => queuePendingMediaDownloads(msgs), 400);
     } catch (error) {
       console.error("Error fetching messages:", error);
     }
