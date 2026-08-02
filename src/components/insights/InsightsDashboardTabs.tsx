@@ -93,7 +93,7 @@ export function InsightsDashboardTabs() {
           <DropdownMenu>
 
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 w-full justify-between gap-2 min-w-0">
+              <Button variant="outline" className="h-9 flex-1 justify-between gap-2 min-w-0">
                 <span className="truncate font-semibold">{activeDashboard?.name || "Selecionar painel"}</span>
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
               </Button>
