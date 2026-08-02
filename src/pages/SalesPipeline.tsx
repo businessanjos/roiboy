@@ -2172,88 +2172,80 @@ export default function SalesPipeline() {
   return (
     <>
       <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-        {/* Header */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 sm:gap-3 min-w-0">
-            <div className="min-w-0">
-              <h1 className="text-lg sm:text-xl font-bold">Comercial</h1>
-              <p className="text-muted-foreground text-xs hidden sm:block">
-                Gerencie prospecção e negociações
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
-            {mainTab === 'pipeline' && (
-              <>
-                {/* View toggle - desktop only */}
-                <div className="flex items-center border rounded-lg overflow-hidden">
-                  <Button
-                    variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-none h-8"
-                    onClick={() => setViewMode('kanban')}
-                  >
-                    <LayoutGrid className="h-3.5 w-3.5" />
-                  </Button>
-                  <Button
-                    variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                    size="sm"
-                    className="rounded-none h-8"
-                    onClick={() => setViewMode('list')}
-                  >
-                    <List className="h-3.5 w-3.5" />
-                  </Button>
-                </div>
-
-                {/* Config dropdown */}
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
-                      <MoreVertical className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" className="w-48">
-                    <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
-                      <Columns3 className="h-4 w-4 mr-2" />
-                      Gerenciar Etapas
-                    </DropdownMenuItem>
-                    {isAdmin && (
-                      <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
-                        <SlidersHorizontal className="h-4 w-4 mr-2" />
-                        Campos Personalizados
-                      </DropdownMenuItem>
-                    )}
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
-                      <Download className="h-4 w-4 mr-2" />
-                      Exportar Pipeline
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-
-                <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
-                  <Plus className="h-4 w-4" />
-                  <span className="hidden sm:inline">Novo Deal</span>
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-
         {/* Main Tabs */}
         <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
-          <TabsList className="w-full sm:w-auto grid grid-cols-2 sm:flex">
-            <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
-              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Prospecção
-              <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="pipeline" className="gap-1.5 text-xs sm:text-sm">
-              <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-              Pipeline
-              <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
-            </TabsTrigger>
-          </TabsList>
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <TabsList className="grid grid-cols-2 sm:flex">
+              <TabsTrigger value="prospeccao" className="gap-1.5 text-xs sm:text-sm">
+                <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Prospecção
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="gap-1.5 text-xs sm:text-sm">
+                <Target className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                Pipeline
+                <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
+              </TabsTrigger>
+            </TabsList>
+
+            <div className="flex items-center gap-1.5 sm:gap-2 flex-shrink-0">
+              {mainTab === 'pipeline' && (
+                <>
+                  {/* View toggle - desktop only */}
+                  <div className="flex items-center border rounded-lg overflow-hidden">
+                    <Button
+                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-8"
+                      onClick={() => setViewMode('kanban')}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-8"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  {/* Config dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
+                        <Columns3 className="h-4 w-4 mr-2" />
+                        Gerenciar Etapas
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
+                          <SlidersHorizontal className="h-4 w-4 mr-2" />
+                          Campos Personalizados
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Pipeline
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+
+                  <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Novo Deal</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
 
           <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
             <LeadsTab />
