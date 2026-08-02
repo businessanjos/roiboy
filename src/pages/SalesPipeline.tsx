@@ -2701,10 +2701,11 @@ export default function SalesPipeline() {
                 )}
 
               </div>
-
-              {/* Resumo agora vive na linha do botão de filtros (sem duplicar) */}
+              )}
+              </div>
 
             </div>
+
 
             {/* Status sub-tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
