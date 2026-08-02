@@ -290,8 +290,8 @@ function ComparisonCard({
               barCategoryGap={horizontal ? "18%" : "22%"}
               margin={
                 horizontal
-                  ? { top: 4, right: 56, left: 4, bottom: 4 }
-                  : { top: 8, right: 12, left: 4, bottom: 4 }
+                  ? { top: 4, right: 96, left: 4, bottom: 4 }
+                  : { top: 22, right: 12, left: 4, bottom: 4 }
               }
             >
               <CartesianGrid
