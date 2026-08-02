@@ -1048,7 +1048,7 @@ export function DealDetailSheet({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 mr-8">
+            <div className="flex items-center gap-1.5 w-full sm:w-auto sm:mr-8">
               {!isClosed && (
                 <>
                   <Button
