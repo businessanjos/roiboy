@@ -459,7 +459,7 @@ export function ZappMessagesList({
         className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-2 sm:px-4 py-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
       >
         <div ref={topSentinelRef} />
-        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages || windowStart > 0) && (
+        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages) && (
           <div className="flex justify-center py-2">
             <Button
               variant="ghost"
@@ -482,7 +482,7 @@ export function ZappMessagesList({
             </Button>
           </div>
         )}
-        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && windowStart === 0 && (
+        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && (
           <p className="text-center text-[11px] text-zapp-text-muted py-2">Início da conversa</p>
         )}
 
@@ -492,15 +492,30 @@ export function ZappMessagesList({
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          <div className="w-full min-w-0">
-            {visibleMessages.map((message, i) => {
-              const prev = i === 0 ? enrichedMessages[windowStart - 1] : visibleMessages[i - 1];
+          <div className="w-full min-w-0 relative" style={{ height: `${totalSize}px` }}>
+            {virtualItems.map((virtualRow) => {
+              const message = enrichedMessages[virtualRow.index];
+              if (!message) return null;
+              const prev = enrichedMessages[virtualRow.index - 1];
               const showTimestamp =
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
               return (
-                <div key={message.id} data-msg-id={message.id} className="w-full min-w-0">
+                <div
+                  key={virtualRow.key}
+                  data-index={virtualRow.index}
+                  data-msg-id={message.id}
+                  ref={rowVirtualizer.measureElement}
+                  className="w-full min-w-0"
+                  style={{
+                    position: "absolute",
+                    top: 0,
+                    left: 0,
+                    width: "100%",
+                    transform: `translateY(${virtualRow.start}px)`,
+                  }}
+                >
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -519,6 +534,7 @@ export function ZappMessagesList({
             })}
           </div>
         )}
+
 
       </div>
 
