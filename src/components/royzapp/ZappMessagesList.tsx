@@ -414,16 +414,6 @@ export function ZappMessagesList({
 
 
 
-  // Restaurar posição ao expandir a janela local de mensagens
-  useLayoutEffect(() => {
-    const saved = pendingRestoreRef.current;
-    const viewport = viewportRef.current;
-    if (saved && viewport) {
-      pendingRestoreRef.current = null;
-      viewport.scrollTop = saved.scrollTop + (viewport.scrollHeight - saved.scrollHeight);
-    }
-  }, [windowSize]);
-
 
   // Scroll to search focus
   useEffect(() => {
