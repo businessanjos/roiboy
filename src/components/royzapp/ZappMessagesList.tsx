@@ -1,5 +1,4 @@
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
 
 
@@ -248,25 +247,8 @@ export function ZappMessagesList({
     return map;
   }, [enrichedMessages]);
 
-  // ---- Virtualização (padrão validado no zApp da RYKA) ----
-  const rowVirtualizer = useVirtualizer({
-    count: enrichedMessages.length,
-    getScrollElement: () => viewportRef.current,
-    estimateSize: (i) => {
-      const m = enrichedMessages[i];
-      if (!m) return 72;
-      const t = m.message_type;
-      if (t === "image" || t === "video" || t === "sticker") return 260;
-      if (t === "document") return 110;
-      if (t === "audio" || t === "ptt") return 84;
-      if (m.quoted_message_id) return 128;
-      return 64;
-    },
-    overscan: 8,
-    getItemKey: (i) => enrichedMessages[i]?.id ?? i,
-  });
-  const virtualItems = rowVirtualizer.getVirtualItems();
-  const totalSize = rowVirtualizer.getTotalSize();
+
+
 
 
   const atBottomRef = useRef(true);
@@ -309,17 +291,16 @@ export function ZappMessagesList({
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
-      const index = indexById.get(messageId);
-      if (index === undefined) return;
+      if (!indexById.has(messageId)) return;
       pinBottomUntilRef.current = 0;
-      rowVirtualizer.scrollToIndex(index, { align: "center" });
       requestAnimationFrame(() => {
         const el = viewportRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(messageId)}"]`);
         el?.scrollIntoView({ block: "center" });
       });
     },
-    [indexById, rowVirtualizer]
+    [indexById]
   );
+
 
   // Scroll to quoted message handler
   const handleScrollToQuoted = useCallback(
@@ -364,9 +345,29 @@ export function ZappMessagesList({
   useLayoutEffect(() => {
     firstMessageIdRef.current = null;
     pendingRestoreRef.current = null;
-    pinBottomUntilRef.current = Date.now() + 2500;
+    atBottomRef.current = true;
+    pinBottomUntilRef.current = Date.now() + 5000;
     scrollToBottom();
   }, [conversationId, scrollToBottom]);
+
+  // Mídias (imagem/vídeo) só definem a altura real depois de carregar; reancora
+  // no fim quando isso acontece e o usuário ainda está no fim.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onMediaLoad = () => {
+      if (pendingRestoreRef.current) return;
+      if (!atBottomRef.current && Date.now() >= pinBottomUntilRef.current) return;
+      requestAnimationFrame(scrollToBottom);
+    };
+    viewport.addEventListener("load", onMediaLoad, true);
+    viewport.addEventListener("loadedmetadata", onMediaLoad, true);
+    return () => {
+      viewport.removeEventListener("load", onMediaLoad, true);
+      viewport.removeEventListener("loadedmetadata", onMediaLoad, true);
+    };
+  }, [conversationId, scrollToBottom]);
+
 
   // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
@@ -393,12 +394,25 @@ export function ZappMessagesList({
     if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
-  // A altura total muda conforme o virtualizer mede as linhas reais.
-  // Reancora no fim enquanto a conversa acabou de abrir ou se o usuário já está no fim.
-  useLayoutEffect(() => {
-    if (pendingRestoreRef.current) return;
-    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
-  }, [totalSize, scrollToBottom]);
+  // Enquanto o virtualizer mede as linhas reais logo após abrir a conversa,
+  // mantém a rolagem no fim via rAF (fora do ciclo de render, sem loop).
+  useEffect(() => {
+    let raf = 0;
+    const tick = () => {
+      if (Date.now() >= pinBottomUntilRef.current) return;
+      if (!pendingRestoreRef.current && atBottomRef.current) {
+        const viewport = viewportRef.current;
+        if (viewport) {
+          const target = viewport.scrollHeight - viewport.clientHeight;
+          if (Math.abs(viewport.scrollTop - target) > 4) viewport.scrollTop = target;
+        }
+      }
+      raf = requestAnimationFrame(tick);
+    };
+    raf = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(raf);
+  }, [conversationId]);
+
 
 
 
@@ -503,30 +517,15 @@ export function ZappMessagesList({
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          <div className="w-full min-w-0 relative" style={{ height: `${totalSize}px` }}>
-            {virtualItems.map((virtualRow) => {
-              const message = enrichedMessages[virtualRow.index];
-              if (!message) return null;
-              const prev = enrichedMessages[virtualRow.index - 1];
+          <div className="w-full min-w-0">
+            {enrichedMessages.map((message, index) => {
+              const prev = enrichedMessages[index - 1];
               const showTimestamp =
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
               return (
-                <div
-                  key={virtualRow.key}
-                  data-index={virtualRow.index}
-                  data-msg-id={message.id}
-                  ref={rowVirtualizer.measureElement}
-                  className="w-full min-w-0"
-                  style={{
-                    position: "absolute",
-                    top: 0,
-                    left: 0,
-                    width: "100%",
-                    transform: `translateY(${virtualRow.start}px)`,
-                  }}
-                >
+                <div key={message.id} data-index={index} data-msg-id={message.id} className="w-full min-w-0">
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -545,6 +544,7 @@ export function ZappMessagesList({
             })}
           </div>
         )}
+
 
 
       </div>
