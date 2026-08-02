@@ -387,22 +387,18 @@ export function ZappMessagesList({
       return;
     }
 
-    scrollToBottom();
+    // Só acompanha o fim se o usuário já estava no fim (ou logo após abrir).
+    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
   // Reancora no fim quando a altura muda (mídia carregando, painel de sugestões
-  // abrindo, teclado) — durante a janela de "pin" ou se já estávamos no fim.
+  // abrindo, teclado) — apenas se o usuário estiver no fim ou na janela de "pin".
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     let raf = 0;
-    let wasAtBottom = true;
-    const onScroll = () => {
-      wasAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
-    };
-    viewport.addEventListener("scroll", onScroll, { passive: true });
     const observer = new ResizeObserver(() => {
-      if (Date.now() >= pinBottomUntilRef.current && !wasAtBottom) return;
+      if (Date.now() >= pinBottomUntilRef.current && !atBottomRef.current) return;
       if (pendingRestoreRef.current) return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(scrollToBottom);
@@ -412,10 +408,10 @@ export function ZappMessagesList({
     if (content) observer.observe(content);
     return () => {
       cancelAnimationFrame(raf);
-      viewport.removeEventListener("scroll", onScroll);
       observer.disconnect();
     };
   }, [scrollToBottom]);
+
 
 
   // Restaurar posição ao expandir a janela local de mensagens
