@@ -1,3 +1,4 @@
+import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -47,12 +48,17 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
     return globalFilters;
   })();
 
+  // Mesma granularidade adaptativa dos gráficos, para os rótulos baterem
+  const effectiveConfig = withAdaptiveDateGrain(config, filters.startDate, filters.endDate);
+
   return useQuery({
-    queryKey: ['visual-drilldown', config, groupName, filters, accountId, extraCfColumns],
+    queryKey: ['visual-drilldown', effectiveConfig, groupName, filters, accountId, extraCfColumns],
     queryFn: async (): Promise<DrilldownRecord[]> => {
+      const config = effectiveConfig;
       if (!config || !accountId) return [];
 
       const { dataSource } = config;
+
 
       switch (dataSource) {
         case 'deals':
