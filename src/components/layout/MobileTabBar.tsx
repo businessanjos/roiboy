@@ -47,6 +47,8 @@ export function MobileTabBar() {
   }, [navItems, currentSector?.id]);
 
 
+  // O ROY zAPP tem navegação própria no mobile — sem tab bar global.
+  if (location.pathname.startsWith("/roy-zapp")) return null;
   if (!currentSector || HIDDEN_ROUTES.includes(location.pathname)) return null;
   if (primary.length === 0) return null;
 

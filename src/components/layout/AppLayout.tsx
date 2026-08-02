@@ -165,7 +165,14 @@ export function AppLayout() {
 
           <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
             <Sidebar />
-            <main className="flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain pb-[calc(3.5rem+env(safe-area-inset-bottom))] lg:pb-0">
+            <main
+              className={
+                "flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain lg:pb-0 " +
+                (location.pathname.startsWith("/roy-zapp")
+                  ? "pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
+                  : "pb-[calc(3.5rem+env(safe-area-inset-bottom))]")
+              }
+            >
               <Outlet />
             </main>
           </div>
