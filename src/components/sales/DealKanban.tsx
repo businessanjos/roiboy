@@ -278,41 +278,44 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
         {isMobile ? (
           <div className="w-full flex flex-col gap-2">
             {/* Stage selector - app style */}
-            <div className="-mx-1 px-1 overflow-x-auto scrollbar-none">
-              <div className="flex gap-1.5 w-max pb-1">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" className="w-full justify-between h-10">
+                  <span className="flex items-center gap-2 min-w-0">
+                    <span
+                      className="h-2.5 w-2.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: activeStage?.color || undefined }}
+                    />
+                    <span className="truncate font-medium">{activeStage?.name || "Etapa"}</span>
+                    <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold">
+                      {(dealsByStage[activeStageId || ""] || []).length}
+                    </span>
+                  </span>
+                  <ChevronDown className="h-4 w-4 opacity-60 flex-shrink-0" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto bg-popover z-50">
                 {stages.map((stage) => {
                   const count = (dealsByStage[stage.id] || []).length;
-                  const active = stage.id === activeStageId;
                   return (
-                    <button
+                    <DropdownMenuItem
                       key={stage.id}
-                      type="button"
                       onClick={() => setMobileStageId(stage.id)}
-                      className={cn(
-                        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
-                        active
-                          ? "bg-primary text-primary-foreground border-primary"
-                          : "bg-card text-muted-foreground border-border"
-                      )}
+                      className="gap-2"
                     >
                       <span
-                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        className="h-2.5 w-2.5 rounded-full flex-shrink-0"
                         style={{ backgroundColor: stage.color || undefined }}
                       />
-                      {stage.name}
-                      <span
-                        className={cn(
-                          "rounded-full px-1.5 text-[10px] font-semibold",
-                          active ? "bg-primary-foreground/20" : "bg-muted"
-                        )}
-                      >
-                        {count}
-                      </span>
-                    </button>
+                      <span className="truncate flex-1">{stage.name}</span>
+                      <span className="rounded-full bg-muted px-1.5 text-[10px] font-semibold">{count}</span>
+                      {stage.id === activeStageId && <Check className="h-3.5 w-3.5" />}
+                    </DropdownMenuItem>
                   );
                 })}
-              </div>
-            </div>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
 
             <div className="w-full h-[calc(100vh-320px)] overflow-hidden">
               {activeStage && (
