@@ -259,10 +259,35 @@ export function ZappMessagesList({
     [enrichedMessages, windowStart]
   );
 
+  const atBottomRef = useRef(true);
+
   const scrollToBottom = useCallback(() => {
     const viewport = viewportRef.current;
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    atBottomRef.current = true;
   }, []);
+
+  // Observa a posição do usuário e cancela a "pinagem" no fim assim que ele
+  // interage com a rolagem — evita o chat pulando enquanto se rola.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onScroll = () => {
+      atBottomRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
+    };
+    const onUserIntent = () => {
+      pinBottomUntilRef.current = 0;
+      onScroll();
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    viewport.addEventListener("wheel", onUserIntent, { passive: true });
+    viewport.addEventListener("touchstart", onUserIntent, { passive: true });
+    return () => {
+      viewport.removeEventListener("scroll", onScroll);
+      viewport.removeEventListener("wheel", onUserIntent);
+      viewport.removeEventListener("touchstart", onUserIntent);
+    };
+  }, [conversationId]);
 
   const saveScrollAnchor = useCallback(() => {
     const viewport = viewportRef.current;
@@ -270,6 +295,7 @@ export function ZappMessagesList({
       pendingRestoreRef.current = { scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop };
     }
   }, []);
+
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
