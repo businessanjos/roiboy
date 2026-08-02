@@ -401,6 +401,7 @@ export function InsightsMainContent() {
             onLayoutChange={handleLayoutChange}
             onUpdateVisual={updateVisual}
             onRemoveVisual={removeVisual}
+            toolbarSlotId="insights-layout-toggle"
           />
         ) : (
           <div className="flex flex-col items-center justify-center py-16 px-4">
