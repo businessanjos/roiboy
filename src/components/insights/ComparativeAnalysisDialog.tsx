@@ -347,7 +347,9 @@ function ComparisonCard({
                     formatter={(v: any) => compactValue(Number(v), config?.formatting)}
                   />
                 )}
+                <LabelList dataKey="growth" content={renderGrowthLabel} />
               </Bar>
+
             </BarChart>
           </ResponsiveContainer>
         )}
