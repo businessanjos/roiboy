@@ -18,7 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { useVisualData } from "@/hooks/useVisualData";
+import { useVisualData, compareDateLabels } from "@/hooks/useVisualData";
 import type { InsightsVisual } from "@/hooks/useInsightsDashboards";
 import { cn } from "@/lib/utils";
 import {
@@ -26,6 +26,7 @@ import {
   BarChart,
   CartesianGrid,
   Legend,
+  LabelList,
   ResponsiveContainer,
   Tooltip,
   XAxis,
@@ -86,6 +87,22 @@ function formatValue(value: number, formatting: any) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: decimals }).format(value || 0);
 }
 
+const DATE_LABEL_RE = /^(\d{2}\/\d{2}|[a-zç]{3}\/\d{2}|\d{4}|sem \d+)/i;
+
+function isDateLike(rows: { name: string }[]) {
+  if (rows.length < 2) return false;
+  return rows.every((r) => DATE_LABEL_RE.test(String(r.name).trim()));
+}
+
+function compactValue(value: number, formatting: any) {
+  const isCurrency = formatting?.type === "currency";
+  const abs = Math.abs(value);
+  const prefix = isCurrency ? "R$ " : "";
+  if (abs >= 1_000_000) return `${prefix}${(value / 1_000_000).toFixed(1).replace(".", ",")} mi`;
+  if (abs >= 1_000) return `${prefix}${Math.round(value / 1_000)} mil`;
+  return `${prefix}${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(value || 0)}`;
+}
+
 function buildSeries(
   currentRows: { name: string; value: number }[] = [],
   previousRows: { name: string; value: number }[] = [],
@@ -94,12 +111,15 @@ function buildSeries(
   const previousNames = previousRows.map((r) => r.name);
   const overlap = currentNames.filter((n) => previousNames.includes(n)).length;
 
-  // Date-like series (jan/25 vs jan/26) have no label overlap: align by position.
-  if (overlap === 0 && currentRows.length > 0 && currentRows.length === previousRows.length) {
-    return currentRows.map((row, i) => ({
-      name: row.name,
-      atual: Number(row.value) || 0,
-      anterior: Number(previousRows[i]?.value) || 0,
+  // Date-like series (jan/25 vs jan/26): keep chronological order and align by position.
+  if (overlap === 0 && isDateLike(currentRows) && isDateLike(previousRows)) {
+    const cur = [...currentRows].sort((a, b) => compareDateLabels(a.name, b.name));
+    const prev = [...previousRows].sort((a, b) => compareDateLabels(a.name, b.name));
+    const len = Math.max(cur.length, prev.length);
+    return Array.from({ length: len }, (_, i) => ({
+      name: cur[i]?.name || prev[i]?.name || "",
+      atual: Number(cur[i]?.value) || 0,
+      anterior: Number(prev[i]?.value) || 0,
     }));
   }
 
@@ -112,8 +132,7 @@ function buildSeries(
       atual: currentMap.get(name) ?? 0,
       anterior: previousMap.get(name) ?? 0,
     }))
-    .sort((a, b) => b.atual + b.anterior - (a.atual + a.anterior))
-    .slice(0, 15);
+    .sort((a, b) => b.atual + b.anterior - (a.atual + a.anterior));
 }
 
 function DeltaBadge({ pct, positive, neutral }: { pct: number | null; positive: boolean; neutral: boolean }) {
@@ -181,10 +200,21 @@ function ComparisonCard({
   const positive = diff > 0;
   const neutral = Math.abs(diff) < 0.0001;
 
-  const series = useMemo(
+  const allSeries = useMemo(
     () => buildSeries(current.data as any, previous.data as any),
     [current.data, previous.data],
   );
+  const dateLike = useMemo(() => isDateLike(allSeries), [allSeries]);
+  const MAX_BARS = dateLike ? 24 : 12;
+  const series = useMemo(() => allSeries.slice(0, MAX_BARS), [allSeries, MAX_BARS]);
+  const hiddenCount = Math.max(0, allSeries.length - series.length);
+  // Categorical labels are long → horizontal bars keep every label readable.
+  const horizontal = !dateLike && series.length > 4;
+  const chartHeight = horizontal
+    ? Math.max(220, series.length * 46 + 60)
+    : series.length > 12
+      ? 260
+      : 230;
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -203,7 +233,7 @@ function ComparisonCard({
         {!loading && <DeltaBadge pct={pct} positive={positive} neutral={neutral} />}
       </div>
 
-      <div className="mt-3 h-[220px]">
+      <div className="mt-3" style={{ height: chartHeight }}>
         {loading ? (
           <div className="h-full flex items-center justify-center">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
@@ -214,22 +244,57 @@ function ComparisonCard({
           </div>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
-            <BarChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                interval={0}
-                angle={series.length > 6 ? -35 : 0}
-                textAnchor={series.length > 6 ? "end" : "middle"}
-                height={series.length > 6 ? 60 : 30}
+            <BarChart
+              data={series}
+              layout={horizontal ? "vertical" : "horizontal"}
+              barCategoryGap={horizontal ? "18%" : "22%"}
+              margin={
+                horizontal
+                  ? { top: 4, right: 56, left: 4, bottom: 4 }
+                  : { top: 8, right: 12, left: 4, bottom: 4 }
+              }
+            >
+              <CartesianGrid
+                strokeDasharray="3 3"
+                stroke="hsl(var(--border))"
+                horizontal={horizontal}
+                vertical={!horizontal}
               />
-              <YAxis
-                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
-                width={70}
-                tickFormatter={(v) => formatValue(Number(v), config?.formatting)}
-              />
+              {horizontal ? (
+                <>
+                  <XAxis
+                    type="number"
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickFormatter={(v) => compactValue(Number(v), config?.formatting)}
+                  />
+                  <YAxis
+                    type="category"
+                    dataKey="name"
+                    width={150}
+                    interval={0}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    tickFormatter={(v: string) =>
+                      String(v).length > 22 ? `${String(v).slice(0, 21)}…` : String(v)
+                    }
+                  />
+                </>
+              ) : (
+                <>
+                  <XAxis
+                    dataKey="name"
+                    interval={0}
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    height={28}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                    width={62}
+                    tickFormatter={(v) => compactValue(Number(v), config?.formatting)}
+                  />
+                </>
+              )}
               <Tooltip
+                cursor={{ fill: "hsl(var(--muted) / 0.35)" }}
                 formatter={(v: any) => formatValue(Number(v), config?.formatting)}
                 contentStyle={{
                   background: "hsl(var(--popover))",
@@ -239,12 +304,45 @@ function ComparisonCard({
                 }}
               />
               <Legend wrapperStyle={{ fontSize: 12 }} />
-              <Bar dataKey="anterior" name={previousLabel} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="atual" name={currentLabel} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+              <Bar
+                dataKey="anterior"
+                name={previousLabel}
+                fill="hsl(var(--muted-foreground))"
+                radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+              >
+                {horizontal && (
+                  <LabelList
+                    dataKey="anterior"
+                    position="right"
+                    style={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
+                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                  />
+                )}
+              </Bar>
+              <Bar
+                dataKey="atual"
+                name={currentLabel}
+                fill="hsl(var(--primary))"
+                radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
+              >
+                {horizontal && (
+                  <LabelList
+                    dataKey="atual"
+                    position="right"
+                    style={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
+                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                  />
+                )}
+              </Bar>
             </BarChart>
           </ResponsiveContainer>
         )}
       </div>
+      {hiddenCount > 0 && (
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          +{hiddenCount} categorias com menor volume não exibidas.
+        </p>
+      )}
     </div>
   );
 }
@@ -265,7 +363,7 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[88vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-[92vw] xl:max-w-6xl max-h-[90vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Análise comparativa</DialogTitle>
           <DialogDescription>
