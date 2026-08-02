@@ -78,10 +78,11 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         isOver && "opacity-100 scale-[1.02]"
       )}
     >
-      {/* Column Header */}
+      {/* Column Header — no mobile o seletor de etapa já mostra nome/contagem/valor */}
       <div 
         className={cn(
           "flex items-center gap-1.5 mb-2 px-2 py-1.5 rounded-lg transition-all duration-200",
+          fullWidth && "hidden",
           isOver && "shadow-md",
         )}
         style={isOver ? {

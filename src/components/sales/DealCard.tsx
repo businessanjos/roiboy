@@ -249,7 +249,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
         </div>
 
         {/* Row 4: Actions + Tags */}
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2 min-w-0 overflow-hidden">
           <div className="flex items-center gap-0.5">
             {/* WhatsApp */}
             {contactPhone && (
@@ -330,16 +330,16 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
           )}
 
           {/* Tags compact */}
-          <div className="flex items-center gap-1 overflow-hidden">
+          <div className="flex items-center gap-1 min-w-0 flex-1 justify-end overflow-hidden">
             {faturamentoLabel && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 truncate max-w-[80px]">
-                $ {faturamentoLabel}
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 max-w-[80px] min-w-0 shrink overflow-hidden">
+                <span className="truncate">$ {faturamentoLabel}</span>
               </Badge>
             )}
             {itemVendaLabel && (
               <Badge 
                 variant="outline" 
-                className="text-[9px] px-1 py-0 h-4 truncate max-w-[80px]"
+                className="text-[9px] px-1 py-0 h-4 max-w-[80px] min-w-0 shrink overflow-hidden"
                 style={itemVendaColor ? {
                   backgroundColor: `${itemVendaColor}1A`,
                   color: itemVendaColor,
@@ -350,9 +350,10 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                   borderColor: 'rgb(59 130 246 / 0.2)',
                 }}
               >
-                {itemVendaLabel}
+                <span className="truncate">{itemVendaLabel}</span>
               </Badge>
             )}
+
             {deal.tags
               ?.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
               .slice(0, 1)

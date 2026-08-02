@@ -39,6 +39,8 @@ import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -195,6 +197,8 @@ export default function SalesPipeline() {
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
   const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
@@ -2167,150 +2171,7 @@ export default function SalesPipeline() {
     );
   }
 
-  return (
-    <>
-      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
-        {/* Main Tabs */}
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
-          <div className="flex items-center justify-between gap-2">
-            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
-
-
-              <TabsTrigger value="prospeccao" className="flex-1 min-w-0 gap-1 px-2 text-[11px] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-sm">
-                <Users className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <span className="truncate">Prospecção</span>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
-              </TabsTrigger>
-              <TabsTrigger value="pipeline" className="flex-1 min-w-0 gap-1 px-2 text-[11px] sm:flex-none sm:gap-1.5 sm:px-3 sm:text-sm">
-                <Target className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" />
-                <span className="truncate">Pipeline</span>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
-              </TabsTrigger>
-            </TabsList>
-
-            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
-
-              {mainTab === 'pipeline' && (
-                <>
-                  <div className="flex items-center gap-1.5 sm:gap-2">
-                  {/* View toggle - desktop only */}
-                  <div className="flex items-center border rounded-lg overflow-hidden">
-
-                    <Button
-                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-8"
-                      onClick={() => setViewMode('kanban')}
-                    >
-                      <LayoutGrid className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button
-                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
-                      size="sm"
-                      className="rounded-none h-8"
-                      onClick={() => setViewMode('list')}
-                    >
-                      <List className="h-3.5 w-3.5" />
-                    </Button>
-                  </div>
-
-                  {/* Config dropdown */}
-                  <DropdownMenu>
-                    <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
-                        <MoreVertical className="h-4 w-4" />
-                      </Button>
-                    </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
-                      <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
-                        <Columns3 className="h-4 w-4 mr-2" />
-                        Gerenciar Etapas
-                      </DropdownMenuItem>
-                      {isAdmin && (
-                        <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
-                          <SlidersHorizontal className="h-4 w-4 mr-2" />
-                          Campos Personalizados
-                        </DropdownMenuItem>
-                      )}
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
-                        <Download className="h-4 w-4 mr-2" />
-                        Exportar Pipeline
-                      </DropdownMenuItem>
-                    </DropdownMenuContent>
-                  </DropdownMenu>
-                  </div>
-
-
-                  <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
-                    <Plus className="h-4 w-4" />
-                    <span className="hidden sm:inline">Novo Deal</span>
-                  </Button>
-                </>
-              )}
-            </div>
-          </div>
-
-
-          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
-            <LeadsTab />
-          </TabsContent>
-
-          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
-            {/* Pipeline Selector + Sub-tabs Row */}
-            <div className="space-y-3">
-              {/* Pipeline selector row + unified filters */}
-              <div className="flex flex-col gap-2">
-                <div className={cn("flex flex-col gap-2", filtersCollapsed && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
-                  <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", filtersCollapsed && "flex-1 min-w-0 flex-nowrap sm:flex-wrap")}>
-                    <div className="flex items-center gap-2 min-w-0 flex-1">
-                      <PipelineSelector
-                        pipelines={pipelines}
-                        activePipelineId={activePipelineId}
-                        onSelect={setActivePipelineId}
-                        onCreate={createPipeline}
-                        onUpdate={updatePipeline}
-                        onDelete={deletePipeline}
-                      />
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                      onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                      aria-expanded={!filtersCollapsed}
-                    >
-                      <SlidersHorizontal className="h-3.5 w-3.5" />
-                      <span className={cn(filtersCollapsed && "hidden sm:inline")}>Filtros</span>
-                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
-                    </Button>
-                  </div>
-
-                  {activeTab === 'open' && (
-                    <div className={cn(
-                      "flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0",
-                      filtersCollapsed && "w-auto shrink-0 gap-2 px-2 py-1 text-[11px] sm:w-auto sm:px-0 sm:py-0"
-                    )}>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length}<span className={cn(filtersCollapsed && "hidden sm:inline")}> negócios</span></span>
-                      </div>
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
-                        <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
-                      </div>
-                      <div className="hidden sm:flex items-center gap-1.5">
-                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
-                        <span className="text-muted-foreground">Ponderado:</span>
-                        <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
-                      </div>
-                    </div>
-                  )}
-
-
-                  <div className="w-full">
-
-                  {!filtersCollapsed && (
+  const filtersPanel = (
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
                     {activeTab === 'open' && (
                       <div className="flex flex-col gap-1">
@@ -2497,7 +2358,164 @@ export default function SalesPipeline() {
                       </div>
                     )}
                   </div>
+  );
+
+  return (
+    <>
+      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+        {/* Main Tabs */}
+        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
+          <div className="flex items-center justify-between gap-2">
+            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
+
+
+              <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Users className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap sm:hidden">Leads</span>
+                <span className="hidden sm:inline">Prospecção</span>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'prospeccao' && "hidden sm:inline-flex")}>{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+              </TabsTrigger>
+              <TabsTrigger value="pipeline" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Target className="h-4 w-4 shrink-0" />
+                <span className="whitespace-nowrap">Pipeline</span>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'pipeline' && "hidden sm:inline-flex")}>{openDeals.length}</Badge>
+              </TabsTrigger>
+
+            </TabsList>
+
+            <div className="flex items-center justify-end gap-1.5 sm:gap-2 w-auto shrink-0">
+
+              {mainTab === 'pipeline' && (
+                <>
+                  <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* View toggle - desktop only */}
+                  <div className="flex items-center border rounded-lg overflow-hidden">
+
+                    <Button
+                      variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-8"
+                      onClick={() => setViewMode('kanban')}
+                    >
+                      <LayoutGrid className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      variant={viewMode === 'list' ? 'secondary' : 'ghost'}
+                      size="sm"
+                      className="rounded-none h-8"
+                      onClick={() => setViewMode('list')}
+                    >
+                      <List className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
+
+                  {/* Config dropdown */}
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
+                        <MoreVertical className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem onClick={() => setIsStagesManagerOpen(true)}>
+                        <Columns3 className="h-4 w-4 mr-2" />
+                        Gerenciar Etapas
+                      </DropdownMenuItem>
+                      {isAdmin && (
+                        <DropdownMenuItem onClick={() => setIsFieldsDialogOpen(true)}>
+                          <SlidersHorizontal className="h-4 w-4 mr-2" />
+                          Campos Personalizados
+                        </DropdownMenuItem>
+                      )}
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem onClick={() => setIsExportDialogOpen(true)}>
+                        <Download className="h-4 w-4 mr-2" />
+                        Exportar Pipeline
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  </div>
+
+
+                  <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
+                    <Plus className="h-4 w-4" />
+                    <span className="hidden sm:inline">Novo Deal</span>
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+
+
+          <TabsContent value="prospeccao" className="mt-3 sm:mt-4">
+            <LeadsTab />
+          </TabsContent>
+
+          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+            {/* Pipeline Selector + Sub-tabs Row */}
+            <div className="space-y-3">
+              {/* Pipeline selector row + unified filters */}
+              <div className="flex flex-col gap-2">
+                <div className={cn("flex flex-col gap-2", (isMobile || filtersCollapsed) && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
+                  <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", (isMobile || filtersCollapsed) && "flex-1 min-w-0 flex-nowrap sm:flex-wrap")}>
+                    <div className="flex items-center gap-2 min-w-0 flex-1">
+                      <PipelineSelector
+                        pipelines={pipelines}
+                        activePipelineId={activePipelineId}
+                        onSelect={setActivePipelineId}
+                        onCreate={createPipeline}
+                        onUpdate={updatePipeline}
+                        onDelete={deletePipeline}
+                      />
+                    </div>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
+                      aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
+                    >
+                      <SlidersHorizontal className="h-3.5 w-3.5" />
+                      <span className={cn((isMobile || filtersCollapsed) && "hidden sm:inline")}>Filtros</span>
+                      <ChevronDown className={cn("h-3.5 w-3.5 transition-transform hidden sm:inline", !filtersCollapsed && "rotate-180")} />
+                    </Button>
+                  </div>
+
+                  {activeTab === 'open' && (
+                    <div className={cn(
+                      "flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0",
+                      (isMobile || filtersCollapsed) && "w-auto shrink-0 gap-2 px-2 py-1 text-[11px] sm:w-auto sm:px-0 sm:py-0"
+                    )}>
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length}<span className={cn((isMobile || filtersCollapsed) && "hidden sm:inline")}> negócios</span></span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                        <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
+                      </div>
+                      <div className="hidden sm:flex items-center gap-1.5">
+                        <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-muted-foreground">Ponderado:</span>
+                        <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
+                      </div>
+                    </div>
                   )}
+
+
+                  <div className="w-full">
+
+                  {isMobile ? (
+                    <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
+                      <SheetContent side="bottom" className="h-[85dvh] overflow-y-auto p-4" aria-describedby={undefined}>
+                        <SheetHeader className="mb-3 text-left">
+                          <SheetTitle className="text-base">Filtros</SheetTitle>
+                        </SheetHeader>
+                        {filtersPanel}
+                      </SheetContent>
+                    </Sheet>
+                  ) : (!filtersCollapsed && filtersPanel)}
                   </div>
                 </div>
 

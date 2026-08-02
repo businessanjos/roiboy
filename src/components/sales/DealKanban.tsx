@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
   DndContext,
   DragEndEvent,
@@ -259,6 +259,38 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
     }
   };
 
+  // Mede o espaço realmente disponível abaixo do cabeçalho para o board mobile,
+  // evitando altura fixa (que sobra ou corta conforme os filtros abrem/fecham).
+  const mobileBoardRef = useRef<HTMLDivElement | null>(null);
+  const [mobileBoardHeight, setMobileBoardHeight] = useState<number | null>(null);
+
+  useLayoutEffect(() => {
+    if (!isMobile) {
+      setMobileBoardHeight(null);
+      return;
+    }
+    const measure = () => {
+      const el = mobileBoardRef.current;
+      if (!el) return;
+      const top = el.getBoundingClientRect().top;
+      const bottomBar = 64; // barra de abas inferior + safe area
+      const next = Math.max(240, Math.round(window.innerHeight - top - bottomBar));
+      setMobileBoardHeight((prev) => (prev !== null && Math.abs(prev - next) < 2 ? prev : next));
+    };
+    measure();
+    const raf = requestAnimationFrame(measure);
+    window.addEventListener("resize", measure);
+    window.addEventListener("orientationchange", measure);
+    const ro = new ResizeObserver(measure);
+    if (document.body) ro.observe(document.body);
+    return () => {
+      cancelAnimationFrame(raf);
+      window.removeEventListener("resize", measure);
+      window.removeEventListener("orientationchange", measure);
+      ro.disconnect();
+    };
+  }, [isMobile, activeStageId]);
+
   if (stages.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-muted-foreground">
@@ -294,7 +326,14 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
                       {(dealsByStage[activeStageId || ""] || []).length}
                     </span>
                   </span>
-                  <ChevronDown className="h-4 w-4 opacity-60 flex-shrink-0" />
+                  <span className="flex items-center gap-1.5 flex-shrink-0">
+                    <span className="text-xs font-semibold text-muted-foreground tabular-nums">
+                      {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" }).format(
+                        (dealsByStage[activeStageId || ""] || []).reduce((sum, d) => sum + (Number(d.value) || 0), 0)
+                      )}
+                    </span>
+                    <ChevronDown className="h-4 w-4 opacity-60" />
+                  </span>
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="start" className="w-[calc(100vw-2rem)] max-h-[60vh] overflow-y-auto bg-popover z-50">
@@ -320,7 +359,11 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
             </DropdownMenu>
 
 
-            <div className="w-full h-[calc(100vh-320px)] overflow-hidden">
+            <div
+              ref={mobileBoardRef}
+              className="w-full overflow-hidden"
+              style={{ height: mobileBoardHeight ? `${mobileBoardHeight}px` : undefined }}
+            >
               {activeStage && (
                 <DealKanbanColumn
                   key={activeStage.id}
