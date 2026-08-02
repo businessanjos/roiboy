@@ -415,7 +415,20 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
     return { ...rawRange, endDate: endOfDay(new Date()).toISOString() };
   }, [rawRange, sameElapsed, isOngoing]);
 
-  const previousRange = useMemo(() => shiftRange(currentRange, mode), [currentRange, mode]);
+  // O período anterior é sempre calculado a partir do intervalo ORIGINAL (ex.: o ano
+  // cheio) e só depois recortado com a mesma duração já decorrida do período atual.
+  // Assim comparamos jan–ago/25 vs jan–ago/26, e não jun–dez/25 vs jan–ago/26.
+  const previousRange = useMemo(() => {
+    const base = shiftRange(rawRange, mode);
+    if (!sameElapsed || !isOngoing) return base;
+    const elapsedMs =
+      parseISO(currentRange.endDate).getTime() - parseISO(currentRange.startDate).getTime();
+    const baseStart = parseISO(base.startDate).getTime();
+    const baseEnd = parseISO(base.endDate).getTime();
+    const truncated = Math.min(baseEnd, baseStart + elapsedMs);
+    return { ...base, endDate: new Date(truncated).toISOString() };
+  }, [rawRange, mode, sameElapsed, isOngoing, currentRange]);
+
 
   const currentLabel = format(parseISO(currentRange.startDate), "yyyy", { locale: ptBR });
   const previousLabel = format(parseISO(previousRange.startDate), "yyyy", { locale: ptBR });
