@@ -9,14 +9,12 @@ import { componentTagger } from "lovable-tagger";
  * users sit on cached HTML pointing to evicted asset hashes and have to
  * Ctrl+Shift+R every release.
  */
-function versionJsonPlugin(): Plugin {
-  let version = "";
+const APP_BUILD_VERSION = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+function versionJsonPlugin(version: string): Plugin {
   return {
     name: "roy-version-json",
     apply: "build",
-    buildStart() {
-      version = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-    },
     generateBundle() {
       this.emitFile({
         type: "asset",
@@ -33,6 +31,9 @@ function versionJsonPlugin(): Plugin {
 
 // https://vitejs.dev/config/
 export default defineConfig(({ mode }) => ({
+  define: {
+    __APP_VERSION__: JSON.stringify(APP_BUILD_VERSION),
+  },
   server: {
     host: "::",
     port: 8080,
@@ -40,7 +41,7 @@ export default defineConfig(({ mode }) => ({
   plugins: [
     react(),
     mode === "development" && componentTagger(),
-    versionJsonPlugin(),
+    versionJsonPlugin(APP_BUILD_VERSION),
   ].filter(Boolean),
   resolve: {
     alias: [

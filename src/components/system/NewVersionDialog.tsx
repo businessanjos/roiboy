@@ -13,12 +13,12 @@ import { Button } from "@/components/ui/button";
 import { useAppVersionCheck, hardReloadApp } from "@/hooks/useAppVersionCheck";
 
 export function NewVersionDialog() {
-  const { hasNewVersion, remoteVersion, canDefer, deferUpdate } = useAppVersionCheck();
+  const { hasNewVersion, canDefer, deferUpdate } = useAppVersionCheck();
   const [updating, setUpdating] = useState(false);
 
   const handleUpdate = () => {
     setUpdating(true);
-    hardReloadApp(remoteVersion);
+    hardReloadApp();
   };
 
   return (

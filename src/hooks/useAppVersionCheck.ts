@@ -15,7 +15,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 const VERSION_URL = "/version.json";
 const POLL_INTERVAL_MS = 2 * 60 * 1000; // 2 minutes
 const STORAGE_KEY = "app:initial-version";
-const LAST_SEEN_VERSION_KEY = "app:last-seen-version";
 const DEFER_STATE_KEY = "app:version-defer-state";
 export const MAX_DEFERS = 5;
 const DEFER_INTERVAL_MS = 30 * 60 * 1000; // 30 min
@@ -74,7 +73,7 @@ export async function fetchAppVersion(): Promise<string | null> {
   }
 }
 
-export function hardReloadApp(version?: string | null) {
+export function hardReloadApp() {
   // Best-effort cache wipe before reloading so the next paint loads the new
   // hashed assets even on aggressive browser/CDN caches.
   try {
@@ -86,7 +85,6 @@ export function hardReloadApp(version?: string | null) {
   }
   try {
     localStorage.removeItem(DEFER_STATE_KEY);
-    if (version) localStorage.setItem(LAST_SEEN_VERSION_KEY, version);
   } catch {
     /* ignore */
   }
@@ -113,7 +111,7 @@ export interface UseAppVersionCheckResult {
 }
 
 export function useAppVersionCheck(): UseAppVersionCheckResult {
-  const initialVersionRef = useRef<string | null>(null);
+  const initialVersionRef = useRef<string | null>(__APP_VERSION__ || null);
   const [hasNewVersion, setHasNewVersion] = useState(false);
   const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
   const [deferCount, setDeferCount] = useState(0);
@@ -136,23 +134,12 @@ export function useAppVersionCheck(): UseAppVersionCheckResult {
     const init = async () => {
       const current = await fetchAppVersion();
       if (cancelled || !current) return;
-
-      let previousVersion: string | null = null;
       try {
-        previousVersion = localStorage.getItem(LAST_SEEN_VERSION_KEY);
+        sessionStorage.setItem(STORAGE_KEY, initialVersionRef.current || current);
       } catch {
         /* ignore */
       }
-
-      initialVersionRef.current = previousVersion || current;
-      try {
-        sessionStorage.setItem(STORAGE_KEY, current);
-        if (!previousVersion) localStorage.setItem(LAST_SEEN_VERSION_KEY, current);
-      } catch {
-        /* ignore */
-      }
-
-      if (previousVersion && previousVersion !== current) {
+      if (initialVersionRef.current && initialVersionRef.current !== current) {
         const { count, nextRemindAt } = readDeferState(current);
         setRemoteVersion(current);
         setDeferCount(count);

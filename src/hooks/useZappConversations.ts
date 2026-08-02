@@ -282,17 +282,21 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     if (leadIds.length > 0) {
       // Batch lead IDs in chunks of 50 to avoid URI Too Long (400) errors
       const BATCH_SIZE = 50;
-      const allDealsData: any[] = [];
-      for (let i = 0; i < leadIds.length; i += BATCH_SIZE) {
-        const batch = leadIds.slice(i, i + BATCH_SIZE);
-        const { data: dealsData } = await supabase
-          .from("deals")
-          .select("lead_id, stage:deal_stages(name, color)")
-          .in("lead_id", batch)
-          .eq("status", "open")
-          .order("created_at", { ascending: false });
-        if (dealsData) allDealsData.push(...dealsData);
-      }
+      const batches = Array.from(
+        { length: Math.ceil(leadIds.length / BATCH_SIZE) },
+        (_, index) => leadIds.slice(index * BATCH_SIZE, (index + 1) * BATCH_SIZE),
+      );
+      const dealResults = await Promise.all(
+        batches.map((batch) =>
+          supabase
+            .from("deals")
+            .select("lead_id, stage:deal_stages(name, color)")
+            .in("lead_id", batch)
+            .eq("status", "open")
+            .order("created_at", { ascending: false }),
+        ),
+      );
+      const allDealsData = dealResults.flatMap(({ data }) => data || []);
 
       if (allDealsData.length > 0) {
         const stagesMap: Record<string, { stageName: string; stageColor: string }> = {};

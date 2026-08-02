@@ -111,11 +111,13 @@ export function useZappConnectionAlerts(options: {
 
   useEffect(() => {
     if (!enabled) return;
-    check();
+    // Keep the initial mobile connection free for the conversation list.
+    const initialTimer = setTimeout(check, 3000);
     const timer = setInterval(check, POLL_MS);
     const onFocus = () => check();
     window.addEventListener("focus", onFocus);
     return () => {
+      clearTimeout(initialTimer);
       clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
