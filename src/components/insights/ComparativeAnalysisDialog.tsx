@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { subYears, differenceInCalendarDays, subDays, format, parseISO } from "date-fns";
+import { subYears, differenceInCalendarDays, subDays, format, parseISO, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowDownRight, ArrowUpRight, Minus, Loader2 } from "lucide-react";
 import {
