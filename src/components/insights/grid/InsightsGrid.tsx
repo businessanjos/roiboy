@@ -43,12 +43,14 @@ const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function getMobileMinHeight(visual: InsightsVisual): string {
   const ct = visual.chart_type || "bar";
-  if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[120px]";
-  if (["table", "ranking"].includes(ct)) return "min-h-[280px]";
-  if (ct === "map") return "min-h-[300px]";
-  if (["pie", "donut"].includes(ct)) return "min-h-[280px]";
-  return "min-h-[260px]";
+  if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[132px]";
+  if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return "min-h-[340px]";
+  if (ct === "map") return "min-h-[320px]";
+  if (["pie", "donut"].includes(ct)) return "min-h-[320px]";
+  if (["bar_stacked", "funnel", "goal_tracker"].includes(ct)) return "min-h-[380px]";
+  return "min-h-[330px]";
 }
+
 
 function getMinHeight(visual: InsightsVisual): number {
   const ct = visual.chart_type || "bar";
@@ -297,10 +299,15 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, readOnly 
   return (
     <div className="space-y-3">
       {sorted.map((visual) => (
-        <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
-          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
+        // `flex` + min-h garante que o card (h-full) receba altura real no mobile;
+        // sem isso o corpo do gráfico colapsa para 0px e o card aparece vazio.
+        <div key={visual.id} className={`w-full flex rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
+          <div className="w-full min-w-0">
+            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
+          </div>
         </div>
       ))}
+
     </div>
   );
 }

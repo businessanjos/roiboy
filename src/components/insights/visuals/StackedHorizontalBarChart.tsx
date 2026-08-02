@@ -10,6 +10,8 @@ import {
   LabelList,
 } from "recharts";
 import { ChartLegendContent } from './ChartLegendContent';
+import { useChartSize } from './useChartSize';
+
 import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
 import { formatValueCompact } from "@/lib/formula-evaluator";
@@ -106,6 +108,9 @@ export function StackedHorizontalBarChart({
   const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
   const tvMode = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'] * tvMode.scale;
+  // Largura real do container: permite adaptar eixos/legenda em telas estreitas (mobile).
+  const { ref: sizeRef, width: containerWidth } = useChartSize();
+
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
     return (
@@ -118,22 +123,39 @@ export function StackedHorizontalBarChart({
   const isVertical = orientation === 'vertical';
 
   if (isVertical) {
-    const tickFont = Math.round(11 * m);
+    const width = containerWidth || 0;
+    const narrow = width > 0 && width < 520;
+    const tickFont = Math.round((narrow ? 9 : 11) * m);
     // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
     const totals = data.map((d) =>
       seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
     );
     const maxTotal = Math.max(0, ...totals);
     const longestTick = formatValueCompact(maxTotal, safeFormatting.type);
-    const yWidth = Math.round(Math.min(120, Math.max(48, longestTick.length * tickFont * 0.62 + 16)));
+    const yWidth = Math.round(Math.min(120, Math.max(narrow ? 40 : 48, longestTick.length * tickFont * 0.62 + 12)));
     const lastKey = seriesKeys[seriesKeys.length - 1];
-    const showTotals = safeAppearance.showDataLabels && data.length <= 40;
+    // Em telas estreitas os rótulos de total colidem — mantemos só o tooltip.
+    const showTotals = safeAppearance.showDataLabels && data.length <= 40 && !narrow;
+
+    // Eixo X: gira e reduz a densidade de rótulos quando o espaço por categoria é pequeno.
+    const plotWidth = Math.max(width - yWidth - 24, 1);
+    const slot = data.length ? plotWidth / data.length : plotWidth;
+    const longestName = data.reduce((max, d) => Math.max(max, String(d.name ?? '').length), 0);
+    const fitsFlat = longestName * tickFont * 0.6 <= slot - 4;
+    const xInterval = fitsFlat ? 0 : Math.max(0, Math.ceil((data.length * (tickFont + 6)) / plotWidth) - 1);
+    const xHeight = fitsFlat ? 24 : Math.min(78, Math.round(longestName * tickFont * 0.5) + 14);
+
+    // Legenda multi-linha: reserva altura suficiente para não invadir o gráfico.
+    const legendChars = seriesKeys.reduce((s, k) => s + k.length + 6, 0);
+    const legendLines = Math.max(1, Math.ceil((legendChars * tickFont * 0.55) / Math.max(width - 16, 200)));
+    const legendHeight = Math.round(legendLines * (tickFont + 9) + 8);
 
     return (
+      <div ref={sizeRef} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart
           data={data}
-          margin={{ top: 34, right: 12, left: 4, bottom: 4 }}
+          margin={{ top: showTotals ? 34 : 12, right: 12, left: 4, bottom: 4 }}
           barCategoryGap="18%"
         >
           <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
@@ -142,9 +164,11 @@ export function StackedHorizontalBarChart({
             tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
             tickLine={false}
             axisLine={{ stroke: 'hsl(var(--border))' }}
-            interval={0}
+            interval={xInterval}
+            angle={fitsFlat ? 0 : -35}
+            textAnchor={fitsFlat ? 'middle' : 'end'}
             tickMargin={6}
-            height={24}
+            height={xHeight}
           />
           <YAxis
             tickFormatter={(value) => formatValueCompact(value, safeFormatting.type)}
@@ -158,13 +182,14 @@ export function StackedHorizontalBarChart({
             <Legend
               verticalAlign="top"
               align="center"
-              height={26}
+              height={legendHeight}
               wrapperStyle={{ paddingBottom: 6 }}
               content={(props: any) => (
-                <ChartLegendContent payload={props?.payload} fontSize={Math.round(11 * m)} />
+                <ChartLegendContent payload={props?.payload} fontSize={tickFont} />
               )}
             />
           )}
+
           {seriesKeys.map((key, index) => (
             <Bar
               key={key}
@@ -216,7 +241,9 @@ export function StackedHorizontalBarChart({
           ))}
         </BarChart>
       </ResponsiveContainer>
+      </div>
     );
+
   }
 
 
