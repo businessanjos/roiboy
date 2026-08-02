@@ -38,7 +38,7 @@ export function MobileTabBar() {
     if (currentSector?.id === "vendas") {
       list = list.filter((i) => i.to.split("?")[0] !== "/sales-team");
       list.unshift({
-        to: buildRoyZappUrl({ sector: "vendas" }),
+        to: buildRoyZappUrl({ sector: "vendas", extra: { view: "inbox" } }),
         icon: MessageSquare,
         label: "RoyZapp",
       });
