@@ -91,6 +91,7 @@ export function InsightsDashboardTabs() {
         {/* Mobile: seletor em dropdown (evita carrossel de abas em tela estreita) */}
         <div className="flex sm:hidden flex-1 min-w-0 py-1.5 items-center gap-1.5">
           <DropdownMenu>
+
             <DropdownMenuTrigger asChild>
               <Button variant="outline" className="h-9 w-full justify-between gap-2 min-w-0">
                 <span className="truncate font-semibold">{activeDashboard?.name || "Selecionar painel"}</span>
