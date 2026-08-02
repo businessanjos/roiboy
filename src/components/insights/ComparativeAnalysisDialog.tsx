@@ -224,33 +224,64 @@ function ComparisonCard({
   // Altura fixa para manter todos os blocos alinhados na grade.
   const chartHeight = 360;
 
-  // Tag de crescimento (ano a ano) por barra/categoria.
-  const renderGrowthLabel = (props: any) => {
-    const { x, y, width, height, value } = props;
+  const growthText = (value: any) => {
     if (value === undefined || value === null) return null;
     const g = Number(value);
     if (!Number.isFinite(g)) return null;
-    const text = `${g > 0 ? "+" : ""}${g.toFixed(g > -10 && g < 10 ? 1 : 0)}%`;
-    const color =
-      Math.abs(g) < 0.05
-        ? "hsl(var(--muted-foreground))"
-        : g > 0
-          ? "hsl(142 70% 40%)"
-          : "hsl(var(--destructive))";
-    const cx = horizontal ? Number(x) + Number(width) + 4 : Number(x) + Number(width) / 2;
-    const cy = horizontal ? Number(y) + Number(height) / 2 - 8 : Number(y) - 6;
+    return `${g > 0 ? "+" : ""}${g.toFixed(g > -10 && g < 10 ? 1 : 0)}%`;
+  };
+  const growthColor = (g: number) =>
+    Math.abs(g) < 0.05
+      ? "hsl(var(--muted-foreground))"
+      : g > 0
+        ? "hsl(142 70% 40%)"
+        : "hsl(var(--destructive))";
+
+  // Vertical: tag de crescimento acima da barra atual.
+  const renderGrowthLabel = (props: any) => {
+    const { x, y, width, value } = props;
+    const text = growthText(value);
+    if (!text) return null;
     return (
       <text
-        x={cx}
-        y={cy}
-        textAnchor={horizontal ? "start" : "middle"}
-        dominantBaseline={horizontal ? "middle" : "auto"}
-        style={{ fontSize: 10, fontWeight: 600, fill: color }}
+        x={Number(x) + Number(width) / 2}
+        y={Number(y) - 6}
+        textAnchor="middle"
+        style={{ fontSize: 10, fontWeight: 600, fill: growthColor(Number(value)) }}
       >
         {text}
       </text>
     );
   };
+
+  // Horizontal: um único rótulo no fim da barra atual (valor + crescimento).
+  const renderEndLabel = (props: any) => {
+    const { x, y, width, height, index } = props;
+    const row: any = series[index] ?? {};
+    const cur = Number(row.atual) || 0;
+    const prev = Number(row.anterior) || 0;
+    if (!cur && !prev) return null;
+    const g = growthText(row.growth);
+    return (
+      <text
+        x={Number(x) + Number(width) + 6}
+        y={Number(y) + Number(height) / 2}
+        textAnchor="start"
+        dominantBaseline="central"
+        style={{ fontSize: 10 }}
+      >
+        <tspan style={{ fill: "hsl(var(--foreground))", fontWeight: 600 }}>
+          {compactValue(cur, config?.formatting)}
+        </tspan>
+        {g && (
+          <tspan dx={6} style={{ fill: growthColor(Number(row.growth)), fontWeight: 600 }}>
+            {g}
+          </tspan>
+        )}
+      </text>
+    );
+  };
+
 
 
 
@@ -289,7 +320,7 @@ function ComparisonCard({
               barCategoryGap={horizontal ? "18%" : "22%"}
               margin={
                 horizontal
-                  ? { top: 4, right: 96, left: 4, bottom: 4 }
+                  ? { top: 4, right: 132, left: 4, bottom: 4 }
                   : { top: 22, right: 12, left: 4, bottom: 4 }
               }
             >
@@ -357,8 +388,11 @@ function ComparisonCard({
                   <LabelList
                     dataKey="anterior"
                     position="right"
+                    offset={6}
                     style={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                    formatter={(v: any) =>
+                      Number(v) ? compactValue(Number(v), config?.formatting) : ""
+                    }
                   />
                 )}
               </Bar>
@@ -368,16 +402,13 @@ function ComparisonCard({
                 fill="hsl(var(--primary))"
                 radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
               >
-                {horizontal && (
-                  <LabelList
-                    dataKey="atual"
-                    position="right"
-                    style={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
-                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
-                  />
+                {horizontal ? (
+                  <LabelList dataKey="atual" content={renderEndLabel} />
+                ) : (
+                  <LabelList dataKey="growth" content={renderGrowthLabel} />
                 )}
-                <LabelList dataKey="growth" content={renderGrowthLabel} />
               </Bar>
+
 
             </BarChart>
           </ResponsiveContainer>
