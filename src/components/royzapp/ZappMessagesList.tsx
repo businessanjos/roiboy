@@ -328,12 +328,15 @@ export function ZappMessagesList({
   );
 
   const handleLoadOlder = useCallback(() => {
+    // Evita expansões em cascata antes de restaurar a posição da anterior.
+    if (pendingRestoreRef.current) return;
     // Primeiro expande a janela local; só busca no servidor quando tudo já está renderizado.
     if (windowStart > 0) {
       saveScrollAnchor();
       setWindowSize((s) => s + WINDOW_STEP);
       return;
     }
+
     if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
     saveScrollAnchor();
     onLoadOlderMessages();
