@@ -33,6 +33,8 @@ interface InsightsGridProps {
   minCardWidths?: Partial<MinCardWidths>;
   /** TV mode: fit every visual inside the available height (no page scroll). */
   fitHeight?: boolean;
+  /** Optional DOM element id to portal the "Ajustar layout" toggle into (e.g. the filters row). */
+  toolbarSlotId?: string;
 }
 
 const ROW_HEIGHT = 20;
