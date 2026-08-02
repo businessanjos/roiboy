@@ -221,9 +221,8 @@ function ComparisonCard({
   const hiddenCount = Math.max(0, allSeries.length - series.length);
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
-  const chartHeight = horizontal
-    ? Math.min(460, Math.max(300, series.length * 42 + 70))
-    : 300;
+  // Altura fixa para manter todos os blocos alinhados na grade.
+  const chartHeight = 360;
 
   // Tag de crescimento (ano a ano) por barra/categoria.
   const renderGrowthLabel = (props: any) => {
