@@ -18,6 +18,7 @@ interface DealKanbanColumnProps {
   isDragActive?: boolean;
   activityStatusGetter?: (dealId: string) => ActivityStatus;
   showActivityCounts?: boolean;
+  fullWidth?: boolean;
 }
 
 const getStageIcon = (stageName: string, color: string) => {
@@ -42,7 +43,7 @@ const getStageIcon = (stageName: string, color: string) => {
   return <Users className={iconClass} style={{ color }} />;
 };
 
-export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false }: DealKanbanColumnProps) {
+export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, faturamentoMap, itemVendaMap, isDragActive = false, activityStatusGetter, showActivityCounts = false, fullWidth = false }: DealKanbanColumnProps) {
   const { setNodeRef, isOver } = useDroppable({
     id: stage.id,
   });
@@ -68,7 +69,9 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
     <div
       ref={setNodeRef}
       className={cn(
-        "flex-1 min-w-[78vw] sm:min-w-[200px] max-w-[78vw] sm:max-w-[320px] flex flex-col transition-all duration-200",
+        fullWidth
+          ? "w-full min-w-0 max-w-none flex flex-col transition-all duration-200"
+          : "flex-1 min-w-[78vw] sm:min-w-[200px] max-w-[78vw] sm:max-w-[320px] flex flex-col transition-all duration-200",
         // When drag is active but NOT over this column — subtle pulse hint
         isDragActive && !isOver && "opacity-80",
         // When hovering over this column — strong highlight
