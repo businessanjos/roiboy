@@ -212,13 +212,12 @@ function ComparisonCard({
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
   const chartHeight = horizontal
-    ? Math.max(220, series.length * 46 + 60)
-    : series.length > 12
-      ? 260
-      : 230;
+    ? Math.min(460, Math.max(300, series.length * 42 + 70))
+    : 300;
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
+
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-sm font-semibold truncate">{visual.title || "Sem título"}</p>
