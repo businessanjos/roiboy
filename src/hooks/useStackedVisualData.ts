@@ -10,6 +10,8 @@ import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/appl
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
+import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
+
 
 
 export interface StackedDataPoint {
