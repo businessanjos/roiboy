@@ -315,7 +315,7 @@ export function SpiffSpinsHistory() {
               Nenhum giro encontrado com os filtros atuais.
             </div>
           ) : (
-            <Table>
+            <div className="w-full overflow-x-auto"><Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Data</TableHead>
@@ -397,7 +397,7 @@ export function SpiffSpinsHistory() {
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
           )}
         </CardContent>
       </Card>

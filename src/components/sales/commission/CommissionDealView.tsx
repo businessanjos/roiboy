@@ -207,7 +207,7 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
             <CardTitle className="text-sm">Comissão por Negócio</CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            <Table>
+            <div className="w-full overflow-x-auto"><Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Vendedor</TableHead>
@@ -329,7 +329,7 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                   );
                 })}
               </TableBody>
-            </Table>
+            </Table></div>
           </CardContent>
         </Card>
       )}

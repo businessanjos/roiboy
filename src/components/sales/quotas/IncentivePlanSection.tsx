@@ -771,7 +771,7 @@ export function IncentivePlanSection() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
+              <div className="w-full overflow-x-auto"><Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead className="w-[50px]">Tipo</TableHead>
@@ -862,7 +862,7 @@ export function IncentivePlanSection() {
                     </TableRow>
                   )}
                 </TableBody>
-              </Table>
+              </Table></div>
             </CardContent>
           </Card>
 
