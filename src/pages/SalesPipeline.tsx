@@ -157,10 +157,9 @@ export default function SalesPipeline() {
   const [isDeletedDrawerOpen, setIsDeletedDrawerOpen] = useState(false);
   const { isSuperAdmin } = useSuperAdmin();
   const canSeeDeleted = isManagementUser(currentUser as any, !!isSuperAdmin);
-  // No celular a lista é a leitura natural (estilo app); no desktop, kanban.
-  const [viewMode, setViewMode] = useState<'kanban' | 'list'>(
-    () => (typeof window !== 'undefined' && window.innerWidth < 640 ? 'list' : 'kanban')
-  );
+  // Kanban por padrão (no celular usa seletor de etapa em tela cheia)
+  const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
+
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
 
