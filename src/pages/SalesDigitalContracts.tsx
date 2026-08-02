@@ -370,48 +370,50 @@ export default function SalesDigitalContracts() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 md:p-6 space-y-4 md:space-y-6 pb-24 md:pb-6">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-2xl font-semibold text-foreground">Contratos de Vendas</h1>
           <p className="text-sm text-muted-foreground">
             Contratos digitais criados pela aba Contrato dos Deals.
           </p>
         </div>
-        <div className="flex gap-2">
-          <Button onClick={() => setGenerateOpen(true)}>
+        <div className="flex gap-2 overflow-x-auto scrollbar-none -mx-3 px-3 md:mx-0 md:px-0">
+          <Button className="shrink-0" onClick={() => setGenerateOpen(true)}>
             <FilePlus2 className="mr-2 h-4 w-4" />
             Gerar contrato
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" className="shrink-0" asChild>
             <Link to="/sales/contracts/templates">
               <FileText className="mr-2 h-4 w-4" />
               Templates
             </Link>
           </Button>
-          <Button variant="outline" asChild>
+          <Button variant="outline" className="shrink-0" asChild>
             <Link to="/sales/contracts/defaults">
               <Settings2 className="mr-2 h-4 w-4" />
-              Padrões da contratada
+              <span className="hidden sm:inline">Padrões da contratada</span>
+              <span className="sm:hidden">Padrões</span>
             </Link>
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 md:grid-cols-3">
-        <Card className="p-4">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3">
+        <Card className="p-3 md:p-4">
           <p className="text-xs font-medium text-muted-foreground">Contratos digitais</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{contracts.length}</p>
+          <p className="mt-1 text-xl md:text-2xl font-semibold text-foreground">{contracts.length}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="p-3 md:p-4">
           <p className="text-xs font-medium text-muted-foreground">Assinados</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{totals.signed}</p>
+          <p className="mt-1 text-xl md:text-2xl font-semibold text-foreground">{totals.signed}</p>
         </Card>
-        <Card className="p-4">
+        <Card className="col-span-2 md:col-span-1 p-3 md:p-4">
           <p className="text-xs font-medium text-muted-foreground">Valor contratado</p>
-          <p className="mt-1 text-2xl font-semibold text-foreground">{formatCurrency(totals.total)}</p>
+          <p className="mt-1 text-xl md:text-2xl font-semibold text-foreground">{formatCurrency(totals.total)}</p>
         </Card>
       </div>
+
 
       <Card className="overflow-hidden">
         <div className="flex flex-col gap-3 border-b border-border p-4 md:flex-row md:items-center md:justify-between">
