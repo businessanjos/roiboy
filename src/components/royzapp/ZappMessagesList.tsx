@@ -393,6 +393,15 @@ export function ZappMessagesList({
     if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
+  // A altura total muda conforme o virtualizer mede as linhas reais.
+  // Reancora no fim enquanto a conversa acabou de abrir ou se o usuário já está no fim.
+  useLayoutEffect(() => {
+    if (pendingRestoreRef.current) return;
+    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
+  }, [totalSize, scrollToBottom]);
+
+
+
   // Reancora no fim quando a altura muda (mídia carregando, painel de sugestões
   // abrindo, teclado) — apenas se o usuário estiver no fim ou na janela de "pin".
   useEffect(() => {
