@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { Plus, ChevronLeft, ChevronRight, MoreHorizontal, Pencil, Copy, Trash2, Target } from "lucide-react";
+import { Plus, ChevronLeft, ChevronRight, ChevronDown, MoreHorizontal, Pencil, Copy, Trash2, Target } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
