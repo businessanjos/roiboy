@@ -45,6 +45,16 @@ export function InsightsMainContent() {
   const [tvFit, setTvFit] = useState(true);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
+  const [mobileActionsSlot, setMobileActionsSlot] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    if (!isMobile) {
+      setMobileActionsSlot(null);
+      return;
+    }
+    setMobileActionsSlot(document.getElementById("insights-mobile-actions"));
+  }, [isMobile, activeDashboardId]);
+
 
   // Detect fixedDateRange year from visuals (parse from ISO string to avoid timezone shift)
   const fixedYear = useMemo(() => {
