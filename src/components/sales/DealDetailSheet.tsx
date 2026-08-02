@@ -962,18 +962,19 @@ export function DealDetailSheet({
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
-        <SheetHeader className="px-5 py-4 border-b bg-muted/30">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 flex-1 min-w-0">
-              <Avatar className="h-10 w-10 border border-primary/20">
+        <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+            <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
+              <Avatar className="h-10 w-10 shrink-0 border border-primary/20">
                 <AvatarImage src={deal.client?.avatar_url || deal.lead?.avatar_url || undefined} />
                 <AvatarFallback className="text-xs font-semibold bg-primary/10 text-primary">
                   {getInitials(contactName)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <div className="flex items-center gap-2">
-                  <SheetTitle className="text-base font-semibold truncate flex items-center gap-1.5">
+                <div className="flex items-center gap-2 flex-wrap min-w-0">
+                  <SheetTitle className="text-sm sm:text-base font-semibold truncate flex items-center gap-1.5 min-w-0 max-w-full text-left">
+
                     <span className="truncate">{deal.title}</span>
                     <VipBadge clientId={deal.client_id} size="md" />
                   </SheetTitle>
