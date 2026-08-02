@@ -388,8 +388,11 @@ function ComparisonCard({
                   <LabelList
                     dataKey="anterior"
                     position="right"
+                    offset={6}
                     style={{ fontSize: 10, fill: "hsl(var(--muted-foreground))" }}
-                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
+                    formatter={(v: any) =>
+                      Number(v) ? compactValue(Number(v), config?.formatting) : ""
+                    }
                   />
                 )}
               </Bar>
@@ -399,16 +402,13 @@ function ComparisonCard({
                 fill="hsl(var(--primary))"
                 radius={horizontal ? [0, 3, 3, 0] : [3, 3, 0, 0]}
               >
-                {horizontal && (
-                  <LabelList
-                    dataKey="atual"
-                    position="right"
-                    style={{ fontSize: 10, fill: "hsl(var(--foreground))" }}
-                    formatter={(v: any) => compactValue(Number(v), config?.formatting)}
-                  />
+                {horizontal ? (
+                  <LabelList dataKey="atual" content={renderEndLabel} />
+                ) : (
+                  <LabelList dataKey="growth" content={renderGrowthLabel} />
                 )}
-                <LabelList dataKey="growth" content={renderGrowthLabel} />
               </Bar>
+
 
             </BarChart>
           </ResponsiveContainer>
