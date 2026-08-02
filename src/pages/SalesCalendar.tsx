@@ -277,15 +277,16 @@ export default function SalesCalendar() {
   const googleConnected = googleQuery.data?.connected;
 
   return (
-    <div className="p-4 space-y-4">
+    <div className="p-3 md:p-4 space-y-3 md:space-y-4 pb-24 md:pb-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
+        <div className="hidden md:block">
           <h1 className="text-xl font-bold tracking-tight">Calendário</h1>
           <p className="text-muted-foreground text-xs">
             Tarefas, reuniões e compromissos do Google Agenda em uma visão única
           </p>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-2 overflow-x-auto scrollbar-none -mx-3 px-3 md:mx-0 md:px-0 md:flex-wrap [&>*]:shrink-0">
+
           {googleConnected === false && (
             <Badge
               variant="outline"

@@ -866,10 +866,10 @@ export default function SalesDashboard() {
     dealsLoading || wonLoading || lostLoading || openLoading || teamLoading;
 
   return (
-    <div className="container mx-auto p-6 space-y-6 max-w-[1400px]">
+    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-[1400px] pb-24 md:pb-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-        <div>
+      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 md:gap-4">
+        <div className="hidden md:block">
           <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
             <TrendingUp className="w-7 h-7 text-primary" />
             Dashboard Comercial
@@ -880,9 +880,9 @@ export default function SalesDashboard() {
         </div>
 
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground" />
+          <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
           <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-            <SelectTrigger className="w-[200px]">
+            <SelectTrigger className="w-full md:w-[200px] h-9">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -896,7 +896,7 @@ export default function SalesDashboard() {
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground -mt-3">
+      <div className="text-xs text-muted-foreground -mt-2 md:-mt-3">
         Período: {format(start, "dd/MM/yyyy", { locale: ptBR })} →{" "}
         {format(end, "dd/MM/yyyy", { locale: ptBR })}
       </div>
@@ -908,24 +908,27 @@ export default function SalesDashboard() {
       <div className="flex items-center justify-between -mb-2">
         <span className="text-xs text-muted-foreground">Indicadores principais</span>
         <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
-          <Settings2 className="w-4 h-4 mr-1.5" /> Personalizar KPIs
+          <Settings2 className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Personalizar KPIs</span><span className="sm:hidden">KPIs</span>
         </Button>
       </div>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
         {renderKpis("header")}
       </div>
 
       <Tabs defaultValue="goals" className="w-full">
-        <TabsList className="grid grid-cols-6 w-full md:w-fit">
-          <TabsTrigger value="goals">Metas</TabsTrigger>
-          <TabsTrigger value="funnel">Funil</TabsTrigger>
-          <TabsTrigger value="performance">Performance</TabsTrigger>
-          <TabsTrigger value="team">Equipe</TabsTrigger>
-          <TabsTrigger value="origin">Origem & Perdas</TabsTrigger>
-          <TabsTrigger value="ask" className="gap-1.5">
-            <span className="inline-flex items-center gap-1">✨ AION</span>
-          </TabsTrigger>
-        </TabsList>
+        <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none">
+          <TabsList className="inline-flex w-max md:grid md:grid-cols-6 md:w-fit gap-1">
+            <TabsTrigger value="goals" className="rounded-full md:rounded-md">Metas</TabsTrigger>
+            <TabsTrigger value="funnel" className="rounded-full md:rounded-md">Funil</TabsTrigger>
+            <TabsTrigger value="performance" className="rounded-full md:rounded-md">Performance</TabsTrigger>
+            <TabsTrigger value="team" className="rounded-full md:rounded-md">Equipe</TabsTrigger>
+            <TabsTrigger value="origin" className="rounded-full md:rounded-md">Origem & Perdas</TabsTrigger>
+            <TabsTrigger value="ask" className="gap-1.5 rounded-full md:rounded-md">
+              <span className="inline-flex items-center gap-1">✨ AION</span>
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
 
         <TabsContent value="ask" className="mt-4">
           <SalesDashboardChatTab />
