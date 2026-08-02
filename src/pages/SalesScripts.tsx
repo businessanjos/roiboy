@@ -637,9 +637,9 @@ export default function SalesScripts() {
   const materialCountByType = MATERIAL_TYPES.map(mt => ({ ...mt, count: materials.filter(m => m.material_type === mt.value).length }));
 
   return (
-    <div className="px-4 md:px-8 py-6 md:py-8 space-y-6 max-w-[1400px] mx-auto pb-20 md:pb-12 w-full min-w-0 overflow-x-hidden">
+    <div className="px-3 md:px-8 py-3 md:py-8 space-y-4 md:space-y-6 max-w-[1400px] mx-auto pb-24 md:pb-12 w-full min-w-0 overflow-x-hidden">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
+      <div className="hidden md:flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-2 border-b border-border/60">
         <div className="flex items-center gap-4">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/20 flex items-center justify-center shrink-0">
             <MessageSquareText className="w-6 h-6 text-primary" />
@@ -655,31 +655,34 @@ export default function SalesScripts() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {isSalesRep ? (
-          <TabsList className="grid w-full grid-cols-1 mb-6 h-12 p-1 bg-muted/50">
-            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsList className="grid w-full grid-cols-1 mb-4 md:mb-6 h-11 md:h-12 p-1 bg-muted/50">
+            <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Sparkles className="w-4 h-4" />
               <span className="text-sm font-medium">Playbooks</span>
             </TabsTrigger>
           </TabsList>
         ) : (
-          <TabsList className="grid w-full grid-cols-5 mb-6 h-12 p-1 bg-muted/50">
-            <TabsTrigger value="materials" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
-            </TabsTrigger>
-            <TabsTrigger value="playbooks" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
-            </TabsTrigger>
-            <TabsTrigger value="analysis" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
-            </TabsTrigger>
-            <TabsTrigger value="commission" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
-            </TabsTrigger>
-            <TabsTrigger value="scripts" className="gap-2 h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
-              <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
-            </TabsTrigger>
-          </TabsList>
+          <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none mb-4 md:mb-6">
+            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-5 h-11 md:h-12 p-1 bg-muted/50 gap-1">
+              <TabsTrigger value="materials" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
+              </TabsTrigger>
+              <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
+              </TabsTrigger>
+              <TabsTrigger value="analysis" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
+              </TabsTrigger>
+              <TabsTrigger value="commission" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
+              </TabsTrigger>
+              <TabsTrigger value="scripts" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+                <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
+              </TabsTrigger>
+            </TabsList>
+          </div>
         )}
+
 
         {/* MATERIALS */}
         <TabsContent value="materials">
