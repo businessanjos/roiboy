@@ -2291,7 +2291,7 @@ export default function SalesPipeline() {
                         Filtros e busca
                         <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
                       </Button>
-                      {filtersCollapsed && activeTab === 'open' && (
+                      {activeTab === 'open' && (
                         <div className="flex items-center gap-3 sm:gap-5 text-xs sm:text-sm">
                           <div className="flex items-center gap-1.5">
                             <div className="h-2 w-2 rounded-full bg-primary" />
