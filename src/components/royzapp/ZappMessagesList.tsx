@@ -1,5 +1,7 @@
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
+
 
 import { Button } from "@/components/ui/button";
 import {
