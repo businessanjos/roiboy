@@ -2237,6 +2237,8 @@ export default function SalesPipeline() {
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
+                  </div>
+
 
                   <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
                     <Plus className="h-4 w-4" />
