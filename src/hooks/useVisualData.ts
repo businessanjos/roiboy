@@ -31,16 +31,13 @@ interface UseVisualDataParams {
 
 
 /**
- * Agrupamento diário em janelas longas (ex.: "Este Ano") gera centenas de
- * barras ilegíveis. Acima de ~2 meses o gráfico passa a agrupar por mês.
+ * Granularidade adaptativa: o agrupamento nunca é mais fino do que a
+ * janela filtrada suporta (dia -> semana -> mês -> ano).
  */
 function rollUpLongDayGrouping<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string): T {
-  if (!cfg || (cfg as any).dimension?.dateGrouping !== 'day') return cfg;
-  if (!startDate || !endDate) return cfg;
-  const days = (new Date(endDate).getTime() - new Date(startDate).getTime()) / 86400000;
-  if (days <= 62) return cfg;
-  return { ...(cfg as any), dimension: { ...(cfg as any).dimension, dateGrouping: 'month' } } as T;
+  return withAdaptiveDateGrain(cfg, startDate, endDate);
 }
+
 
 export function useVisualData({ config: rawConfig, chartType, enabled = true }: UseVisualDataParams) {
   const config = rawConfig;
