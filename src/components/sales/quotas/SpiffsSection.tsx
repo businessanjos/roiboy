@@ -653,7 +653,7 @@ export function SpiffsSection() {
           {spiffs.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum SPIFF criado. Crie campanhas temporárias para impulsionar vendas específicas.</p>
           ) : (
-            <div className="w-full overflow-x-auto"><Table>
+            <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
               <TableHeader>
                 <TableRow>
                   <TableHead>Campanha</TableHead>
@@ -924,7 +924,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum negócio ganho no período ainda.</p>
       ) : (
-        <div className="w-full overflow-x-auto"><Table>
+        <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Vendedor</TableHead>
@@ -1173,7 +1173,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhuma venda ganha na janela atual ainda.</p>
       ) : (
-        <div className="w-full overflow-x-auto"><Table>
+        <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Vendedor</TableHead>

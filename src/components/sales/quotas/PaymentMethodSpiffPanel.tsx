@@ -222,7 +222,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum participante encontrado.</p>
       ) : (
-        <div className="w-full overflow-x-auto"><Table>
+        <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Closer</TableHead>

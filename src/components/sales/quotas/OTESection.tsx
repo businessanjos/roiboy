@@ -193,7 +193,7 @@ export function OTESection({
           )}
         </CardHeader>
         <CardContent>
-          <div className="w-full overflow-x-auto"><Table>
+          <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
             <TableHeader>
               <TableRow>
                 <TableHead>Vendedor</TableHead>
