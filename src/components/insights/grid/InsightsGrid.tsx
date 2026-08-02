@@ -524,7 +524,9 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
       title="Redimensionar e posicionar os cards livremente"
     >
       <Move className="h-3.5 w-3.5" />
-      {freeLayout ? "Concluir layout" : "Ajustar layout"}
+      <span className={toolbarSlot ? "hidden 2xl:inline" : ""}>
+        {freeLayout ? "Concluir layout" : "Ajustar layout"}
+      </span>
     </button>
   );
 
