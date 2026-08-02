@@ -2479,6 +2479,8 @@ export default function SalesPipeline() {
                       </div>
                     )}
                   </div>
+                  )}
+                  </div>
                 </div>
 
                 {/* Active filter chips (only for open pipeline view) */}
