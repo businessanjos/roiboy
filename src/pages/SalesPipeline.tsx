@@ -2257,51 +2257,53 @@ export default function SalesPipeline() {
             <div className="space-y-3">
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className={cn("gap-2 sm:gap-3", filtersCollapsed ? "flex flex-wrap items-center" : "flex flex-col")}>
-                  <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1 sm:flex-none">
-                  <PipelineSelector
-                    pipelines={pipelines}
-                    activePipelineId={activePipelineId}
-                    onSelect={setActivePipelineId}
-                    onCreate={createPipeline}
-                    onUpdate={updatePipeline}
-                    onDelete={deletePipeline}
-                  />
+                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
+                    <PipelineSelector
+                      pipelines={pipelines}
+                      activePipelineId={activePipelineId}
+                      onSelect={setActivePipelineId}
+                      onCreate={createPipeline}
+                      onUpdate={updatePipeline}
+                      onDelete={deletePipeline}
+                    />
                   </div>
-                  
-                  
-                  {/* Filters toolbar */}
-                  <div className={filtersCollapsed ? "flex-1 min-w-0 w-full sm:w-auto" : "w-full"}>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 sm:flex-wrap">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        className="h-8 w-full sm:w-auto justify-center sm:justify-start gap-2 px-2 text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                        onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                        aria-expanded={!filtersCollapsed}
-                      >
-                        <SlidersHorizontal className="h-3.5 w-3.5" />
-                        Filtros e busca
-                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
-                      </Button>
-                      {activeTab === 'open' && (
-                        <div className="flex items-center justify-center sm:justify-start gap-4 sm:gap-5 text-xs sm:text-sm w-full sm:w-auto">
-                          <div className="flex items-center gap-1.5">
-                            <div className="h-2 w-2 rounded-full bg-primary" />
-                            <span className="text-muted-foreground">{filteredOpenDeals.length} negócios</span>
-                          </div>
-                          <div className="flex items-center gap-1.5">
-                            <DollarSign className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="font-semibold">{formatCurrency(filteredOpenTotalValue)}</span>
-                          </div>
-                          <div className="hidden sm:flex items-center gap-1.5">
-                            <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
-                            <span className="text-muted-foreground">Ponderado:</span>
-                            <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
-                          </div>
-                        </div>
-                      )}
+
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                    onClick={() => setFiltersCollapsed(!filtersCollapsed)}
+                    aria-expanded={!filtersCollapsed}
+                  >
+                    <SlidersHorizontal className="h-3.5 w-3.5" />
+                    <span className="hidden xs:inline sm:inline">Filtros e busca</span>
+                    <span className="xs:hidden sm:hidden">Filtros</span>
+                    <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", !filtersCollapsed && "rotate-180")} />
+                  </Button>
+                </div>
+
+                {activeTab === 'open' && (
+                  <div className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0">
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
+                      <span className="text-muted-foreground truncate">{filteredOpenDeals.length} negócios</span>
                     </div>
+                    <div className="flex items-center gap-1.5 min-w-0">
+                      <DollarSign className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                      <span className="font-semibold truncate">{formatCurrency(filteredOpenTotalValue)}</span>
+                    </div>
+                    <div className="hidden sm:flex items-center gap-1.5">
+                      <BarChart3 className="h-3.5 w-3.5 text-muted-foreground" />
+                      <span className="text-muted-foreground">Ponderado:</span>
+                      <span className="font-medium">{formatCurrency(filteredOpenWeightedValue)}</span>
+                    </div>
+                  </div>
+                )}
+
+                <div className="w-full">
+                  <div className="hidden" />
+
 
                   {!filtersCollapsed && (
                   <div className="flex flex-wrap items-end gap-3 bg-card border border-border rounded-xl p-3 shadow-sm w-full mt-2">
