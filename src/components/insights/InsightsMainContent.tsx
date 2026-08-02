@@ -1,6 +1,6 @@
 import { useState, useCallback, useMemo, useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
-import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2, Tv } from "lucide-react";
+import { BarChart3, Plus, Monitor, Maximize2, Minimize2, X, Share2, Tv, GitCompareArrows } from "lucide-react";
 import { ZoomControls } from "@/components/ui/zoom-controls";
 import { useInsightsDashboards } from "@/hooks/useInsightsDashboards";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -13,6 +13,7 @@ import { ShareDashboardModal } from "./ShareDashboardModal";
 import { InsightsGrid } from "./grid/InsightsGrid";
 import { DashboardPaletteSelector } from "./DashboardPaletteSelector";
 import { TvFitStage } from "./TvFitStage";
+import { ComparativeAnalysisDialog } from "./ComparativeAnalysisDialog";
 
 import { WhatsAppDashboardPanel } from "./whatsapp-dashboard";
 import { startOfMonth, endOfMonth } from "date-fns";
@@ -39,6 +40,7 @@ export function InsightsMainContent() {
 
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
   const [isShareOpen, setIsShareOpen] = useState(false);
+  const [isCompareOpen, setIsCompareOpen] = useState(false);
   const [isFocusMode, setIsFocusMode] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
@@ -301,6 +303,11 @@ export function InsightsMainContent() {
     <div className="flex-1 overflow-auto">
       {focusModeOverlay}
       <VisualStudioDialog open={isBuilderOpen} onOpenChange={setIsBuilderOpen} />
+      <ComparativeAnalysisDialog
+        open={isCompareOpen}
+        onOpenChange={setIsCompareOpen}
+        visuals={filteredVisuals}
+      />
       {activeDashboard && (
         <ShareDashboardModal
           open={isShareOpen}
@@ -318,6 +325,17 @@ export function InsightsMainContent() {
                 <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
                   <Share2 className="h-4 w-4" />
                   <span className="hidden md:inline ml-2">Compartilhar</span>
+                </Button>
+              )}
+              {hasVisuals && (
+                <Button
+                  variant="outline"
+                  size="icon"
+                  className="h-8 w-8 md:h-9 md:w-auto md:px-3"
+                  onClick={() => setIsCompareOpen(true)}
+                >
+                  <GitCompareArrows className="h-4 w-4" />
+                  <span className="hidden md:inline ml-2">Análise comparativa</span>
                 </Button>
               )}
               {hasVisuals && (
