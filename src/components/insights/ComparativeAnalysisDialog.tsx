@@ -86,6 +86,22 @@ function formatValue(value: number, formatting: any) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: decimals }).format(value || 0);
 }
 
+const DATE_LABEL_RE = /^(\d{2}\/\d{2}|[a-zç]{3}\/\d{2}|\d{4}|sem \d+)/i;
+
+function isDateLike(rows: { name: string }[]) {
+  if (rows.length < 2) return false;
+  return rows.every((r) => DATE_LABEL_RE.test(String(r.name).trim()));
+}
+
+function compactValue(value: number, formatting: any) {
+  const isCurrency = formatting?.type === "currency";
+  const abs = Math.abs(value);
+  const prefix = isCurrency ? "R$ " : "";
+  if (abs >= 1_000_000) return `${prefix}${(value / 1_000_000).toFixed(1).replace(".", ",")} mi`;
+  if (abs >= 1_000) return `${prefix}${Math.round(value / 1_000)} mil`;
+  return `${prefix}${new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 0 }).format(value || 0)}`;
+}
+
 function buildSeries(
   currentRows: { name: string; value: number }[] = [],
   previousRows: { name: string; value: number }[] = [],
@@ -94,12 +110,15 @@ function buildSeries(
   const previousNames = previousRows.map((r) => r.name);
   const overlap = currentNames.filter((n) => previousNames.includes(n)).length;
 
-  // Date-like series (jan/25 vs jan/26) have no label overlap: align by position.
-  if (overlap === 0 && currentRows.length > 0 && currentRows.length === previousRows.length) {
-    return currentRows.map((row, i) => ({
-      name: row.name,
-      atual: Number(row.value) || 0,
-      anterior: Number(previousRows[i]?.value) || 0,
+  // Date-like series (jan/25 vs jan/26): keep chronological order and align by position.
+  if (overlap === 0 && isDateLike(currentRows) && isDateLike(previousRows)) {
+    const cur = [...currentRows].sort((a, b) => compareDateLabels(a.name, b.name));
+    const prev = [...previousRows].sort((a, b) => compareDateLabels(a.name, b.name));
+    const len = Math.max(cur.length, prev.length);
+    return Array.from({ length: len }, (_, i) => ({
+      name: cur[i]?.name || prev[i]?.name || "",
+      atual: Number(cur[i]?.value) || 0,
+      anterior: Number(prev[i]?.value) || 0,
     }));
   }
 
@@ -112,8 +131,7 @@ function buildSeries(
       atual: currentMap.get(name) ?? 0,
       anterior: previousMap.get(name) ?? 0,
     }))
-    .sort((a, b) => b.atual + b.anterior - (a.atual + a.anterior))
-    .slice(0, 15);
+    .sort((a, b) => b.atual + b.anterior - (a.atual + a.anterior));
 }
 
 function DeltaBadge({ pct, positive, neutral }: { pct: number | null; positive: boolean; neutral: boolean }) {
