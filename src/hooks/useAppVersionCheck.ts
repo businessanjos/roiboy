@@ -111,7 +111,7 @@ export interface UseAppVersionCheckResult {
 }
 
 export function useAppVersionCheck(): UseAppVersionCheckResult {
-  const initialVersionRef = useRef<string | null>(null);
+  const initialVersionRef = useRef<string | null>(__APP_VERSION__ || null);
   const [hasNewVersion, setHasNewVersion] = useState(false);
   const [remoteVersion, setRemoteVersion] = useState<string | null>(null);
   const [deferCount, setDeferCount] = useState(0);
@@ -134,11 +134,18 @@ export function useAppVersionCheck(): UseAppVersionCheckResult {
     const init = async () => {
       const current = await fetchAppVersion();
       if (cancelled || !current) return;
-      initialVersionRef.current = current;
       try {
-        sessionStorage.setItem(STORAGE_KEY, current);
+        sessionStorage.setItem(STORAGE_KEY, initialVersionRef.current || current);
       } catch {
         /* ignore */
+      }
+      if (initialVersionRef.current && initialVersionRef.current !== current) {
+        const { count, nextRemindAt } = readDeferState(current);
+        setRemoteVersion(current);
+        setDeferCount(count);
+        if (count >= MAX_DEFERS || nextRemindAt <= Date.now()) {
+          setHasNewVersion(true);
+        }
       }
     };
 

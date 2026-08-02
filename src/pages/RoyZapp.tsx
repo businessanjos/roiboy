@@ -298,7 +298,6 @@ export default function RoyZapp() {
     whatsappConnecting,
     whatsappInstanceName,
     toggleWhatsAppConnection,
-    checkWhatsAppStatus,
     fetchData,
     fetchMessages,
     loadOlderMessages,
@@ -313,13 +312,6 @@ export default function RoyZapp() {
   });
 
   // Messaging hook is initialized below after state declarations
-
-  // Check WhatsApp status when sector changes
-  useEffect(() => {
-    if (selectedSectorId) {
-      checkWhatsAppStatus();
-    }
-  }, [selectedSectorId, checkWhatsAppStatus]);
 
   // Get current sector info
   const currentSector = useMemo(() => {
