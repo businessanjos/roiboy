@@ -358,7 +358,15 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 const FREE_LAYOUT_KEY = "insights:free-layout-mode";
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight, toolbarSlotId }: InsightsGridProps) {
+  const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!toolbarSlotId) {
+      setToolbarSlot(null);
+      return;
+    }
+    setToolbarSlot(document.getElementById(toolbarSlotId));
+  }, [toolbarSlotId, visuals.length]);
   const isMobile = useIsMobile();
   const containerRef = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState<number | null>(null);
