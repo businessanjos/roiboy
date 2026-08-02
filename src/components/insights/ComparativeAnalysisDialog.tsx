@@ -207,13 +207,53 @@ function ComparisonCard({
   );
   const dateLike = useMemo(() => isDateLike(allSeries), [allSeries]);
   const MAX_BARS = dateLike ? 24 : 12;
-  const series = useMemo(() => allSeries.slice(0, MAX_BARS), [allSeries, MAX_BARS]);
+  const series = useMemo(
+    () =>
+      allSeries.slice(0, MAX_BARS).map((row: any) => {
+        const prev = Number(row.anterior) || 0;
+        const cur = Number(row.atual) || 0;
+        const growth = prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : cur !== 0 ? null : 0;
+        return { ...row, growth };
+      }),
+    [allSeries, MAX_BARS],
+  );
+
   const hiddenCount = Math.max(0, allSeries.length - series.length);
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
   const chartHeight = horizontal
     ? Math.min(460, Math.max(300, series.length * 42 + 70))
     : 300;
+
+  // Tag de crescimento (ano a ano) por barra/categoria.
+  const renderGrowthLabel = (props: any) => {
+    const { x, y, width, height, value } = props;
+    if (value === undefined || value === null) return null;
+    const g = Number(value);
+    if (!Number.isFinite(g)) return null;
+    const text = `${g > 0 ? "+" : ""}${g.toFixed(g > -10 && g < 10 ? 1 : 0)}%`;
+    const color =
+      Math.abs(g) < 0.05
+        ? "hsl(var(--muted-foreground))"
+        : g > 0
+          ? "hsl(142 70% 40%)"
+          : "hsl(var(--destructive))";
+    const cx = horizontal ? Number(x) + Number(width) + 4 : Number(x) + Number(width) / 2;
+    const cy = horizontal ? Number(y) + Number(height) / 2 - 8 : Number(y) - 6;
+    return (
+      <text
+        x={cx}
+        y={cy}
+        textAnchor={horizontal ? "start" : "middle"}
+        dominantBaseline={horizontal ? "middle" : "auto"}
+        style={{ fontSize: 10, fontWeight: 600, fill: color }}
+      >
+        {text}
+      </text>
+    );
+  };
+
+
 
   return (
     <div className="flex h-full flex-col rounded-lg border border-border bg-card p-4">
@@ -250,8 +290,8 @@ function ComparisonCard({
               barCategoryGap={horizontal ? "18%" : "22%"}
               margin={
                 horizontal
-                  ? { top: 4, right: 56, left: 4, bottom: 4 }
-                  : { top: 8, right: 12, left: 4, bottom: 4 }
+                  ? { top: 4, right: 96, left: 4, bottom: 4 }
+                  : { top: 22, right: 12, left: 4, bottom: 4 }
               }
             >
               <CartesianGrid
@@ -337,7 +377,9 @@ function ComparisonCard({
                     formatter={(v: any) => compactValue(Number(v), config?.formatting)}
                   />
                 )}
+                <LabelList dataKey="growth" content={renderGrowthLabel} />
               </Bar>
+
             </BarChart>
           </ResponsiveContainer>
         )}
