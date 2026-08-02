@@ -20,6 +20,8 @@ import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { supabase } from "@/integrations/supabase/client";
 import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { resolveProductMap } from "./productColorResolver";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 
 interface DealKanbanProps {
   stages: DealStage[];
@@ -45,6 +47,11 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
   const [faturamentoMap, setFaturamentoMap] = useState<Record<string, string>>({});
   const [itemVendaMap, setItemVendaMap] = useState<Record<string, { name: string; color: string | null }>>({});
+  const isMobile = useIsMobile();
+  const [mobileStageId, setMobileStageId] = useState<string | null>(null);
+  const activeStageId = mobileStageId && stages.some(s => s.id === mobileStageId) ? mobileStageId : stages[0]?.id;
+  const activeStageIndex = stages.findIndex(s => s.id === activeStageId);
+  const activeStage = activeStageIndex >= 0 ? stages[activeStageIndex] : undefined;
 
   // Batch fetch activity statuses for ALL deals in a single query
   const dealActivityRefs = useMemo(() => deals.map(d => ({ id: d.id, lead_id: d.lead_id, client_id: d.client_id })), [deals]);
