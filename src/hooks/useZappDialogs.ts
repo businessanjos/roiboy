@@ -66,15 +66,12 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
 
     // Wrap all queries in retry for network resilience
     const [deptsResult, parallelResults] = await withRetry(async () => {
-      const deptsRes = await supabase
-        .from("zapp_departments")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("display_order");
-
-      if (deptsRes.error) throw deptsRes.error;
-
-      const [agentsRes, usersRes, rolesRes] = await Promise.all([
+      const [deptsRes, agentsRes, usersRes, rolesRes] = await Promise.all([
+        supabase
+          .from("zapp_departments")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("display_order"),
         supabase
           .from("zapp_agents")
           .select(`*, user:users!zapp_agents_user_id_fkey(id, name, email, avatar_url, team_role_id, role, is_also_admin), department:zapp_departments(*)`)
@@ -92,6 +89,7 @@ export function useZappDialogs(options: UseZappDialogsOptions) {
           .order("display_order"),
       ]);
 
+      if (deptsRes.error) throw deptsRes.error;
       if (agentsRes.error) throw agentsRes.error;
       if (usersRes.error) throw usersRes.error;
       if (rolesRes.error) throw rolesRes.error;

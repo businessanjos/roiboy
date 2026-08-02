@@ -97,7 +97,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
       // Fetch dialog data (departments, agents, users, roles)
       const { targetDepartmentId } = await dialogs.fetchDialogData();
 
-      // Fetch assignments for the target department
+      // Fetch assignments first. Filters and badges are secondary and must not
+      // hold the conversation list behind a long mobile loading screen.
       if (sectorId && targetDepartmentId) {
         console.log(`[ZappData] fetchData: Filtering by department ${targetDepartmentId} for sector ${sectorId}`);
         await conversations.fetchAssignmentsForDepartment(targetDepartmentId);
@@ -105,8 +106,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
         console.log(`[ZappData] fetchData: No department for sector ${sectorId}`);
       }
 
-      // Fetch filter data (tags, products, clients)
-      await filters.fetchFilterData();
+      void filters.fetchFilterData().catch((error) => {
+        console.error("Error fetching zapp filters:", error);
+      });
     } catch (error: any) {
       console.error("Error fetching zapp data:", error);
       toast.error("Erro ao carregar dados");
