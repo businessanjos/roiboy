@@ -198,6 +198,7 @@ export default function SalesPipeline() {
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
   const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
   const isMobile = useIsMobile();
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
@@ -2370,14 +2371,14 @@ export default function SalesPipeline() {
 
               <TabsTrigger value="prospeccao" className="flex-1 min-w-0 gap-1.5 px-2 text-xs sm:flex-none sm:px-3 sm:text-sm">
                 <Users className="h-4 w-4 shrink-0" />
-                <span className="sm:hidden">Leads</span>
+                <span className="truncate sm:hidden">Leads</span>
                 <span className="hidden sm:inline">Prospecção</span>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'prospeccao' && "hidden sm:inline-flex")}>{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
               </TabsTrigger>
               <TabsTrigger value="pipeline" className="flex-1 min-w-0 gap-1.5 px-2 text-xs sm:flex-none sm:px-3 sm:text-sm">
                 <Target className="h-4 w-4 shrink-0" />
-                <span>Pipeline</span>
-                <Badge variant="secondary" className="text-[10px] sm:text-xs">{openDeals.length}</Badge>
+                <span className="truncate">Pipeline</span>
+                <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'pipeline' && "hidden sm:inline-flex")}>{openDeals.length}</Badge>
               </TabsTrigger>
 
             </TabsList>
@@ -2471,8 +2472,8 @@ export default function SalesPipeline() {
                       variant="ghost"
                       size="sm"
                       className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
-                      onClick={() => setFiltersCollapsed(!filtersCollapsed)}
-                      aria-expanded={!filtersCollapsed}
+                      onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
+                      aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
                     >
                       <SlidersHorizontal className="h-3.5 w-3.5" />
                       <span className={cn(filtersCollapsed && "hidden sm:inline")}>Filtros</span>
@@ -2504,8 +2505,8 @@ export default function SalesPipeline() {
 
                   <div className="w-full">
 
-                  {!filtersCollapsed && (isMobile ? (
-                    <Sheet open onOpenChange={(o) => { if (!o) setFiltersCollapsed(true); }}>
+                  {isMobile ? (
+                    <Sheet open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen}>
                       <SheetContent side="bottom" className="h-[85dvh] overflow-y-auto p-4" aria-describedby={undefined}>
                         <SheetHeader className="mb-3 text-left">
                           <SheetTitle className="text-base">Filtros</SheetTitle>
@@ -2513,7 +2514,7 @@ export default function SalesPipeline() {
                         {filtersPanel}
                       </SheetContent>
                     </Sheet>
-                  ) : filtersPanel)}
+                  ) : (!filtersCollapsed && filtersPanel)}
                   </div>
                 </div>
 
