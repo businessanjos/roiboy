@@ -2707,7 +2707,7 @@ export default function SalesPipeline() {
               </div>
 
               {/* Summary metrics - compact inline */}
-              {activeTab === 'open' && (
+              {activeTab === 'open' && !filtersCollapsed && (
                 <div className="flex items-center gap-3 sm:gap-5 text-xs sm:text-sm">
                   <div className="flex items-center gap-1.5">
                     <div className="h-2 w-2 rounded-full bg-primary" />
