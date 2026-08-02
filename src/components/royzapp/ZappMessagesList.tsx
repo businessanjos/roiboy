@@ -1,9 +1,24 @@
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
+
+/** Quantas mensagens são montadas por vez (janela local de renderização). */
+const WINDOW_STEP = 40;
+
+
 
 interface ZappMessagesListProps {
   messages: Message[];
@@ -69,8 +84,6 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   return map;
 }
 
-// extractUnresolvedJids removed — no longer doing DB lookups for mentions
-
 export function ZappMessagesList({
   messages,
   conversationId = null,
@@ -87,120 +100,94 @@ export function ZappMessagesList({
   isLoadingOlderMessages = false,
   onLoadOlderMessages,
 }: ZappMessagesListProps) {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const scrollRootRef = useRef<HTMLDivElement>(null);
+  const viewportRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   // Guarda a altura do scroll antes de carregar histórico, para manter a
   // posição visual quando mensagens antigas são inseridas no topo.
   const pendingRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
   const firstMessageIdRef = useRef<string | null>(null);
-  // Conversa atual + janela de "grudar no fim" enquanto mídias/áudios ainda
-  // mudam a altura logo após abrir a conversa.
-  const conversationKeyRef = useRef<string | null>(null);
+  // Janela de "grudar no fim" enquanto mídias/áudios ainda mudam a altura
+  // logo após abrir a conversa.
   const pinBottomUntilRef = useRef<number>(0);
-  const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [pendingDeleteId, setPendingDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   // Deduplicate messages to prevent visual duplicates from race conditions
   // Priority: real messages over temp, dedupe by external_message_id when available
   // Special handling for audio messages which can have duplicate records with different content
-  // CRITICAL FIX: Use 30-second buckets (increased from 5s) as safety fallback
   const deduplicatedMessages = useMemo(() => {
-    const seen = new Map<string, boolean>();
+    const seen = new Set<string>();
     const result: Message[] = [];
-    
-    // Group outbound audio messages by approximate time (30-second buckets) for deduplication
-    // This handles the case where frontend and webhook create separate records
+
+    // Group outbound audio messages by approximate time (30-second buckets)
     const audioTimeMap = new Map<string, Message[]>();
-    
+    let hasTemp = false;
+
     for (const msg of messages) {
-      if (msg.message_type === 'audio' && !msg.is_from_client) {
-        // Use 30-second buckets (30000ms) for more aggressive deduplication
+      if (msg.id.startsWith("temp-")) hasTemp = true;
+      if (msg.message_type === "audio" && !msg.is_from_client) {
         const timeKey = String(Math.floor(new Date(msg.created_at).getTime() / 30000));
-        if (!audioTimeMap.has(timeKey)) {
-          audioTimeMap.set(timeKey, []);
-        }
-        audioTimeMap.get(timeKey)!.push(msg);
+        const bucket = audioTimeMap.get(timeKey);
+        if (bucket) bucket.push(msg);
+        else audioTimeMap.set(timeKey, [msg]);
       }
     }
-    
+
     // For each time bucket with multiple audios, prefer the one with external_message_id and duration
     const duplicateAudioIds = new Set<string>();
-    for (const [timeKey, audioMsgs] of audioTimeMap) {
+    for (const audioMsgs of audioTimeMap.values()) {
       if (audioMsgs.length > 1) {
-        console.log(`[DEDUPE] Found ${audioMsgs.length} audio messages in 30s bucket ${timeKey}`);
-        
-        // Sort: prefer messages with external_message_id and non-zero duration
         audioMsgs.sort((a, b) => {
-          // Prefer real messages over temp
-          if (!a.id.startsWith('temp-') && b.id.startsWith('temp-')) return -1;
-          if (a.id.startsWith('temp-') && !b.id.startsWith('temp-')) return 1;
-          // Prefer messages with external_message_id
+          if (!a.id.startsWith("temp-") && b.id.startsWith("temp-")) return -1;
+          if (a.id.startsWith("temp-") && !b.id.startsWith("temp-")) return 1;
           if (a.external_message_id && !b.external_message_id) return -1;
           if (!a.external_message_id && b.external_message_id) return 1;
-          // Prefer messages with duration
           if ((a.audio_duration_sec || 0) > (b.audio_duration_sec || 0)) return -1;
           if ((a.audio_duration_sec || 0) < (b.audio_duration_sec || 0)) return 1;
           return 0;
         });
-        
-        // Mark all but the first (best) as duplicates
-        for (let i = 1; i < audioMsgs.length; i++) {
-          console.log(`[DEDUPE] Filtering duplicate audio: ${audioMsgs[i].id}`);
-          duplicateAudioIds.add(audioMsgs[i].id);
-        }
+        for (let i = 1; i < audioMsgs.length; i++) duplicateAudioIds.add(audioMsgs[i].id);
       }
     }
-    
-    // Process from oldest to newest to maintain order
+
+    // Só monta a lista de áudios reais quando existe alguma mensagem temporária
+    const realAudioTimes = hasTemp
+      ? messages
+          .filter((m) => !m.id.startsWith("temp-") && m.message_type === "audio" && m.is_from_client === false)
+          .map((m) => new Date(m.created_at).getTime())
+      : [];
+
     for (const msg of messages) {
-      // Skip duplicate audio messages identified above
-      if (duplicateAudioIds.has(msg.id)) {
-        continue;
-      }
-      
+      if (duplicateAudioIds.has(msg.id)) continue;
+
       // Skip temporary messages if a real version exists (30s window)
-      if (msg.id.startsWith('temp-')) {
-        const hasRecentRealAudio = messages.some(m => 
-          !m.id.startsWith('temp-') && 
-          m.message_type === 'audio' &&
-          m.is_from_client === false &&
-          Math.abs(new Date(m.created_at).getTime() - new Date(msg.created_at).getTime()) < 30000
-        );
-        if (hasRecentRealAudio) {
-          continue;
-        }
+      if (msg.id.startsWith("temp-")) {
+        const ts = new Date(msg.created_at).getTime();
+        if (realAudioTimes.some((t) => Math.abs(t - ts) < 30000)) continue;
       }
-      
-      // Deduplicate by external_message_id if available (prevents webhook duplicates)
+
       const dedupeKey = msg.external_message_id || msg.id;
       if (!seen.has(dedupeKey)) {
-        seen.set(dedupeKey, true);
+        seen.add(dedupeKey);
         result.push(msg);
       }
     }
-    
+
     return result;
   }, [messages]);
 
   // Build fallback mention map from sender_phone data for groups
-  const fallbackMentionMap = useMemo(() => {
+  const combinedMentionMap = useMemo(() => {
     if (!isGroup) return {};
     return buildFallbackMentionMap(deduplicatedMessages);
   }, [isGroup, deduplicatedMessages]);
-
-  // Combined mention map: only use fallback from sender data + webhook mention_map
-  const combinedMentionMap = useMemo(() => {
-    return fallbackMentionMap;
-  }, [fallbackMentionMap]);
 
   // Build a lookup map by external_message_id for quoted content resolution
   const messagesByExternalId = useMemo(() => {
     const map = new Map<string, Message>();
     for (const msg of deduplicatedMessages) {
-      if (msg.external_message_id) {
-        map.set(msg.external_message_id, msg);
-      }
+      if (msg.external_message_id) map.set(msg.external_message_id, msg);
     }
     return map;
   }, [deduplicatedMessages]);
@@ -208,26 +195,29 @@ export function ZappMessagesList({
   // Enrich messages: merge mention names + fill missing quoted content from loaded messages
   const enrichedMessages = useMemo(() => {
     const mentionRegex = /@\d{5,}/;
-    return deduplicatedMessages.map(msg => {
+    return deduplicatedMessages.map((msg) => {
       let enriched = msg;
 
       // Fill missing quoted_content by looking up the original message
       if (msg.quoted_message_id && !msg.quoted_content) {
         const originalMsg = messagesByExternalId.get(msg.quoted_message_id);
         if (originalMsg) {
-          const resolvedContent = originalMsg.content || 
-            (originalMsg.message_type === 'image' ? '📷 Imagem' :
-             originalMsg.message_type === 'video' ? '🎬 Vídeo' :
-             originalMsg.message_type === 'audio' ? '🎤 Áudio' :
-             originalMsg.message_type === 'document' ? '📄 Documento' :
-             originalMsg.message_type === 'sticker' ? '🎨 Figurinha' : null);
-          const resolvedSender = msg.quoted_sender_name || originalMsg.sender_name || 
-            (originalMsg.is_from_client ? 'Cliente' : 'Você');
-          enriched = { 
-            ...enriched, 
-            quoted_content: resolvedContent, 
-            quoted_sender_name: resolvedSender 
-          };
+          const resolvedContent =
+            originalMsg.content ||
+            (originalMsg.message_type === "image"
+              ? "📷 Imagem"
+              : originalMsg.message_type === "video"
+                ? "🎬 Vídeo"
+                : originalMsg.message_type === "audio"
+                  ? "🎤 Áudio"
+                  : originalMsg.message_type === "document"
+                    ? "📄 Documento"
+                    : originalMsg.message_type === "sticker"
+                      ? "🎨 Figurinha"
+                      : null);
+          const resolvedSender =
+            msg.quoted_sender_name || originalMsg.sender_name || (originalMsg.is_from_client ? "Cliente" : "Você");
+          enriched = { ...enriched, quoted_content: resolvedContent, quoted_sender_name: resolvedSender };
         }
       }
 
@@ -245,89 +235,110 @@ export function ZappMessagesList({
     });
   }, [deduplicatedMessages, isGroup, combinedMentionMap, messagesByExternalId]);
 
-  // Scroll to quoted message handler
-  const handleScrollToQuoted = useCallback((quotedMessageId: string) => {
-    // Find message by external_message_id OR local id
-    const targetMessage = enrichedMessages.find(
-      m => m.external_message_id === quotedMessageId || m.id === quotedMessageId
-    );
-    
-    if (targetMessage) {
-      const element = messageRefs.current.get(targetMessage.id);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-        setHighlightedMessageId(targetMessage.id);
-        
-        // Remove highlight after 2 seconds
-        setTimeout(() => setHighlightedMessageId(null), 2000);
-      }
-    }
-  }, [enrichedMessages]);
-
-  // Clean up old refs when messages change
-  useEffect(() => {
-    const currentIds = new Set(enrichedMessages.map(m => m.id));
-    messageRefs.current.forEach((_, id) => {
-      if (!currentIds.has(id)) {
-        messageRefs.current.delete(id);
+  const indexById = useMemo(() => {
+    const map = new Map<string, number>();
+    enrichedMessages.forEach((m, i) => {
+      map.set(m.id, i);
+      if (m.external_message_id) {
+        if (!map.has(m.external_message_id)) map.set(m.external_message_id, i);
       }
     });
+    return map;
   }, [enrichedMessages]);
 
-  const getViewport = useCallback((): HTMLElement | null => {
-    const root = scrollRootRef.current;
-    if (!root) return null;
-    return root.querySelector<HTMLElement>("[data-radix-scroll-area-viewport]");
+  // ---- Janela local de renderização (evita montar centenas de bolhas) ----
+  const [windowSize, setWindowSize] = useState(WINDOW_STEP);
+
+  useEffect(() => {
+    setWindowSize(WINDOW_STEP);
+  }, [conversationId]);
+
+  const windowStart = Math.max(0, enrichedMessages.length - windowSize);
+  const visibleMessages = useMemo(
+    () => enrichedMessages.slice(windowStart),
+    [enrichedMessages, windowStart]
+  );
+
+  const scrollToBottom = useCallback(() => {
+    const viewport = viewportRef.current;
+    if (viewport) viewport.scrollTop = viewport.scrollHeight;
   }, []);
 
-  const handleLoadOlder = useCallback(() => {
-    if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
-    const viewport = getViewport();
+  const saveScrollAnchor = useCallback(() => {
+    const viewport = viewportRef.current;
     if (viewport) {
       pendingRestoreRef.current = { scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop };
     }
+  }, []);
+
+  const scrollToMessage = useCallback(
+    (messageId: string) => {
+      const index = indexById.get(messageId);
+      if (index === undefined) return;
+      const ensureVisible = () => {
+        const el = viewportRef.current?.querySelector<HTMLElement>(`[data-msg-id="${CSS.escape(messageId)}"]`);
+        el?.scrollIntoView({ block: "center" });
+      };
+      if (index < Math.max(0, enrichedMessages.length - windowSize)) {
+        setWindowSize(enrichedMessages.length - index + WINDOW_STEP);
+        requestAnimationFrame(ensureVisible);
+      } else {
+        ensureVisible();
+      }
+    },
+    [indexById, enrichedMessages.length, windowSize]
+  );
+
+  // Scroll to quoted message handler
+  const handleScrollToQuoted = useCallback(
+    (quotedMessageId: string) => {
+      const target = enrichedMessages[indexById.get(quotedMessageId) ?? -1];
+      if (!target) return;
+      scrollToMessage(target.id);
+      setHighlightedMessageId(target.id);
+      setTimeout(() => setHighlightedMessageId(null), 2000);
+    },
+    [indexById, enrichedMessages, scrollToMessage]
+  );
+
+  const handleLoadOlder = useCallback(() => {
+    // Primeiro expande a janela local; só busca no servidor quando tudo já está renderizado.
+    if (windowStart > 0) {
+      saveScrollAnchor();
+      setWindowSize((s) => s + WINDOW_STEP);
+      return;
+    }
+    if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
+    saveScrollAnchor();
     onLoadOlderMessages();
-  }, [onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages, getViewport]);
+  }, [windowStart, saveScrollAnchor, onLoadOlderMessages, isLoadingOlderMessages, hasMoreMessages]);
+
 
   // Carrega automaticamente ao chegar no topo da conversa.
   useEffect(() => {
     const sentinel = topSentinelRef.current;
-    const viewport = getViewport();
-    if (!sentinel || !viewport || !hasMoreMessages) return;
+    const viewport = viewportRef.current;
+    if (!sentinel || !viewport || (!hasMoreMessages && windowStart === 0)) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        // Enquanto a conversa ainda está se ajustando ao fim, ignorar o topo:
-        // carregar histórico aqui é o que fazia a conversa abrir no meio.
+        // Enquanto a conversa ainda está se ajustando ao fim, ignorar o topo.
         if (Date.now() < pinBottomUntilRef.current) return;
         if (entries.some((e) => e.isIntersecting)) handleLoadOlder();
       },
-      { root: viewport, rootMargin: "120px 0px 0px 0px" }
+      { root: viewport, rootMargin: "160px 0px 0px 0px" }
     );
     observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [hasMoreMessages, handleLoadOlder, getViewport]);
-
-  const scrollToBottom = useCallback(() => {
-    const viewport = getViewport();
-    if (viewport) {
-      viewport.scrollTop = viewport.scrollHeight;
-      return;
-    }
-    messagesEndRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
-  }, [getViewport]);
+  }, [hasMoreMessages, windowStart, handleLoadOlder]);
 
   // Troca de conversa: reseta âncoras e prende no fim enquanto o layout
-  // (mídias, áudios) ainda muda de altura. Rodar antes do efeito de scroll
-  // garante que a primeira leva de mensagens nunca seja tratada como
-  // "histórico carregado no topo".
+  // (mídias, áudios) ainda muda de altura.
   useLayoutEffect(() => {
-    conversationKeyRef.current = conversationId;
     firstMessageIdRef.current = null;
     pendingRestoreRef.current = null;
-    pinBottomUntilRef.current = Date.now() + 1500;
-    const viewport = getViewport();
-    if (viewport) viewport.scrollTop = viewport.scrollHeight;
-  }, [conversationId, getViewport]);
+    pinBottomUntilRef.current = Date.now() + 1200;
+    scrollToBottom();
+  }, [conversationId, scrollToBottom]);
 
   // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
@@ -337,62 +348,106 @@ export function ZappMessagesList({
     }
 
     const newFirstId = enrichedMessages[0].id;
-    const prepended =
-      firstMessageIdRef.current !== null &&
-      firstMessageIdRef.current !== newFirstId;
+    const prepended = firstMessageIdRef.current !== null && firstMessageIdRef.current !== newFirstId;
     firstMessageIdRef.current = newFirstId;
 
-    if (prepended && pendingRestoreRef.current) {
-      const viewport = getViewport();
+    if (prepended) {
       const saved = pendingRestoreRef.current;
       pendingRestoreRef.current = null;
-      if (viewport) {
+      const viewport = viewportRef.current;
+      if (saved && viewport) {
         viewport.scrollTop = saved.scrollTop + (viewport.scrollHeight - saved.scrollHeight);
-        return;
       }
+      return;
     }
 
-    if (prepended) return;
-
     scrollToBottom();
-  }, [enrichedMessages, getViewport, scrollToBottom]);
+  }, [enrichedMessages, scrollToBottom]);
 
-  // Enquanto a janela de "grudar no fim" estiver ativa, qualquer mudança de
-  // altura (mídia carregando, áudio medindo duração) reancora no fim.
+  // Reancora no fim quando a altura muda (mídia carregando, painel de sugestões
+  // abrindo, teclado) — durante a janela de "pin" ou se já estávamos no fim.
   useEffect(() => {
-    const viewport = getViewport();
+    const viewport = viewportRef.current;
     if (!viewport) return;
+    let raf = 0;
+    let wasAtBottom = true;
+    const onScroll = () => {
+      wasAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
     const observer = new ResizeObserver(() => {
-      if (Date.now() < pinBottomUntilRef.current) scrollToBottom();
+      if (Date.now() >= pinBottomUntilRef.current && !wasAtBottom) return;
+      if (pendingRestoreRef.current) return;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(scrollToBottom);
     });
     observer.observe(viewport);
     const content = viewport.firstElementChild;
     if (content) observer.observe(content);
-    return () => observer.disconnect();
-  }, [getViewport, scrollToBottom, enrichedMessages.length]);
+    return () => {
+      cancelAnimationFrame(raf);
+      viewport.removeEventListener("scroll", onScroll);
+      observer.disconnect();
+    };
+  }, [scrollToBottom]);
+
+
+  // Restaurar posição ao expandir a janela local de mensagens
+  useLayoutEffect(() => {
+    const saved = pendingRestoreRef.current;
+    const viewport = viewportRef.current;
+    if (saved && viewport) {
+      pendingRestoreRef.current = null;
+      viewport.scrollTop = saved.scrollTop + (viewport.scrollHeight - saved.scrollHeight);
+    }
+  }, [windowSize]);
 
 
   // Scroll to search focus
   useEffect(() => {
-    if (searchFocusId) {
-      const element = messageRefs.current.get(searchFocusId);
-      if (element) {
-        element.scrollIntoView({ behavior: "smooth", block: "center" });
-        setHighlightedMessageId(searchFocusId);
-        const timer = setTimeout(() => setHighlightedMessageId(null), 2000);
-        return () => clearTimeout(timer);
-      }
-    }
-  }, [searchFocusId]);
+    if (!searchFocusId) return;
+    if (indexById.get(searchFocusId) === undefined) return;
+    scrollToMessage(searchFocusId);
+    setHighlightedMessageId(searchFocusId);
+    const timer = setTimeout(() => setHighlightedMessageId(null), 2000);
+    return () => clearTimeout(timer);
+  }, [searchFocusId, indexById, scrollToMessage]);
 
   // Build search match set for fast lookup
   const searchMatchSet = useMemo(() => new Set(searchMatchIds || []), [searchMatchIds]);
 
+  // ---- Callbacks estáveis para as bolhas (evita re-render de toda a lista) ----
+  const callbacksRef = useRef({ onReplyMessage, onEditMessage, onRetryMessage, onRetryMediaDownload, onDeleteMessage });
+  callbacksRef.current = { onReplyMessage, onEditMessage, onRetryMessage, onRetryMediaDownload, onDeleteMessage };
+
+  const stableReply = useCallback((message: Message) => callbacksRef.current.onReplyMessage?.(message), []);
+  const stableEdit = useCallback(
+    (id: string, content: string) => callbacksRef.current.onEditMessage?.(id, content) ?? Promise.resolve(),
+    []
+  );
+  const stableRetry = useCallback((message: Message) => callbacksRef.current.onRetryMessage?.(message), []);
+  const stableRetryMedia = useCallback((id: string) => callbacksRef.current.onRetryMediaDownload?.(id), []);
+  const stableRequestDelete = useCallback((id: string) => setPendingDeleteId(id), []);
+
+  const confirmDelete = useCallback(async () => {
+    if (!pendingDeleteId) return;
+    setIsDeleting(true);
+    try {
+      await callbacksRef.current.onDeleteMessage?.(pendingDeleteId);
+    } finally {
+      setIsDeleting(false);
+      setPendingDeleteId(null);
+    }
+  }, [pendingDeleteId]);
+
   return (
-    <ScrollArea ref={scrollRootRef} className="flex-1 px-2 sm:px-4 py-2">
-      <div className="space-y-1 w-full min-w-0">
+    <>
+      <div
+        ref={viewportRef}
+        className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden overscroll-contain px-2 sm:px-4 py-2 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin]"
+      >
         <div ref={topSentinelRef} />
-        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages) && (
+        {enrichedMessages.length > 0 && (hasMoreMessages || isLoadingOlderMessages || windowStart > 0) && (
           <div className="flex justify-center py-2">
             <Button
               variant="ghost"
@@ -415,45 +470,77 @@ export function ZappMessagesList({
             </Button>
           </div>
         )}
-        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && (
+        {enrichedMessages.length > 0 && !hasMoreMessages && !isLoadingOlderMessages && windowStart === 0 && (
           <p className="text-center text-[11px] text-zapp-text-muted py-2">Início da conversa</p>
         )}
+
         {enrichedMessages.length === 0 ? (
           <div className="text-center py-8">
             <MessageSquare className="h-8 w-8 text-zapp-text-muted mx-auto mb-2" />
             <p className="text-zapp-text-muted text-sm">Nenhuma mensagem ainda</p>
           </div>
         ) : (
-          enrichedMessages.map((message, index) => {
-            const showTimestamp = index === 0 ||
-              new Date(message.created_at).toDateString() !== new Date(enrichedMessages[index - 1].created_at).toDateString();
+          <div className="w-full min-w-0">
+            {visibleMessages.map((message, i) => {
+              const prev = i === 0 ? enrichedMessages[windowStart - 1] : visibleMessages[i - 1];
+              const showTimestamp =
+                !prev ||
+                new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
-            return (
-              <div
-                key={message.id}
-                ref={(el) => {
-                  if (el) messageRefs.current.set(message.id, el);
-                }}
-              >
-                <ZappMessageBubble
-                  message={message}
-                  showTimestamp={showTimestamp}
-                  isGroup={isGroup}
-                  onReply={onReplyMessage}
-                  onDelete={onDeleteMessage}
-                  onEdit={onEditMessage}
-                  onRetry={onRetryMessage}
-                  onRetryMediaDownload={onRetryMediaDownload}
-                  onScrollToQuoted={handleScrollToQuoted}
-                  isHighlighted={highlightedMessageId === message.id}
-                  searchHighlight={searchMatchSet.has(message.id)}
-                />
-              </div>
-            );
-          })
+              return (
+                <div key={message.id} data-msg-id={message.id} className="w-full min-w-0">
+                  <ZappMessageBubble
+                    message={message}
+                    showTimestamp={!!showTimestamp}
+                    isGroup={isGroup}
+                    onReply={onReplyMessage ? stableReply : undefined}
+                    onDelete={onDeleteMessage ? stableRequestDelete : undefined}
+                    onEdit={onEditMessage ? stableEdit : undefined}
+                    onRetry={onRetryMessage ? stableRetry : undefined}
+                    onRetryMediaDownload={onRetryMediaDownload ? stableRetryMedia : undefined}
+                    onScrollToQuoted={handleScrollToQuoted}
+                    isHighlighted={highlightedMessageId === message.id}
+                    searchHighlight={searchMatchSet.has(message.id)}
+                  />
+                </div>
+              );
+            })}
+          </div>
         )}
-        <div ref={messagesEndRef} />
+
       </div>
-    </ScrollArea>
+
+      <AlertDialog open={!!pendingDeleteId} onOpenChange={(open) => !open && setPendingDeleteId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Apagar mensagem para todos?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta mensagem será apagada para você e para todos os participantes da conversa. Esta ação não pode ser
+              desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                void confirmDelete();
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Apagando...
+                </>
+              ) : (
+                "Apagar para todos"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </>
   );
 }
