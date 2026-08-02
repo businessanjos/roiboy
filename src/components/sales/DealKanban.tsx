@@ -268,24 +268,84 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
         onDragEnd={handleDragEnd}
         measuring={measuring}
       >
-        <div className="w-full h-[calc(100vh-300px)] sm:h-[calc(100vh-220px)] overflow-x-auto -mx-1 px-1 snap-x snap-mandatory sm:snap-none">
-          <div className="flex gap-2 sm:gap-3 h-full min-w-max pr-2 sm:pr-4 [&>*]:snap-start">
-            {stages.map((stage, index) => (
-              <DealKanbanColumn
-                key={stage.id}
-                stage={stage}
-                deals={dealsByStage[stage.id] || []}
-                onDealClick={onDealClick}
-                conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
-                faturamentoMap={faturamentoMap}
-                itemVendaMap={itemVendaMap}
-                isDragActive={isDragActive}
-                activityStatusGetter={getActivityStatus}
-                showActivityCounts={showActivityCounts}
-              />
-            ))}
+        {isMobile ? (
+          <div className="w-full flex flex-col gap-2">
+            {/* Stage selector - app style */}
+            <div className="-mx-1 px-1 overflow-x-auto scrollbar-none">
+              <div className="flex gap-1.5 w-max pb-1">
+                {stages.map((stage) => {
+                  const count = (dealsByStage[stage.id] || []).length;
+                  const active = stage.id === activeStageId;
+                  return (
+                    <button
+                      key={stage.id}
+                      type="button"
+                      onClick={() => setMobileStageId(stage.id)}
+                      className={cn(
+                        "flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium whitespace-nowrap transition-colors",
+                        active
+                          ? "bg-primary text-primary-foreground border-primary"
+                          : "bg-card text-muted-foreground border-border"
+                      )}
+                    >
+                      <span
+                        className="h-2 w-2 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: stage.color || undefined }}
+                      />
+                      {stage.name}
+                      <span
+                        className={cn(
+                          "rounded-full px-1.5 text-[10px] font-semibold",
+                          active ? "bg-primary-foreground/20" : "bg-muted"
+                        )}
+                      >
+                        {count}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            <div className="w-full h-[calc(100vh-320px)] overflow-hidden">
+              {activeStage && (
+                <DealKanbanColumn
+                  key={activeStage.id}
+                  fullWidth
+                  stage={activeStage}
+                  deals={dealsByStage[activeStage.id] || []}
+                  onDealClick={onDealClick}
+                  conversionRate={activeStageIndex > 0 ? conversionRates[activeStage.id] : undefined}
+                  faturamentoMap={faturamentoMap}
+                  itemVendaMap={itemVendaMap}
+                  isDragActive={isDragActive}
+                  activityStatusGetter={getActivityStatus}
+                  showActivityCounts={showActivityCounts}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        ) : (
+          <div className="w-full h-[calc(100vh-220px)] overflow-x-auto -mx-1 px-1">
+            <div className="flex gap-3 h-full min-w-max pr-4">
+              {stages.map((stage, index) => (
+                <DealKanbanColumn
+                  key={stage.id}
+                  stage={stage}
+                  deals={dealsByStage[stage.id] || []}
+                  onDealClick={onDealClick}
+                  conversionRate={index > 0 ? conversionRates[stage.id] : undefined}
+                  faturamentoMap={faturamentoMap}
+                  itemVendaMap={itemVendaMap}
+                  isDragActive={isDragActive}
+                  activityStatusGetter={getActivityStatus}
+                  showActivityCounts={showActivityCounts}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
 
         <DragOverlay
           dropAnimation={{
