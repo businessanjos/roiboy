@@ -259,10 +259,35 @@ export function ZappMessagesList({
     [enrichedMessages, windowStart]
   );
 
+  const atBottomRef = useRef(true);
+
   const scrollToBottom = useCallback(() => {
     const viewport = viewportRef.current;
     if (viewport) viewport.scrollTop = viewport.scrollHeight;
+    atBottomRef.current = true;
   }, []);
+
+  // Observa a posição do usuário e cancela a "pinagem" no fim assim que ele
+  // interage com a rolagem — evita o chat pulando enquanto se rola.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onScroll = () => {
+      atBottomRef.current = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
+    };
+    const onUserIntent = () => {
+      pinBottomUntilRef.current = 0;
+      onScroll();
+    };
+    viewport.addEventListener("scroll", onScroll, { passive: true });
+    viewport.addEventListener("wheel", onUserIntent, { passive: true });
+    viewport.addEventListener("touchstart", onUserIntent, { passive: true });
+    return () => {
+      viewport.removeEventListener("scroll", onScroll);
+      viewport.removeEventListener("wheel", onUserIntent);
+      viewport.removeEventListener("touchstart", onUserIntent);
+    };
+  }, [conversationId]);
 
   const saveScrollAnchor = useCallback(() => {
     const viewport = viewportRef.current;
@@ -270,6 +295,7 @@ export function ZappMessagesList({
       pendingRestoreRef.current = { scrollHeight: viewport.scrollHeight, scrollTop: viewport.scrollTop };
     }
   }, []);
+
 
   const scrollToMessage = useCallback(
     (messageId: string) => {
@@ -302,12 +328,15 @@ export function ZappMessagesList({
   );
 
   const handleLoadOlder = useCallback(() => {
+    // Evita expansões em cascata antes de restaurar a posição da anterior.
+    if (pendingRestoreRef.current) return;
     // Primeiro expande a janela local; só busca no servidor quando tudo já está renderizado.
     if (windowStart > 0) {
       saveScrollAnchor();
       setWindowSize((s) => s + WINDOW_STEP);
       return;
     }
+
     if (!onLoadOlderMessages || isLoadingOlderMessages || !hasMoreMessages) return;
     saveScrollAnchor();
     onLoadOlderMessages();
@@ -361,22 +390,18 @@ export function ZappMessagesList({
       return;
     }
 
-    scrollToBottom();
+    // Só acompanha o fim se o usuário já estava no fim (ou logo após abrir).
+    if (atBottomRef.current || Date.now() < pinBottomUntilRef.current) scrollToBottom();
   }, [enrichedMessages, scrollToBottom]);
 
   // Reancora no fim quando a altura muda (mídia carregando, painel de sugestões
-  // abrindo, teclado) — durante a janela de "pin" ou se já estávamos no fim.
+  // abrindo, teclado) — apenas se o usuário estiver no fim ou na janela de "pin".
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
     let raf = 0;
-    let wasAtBottom = true;
-    const onScroll = () => {
-      wasAtBottom = viewport.scrollHeight - viewport.scrollTop - viewport.clientHeight < 80;
-    };
-    viewport.addEventListener("scroll", onScroll, { passive: true });
     const observer = new ResizeObserver(() => {
-      if (Date.now() >= pinBottomUntilRef.current && !wasAtBottom) return;
+      if (Date.now() >= pinBottomUntilRef.current && !atBottomRef.current) return;
       if (pendingRestoreRef.current) return;
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(scrollToBottom);
@@ -386,10 +411,10 @@ export function ZappMessagesList({
     if (content) observer.observe(content);
     return () => {
       cancelAnimationFrame(raf);
-      viewport.removeEventListener("scroll", onScroll);
       observer.disconnect();
     };
   }, [scrollToBottom]);
+
 
 
   // Restaurar posição ao expandir a janela local de mensagens
