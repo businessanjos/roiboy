@@ -345,9 +345,29 @@ export function ZappMessagesList({
   useLayoutEffect(() => {
     firstMessageIdRef.current = null;
     pendingRestoreRef.current = null;
-    pinBottomUntilRef.current = Date.now() + 2500;
+    atBottomRef.current = true;
+    pinBottomUntilRef.current = Date.now() + 5000;
     scrollToBottom();
   }, [conversationId, scrollToBottom]);
+
+  // Mídias (imagem/vídeo) só definem a altura real depois de carregar; reancora
+  // no fim quando isso acontece e o usuário ainda está no fim.
+  useEffect(() => {
+    const viewport = viewportRef.current;
+    if (!viewport) return;
+    const onMediaLoad = () => {
+      if (pendingRestoreRef.current) return;
+      if (!atBottomRef.current && Date.now() >= pinBottomUntilRef.current) return;
+      requestAnimationFrame(scrollToBottom);
+    };
+    viewport.addEventListener("load", onMediaLoad, true);
+    viewport.addEventListener("loadedmetadata", onMediaLoad, true);
+    return () => {
+      viewport.removeEventListener("load", onMediaLoad, true);
+      viewport.removeEventListener("loadedmetadata", onMediaLoad, true);
+    };
+  }, [conversationId, scrollToBottom]);
+
 
   // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
