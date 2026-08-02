@@ -297,10 +297,15 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, readOnly 
   return (
     <div className="space-y-3">
       {sorted.map((visual) => (
-        <div key={visual.id} className={`w-full rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
-          <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
+        // `flex` + min-h garante que o card (h-full) receba altura real no mobile;
+        // sem isso o corpo do gráfico colapsa para 0px e o card aparece vazio.
+        <div key={visual.id} className={`w-full flex rounded-lg overflow-hidden ${getMobileMinHeight(visual)}`}>
+          <div className="w-full min-w-0">
+            <ConfigurableVisualCard visual={visual} onUpdateVisual={onUpdateVisual} onRemoveVisual={onRemoveVisual} readOnly={readOnly} />
+          </div>
         </div>
       ))}
+
     </div>
   );
 }
