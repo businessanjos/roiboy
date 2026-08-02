@@ -2701,9 +2701,8 @@ export default function SalesPipeline() {
 
               </div>
               )}
-              </div>
 
-            </div>
+
 
 
             {/* Status sub-tabs */}
