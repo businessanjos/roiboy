@@ -39,8 +39,7 @@ export function AppLayout() {
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
 
-  // Background poll for new deploys → toast + auto-reload to bust stale assets.
-  useAppVersionCheck();
+  // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
   // Check if user is external (viewer role with external dashboard access)
   const { data: externalAccess } = useQuery({
