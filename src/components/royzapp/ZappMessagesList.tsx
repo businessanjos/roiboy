@@ -91,6 +91,10 @@ export function ZappMessagesList({
   // posição visual quando mensagens antigas são inseridas no topo.
   const pendingRestoreRef = useRef<{ scrollHeight: number; scrollTop: number } | null>(null);
   const firstMessageIdRef = useRef<string | null>(null);
+  // Conversa atual + janela de "grudar no fim" enquanto mídias/áudios ainda
+  // mudam a altura logo após abrir a conversa.
+  const conversationKeyRef = useRef<string | null>(null);
+  const pinBottomUntilRef = useRef<number>(0);
   const messageRefs = useRef<Map<string, HTMLDivElement>>(new Map());
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
 
