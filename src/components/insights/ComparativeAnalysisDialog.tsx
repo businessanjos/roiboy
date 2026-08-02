@@ -76,14 +76,73 @@ function formatValue(value: number, formatting: any) {
   return new Intl.NumberFormat("pt-BR", { maximumFractionDigits: decimals }).format(value || 0);
 }
 
-function ComparisonRow({
+function buildSeries(
+  currentRows: { name: string; value: number }[] = [],
+  previousRows: { name: string; value: number }[] = [],
+) {
+  const currentNames = currentRows.map((r) => r.name);
+  const previousNames = previousRows.map((r) => r.name);
+  const overlap = currentNames.filter((n) => previousNames.includes(n)).length;
+
+  // Date-like series (jan/25 vs jan/26) have no label overlap: align by position.
+  if (overlap === 0 && currentRows.length > 0 && currentRows.length === previousRows.length) {
+    return currentRows.map((row, i) => ({
+      name: row.name,
+      atual: Number(row.value) || 0,
+      anterior: Number(previousRows[i]?.value) || 0,
+    }));
+  }
+
+  const names = Array.from(new Set([...currentNames, ...previousNames]));
+  const currentMap = new Map(currentRows.map((r) => [r.name, Number(r.value) || 0]));
+  const previousMap = new Map(previousRows.map((r) => [r.name, Number(r.value) || 0]));
+  return names
+    .map((name) => ({
+      name,
+      atual: currentMap.get(name) ?? 0,
+      anterior: previousMap.get(name) ?? 0,
+    }))
+    .sort((a, b) => b.atual + b.anterior - (a.atual + a.anterior))
+    .slice(0, 15);
+}
+
+function DeltaBadge({ pct, positive, neutral }: { pct: number | null; positive: boolean; neutral: boolean }) {
+  return (
+    <Badge
+      variant="outline"
+      className={cn(
+        "gap-1 tabular-nums",
+        neutral
+          ? "text-muted-foreground"
+          : positive
+            ? "text-emerald-600 border-emerald-500/40 bg-emerald-500/10"
+            : "text-destructive border-destructive/40 bg-destructive/10",
+      )}
+    >
+      {neutral ? (
+        <Minus className="h-3 w-3" />
+      ) : positive ? (
+        <ArrowUpRight className="h-3 w-3" />
+      ) : (
+        <ArrowDownRight className="h-3 w-3" />
+      )}
+      {pct === null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`}
+    </Badge>
+  );
+}
+
+function ComparisonCard({
   visual,
   currentRange,
   previousRange,
+  currentLabel,
+  previousLabel,
 }: {
   visual: InsightsVisual;
   currentRange: Range;
   previousRange: Range;
+  currentLabel: string;
+  previousLabel: string;
 }) {
   const config = visual.config as any;
   const chartType = visual.chart_type || undefined;
@@ -112,53 +171,71 @@ function ComparisonRow({
   const positive = diff > 0;
   const neutral = Math.abs(diff) < 0.0001;
 
+  const series = useMemo(
+    () => buildSeries(current.data as any, previous.data as any),
+    [current.data, previous.data],
+  );
+
   return (
-    <tr className="border-b border-border/60 last:border-0">
-      <td className="py-3 pr-3 text-sm font-medium">
-        {visual.title || "Sem título"}
-        {chartType && (
-          <span className="ml-2 text-[11px] uppercase tracking-wide text-muted-foreground">
-            {chartType}
-          </span>
+    <div className="rounded-lg border border-border bg-card p-4">
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold truncate">{visual.title || "Sem título"}</p>
+          <p className="text-xs text-muted-foreground">
+            {previousLabel}: <span className="tabular-nums">{formatValue(previousTotal, config?.formatting)}</span>
+            <span className="mx-1.5">•</span>
+            {currentLabel}:{" "}
+            <span className="tabular-nums font-medium text-foreground">
+              {formatValue(currentTotal, config?.formatting)}
+            </span>
+          </p>
+        </div>
+        {!loading && <DeltaBadge pct={pct} positive={positive} neutral={neutral} />}
+      </div>
+
+      <div className="mt-3 h-[220px]">
+        {loading ? (
+          <div className="h-full flex items-center justify-center">
+            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+          </div>
+        ) : series.length === 0 ? (
+          <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
+            Sem dados no período.
+          </div>
+        ) : (
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 8 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                interval={0}
+                angle={series.length > 6 ? -35 : 0}
+                textAnchor={series.length > 6 ? "end" : "middle"}
+                height={series.length > 6 ? 60 : 30}
+              />
+              <YAxis
+                tick={{ fontSize: 11, fill: "hsl(var(--muted-foreground))" }}
+                width={70}
+                tickFormatter={(v) => formatValue(Number(v), config?.formatting)}
+              />
+              <Tooltip
+                formatter={(v: any) => formatValue(Number(v), config?.formatting)}
+                contentStyle={{
+                  background: "hsl(var(--popover))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: 8,
+                  fontSize: 12,
+                }}
+              />
+              <Legend wrapperStyle={{ fontSize: 12 }} />
+              <Bar dataKey="anterior" name={previousLabel} fill="hsl(var(--muted-foreground))" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="atual" name={currentLabel} fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
         )}
-      </td>
-      {loading ? (
-        <td colSpan={3} className="py-3 text-center">
-          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground inline" />
-        </td>
-      ) : (
-        <>
-          <td className="py-3 px-3 text-sm text-right tabular-nums">
-            {formatValue(previousTotal, config?.formatting)}
-          </td>
-          <td className="py-3 px-3 text-sm text-right tabular-nums font-semibold">
-            {formatValue(currentTotal, config?.formatting)}
-          </td>
-          <td className="py-3 pl-3 text-right">
-            <Badge
-              variant="outline"
-              className={cn(
-                "gap-1 tabular-nums",
-                neutral
-                  ? "text-muted-foreground"
-                  : positive
-                    ? "text-emerald-600 border-emerald-500/40 bg-emerald-500/10"
-                    : "text-destructive border-destructive/40 bg-destructive/10",
-              )}
-            >
-              {neutral ? (
-                <Minus className="h-3 w-3" />
-              ) : positive ? (
-                <ArrowUpRight className="h-3 w-3" />
-              ) : (
-                <ArrowDownRight className="h-3 w-3" />
-              )}
-              {pct === null ? "—" : `${pct > 0 ? "+" : ""}${pct.toFixed(1)}%`}
-            </Badge>
-          </td>
-        </>
-      )}
-    </tr>
+      </div>
+    </div>
   );
 }
 
@@ -172,13 +249,17 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
   );
   const previousRange = useMemo(() => shiftRange(currentRange, mode), [currentRange, mode]);
 
+  const currentLabel = format(parseISO(currentRange.startDate), "yyyy", { locale: ptBR });
+  const previousLabel = format(parseISO(previousRange.startDate), "yyyy", { locale: ptBR });
+  const isYearMode = mode === "previous_year" && currentLabel !== previousLabel;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[85vh] overflow-hidden flex flex-col">
+      <DialogContent className="max-w-5xl max-h-[88vh] overflow-hidden flex flex-col">
         <DialogHeader>
           <DialogTitle>Análise comparativa</DialogTitle>
           <DialogDescription>
-            Compara os mesmos indicadores deste painel entre o período atual e o período anterior.
+            Compara os mesmos indicadores deste painel, lado a lado, entre o período atual e o anterior.
           </DialogDescription>
         </DialogHeader>
 
@@ -197,33 +278,25 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto mt-2">
+        <div className="flex-1 overflow-auto mt-2 pr-1">
           {visuals.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
               Este painel não tem visuais para comparar.
             </p>
           ) : (
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-border text-xs uppercase tracking-wider text-muted-foreground">
-                  <th className="text-left font-medium py-2 pr-3">Indicador</th>
-                  <th className="text-right font-medium py-2 px-3">Anterior</th>
-                  <th className="text-right font-medium py-2 px-3">Atual</th>
-                  <th className="text-right font-medium py-2 pl-3">Variação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {open &&
-                  visuals.map((v) => (
-                    <ComparisonRow
-                      key={v.id}
-                      visual={v}
-                      currentRange={currentRange}
-                      previousRange={previousRange}
-                    />
-                  ))}
-              </tbody>
-            </table>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {open &&
+                visuals.map((v) => (
+                  <ComparisonCard
+                    key={v.id}
+                    visual={v}
+                    currentRange={currentRange}
+                    previousRange={previousRange}
+                    currentLabel={isYearMode ? currentLabel : "Atual"}
+                    previousLabel={isYearMode ? previousLabel : "Anterior"}
+                  />
+                ))}
+            </div>
           )}
         </div>
       </DialogContent>
