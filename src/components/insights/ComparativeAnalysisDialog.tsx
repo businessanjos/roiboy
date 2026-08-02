@@ -221,9 +221,8 @@ function ComparisonCard({
   const hiddenCount = Math.max(0, allSeries.length - series.length);
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
-  const chartHeight = horizontal
-    ? Math.min(460, Math.max(300, series.length * 42 + 70))
-    : 300;
+  // Altura fixa para manter todos os blocos alinhados na grade.
+  const chartHeight = 360;
 
   // Tag de crescimento (ano a ano) por barra/categoria.
   const renderGrowthLabel = (props: any) => {
@@ -472,7 +471,7 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
               Este painel não tem visuais para comparar.
             </p>
           ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-4 items-stretch auto-rows-fr">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-stretch auto-rows-fr">
               {open &&
                 visuals.map((v) => (
                   <ComparisonCard
