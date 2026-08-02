@@ -197,6 +197,7 @@ export default function SalesPipeline() {
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
   const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
+  const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
   const [filterCustomFields, setFilterCustomFields] = useState<CustomFieldOption[]>([]);
