@@ -22,7 +22,8 @@ export function MobileTabBar() {
   const navItems = useSectorNavItems();
   const [moreOpen, setMoreOpen] = useState(false);
 
-  // Na barra inferior priorizamos "Insights" no lugar do Dashboard
+  // Na barra inferior priorizamos "Insights" no lugar do Dashboard.
+  // No setor Vendas, trocamos "Gestão" por um atalho direto ao RoyZapp Vendas.
   const primary = useMemo(() => {
     const isDashboard = (to: string) => to.split("?")[0].includes("dashboard");
     const insights = navItems.find((i) => i.to.split("?")[0] === "/insights");
@@ -32,8 +33,17 @@ export function MobileTabBar() {
       list = list.filter((i) => !isDashboard(i.to) && i.to.split("?")[0] !== "/insights");
       list.splice(dashIndex >= 0 ? dashIndex : list.length, 0, insights);
     }
+    if (currentSector?.id === "vendas") {
+      list = list.filter((i) => i.to.split("?")[0] !== "/sales-team");
+      list.unshift({
+        to: buildRoyZappUrl({ sector: "vendas" }),
+        icon: MessageSquare,
+        label: "RoyZapp",
+      });
+    }
     return list.slice(0, 4);
-  }, [navItems]);
+  }, [navItems, currentSector?.id]);
+
 
   if (!currentSector || HIDDEN_ROUTES.includes(location.pathname)) return null;
   if (primary.length === 0) return null;
