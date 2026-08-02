@@ -355,6 +355,22 @@ export default function SalesDigitalContracts() {
     }
   };
 
+  const openContract = (contract: DigitalContractListItem) => {
+    if (contract.deal_id) {
+      openDealContractEditor(contract.deal_id);
+    } else {
+      setEditorDeal({
+        id: null,
+        clientId: contract.client_id ?? null,
+        clientName: contract.client_name || contract.contract_number,
+        value: contract.total_value ?? null,
+        contractId: contract.id,
+      });
+    }
+  };
+
+
+
   if (loading) {
     return (
       <div className="p-6 space-y-6">
