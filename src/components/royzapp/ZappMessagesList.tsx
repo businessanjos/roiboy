@@ -293,6 +293,9 @@ export function ZappMessagesList({
     if (!sentinel || !viewport || !hasMoreMessages) return;
     const observer = new IntersectionObserver(
       (entries) => {
+        // Enquanto a conversa ainda está se ajustando ao fim, ignorar o topo:
+        // carregar histórico aqui é o que fazia a conversa abrir no meio.
+        if (Date.now() < pinBottomUntilRef.current) return;
         if (entries.some((e) => e.isIntersecting)) handleLoadOlder();
       },
       { root: viewport, rootMargin: "120px 0px 0px 0px" }
@@ -301,15 +304,40 @@ export function ZappMessagesList({
     return () => observer.disconnect();
   }, [hasMoreMessages, handleLoadOlder, getViewport]);
 
+  const scrollToBottom = useCallback(() => {
+    const viewport = getViewport();
+    if (viewport) {
+      viewport.scrollTop = viewport.scrollHeight;
+      return;
+    }
+    messagesEndRef.current?.scrollIntoView({ behavior: "instant" as ScrollBehavior });
+  }, [getViewport]);
+
   // Auto-scroll to bottom when messages change (exceto ao carregar histórico antigo)
   useLayoutEffect(() => {
     if (enrichedMessages.length === 0) {
       firstMessageIdRef.current = null;
+      conversationKeyRef.current = null;
       return;
     }
 
+    const conversationKey =
+      (enrichedMessages[enrichedMessages.length - 1] as any)?.conversation_id ?? null;
+    const conversationChanged =
+      conversationKey !== null && conversationKeyRef.current !== conversationKey;
+    if (conversationChanged) {
+      conversationKeyRef.current = conversationKey;
+      firstMessageIdRef.current = null;
+      pendingRestoreRef.current = null;
+      // Mantém preso ao fim por um instante enquanto imagens/áudios carregam.
+      pinBottomUntilRef.current = Date.now() + 1500;
+    }
+
     const newFirstId = enrichedMessages[0].id;
-    const prepended = firstMessageIdRef.current !== null && firstMessageIdRef.current !== newFirstId;
+    const prepended =
+      !conversationChanged &&
+      firstMessageIdRef.current !== null &&
+      firstMessageIdRef.current !== newFirstId;
     firstMessageIdRef.current = newFirstId;
 
     if (prepended && pendingRestoreRef.current) {
@@ -324,10 +352,23 @@ export function ZappMessagesList({
 
     if (prepended) return;
 
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "instant" });
-    }
-  }, [enrichedMessages, getViewport]);
+    scrollToBottom();
+  }, [enrichedMessages, getViewport, scrollToBottom]);
+
+  // Enquanto a janela de "grudar no fim" estiver ativa, qualquer mudança de
+  // altura (mídia carregando, áudio medindo duração) reancora no fim.
+  useEffect(() => {
+    const viewport = getViewport();
+    if (!viewport) return;
+    const observer = new ResizeObserver(() => {
+      if (Date.now() < pinBottomUntilRef.current) scrollToBottom();
+    });
+    observer.observe(viewport);
+    const content = viewport.firstElementChild;
+    if (content) observer.observe(content);
+    return () => observer.disconnect();
+  }, [getViewport, scrollToBottom, enrichedMessages.length]);
+
 
   // Scroll to search focus
   useEffect(() => {
