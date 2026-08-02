@@ -17,8 +17,8 @@ import {
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
 
-/** Quantas mensagens são montadas por vez (janela local de renderização). */
-const WINDOW_STEP = 40;
+
+
 
 
 
