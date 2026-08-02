@@ -207,7 +207,17 @@ function ComparisonCard({
   );
   const dateLike = useMemo(() => isDateLike(allSeries), [allSeries]);
   const MAX_BARS = dateLike ? 24 : 12;
-  const series = useMemo(() => allSeries.slice(0, MAX_BARS), [allSeries, MAX_BARS]);
+  const series = useMemo(
+    () =>
+      allSeries.slice(0, MAX_BARS).map((row: any) => {
+        const prev = Number(row.anterior) || 0;
+        const cur = Number(row.atual) || 0;
+        const growth = prev !== 0 ? ((cur - prev) / Math.abs(prev)) * 100 : cur !== 0 ? null : 0;
+        return { ...row, growth };
+      }),
+    [allSeries, MAX_BARS],
+  );
+
   const hiddenCount = Math.max(0, allSeries.length - series.length);
   // Categorical labels are long → horizontal bars keep every label readable.
   const horizontal = !dateLike && series.length > 4;
