@@ -39,6 +39,8 @@ import { useBatchDealActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -195,6 +197,7 @@ export default function SalesPipeline() {
   const [openDateStart, setOpenDateStart] = usePersistedFilter<string>("salesPipeline", "openDateStart", "");
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
   const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
+  const isMobile = useIsMobile();
   const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
   const [wonDateStart, setWonDateStart] = usePersistedFilter<string>("salesPipeline", "wonDateStart", "");
