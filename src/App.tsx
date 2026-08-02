@@ -260,6 +260,7 @@ const App = () => (
                   <TooltipProvider>
                     <Toaster />
                     <Sonner />
+                    <NewVersionDialog />
                     <BrowserRouter>
                       <SectorProvider>
                         <CompanyProvider>
