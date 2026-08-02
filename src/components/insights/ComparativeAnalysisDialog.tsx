@@ -351,15 +351,30 @@ export function ComparativeAnalysisDialog({ open, onOpenChange, visuals }: Props
   const { filters } = useInsightsFilters();
   const [mode, setMode] = useState<CompareMode>("previous_year");
 
-  const currentRange: Range = useMemo(
+  const [sameElapsed, setSameElapsed] = useState(true);
+
+  const rawRange: Range = useMemo(
     () => ({ startDate: filters.startDate, endDate: filters.endDate }),
     [filters.startDate, filters.endDate],
   );
+
+  // Se o período atual ainda está em curso, cortar em hoje para não comparar
+  // um ano inteiro contra um ano parcial (ex.: 2025 completo vs 2026 até agosto).
+  const isOngoing = useMemo(
+    () => parseISO(rawRange.endDate).getTime() > endOfDay(new Date()).getTime(),
+    [rawRange.endDate],
+  );
+  const currentRange: Range = useMemo(() => {
+    if (!sameElapsed || !isOngoing) return rawRange;
+    return { ...rawRange, endDate: endOfDay(new Date()).toISOString() };
+  }, [rawRange, sameElapsed, isOngoing]);
+
   const previousRange = useMemo(() => shiftRange(currentRange, mode), [currentRange, mode]);
 
   const currentLabel = format(parseISO(currentRange.startDate), "yyyy", { locale: ptBR });
   const previousLabel = format(parseISO(previousRange.startDate), "yyyy", { locale: ptBR });
   const isYearMode = mode === "previous_year" && currentLabel !== previousLabel;
+
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
