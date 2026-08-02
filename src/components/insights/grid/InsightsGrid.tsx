@@ -43,12 +43,14 @@ const CONTAINER_PADDING: [number, number] = [4, 4];
 
 function getMobileMinHeight(visual: InsightsVisual): string {
   const ct = visual.chart_type || "bar";
-  if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[120px]";
-  if (["table", "ranking"].includes(ct)) return "min-h-[280px]";
-  if (ct === "map") return "min-h-[300px]";
-  if (["pie", "donut"].includes(ct)) return "min-h-[280px]";
-  return "min-h-[260px]";
+  if (["scorecard", "kpi", "number"].includes(ct)) return "min-h-[132px]";
+  if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return "min-h-[340px]";
+  if (ct === "map") return "min-h-[320px]";
+  if (["pie", "donut"].includes(ct)) return "min-h-[320px]";
+  if (["bar_stacked", "funnel", "goal_tracker"].includes(ct)) return "min-h-[380px]";
+  return "min-h-[330px]";
 }
+
 
 function getMinHeight(visual: InsightsVisual): number {
   const ct = visual.chart_type || "bar";
