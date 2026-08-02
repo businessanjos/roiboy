@@ -385,8 +385,8 @@ export function InsightsMainContent() {
             />
           )}
           <InsightsFilterBar />
-          <div id="insights-layout-toggle" className="ml-auto flex items-center" />
         </div>
+
 
 
         {/* Grid or Empty State */}
