@@ -10,6 +10,8 @@ import {
   LabelList,
 } from "recharts";
 import { ChartLegendContent } from './ChartLegendContent';
+import { useChartSize } from './useChartSize';
+
 import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, DEFAULT_APPEARANCE } from "../visual-builder/types";
 import { useTvMode } from "../TvModeContext";
 import { formatValueCompact } from "@/lib/formula-evaluator";
