@@ -115,8 +115,12 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
         <p className="text-muted-foreground text-center" style={{ fontSize: `${subtitleSize}px` }}>
           {totalCount.toLocaleString('pt-BR')} {(() => {
             const src = config?.dataSource as string | undefined;
-            const isDeals = src === 'deals' || src === 'deals_won';
-            if (isDeals) return totalCount === 1 ? 'venda' : 'vendas';
+            const status = (config as any)?.statusFilter as string | undefined;
+            const dealStatuses = (config as any)?.dealStatusFilter as string[] | undefined;
+            const onlyWon = status === 'won' || (dealStatuses?.length === 1 && dealStatuses[0] === 'won');
+            const isWonSource = src === 'deals_won' || (src === 'deals' && onlyWon);
+            if (isWonSource) return totalCount === 1 ? 'venda' : 'vendas';
+            if (src === 'deals') return totalCount === 1 ? 'negócio' : 'negócios';
             return totalCount === 1 ? 'registro' : 'registros';
           })()}
         </p>
