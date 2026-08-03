@@ -339,6 +339,8 @@ export function VisualStudioDialog({
       },
       appearance,
       statusFilter,
+      // Marca que o status foi definido explicitamente aqui: sem filtro = todos.
+      explicitStatus: true,
     };
 
     if (isTable) {
