@@ -273,9 +273,11 @@ function isCategoricalField(field: string | undefined, type: string | undefined)
 function getCategoryValue(deal: any, field: string): string {
   if (field === 'product' || field === 'product_name') return deal.product || 'Não informado';
   if (field === 'canal') return deal.canal || 'Não informado';
+  if (field === 'mql') return deal._mql_label || 'Não informado';
   if (field === 'responsible') return (deal.users as any)?.name || 'Sem Responsável';
   return deal[field] || 'Não informado';
 }
+
 
 async function fetchStackedDealsData(
   accountId: string,
