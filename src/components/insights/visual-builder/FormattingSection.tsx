@@ -47,6 +47,32 @@ export function FormattingSection({ value, onChange, aggregation, onUseCount, pe
           </label>
         ))}
       </RadioGroup>
+      {value === 'percentage' && (
+        <div className="space-y-2 rounded-lg border p-3">
+          <Label className="text-sm font-medium">Como calcular a porcentagem</Label>
+          <RadioGroup
+            value={percentMode}
+            onValueChange={(v) => onPercentModeChange?.(v as 'share' | 'raw')}
+            className="space-y-2"
+          >
+            <label className="flex items-start gap-3 cursor-pointer">
+              <RadioGroupItem value="share" className="mt-0.5" />
+              <div>
+                <p className="text-sm">Participação no total</p>
+                <p className="text-xs text-muted-foreground">Cada item vira sua fatia % do total do gráfico (soma 100%).</p>
+              </div>
+            </label>
+            <label className="flex items-start gap-3 cursor-pointer">
+              <RadioGroupItem value="raw" className="mt-0.5" />
+              <div>
+                <p className="text-sm">O valor já é percentual</p>
+                <p className="text-xs text-muted-foreground">Apenas adiciona o símbolo % ao número calculado.</p>
+              </div>
+            </label>
+          </RadioGroup>
+        </div>
+      )}
+
 
       {showCountHint && (
         <div className="flex items-start gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
