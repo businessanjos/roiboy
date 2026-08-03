@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, LayoutDashboard, Instagram, Music2, Youtube, CalendarDays, ClipboardEdit } from 'lucide-react';
+import { Users, LayoutDashboard, Instagram, Music2, Youtube, CalendarDays, ClipboardEdit, ListChecks } from 'lucide-react';
 import { SocialMediaTab } from '@/components/marketing/SocialMediaTab';
 import { SocialMediaDashboard } from '@/components/marketing/SocialMediaDashboard';
 import { TikTokTab } from '@/components/marketing/TikTokTab';
@@ -10,6 +10,8 @@ import { YouTubeTab } from '@/components/marketing/YouTubeTab';
 import { YouTubeDashboard } from '@/components/marketing/YouTubeDashboard';
 import { ContentCalendarView } from '@/components/marketing/ContentCalendarView';
 import { ManualMetricsTab } from '@/components/marketing/ManualMetricsTab';
+import { ContentChecklistTab } from '@/components/marketing/ContentChecklistTab';
+
 
 
 export default function SocialMedia() {
