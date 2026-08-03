@@ -4840,52 +4840,76 @@ export type Database = {
         Row: {
           account_id: string
           answers: Json
+          blockers: Json
           created_at: string
           created_by: string | null
           decision: string
           format: string | null
           id: string
           ideia_central: string | null
+          last_blocker_notified_at: string | null
           objetivo: string | null
           pilar: string | null
           post_date: string | null
           post_title: string
           responsible: string | null
+          responsible_user_id: string | null
           updated_at: string
         }
         Insert: {
           account_id: string
           answers?: Json
+          blockers?: Json
           created_at?: string
           created_by?: string | null
           decision?: string
           format?: string | null
           id?: string
           ideia_central?: string | null
+          last_blocker_notified_at?: string | null
           objetivo?: string | null
           pilar?: string | null
           post_date?: string | null
           post_title?: string
           responsible?: string | null
+          responsible_user_id?: string | null
           updated_at?: string
         }
         Update: {
           account_id?: string
           answers?: Json
+          blockers?: Json
           created_at?: string
           created_by?: string | null
           decision?: string
           format?: string | null
           id?: string
           ideia_central?: string | null
+          last_blocker_notified_at?: string | null
           objetivo?: string | null
           pilar?: string | null
           post_date?: string | null
           post_title?: string
           responsible?: string | null
+          responsible_user_id?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "content_approval_checklists_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "content_approval_checklists_responsible_user_id_fkey"
+            columns: ["responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       content_library_items: {
         Row: {

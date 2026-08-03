@@ -15,3 +15,9 @@ type: feature
 - Aprovação só libera com 100% dos itens positivos e zero bloqueios.
 - Persistência: tabela `content_approval_checklists` (RLS por `account_id` via `public.users`), campos: post_title, responsible, post_date, format, pilar, objetivo, ideia_central, answers jsonb, decision (pending|approved|adjust|rejected).
 - Regra de negócio: conteúdo é para EMPRESÁRIOS da estética, nunca iniciantes nem pacientes; percepção premium/high ticket obrigatória.
+
+## Notificações de reprovação automática
+- Campo **Responsável** é um seletor de usuário (`responsible_user_id`), não texto livre — é quem recebe a notificação.
+- Ao salvar com itens negativos marcados, `src/lib/contentChecklistNotifications.ts` insere em `notifications` (type `content_checklist_blocker`, link `/social-media?platform=checklist`).
+- Colunas de controle: `blockers` jsonb (bloqueios já notificados) e `last_blocker_notified_at` — só bloqueios novos disparam notificação, evitando spam ao reeditar.
+- Sem responsável selecionado, quem preencheu recebe o aviso.

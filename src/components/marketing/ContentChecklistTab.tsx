@@ -14,8 +14,10 @@ import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
-import { AlertTriangle, CheckCircle2, FileCheck2, Plus, Trash2, XCircle } from 'lucide-react';
+import { AlertTriangle, BellRing, CheckCircle2, FileCheck2, Plus, Trash2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { notifyChecklistBlockers } from '@/lib/contentChecklistNotifications';
+
 import {
   CHECKLIST_FORMATS,
   CHECKLIST_STAGES,
@@ -31,19 +33,26 @@ interface ChecklistRow {
   id: string;
   post_title: string;
   responsible: string | null;
+  responsible_user_id: string | null;
   post_date: string | null;
   format: string | null;
   pilar: string | null;
   objetivo: string | null;
   ideia_central: string | null;
   answers: Answers;
+  blockers: string[];
   decision: string;
   created_at: string;
 }
 
+interface AccountUser {
+  id: string;
+  name: string;
+}
+
 const emptyDraft = {
   post_title: '',
-  responsible: '',
+  responsible_user_id: '',
   post_date: new Date().toISOString().slice(0, 10),
   format: '' as string,
   pilar: '',
@@ -56,8 +65,10 @@ const emptyDraft = {
 export function ContentChecklistTab() {
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
-  const [draft, setDraft] = useState({ ...emptyDraft, responsible: '' });
+  const [draft, setDraft] = useState({ ...emptyDraft });
   const [editingId, setEditingId] = useState<string | null>(null);
+  /** Bloqueios já notificados nesta sessão do rascunho — evita spam de notificação. */
+  const [notifiedBlockers, setNotifiedBlockers] = useState<string[]>([]);
 
   const { data: history = [] } = useQuery({
     queryKey: ['content-checklists', currentUser?.account_id],
@@ -73,6 +84,24 @@ export function ContentChecklistTab() {
       return (data ?? []) as ChecklistRow[];
     },
   });
+
+  const { data: accountUsers = [] } = useQuery({
+    queryKey: ['content-checklist-users', currentUser?.account_id],
+    enabled: !!currentUser?.account_id,
+    queryFn: async (): Promise<AccountUser[]> => {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, name')
+        .eq('account_id', currentUser!.account_id)
+        .eq('is_active', true)
+        .order('name');
+      if (error) throw error;
+      return (data ?? []) as AccountUser[];
+    },
+  });
+
+  const responsibleName =
+    accountUsers.find((u) => u.id === draft.responsible_user_id)?.name ?? null;
 
   const setAnswer = (id: string, value: boolean) =>
     setDraft((d) => ({ ...d, answers: { ...d.answers, [id]: value } }));
@@ -99,23 +128,31 @@ export function ContentChecklistTab() {
   const progress = positiveTotal ? Math.round((positiveChecked / positiveTotal) * 100) : 0;
   const canApprove = blockers.length === 0 && progress === 100 && !!draft.post_title.trim();
 
+  const newBlockers = blockers.filter((b) => !notifiedBlockers.includes(b));
+
   const saveMutation = useMutation({
     mutationFn: async (decision: string) => {
       if (!currentUser?.account_id) throw new Error('Sem conta ativa');
       if (!draft.post_title.trim()) throw new Error('Informe o post/pauta');
+      const shouldNotify = newBlockers.length > 0;
       const payload = {
         account_id: currentUser.account_id,
         created_by: currentUser.id,
         post_title: draft.post_title.trim(),
-        responsible: draft.responsible || null,
+        responsible: responsibleName,
+        responsible_user_id: draft.responsible_user_id || null,
         post_date: draft.post_date || null,
         format: draft.format || null,
         pilar: draft.pilar || null,
         objetivo: draft.objetivo || null,
         ideia_central: draft.ideia_central || null,
         answers: draft.answers,
+        blockers,
         decision,
+        ...(shouldNotify ? { last_blocker_notified_at: new Date().toISOString() } : {}),
       };
+
+      let checklistId = editingId;
       if (editingId) {
         const { error } = await (supabase as any)
           .from('content_approval_checklists')
@@ -123,20 +160,48 @@ export function ContentChecklistTab() {
           .eq('id', editingId);
         if (error) throw error;
       } else {
-        const { error } = await (supabase as any).from('content_approval_checklists').insert(payload);
+        const { data, error } = await (supabase as any)
+          .from('content_approval_checklists')
+          .insert(payload)
+          .select('id')
+          .single();
         if (error) throw error;
+        checklistId = data?.id ?? null;
       }
+
+      let notified = 0;
+      if (shouldNotify) {
+        notified = await notifyChecklistBlockers({
+          accountId: currentUser.account_id,
+          actor: { id: currentUser.id, name: currentUser.name },
+          responsibleUserId: draft.responsible_user_id || null,
+          checklistId,
+          postTitle: draft.post_title.trim(),
+          blockers,
+          decision,
+        });
+      }
+      return { notified };
     },
-    onSuccess: (_d, decision) => {
+    onSuccess: ({ notified }, decision) => {
       queryClient.invalidateQueries({ queryKey: ['content-checklists'] });
       toast.success(
         decision === 'approved' ? 'Checklist aprovado e salvo' : 'Checklist salvo',
       );
+      if (notified > 0) {
+        toast.warning(
+          responsibleName
+            ? `${responsibleName} foi notificado sobre a reprovação automática`
+            : 'Notificação de reprovação automática enviada',
+        );
+      }
       setDraft({ ...emptyDraft, answers: {} });
+      setNotifiedBlockers([]);
       setEditingId(null);
     },
     onError: (e: any) => toast.error(e.message ?? 'Erro ao salvar checklist'),
   });
+
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
@@ -154,9 +219,10 @@ export function ContentChecklistTab() {
 
   const loadRow = (row: ChecklistRow) => {
     setEditingId(row.id);
+    setNotifiedBlockers(row.blockers ?? []);
     setDraft({
       post_title: row.post_title ?? '',
-      responsible: row.responsible ?? '',
+      responsible_user_id: row.responsible_user_id ?? '',
       post_date: row.post_date ?? '',
       format: row.format ?? '',
       pilar: row.pilar ?? '',
@@ -166,6 +232,7 @@ export function ContentChecklistTab() {
       decision: row.decision,
     });
   };
+
 
   const decisionBadge = (decision: string) => {
     const map: Record<string, { label: string; className: string }> = {
@@ -201,12 +268,19 @@ export function ContentChecklistTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>Responsável</Label>
-                <Input
-                  value={draft.responsible}
-                  onChange={(e) => setDraft((d) => ({ ...d, responsible: e.target.value }))}
-                  placeholder="Jessica"
-                />
+                <Select
+                  value={draft.responsible_user_id}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, responsible_user_id: v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Quem será notificado" /></SelectTrigger>
+                  <SelectContent>
+                    {accountUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div className="space-y-1.5">
                 <Label>Data</Label>
                 <Input
@@ -338,7 +412,16 @@ export function ContentChecklistTab() {
                 <ul className="mt-1.5 list-disc pl-5 text-xs text-destructive">
                   {blockers.map((b) => <li key={b}>{b}</li>)}
                 </ul>
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive/80">
+                  <BellRing className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {newBlockers.length === 0
+                    ? 'Responsável já notificado sobre estes bloqueios.'
+                    : responsibleName
+                      ? `Ao salvar, ${responsibleName} será notificado.`
+                      : 'Selecione o responsável para que ele receba a notificação ao salvar.'}
+                </p>
               </div>
+
             ) : progress === 100 ? (
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600">
                 <CheckCircle2 className="h-4 w-4" /> Pronto para enviar à Bruna
