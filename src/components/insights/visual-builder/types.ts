@@ -16,6 +16,8 @@ export interface AppearanceConfig {
   fillEmptyDates: boolean;
   fontScale?: FontScale;
   valueColor?: string;
+  /** Quando true, a paleta escolhida prevalece sobre cores fixas de série/opção. */
+  paletteLocked?: boolean;
 }
 
 export interface FieldOption {

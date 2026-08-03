@@ -47,7 +47,7 @@ export function DashboardPaletteSelector({
           config: {
             ...cfg,
             colorPalette: palette,
-            appearance: { ...(cfg.appearance || {}), colorPalette: palette },
+            appearance: { ...(cfg.appearance || {}), colorPalette: palette, paletteLocked: true },
           },
         });
       }

@@ -162,7 +162,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
           formatting={formatting}
           appearance={config}
           orientation={visualConfig?.chartOrientation || 'horizontal'}
-          seriesColors={visualConfig?.seriesColors}
+          seriesColors={config.paletteLocked ? undefined : visualConfig?.seriesColors}
           onDrilldown={onDrilldown}
         />
       );
@@ -288,7 +288,7 @@ function BarChartView({
             {data.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.color || colors[index % colors.length]}
+                fill={(!appearance.paletteLocked && entry.color) || colors[index % colors.length]}
               />
             ))}
           </Bar>
@@ -408,7 +408,7 @@ function HorizontalBarChartView({
             {rows.map((entry, index) => (
               <Cell
                 key={`cell-${index}`}
-                fill={entry.color || colors[index % colors.length]}
+                fill={(!appearance.paletteLocked && entry.color) || colors[index % colors.length]}
               />
             ))}
           </Bar>
@@ -533,7 +533,7 @@ function PieChartView({
 
   const legendItems = data.map((entry, index) => ({
     name: String(entry.name ?? ''),
-    color: entry.color || colors[index % colors.length],
+    color: (!appearance.paletteLocked && entry.color) || colors[index % colors.length],
   }));
 
   return (
@@ -562,7 +562,7 @@ function PieChartView({
               {data.map((entry, index) => (
                 <Cell
                   key={`cell-${index}`}
-                  fill={entry.color || colors[index % colors.length]}
+                  fill={(!appearance.paletteLocked && entry.color) || colors[index % colors.length]}
                   stroke="hsl(var(--card))"
                   strokeWidth={2}
                 />

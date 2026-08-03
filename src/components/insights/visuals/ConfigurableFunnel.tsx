@@ -67,7 +67,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
         const conversionPct = index > 0 && prevCum > 0
           ? Math.round((cumValue / prevCum) * 100)
           : null;
-        const bgColor = item.color || colors[index % colors.length];
+        const bgColor = (!config.paletteLocked && item.color) || colors[index % colors.length];
 
         const overallPct = Math.round((cumValue / maxValue) * 100);
         const stagePct = conversionPct !== null ? conversionPct : 100;
