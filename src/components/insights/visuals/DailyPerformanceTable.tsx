@@ -62,13 +62,20 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const userId = dp.userId && dp.userId !== "all" ? dp.userId : (filters.userId !== "all" ? filters.userId : null);
 
   const range = useMemo(() => {
-    // Os filtros globais podem entregar ISO completo ("2026-01-01T00:00:00.000Z");
-    // normalizamos para YYYY-MM-DD antes de montar os limites do período.
-    const toDay = (v?: string) => (v ? String(v).slice(0, 10) : "");
+    // Os filtros globais podem entregar ISO completo ("2026-08-01T03:00:00.000Z").
+    // Cortar a string levaria ao dia UTC (31/07), então convertemos para o dia local.
+    const toDay = (v?: string) => {
+      if (!v) return "";
+      const raw = String(v);
+      if (!raw.includes("T")) return raw.slice(0, 10);
+      const d = new Date(raw);
+      return Number.isNaN(d.getTime()) ? raw.slice(0, 10) : format(d, "yyyy-MM-dd");
+    };
     const start = toDay(config.fixedDateRange?.startDate || filters.startDate);
     const end = toDay(config.fixedDateRange?.endDate || filters.endDate);
     return { start, end };
   }, [config.fixedDateRange, filters.startDate, filters.endDate]);
+
 
   const days = useMemo(() => {
     try {
