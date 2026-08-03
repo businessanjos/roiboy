@@ -127,8 +127,10 @@ export default function RHVagas() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {jobs.map(job => (
-            <Card key={job.id} className={`hover:shadow-md transition-shadow cursor-pointer ${selectMode && selectedIds.includes(job.id) ? "ring-2 ring-primary" : ""}`} onClick={() => selectMode ? toggleSelect(job.id) : navigate(`/rh/vacancies/${job.id}`)}>
+          {jobs.map(job => {
+            const isClosed = job.status === "closed";
+            return (
+            <Card key={job.id} className={`relative hover:shadow-md transition-shadow cursor-pointer ${isClosed ? "opacity-70 border-dashed bg-muted/30" : ""} ${selectMode && selectedIds.includes(job.id) ? "ring-2 ring-primary" : ""}`} onClick={() => selectMode ? toggleSelect(job.id) : navigate(`/rh/vacancies/${job.id}`)}>
               <CardHeader className="pb-2">
                 {selectMode && (
                   <div className="mb-2" onClick={e => e.stopPropagation()}>
@@ -138,7 +140,7 @@ export default function RHVagas() {
                 <div className="flex items-start justify-between">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <CardTitle className="text-lg truncate">{job.title}</CardTitle>
+                      <CardTitle className={`text-lg truncate ${isClosed ? "text-muted-foreground" : ""}`}>{job.title}</CardTitle>
                       {(job.openings_count ?? 1) > 1 && (
                         <Badge variant="secondary" className="text-[10px] py-0">{job.openings_count} posições</Badge>
                       )}
@@ -153,6 +155,7 @@ export default function RHVagas() {
                         <DropdownMenuItem onClick={() => navigate(`/rh/vacancies/${job.id}/edit`)}><Pencil className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
                         {job.status === "draft" && <DropdownMenuItem onClick={() => updateJob.mutate({ id: job.id, status: "active" })}><Send className="h-4 w-4 mr-2" />Publicar</DropdownMenuItem>}
                         {job.status === "active" && <DropdownMenuItem onClick={() => updateJob.mutate({ id: job.id, status: "closed" })}><XCircle className="h-4 w-4 mr-2" />Encerrar</DropdownMenuItem>}
+                        {isClosed && <DropdownMenuItem onClick={() => updateJob.mutate({ id: job.id, status: "active" })}><Send className="h-4 w-4 mr-2" />Reabrir vaga</DropdownMenuItem>}
                         <DropdownMenuItem onClick={() => navigate(`/rh/vacancies/${job.id}`)}><Users className="h-4 w-4 mr-2" />Ver Candidatos</DropdownMenuItem>
                         <DropdownMenuItem onClick={() => setDeleteDialog({ open: true, job })} className="text-destructive"><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
                       </DropdownMenuContent>
@@ -161,12 +164,20 @@ export default function RHVagas() {
                 </div>
               </CardHeader>
               <CardContent className="space-y-1.5">
+                {isClosed && (
+                  <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground bg-muted rounded-md px-2 py-1 w-fit">
+                    <XCircle className="h-3.5 w-3.5" />
+                    Vaga encerrada{(job as any).closed_at ? ` em ${new Date((job as any).closed_at).toLocaleDateString("pt-BR")}` : ""}
+                  </div>
+                )}
                 {job.department && <p className="text-sm text-muted-foreground">Departamento: {job.department}</p>}
                 <JobScoreBadge job={job} benchmark={benchmarks[job.id]} />
                 <JobMetaRow job={job} />
               </CardContent>
             </Card>
-          ))}
+            );
+          })}
+
         </div>
       )}
 
