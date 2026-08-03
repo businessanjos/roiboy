@@ -525,56 +525,83 @@ function PieChartView({
   const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
-  const compact = width > 0 && (width < 320 || height < 240 || data.length > 6);
+  const sideLegend = width >= 480 && data.length > 1;
+  // Com legenda lateral não há espaço para rótulos externos: só a porcentagem.
+  const compact = width > 0 && (sideLegend || width < 320 || height < 240 || data.length > 6);
   const labelFont = Math.round(11 * m);
-  const sideLegend = width >= 520;
+  const legendWidth = Math.min(Math.max(width * 0.28, 130), 240);
+
+  const legendItems = data.map((entry, index) => ({
+    name: String(entry.name ?? ''),
+    color: entry.color || colors[index % colors.length],
+  }));
 
   return (
-    <div ref={ref} className="h-full w-full">
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
-          <Pie
-            data={data}
-            cx="50%"
-            cy="50%"
-            innerRadius="45%"
-            outerRadius={compact ? '72%' : '68%'}
-            paddingAngle={2}
-            dataKey="value"
-            label={
-              compact
-                ? ({ percent }) => (percent >= 0.05 ? `${(percent * 100).toFixed(0)}%` : '')
-                : ({ name, percent }) =>
-                    percent >= 0.03 ? `${truncateLabel(String(name ?? ''), 14)} ${(percent * 100).toFixed(0)}%` : ''
-            }
-            labelLine={compact ? false : { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
-            onClick={(data) => onDrilldown?.(data.name)}
-            style={{ cursor: onDrilldown ? 'pointer' : 'default', fontSize: labelFont }}
-          >
-            {data.map((entry, index) => (
-              <Cell
-                key={`cell-${index}`}
-                fill={entry.color || colors[index % colors.length]}
-                stroke="hsl(var(--card))"
-                strokeWidth={2}
+    <div ref={ref} className={`h-full w-full ${sideLegend ? 'flex items-center gap-2' : ''}`}>
+      <div className={sideLegend ? 'h-full min-w-0 flex-1' : 'h-full w-full'}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart margin={{ top: 8, right: 8, bottom: 8, left: 8 }}>
+            <Pie
+              data={data}
+              cx="50%"
+              cy="50%"
+              innerRadius="45%"
+              outerRadius={compact ? '78%' : '68%'}
+              paddingAngle={2}
+              dataKey="value"
+              label={
+                compact
+                  ? ({ percent }) => (percent >= 0.05 ? `${(percent * 100).toFixed(0)}%` : '')
+                  : ({ name, percent }) =>
+                      percent >= 0.03 ? `${truncateLabel(String(name ?? ''), 14)} ${(percent * 100).toFixed(0)}%` : ''
+              }
+              labelLine={compact ? false : { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+              onClick={(data) => onDrilldown?.(data.name)}
+              style={{ cursor: onDrilldown ? 'pointer' : 'default', fontSize: labelFont }}
+            >
+              {data.map((entry, index) => (
+                <Cell
+                  key={`cell-${index}`}
+                  fill={entry.color || colors[index % colors.length]}
+                  stroke="hsl(var(--card))"
+                  strokeWidth={2}
+                />
+              ))}
+            </Pie>
+            <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
+            {!sideLegend && data.length > 1 && (
+              <Legend
+                verticalAlign="bottom"
+                content={<ChartLegendContent fontSize={labelFont} align="center" />}
               />
-            ))}
-          </Pie>
-          <Legend
-            layout={sideLegend ? 'vertical' : 'horizontal'}
-            align={sideLegend ? 'right' : 'center'}
-            verticalAlign={sideLegend ? 'middle' : 'bottom'}
-            content={
-              <ChartLegendContent
-                fontSize={labelFont}
-                align={sideLegend ? 'left' : 'center'}
-                className={sideLegend ? 'flex-col items-start gap-y-1.5 pl-2' : undefined}
+            )}
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+
+      {sideLegend && (
+        <div
+          className="flex shrink-0 flex-col justify-center gap-1.5 overflow-hidden pr-1"
+          style={{ width: legendWidth, fontSize: labelFont }}
+        >
+          {legendItems.map((item) => (
+            <span key={item.name} className="flex items-center gap-1.5 leading-tight">
+              <span
+                aria-hidden
+                className="inline-block shrink-0 rounded-[3px]"
+                style={{
+                  width: Math.round(labelFont * 0.78),
+                  height: Math.round(labelFont * 0.78),
+                  backgroundColor: item.color,
+                }}
               />
-            }
-          />
-          <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
-        </PieChart>
-      </ResponsiveContainer>
+              <span className="truncate font-medium tracking-tight text-muted-foreground" title={item.name}>
+                {item.name}
+              </span>
+            </span>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
