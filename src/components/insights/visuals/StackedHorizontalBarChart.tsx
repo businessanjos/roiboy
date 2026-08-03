@@ -312,7 +312,10 @@ export function StackedHorizontalBarChart({
                 stackId="stack"
                 fill={getSeriesColor(key, index)}
                 radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
+                onClick={(payload: any) => onDrilldown?.(payload?.name ?? payload?.payload?.name)}
+                style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
               >
+
                 {safeAppearance.showDataLabels && (
                   <LabelList
                     dataKey={key}
