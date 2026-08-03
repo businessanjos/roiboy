@@ -161,7 +161,12 @@ Deno.serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const host = cfg.host_url || Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com";
+    const { data: sectorSettings } = await supabase
+      .from("sector_settings")
+      .select("royzapp_host")
+      .eq("sector_id", "vendas")
+      .maybeSingle();
+    const host = (cfg.host_url || sectorSettings?.royzapp_host || Deno.env.get("UAZAPI_URL") || "https://g1.uazapi.com").replace(/\/$/, "");
 
     const resp = await fetch(`${host}/send/text`, {
       method: "POST",
