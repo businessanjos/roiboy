@@ -10,7 +10,11 @@ export interface ChecklistSection {
   title: string;
   note?: string;
   items: ChecklistItem[];
-  /** Só aparece quando o formato selecionado estiver na lista. */
+  /**
+   * Formatos em que a etapa vem ativada por padrão.
+   * Sem a lista, a etapa vale para todos os formatos por padrão.
+   * A configuração salva por conta sobrescreve este padrão.
+   */
   formats?: string[];
 }
 
