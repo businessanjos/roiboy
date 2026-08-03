@@ -21,6 +21,7 @@ interface Props {
     roulette_min_prize?: number | null;
     roulette_max_prize?: number | null;
     roulette_pool_id?: string | null;
+    custom_prize_description?: string | null;
   };
   user: { uid: string; name: string };
   pendingSpins: number;
@@ -58,7 +59,19 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       }));
     }
     const min = Number(spiff.roulette_min_prize ?? 0);
-    const max = Number(spiff.roulette_max_prize ?? 100);
+    const max = Number(spiff.roulette_max_prize ?? 0);
+    // SPIFF custom (prêmio livre, sem pool e sem faixa em dinheiro):
+    // registra um único "prêmio" descritivo, mantendo o fluxo de aprovação.
+    if (max <= 0) {
+      return [
+        {
+          id: null,
+          label: spiff.custom_prize_description?.trim() || "Prêmio a combinar",
+          cash_value: 0,
+          color: null,
+        },
+      ];
+    }
     const step = 50;
     const range = Math.max(0, max - min);
     const steps = Math.floor(range / step) + 1;
@@ -81,7 +94,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
 
   const min = Number(spiff.roulette_min_prize ?? 0);
-  const max = Number(spiff.roulette_max_prize ?? 100);
+  const max = Number(spiff.roulette_max_prize ?? 0);
   const usingPool = !!spiff.roulette_pool_id;
 
   useEffect(() => {
@@ -275,7 +288,9 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         <Badge variant="outline" className="mt-3 text-[10px]">
           {usingPool
             ? `${prizesQuery.data?.length ?? 0} prêmios disponíveis`
-            : `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`}
+            : max > 0
+              ? `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`
+              : spiff.custom_prize_description?.trim() || "Prêmio a combinar"}
         </Badge>
         <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1">
           <ShieldCheck className="h-3 w-3 text-amber-500" />
