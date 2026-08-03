@@ -26291,6 +26291,15 @@ export type Database = {
         }[]
       }
       apply_agency_rules: { Args: { p_account_id: string }; Returns: number }
+      audit_zapp_conversation_routing: {
+        Args: {
+          p_dry_run?: boolean
+          p_limit?: number
+          p_min_messages?: number
+          p_min_ratio?: number
+        }
+        Returns: Json
+      }
       auto_heal_inactive_assignments: { Args: never; Returns: Json }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
