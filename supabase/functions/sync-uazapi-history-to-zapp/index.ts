@@ -280,7 +280,7 @@ Deno.serve(async (req) => {
         const isGroup = !!chat.wa_isGroup || chatId.includes("@g.us");
         const groupName = chat.wa_name || chat.name || "Grupo";
         const directPhone = !isGroup
-          ? normalizePhone(chat.phone || chatId)
+          ? bestDirectPhone(chat.phone, chatId)
           : "";
 
         // If filtering to a specific phone, skip groups and any chat that doesn't match
