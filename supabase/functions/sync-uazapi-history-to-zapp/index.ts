@@ -62,8 +62,25 @@ function normalizePhone(raw?: string | null): string {
       digits = digits.slice(0, 4) + "9" + digits.slice(4);
   }
   if (digits.length < 8 || digits.length > 15) return "";
+  // Números BR truncados (ex.: "551899631" vindo de um campo cortado) criam
+  // conversas duplicadas. Só aceita BR completo (12 ou 13 dígitos).
+  if (digits.startsWith("55") && digits.length < 12) return "";
   return `+${digits}`;
 }
+
+/**
+ * O campo `chat.phone` da UAZ às vezes chega truncado (últimos dígitos cortados),
+ * o que gerava conversas duplicadas. O JID (`wa_chatid`) é sempre completo,
+ * então escolhemos o candidato com mais dígitos.
+ */
+function bestDirectPhone(rawPhone?: string | null, chatId?: string | null): string {
+  const fromPhone = normalizePhone(rawPhone);
+  const fromChatId = normalizePhone(chatId);
+  if (!fromPhone) return fromChatId;
+  if (!fromChatId) return fromPhone;
+  return fromChatId.length >= fromPhone.length ? fromChatId : fromPhone;
+}
+
 
 function phoneWithoutBrazilNinth(phone: string): string | null {
   return phone.startsWith("+55") && phone.length === 14
@@ -263,7 +280,7 @@ Deno.serve(async (req) => {
         const isGroup = !!chat.wa_isGroup || chatId.includes("@g.us");
         const groupName = chat.wa_name || chat.name || "Grupo";
         const directPhone = !isGroup
-          ? normalizePhone(chat.phone || chatId)
+          ? bestDirectPhone(chat.phone, chatId)
           : "";
 
         // If filtering to a specific phone, skip groups and any chat that doesn't match
