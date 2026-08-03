@@ -79,11 +79,33 @@ function isScorecard(visual: InsightsVisual) {
 
 // ── Row-grouping: groups visuals by their y-position proximity ──
 
+/** Peso vertical por tipo de card (usado quando não há altura salva). */
+function getTypeWeight(visual: InsightsVisual): number {
+  const ct = visual.chart_type || "bar";
+  if (["number", "scorecard", "kpi"].includes(ct)) return 0.45;
+  if (ct === "gauge") return 0.8;
+  if (["pie", "donut"].includes(ct)) return 0.9;
+  if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return 1.9;
+  return 1.2;
+}
+
 interface VisualRow {
   visuals: InsightsVisual[];
   isAllScorecards: boolean;
   isAllCompact: boolean;
+  /** Proporção de altura da linha no modo TV. */
+  weight: number;
 }
+
+function getRowWeight(items: InsightsVisual[]): number {
+  // Respeita a altura salva pelo usuário quando existir
+  const savedHeights = items.map((v) => v.layout?.h || 0).filter((h) => h > 0);
+  if (savedHeights.length === items.length && savedHeights.length > 0) {
+    return Math.max(...savedHeights);
+  }
+  return Math.max(...items.map(getTypeWeight));
+}
+
 
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   if (visuals.length === 0) return [];
@@ -106,7 +128,9 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
       visuals: items,
       isAllScorecards: items.every(isScorecard),
       isAllCompact: items.every(isCompactCard),
+      weight: getRowWeight(items),
     });
+
   };
 
   let currentRow: InsightsVisual[] = [sorted[0]];
@@ -234,11 +258,14 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           : `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight
           ? {
-              // Compact rows (scorecards / gauges) take less vertical space than charts
-              flex: `${row.isAllScorecards ? 0.55 : row.isAllCompact ? 0.9 : 1} 1 0%`,
+              // Altura proporcional: usa a altura salva (ou o peso por tipo),
+              // então linhas de scorecards ficam baixas e tabelas ganham espaço.
+              flex: `${row.weight} 1 0%`,
+              minHeight: 0,
               gridAutoRows: "1fr",
             }
           : {}),
+
       }}
     >
       {visuals.map((visual, idx) => {
