@@ -562,7 +562,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         resizeConfig={{
           enabled: interactive,
         }}
-        compactor={freePositionCompactor}
+        compactor={verticalCompactorInstance}
       >
         {visuals.map((visual) => (
           <div key={visual.id} className="h-full overflow-hidden rounded-lg">
