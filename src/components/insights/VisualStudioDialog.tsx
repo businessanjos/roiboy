@@ -888,7 +888,7 @@ export function VisualStudioDialog({
                 dateDisplayFormat={dateDisplayFormat}
                 onDateDisplayFormatChange={setDateDisplayFormat}
                 colorPalette={colorPalette}
-                onColorPaletteChange={setColorPalette}
+                onColorPaletteChange={(p) => { setColorPalette(p); setPaletteLocked(true); }}
                 fillEmptyDates={fillEmptyDates}
                 onFillEmptyDatesChange={setFillEmptyDates}
                 isDimensionDate={!!isDimensionDate}
