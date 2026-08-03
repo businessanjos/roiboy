@@ -230,6 +230,48 @@ async function allOptionLabels(fieldId: string): Promise<string[]> {
   return options.map((o) => o?.label).filter(Boolean);
 }
 
+/** "SIM - Acima de 30k" -> "sim", "NÃO - Lead não Qualificado" -> "nao" */
+function labelKey(label: string): string {
+  return label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[-/(]/)[0]
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+async function reconcileOptionLabels(fieldId: string, values: string[]): Promise<string[]> {
+  const { data } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', fieldId)
+    .maybeSingle();
+  const options = ((data?.options as any[]) || []).filter((o) => o?.label);
+  if (options.length === 0) return values;
+
+  const labels = options.map((o) => String(o.label));
+  const labelSet = new Set(labels);
+  const byKey = new Map<string, string>();
+  for (const l of labels) {
+    const k = labelKey(l);
+    if (k && !byKey.has(k)) byKey.set(k, l);
+  }
+  const byValue = new Map<string, string>();
+  for (const o of options) byValue.set(String(o.value), String(o.label));
+
+  const out = new Set<string>();
+  for (const v of values) {
+    if (labelSet.has(v)) { out.add(v); continue; }
+    const byVal = byValue.get(v);
+    if (byVal) { out.add(byVal); continue; }
+    const alt = byKey.get(labelKey(v));
+    if (alt) out.add(alt);
+  }
+  return Array.from(out);
+}
+
+
 export async function applyVisualFilters<T extends { id: string; lead_id?: string | null }>(
   records: T[],
   accountId: string,
