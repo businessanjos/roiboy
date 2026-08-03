@@ -459,6 +459,7 @@ export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promi
   if (leads.length === 0) return leads;
 
   const leadIds = leads.map(l => l.id);
+  const valueMap = await loadOptionMap(LEAD_MQL_FIELD_ID, LEAD_MQL_VALUE_MAP);
   let allMqlValues: any[] = [];
   const batchSize = 500;
 
@@ -480,11 +481,12 @@ export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promi
 
   const mqlMap = new Map<string, { label: string; color: string }>();
   for (const row of allMqlValues) {
-    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    const mapped = valueMap[row.value_text || ''];
     if (mapped) {
       mqlMap.set(row.lead_id, mapped);
     }
   }
+
 
   return leads.map(lead => {
     const mql = mqlMap.get(lead.id);
@@ -760,26 +762,74 @@ export async function enrichDealsWithProduct(accountId: string, deals: any[]): P
     return { ...deal, product: productName };
   });
 }
-async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
+const NAMED_COLORS: Record<string, string> = {
+  green: '#22c55e',
+  red: '#ef4444',
+  purple: '#a855f7',
+  blue: '#3b82f6',
+  amber: '#f59e0b',
+  yellow: '#eab308',
+  gray: '#6b7280',
+  grey: '#6b7280',
+};
+
+const optionMapCache = new Map<string, Record<string, { label: string; color: string }>>();
+
+/**
+ * Reads the real option list of a select custom field so labels/colors always
+ * match what is configured (static maps go stale when options are added).
+ */
+async function loadOptionMap(
+  fieldId: string,
+  fallback: Record<string, { label: string; color: string }>
+): Promise<Record<string, { label: string; color: string }>> {
+  const cached = optionMapCache.get(fieldId);
+  if (cached) return cached;
+  const { data } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', fieldId)
+    .maybeSingle();
+  const options = (data?.options as any[]) || [];
+  const map: Record<string, { label: string; color: string }> = { ...fallback };
+  for (const o of options) {
+    if (!o?.value || !o?.label) continue;
+    map[String(o.value)] = {
+      label: String(o.label),
+      color: NAMED_COLORS[String(o.color || '').toLowerCase()] || String(o.color || '') || '#6b7280',
+    };
+  }
+  optionMapCache.set(fieldId, map);
+  return map;
+}
+
+export async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
   const dealIds = deals.map(d => d.id);
+  const valueMap = await loadOptionMap(MQL_FIELD_ID, MQL_VALUE_MAP);
 
-  const { data: mqlValues, error } = await supabase
-    .from('deal_field_values')
-    .select('deal_id, value_text')
-    .eq('field_id', MQL_FIELD_ID)
-    .eq('account_id', accountId)
-    .in('deal_id', dealIds);
+  let mqlValues: any[] = [];
+  const batchSize = 500;
+  for (let i = 0; i < dealIds.length; i += batchSize) {
+    const batch = dealIds.slice(i, i + batchSize);
+    const { data, error } = await supabase
+      .from('deal_field_values')
+      .select('deal_id, value_text')
+      .eq('field_id', MQL_FIELD_ID)
+      .eq('account_id', accountId)
+      .in('deal_id', batch);
 
-  if (error) {
-    console.error('Error fetching MQL values:', error);
-    return deals.map(d => ({ ...d, _mql_label: 'Não informado', _mql_color: undefined }));
+    if (error) {
+      console.error('Error fetching MQL values:', error);
+      continue;
+    }
+    mqlValues = mqlValues.concat(data || []);
   }
 
   const mqlMap = new Map<string, { label: string; color: string }>();
-  for (const row of mqlValues || []) {
-    const mapped = MQL_VALUE_MAP[row.value_text || ''];
+  for (const row of mqlValues) {
+    const mapped = valueMap[row.value_text || ''];
     if (mapped) {
       mqlMap.set(row.deal_id, mapped);
     }
@@ -794,6 +844,7 @@ async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[
     };
   });
 }
+
 
 async function fetchDealsData(
   accountId: string,

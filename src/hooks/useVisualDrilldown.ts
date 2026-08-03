@@ -4,12 +4,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useInsightsFilters, mergeGlobalDealFilter, mergeGlobalLeadFilter } from "@/hooks/useInsightsFilters";
 import { VisualConfig, getLeadFilters, getDealFilters } from "@/components/insights/visual-builder/types";
-import { selectUnmirroredFilters } from "@/lib/insights/applyFilters";
+import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
 import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, endOfMonth, endOfYear, startOfDay, endOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { enrichDealsWithProduct, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
+import { enrichDealsWithProduct, enrichDealsWithCanal, enrichDealsWithMql, enrichLeadsWithMql, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 
@@ -178,12 +178,29 @@ async function fetchDealsRecords(
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
 
+  // Unified (Pipedrive-style) filters that the legacy engine can't express —
+  // the chart applies them, so the drilldown must apply them too.
+  const unifiedFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any[];
+  }
+
+
   // Enrich with product if dimension is product/product_name OR if product column is in tableConfig
   const isProductDimension = config.dimension?.field === 'product' || config.dimension?.field === 'product_name';
   const hasProductColumn = config.tableConfig?.columns?.includes('product');
   if (isProductDimension || hasProductColumn) {
     filteredData = await enrichDealsWithProduct(accountId, filteredData);
   }
+
+  // Enriched dimensions backed by custom fields (Canal / MQL)
+  if (config.dimension?.field === 'canal' || config.stackBy === 'canal') {
+    filteredData = await enrichDealsWithCanal(accountId, filteredData);
+  }
+  if (config.dimension?.field === 'mql' || config.stackBy === 'mql') {
+    filteredData = await enrichDealsWithMql(accountId, filteredData);
+  }
+
 
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
@@ -378,6 +395,19 @@ async function fetchLeadsRecords(
     filteredData = filteredData.filter((l: any) => allowedLeadIds.has(l.id));
   }
 
+  // Unified filters (MQL, Canal, campos nativos) — mesmo recorte do gráfico.
+  const unifiedLeadFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedLeadFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedLeadFilters, 'leads') as any[];
+  }
+
+
+  // Dimensão MQL vem de campo personalizado do lead
+  if (config.dimension?.field === 'mql' || config.stackBy === 'mql') {
+    filteredData = await enrichLeadsWithMql(accountId, filteredData);
+  }
+
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
@@ -515,6 +545,13 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
   if (field === 'product' || field === 'product_name') {
     return item.product || 'Não informado';
   }
+  if (field === 'canal') {
+    return item.canal || 'Não informado';
+  }
+  if (field === 'mql') {
+    return item._mql_label || 'Não informado';
+  }
+
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
   }

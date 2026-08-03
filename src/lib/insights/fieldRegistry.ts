@@ -163,6 +163,30 @@ export async function fetchNativeFieldValues(
 ): Promise<string[]> {
   if (NATIVE_STATIC_VALUES[field]) return NATIVE_STATIC_VALUES[field];
 
+  if (field === 'canal' || field === 'product' || field === 'mql') {
+    const nameByField: Record<string, string> = {
+      canal: 'Canal de Venda',
+      product: 'Item da Venda',
+      mql: 'MQL',
+    };
+    // The same field name can exist twice (one for deals, one for leads) with
+    // different option labels — always pick the one matching the data source.
+    const { data } = await supabase
+      .from('custom_fields')
+      .select('options, show_in_deals, show_in_leads')
+      .eq('account_id', accountId)
+      .eq('name', nameByField[field])
+      .eq('is_active', true);
+    const rows = data || [];
+    const preferLeads = dataSource === 'leads';
+    const picked =
+      (preferLeads
+        ? rows.find((r: any) => r.show_in_leads) || rows.find((r: any) => r.show_in_deals)
+        : rows.find((r: any) => r.show_in_deals) || rows.find((r: any) => r.show_in_leads)) || rows[0];
+    const options = ((picked?.options as any[]) || []);
+    return options.map((o) => o?.label).filter(Boolean);
+  }
+
   if (dataSource === 'deals' || dataSource === 'sale_items') {
     if (field === 'pipeline_name') {
       const { data } = await supabase
@@ -184,23 +208,8 @@ export async function fetchNativeFieldValues(
       const { data } = await supabase.from('users').select('name').eq('account_id', accountId);
       return [...new Set((data || []).map((r: any) => r.name).filter(Boolean))].sort();
     }
-    if (field === 'canal' || field === 'product' || field === 'mql') {
-      const nameByField: Record<string, string> = {
-        canal: 'Canal de Venda',
-        product: 'Item da Venda',
-        mql: 'MQL',
-      };
-      const { data } = await supabase
-        .from('custom_fields')
-        .select('options')
-        .eq('account_id', accountId)
-        .eq('name', nameByField[field])
-        .eq('is_active', true)
-        .limit(1);
-      const options = (data?.[0]?.options as any[]) || [];
-      return options.map((o) => o?.label).filter(Boolean);
-    }
   }
+
 
   if (dataSource === 'tasks') {
     if (field === 'activity_type') {

@@ -7,7 +7,7 @@ import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInt
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
-import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
+import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
@@ -273,9 +273,11 @@ function isCategoricalField(field: string | undefined, type: string | undefined)
 function getCategoryValue(deal: any, field: string): string {
   if (field === 'product' || field === 'product_name') return deal.product || 'Não informado';
   if (field === 'canal') return deal.canal || 'Não informado';
+  if (field === 'mql') return deal._mql_label || 'Não informado';
   if (field === 'responsible') return (deal.users as any)?.name || 'Sem Responsável';
   return deal[field] || 'Não informado';
 }
+
 
 async function fetchStackedDealsData(
   accountId: string,
@@ -385,6 +387,12 @@ async function fetchStackedDealsData(
   if (needsCanal) {
     allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
+
+  // Enrich deals with MQL if needed
+  if (config.stackBy === 'mql' || config.dimension.field === 'mql') {
+    allDeals = await enrichDealsWithMql(accountId, allDeals);
+  }
+
 
   // Enrich deals with Product if needed
   const needsProduct = config.stackBy === 'product' || config.stackBy === 'product_name' || config.dimension.field === 'product' || config.dimension.field === 'product_name';
