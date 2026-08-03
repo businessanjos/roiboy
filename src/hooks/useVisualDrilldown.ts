@@ -193,6 +193,15 @@ async function fetchDealsRecords(
     filteredData = await enrichDealsWithProduct(accountId, filteredData);
   }
 
+  // Enriched dimensions backed by custom fields (Canal / MQL)
+  if (config.dimension?.field === 'canal' || config.stackBy === 'canal') {
+    filteredData = await enrichDealsWithCanal(accountId, filteredData);
+  }
+  if (config.dimension?.field === 'mql' || config.stackBy === 'mql') {
+    filteredData = await enrichDealsWithMql(accountId, filteredData);
+  }
+
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'deals') as any[];
