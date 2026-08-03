@@ -354,8 +354,18 @@ function MobileInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, readOnly 
 
 // ── Layout item conversion ──
 
+/** Limites mínimos por tipo de card (em unidades do grid de 48 colunas). */
+function getGridMins(visual?: InsightsVisual): { minW: number; minH: number } {
+  const ct = visual?.chart_type || "bar";
+  if (["number", "scorecard", "kpi"].includes(ct)) return { minW: 4, minH: 4 };
+  if (ct === "gauge") return { minW: 5, minH: 5 };
+  if (["table", "ranking", "data_table", "daily_performance"].includes(ct)) return { minW: 6, minH: 6 };
+  return { minW: 5, minH: 5 };
+}
+
 function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
   const existingLayout = visual.layout;
+  const { minW, minH } = getGridMins(visual);
 
   if (existingLayout) {
     if (existingLayout.scale === 48) {
@@ -365,8 +375,8 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
         y: existingLayout.y,
         w: existingLayout.w,
         h: existingLayout.h,
-        minW: 8,
-        minH: 10,
+        minW,
+        minH,
       };
     }
     return {
@@ -375,8 +385,8 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
       y: existingLayout.y * 5,
       w: existingLayout.w * 4,
       h: existingLayout.h * 5,
-      minW: 8,
-      minH: 10,
+      minW,
+      minH,
     };
   }
 
@@ -386,10 +396,11 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
     y: Math.floor(index / 2) * 20,
     w: 24,
     h: 18,
-    minW: 8,
-    minH: 8,
+    minW,
+    minH,
   };
 }
+
 
 // ── Main component ──
 
