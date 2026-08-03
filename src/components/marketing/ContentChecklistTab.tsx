@@ -412,7 +412,16 @@ export function ContentChecklistTab() {
                 <ul className="mt-1.5 list-disc pl-5 text-xs text-destructive">
                   {blockers.map((b) => <li key={b}>{b}</li>)}
                 </ul>
+                <p className="mt-2 flex items-start gap-1.5 text-xs text-destructive/80">
+                  <BellRing className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                  {newBlockers.length === 0
+                    ? 'Responsável já notificado sobre estes bloqueios.'
+                    : responsibleName
+                      ? `Ao salvar, ${responsibleName} será notificado.`
+                      : 'Selecione o responsável para que ele receba a notificação ao salvar.'}
+                </p>
               </div>
+
             ) : progress === 100 ? (
               <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600">
                 <CheckCircle2 className="h-4 w-4" /> Pronto para enviar à Bruna
