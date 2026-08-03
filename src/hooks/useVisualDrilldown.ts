@@ -530,6 +530,13 @@ function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: Vi
   if (field === 'product' || field === 'product_name') {
     return item.product || 'Não informado';
   }
+  if (field === 'canal') {
+    return item.canal || 'Não informado';
+  }
+  if (field === 'mql') {
+    return item._mql_label || 'Não informado';
+  }
+
   if (field === 'is_active') {
     return item.is_active ? 'Ativo' : 'Inativo';
   }
