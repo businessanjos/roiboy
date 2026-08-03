@@ -375,7 +375,40 @@ export const DECISIONS = [
   { value: 'rejected', label: 'Reprovado' },
 ] as const;
 
-/** Retorna todas as seções visíveis para o formato escolhido. */
-export function visibleSections(stage: ChecklistStage, format?: string | null) {
-  return stage.sections.filter((s) => !s.formats || (format ? s.formats.includes(format) : false));
+/** Mapa de override: `${formato}::${sectionId}` -> ativo/inativo. */
+export type FormatRuleMap = Record<string, boolean>;
+
+export const ruleKey = (format: string, sectionId: string) => `${format}::${sectionId}`;
+
+/** Padrão do schema (sem considerar overrides). */
+export function isSectionDefaultForFormat(section: ChecklistSection, format: string) {
+  return !section.formats || section.formats.includes(format);
 }
+
+/** A etapa está ativa para o formato, considerando a configuração salva. */
+export function isSectionEnabled(
+  section: ChecklistSection,
+  format?: string | null,
+  rules?: FormatRuleMap,
+) {
+  const normalized = normalizeFormat(format);
+  if (!normalized) return !section.formats;
+  const override = rules?.[ruleKey(normalized, section.id)];
+  if (override !== undefined) return override;
+  return isSectionDefaultForFormat(section, normalized);
+}
+
+/** Retorna todas as seções visíveis para o formato escolhido. */
+export function visibleSections(
+  stage: ChecklistStage,
+  format?: string | null,
+  rules?: FormatRuleMap,
+) {
+  return stage.sections.filter((s) => isSectionEnabled(s, format, rules));
+}
+
+/** Todas as seções do checklist, achatadas com o título da etapa. */
+export const ALL_SECTIONS = CHECKLIST_STAGES.flatMap((stage) =>
+  stage.sections.map((section) => ({ stage, section })),
+);
+
