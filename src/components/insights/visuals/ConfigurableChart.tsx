@@ -33,6 +33,7 @@ import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
+import { extendPalette } from "@/lib/insights/paletteColors";
 import { useTvMode } from "../TvModeContext";
 
 

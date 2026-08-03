@@ -3,6 +3,7 @@ import { AppearanceConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIP
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { useTvMode } from "../TvModeContext";
 import { useChartSize } from "./useChartSize";
+import { extendPalette, readableTextOn } from "@/lib/insights/paletteColors";
 
 interface AggregatedDataPoint {
   name: string;
@@ -25,7 +26,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   ref
 ) {
   const config = appearance || DEFAULT_APPEARANCE;
-  const colors = COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional;
+  const colors = extendPalette(COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional, 20);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'] * tv.scale;
   const { ref: sizeRef, height } = useChartSize();
@@ -69,6 +70,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
           : null;
         const bgColor = (!config.paletteLocked && item.color) || colors[index % colors.length];
 
+        const barText = readableTextOn(bgColor);
         const overallPct = Math.round((cumValue / maxValue) * 100);
         const stagePct = conversionPct !== null ? conversionPct : 100;
 
@@ -82,10 +84,10 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                 className="rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
                 style={{ backgroundColor: bgColor, height: barHeight }}
               >
-                <span className="text-sm font-medium text-white truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-medium truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m), color: barText }}>
                   {item.name}
                 </span>
-                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                <span className="text-sm font-bold ml-2 shrink-0" style={{ fontSize: Math.round(13 * m), color: barText }}>
                   {formatValueCompact(cumValue, formatting.type)}
                 </span>
               </div>
