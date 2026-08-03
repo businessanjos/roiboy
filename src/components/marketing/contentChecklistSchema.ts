@@ -224,7 +224,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'carrossel_alta',
         title: 'Carrossel — assunto em alta',
-        formats: ['Carrossel - Assunto em alta'],
+        formats: ['Carrossel', 'Post'],
         items: [
           { id: 'cra_capa', label: 'Capa chamativa e bonita com pessoa ou marca famosa para o público' },
           { id: 'cra_gancho', label: 'Gancho forte' },
@@ -247,7 +247,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'carrossel_edu',
         title: 'Carrossel — educativo',
-        formats: ['Carrossel - Educativo'],
+        formats: ['Carrossel', 'Post'],
         items: [
           { id: 'cre_capa', label: 'Capa com gancho contraintuitivo ou forte' },
           { id: 'cre_estrategico', label: 'Nível estratégico' },
@@ -265,7 +265,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'revista',
         title: 'Revista',
-        formats: ['Revista'],
+        formats: ['Revista', 'Post'],
         items: [
           { id: 'rev_fomo', label: 'Gera FOMO' },
           { id: 'rev_identidade', label: 'Imagem dentro da identidade visual da Eternum' },
@@ -277,7 +277,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'outdoor',
         title: 'Outdoor — prova social',
-        formats: ['Outdoor - Prova social'],
+        formats: ['Outdoor', 'Post'],
         items: [
           { id: 'out_fomo', label: 'Gera FOMO' },
           { id: 'out_legenda', label: 'Legenda valoriza o EC e a pessoa' },
