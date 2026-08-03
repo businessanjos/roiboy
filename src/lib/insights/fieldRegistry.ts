@@ -106,13 +106,36 @@ export async function fetchFieldCatalog(
     return native;
   }
 
+  const rows = (data || []) as CustomFieldRow[];
+
+  // Campos duplicados (mesmo nome existindo em versões de deal e de lead)
+  // compartilham as opções: qualquer opção nova cadastrada em "Campos
+  // personalizados" aparece nos filtros das duas fontes.
+  const optionsByName = new Map<string, string[]>();
+  for (const row of rows) {
+    const key = (row.name || '').trim().toLowerCase();
+    const labels = Array.isArray(row.options)
+      ? (row.options as any[]).map((o) => o?.label).filter(Boolean)
+      : [];
+    const merged = optionsByName.get(key) ?? [];
+    for (const l of labels) if (!merged.includes(l)) merged.push(l);
+    optionsByName.set(key, merged);
+  }
+
+  const withMergedOptions = (row: CustomFieldRow, source: FilterFieldSource): CatalogField => {
+    const field = mapCustomField(row, source);
+    const merged = optionsByName.get((row.name || '').trim().toLowerCase());
+    if (merged?.length) field.options = merged;
+    return field;
+  };
+
   const custom: CatalogField[] = [];
-  for (const row of (data || []) as CustomFieldRow[]) {
+  for (const row of rows) {
     if (entities.includes('deal_custom') && row.show_in_deals) {
-      custom.push(mapCustomField(row, 'deal_custom'));
+      custom.push(withMergedOptions(row, 'deal_custom'));
     }
     if (entities.includes('lead_custom') && row.show_in_leads) {
-      custom.push(mapCustomField(row, 'lead_custom'));
+      custom.push(withMergedOptions(row, 'lead_custom'));
     }
   }
 
