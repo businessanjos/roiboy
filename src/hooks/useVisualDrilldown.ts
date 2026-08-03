@@ -178,6 +178,14 @@ async function fetchDealsRecords(
     filteredData = await filterByDealFields(filteredData, accountId, dealFilters) as any[];
   }
 
+  // Unified (Pipedrive-style) filters that the legacy engine can't express —
+  // the chart applies them, so the drilldown must apply them too.
+  const unifiedFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedFilters, 'deals') as any[];
+  }
+
+
   // Enrich with product if dimension is product/product_name OR if product column is in tableConfig
   const isProductDimension = config.dimension?.field === 'product' || config.dimension?.field === 'product_name';
   const hasProductColumn = config.tableConfig?.columns?.includes('product');
