@@ -248,6 +248,8 @@ export function useSocialMediaData() {
       collaborator: string;
       specialist_version?: string;
       composition?: string[];
+      /** Perfis adicionais que receberão uma cópia do post (collab). */
+      collab_profile_ids?: string[];
     }) => {
       if (!currentProfile) throw new Error('Nenhum perfil selecionado');
 
@@ -279,10 +281,8 @@ export function useSocialMediaData() {
       const engagementRate = Math.min(rawEngagementRate, 999.99);
       const viralityRate = Math.min(rawViralityRate, 999.99);
 
-      const { data: post, error } = await supabase
-        .from('instagram_posts')
-        .insert({
-          profile_id: currentProfile.id,
+      const buildRow = (profileId: string) => ({
+          profile_id: profileId,
           instagram_id: instagramId,
           permalink: data.permalink,
           post_type: data.post_type,
@@ -306,7 +306,11 @@ export function useSocialMediaData() {
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
-        })
+      });
+
+      const { data: post, error } = await supabase
+        .from('instagram_posts')
+        .insert(buildRow(currentProfile.id))
         .select()
         .single();
 
@@ -316,11 +320,37 @@ export function useSocialMediaData() {
         }
         throw error;
       }
-      return post;
+
+      // Replica o mesmo post nos perfis marcados como collab
+      const collabIds = (data.collab_profile_ids ?? []).filter((id) => id && id !== currentProfile.id);
+      let replicated = 0;
+      let skipped = 0;
+      for (const profileId of collabIds) {
+        const { error: collabError } = await supabase
+          .from('instagram_posts')
+          .insert(buildRow(profileId));
+        if (collabError) {
+          if ((collabError as any).code === '23505') skipped += 1;
+          else throw collabError;
+        } else {
+          replicated += 1;
+        }
+      }
+
+      return { post, replicated, skipped };
     },
-    onSuccess: () => {
+    onSuccess: (result: any) => {
       queryClient.invalidateQueries({ queryKey: ['instagram-posts'] });
-      toast.success('Post adicionado com sucesso!');
+      const replicated = result?.replicated ?? 0;
+      const skipped = result?.skipped ?? 0;
+      toast.success(
+        replicated > 0
+          ? `Post adicionado e replicado em ${replicated} perfil(is) de collab`
+          : 'Post adicionado com sucesso!',
+      );
+      if (skipped > 0) {
+        toast.warning(`${skipped} perfil(is) de collab já tinham esse post e foram ignorados.`);
+      }
     },
     onError: (error: any) => {
       if (error?.message === 'DUPLICATE_POST') {
