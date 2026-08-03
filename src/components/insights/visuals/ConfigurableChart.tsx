@@ -12,9 +12,11 @@ import {
   Tooltip,
   CartesianGrid,
   LabelList,
+  Legend,
 } from "recharts";
 import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS, DATA_SOURCE_FIELDS, AGGREGATION_OPTIONS } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
+import { ChartLegendContent } from "./ChartLegendContent";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
 import { SalesLeadsScorecard } from "./SalesLeadsScorecard";
