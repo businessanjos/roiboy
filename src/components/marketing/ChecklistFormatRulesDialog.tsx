@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useMemo, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Badge } from '@/components/ui/badge';
@@ -88,9 +88,9 @@ export function ChecklistFormatRulesDialog({ rules }: Props) {
               {ALL_SECTIONS.map(({ stage, section }, idx, arr) => {
                 const isNewStage = idx === 0 || arr[idx - 1].stage.id !== stage.id;
                 return (
-                  <>
+                  <Fragment key={section.id}>
                     {isNewStage && (
-                      <tr key={`${stage.id}-head`}>
+                      <tr>
                         <td
                           colSpan={CHECKLIST_FORMATS.length + 1}
                           className="border-b bg-muted/50 px-2 py-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground"
@@ -99,7 +99,7 @@ export function ChecklistFormatRulesDialog({ rules }: Props) {
                         </td>
                       </tr>
                     )}
-                    <tr key={section.id} className="hover:bg-muted/30">
+                    <tr className="hover:bg-muted/30">
                       <td className="border-b p-2 align-middle">
                         <span className="mr-2">{section.title}</span>
                         {section.items.some((i) => i.negative) && (
@@ -124,7 +124,7 @@ export function ChecklistFormatRulesDialog({ rules }: Props) {
                         );
                       })}
                     </tr>
-                  </>
+                  </Fragment>
                 );
               })}
             </tbody>
