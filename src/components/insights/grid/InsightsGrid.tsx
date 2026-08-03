@@ -88,74 +88,55 @@ interface VisualRow {
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   if (visuals.length === 0) return [];
 
-  // Extract all scorecards and gauges first, regardless of position
-  const allScorecards = visuals.filter(isScorecard);
-  const allGauges = visuals.filter(isGauge);
-  const regularVisuals = visuals.filter(v => !isScorecard(v) && !isGauge(v));
+  // Respeita a organização salva: as linhas são derivadas da posição real (y/x),
+  // sem "puxar" scorecards ou gauges para o topo.
+  const sorted = [...visuals].sort((a, b) => {
+    const ay = a.layout?.y ?? 0;
+    const by = b.layout?.y ?? 0;
+    if (ay !== by) return ay - by;
+    return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+  });
 
   const rows: VisualRow[] = [];
+  const isFullWidth = (v: InsightsVisual) => v.layout?.col_span === "1/1";
 
-  // Scorecards row at top
-  if (allScorecards.length > 0) {
+  const pushRow = (items: InsightsVisual[]) => {
+    if (items.length === 0) return;
     rows.push({
-      visuals: allScorecards.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
-      isAllScorecards: true,
-      isAllCompact: true,
+      visuals: items,
+      isAllScorecards: items.every(isScorecard),
+      isAllCompact: items.every(isCompactCard),
     });
-  }
+  };
 
-  // Gauges row right below scorecards
-  if (allGauges.length > 0) {
-    rows.push({
-      visuals: allGauges.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
-      isAllScorecards: false,
-      isAllCompact: true,
-    });
-  }
+  let currentRow: InsightsVisual[] = [sorted[0]];
+  let currentY = sorted[0].layout?.y ?? 0;
+  let currentBottom = currentY + (sorted[0].layout?.h ?? 0);
 
-  // Group remaining visuals by y-proximity
-  if (regularVisuals.length > 0) {
-    const sorted = [...regularVisuals].sort((a, b) => {
-      const ay = a.layout?.y ?? 0;
-      const by = b.layout?.y ?? 0;
-      if (ay !== by) return ay - by;
-      return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
-    });
+  for (let i = 1; i < sorted.length; i++) {
+    const v = sorted[i];
+    const vy = v.layout?.y ?? 0;
+    // Mesma linha quando o card começa antes do fim vertical da linha atual
+    // (tolerância pequena para diferenças de altura entre cards).
+    const overlapsRow = vy < currentBottom - 1 || Math.abs(vy - currentY) <= 2;
+    const breaksRow = isFullWidth(v) || currentRow.some(isFullWidth) || !overlapsRow;
 
-    const isFullWidth = (v: InsightsVisual) => v.layout?.col_span === "1/1";
-
-    let currentRow: InsightsVisual[] = [sorted[0]];
-    let currentY = sorted[0].layout?.y ?? 0;
-
-    for (let i = 1; i < sorted.length; i++) {
-      const vy = sorted[i].layout?.y ?? 0;
-      const breaksRow =
-        isFullWidth(sorted[i]) ||
-        currentRow.some(isFullWidth) ||
-        Math.abs(vy - currentY) > 5;
-      if (!breaksRow) {
-        currentRow.push(sorted[i]);
-      } else {
-        rows.push({
-          visuals: currentRow,
-          isAllScorecards: false,
-          isAllCompact: false,
-        });
-        currentRow = [sorted[i]];
-        currentY = vy;
-      }
+    if (!breaksRow) {
+      currentRow.push(v);
+      currentBottom = Math.max(currentBottom, vy + (v.layout?.h ?? 0));
+    } else {
+      pushRow(currentRow);
+      currentRow = [v];
+      currentY = vy;
+      currentBottom = vy + (v.layout?.h ?? 0);
     }
-
-
-    rows.push({
-      visuals: currentRow,
-      isAllScorecards: false,
-      isAllCompact: false,
-    });
   }
+
+  pushRow(currentRow);
 
   return rows;
 }
+
 
 // ── Responsive static grid ──
 
