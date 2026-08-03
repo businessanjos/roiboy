@@ -378,6 +378,7 @@ Deno.serve(async (req) => {
         phone_e164,
         status,
         created_at,
+        recent_activity_at,
         company_name,
         tags,
         avatar_url,
