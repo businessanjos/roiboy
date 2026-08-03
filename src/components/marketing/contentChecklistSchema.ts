@@ -10,7 +10,11 @@ export interface ChecklistSection {
   title: string;
   note?: string;
   items: ChecklistItem[];
-  /** Só aparece quando o formato selecionado estiver na lista. */
+  /**
+   * Formatos em que a etapa vem ativada por padrão.
+   * Sem a lista, a etapa vale para todos os formatos por padrão.
+   * A configuração salva por conta sobrescreve este padrão.
+   */
   formats?: string[];
 }
 
@@ -22,12 +26,29 @@ export interface ChecklistStage {
 }
 
 export const CHECKLIST_FORMATS = [
-  'Carrossel - Assunto em alta',
-  'Carrossel - Educativo',
+  'Reels',
+  'Stories',
+  'Carrossel',
+  'Post',
   'Revista',
-  'Outdoor - Prova social',
+  'Outdoor',
   'Outro',
 ] as const;
+
+export type ChecklistFormat = (typeof CHECKLIST_FORMATS)[number];
+
+/** Formatos antigos salvos em checklists já criados. */
+export const LEGACY_FORMAT_ALIASES: Record<string, string> = {
+  'Carrossel - Assunto em alta': 'Carrossel',
+  'Carrossel - Educativo': 'Carrossel',
+  'Outdoor - Prova social': 'Outdoor',
+};
+
+export function normalizeFormat(format?: string | null): string | null {
+  if (!format) return null;
+  return LEGACY_FORMAT_ALIASES[format] ?? format;
+}
+
 
 export const CHECKLIST_STAGES: ChecklistStage[] = [
   {
@@ -203,7 +224,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'carrossel_alta',
         title: 'Carrossel — assunto em alta',
-        formats: ['Carrossel - Assunto em alta'],
+        formats: ['Carrossel', 'Post'],
         items: [
           { id: 'cra_capa', label: 'Capa chamativa e bonita com pessoa ou marca famosa para o público' },
           { id: 'cra_gancho', label: 'Gancho forte' },
@@ -226,7 +247,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'carrossel_edu',
         title: 'Carrossel — educativo',
-        formats: ['Carrossel - Educativo'],
+        formats: ['Carrossel', 'Post'],
         items: [
           { id: 'cre_capa', label: 'Capa com gancho contraintuitivo ou forte' },
           { id: 'cre_estrategico', label: 'Nível estratégico' },
@@ -244,7 +265,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'revista',
         title: 'Revista',
-        formats: ['Revista'],
+        formats: ['Revista', 'Post'],
         items: [
           { id: 'rev_fomo', label: 'Gera FOMO' },
           { id: 'rev_identidade', label: 'Imagem dentro da identidade visual da Eternum' },
@@ -256,7 +277,7 @@ export const CHECKLIST_STAGES: ChecklistStage[] = [
       {
         id: 'outdoor',
         title: 'Outdoor — prova social',
-        formats: ['Outdoor - Prova social'],
+        formats: ['Outdoor', 'Post'],
         items: [
           { id: 'out_fomo', label: 'Gera FOMO' },
           { id: 'out_legenda', label: 'Legenda valoriza o EC e a pessoa' },
@@ -354,7 +375,40 @@ export const DECISIONS = [
   { value: 'rejected', label: 'Reprovado' },
 ] as const;
 
-/** Retorna todas as seções visíveis para o formato escolhido. */
-export function visibleSections(stage: ChecklistStage, format?: string | null) {
-  return stage.sections.filter((s) => !s.formats || (format ? s.formats.includes(format) : false));
+/** Mapa de override: `${formato}::${sectionId}` -> ativo/inativo. */
+export type FormatRuleMap = Record<string, boolean>;
+
+export const ruleKey = (format: string, sectionId: string) => `${format}::${sectionId}`;
+
+/** Padrão do schema (sem considerar overrides). */
+export function isSectionDefaultForFormat(section: ChecklistSection, format: string) {
+  return !section.formats || section.formats.includes(format);
 }
+
+/** A etapa está ativa para o formato, considerando a configuração salva. */
+export function isSectionEnabled(
+  section: ChecklistSection,
+  format?: string | null,
+  rules?: FormatRuleMap,
+) {
+  const normalized = normalizeFormat(format);
+  if (!normalized) return !section.formats;
+  const override = rules?.[ruleKey(normalized, section.id)];
+  if (override !== undefined) return override;
+  return isSectionDefaultForFormat(section, normalized);
+}
+
+/** Retorna todas as seções visíveis para o formato escolhido. */
+export function visibleSections(
+  stage: ChecklistStage,
+  format?: string | null,
+  rules?: FormatRuleMap,
+) {
+  return stage.sections.filter((s) => isSectionEnabled(s, format, rules));
+}
+
+/** Todas as seções do checklist, achatadas com o título da etapa. */
+export const ALL_SECTIONS = CHECKLIST_STAGES.flatMap((stage) =>
+  stage.sections.map((section) => ({ stage, section })),
+);
+

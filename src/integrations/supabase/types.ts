@@ -4911,6 +4911,36 @@ export type Database = {
           },
         ]
       }
+      content_checklist_format_rules: {
+        Row: {
+          account_id: string
+          created_at: string
+          enabled: boolean
+          format: string
+          id: string
+          section_id: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          enabled?: boolean
+          format: string
+          id?: string
+          section_id: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          enabled?: boolean
+          format?: string
+          id?: string
+          section_id?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_library_items: {
         Row: {
           account_id: string
