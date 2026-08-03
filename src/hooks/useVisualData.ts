@@ -88,8 +88,10 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
       const leadFilters = mergeGlobalLeadFilter(getLeadFilters(config), globalFilters.globalFieldFilter);
       const dealFilters = mergeGlobalDealFilter(getDealFilters(config), globalFilters.globalFieldFilter);
 
-      // Infer status filter for legacy scorecards without explicit statusFilter
-      const effectiveStatusFilter = statusFilter ?? inferStatusFilter(measure, dimension);
+      // Infer status filter ONLY for legacy scorecards (visuais criados pelo Studio
+      // marcam explicitStatus, então "sem filtro" significa todos os negócios).
+      const explicitStatus = (config as any).explicitStatus === true;
+      const effectiveStatusFilter = statusFilter ?? (explicitStatus ? undefined : inferStatusFilter(measure, dimension));
 
       let result: AggregatedDataPoint[];
 
