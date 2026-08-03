@@ -48,7 +48,10 @@ Deno.serve(async (req) => {
     const dryRun = body?.dryRun === true;
     const to = normalizePhone(body?.to || DEFAULT_TO);
 
-    const { startUtc, endUtc, monthStartUtc, label } = brDayRange();
+    const offsetDays = Number(body?.offsetDays ?? 0);
+    const { startUtc, endUtc, monthStartUtc, label } = brDayRange(
+      new Date(Date.now() + offsetDays * 24 * 60 * 60_000),
+    );
     const startIso = startUtc.toISOString();
     const endIso = endUtc.toISOString();
     const monthIso = monthStartUtc.toISOString();
