@@ -128,7 +128,9 @@ function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
       visuals: items,
       isAllScorecards: items.every(isScorecard),
       isAllCompact: items.every(isCompactCard),
+      weight: getRowWeight(items),
     });
+
   };
 
   let currentRow: InsightsVisual[] = [sorted[0]];
