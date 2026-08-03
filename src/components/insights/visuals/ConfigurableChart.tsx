@@ -33,6 +33,7 @@ import { DailyPerformanceTable } from "./DailyPerformanceTable";
 import { formatValueCompact, formatValueWithScale } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
 import { useChartSize, approxTextWidth, truncateLabel } from "./useChartSize";
+import { extendPalette } from "@/lib/insights/paletteColors";
 import { useTvMode } from "../TvModeContext";
 
 
@@ -58,7 +59,8 @@ interface ConfigurableChartProps {
 }
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
-  return COLOR_PALETTES[palette] || COLOR_PALETTES.professional;
+  // Extensão harmônica para nunca repetir a mesma cor em séries longas.
+  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.professional, 20);
 }
 
 /** Header label for the grouping field ("Ver por") of the current visual. */

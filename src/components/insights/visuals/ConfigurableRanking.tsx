@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { FormatType, AppearanceConfig, FONT_SCALE_MULTIPLIERS, COLOR_PALETTES } from "../visual-builder/types";
+import { extendPalette, readableTextOn } from "@/lib/insights/paletteColors";
 import { useTvMode } from "../TvModeContext";
 
 interface AggregatedDataPoint {
@@ -40,7 +41,7 @@ const PODIUM_LAYOUT: Record<number, { height: number; order: number }> = {
 /** Ranking colours follow the dashboard palette so the visual never clashes. */
 function paletteColors(appearance?: AppearanceConfig): string[] {
   const palette = COLOR_PALETTES[appearance?.colorPalette || 'professional'];
-  return palette?.length ? palette : COLOR_PALETTES.professional;
+  return extendPalette(palette?.length ? palette : COLOR_PALETTES.professional, 20);
 }
 
 
@@ -136,7 +137,7 @@ function Podium({
                 backgroundImage: `linear-gradient(to top, ${color}, ${color}b3)`,
               }}
             >
-              <span className="font-bold text-lg drop-shadow-sm text-white">
+              <span className="font-bold text-lg drop-shadow-sm" style={{ color: readableTextOn(color) }}>
                 {originalIndex + 1}º
               </span>
             </div>
