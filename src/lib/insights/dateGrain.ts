@@ -5,13 +5,28 @@ const DAY_MS = 86400000;
 const ORDER: DateGrouping[] = ['day', 'week', 'month', 'year'];
 
 /**
+ * No celular o eixo X não comporta 30 rótulos diários: agrupamos por semana
+ * a partir de ~10 dias de janela para o gráfico mensal ficar legível.
+ */
+export function isNarrowViewport(): boolean {
+  if (typeof window === 'undefined') return false;
+  return window.innerWidth < 768;
+}
+
+/**
  * Granularidade mínima legível para uma janela de tempo.
  * - até ~45 dias  -> dia
  * - até ~120 dias -> semana
  * - até ~3 anos   -> mês
  * - acima disso   -> ano
  */
-export function minimumGrainForSpan(days: number): DateGrouping {
+export function minimumGrainForSpan(days: number, narrow = isNarrowViewport()): DateGrouping {
+  if (narrow) {
+    if (days <= 10) return 'day';
+    if (days <= 120) return 'week';
+    if (days <= 1100) return 'month';
+    return 'year';
+  }
   if (days <= 45) return 'day';
   if (days <= 120) return 'week';
   if (days <= 1100) return 'month';
