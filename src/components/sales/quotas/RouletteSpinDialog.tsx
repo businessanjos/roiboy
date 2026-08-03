@@ -98,14 +98,36 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const usingPool = !!spiff.roulette_pool_id;
 
   useEffect(() => {
-    if (open) {
-      setPhase("idle");
-      setFinalOption(null);
-      setTvMode(false);
-      setApprover(null);
-      setRequestId(null);
-    }
-  }, [open]);
+    if (!open) return;
+    setPhase("idle");
+    setFinalOption(null);
+    setTvMode(false);
+    setApprover(null);
+    setRequestId(null);
+
+    // Retoma solicitação pendente já enviada (o pedido continua na fila
+    // do gestor mesmo se o vendedor fechar a tela).
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("spiff_spin_requests" as any)
+        .select("id")
+        .eq("spiff_id", spiff.id)
+        .eq("user_id", user.uid)
+        .eq("status", "pending")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (cancelled || !data) return;
+      setRequestId((data as any).id);
+      setPhase("awaiting_approval");
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open, spiff.id, user.uid]);
+
 
   const pickWeighted = (options: { weight?: number }[]) => {
     const weights = options.map((o: any) => Number(o.weight ?? 1));
