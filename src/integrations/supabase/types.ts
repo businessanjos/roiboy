@@ -4836,6 +4836,57 @@ export type Database = {
           },
         ]
       }
+      content_approval_checklists: {
+        Row: {
+          account_id: string
+          answers: Json
+          created_at: string
+          created_by: string | null
+          decision: string
+          format: string | null
+          id: string
+          ideia_central: string | null
+          objetivo: string | null
+          pilar: string | null
+          post_date: string | null
+          post_title: string
+          responsible: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          answers?: Json
+          created_at?: string
+          created_by?: string | null
+          decision?: string
+          format?: string | null
+          id?: string
+          ideia_central?: string | null
+          objetivo?: string | null
+          pilar?: string | null
+          post_date?: string | null
+          post_title?: string
+          responsible?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          answers?: Json
+          created_at?: string
+          created_by?: string | null
+          decision?: string
+          format?: string | null
+          id?: string
+          ideia_central?: string | null
+          objetivo?: string | null
+          pilar?: string | null
+          post_date?: string | null
+          post_title?: string
+          responsible?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       content_library_items: {
         Row: {
           account_id: string
