@@ -803,7 +803,7 @@ async function loadOptionMap(
   return map;
 }
 
-async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
+export async function enrichDealsWithMql(accountId: string, deals: any[]): Promise<any[]> {
   if (deals.length === 0) return deals;
 
   const dealIds = deals.map(d => d.id);
