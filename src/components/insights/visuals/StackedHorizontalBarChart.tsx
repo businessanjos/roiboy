@@ -201,7 +201,10 @@ export function StackedHorizontalBarChart({
               stackId="stack"
               fill={getSeriesColor(key, index)}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
+              onClick={(payload: any) => onDrilldown?.(payload?.name ?? payload?.payload?.name)}
+              style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
             >
+
               {showTotals && key === lastKey && (
                 <LabelList
                   dataKey={key}
