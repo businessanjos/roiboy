@@ -15,29 +15,52 @@ import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
  * existing deal/lead field-value lookups.
  */
 
-// Deal native fields that are actually backed by custom fields
-const DEAL_ENRICHED_FIELDS: Record<string, string> = {
+// Native fields that are actually backed by custom fields
+const ENRICHED_FIELDS: Record<string, string> = {
   canal: 'Canal de Venda',
   product: 'Item da Venda',
   product_name: 'Item da Venda',
   mql: 'MQL',
 };
 
-const enrichedFieldIdCache = new Map<string, string | null>();
+type EnrichedRef = { id: string; source: 'deal_custom' | 'lead_custom' } | null;
 
-async function resolveEnrichedFieldId(accountId: string, fieldName: string): Promise<string | null> {
-  const cacheKey = `${accountId}:${fieldName}`;
+const enrichedFieldIdCache = new Map<string, EnrichedRef>();
+
+/**
+ * Resolves a pseudo-native field (MQL, Canal, Produto) to the real custom field.
+ * The same field name can exist twice (one for deals, one for leads), so we
+ * prefer the one that matches the data source and fall back to the other —
+ * otherwise the filter targets the wrong field and drops every record.
+ */
+async function resolveEnrichedField(
+  accountId: string,
+  fieldName: string,
+  prefer: 'deals' | 'leads'
+): Promise<EnrichedRef> {
+  const cacheKey = `${accountId}:${fieldName}:${prefer}`;
   if (enrichedFieldIdCache.has(cacheKey)) return enrichedFieldIdCache.get(cacheKey)!;
   const { data } = await supabase
     .from('custom_fields')
-    .select('id')
+    .select('id, show_in_deals, show_in_leads')
     .eq('account_id', accountId)
     .eq('name', fieldName)
-    .eq('is_active', true)
-    .limit(1);
-  const id = data?.[0]?.id ?? null;
-  enrichedFieldIdCache.set(cacheKey, id);
-  return id;
+    .eq('is_active', true);
+
+  const rows = data || [];
+  const dealRow = rows.find((r: any) => r.show_in_deals);
+  const leadRow = rows.find((r: any) => r.show_in_leads);
+  const picked =
+    prefer === 'deals' ? dealRow || leadRow : leadRow || dealRow;
+  const ref: EnrichedRef = picked
+    ? {
+        id: picked.id,
+        source: (picked as any).show_in_deals && (prefer === 'deals' || !leadRow) ? 'deal_custom' : 'lead_custom',
+      }
+    : null;
+  enrichedFieldIdCache.set(cacheKey, ref);
+  return ref;
+
 }
 
 function readNativeValue(record: any, field: string): string | null {
