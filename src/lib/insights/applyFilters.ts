@@ -15,29 +15,52 @@ import { filterByLeadField } from "@/hooks/useLeadFieldFilter";
  * existing deal/lead field-value lookups.
  */
 
-// Deal native fields that are actually backed by custom fields
-const DEAL_ENRICHED_FIELDS: Record<string, string> = {
+// Native fields that are actually backed by custom fields
+const ENRICHED_FIELDS: Record<string, string> = {
   canal: 'Canal de Venda',
   product: 'Item da Venda',
   product_name: 'Item da Venda',
   mql: 'MQL',
 };
 
-const enrichedFieldIdCache = new Map<string, string | null>();
+type EnrichedRef = { id: string; source: 'deal_custom' | 'lead_custom' } | null;
 
-async function resolveEnrichedFieldId(accountId: string, fieldName: string): Promise<string | null> {
-  const cacheKey = `${accountId}:${fieldName}`;
+const enrichedFieldIdCache = new Map<string, EnrichedRef>();
+
+/**
+ * Resolves a pseudo-native field (MQL, Canal, Produto) to the real custom field.
+ * The same field name can exist twice (one for deals, one for leads), so we
+ * prefer the one that matches the data source and fall back to the other —
+ * otherwise the filter targets the wrong field and drops every record.
+ */
+async function resolveEnrichedField(
+  accountId: string,
+  fieldName: string,
+  prefer: 'deals' | 'leads'
+): Promise<EnrichedRef> {
+  const cacheKey = `${accountId}:${fieldName}:${prefer}`;
   if (enrichedFieldIdCache.has(cacheKey)) return enrichedFieldIdCache.get(cacheKey)!;
   const { data } = await supabase
     .from('custom_fields')
-    .select('id')
+    .select('id, show_in_deals, show_in_leads')
     .eq('account_id', accountId)
     .eq('name', fieldName)
-    .eq('is_active', true)
-    .limit(1);
-  const id = data?.[0]?.id ?? null;
-  enrichedFieldIdCache.set(cacheKey, id);
-  return id;
+    .eq('is_active', true);
+
+  const rows = data || [];
+  const dealRow = rows.find((r: any) => r.show_in_deals);
+  const leadRow = rows.find((r: any) => r.show_in_leads);
+  const picked =
+    prefer === 'deals' ? dealRow || leadRow : leadRow || dealRow;
+  const ref: EnrichedRef = picked
+    ? {
+        id: picked.id,
+        source: (picked as any).show_in_deals && (prefer === 'deals' || !leadRow) ? 'deal_custom' : 'lead_custom',
+      }
+    : null;
+  enrichedFieldIdCache.set(cacheKey, ref);
+  return ref;
+
 }
 
 function readNativeValue(record: any, field: string): string | null {
@@ -130,12 +153,14 @@ async function applyNativeFilter<T extends { id: string }>(
   dataSource: DataSource,
   filter: VisualFilter
 ): Promise<T[]> {
-  // Deal fields backed by custom fields are delegated to the custom path
-  if (dataSource === 'deals' && DEAL_ENRICHED_FIELDS[filter.field]) {
-    const fieldId = await resolveEnrichedFieldId(accountId, DEAL_ENRICHED_FIELDS[filter.field]);
-    if (!fieldId) return records;
-    return applyCustomFilter(records, accountId, { ...filter, source: 'deal_custom', field: fieldId }, 'deals');
+  // Fields backed by custom fields (MQL, Canal, Produto) are delegated to the custom path
+  if (ENRICHED_FIELDS[filter.field]) {
+    const mode: 'deals' | 'leads' = dataSource === 'leads' ? 'leads' : 'deals';
+    const ref = await resolveEnrichedField(accountId, ENRICHED_FIELDS[filter.field], mode);
+    if (!ref) return records;
+    return applyCustomFilter(records, accountId, { ...filter, source: ref.source, field: ref.id }, mode);
   }
+
 
   // Legacy/mis-saved filters: a custom field UUID stored with source "native".
   // Without this guard the record lookup returns null and everything is filtered out.
@@ -173,11 +198,18 @@ async function applyCustomFilter<T extends { id: string; lead_id?: string | null
 
   if (positiveValues.length === 0) return records;
 
+  // The saved labels may come from a twin field (e.g. the deal "MQL" vs the lead
+  // "MQL" have different wording). Reconcile them against the target field's
+  // real options so the lookup does not silently match nothing.
+  const selectedValues = await reconcileOptionLabels(filter.field, positiveValues);
+  if (selectedValues.length === 0) return records;
+
   const legacyFilter = {
     fieldId: filter.field,
     fieldName: filter.label,
-    selectedValues: positiveValues,
+    selectedValues,
   };
+
 
   const matched = isDealField
     ? await filterByDealField(records as any, accountId, legacyFilter as any)
@@ -197,6 +229,57 @@ async function allOptionLabels(fieldId: string): Promise<string[]> {
   const options = (data?.options as any[]) || [];
   return options.map((o) => o?.label).filter(Boolean);
 }
+
+/** "SIM - Acima de 30k" -> "sim", "NÃO - Lead não Qualificado" -> "nao" */
+function labelKey(label: string): string {
+  return label
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .split(/[-/(]/)[0]
+    .replace(/[^a-z0-9]/g, '')
+    .trim();
+}
+
+async function reconcileOptionLabels(fieldId: string, values: string[]): Promise<string[]> {
+  const { data } = await supabase
+    .from('custom_fields')
+    .select('options')
+    .eq('id', fieldId)
+    .maybeSingle();
+  const options = ((data?.options as any[]) || []).filter((o) => o?.label);
+  if (options.length === 0) return values;
+
+  const labels = options.map((o) => String(o.label));
+  const labelSet = new Set(labels);
+  const byKey = new Map<string, string>();
+  for (const l of labels) {
+    const k = labelKey(l);
+    if (k && !byKey.has(k)) byKey.set(k, l);
+  }
+  const byValue = new Map<string, string>();
+  for (const o of options) byValue.set(String(o.value), String(o.label));
+
+  const out = new Set<string>();
+  let exact = false;
+  for (const v of values) {
+    if (labelSet.has(v)) { out.add(v); exact = true; continue; }
+    const byVal = byValue.get(v);
+    if (byVal) { out.add(byVal); exact = true; continue; }
+  }
+  // Only fall back to fuzzy prefix matching for small option sets (yes/no style)
+  // and when nothing matched exactly, to avoid mismapping product-like lists.
+  if (!exact && options.length <= 5) {
+    for (const v of values) {
+      const alt = byKey.get(labelKey(v));
+      if (alt) out.add(alt);
+    }
+  }
+  if (out.size === 0) return values;
+  return Array.from(out);
+
+}
+
 
 export async function applyVisualFilters<T extends { id: string; lead_id?: string | null }>(
   records: T[],
