@@ -66,6 +66,9 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
   const tv = useTvMode();
   const config = visual.config as VisualConfig | null;
   const chartType = (visual.chart_type || 'bar') as ChartType;
+  // Porcentagem como participação no total (padrão) x valor já percentual
+  const isPercentShare =
+    (config?.formatting?.type === 'percentage') && (config?.formatting?.percentMode ?? 'share') === 'share';
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -158,6 +161,19 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     };
   }, [stackedResult, config?.hiddenCategories]);
 
+  // Formato "%" com modo participação nos empilhados: cada barra soma 100%
+  const percentStackedData = useMemo(() => {
+    if (!processedStackedData || !isPercentShare) return processedStackedData;
+    const keys = processedStackedData.seriesKeys;
+    const data = processedStackedData.data.map((row: any) => {
+      const total = keys.reduce((acc, k) => acc + (Number(row[k]) || 0), 0);
+      const next: any = { name: row.name };
+      for (const k of keys) next[k] = total ? ((Number(row[k]) || 0) / total) * 100 : 0;
+      return next;
+    });
+    return { data, seriesKeys: keys };
+  }, [processedStackedData, isPercentShare]);
+
   // Apply custom formula if present
   const processedData = useMemo(() => {
     if (!data) return [];
@@ -172,16 +188,23 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     if (config?.hiddenCategories?.length) {
       result = result.filter((item) => !config.hiddenCategories!.includes(item.name));
     }
+    // Formato "%" com modo participação: cada item vira sua fatia do total exibido
+    if (isPercentShare) {
+      const total = result.reduce((acc, item) => acc + (Number(item.value) || 0), 0);
+      if (total) {
+        result = result.map((item) => ({ ...item, value: ((Number(item.value) || 0) / total) * 100 }));
+      }
+    }
     return result;
-  }, [data, config?.customFormula, config?.hiddenCategories]);
+  }, [data, config?.customFormula, config?.hiddenCategories, isPercentShare]);
 
   // Resumo do topo: soma e média das barras/pontos exibidos, para "bater o olho".
   // Percentual não soma (a soma de porcentagens não significa nada), então mostra só a média.
   const summary = useMemo(() => {
     if (!SUMMARIZABLE_TYPES.has(chartType)) return null;
     const values: number[] = isStacked
-      ? (processedStackedData?.data || []).map((row: any) =>
-          (processedStackedData?.seriesKeys || []).reduce((acc, k) => acc + (Number(row[k]) || 0), 0),
+      ? (percentStackedData?.data || []).map((row: any) =>
+          (percentStackedData?.seriesKeys || []).reduce((acc, k) => acc + (Number(row[k]) || 0), 0),
         )
       : (processedData || []).map((d: any) => Number(d.value) || 0);
     if (!values.length) return null;
@@ -194,7 +217,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
       average: formatValue(total / values.length, formatType, Math.max(decimals, formatType === 'decimal' ? 1 : decimals)),
       count: values.length,
     };
-  }, [chartType, isStacked, processedStackedData, processedData, config?.formatting]);
+  }, [chartType, isStacked, percentStackedData, processedData, config?.formatting]);
 
 
 
@@ -459,8 +482,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
               formatting={config.formatting || { type: 'number' as FormatType, decimals: 0 }}
               appearance={config.appearance || DEFAULT_APPEARANCE}
               visualConfig={isBubbleMap ? { ...config, _mapData: mapData } as any : (isStacked && effectiveChartType === 'bar_stacked' && !config.chartOrientation ? { ...config, chartOrientation: chartType === 'bar' ? 'vertical' : 'horizontal' } : config)}
-              stackedData={processedStackedData?.data}
-              stackedSeriesKeys={processedStackedData?.seriesKeys}
+              stackedData={percentStackedData?.data}
+              stackedSeriesKeys={percentStackedData?.seriesKeys}
               onDrilldown={handleDrilldown}
             />
           </CardContent>
