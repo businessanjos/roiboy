@@ -94,7 +94,7 @@ Deno.serve(async (req) => {
 
     // Native (DB-orderable) sort mapping.
     const NATIVE_SORTS: Record<string, { col: string; asc: boolean }> = {
-      recent: { col: "created_at", asc: false },
+      recent: { col: "recent_activity_at", asc: false },
       alphabetical: { col: "full_name", asc: true },
       initial_asc: { col: "initial_revenue", asc: true },
       initial_desc: { col: "initial_revenue", asc: false },
@@ -378,6 +378,7 @@ Deno.serve(async (req) => {
         phone_e164,
         status,
         created_at,
+        recent_activity_at,
         company_name,
         tags,
         avatar_url,
