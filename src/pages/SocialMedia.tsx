@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Users, LayoutDashboard, Instagram, Music2, Youtube, CalendarDays, ClipboardEdit } from 'lucide-react';
+import { Users, LayoutDashboard, Instagram, Music2, Youtube, CalendarDays, ClipboardEdit, ListChecks } from 'lucide-react';
 import { SocialMediaTab } from '@/components/marketing/SocialMediaTab';
 import { SocialMediaDashboard } from '@/components/marketing/SocialMediaDashboard';
 import { TikTokTab } from '@/components/marketing/TikTokTab';
@@ -10,15 +10,17 @@ import { YouTubeTab } from '@/components/marketing/YouTubeTab';
 import { YouTubeDashboard } from '@/components/marketing/YouTubeDashboard';
 import { ContentCalendarView } from '@/components/marketing/ContentCalendarView';
 import { ManualMetricsTab } from '@/components/marketing/ManualMetricsTab';
+import { ContentChecklistTab } from '@/components/marketing/ContentChecklistTab';
+
 
 
 export default function SocialMedia() {
   const [searchParams, setSearchParams] = useSearchParams();
 
-  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual' | null;
+  const urlPlatform = searchParams.get('platform') as 'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual' | 'checklist' | null;
   const urlPostId = searchParams.get('postId');
 
-  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual'>(urlPlatform || 'instagram');
+  const [platform, setPlatform] = useState<'instagram' | 'tiktok' | 'youtube' | 'calendar' | 'manual' | 'checklist'>(urlPlatform || 'instagram');
   const [activeTab, setActiveTab] = useState('profiles');
   const [calendarMonth, setCalendarMonth] = useState(new Date());
 
@@ -41,6 +43,7 @@ export default function SocialMedia() {
     youtube: 'Gerencie e analise seus canais do YouTube',
     calendar: 'Visualize os posts publicados nas redes sociais',
     manual: 'Preencha manualmente os números semanais de cada perfil no Eternum RECORDES',
+    checklist: 'Checklist oficial de aprovação de conteúdo — rode antes de produzir qualquer post',
   };
 
   return (
@@ -71,6 +74,10 @@ export default function SocialMedia() {
           <TabsTrigger value="manual" className="gap-2">
             <ClipboardEdit className="h-4 w-4" />
             Eternum RECORDES
+          </TabsTrigger>
+          <TabsTrigger value="checklist" className="gap-2">
+            <ListChecks className="h-4 w-4" />
+            Checklist
           </TabsTrigger>
         </TabsList>
 
@@ -124,6 +131,11 @@ export default function SocialMedia() {
         {/* Manual weekly metrics */}
         <TabsContent value="manual" className="mt-0">
           <ManualMetricsTab />
+        </TabsContent>
+
+        {/* Content approval checklist */}
+        <TabsContent value="checklist" className="mt-0">
+          <ContentChecklistTab />
         </TabsContent>
       </Tabs>
     </div>
