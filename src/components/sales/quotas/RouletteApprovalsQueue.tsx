@@ -44,6 +44,11 @@ export function RouletteApprovalsQueue() {
   const { data: pending = [] } = useQuery({
     queryKey: ["spiff-spin-requests-pending", currentUser?.account_id],
     enabled: !!currentUser?.account_id && isManager,
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+    refetchOnReconnect: true,
+    refetchInterval: 20000,
     queryFn: async (): Promise<PendingRequest[]> => {
       const { data, error } = await supabase
         .from("spiff_spin_requests" as any)
