@@ -161,8 +161,10 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
           appearance={config}
           orientation={visualConfig?.chartOrientation || 'horizontal'}
           seriesColors={visualConfig?.seriesColors}
+          onDrilldown={onDrilldown}
         />
       );
+
     case 'line':
       return <LineChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'pie':

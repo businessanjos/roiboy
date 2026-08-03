@@ -27,7 +27,9 @@ interface StackedHorizontalBarChartProps {
   appearance: AppearanceConfig;
   orientation?: 'horizontal' | 'vertical';
   seriesColors?: Record<string, string>;
+  onDrilldown?: (groupName?: string) => void;
 }
+
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
   const extended = [
@@ -101,7 +103,9 @@ export function StackedHorizontalBarChart({
   appearance,
   orientation = 'horizontal',
   seriesColors,
+  onDrilldown,
 }: StackedHorizontalBarChartProps) {
+
   const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
@@ -197,7 +201,10 @@ export function StackedHorizontalBarChart({
               stackId="stack"
               fill={getSeriesColor(key, index)}
               radius={index === seriesKeys.length - 1 ? [4, 4, 0, 0] : undefined}
+              onClick={(payload: any) => onDrilldown?.(payload?.name ?? payload?.payload?.name)}
+              style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
             >
+
               {showTotals && key === lastKey && (
                 <LabelList
                   dataKey={key}
@@ -305,7 +312,10 @@ export function StackedHorizontalBarChart({
                 stackId="stack"
                 fill={getSeriesColor(key, index)}
                 radius={index === seriesKeys.length - 1 ? [0, 4, 4, 0] : undefined}
+                onClick={(payload: any) => onDrilldown?.(payload?.name ?? payload?.payload?.name)}
+                style={{ cursor: onDrilldown ? 'pointer' : 'default' }}
               >
+
                 {safeAppearance.showDataLabels && (
                   <LabelList
                     dataKey={key}
