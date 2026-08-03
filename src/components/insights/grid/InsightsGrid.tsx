@@ -88,74 +88,55 @@ interface VisualRow {
 function groupVisualsIntoRows(visuals: InsightsVisual[]): VisualRow[] {
   if (visuals.length === 0) return [];
 
-  // Extract all scorecards and gauges first, regardless of position
-  const allScorecards = visuals.filter(isScorecard);
-  const allGauges = visuals.filter(isGauge);
-  const regularVisuals = visuals.filter(v => !isScorecard(v) && !isGauge(v));
+  // Respeita a organização salva: as linhas são derivadas da posição real (y/x),
+  // sem "puxar" scorecards ou gauges para o topo.
+  const sorted = [...visuals].sort((a, b) => {
+    const ay = a.layout?.y ?? 0;
+    const by = b.layout?.y ?? 0;
+    if (ay !== by) return ay - by;
+    return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
+  });
 
   const rows: VisualRow[] = [];
+  const isFullWidth = (v: InsightsVisual) => v.layout?.col_span === "1/1";
 
-  // Scorecards row at top
-  if (allScorecards.length > 0) {
+  const pushRow = (items: InsightsVisual[]) => {
+    if (items.length === 0) return;
     rows.push({
-      visuals: allScorecards.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
-      isAllScorecards: true,
-      isAllCompact: true,
+      visuals: items,
+      isAllScorecards: items.every(isScorecard),
+      isAllCompact: items.every(isCompactCard),
     });
-  }
+  };
 
-  // Gauges row right below scorecards
-  if (allGauges.length > 0) {
-    rows.push({
-      visuals: allGauges.sort((a, b) => (a.layout?.x ?? 0) - (b.layout?.x ?? 0)),
-      isAllScorecards: false,
-      isAllCompact: true,
-    });
-  }
+  let currentRow: InsightsVisual[] = [sorted[0]];
+  let currentY = sorted[0].layout?.y ?? 0;
+  let currentBottom = currentY + (sorted[0].layout?.h ?? 0);
 
-  // Group remaining visuals by y-proximity
-  if (regularVisuals.length > 0) {
-    const sorted = [...regularVisuals].sort((a, b) => {
-      const ay = a.layout?.y ?? 0;
-      const by = b.layout?.y ?? 0;
-      if (ay !== by) return ay - by;
-      return (a.layout?.x ?? 0) - (b.layout?.x ?? 0);
-    });
+  for (let i = 1; i < sorted.length; i++) {
+    const v = sorted[i];
+    const vy = v.layout?.y ?? 0;
+    // Mesma linha quando o card começa antes do fim vertical da linha atual
+    // (tolerância pequena para diferenças de altura entre cards).
+    const overlapsRow = vy < currentBottom - 1 || Math.abs(vy - currentY) <= 2;
+    const breaksRow = isFullWidth(v) || currentRow.some(isFullWidth) || !overlapsRow;
 
-    const isFullWidth = (v: InsightsVisual) => v.layout?.col_span === "1/1";
-
-    let currentRow: InsightsVisual[] = [sorted[0]];
-    let currentY = sorted[0].layout?.y ?? 0;
-
-    for (let i = 1; i < sorted.length; i++) {
-      const vy = sorted[i].layout?.y ?? 0;
-      const breaksRow =
-        isFullWidth(sorted[i]) ||
-        currentRow.some(isFullWidth) ||
-        Math.abs(vy - currentY) > 5;
-      if (!breaksRow) {
-        currentRow.push(sorted[i]);
-      } else {
-        rows.push({
-          visuals: currentRow,
-          isAllScorecards: false,
-          isAllCompact: false,
-        });
-        currentRow = [sorted[i]];
-        currentY = vy;
-      }
+    if (!breaksRow) {
+      currentRow.push(v);
+      currentBottom = Math.max(currentBottom, vy + (v.layout?.h ?? 0));
+    } else {
+      pushRow(currentRow);
+      currentRow = [v];
+      currentY = vy;
+      currentBottom = vy + (v.layout?.h ?? 0);
     }
-
-
-    rows.push({
-      visuals: currentRow,
-      isAllScorecards: false,
-      isAllCompact: false,
-    });
   }
+
+  pushRow(currentRow);
 
   return rows;
 }
+
 
 // ── Responsive static grid ──
 
@@ -235,11 +216,22 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
     Math.min(visuals.length, Math.floor((containerWidth + GRID_GAP) / (fitMinWidth + GRID_GAP)) || 1)
   );
 
+  // Quando os cards têm largura salva (grid de 48 colunas) e não usam col_span,
+  // reproduzimos as proporções exatas da organização do usuário.
+  const rowSavedWidth = visuals.reduce((sum, v) => sum + (v.layout?.w || 0), 0);
+  const useSavedWidths =
+    visuals.length > 1 &&
+    visuals.every((v) => !v.layout?.col_span && (v.layout?.w || 0) > 0) &&
+    rowSavedWidth > 0;
+  const PROPORTIONAL_COLS = 48;
+
   return (
     <div
       className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
       style={{
-        gridTemplateColumns: `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
+        gridTemplateColumns: useSavedWidths
+          ? `repeat(${PROPORTIONAL_COLS}, minmax(0, 1fr))`
+          : `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight
           ? {
               // Compact rows (scorecards / gauges) take less vertical space than charts
@@ -249,14 +241,32 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           : {}),
       }}
     >
-      {visuals.map((visual) => {
+      {visuals.map((visual, idx) => {
         const minH = getMinHeight(visual);
         const colSpan = visual.layout?.col_span;
 
         let span = 1;
-        if (colSpan === "1/1") span = effectiveCols;
+        let maxSpan = effectiveCols;
+
+        if (useSavedWidths) {
+          maxSpan = PROPORTIONAL_COLS;
+          const raw = ((visual.layout!.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
+          span = Math.max(4, Math.round(raw));
+          // Garante que a última coluna feche exatamente a linha
+          if (idx === visuals.length - 1) {
+            const used = visuals
+              .slice(0, idx)
+              .reduce(
+                (sum, v) => sum + Math.max(4, Math.round(((v.layout?.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS)),
+                0
+              );
+            span = Math.max(4, PROPORTIONAL_COLS - used);
+          }
+        } else if (colSpan === "1/1") span = effectiveCols;
         else if (colSpan === "1/2") span = Math.max(1, Math.round(effectiveCols / 2));
         else if (colSpan === "1/3") span = Math.max(1, Math.round(effectiveCols / 3));
+
+
 
         return (
           <div
@@ -264,7 +274,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
             className={`overflow-hidden rounded-lg min-w-0 ${fitHeight ? "h-full min-h-0" : ""}`}
             style={{
               ...(fitHeight ? { minHeight: 0 } : { minHeight: minH }),
-              gridColumn: `span ${Math.min(span, effectiveCols)} / span ${Math.min(span, effectiveCols)}`,
+              gridColumn: `span ${Math.min(span, maxSpan)} / span ${Math.min(span, maxSpan)}`,
             }}
           >
             <ConfigurableVisualCard
