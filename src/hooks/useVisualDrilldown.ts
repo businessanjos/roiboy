@@ -459,6 +459,10 @@ async function fetchProductsRecords(
 
 // Rótulos de data variam entre os motores de gráfico (dd/MM, MMM/yy, "Sem 31", etc.)
 // e a granularidade pode ser adaptativa. Comparamos contra todos os formatos possíveis.
+function normalizeLabel(v: string): string {
+  return String(v).toLowerCase().replace(/\./g, '').trim();
+}
+
 function dateGroupCandidates(dateString: string): string[] {
   try {
     const date = typeof dateString === 'string' ? parseISO(dateString) : new Date(dateString);
@@ -471,12 +475,16 @@ function dateGroupCandidates(dateString: string): string[] {
       format(date, 'MMM', { locale: ptBR }),
       format(date, 'MMM/yy', { locale: ptBR }),
       format(date, 'MMMM yyyy', { locale: ptBR }),
+      // Rótulos em inglês (locale padrão usado pelos gráficos empilhados)
+      format(date, 'MMM'),
+      format(date, 'MMM/yy'),
+      format(date, 'MMMM yyyy'),
       format(date, 'yyyy-MM'),
       format(date, 'yyyy'),
       format(ws, "'Sem' w/yyyy", { locale: ptBR }),
       `Sem ${format(date, 'II')}`,
       format(ws, 'yyyy-MM-dd'),
-    ];
+    ].map(normalizeLabel);
   } catch {
     return [];
   }
@@ -486,10 +494,11 @@ function matchesGroup(item: any, dimension: VisualConfig['dimension'], config: V
   if (dimension?.type === 'date') {
     const dateValue = item[dimension.field];
     if (!dateValue) return groupName === 'Sem Data';
-    return dateGroupCandidates(dateValue).includes(groupName);
+    return dateGroupCandidates(dateValue).includes(normalizeLabel(groupName));
   }
   return getGroupKey(item, dimension, config) === groupName;
 }
+
 
 function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: VisualConfig): string {
   const field = dimension.field;
