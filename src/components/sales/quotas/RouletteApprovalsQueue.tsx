@@ -105,8 +105,21 @@ export function RouletteApprovalsQueue() {
           }
         }
       )
-      .subscribe();
+      .subscribe((status) => {
+        if (status === "SUBSCRIBED") {
+          queryClient.invalidateQueries({ queryKey: ["spiff-spin-requests-pending"] });
+        }
+      });
+
+    const onVisible = () => {
+      if (document.visibilityState === "visible") {
+        queryClient.invalidateQueries({ queryKey: ["spiff-spin-requests-pending"] });
+      }
+    };
+    document.addEventListener("visibilitychange", onVisible);
+
     return () => {
+      document.removeEventListener("visibilitychange", onVisible);
       supabase.removeChannel(channel);
     };
   }, [isManager, currentUser?.account_id, queryClient]);
