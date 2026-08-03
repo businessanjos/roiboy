@@ -216,11 +216,22 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
     Math.min(visuals.length, Math.floor((containerWidth + GRID_GAP) / (fitMinWidth + GRID_GAP)) || 1)
   );
 
+  // Quando os cards têm largura salva (grid de 48 colunas) e não usam col_span,
+  // reproduzimos as proporções exatas da organização do usuário.
+  const rowSavedWidth = visuals.reduce((sum, v) => sum + (v.layout?.w || 0), 0);
+  const useSavedWidths =
+    visuals.length > 1 &&
+    visuals.every((v) => !v.layout?.col_span && (v.layout?.w || 0) > 0) &&
+    rowSavedWidth > 0;
+  const PROPORTIONAL_COLS = 48;
+
   return (
     <div
       className={fitHeight ? "grid gap-4 min-h-0" : "grid gap-3"}
       style={{
-        gridTemplateColumns: `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
+        gridTemplateColumns: useSavedWidths
+          ? `repeat(${PROPORTIONAL_COLS}, minmax(0, 1fr))`
+          : `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight
           ? {
               // Compact rows (scorecards / gauges) take less vertical space than charts
@@ -230,20 +241,31 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           : {}),
       }}
     >
-      {visuals.map((visual) => {
+      {visuals.map((visual, idx) => {
         const minH = getMinHeight(visual);
         const colSpan = visual.layout?.col_span;
 
         let span = 1;
-        if (colSpan === "1/1") span = effectiveCols;
+        let maxSpan = effectiveCols;
+
+        if (useSavedWidths) {
+          maxSpan = PROPORTIONAL_COLS;
+          const raw = ((visual.layout!.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS;
+          span = Math.max(4, Math.round(raw));
+          // Garante que a última coluna feche exatamente a linha
+          if (idx === visuals.length - 1) {
+            const used = visuals
+              .slice(0, idx)
+              .reduce(
+                (sum, v) => sum + Math.max(4, Math.round(((v.layout?.w || 0) / rowSavedWidth) * PROPORTIONAL_COLS)),
+                0
+              );
+            span = Math.max(4, PROPORTIONAL_COLS - used);
+          }
+        } else if (colSpan === "1/1") span = effectiveCols;
         else if (colSpan === "1/2") span = Math.max(1, Math.round(effectiveCols / 2));
         else if (colSpan === "1/3") span = Math.max(1, Math.round(effectiveCols / 3));
-        else if (visual.layout?.w) {
-          // Sem col_span explícito: respeita a largura salva no grid de 48 colunas,
-          // proporcional ao que a linha ocupa.
-          const rowWidth = visuals.reduce((sum, v) => sum + (v.layout?.w || 0), 0) || 48;
-          span = Math.max(1, Math.round((visual.layout.w / rowWidth) * effectiveCols));
-        }
+
 
 
         return (
