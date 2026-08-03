@@ -202,12 +202,18 @@ export async function fetchNativeFieldValues(
       .eq('is_active', true);
     const rows = data || [];
     const preferLeads = dataSource === 'leads';
-    const picked =
-      (preferLeads
-        ? rows.find((r: any) => r.show_in_leads) || rows.find((r: any) => r.show_in_deals)
-        : rows.find((r: any) => r.show_in_deals) || rows.find((r: any) => r.show_in_leads)) || rows[0];
-    const options = ((picked?.options as any[]) || []);
-    return options.map((o) => o?.label).filter(Boolean);
+    const ordered = preferLeads
+      ? [...rows].sort((a: any, b: any) => Number(!!b.show_in_leads) - Number(!!a.show_in_leads))
+      : [...rows].sort((a: any, b: any) => Number(!!b.show_in_deals) - Number(!!a.show_in_deals));
+    // Une as opções das versões duplicadas do mesmo campo, começando pela que
+    // corresponde à fonte de dados — nada cadastrado no sistema fica de fora.
+    const labels: string[] = [];
+    for (const r of ordered) {
+      for (const o of ((r?.options as any[]) || [])) {
+        if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+      }
+    }
+    return labels;
   }
 
   if (dataSource === 'deals' || dataSource === 'sale_items') {
