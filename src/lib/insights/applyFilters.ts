@@ -153,12 +153,14 @@ async function applyNativeFilter<T extends { id: string }>(
   dataSource: DataSource,
   filter: VisualFilter
 ): Promise<T[]> {
-  // Deal fields backed by custom fields are delegated to the custom path
-  if (dataSource === 'deals' && DEAL_ENRICHED_FIELDS[filter.field]) {
-    const fieldId = await resolveEnrichedFieldId(accountId, DEAL_ENRICHED_FIELDS[filter.field]);
-    if (!fieldId) return records;
-    return applyCustomFilter(records, accountId, { ...filter, source: 'deal_custom', field: fieldId }, 'deals');
+  // Fields backed by custom fields (MQL, Canal, Produto) are delegated to the custom path
+  if (ENRICHED_FIELDS[filter.field]) {
+    const mode: 'deals' | 'leads' = dataSource === 'leads' ? 'leads' : 'deals';
+    const ref = await resolveEnrichedField(accountId, ENRICHED_FIELDS[filter.field], mode);
+    if (!ref) return records;
+    return applyCustomFilter(records, accountId, { ...filter, source: ref.source, field: ref.id }, mode);
   }
+
 
   // Legacy/mis-saved filters: a custom field UUID stored with source "native".
   // Without this guard the record lookup returns null and everything is filtered out.
