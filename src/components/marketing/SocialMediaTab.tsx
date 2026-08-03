@@ -982,6 +982,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
         onOpenChange={setAddPostDialogOpen}
         onSubmit={handleAddPost}
         isLoading={createPost.isPending}
+        profiles={profiles.map((p) => ({ id: p.id, username: p.username }))}
+        currentProfileId={currentProfile?.id}
       />
 
       {/* Edit Post Dialog */}
