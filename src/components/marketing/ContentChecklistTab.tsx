@@ -16,6 +16,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { toast } from 'sonner';
 import { AlertTriangle, CheckCircle2, FileCheck2, Plus, Trash2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { notifyChecklistBlockers } from '@/lib/contentChecklistNotifications';
+
 import {
   CHECKLIST_FORMATS,
   CHECKLIST_STAGES,
