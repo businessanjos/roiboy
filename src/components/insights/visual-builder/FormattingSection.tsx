@@ -11,10 +11,14 @@ interface FormattingSectionProps {
   aggregation?: Aggregation;
   /** Atalho para trocar a medida para contagem */
   onUseCount?: () => void;
+  /** Como o percentual é calculado quando o formato é Porcentagem */
+  percentMode?: 'share' | 'raw';
+  onPercentModeChange?: (mode: 'share' | 'raw') => void;
 }
 
-export function FormattingSection({ value, onChange, aggregation, onUseCount }: FormattingSectionProps) {
+export function FormattingSection({ value, onChange, aggregation, onUseCount, percentMode = 'share', onPercentModeChange }: FormattingSectionProps) {
   const showCountHint = !!aggregation && aggregation !== 'count';
+
 
   return (
     <div className="space-y-3">
