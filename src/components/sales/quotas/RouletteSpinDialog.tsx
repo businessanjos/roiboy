@@ -59,7 +59,19 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       }));
     }
     const min = Number(spiff.roulette_min_prize ?? 0);
-    const max = Number(spiff.roulette_max_prize ?? 100);
+    const max = Number(spiff.roulette_max_prize ?? 0);
+    // SPIFF custom (prêmio livre, sem pool e sem faixa em dinheiro):
+    // registra um único "prêmio" descritivo, mantendo o fluxo de aprovação.
+    if (max <= 0) {
+      return [
+        {
+          id: null,
+          label: spiff.custom_prize_description?.trim() || "Prêmio a combinar",
+          cash_value: 0,
+          color: null,
+        },
+      ];
+    }
     const step = 50;
     const range = Math.max(0, max - min);
     const steps = Math.floor(range / step) + 1;
