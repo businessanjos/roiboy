@@ -261,14 +261,23 @@ async function reconcileOptionLabels(fieldId: string, values: string[]): Promise
   for (const o of options) byValue.set(String(o.value), String(o.label));
 
   const out = new Set<string>();
+  let exact = false;
   for (const v of values) {
-    if (labelSet.has(v)) { out.add(v); continue; }
+    if (labelSet.has(v)) { out.add(v); exact = true; continue; }
     const byVal = byValue.get(v);
-    if (byVal) { out.add(byVal); continue; }
-    const alt = byKey.get(labelKey(v));
-    if (alt) out.add(alt);
+    if (byVal) { out.add(byVal); exact = true; continue; }
   }
+  // Only fall back to fuzzy prefix matching for small option sets (yes/no style)
+  // and when nothing matched exactly, to avoid mismapping product-like lists.
+  if (!exact && options.length <= 5) {
+    for (const v of values) {
+      const alt = byKey.get(labelKey(v));
+      if (alt) out.add(alt);
+    }
+  }
+  if (out.size === 0) return values;
   return Array.from(out);
+
 }
 
 
