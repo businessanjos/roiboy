@@ -1,7 +1,9 @@
 import { useState, useEffect, useRef } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Link2, Plus, AtSign, Bookmark } from 'lucide-react';
+import { CalendarIcon, Link2, Plus, AtSign, Bookmark, Users } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -42,6 +44,10 @@ interface AddPostDialogProps {
   onOpenChange: (open: boolean) => void;
   onSubmit: (data: PostFormData) => void;
   isLoading: boolean;
+  /** Perfis disponíveis para replicar o post em collab. */
+  profiles?: { id: string; username: string }[];
+  /** Perfil atualmente selecionado (não aparece como opção de collab). */
+  currentProfileId?: string;
 }
 
 export interface PostFormData {
@@ -64,6 +70,8 @@ export interface PostFormData {
   collaborator: string;
   specialist_version?: string;
   composition?: string[];
+  is_collab?: boolean;
+  collab_profile_ids?: string[];
 }
 
 const extractInstagramId = (url: string): string | null => {
@@ -81,6 +89,8 @@ export function AddPostDialog({
   onOpenChange,
   onSubmit,
   isLoading,
+  profiles = [],
+  currentProfileId,
 }: AddPostDialogProps) {
   const { specialistVersionOptions, compositionOptions, addOption, deleteOption, updateOption, isLoading: isLoadingOptions } = useInstagramPostOptions();
   const { templates, presets, createPreset, deletePreset, isLoading: isLoadingTemplates } = useCompositionTemplates();
@@ -102,6 +112,8 @@ export function AddPostDialog({
   const [reposts, setReposts] = useState('');
   const [profileVisits, setProfileVisits] = useState('');
   const [collaborator, setCollaborator] = useState('');
+  const [isCollab, setIsCollab] = useState(false);
+  const [collabProfileIds, setCollabProfileIds] = useState<string[]>([]);
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
   const [savePresetOpen, setSavePresetOpen] = useState(false);
@@ -137,6 +149,8 @@ export function AddPostDialog({
     setReposts('');
     setProfileVisits('');
     setCollaborator('');
+    setIsCollab(false);
+    setCollabProfileIds([]);
     setSpecialistVersion('');
     setComposition([]);
   };
@@ -186,8 +200,17 @@ export function AddPostDialog({
       collaborator: collaborator.trim(),
       specialist_version: specialistVersion || undefined,
       composition: composition.length > 0 ? composition : undefined,
+      is_collab: isCollab,
+      collab_profile_ids: isCollab ? collabProfileIds : [],
     });
   };
+
+  const collabCandidates = profiles.filter((p) => p.id !== currentProfileId);
+
+  const toggleCollabProfile = (id: string) =>
+    setCollabProfileIds((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id],
+    );
 
   const handleApplyTemplate = (items: string[], sv?: string) => {
     setComposition(items);
@@ -318,6 +341,69 @@ export function AddPostDialog({
                     className="pl-10"
                   />
                 </div>
+              </div>
+
+              {/* Post em collab */}
+              <div className="space-y-3 rounded-lg border p-3">
+                <label className="flex items-start gap-2.5 cursor-pointer">
+                  <Checkbox
+                    checked={isCollab}
+                    onCheckedChange={(v) => {
+                      const checked = v === true;
+                      setIsCollab(checked);
+                      if (!checked) setCollabProfileIds([]);
+                    }}
+                    className="mt-0.5"
+                  />
+                  <span className="text-sm">
+                    <span className="flex items-center gap-1.5 font-medium">
+                      <Users className="h-4 w-4 text-primary" />
+                      Post em collab
+                    </span>
+                    <span className="text-xs text-muted-foreground">
+                      Replica automaticamente as mesmas métricas para os outros perfis do collab.
+                    </span>
+                  </span>
+                </label>
+
+                {isCollab && (
+                  <div className="space-y-2 pl-6">
+                    <Label className="text-xs text-muted-foreground">
+                      Perfis em collab
+                    </Label>
+                    {collabCandidates.length === 0 ? (
+                      <p className="text-xs text-muted-foreground">
+                        Nenhum outro perfil conectado para replicar.
+                      </p>
+                    ) : (
+                      <div className="grid gap-2 sm:grid-cols-2">
+                        {collabCandidates.map((p) => {
+                          const checked = collabProfileIds.includes(p.id);
+                          return (
+                            <label
+                              key={p.id}
+                              className={cn(
+                                'flex items-center gap-2 rounded-md border p-2 text-sm cursor-pointer transition-colors',
+                                checked ? 'border-primary/40 bg-primary/5' : 'hover:bg-muted/50',
+                              )}
+                            >
+                              <Checkbox
+                                checked={checked}
+                                onCheckedChange={() => toggleCollabProfile(p.id)}
+                              />
+                              <span>@{p.username}</span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    )}
+                    {collabProfileIds.length > 0 && (
+                      <Badge variant="outline" className="text-xs">
+                        Será criado em {collabProfileIds.length + 1} perfis
+                      </Badge>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Versão do Especialista */}
