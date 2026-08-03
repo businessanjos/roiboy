@@ -258,11 +258,14 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
           : `repeat(auto-fit, minmax(${fitMinWidth}px, 1fr))`,
         ...(fitHeight
           ? {
-              // Compact rows (scorecards / gauges) take less vertical space than charts
-              flex: `${row.isAllScorecards ? 0.55 : row.isAllCompact ? 0.9 : 1} 1 0%`,
+              // Altura proporcional: usa a altura salva (ou o peso por tipo),
+              // então linhas de scorecards ficam baixas e tabelas ganham espaço.
+              flex: `${row.weight} 1 0%`,
+              minHeight: 0,
               gridAutoRows: "1fr",
             }
           : {}),
+
       }}
     >
       {visuals.map((visual, idx) => {
