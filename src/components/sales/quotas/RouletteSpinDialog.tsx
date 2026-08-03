@@ -94,7 +94,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const [approver, setApprover] = useState<{ id: string; name: string } | null>(null);
 
   const min = Number(spiff.roulette_min_prize ?? 0);
-  const max = Number(spiff.roulette_max_prize ?? 100);
+  const max = Number(spiff.roulette_max_prize ?? 0);
   const usingPool = !!spiff.roulette_pool_id;
 
   useEffect(() => {
