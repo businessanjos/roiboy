@@ -744,7 +744,11 @@ export function VisualStudioDialog({
                         field={measureField}
                         aggregation={aggregation}
                         onFieldChange={setMeasureField}
-                        onAggregationChange={setAggregation}
+                        onAggregationChange={(agg) => {
+                          setAggregation(agg);
+                          // Contagem nunca é dinheiro: evita "Total R$ 104,00" em quantidade.
+                          if (agg === 'count' && formatType === 'currency') setFormatType('decimal');
+                        }}
                         catalog={fieldCatalog}
                       />
 
