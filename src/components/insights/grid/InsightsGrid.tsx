@@ -238,6 +238,13 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
         if (colSpan === "1/1") span = effectiveCols;
         else if (colSpan === "1/2") span = Math.max(1, Math.round(effectiveCols / 2));
         else if (colSpan === "1/3") span = Math.max(1, Math.round(effectiveCols / 3));
+        else if (visual.layout?.w) {
+          // Sem col_span explícito: respeita a largura salva no grid de 48 colunas,
+          // proporcional ao que a linha ocupa.
+          const rowWidth = visuals.reduce((sum, v) => sum + (v.layout?.w || 0), 0) || 48;
+          span = Math.max(1, Math.round((visual.layout.w / rowWidth) * effectiveCols));
+        }
+
 
         return (
           <div
