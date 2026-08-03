@@ -55,14 +55,25 @@ export function MeasureSection({
         <div className="space-y-2">
           <Label className="text-sm text-muted-foreground">Campo</Label>
           <Select
-            value={field || undefined}
-            onValueChange={onFieldChange}
+            value={aggregation === 'count' ? '__count__' : (field || undefined)}
+            onValueChange={(v) => {
+              if (v === '__count__') {
+                onAggregationChange('count');
+                return;
+              }
+              onFieldChange(v);
+              if (aggregation === 'count') onAggregationChange('sum');
+            }}
             disabled={!dataSource}
           >
             <SelectTrigger>
               <SelectValue placeholder="Selecione o campo" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="__count__">
+                Quantidade de registros
+                <span className="ml-1 text-xs text-muted-foreground">(contagem)</span>
+              </SelectItem>
               {numericFields.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
@@ -76,6 +87,7 @@ export function MeasureSection({
           </Select>
         </div>
       )}
+
 
       <div className="space-y-2">
         <Label className="text-sm text-muted-foreground">Agregação</Label>
