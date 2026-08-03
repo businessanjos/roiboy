@@ -53,15 +53,21 @@ Deno.serve(async (req) => {
     const endIso = endUtc.toISOString();
     const monthIso = monthStartUtc.toISOString();
 
-    const [{ data: leadsToday }, { data: dealsToday }, { data: wonToday }, { data: lostToday }, { data: wonMonth }, { data: openDeals }, { data: users }] =
+    const ym = `${startUtc.getUTCFullYear()}-${String(new Date(startUtc.getTime() + TZ_OFFSET_MINUTES * 60_000).getUTCMonth() + 1).padStart(2, "0")}`;
+    const tomorrowEndIso = new Date(endUtc.getTime() + 24 * 60 * 60_000).toISOString();
+
+    const [{ data: leadsToday }, { data: dealsToday }, { data: wonToday }, { data: lostToday }, { data: wonMonth }, { data: openDeals }, { data: users }, { data: meetingsToday }, { data: meetingsTomorrow }, { data: goals }] =
       await Promise.all([
         supabase.from("leads").select("id, source, canal, mql").gte("created_at", startIso).lt("created_at", endIso),
         supabase.from("deals").select("id").is("deleted_at", null).gte("created_at", startIso).lt("created_at", endIso),
         supabase.from("deals").select("id, title, value, responsible_user_id, sdr_user_id").is("deleted_at", null).eq("status", "won").gte("won_at", startIso).lt("won_at", endIso),
         supabase.from("deals").select("id, lost_reason, responsible_user_id").is("deleted_at", null).eq("status", "lost").gte("lost_at", startIso).lt("lost_at", endIso),
-        supabase.from("deals").select("id, value, responsible_user_id").is("deleted_at", null).eq("status", "won").gte("won_at", monthIso).lt("won_at", endIso),
+        supabase.from("deals").select("id, value, responsible_user_id, sdr_user_id").is("deleted_at", null).eq("status", "won").gte("won_at", monthIso).lt("won_at", endIso),
         supabase.from("deals").select("id, value").is("deleted_at", null).eq("status", "open"),
         supabase.from("users").select("id, name"),
+        supabase.from("sales_meetings").select("id, status").gte("scheduled_at", startIso).lt("scheduled_at", endIso),
+        supabase.from("sales_meetings").select("id").gte("scheduled_at", endIso).lt("scheduled_at", tomorrowEndIso),
+        supabase.from("sales_monthly_goals").select("goal_value, super_goal_value, cargo, user_id").eq("year_month", ym),
       ]);
 
     const nameById = new Map((users || []).map((u: any) => [u.id, (u.name || "").split(" ")[0] || "—"]));
@@ -90,6 +96,23 @@ Deno.serve(async (req) => {
     }
     const ranking = [...byRep.entries()].sort((a, b) => b[1].valor - a[1].valor).slice(0, 5);
 
+    // Ranking do mês por SDR
+    const bySdr = new Map<string, { qtd: number; valor: number }>();
+    for (const d of monthWon as any[]) {
+      if (!d.sdr_user_id) continue;
+      const key = nameById.get(d.sdr_user_id) || "SDR";
+      const cur = bySdr.get(key) || { qtd: 0, valor: 0 };
+      cur.qtd += 1;
+      cur.valor += Number(d.value || 0);
+      bySdr.set(key, cur);
+    }
+    const rankingSdr = [...bySdr.entries()].sort((a, b) => b[1].valor - a[1].valor).slice(0, 5);
+
+    // Meta do mês
+    const goalValue = (goals || []).reduce((s: number, g: any) => s + Number(g.goal_value || 0), 0);
+
+    const meetingsDone = (meetingsToday || []).filter((m: any) => ["done", "completed", "realizada"].includes(String(m.status || "").toLowerCase())).length;
+
     // Canais de leads do dia
     const byChannel = new Map<string, number>();
     for (const l of leads as any[]) {
@@ -110,6 +133,10 @@ Deno.serve(async (req) => {
       lines.push(`• Canais: ${channels.map(([c, n]) => `${c} ${n}`).join(" | ")}`);
     }
     lines.push("");
+    lines.push(`*AGENDA COMERCIAL*`);
+    lines.push(`• Reuniões do dia: *${(meetingsToday || []).length}*` + (meetingsDone ? ` (realizadas: ${meetingsDone})` : ""));
+    lines.push(`• Agendadas para amanhã: *${(meetingsTomorrow || []).length}*`);
+    lines.push("");
     lines.push(`*FECHAMENTO DO DIA*`);
     lines.push(`• Vendas: *${won.length}*`);
     lines.push(`• Valor: *${brl(wonValue)}*`);
@@ -125,10 +152,25 @@ Deno.serve(async (req) => {
     lines.push(`• Vendas: *${monthWon.length}*`);
     lines.push(`• Faturamento: *${brl(monthValue)}*`);
     lines.push(`• Pipeline aberto: *${brl(pipelineValue)}*`);
+    if (goalValue > 0) {
+      const falta = Math.max(goalValue - monthValue, 0);
+      lines.push(`• Meta do mês: *${brl(goalValue)}* — atingido *${pct(monthValue, goalValue)}*`);
+      lines.push(`• Falta: *${brl(falta)}*`);
+    } else {
+      lines.push(`• Meta do mês: _não cadastrada_`);
+    }
     if (ranking.length) {
       lines.push("");
       lines.push(`*RANKING DO MÊS*`);
       ranking.forEach(([nome, r], i) => {
+        const medal = ["🥇", "🥈", "🥉"][i] || `${i + 1}.`;
+        lines.push(`${medal} ${nome} — ${r.qtd} venda(s) · ${brl(r.valor)}`);
+      });
+    }
+    if (rankingSdr.length) {
+      lines.push("");
+      lines.push(`*RANKING SDR (mês)*`);
+      rankingSdr.forEach(([nome, r], i) => {
         const medal = ["🥇", "🥈", "🥉"][i] || `${i + 1}.`;
         lines.push(`${medal} ${nome} — ${r.qtd} venda(s) · ${brl(r.valor)}`);
       });
