@@ -617,13 +617,13 @@ async function fetchTasksRecords(
         case 'due_date':
         case 'created_at': {
           const dateVal = task[config.dimension.field];
-          taskGroup = dateVal ? formatDateGroup(dateVal, config.dimension.dateGrouping || 'month') : 'Sem Data';
-          break;
+          if (!dateVal) return groupName === 'Sem Data';
+          return dateGroupCandidates(dateVal).includes(groupName);
         }
         default:
           taskGroup = (task.users as any)?.name || '';
       }
-      return matchesGroup(item, config.dimension, config, groupName);
+      return taskGroup === groupName;
     });
   }
 
