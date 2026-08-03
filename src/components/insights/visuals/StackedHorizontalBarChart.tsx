@@ -16,6 +16,7 @@ import { FormatType, AppearanceConfig, COLOR_PALETTES, FONT_SCALE_MULTIPLIERS, D
 import { useTvMode } from "../TvModeContext";
 import { formatValueCompact } from "@/lib/formula-evaluator";
 import { StackedDataPoint } from "@/hooks/useStackedVisualData";
+import { extendPalette, readableTextOn } from "@/lib/insights/paletteColors";
 
 interface StackedHorizontalBarChartProps {
   data: StackedDataPoint[];
@@ -32,12 +33,8 @@ interface StackedHorizontalBarChartProps {
 
 
 function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
-  const extended = [
-    ...(COLOR_PALETTES[palette] || COLOR_PALETTES.professional),
-    '#f97316', '#06b6d4', '#8b5cf6', '#ec4899', '#84cc16',
-    '#14b8a6', '#f43f5e', '#a855f7', '#eab308', '#6366f1',
-  ];
-  return extended;
+  // Extensão harmônica: variações da própria paleta, sem cores fora do tema.
+  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.professional, 20);
 }
 
 const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any) => {
@@ -70,7 +67,7 @@ const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any
 };
 
 const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMultiplier: number) => {
-  const { x, y, width, height, value } = props;
+  const { x, y, width, height, value, fill } = props;
   if (!value || value === 0 || height < 14) return null;
 
   const baseFontSize = Math.round(10 * fontMultiplier);
@@ -85,7 +82,7 @@ const renderInsideLabel = (props: any, formatting: { type: FormatType }, fontMul
     <text
       x={x + width / 2}
       y={y + height / 2}
-      fill="white"
+      fill={readableTextOn(fill)}
       textAnchor="middle"
       dominantBaseline="middle"
       fontSize={effectiveFontSize}
@@ -109,7 +106,8 @@ export function StackedHorizontalBarChart({
   const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
-  const getSeriesColor = (key: string, index: number) => seriesColors?.[key] || colors[index % colors.length];
+  const getSeriesColor = (key: string, index: number) =>
+    (!safeAppearance.paletteLocked && seriesColors?.[key]) || colors[index % colors.length];
   const tvMode = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'] * tvMode.scale;
   // Largura real do container: permite adaptar eixos/legenda em telas estreitas (mobile).
