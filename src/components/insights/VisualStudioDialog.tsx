@@ -127,6 +127,7 @@ export function VisualStudioDialog({
   const [dimensionField, setDimensionField] = useState<string | null>(null);
   const [dateGrouping, setDateGrouping] = useState<DateGrouping>('month');
   const [formatType, setFormatType] = useState<FormatType>('decimal');
+  const [percentMode, setPercentMode] = useState<'share' | 'raw'>('share');
   const [segmentBy, setSegmentBy] = useState<SegmentBy | null>(null);
   const [visualFilters, setVisualFilters] = useState<VisualFilter[]>([]);
   const [tableColumns, setTableColumns] = useState<string[]>([]);
@@ -164,6 +165,7 @@ export function VisualStudioDialog({
       setDimensionField(baseConfig.dimension?.field ?? null);
       setDateGrouping(baseConfig.dimension?.dateGrouping ?? 'month');
       setFormatType(baseConfig.formatting?.type ?? 'decimal');
+      setPercentMode(baseConfig.formatting?.percentMode ?? 'share');
       setSegmentBy(baseConfig.segmentBy ?? null);
       // Existing visuals may still persist filters only in the legacy keys.
       // Normalize them before the preview config is rebuilt; otherwise
@@ -194,6 +196,7 @@ export function VisualStudioDialog({
       setDimensionField(null);
       setDateGrouping('month');
       setFormatType('currency');
+      setPercentMode('share');
       setSegmentBy(null);
       setVisualFilters([]);
       setTableColumns(getDefaultColumns('deals'));
@@ -332,6 +335,7 @@ export function VisualStudioDialog({
         ...(baseConfig?.formatting ?? {}),
         type: formatType,
         decimals: formatType === 'currency' ? 2 : formatType === 'percentage' ? 1 : 0,
+        ...(formatType === 'percentage' ? { percentMode } : {}),
       },
       appearance,
       statusFilter,
@@ -381,7 +385,7 @@ export function VisualStudioDialog({
     return next;
   }, [
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
-    formatType, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
+    formatType, percentMode, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
     visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf, isGoalTracker, goalSettings,
   ]);
@@ -859,6 +863,8 @@ export function VisualStudioDialog({
                 value={formatType}
                 onChange={setFormatType}
                 aggregation={aggregation}
+                percentMode={percentMode}
+                onPercentModeChange={setPercentMode}
                 onUseCount={() => {
                   setAggregation('count');
                   setFormatType('decimal');
