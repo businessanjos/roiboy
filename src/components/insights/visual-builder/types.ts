@@ -50,6 +50,8 @@ export interface VisualConfig {
   appearance?: AppearanceConfig;
   // Status filter for deals (won, lost, open)
   statusFilter?: 'won' | 'lost' | 'open';
+  // true quando o status foi definido no Studio (sem filtro = todos os negócios)
+  explicitStatus?: boolean;
   // Hidden users for call_commercial visual
   hiddenUsers?: string[];
   // Hidden categories for filtering chart groups
