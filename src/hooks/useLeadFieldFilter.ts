@@ -53,7 +53,7 @@ async function getMatchingLeadIds(
   // Get field definition including field_type
   const { data: fieldDef } = await supabase
     .from('custom_fields')
-    .select('options, field_type')
+    .select('options, field_type, name, account_id')
     .eq('id', filter.fieldId)
     .maybeSingle();
 
@@ -64,6 +64,25 @@ async function getMatchingLeadIds(
     for (const opt of fieldDef.options as any[]) {
       if (opt.label && opt.value) {
         optionLabelToValue.set(opt.label, opt.value);
+      }
+    }
+  }
+
+  // Campos homônimos (versão de deal x de lead) compartilham rótulos: aceita
+  // também as opções cadastradas na versão irmã do mesmo campo.
+  if (fieldDef?.name && fieldDef?.account_id) {
+    const { data: siblings } = await supabase
+      .from('custom_fields')
+      .select('options')
+      .eq('account_id', fieldDef.account_id)
+      .eq('name', fieldDef.name)
+      .eq('is_active', true)
+      .neq('id', filter.fieldId);
+    for (const s of siblings || []) {
+      for (const opt of ((s?.options as any[]) || [])) {
+        if (opt?.label && opt?.value && !optionLabelToValue.has(opt.label)) {
+          optionLabelToValue.set(opt.label, opt.value);
+        }
       }
     }
   }

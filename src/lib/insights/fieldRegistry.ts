@@ -106,13 +106,36 @@ export async function fetchFieldCatalog(
     return native;
   }
 
+  const rows = (data || []) as CustomFieldRow[];
+
+  // Campos duplicados (mesmo nome existindo em versões de deal e de lead)
+  // compartilham as opções: qualquer opção nova cadastrada em "Campos
+  // personalizados" aparece nos filtros das duas fontes.
+  const optionsByName = new Map<string, string[]>();
+  for (const row of rows) {
+    const key = (row.name || '').trim().toLowerCase();
+    const labels = Array.isArray(row.options)
+      ? (row.options as any[]).map((o) => o?.label).filter(Boolean)
+      : [];
+    const merged = optionsByName.get(key) ?? [];
+    for (const l of labels) if (!merged.includes(l)) merged.push(l);
+    optionsByName.set(key, merged);
+  }
+
+  const withMergedOptions = (row: CustomFieldRow, source: FilterFieldSource): CatalogField => {
+    const field = mapCustomField(row, source);
+    const merged = optionsByName.get((row.name || '').trim().toLowerCase());
+    if (merged?.length) field.options = merged;
+    return field;
+  };
+
   const custom: CatalogField[] = [];
-  for (const row of (data || []) as CustomFieldRow[]) {
+  for (const row of rows) {
     if (entities.includes('deal_custom') && row.show_in_deals) {
-      custom.push(mapCustomField(row, 'deal_custom'));
+      custom.push(withMergedOptions(row, 'deal_custom'));
     }
     if (entities.includes('lead_custom') && row.show_in_leads) {
-      custom.push(mapCustomField(row, 'lead_custom'));
+      custom.push(withMergedOptions(row, 'lead_custom'));
     }
   }
 
@@ -179,12 +202,18 @@ export async function fetchNativeFieldValues(
       .eq('is_active', true);
     const rows = data || [];
     const preferLeads = dataSource === 'leads';
-    const picked =
-      (preferLeads
-        ? rows.find((r: any) => r.show_in_leads) || rows.find((r: any) => r.show_in_deals)
-        : rows.find((r: any) => r.show_in_deals) || rows.find((r: any) => r.show_in_leads)) || rows[0];
-    const options = ((picked?.options as any[]) || []);
-    return options.map((o) => o?.label).filter(Boolean);
+    const ordered = preferLeads
+      ? [...rows].sort((a: any, b: any) => Number(!!b.show_in_leads) - Number(!!a.show_in_leads))
+      : [...rows].sort((a: any, b: any) => Number(!!b.show_in_deals) - Number(!!a.show_in_deals));
+    // Une as opções das versões duplicadas do mesmo campo, começando pela que
+    // corresponde à fonte de dados — nada cadastrado no sistema fica de fora.
+    const labels: string[] = [];
+    for (const r of ordered) {
+      for (const o of ((r?.options as any[]) || [])) {
+        if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+      }
+    }
+    return labels;
   }
 
   if (dataSource === 'deals' || dataSource === 'sale_items') {
@@ -262,9 +291,27 @@ export async function fetchNativeFieldValues(
 export async function fetchCustomFieldValues(fieldId: string): Promise<string[]> {
   const { data } = await supabase
     .from('custom_fields')
-    .select('options')
+    .select('name, account_id, options')
     .eq('id', fieldId)
     .maybeSingle();
-  const options = (data?.options as any[]) || [];
-  return options.map((o) => o?.label).filter(Boolean);
+  const labels: string[] = [];
+  for (const o of ((data?.options as any[]) || [])) {
+    if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+  }
+  // Inclui opções de campos homônimos (versões deal/lead do mesmo conceito).
+  if (data?.name && data?.account_id) {
+    const { data: siblings } = await supabase
+      .from('custom_fields')
+      .select('options')
+      .eq('account_id', data.account_id)
+      .eq('name', data.name)
+      .eq('is_active', true)
+      .neq('id', fieldId);
+    for (const s of siblings || []) {
+      for (const o of ((s?.options as any[]) || [])) {
+        if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+      }
+    }
+  }
+  return labels;
 }
