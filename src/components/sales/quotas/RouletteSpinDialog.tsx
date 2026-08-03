@@ -279,11 +279,13 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
 
   const handleCancel = () => {
     if (phase === "spinning") return;
+    // Fechar a tela NÃO cancela a solicitação: ela continua na fila do gestor.
     if (phase === "awaiting_approval") {
-      cancelRequest();
+      toast.info("Solicitação continua na fila do gestor. Você será avisado quando for aprovada.");
     }
     onOpenChange(false);
   };
+
 
   const renderIdleOrAwaiting = () => {
     if (phase === "awaiting_approval") {
