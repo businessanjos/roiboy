@@ -494,9 +494,10 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
 
   const containerWidth = width ?? 1200;
 
-  if (readOnly) {
+  // TV mode (fitHeight) keeps the auto-fit responsive rows so everything fits the screen.
+  if (readOnly && fitHeight) {
     return (
-      <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${fitHeight ? "h-full min-h-0 overflow-hidden" : ""}`}>
+      <div ref={containerRef} className="insights-grid pointer-events-auto relative h-full min-h-0 overflow-hidden">
         <ResponsiveInsightsGrid
           visuals={visuals}
           onUpdateVisual={undefined}
@@ -504,13 +505,13 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           containerWidth={containerWidth}
           readOnly
           minCardWidths={minCardWidths}
-          fitHeight={fitHeight}
+          fitHeight
         />
       </div>
     );
   }
 
-  const gridVisible = freeLayout || isEditing;
+  const interactive = !readOnly && freeLayout;
 
   const layoutToggle = (
     <button
@@ -530,63 +531,46 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     </button>
   );
 
-  // Responsive CSS grid by default; free layout mode keeps the draggable/resizable grid visible
+  // Always render the saved layout (WYSIWYG); drag/resize only when "Ajustar layout" is on
   return (
-    <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${freeLayout ? "free-layout" : ""}`}>
-      {toolbarSlot ? (
+    <div ref={containerRef} className={`insights-grid pointer-events-auto relative ${interactive ? "free-layout" : ""}`}>
+      {!readOnly && (toolbarSlot ? (
         createPortal(layoutToggle, toolbarSlot)
       ) : (
         <div className="flex justify-end pb-2">{layoutToggle}</div>
-      )}
+      ))}
 
-      {/* Responsive CSS grid — visible when not in free/edit mode */}
-      {!gridVisible && (
-        <ResponsiveInsightsGrid
-          visuals={visuals}
-          onUpdateVisual={onUpdateVisual}
-          onRemoveVisual={onRemoveVisual}
-          containerWidth={containerWidth}
-          readOnly={readOnly}
-          minCardWidths={minCardWidths}
-        />
-      )}
-
-      {/* React-grid-layout — interactive drag/resize surface */}
-      <div className={gridVisible ? "block" : "absolute inset-0 opacity-0 pointer-events-none"}
-        style={!gridVisible ? { height: 0, overflow: "hidden" } : undefined}
+      <GridLayout
+        className="layout"
+        layout={localLayout}
+        width={containerWidth}
+        onLayoutChange={handleContinuousLayoutChange}
+        onDragStart={handleDragStart}
+        onResizeStart={handleResizeStart}
+        onDragStop={handlePersist}
+        onResizeStop={handlePersist}
+        gridConfig={{
+          cols: COLS,
+          rowHeight: ROW_HEIGHT,
+          margin: MARGIN,
+          containerPadding: CONTAINER_PADDING,
+        }}
+        dragConfig={{
+          enabled: interactive,
+          handle: ".widget-drag-handle",
+        }}
+        resizeConfig={{
+          enabled: interactive,
+        }}
+        compactor={freePositionCompactor}
       >
+        {visuals.map((visual) => (
+          <div key={visual.id} className="h-full overflow-hidden rounded-lg">
+            <ConfigurableVisualCard visual={visual} onUpdateVisual={readOnly ? undefined : onUpdateVisual} onRemoveVisual={readOnly ? undefined : onRemoveVisual} readOnly={readOnly} />
+          </div>
+        ))}
+      </GridLayout>
 
-        <GridLayout
-          className="layout"
-          layout={localLayout}
-          width={containerWidth}
-          onLayoutChange={handleContinuousLayoutChange}
-          onDragStart={handleDragStart}
-          onResizeStart={handleResizeStart}
-          onDragStop={handlePersist}
-          onResizeStop={handlePersist}
-          gridConfig={{
-            cols: COLS,
-            rowHeight: ROW_HEIGHT,
-            margin: MARGIN,
-            containerPadding: CONTAINER_PADDING,
-          }}
-          dragConfig={{
-            enabled: !readOnly,
-            handle: ".widget-drag-handle",
-          }}
-          resizeConfig={{
-            enabled: !readOnly,
-          }}
-          compactor={freePositionCompactor}
-        >
-          {visuals.map((visual) => (
-            <div key={visual.id} className="h-full overflow-hidden rounded-lg">
-              <ConfigurableVisualCard visual={visual} onUpdateVisual={readOnly ? undefined : onUpdateVisual} onRemoveVisual={readOnly ? undefined : onRemoveVisual} readOnly={readOnly} />
-            </div>
-          ))}
-        </GridLayout>
-      </div>
 
       <style>{`
         .insights-grid .react-grid-item {
