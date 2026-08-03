@@ -10,8 +10,8 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import "react-grid-layout/css/styles.css";
 import "react-resizable/css/styles.css";
 
-// Free position compactor: no compaction, allows overlap, true free-form positioning
-const freePositionCompactor = getCompactor(null, true, false);
+// Pipedrive-like behaviour: items push each other and settle upwards (no gaps, no overlap)
+const verticalCompactorInstance = getCompactor("vertical", false, false);
 
 interface LayoutItem {
   i: string;
@@ -562,7 +562,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
         resizeConfig={{
           enabled: interactive,
         }}
-        compactor={freePositionCompactor}
+        compactor={verticalCompactorInstance}
       >
         {visuals.map((visual) => (
           <div key={visual.id} className="h-full overflow-hidden rounded-lg">
