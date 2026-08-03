@@ -291,9 +291,27 @@ export async function fetchNativeFieldValues(
 export async function fetchCustomFieldValues(fieldId: string): Promise<string[]> {
   const { data } = await supabase
     .from('custom_fields')
-    .select('options')
+    .select('name, account_id, options')
     .eq('id', fieldId)
     .maybeSingle();
-  const options = (data?.options as any[]) || [];
-  return options.map((o) => o?.label).filter(Boolean);
+  const labels: string[] = [];
+  for (const o of ((data?.options as any[]) || [])) {
+    if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+  }
+  // Inclui opções de campos homônimos (versões deal/lead do mesmo conceito).
+  if (data?.name && data?.account_id) {
+    const { data: siblings } = await supabase
+      .from('custom_fields')
+      .select('options')
+      .eq('account_id', data.account_id)
+      .eq('name', data.name)
+      .eq('is_active', true)
+      .neq('id', fieldId);
+    for (const s of siblings || []) {
+      for (const o of ((s?.options as any[]) || [])) {
+        if (o?.label && !labels.includes(o.label)) labels.push(o.label);
+      }
+    }
+  }
+  return labels;
 }
