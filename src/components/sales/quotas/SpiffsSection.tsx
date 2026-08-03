@@ -1203,7 +1203,9 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
               <TableHead className="text-xs">Vendedor</TableHead>
               <TableHead className="text-center text-xs">Vendas (janela)</TableHead>
               <TableHead className="text-center text-xs">Giros</TableHead>
+              <TableHead className="text-center text-xs">Histórico</TableHead>
               <TableHead className="text-center text-xs">Falta p/ próximo</TableHead>
+              <TableHead className="text-right text-xs">Ação</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -1216,13 +1218,42 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                     {s.spins} {s.spins === 1 ? "giro" : "giros"}
                   </Badge>
                 </TableCell>
+                <TableCell className="text-center text-xs tabular-nums">
+                  {s.consumedCount > 0 ? (
+                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">{s.consumedCount}×</span>
+                  ) : (
+                    <span className="text-muted-foreground">—</span>
+                  )}
+                </TableCell>
                 <TableCell className="text-center text-xs text-muted-foreground tabular-nums">
                   {s.toNext} {s.toNext === 1 ? "venda" : "vendas"}
+                </TableCell>
+                <TableCell className="text-right">
+                  <Button
+                    size="sm"
+                    variant={s.spins > 0 ? "default" : "outline"}
+                    disabled={s.spins <= 0}
+                    onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.spins })}
+                    className="h-7 gap-1.5 text-xs"
+                  >
+                    <Dice5 className="h-3.5 w-3.5" />
+                    Girar
+                  </Button>
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </Table></div>
+      )}
+
+      {spinUser && (
+        <RouletteSpinDialog
+          open={!!spinUser}
+          onOpenChange={(o) => { if (!o) setSpinUser(null); }}
+          spiff={spiff}
+          user={{ uid: spinUser.uid, name: spinUser.name }}
+          pendingSpins={spinUser.pending}
+        />
       )}
     </div>
   );
