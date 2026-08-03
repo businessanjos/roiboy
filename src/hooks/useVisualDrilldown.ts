@@ -402,6 +402,12 @@ async function fetchLeadsRecords(
   }
 
 
+  // Dimensão MQL vem de campo personalizado do lead
+  if (config.dimension?.field === 'mql' || config.stackBy === 'mql') {
+    filteredData = await enrichLeadsWithMql(accountId, filteredData);
+  }
+
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
