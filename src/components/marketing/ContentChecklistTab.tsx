@@ -217,9 +217,10 @@ export function ContentChecklistTab() {
 
   const loadRow = (row: ChecklistRow) => {
     setEditingId(row.id);
+    setNotifiedBlockers(row.blockers ?? []);
     setDraft({
       post_title: row.post_title ?? '',
-      responsible: row.responsible ?? '',
+      responsible_user_id: row.responsible_user_id ?? '',
       post_date: row.post_date ?? '',
       format: row.format ?? '',
       pilar: row.pilar ?? '',
@@ -229,6 +230,7 @@ export function ContentChecklistTab() {
       decision: row.decision,
     });
   };
+
 
   const decisionBadge = (decision: string) => {
     const map: Record<string, { label: string; className: string }> = {
