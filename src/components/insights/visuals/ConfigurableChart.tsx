@@ -12,9 +12,11 @@ import {
   Tooltip,
   CartesianGrid,
   LabelList,
+  Legend,
 } from "recharts";
 import { ChartType, FormatType, AppearanceConfig, VisualConfig, COLOR_PALETTES, DEFAULT_APPEARANCE, FONT_SCALE_MULTIPLIERS, DATA_SOURCE_FIELDS, AGGREGATION_OPTIONS } from "../visual-builder/types";
 import { ChartTooltip } from "./ChartTooltip";
+import { ChartLegendContent } from "./ChartLegendContent";
 import { ConfigurableScorecard } from "./ConfigurableScorecard";
 import { DaysElapsedScorecard } from "./DaysElapsedScorecard";
 import { SalesLeadsScorecard } from "./SalesLeadsScorecard";
@@ -525,6 +527,7 @@ function PieChartView({
 
   const compact = width > 0 && (width < 320 || height < 240 || data.length > 6);
   const labelFont = Math.round(11 * m);
+  const sideLegend = width >= 520;
 
   return (
     <div ref={ref} className="h-full w-full">
@@ -557,6 +560,18 @@ function PieChartView({
               />
             ))}
           </Pie>
+          <Legend
+            layout={sideLegend ? 'vertical' : 'horizontal'}
+            align={sideLegend ? 'right' : 'center'}
+            verticalAlign={sideLegend ? 'middle' : 'bottom'}
+            content={
+              <ChartLegendContent
+                fontSize={labelFont}
+                align={sideLegend ? 'left' : 'center'}
+                className={sideLegend ? 'flex-col items-start gap-y-1.5 pl-2' : undefined}
+              />
+            }
+          />
           <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
         </PieChart>
       </ResponsiveContainer>
