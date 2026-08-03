@@ -159,6 +159,8 @@ export function useUpdateAdmission() {
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ["hr-admissions"] });
       qc.invalidateQueries({ queryKey: ["hr-admission", id] });
+      qc.invalidateQueries({ queryKey: ["hr-jobs"] });
+      qc.invalidateQueries({ queryKey: ["hr-jobs-stats"] });
     },
     onError: (e: any) => toast.error("Erro ao atualizar admissão: " + e.message),
   });
