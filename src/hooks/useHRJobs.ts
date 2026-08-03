@@ -282,11 +282,21 @@ export function useHRJobStats() {
         .select("id, stage")
         .eq("account_id", currentUser!.account_id);
 
+      // Contratados = admissões efetivadas (fonte real do RH), pois o pipeline de
+      // admissão não altera o stage da candidatura para "hired".
+      const { data: admissions } = await supabase
+        .from("hr_admissions" as any)
+        .select("id, stage")
+        .eq("account_id", currentUser!.account_id);
+
       const activeJobs = (jobs || []).filter((j: any) => j.status === "active").length;
       const totalApplications = (apps || []).length;
-      const hiredCount = (apps || []).filter((a: any) => a.stage === "hired").length;
+      const admittedCount = (admissions || []).filter((a: any) => a.stage === "admitted").length;
+      const hiredApps = (apps || []).filter((a: any) => a.stage === "hired").length;
+      const hiredCount = Math.max(admittedCount, hiredApps);
 
-      return { activeJobs, totalApplications, hiredCount };
+      return { activeJobs, totalApplications, hiredCount, admissionsInProgress: (admissions || []).length - admittedCount };
+
     },
   });
 }

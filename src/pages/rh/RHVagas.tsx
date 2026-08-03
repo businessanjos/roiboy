@@ -88,7 +88,14 @@ export default function RHVagas() {
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <Card className="p-4"><p className="text-xs text-muted-foreground font-medium">Vagas Ativas</p><p className="text-2xl font-bold">{stats?.activeJobs ?? 0}</p></Card>
         <Card className="p-4"><p className="text-xs text-muted-foreground font-medium">Total Candidaturas</p><p className="text-2xl font-bold">{stats?.totalApplications ?? 0}</p></Card>
-        <Card className="p-4"><p className="text-xs text-muted-foreground font-medium">Contratados</p><p className="text-2xl font-bold">{stats?.hiredCount ?? 0}</p></Card>
+        <Card className="p-4">
+          <p className="text-xs text-muted-foreground font-medium">Contratados</p>
+          <p className="text-2xl font-bold">{stats?.hiredCount ?? 0}</p>
+          {!!stats?.admissionsInProgress && (
+            <p className="text-[11px] text-muted-foreground mt-1">{stats.admissionsInProgress} em admissão</p>
+          )}
+        </Card>
+
       </div>
 
       {/* Filters */}
