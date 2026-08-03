@@ -103,7 +103,9 @@ export function StackedHorizontalBarChart({
   appearance,
   orientation = 'horizontal',
   seriesColors,
+  onDrilldown,
 }: StackedHorizontalBarChartProps) {
+
   const safeFormatting = formatting || { type: 'number' as FormatType, decimals: 0 };
   const safeAppearance = appearance || DEFAULT_APPEARANCE;
   const colors = getChartColors(safeAppearance.colorPalette);
