@@ -274,7 +274,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
             className={`overflow-hidden rounded-lg min-w-0 ${fitHeight ? "h-full min-h-0" : ""}`}
             style={{
               ...(fitHeight ? { minHeight: 0 } : { minHeight: minH }),
-              gridColumn: `span ${Math.min(span, effectiveCols)} / span ${Math.min(span, effectiveCols)}`,
+              gridColumn: `span ${Math.min(span, maxSpan)} / span ${Math.min(span, maxSpan)}`,
             }}
           >
             <ConfigurableVisualCard
