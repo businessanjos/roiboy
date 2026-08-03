@@ -9,7 +9,7 @@ import { format, parseISO, startOfWeek, startOfMonth, startOfYear, endOfWeek, en
 import { ptBR } from "date-fns/locale";
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
-import { enrichDealsWithProduct, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
+import { enrichDealsWithProduct, enrichDealsWithCanal, enrichDealsWithMql, enrichLeadsWithMql, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 
