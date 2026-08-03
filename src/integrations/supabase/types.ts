@@ -3575,6 +3575,7 @@ export type Database = {
           phone_e164: string
           pix_key: string | null
           pix_key_type: string | null
+          recent_activity_at: string | null
           responsible_user_id: string | null
           rg: string | null
           sales_user_id: string | null
@@ -3647,6 +3648,7 @@ export type Database = {
           phone_e164: string
           pix_key?: string | null
           pix_key_type?: string | null
+          recent_activity_at?: string | null
           responsible_user_id?: string | null
           rg?: string | null
           sales_user_id?: string | null
@@ -3719,6 +3721,7 @@ export type Database = {
           phone_e164?: string
           pix_key?: string | null
           pix_key_type?: string | null
+          recent_activity_at?: string | null
           responsible_user_id?: string | null
           rg?: string | null
           sales_user_id?: string | null
