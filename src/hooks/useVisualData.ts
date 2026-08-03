@@ -459,6 +459,7 @@ export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promi
   if (leads.length === 0) return leads;
 
   const leadIds = leads.map(l => l.id);
+  const valueMap = await loadOptionMap(LEAD_MQL_FIELD_ID, LEAD_MQL_VALUE_MAP);
   let allMqlValues: any[] = [];
   const batchSize = 500;
 
@@ -480,11 +481,12 @@ export async function enrichLeadsWithMql(accountId: string, leads: any[]): Promi
 
   const mqlMap = new Map<string, { label: string; color: string }>();
   for (const row of allMqlValues) {
-    const mapped = LEAD_MQL_VALUE_MAP[row.value_text || ''];
+    const mapped = valueMap[row.value_text || ''];
     if (mapped) {
       mqlMap.set(row.lead_id, mapped);
     }
   }
+
 
   return leads.map(lead => {
     const mql = mqlMap.get(lead.id);
