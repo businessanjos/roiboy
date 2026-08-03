@@ -18,6 +18,9 @@ import { AlertTriangle, BellRing, CheckCircle2, FileCheck2, Plus, Trash2, XCircl
 import { cn } from '@/lib/utils';
 import { notifyChecklistBlockers } from '@/lib/contentChecklistNotifications';
 
+import { useChecklistFormatRules } from '@/hooks/useChecklistFormatRules';
+import { ChecklistFormatRulesDialog } from './ChecklistFormatRulesDialog';
+
 import {
   CHECKLIST_FORMATS,
   CHECKLIST_STAGES,
@@ -69,6 +72,7 @@ export function ContentChecklistTab() {
   const [editingId, setEditingId] = useState<string | null>(null);
   /** Bloqueios já notificados nesta sessão do rascunho — evita spam de notificação. */
   const [notifiedBlockers, setNotifiedBlockers] = useState<string[]>([]);
+  const { rules: formatRules } = useChecklistFormatRules();
 
   const { data: history = [] } = useQuery({
     queryKey: ['content-checklists', currentUser?.account_id],
@@ -111,7 +115,7 @@ export function ContentChecklistTab() {
     let checked = 0;
     const blocks: string[] = [];
     for (const stage of CHECKLIST_STAGES) {
-      for (const section of visibleSections(stage, draft.format)) {
+      for (const section of visibleSections(stage, draft.format, formatRules)) {
         for (const item of section.items) {
           if (item.negative) {
             if (draft.answers[item.id]) blocks.push(item.label);
@@ -123,7 +127,7 @@ export function ContentChecklistTab() {
       }
     }
     return { positiveTotal: total, positiveChecked: checked, blockers: blocks };
-  }, [draft.answers, draft.format]);
+  }, [draft.answers, draft.format, formatRules]);
 
   const progress = positiveTotal ? Math.round((positiveChecked / positiveTotal) * 100) : 0;
   const canApprove = blockers.length === 0 && progress === 100 && !!draft.post_title.trim();
@@ -255,6 +259,9 @@ export function ContentChecklistTab() {
               <FileCheck2 className="h-4 w-4" />
               {editingId ? 'Editando checklist' : 'Novo checklist'}
             </CardTitle>
+            <div className="pt-1">
+              <ChecklistFormatRulesDialog rules={formatRules} />
+            </div>
           </CardHeader>
           <CardContent className="space-y-4">
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -337,7 +344,7 @@ export function ContentChecklistTab() {
 
         {/* Etapas */}
         {CHECKLIST_STAGES.map((stage) => {
-          const sections = visibleSections(stage, draft.format);
+          const sections = visibleSections(stage, draft.format, formatRules);
           if (!sections.length) return null;
           return (
             <Card key={stage.id}>
