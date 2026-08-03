@@ -26,12 +26,29 @@ export interface ChecklistStage {
 }
 
 export const CHECKLIST_FORMATS = [
-  'Carrossel - Assunto em alta',
-  'Carrossel - Educativo',
+  'Reels',
+  'Stories',
+  'Carrossel',
+  'Post',
   'Revista',
-  'Outdoor - Prova social',
+  'Outdoor',
   'Outro',
 ] as const;
+
+export type ChecklistFormat = (typeof CHECKLIST_FORMATS)[number];
+
+/** Formatos antigos salvos em checklists já criados. */
+export const LEGACY_FORMAT_ALIASES: Record<string, string> = {
+  'Carrossel - Assunto em alta': 'Carrossel',
+  'Carrossel - Educativo': 'Carrossel',
+  'Outdoor - Prova social': 'Outdoor',
+};
+
+export function normalizeFormat(format?: string | null): string | null {
+  if (!format) return null;
+  return LEGACY_FORMAT_ALIASES[format] ?? format;
+}
+
 
 export const CHECKLIST_STAGES: ChecklistStage[] = [
   {
