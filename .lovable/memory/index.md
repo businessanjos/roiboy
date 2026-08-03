@@ -86,6 +86,7 @@
 - [RoyZapp Data Resolution](mem://features/roy-zapp/data-resolution-and-quotes-v1) — Suffix matching for quotes/mentions
 - [RoyZapp Conversation Badges](mem://features/roy-zapp/conversation-ui-metadata-pt) — Strict exclusion of manual tags from list UI
 - [RoyZapp Instance Linking](mem://features/roy-zapp/instance-sector-linking-pt) — Free text naming for instances
+- [Auto-route clientes p/ CS](mem://features/roy-zapp/auto-route-clients-to-cs-pt) — Trigger move conversas de clientes com contexto de suporte de Vendas para Customer Success
 - [RoyZapp Playbook Multi-send](mem://features/roy-zapp/playbook-multi-send-pt) — Sequential sending of items with 1-300s delays
 - [WhatsApp Spam Prevention](mem://features/roy-zapp/spam-prevention-and-compliance-pt) — Limits on broadcast scale
 - [Meta Webhook Limitation](mem://integrations/whatsapp/meta-api-webhook-limitation-pt) — Single webhook URL limit bypass
