@@ -266,12 +266,19 @@ export function ContentChecklistTab() {
               </div>
               <div className="space-y-1.5">
                 <Label>Responsável</Label>
-                <Input
-                  value={draft.responsible}
-                  onChange={(e) => setDraft((d) => ({ ...d, responsible: e.target.value }))}
-                  placeholder="Jessica"
-                />
+                <Select
+                  value={draft.responsible_user_id}
+                  onValueChange={(v) => setDraft((d) => ({ ...d, responsible_user_id: v }))}
+                >
+                  <SelectTrigger><SelectValue placeholder="Quem será notificado" /></SelectTrigger>
+                  <SelectContent>
+                    {accountUsers.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
+
               <div className="space-y-1.5">
                 <Label>Data</Label>
                 <Input
