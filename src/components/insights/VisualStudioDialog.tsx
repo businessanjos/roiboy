@@ -148,6 +148,7 @@ export function VisualStudioDialog({
   const [showDataLabels, setShowDataLabels] = useState(DEFAULT_APPEARANCE.showDataLabels);
   const [dateDisplayFormat, setDateDisplayFormat] = useState<DateDisplayFormat>(DEFAULT_APPEARANCE.dateDisplayFormat);
   const [colorPalette, setColorPalette] = useState<ColorPalette>(DEFAULT_APPEARANCE.colorPalette);
+  const [paletteLocked, setPaletteLocked] = useState(false);
   const [fillEmptyDates, setFillEmptyDates] = useState(DEFAULT_APPEARANCE.fillEmptyDates);
   const [fontScale, setFontScale] = useState<FontScale>('normal');
   const [valueColor, setValueColor] = useState('');
@@ -185,6 +186,7 @@ export function VisualStudioDialog({
       setShowDataLabels(baseConfig.appearance?.showDataLabels ?? DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(baseConfig.appearance?.dateDisplayFormat ?? DEFAULT_APPEARANCE.dateDisplayFormat);
       setColorPalette(baseConfig.appearance?.colorPalette ?? DEFAULT_APPEARANCE.colorPalette);
+      setPaletteLocked(baseConfig.appearance?.paletteLocked ?? false);
       setFillEmptyDates(baseConfig.appearance?.fillEmptyDates ?? DEFAULT_APPEARANCE.fillEmptyDates);
       setFontScale(baseConfig.appearance?.fontScale ?? 'normal');
       setValueColor(baseConfig.appearance?.valueColor ?? '');
@@ -213,6 +215,7 @@ export function VisualStudioDialog({
       setShowDataLabels(DEFAULT_APPEARANCE.showDataLabels);
       setDateDisplayFormat(DEFAULT_APPEARANCE.dateDisplayFormat);
       setColorPalette(DEFAULT_APPEARANCE.colorPalette);
+      setPaletteLocked(false);
       setFillEmptyDates(DEFAULT_APPEARANCE.fillEmptyDates);
       setFontScale('normal');
       setValueColor('');
@@ -317,6 +320,7 @@ export function VisualStudioDialog({
       colorPalette,
       fillEmptyDates,
       fontScale,
+      paletteLocked,
       ...(valueColor ? { valueColor } : {}),
     };
 
@@ -387,7 +391,7 @@ export function VisualStudioDialog({
     return next;
   }, [
     baseConfig, dataSource, measureField, aggregation, dimensionField, isDimensionDate, dateGrouping,
-    formatType, percentMode, showDataLabels, dateDisplayFormat, colorPalette, fillEmptyDates, fontScale, valueColor,
+    formatType, percentMode, showDataLabels, dateDisplayFormat, colorPalette, paletteLocked, fillEmptyDates, fontScale, valueColor,
     isScorecard, isIndicator, isTable, isGauge, tableColumns, gaugeSubType, indicatorMin, indicatorMax,
     visualFilters, segmentBy, statusFilter, isDailyPerformance, dailyPerf, isGoalTracker, goalSettings,
   ]);
