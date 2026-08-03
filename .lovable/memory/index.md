@@ -87,6 +87,7 @@
 - [RoyZapp Conversation Badges](mem://features/roy-zapp/conversation-ui-metadata-pt) — Strict exclusion of manual tags from list UI
 - [RoyZapp Instance Linking](mem://features/roy-zapp/instance-sector-linking-pt) — Free text naming for instances
 - [Auto-route clientes p/ CS](mem://features/roy-zapp/auto-route-clients-to-cs-pt) — Trigger move conversas de clientes com contexto de suporte de Vendas para Customer Success
+- [Auditoria diária de roteamento](mem://features/roy-zapp/routing-audit-job-pt) — Cron corrige conversas cujo prefixo de external_message_id pertence a outra instância (CS vs Comercial)
 - [RoyZapp Playbook Multi-send](mem://features/roy-zapp/playbook-multi-send-pt) — Sequential sending of items with 1-300s delays
 - [WhatsApp Spam Prevention](mem://features/roy-zapp/spam-prevention-and-compliance-pt) — Limits on broadcast scale
 - [Meta Webhook Limitation](mem://integrations/whatsapp/meta-api-webhook-limitation-pt) — Single webhook URL limit bypass
