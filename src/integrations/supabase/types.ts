@@ -25809,6 +25809,60 @@ export type Database = {
           },
         ]
       }
+      zapp_routing_audit_log: {
+        Row: {
+          account_id: string
+          action: string
+          contact_name: string | null
+          conversation_id: string
+          created_at: string
+          details: Json
+          detected_prefix: string
+          expected_integration_id: string | null
+          expected_sector_id: string | null
+          id: string
+          phone_e164: string | null
+          prefix_message_count: number
+          previous_integration_id: string | null
+          previous_sector_id: string | null
+          total_message_count: number
+        }
+        Insert: {
+          account_id: string
+          action: string
+          contact_name?: string | null
+          conversation_id: string
+          created_at?: string
+          details?: Json
+          detected_prefix: string
+          expected_integration_id?: string | null
+          expected_sector_id?: string | null
+          id?: string
+          phone_e164?: string | null
+          prefix_message_count?: number
+          previous_integration_id?: string | null
+          previous_sector_id?: string | null
+          total_message_count?: number
+        }
+        Update: {
+          account_id?: string
+          action?: string
+          contact_name?: string | null
+          conversation_id?: string
+          created_at?: string
+          details?: Json
+          detected_prefix?: string
+          expected_integration_id?: string | null
+          expected_sector_id?: string | null
+          id?: string
+          phone_e164?: string | null
+          prefix_message_count?: number
+          previous_integration_id?: string | null
+          previous_sector_id?: string | null
+          total_message_count?: number
+        }
+        Relationships: []
+      }
       zapp_tags: {
         Row: {
           account_id: string
@@ -26237,6 +26291,15 @@ export type Database = {
         }[]
       }
       apply_agency_rules: { Args: { p_account_id: string }; Returns: number }
+      audit_zapp_conversation_routing: {
+        Args: {
+          p_dry_run?: boolean
+          p_limit?: number
+          p_min_messages?: number
+          p_min_ratio?: number
+        }
+        Returns: Json
+      }
       auto_heal_inactive_assignments: { Args: never; Returns: Json }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
