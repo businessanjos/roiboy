@@ -288,7 +288,9 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         <Badge variant="outline" className="mt-3 text-[10px]">
           {usingPool
             ? `${prizesQuery.data?.length ?? 0} prêmios disponíveis`
-            : `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`}
+            : max > 0
+              ? `Faixa: R$ ${formatBRL(min)} a R$ ${formatBRL(max)}`
+              : spiff.custom_prize_description?.trim() || "Prêmio a combinar"}
         </Badge>
         <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1">
           <ShieldCheck className="h-3 w-3 text-amber-500" />
