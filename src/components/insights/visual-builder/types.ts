@@ -39,6 +39,10 @@ export interface VisualConfig {
     type: FormatType;
     decimals: number;
     displayScale?: DisplayScale;
+    /** Como interpretar valores quando o formato é porcentagem:
+     *  'share' = calcula a participação de cada item no total do visual (padrão);
+     *  'raw'   = o valor já é um percentual, apenas adiciona o símbolo. */
+    percentMode?: 'share' | 'raw';
   };
   // Custom formula for transformations (e.g., "{{value}} * 0.1")
   customFormula?: string;
