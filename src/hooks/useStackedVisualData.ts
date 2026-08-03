@@ -388,6 +388,12 @@ async function fetchStackedDealsData(
     allDeals = await enrichDealsWithCanal(accountId, allDeals);
   }
 
+  // Enrich deals with MQL if needed
+  if (config.stackBy === 'mql' || config.dimension.field === 'mql') {
+    allDeals = await enrichDealsWithMql(accountId, allDeals);
+  }
+
+
   // Enrich deals with Product if needed
   const needsProduct = config.stackBy === 'product' || config.stackBy === 'product_name' || config.dimension.field === 'product' || config.dimension.field === 'product_name';
   if (needsProduct) {
