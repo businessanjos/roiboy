@@ -21,6 +21,7 @@ interface Props {
     roulette_min_prize?: number | null;
     roulette_max_prize?: number | null;
     roulette_pool_id?: string | null;
+    custom_prize_description?: string | null;
   };
   user: { uid: string; name: string };
   pendingSpins: number;
