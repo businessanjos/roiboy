@@ -386,6 +386,13 @@ async function fetchLeadsRecords(
     filteredData = filteredData.filter((l: any) => allowedLeadIds.has(l.id));
   }
 
+  // Unified filters (MQL, Canal, campos nativos) — mesmo recorte do gráfico.
+  const unifiedLeadFilters = selectUnmirroredFilters(config.filters);
+  if (unifiedLeadFilters.length > 0) {
+    filteredData = await applyVisualFilters(filteredData as any, accountId, unifiedLeadFilters, 'leads') as any[];
+  }
+
+
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
     filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
