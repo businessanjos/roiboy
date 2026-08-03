@@ -491,24 +491,30 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     };
   }, [isMobile, readOnly]);
 
+  const visualsById = useMemo(() => new Map(visuals.map((v) => [v.id, v])), [visuals]);
+
   const handleContinuousLayoutChange = useCallback(
     (newLayout: LayoutItem[]) => {
       if (!isMountedRef.current) {
         isMountedRef.current = true;
         return;
       }
-      setLocalLayout(newLayout.map(item => ({
-        i: item.i,
-        x: item.x,
-        y: item.y,
-        w: item.w,
-        h: item.h,
-        minW: 8,
-        minH: 10,
-      })));
+      setLocalLayout(newLayout.map(item => {
+        const { minW, minH } = getGridMins(visualsById.get(item.i));
+        return {
+          i: item.i,
+          x: item.x,
+          y: item.y,
+          w: item.w,
+          h: item.h,
+          minW,
+          minH,
+        };
+      }));
     },
-    []
+    [visualsById]
   );
+
 
   const handlePersist = useCallback(
     (newLayout: LayoutItem[]) => {
