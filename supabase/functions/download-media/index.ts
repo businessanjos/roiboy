@@ -24,6 +24,9 @@ const corsHeaders = {
  * - Better error handling and logging
  */
 
+// Limite de tamanho por mídia (memória do isolate é compartilhada)
+const MAX_MEDIA_BYTES = 90 * 1024 * 1024;
+
 // Download with timeout
 async function downloadWithTimeout(url: string, timeoutMs: number = 30000): Promise<Response> {
   const controller = new AbortController();
@@ -135,12 +138,28 @@ Deno.serve(async (req) => {
 
     const results: { id: string; success: boolean; url?: string; error?: string }[] = [];
 
-    // Process in batches of 8 for faster throughput (each has 30s individual timeout)
-    const batchSize = 8;
-    
-    for (let i = 0; i < messages.length; i += batchSize) {
-      const batch = messages.slice(i, i + batchSize);
-      
+    // Vídeos e documentos são grandes: baixar 8 em paralelo estourava a memória
+    // do isolate ("Memory limit exceeded"), matando o processo e deixando as
+    // mensagens presas em "downloading". Mídia pesada roda uma por vez.
+    const isHeavy = (msg: any) => msg.media_type === "video" || msg.media_type === "document";
+    const ordered = [
+      ...messages.filter((m: any) => !isHeavy(m)),
+      ...messages.filter((m: any) => isHeavy(m)),
+    ];
+
+    const chunks: any[][] = [];
+    for (const msg of ordered) {
+      const last = chunks[chunks.length - 1];
+      if (isHeavy(msg)) {
+        chunks.push([msg]);
+      } else if (last && last.length < 8 && !isHeavy(last[0])) {
+        last.push(msg);
+      } else {
+        chunks.push([msg]);
+      }
+    }
+
+    for (const batch of chunks) {
       // Process batch in parallel
       const batchResults = await Promise.all(batch.map(async (msg: any) => {
         try {
@@ -165,8 +184,18 @@ Deno.serve(async (req) => {
             throw new Error(`Download failed: ${mediaResponse.status}`);
           }
 
+          // Guard de memória: arquivo grande demais derruba o isolate inteiro.
+          const declaredSize = Number(mediaResponse.headers.get("content-length") || 0);
+          if (declaredSize > MAX_MEDIA_BYTES) {
+            await mediaResponse.body?.cancel();
+            throw new Error(`Media too large: ${declaredSize} bytes`);
+          }
+
           const encryptedData = await mediaResponse.arrayBuffer();
           console.log(`Downloaded ${encryptedData.byteLength} bytes`);
+          if (encryptedData.byteLength > MAX_MEDIA_BYTES) {
+            throw new Error(`Media too large: ${encryptedData.byteLength} bytes`);
+          }
 
           let finalData: Uint8Array;
 
@@ -209,7 +238,9 @@ Deno.serve(async (req) => {
               const iv = derivedBytes.slice(0, 16);
               const cipherKey = derivedBytes.slice(16, 48);
               
-              const ciphertext = new Uint8Array(encryptedData).slice(0, -10);
+              // subarray (view) em vez de slice: evita duplicar o buffer inteiro
+              // em memória, o que derrubava o isolate em vídeos grandes.
+              const ciphertext = new Uint8Array(encryptedData).subarray(0, -10);
               
               const aesKey = await crypto.subtle.importKey(
                 'raw',

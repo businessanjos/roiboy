@@ -44,6 +44,26 @@ Deno.serve(async (req) => {
   try {
     const stuckBefore = new Date(Date.now() - STUCK_DOWNLOADING_MINUTES * 60_000).toISOString();
 
+    // Reaper: mensagens que estouraram MAX_ATTEMPTS e ficaram presas em
+    // "downloading" (o isolate morreu antes de marcar falha) viram "abandoned",
+    // senão nunca saem do limbo e poluem o chat.
+    const { data: reaped } = await supabase
+      .from("zapp_messages")
+      .update({
+        media_download_status: "abandoned",
+        media_last_error: "Abandonado após limite de tentativas (download travado)",
+        updated_at: new Date().toISOString(),
+      })
+      .is("media_url", null)
+      .eq("media_download_status", "downloading")
+      .gte("media_download_attempts", MAX_ATTEMPTS)
+      .lt("updated_at", stuckBefore)
+      .select("id");
+    if (reaped?.length) {
+      console.log(`[retry-failed-media] Abandoned ${reaped.length} stuck downloads`);
+    }
+
+
     // Puxa candidatos amplos (últimas 72h) e filtra em memória pelo backoff.
     const since = new Date(Date.now() - 72 * 3600_000).toISOString();
     const { data: rows, error } = await supabase
