@@ -201,8 +201,7 @@ async function fetchDealsRecords(
   // Filter by group name if provided
   if (groupName && config.dimension) {
     filteredData = filteredData.filter(item => {
-      const itemGroup = getGroupKey(item, config.dimension, config);
-      return itemGroup === groupName;
+      return matchesGroup(item, config.dimension, config, groupName);
     });
   }
 
@@ -394,8 +393,7 @@ async function fetchLeadsRecords(
 
   if (groupName && config.dimension) {
     filteredData = filteredData.filter((item: any) => {
-      const itemGroup = getGroupKey(item, config.dimension, config);
-      return itemGroup === groupName;
+      return matchesGroup(item, config.dimension, config, groupName);
     });
   }
 
@@ -441,8 +439,7 @@ async function fetchProductsRecords(
   let filteredData = data || [];
   if (groupName && config.dimension) {
     filteredData = filteredData.filter(item => {
-      const itemGroup = getGroupKey(item, config.dimension, config);
-      return itemGroup === groupName;
+      return matchesGroup(item, config.dimension, config, groupName);
     });
   }
 
@@ -457,6 +454,41 @@ async function fetchProductsRecords(
       description: product.description,
     },
   }));
+}
+
+
+// Rótulos de data variam entre os motores de gráfico (dd/MM, MMM/yy, "Sem 31", etc.)
+// e a granularidade pode ser adaptativa. Comparamos contra todos os formatos possíveis.
+function dateGroupCandidates(dateString: string): string[] {
+  try {
+    const date = typeof dateString === 'string' ? parseISO(dateString) : new Date(dateString);
+    const ws = startOfWeek(date, { locale: ptBR });
+    return [
+      format(date, 'dd'),
+      format(date, 'dd/MM'),
+      format(date, 'dd/MM/yyyy'),
+      format(date, 'yyyy-MM-dd'),
+      format(date, 'MMM', { locale: ptBR }),
+      format(date, 'MMM/yy', { locale: ptBR }),
+      format(date, 'MMMM yyyy', { locale: ptBR }),
+      format(date, 'yyyy-MM'),
+      format(date, 'yyyy'),
+      format(ws, "'Sem' w/yyyy", { locale: ptBR }),
+      `Sem ${format(date, 'II')}`,
+      format(ws, 'yyyy-MM-dd'),
+    ];
+  } catch {
+    return [];
+  }
+}
+
+function matchesGroup(item: any, dimension: VisualConfig['dimension'], config: VisualConfig, groupName: string): boolean {
+  if (dimension?.type === 'date') {
+    const dateValue = item[dimension.field];
+    if (!dateValue) return groupName === 'Sem Data';
+    return dateGroupCandidates(dateValue).includes(groupName);
+  }
+  return getGroupKey(item, dimension, config) === groupName;
 }
 
 function getGroupKey(item: any, dimension: VisualConfig['dimension'], config: VisualConfig): string {
@@ -591,7 +623,7 @@ async function fetchTasksRecords(
         default:
           taskGroup = (task.users as any)?.name || '';
       }
-      return taskGroup === groupName;
+      return matchesGroup(item, config.dimension, config, groupName);
     });
   }
 
