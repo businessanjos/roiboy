@@ -111,11 +111,13 @@ async function getMatchingLeadIds(
       }
     }
   } else if (isSelectField) {
-    const selectedValueKeys = new Set(
-      filter.selectedValues
+    // Registros legados gravam o próprio rótulo em vez do value da opção.
+    const selectedValueKeys = new Set<string>([
+      ...(filter.selectedValues
         .map(label => optionLabelToValue.get(label))
-        .filter(Boolean) as string[]
-    );
+        .filter(Boolean) as string[]),
+      ...filter.selectedValues,
+    ]);
 
     for (const row of allValues) {
       if (row.value_text && selectedValueKeys.has(row.value_text)) {
