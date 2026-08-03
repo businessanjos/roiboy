@@ -527,6 +527,7 @@ function PieChartView({
 
   const compact = width > 0 && (width < 320 || height < 240 || data.length > 6);
   const labelFont = Math.round(11 * m);
+  const sideLegend = width >= 520;
 
   return (
     <div ref={ref} className="h-full w-full">
@@ -559,6 +560,18 @@ function PieChartView({
               />
             ))}
           </Pie>
+          <Legend
+            layout={sideLegend ? 'vertical' : 'horizontal'}
+            align={sideLegend ? 'right' : 'center'}
+            verticalAlign={sideLegend ? 'middle' : 'bottom'}
+            content={
+              <ChartLegendContent
+                fontSize={labelFont}
+                align={sideLegend ? 'left' : 'center'}
+                className={sideLegend ? 'flex-col items-start gap-y-1.5 pl-2' : undefined}
+              />
+            }
+          />
           <Tooltip content={<ChartTooltip formatting={formatting} showCount />} />
         </PieChart>
       </ResponsiveContainer>
