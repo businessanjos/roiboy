@@ -198,11 +198,18 @@ async function applyCustomFilter<T extends { id: string; lead_id?: string | null
 
   if (positiveValues.length === 0) return records;
 
+  // The saved labels may come from a twin field (e.g. the deal "MQL" vs the lead
+  // "MQL" have different wording). Reconcile them against the target field's
+  // real options so the lookup does not silently match nothing.
+  const selectedValues = await reconcileOptionLabels(filter.field, positiveValues);
+  if (selectedValues.length === 0) return records;
+
   const legacyFilter = {
     fieldId: filter.field,
     fieldName: filter.label,
-    selectedValues: positiveValues,
+    selectedValues,
   };
+
 
   const matched = isDealField
     ? await filterByDealField(records as any, accountId, legacyFilter as any)
