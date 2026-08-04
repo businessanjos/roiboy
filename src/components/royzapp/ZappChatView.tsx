@@ -105,6 +105,7 @@ interface ZappChatViewProps {
   canReply?: boolean;
   /** Papel permite assumir/devolver/alterar status. */
   canClaim?: boolean;
+  onOpenCreateDeal?: () => void;
 }
 
 export function ZappChatView({
@@ -183,6 +184,7 @@ export function ZappChatView({
   canTransfer = true,
   canReply = true,
   canClaim = true,
+  onOpenCreateDeal,
 }: ZappChatViewProps) {
   // Search state
   const [showSearch, setShowSearch] = useState(false);
@@ -345,6 +347,7 @@ export function ZappChatView({
         onCall={handleCall}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
+        onOpenCreateDeal={onOpenCreateDeal}
         canTransfer={canTransfer}
         canClaim={canClaim}
       />

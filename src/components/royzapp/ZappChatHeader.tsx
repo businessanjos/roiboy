@@ -18,6 +18,7 @@ import {
   Trash2,
   X,
   Pencil,
+  Briefcase,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +64,8 @@ interface ZappChatHeaderProps {
   onCall?: () => void;
   onToggleSearch?: () => void;
   onOpenMediaGallery?: () => void;
+  /** Abre o CRM da conversa já no formulário de criação de negócio. */
+  onOpenCreateDeal?: () => void;
   /** Papel do usuário permite transferir conversas (Admin/Gestor). */
   canTransfer?: boolean;
   /** Papel do usuário permite assumir/devolver/alterar status (não-Viewer). */
@@ -95,6 +98,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onCall,
   onToggleSearch,
   onOpenMediaGallery,
+  onOpenCreateDeal,
   canTransfer = true,
   canClaim = true,
 }: ZappChatHeaderProps) {
@@ -301,6 +305,18 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             >
               <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
             </Button>
+            {onOpenCreateDeal && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                onClick={onOpenCreateDeal}
+                title="Criar negócio no CRM"
+                aria-label="Criar negócio no CRM"
+              >
+                <Briefcase className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              </Button>
+            )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8">
@@ -331,6 +347,12 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     <Phone className="h-4 w-4 mr-2" />
                     Ligar
                   </DropdownMenuItem>
+                  {onOpenCreateDeal && (
+                    <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onOpenCreateDeal}>
+                      <Briefcase className="h-4 w-4 mr-2" />
+                      Criar negócio
+                    </DropdownMenuItem>
+                  )}
                   {assignment.status !== "closed" && onOpenCloseTicket && (
                     <DropdownMenuItem 
                       className="text-emerald-500 hover:bg-zapp-hover"

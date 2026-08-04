@@ -95,14 +95,18 @@ export function ZappCRMPanel({
   conversationPhone, 
   conversationClientId, 
   conversationLeadId,
-  conversationContactName 
-}: ZappCRMPanelProps) {
+  conversationContactName,
+  autoOpenCreateDeal,
+}: ZappCRMPanelProps & { autoOpenCreateDeal?: number }) {
   const { currentUser } = useCurrentUser();
   const { activityTypes } = useActivityTypes();
   const { validateDealMove } = useRequiredFieldsValidation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [showCreateDeal, setShowCreateDeal] = useState(false);
+  useEffect(() => {
+    if (autoOpenCreateDeal) setShowCreateDeal(true);
+  }, [autoOpenCreateDeal]);
   const [newDealTitle, setNewDealTitle] = useState("");
   const [newDealValue, setNewDealValue] = useState("");
   const [dealDetailOpen, setDealDetailOpen] = useState(false);
