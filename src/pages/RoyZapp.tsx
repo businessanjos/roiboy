@@ -505,6 +505,7 @@ export default function RoyZapp() {
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
   const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
   const isMeetingsView = activeView === "meetings";
+  const [crmCreateDealTick, setCrmCreateDealTick] = useState(0);
   const keepsConversationSelection = activeView === "inbox" || isCrmSectorView || isMeetingsView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
 
@@ -1788,6 +1789,7 @@ export default function RoyZapp() {
               conversationClientId={selectedConversation.zapp_conversation?.client_id}
               conversationLeadId={selectedConversation.zapp_conversation?.lead_id}
               conversationContactName={selectedConversation.zapp_conversation?.contact_name || selectedConversation.zapp_conversation?.client?.full_name || selectedConversation.zapp_conversation?.lead?.full_name}
+              autoOpenCreateDeal={crmCreateDealTick}
             />
           ) : (
             <div className="flex-1 flex items-center justify-center bg-zapp-bg px-6 text-center">
@@ -1934,6 +1936,14 @@ export default function RoyZapp() {
             canTransfer={zappCaps.canTransfer}
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
+            onOpenCreateDeal={
+              selectedSectorId === "vendas" || currentUser?.role === "mentor"
+                ? () => {
+                    setCrmCreateDealTick((n) => n + 1);
+                    changeView("sector");
+                  }
+                : undefined
+            }
         />
         )}
       </div>
