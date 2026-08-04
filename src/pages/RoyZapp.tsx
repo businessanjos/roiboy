@@ -1947,10 +1947,17 @@ export default function RoyZapp() {
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
             onOpenCreateDeal={() => {
+              const conv = selectedConversation?.zapp_conversation;
+              const hasContactRecord = !!conv?.lead_id || !!conv?.client_id;
+              if (!hasContactRecord) {
+                setConfirmCreateDealOpen(true);
+                return;
+              }
               setForceCrmView(true);
               setCrmCreateDealTick((n) => n + 1);
               changeView("sector");
             }}
+
         />
         )}
       </div>
