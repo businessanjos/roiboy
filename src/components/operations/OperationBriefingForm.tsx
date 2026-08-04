@@ -195,15 +195,52 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       return;
     }
     setLoading(true);
-    let query = supabase.from("deal_operation_briefings").select("*").limit(1);
-    if (dealId) query = query.eq("deal_id", dealId);
-    else if (clientId) query = query.eq("client_id", clientId);
 
-    const { data: row, error } = await query.maybeSingle();
-    if (error && error.code !== "PGRST116") {
-      console.error("Erro ao carregar briefing:", error);
+    let row: any = null;
+
+    if (dealId) {
+      const { data: r, error } = await supabase
+        .from("deal_operation_briefings")
+        .select("*")
+        .eq("deal_id", dealId)
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      row = r;
+    } else if (clientId) {
+      // 1) Briefing já vinculado diretamente ao cliente
+      const { data: r, error } = await supabase
+        .from("deal_operation_briefings")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      row = r;
+
+      // 2) Fallback: briefing preenchido pelo Comercial no negócio deste cliente
+      if (!row) {
+        const { data: deals } = await supabase
+          .from("deals")
+          .select("id")
+          .eq("client_id", clientId);
+        const dealIds = (deals || []).map((d: any) => d.id);
+        if (dealIds.length > 0) {
+          const { data: r2 } = await supabase
+            .from("deal_operation_briefings")
+            .select("*")
+            .in("deal_id", dealIds)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          row = r2;
+        }
+      }
     }
+
     if (row) {
+
       setOriginalId(row.id);
       const r: any = row;
       const loadedData: OperationBriefingData = {
