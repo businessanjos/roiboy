@@ -1028,7 +1028,7 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">
-                        {churnMetrics.cancelamentos} cancel. / {churnMetrics.activeBase} ativos
+                        {churnMetrics.cancelamentos} cancel. / {churnMetrics.activeBase} ativos no início do período
                       </span>
                       <span className={`font-semibold ${churnColor}`}>
                         {churnRate <= CHURN_GOAL
