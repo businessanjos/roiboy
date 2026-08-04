@@ -245,7 +245,7 @@ export function ManualMetricsTab() {
             }
           }}
         >
-          <ToggleGroupItem value="edit" className="gap-2"><PencilLine className="h-4 w-4" />Preencher</ToggleGroupItem>
+          <ToggleGroupItem value="edit" className="gap-2" title="Voltar para a visualização de 1 perfil"><PencilLine className="h-4 w-4" />1 perfil (preencher)</ToggleGroupItem>
           <ToggleGroupItem value="compare" className="gap-2"><Users className="h-4 w-4" />Comparar perfis</ToggleGroupItem>
         </ToggleGroup>
 
