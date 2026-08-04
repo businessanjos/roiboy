@@ -334,10 +334,21 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       ? `${symbolForResume} ${data.trafego_investimento_valor}/${data.trafego_investimento_periodo || "—"}`
       : "";
 
+    // Garante o vínculo com o cliente para que o time de CS enxergue o briefing
+    let resolvedClientId = clientId || originalClientId || null;
+    if (!resolvedClientId && (dealId || originalDealId)) {
+      const { data: deal } = await supabase
+        .from("deals")
+        .select("client_id")
+        .eq("id", (dealId || originalDealId) as string)
+        .maybeSingle();
+      resolvedClientId = deal?.client_id ?? null;
+    }
+
     const payload: any = {
       account_id: currentUser.account_id,
       deal_id: dealId || originalDealId || null,
-      client_id: clientId || originalClientId || null,
+      client_id: resolvedClientId,
 
       // Localização
       pais: data.pais || null,
