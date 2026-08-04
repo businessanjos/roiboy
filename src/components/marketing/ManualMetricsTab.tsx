@@ -48,6 +48,9 @@ export function ManualMetricsTab() {
   const [values, setValues] = useState<Record<number, RowValues>>({});
   const [goalValues, setGoalValues] = useState<RowValues>(emptyRow());
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<'edit' | 'compare'>('edit');
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
 
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
