@@ -287,6 +287,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       setData({ ...loadedData, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     } else {
       setOriginalId(null);
+      setOriginalDealId(null);
+      setOriginalClientId(null);
       setData({ ...EMPTY, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     }
     setLoading(false);
