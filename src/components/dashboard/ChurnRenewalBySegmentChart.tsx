@@ -253,29 +253,15 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
           {isLoading ? (
             <div className="h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando…</div>
           ) : chartData.length === 0 ? (
-            <div className="min-h-[320px] flex flex-col items-center justify-center gap-4 py-8 text-center">
-              <div className="rounded-full bg-muted p-4">
-                <Layers className="h-7 w-7 text-muted-foreground" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-base font-medium">Sem dados no período selecionado</h3>
-                <p className="text-sm text-muted-foreground max-w-md">
-                  Nenhum cancelamento ou contrato vencido foi registrado entre {formatDate(startStr)} e{" "}
-                  {formatDate(endStr)}. Ajuste o filtro de datas ou verifique as fontes abaixo.
-                </p>
-              </div>
-              <div className="w-full max-w-md space-y-2 text-left">
-                {DATA_SOURCES.map((source) => (
-                  <div key={source.metric} className="rounded-lg border border-border bg-muted/40 p-3">
-                    <div className="flex items-center gap-2">
-                      <source.icon className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm font-medium">{source.metric}</span>
-                    </div>
-                    <p className="mt-1 text-xs text-muted-foreground">{source.requirement}</p>
-                  </div>
-                ))}
-              </div>
-            </div>
+            <DashboardChartEmptyState
+              icon={Layers}
+              description="Nenhum cancelamento ou contrato vencido foi registrado para os segmentos neste período."
+              periodStart={startStr}
+              periodEnd={endStr}
+              sources={DATA_SOURCES}
+              className="min-h-[320px]"
+            />
+
 
           ) : (
             <ChartContainer
