@@ -242,7 +242,8 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
     return globalFilters;
   })();
 
-  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate);
+  const isMobile = useIsMobile();
+  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate, isMobile);
 
   return useQuery({
     queryKey: ['stacked-visual-data', effectiveConfig, filters, accountId],

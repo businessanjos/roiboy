@@ -73,7 +73,8 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
     return globalFilters;
   })();
 
-  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate);
+  const isMobile = useIsMobile();
+  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate, isMobile);
 
   return useQuery({
     queryKey: ['visual-data', effectiveConfig, chartType, filters, accountId],
