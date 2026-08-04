@@ -178,6 +178,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
+  const [originalDealId, setOriginalDealId] = useState<string | null>(null);
+  const [originalClientId, setOriginalClientId] = useState<string | null>(null);
   const draftKey = !readOnly && (dealId || clientId)
     ? `roy:sales:operation-briefing-draft:${dealId ? `deal:${dealId}` : `client:${clientId}`}`
     : null;
