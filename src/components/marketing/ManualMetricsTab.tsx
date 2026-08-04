@@ -317,8 +317,11 @@ export function ManualMetricsTab() {
       {mode === 'compare' ? (
         compareProfiles.length < 2 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Selecione pelo menos 2 perfis para comparar.
+            <CardContent className="py-12 text-center text-muted-foreground space-y-3">
+              <p>Selecione pelo menos 2 perfis para comparar.</p>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setMode('edit')}>
+                <PencilLine className="h-4 w-4" />Voltar para 1 perfil
+              </Button>
             </CardContent>
           </Card>
         ) : (
