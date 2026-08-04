@@ -515,16 +515,19 @@ export default function Dashboard() {
     return labels[gestaoPeriodFilter] || "Período";
   }, [gestaoPeriodFilter]);
 
-  // Churn rate within filtered period: cancellations / active contracts base
+  // Churn do período: cancelamentos / base de ativos no INÍCIO do período
+  // Base início ≈ ativos atuais + todas as saídas no período − novos no período
   const churnMetrics = useMemo(() => {
     // Churn = somente cancelamentos antecipados (não inclui encerramentos/não renovações)
     const cancelamentos = monthlyChartData.reduce((sum, m) => sum + (m.cancelamentos || 0), 0);
+    const encerramentos = monthlyChartData.reduce((sum, m) => sum + (m.encerramentos || 0), 0);
     const novos = monthlyChartData.reduce((sum, m) => sum + (m.novos || 0), 0);
-    const activeBase = contractStats?.active ?? gestaoClientStats.active;
-    const denominator = activeBase + cancelamentos;
-    const rate = denominator > 0 ? (cancelamentos / denominator) * 100 : 0;
+    const ativosAtuais = contractStats?.active ?? gestaoClientStats.active;
+    const activeBase = Math.max(0, ativosAtuais + cancelamentos + encerramentos - novos);
+    const rate = activeBase > 0 ? (cancelamentos / activeBase) * 100 : 0;
     return { rate, cancelamentos, novos, activeBase };
   }, [monthlyChartData, contractStats, gestaoClientStats]);
+
 
   // Renewal rate within filtered period: renewed / (renewed + lost)
   const { data: renewalData } = useQuery({
