@@ -1068,7 +1068,11 @@ export default function Dashboard() {
                       </div>
                     </div>
                     <div className="flex items-end justify-between gap-2 mt-2">
-                      <p className={`text-5xl font-bold leading-none ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
+                      {hasRenewalData ? (
+                        <p className={`text-5xl font-bold leading-none ${renewalColor}`}>{renewalRate.toFixed(1)}%</p>
+                      ) : (
+                        <p className="text-2xl font-semibold leading-tight text-muted-foreground">Sem dados no período</p>
+                      )}
                       <div className={`text-right rounded-md px-2.5 py-1.5 ${renewalBg}`}>
                         <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Meta</p>
                         <EditableGoal
@@ -1083,28 +1087,34 @@ export default function Dashboard() {
                     </div>
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">
-                        {renewalData?.renewed ?? 0} renov. / {renewalData?.total ?? 0} resolv.
-                        {renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}
+                        {hasRenewalData
+                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} resolv.${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}`
+                          : "Nenhum desfecho de renovação resolvido no período selecionado"}
                       </span>
-                      <span className={`font-semibold ${renewalColor}`}>
-                        {renewalRate >= RENEWAL_GOAL
-                          ? `${(renewalRate - RENEWAL_GOAL).toFixed(1)}pp acima da meta`
-                          : `${(RENEWAL_GOAL - renewalRate).toFixed(1)}pp abaixo da meta`}
-                      </span>
+                      {hasRenewalData && (
+                        <span className={`font-semibold ${renewalColor}`}>
+                          {renewalRate >= RENEWAL_GOAL
+                            ? `${(renewalRate - RENEWAL_GOAL).toFixed(1)}pp acima da meta`
+                            : `${(RENEWAL_GOAL - renewalRate).toFixed(1)}pp abaixo da meta`}
+                        </span>
+                      )}
                     </div>
                     <div className="mt-2 w-full bg-muted rounded-full h-2 overflow-hidden relative">
-                      <div
-                        className={`h-full rounded-full transition-all duration-500 ${
-                          renewalTone === "success" ? "bg-success" : renewalTone === "warning" ? "bg-warning" : "bg-danger"
-                        }`}
-                        style={{ width: `${Math.min(100, renewalRate)}%` }}
-                      />
+                      {hasRenewalData && (
+                        <div
+                          className={`h-full rounded-full transition-all duration-500 ${
+                            renewalTone === "success" ? "bg-success" : renewalTone === "warning" ? "bg-warning" : "bg-danger"
+                          }`}
+                          style={{ width: `${Math.min(100, renewalRate)}%` }}
+                        />
+                      )}
                       <div
                         className="absolute top-0 h-full w-0.5 bg-foreground/60"
                         style={{ left: `${RENEWAL_GOAL}%` }}
                         title={`Meta: ${RENEWAL_GOAL}%`}
                       />
                     </div>
+
                   </CardContent>
                 </Card>
 
