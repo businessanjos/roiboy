@@ -4,7 +4,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
-import { Layers, XCircle, RefreshCw, Package } from "lucide-react";
+import { Layers, XCircle, RefreshCw, Package, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const METRIC_HELP: { label: string; color: string; formula: string; detail: string }[] = [
+  {
+    label: "Churn %",
+    color: "hsl(var(--danger))",
+    formula: "cancelamentos no período ÷ base ativa no início do período × 100",
+    detail:
+      "Base inicial = contratos ativos hoje + saídas do período − entradas do período. Contam como cancelamento os contratos com status encerrado/cancelado e data de saída dentro do período.",
+  },
+  {
+    label: "Renovação %",
+    color: "hsl(var(--success))",
+    formula: "contratos vencidos com sucessor ÷ total de contratos vencidos × 100",
+    detail:
+      "Um contrato vencido é considerado renovado quando existe outro contrato do mesmo cliente e produto iniciado após o vencimento.",
+  },
+  {
+    label: "Estimativa por vencidos",
+    color: "hsl(var(--muted-foreground))",
+    formula: "usada quando não há desfechos registrados no período",
+    detail:
+      "Quando nenhum evento de renovação ou cancelamento foi registrado, o gráfico estima a renovação a partir dos contratos que venceram no período e da existência de um contrato sucessor ativo.",
+  },
+];
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
