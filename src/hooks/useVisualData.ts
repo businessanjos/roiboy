@@ -14,6 +14,7 @@ import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 
@@ -36,8 +37,8 @@ interface UseVisualDataParams {
  * Granularidade adaptativa: o agrupamento nunca é mais fino do que a
  * janela filtrada suporta (dia -> semana -> mês -> ano).
  */
-function rollUpLongDayGrouping<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string): T {
-  return withAdaptiveDateGrain(cfg, startDate, endDate);
+function rollUpLongDayGrouping<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string, narrow?: boolean): T {
+  return withAdaptiveDateGrain(cfg, startDate, endDate, narrow);
 }
 
 
@@ -72,7 +73,8 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
     return globalFilters;
   })();
 
-  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate);
+  const isMobile = useIsMobile();
+  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate, isMobile);
 
   return useQuery({
     queryKey: ['visual-data', effectiveConfig, chartType, filters, accountId],
