@@ -1797,6 +1797,8 @@ export default function Dashboard() {
                     <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
                   </BarChart>
                 </ChartContainer>
+                )}
+
               </CardContent>
             </Card>
 
