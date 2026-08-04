@@ -503,9 +503,15 @@ export default function RoyZapp() {
     }
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
-  const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
+  const [forceCrmView, setForceCrmView] = useState(false);
+  const isCrmSectorView =
+    activeView === "sector" &&
+    (selectedSectorId === "vendas" || currentUser?.role === "mentor" || forceCrmView);
   const isMeetingsView = activeView === "meetings";
   const [crmCreateDealTick, setCrmCreateDealTick] = useState(0);
+  useEffect(() => {
+    if (activeView !== "sector") setForceCrmView(false);
+  }, [activeView]);
   const keepsConversationSelection = activeView === "inbox" || isCrmSectorView || isMeetingsView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
 

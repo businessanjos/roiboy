@@ -450,7 +450,9 @@ export function ZappCRMPanel({
   };
 
   const isLoading = leadLoading || dealsLoading;
-  const hasContact = conversationLeadId || conversationClientId;
+  // Basta ter um telefone: sem lead/cliente ainda é possível criar o negócio
+  // (o lead é criado automaticamente na hora de salvar).
+  const hasContact = conversationLeadId || conversationClientId || conversationPhone;
   // Format task date with relative labels and time
   const formatTaskDate = (dueDate: string | null, dueTime: string | null): string => {
     if (!dueDate) return "";
