@@ -58,13 +58,16 @@ export function useSectorNavItems(): NavItem[] {
       return currentSector.navItems.filter((item) => item.to !== "/notifications");
     }
 
-    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems;
+    const emailLower = (currentUser?.email || "").toLowerCase();
+    const isSdrExempt = SDR_FULL_VENDAS_EMAILS.has(emailLower);
+    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems && !isSdrExempt;
 
     let sectorItems = currentSector.navItems.filter((item) => item.to !== "/notifications");
 
     if (isSdrUser && currentSector.id === "vendas") {
       sectorItems = sectorItems.filter((item) => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
     }
+
 
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
