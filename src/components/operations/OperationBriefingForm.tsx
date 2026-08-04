@@ -200,6 +200,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
   const [originalDealId, setOriginalDealId] = useState<string | null>(null);
