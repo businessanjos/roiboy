@@ -678,10 +678,29 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         </Section>
 
         {!complete && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-            Campos obrigatórios pendentes: {missing.length}. O Negócio só poderá ser marcado como Ganho com o briefing completo.
+          <div
+            className={`rounded-md border p-3 text-xs ${
+              showErrors
+                ? "border-destructive bg-destructive/10 text-destructive"
+                : "border-destructive/30 bg-destructive/5 text-destructive"
+            }`}
+          >
+            <p className="font-semibold">
+              {showErrors
+                ? `Não foi possível salvar: ${missing.length} campo(s) obrigatório(s) em branco.`
+                : `Campos obrigatórios pendentes: ${missing.length}.`}
+            </p>
+            <ul className="mt-1.5 list-disc pl-4 space-y-0.5">
+              {missing.map((f) => (
+                <li key={f}>{labelForBriefingField(f)}</li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-muted-foreground">
+              O briefing só pode ser salvo com todos os campos obrigatórios preenchidos.
+            </p>
           </div>
         )}
+
 
         {!readOnly && (
           <div className="flex justify-end">
