@@ -252,7 +252,29 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
         </CardHeader>
         <CardContent>
           {isLoading ? (
-            <div className="h-[320px] flex items-center justify-center text-sm text-muted-foreground">Carregando…</div>
+            <div className="h-[340px] w-full" aria-busy="true" aria-label="Carregando churn e renovação por segmento">
+              <div className="flex items-center justify-between mb-4">
+                <Skeleton className="h-3 w-40" />
+                <div className="flex items-center gap-3">
+                  <Skeleton className="h-3 w-20" />
+                  <Skeleton className="h-3 w-20" />
+                </div>
+              </div>
+              <div className="flex h-[240px] items-end gap-6 border-b border-l border-border/60 px-4 pb-2">
+                {[70, 45, 90, 55, 35, 65].map((h, i) => (
+                  <div key={i} className="flex flex-1 items-end justify-center gap-1">
+                    <Skeleton className="w-1/2 rounded-t-md" style={{ height: `${h}%` }} />
+                    <Skeleton className="w-1/2 rounded-t-md" style={{ height: `${Math.max(15, h - 25)}%` }} />
+                  </div>
+                ))}
+              </div>
+              <div className="mt-3 flex justify-around">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <Skeleton key={i} className="h-3 w-12" />
+                ))}
+              </div>
+            </div>
+
           ) : chartData.length === 0 ? (
             <DashboardChartEmptyState
               icon={Layers}
