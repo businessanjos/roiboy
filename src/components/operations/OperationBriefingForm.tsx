@@ -154,9 +154,33 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
   "especialidade",
 ];
 
+export const BRIEFING_FIELD_LABELS: Record<string, string> = {
+  tempo_atuacao_anos: "Tempo de atuação (anos)",
+  faturamento_mes_1: "Faturamento mês 1",
+  faturamento_mes_2: "Faturamento mês 2",
+  faturamento_mes_3: "Faturamento mês 3",
+  ticket_medio: "Ticket médio",
+  margem_lucro_percent: "Margem de lucro (%)",
+  foco_atuacao: "Foco de atuação",
+  objetivo_mentoria: "Objetivo com a mentoria",
+  pais_codigo: "País",
+  estado_uf: "Estado (UF)",
+  cidade: "Cidade",
+  estrutura_clinica: "Estrutura da clínica",
+  numero_funcionarios_num: "Número de funcionários",
+  meta_faturamento: "Meta de faturamento",
+  especialidade: "Especialidade",
+  briefing: "Briefing",
+};
+
+export function labelForBriefingField(field: string): string {
+  return BRIEFING_FIELD_LABELS[field] || field;
+}
+
 export function isBriefingComplete(b: Partial<OperationBriefingData> | null | undefined): boolean {
   return getMissingFields(b).length === 0;
 }
+
 
 interface OperationBriefingFormProps {
   dealId?: string | null;
