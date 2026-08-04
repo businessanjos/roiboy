@@ -156,9 +156,9 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
 
 export const BRIEFING_FIELD_LABELS: Record<string, string> = {
   tempo_atuacao_anos: "Tempo de atuação (anos)",
-  faturamento_mes_1: "Faturamento mês 1",
-  faturamento_mes_2: "Faturamento mês 2",
-  faturamento_mes_3: "Faturamento mês 3",
+  faturamento_mes_1: "Faturamento Mês -1",
+  faturamento_mes_2: "Faturamento Mês -2",
+  faturamento_mes_3: "Faturamento Mês -3",
   ticket_medio: "Ticket médio",
   margem_lucro_percent: "Margem de lucro (%)",
   foco_atuacao: "Foco de atuação",
@@ -167,9 +167,10 @@ export const BRIEFING_FIELD_LABELS: Record<string, string> = {
   estado_uf: "Estado (UF)",
   cidade: "Cidade",
   estrutura_clinica: "Estrutura da clínica",
-  numero_funcionarios_num: "Número de funcionários",
+  numero_funcionarios_num: "Nº de funcionários",
   meta_faturamento: "Meta de faturamento",
   especialidade: "Especialidade",
+
   briefing: "Briefing",
 };
 
