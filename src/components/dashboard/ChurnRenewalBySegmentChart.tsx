@@ -247,10 +247,34 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
             Churn e Renovação por segmento
           </CardTitle>
           <CardDescription>
-            Por produto/plano, no período selecionado. Churn = cancelamentos / base no início do período. Renovação =
-            contratos vencidos com sucessor. Clique em uma barra para ver os clientes e eventos.
+            Por produto/plano, no período selecionado. Clique em uma barra para ver os clientes e eventos.
           </CardDescription>
+          <TooltipProvider delayDuration={150}>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {METRIC_HELP.map((m) => (
+                <Tooltip key={m.label}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={`Como ${m.label} é calculado`}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: m.color }} />
+                      {m.label}
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p className="font-medium">{m.label}</p>
+                    <p className="mt-1 text-xs font-mono leading-relaxed">{m.formula}</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">{m.detail}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <div className="h-[340px] w-full" aria-busy="true" aria-label="Carregando churn e renovação por segmento">
