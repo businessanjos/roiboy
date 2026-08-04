@@ -509,6 +509,10 @@ export default function RoyZapp() {
     (selectedSectorId === "vendas" || currentUser?.role === "mentor" || forceCrmView);
   const isMeetingsView = activeView === "meetings";
   const [crmCreateDealTick, setCrmCreateDealTick] = useState(0);
+  // Confirmação exibida quando a conversa ainda não tem lead/cliente vinculado:
+  // o lead será criado com o nome/telefone da conversa.
+  const [confirmCreateDealOpen, setConfirmCreateDealOpen] = useState(false);
+
   useEffect(() => {
     if (activeView !== "sector") setForceCrmView(false);
   }, [activeView]);
