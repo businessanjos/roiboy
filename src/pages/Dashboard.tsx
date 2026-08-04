@@ -55,7 +55,10 @@ import {
   Maximize2,
   Minimize2,
   X,
+  FileText,
+  XCircle,
 } from "lucide-react";
+import { DashboardChartEmptyState } from "@/components/dashboard/DashboardChartEmptyState";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -439,6 +442,36 @@ export default function Dashboard() {
       { cancelamentos: 0, encerramentos: 0, suspensos: 0, pausados: 0 },
     );
   }, [monthlyChartData]);
+
+  // Empty-state control for the monthly evolution charts
+  const hasMonthlyData = useMemo(
+    () =>
+      monthlyChartData.some(
+        (m: any) =>
+          (m.novos || 0) + (m.cancelamentos || 0) + (m.encerramentos || 0) + (m.suspensos || 0) + (m.pausados || 0) > 0,
+      ),
+    [monthlyChartData],
+  );
+
+  const monthlyChartSources = [
+    {
+      metric: "Novos contratos",
+      requirement: "Precisa de contratos com data de início no período (Clientes › Contratos).",
+      icon: FileText,
+    },
+    {
+      metric: "Cancelamentos e encerramentos",
+      requirement: "Precisa de contratos com status cancelado/encerrado e data de saída preenchida.",
+      icon: XCircle,
+    },
+    {
+      metric: "Suspensos e pausados",
+      requirement: "Precisa de contratos marcados como suspensos ou pausados com data da alteração.",
+      icon: Clock,
+    },
+  ];
+
+
 
   // Lost financial value (within filtered period)
   const lostContracts = useMemo(() => {
@@ -1365,6 +1398,16 @@ export default function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="pt-0">
+              {!hasMonthlyData ? (
+                <DashboardChartEmptyState
+                  icon={BarChart3}
+                  description="Nenhuma movimentação de contratos foi registrada nos meses do período selecionado."
+                  periodStart={gestaoPeriodRange.periodStart}
+                  periodEnd={gestaoPeriodRange.periodEnd}
+                  sources={monthlyChartSources}
+                  className="min-h-[250px] sm:min-h-[320px]"
+                />
+              ) : (
               <ChartContainer config={chartConfig} className="h-[250px] sm:h-[320px] w-full">
                 <BarChart 
                   data={monthlyChartData} 
@@ -1473,6 +1516,8 @@ export default function Dashboard() {
                   />
                 </BarChart>
               </ChartContainer>
+              )}
+
             </CardContent>
           </Card>
 
@@ -1724,6 +1769,16 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {!hasMonthlyData ? (
+                  <DashboardChartEmptyState
+                    icon={BarChart3}
+                    description="Nenhuma movimentação de contratos foi registrada nos meses do período selecionado."
+                    periodStart={gestaoPeriodRange.periodStart}
+                    periodEnd={gestaoPeriodRange.periodEnd}
+                    sources={monthlyChartSources}
+                    className="min-h-[350px]"
+                  />
+                ) : (
                 <ChartContainer config={chartConfig} className="h-[350px] w-full">
                   <BarChart data={monthlyChartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }} barCategoryGap="20%">
                     <defs>
@@ -1764,6 +1819,8 @@ export default function Dashboard() {
                     <Legend wrapperStyle={{ paddingTop: 20 }} iconType="circle" iconSize={10} formatter={(value) => <span className="text-base text-muted-foreground ml-1">{value}</span>} />
                   </BarChart>
                 </ChartContainer>
+                )}
+
               </CardContent>
             </Card>
 
