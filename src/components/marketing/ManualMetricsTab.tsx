@@ -245,7 +245,7 @@ export function ManualMetricsTab() {
             }
           }}
         >
-          <ToggleGroupItem value="edit" className="gap-2"><PencilLine className="h-4 w-4" />Preencher</ToggleGroupItem>
+          <ToggleGroupItem value="edit" className="gap-2" title="Voltar para a visualização de 1 perfil"><PencilLine className="h-4 w-4" />1 perfil (preencher)</ToggleGroupItem>
           <ToggleGroupItem value="compare" className="gap-2"><Users className="h-4 w-4" />Comparar perfis</ToggleGroupItem>
         </ToggleGroup>
 
@@ -317,8 +317,11 @@ export function ManualMetricsTab() {
       {mode === 'compare' ? (
         compareProfiles.length < 2 ? (
           <Card>
-            <CardContent className="py-12 text-center text-muted-foreground">
-              Selecione pelo menos 2 perfis para comparar.
+            <CardContent className="py-12 text-center text-muted-foreground space-y-3">
+              <p>Selecione pelo menos 2 perfis para comparar.</p>
+              <Button variant="outline" size="sm" className="gap-2" onClick={() => setMode('edit')}>
+                <PencilLine className="h-4 w-4" />Voltar para 1 perfil
+              </Button>
             </CardContent>
           </Card>
         ) : (
