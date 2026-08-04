@@ -2243,6 +2243,49 @@ export default function RoyZapp() {
         </AlertDialogContent>
       </AlertDialog>
 
+      {/* Confirmação: criar negócio para conversa sem lead/cliente */}
+      <AlertDialog open={confirmCreateDealOpen} onOpenChange={setConfirmCreateDealOpen}>
+        <AlertDialogContent className="bg-zapp-panel border-zapp-border">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-zapp-text">
+              Criar negócio para este contato?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
+              Esta conversa ainda não tem lead nem cliente vinculado. Um novo lead será
+              criado com os dados abaixo e vinculado ao negócio.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="rounded-md border border-zapp-border bg-zapp-bg p-3 text-sm space-y-1">
+            <p className="text-zapp-text">
+              <span className="text-zapp-text-muted">Nome: </span>
+              {selectedConversation?.zapp_conversation?.contact_name || "Sem nome"}
+            </p>
+            <p className="text-zapp-text">
+              <span className="text-zapp-text-muted">Telefone: </span>
+              {selectedConversation?.zapp_conversation?.phone_e164 ||
+                selectedConversation?.zapp_conversation?.group_jid ||
+                "Não informado"}
+            </p>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-zapp-border text-zapp-text hover:bg-zapp-hover">
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setForceCrmView(true);
+                setCrmCreateDealTick((n) => n + 1);
+                changeView("sector");
+              }}
+            >
+              Criar negócio
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+
+
       {/* Meta templates dialog (only meaningful when current channel is Meta) */}
       <ZappMetaTemplatesDialog
         open={templatesDialogOpen}
