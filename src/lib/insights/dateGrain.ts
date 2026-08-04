@@ -50,11 +50,12 @@ export function resolveAdaptiveGrain(
   configured: DateGrouping | undefined,
   startDate?: string,
   endDate?: string,
+  narrow?: boolean,
 ): DateGrouping | undefined {
   if (!configured) return configured;
   const days = spanInDays(startDate, endDate);
   if (days === null) return configured;
-  const minimum = minimumGrainForSpan(days);
+  const minimum = minimumGrainForSpan(days, narrow ?? isNarrowViewport());
   return ORDER.indexOf(minimum) > ORDER.indexOf(configured) ? minimum : configured;
 }
 
@@ -65,11 +66,12 @@ export function withAdaptiveDateGrain<T extends { dimension?: any } | null>(
   cfg: T,
   startDate?: string,
   endDate?: string,
+  narrow?: boolean,
 ): T {
   if (!cfg) return cfg;
   const dimension = (cfg as any).dimension;
   if (!dimension?.dateGrouping) return cfg;
-  const next = resolveAdaptiveGrain(dimension.dateGrouping, startDate, endDate);
+  const next = resolveAdaptiveGrain(dimension.dateGrouping, startDate, endDate, narrow);
   if (!next || next === dimension.dateGrouping) return cfg;
   return { ...(cfg as any), dimension: { ...dimension, dateGrouping: next } } as T;
 }

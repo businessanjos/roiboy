@@ -11,6 +11,7 @@ import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithMql, enr
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 
 
@@ -207,8 +208,8 @@ interface UseStackedVisualDataParams {
  * Granularidade adaptativa: o agrupamento nunca é mais fino do que a
  * janela filtrada suporta (dia -> semana -> mês -> ano).
  */
-function rollUpLongDayGroupingStacked<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string): T {
-  return withAdaptiveDateGrain(cfg, startDate, endDate);
+function rollUpLongDayGroupingStacked<T extends { dimension?: any } | null>(cfg: T, startDate?: string, endDate?: string, narrow?: boolean): T {
+  return withAdaptiveDateGrain(cfg, startDate, endDate, narrow);
 }
 
 
