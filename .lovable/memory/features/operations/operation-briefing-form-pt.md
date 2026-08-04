@@ -5,6 +5,8 @@ type: feature
 ---
 O comercial preenche o "Briefing para Operação" (tabela `deal_operation_briefings`) com campos ESTRUTURADOS pensados para análise/BI. Aparece em DUAS abas sincronizadas: aba "Briefing Op." no DealDetailSheet (pipeline) e aba "Briefing Op." no ClientDetail (Operações). Ligação por `deal_id` e/ou `client_id`.
 
+**Vínculo obrigatório deal ↔ cliente:** ao salvar pelo pipeline, o form resolve e grava `client_id` a partir do deal (senão o CS não enxerga nada). Ao abrir pelo ClientDetail, busca por `client_id` e, se não achar, faz fallback pelos `deal_id` dos negócios do cliente — sempre preservando os dois vínculos no update.
+
 **Localização internacional (clientes do mundo todo):**
 - `pais` (nome) + `pais_codigo` (ISO alpha-2: BR, US, PT...) — **OBRIGATÓRIO**
 - `estado` (nome) + `estado_uf` (UF quando BR) — **obrigatório só quando pais_codigo = BR**
