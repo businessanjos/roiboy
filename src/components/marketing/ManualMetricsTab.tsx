@@ -416,7 +416,10 @@ export function ManualMetricsTab() {
         Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil. As metas são mensais e
         alimentam os gráficos comparativos (Hoje e 7d usam a semana corrente; 30d e “Este mês” usam as semanas do mês).
       </p>
+        </>
+      )}
     </div>
+
 
   );
 }
