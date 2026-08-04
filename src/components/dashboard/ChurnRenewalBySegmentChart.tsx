@@ -52,8 +52,30 @@ const EVENT_VARIANT: Record<EventKind, "destructive" | "default" | "secondary"> 
   vencido_sem_sucessor: "secondary",
 };
 
+const DATA_SOURCES: { metric: string; requirement: string; icon: typeof Layers }[] = [
+  {
+    metric: "Churn %",
+    requirement:
+      "Precisa de contratos cancelados/encerrados no período (Clientes › Contratos), com data de cancelamento e produto preenchidos.",
+    icon: XCircle,
+  },
+  {
+    metric: "Renovação %",
+    requirement:
+      "Precisa de contratos com data de término dentro do período (Operações › Renovações) e o contrato sucessor cadastrado para o mesmo cliente/produto.",
+    icon: RefreshCw,
+  },
+  {
+    metric: "Segmento (produto/plano)",
+    requirement:
+      "Cada contrato precisa estar vinculado a um produto em Configurações › Produtos; sem produto o contrato não entra em nenhum segmento.",
+    icon: Package,
+  },
+];
+
 const formatDate = (value: string | null) =>
   value ? new Date(`${value.slice(0, 10)}T12:00:00`).toLocaleDateString("pt-BR") : "—";
+
 
 export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }: Props) {
   const startStr = periodStart.toISOString().slice(0, 10);
