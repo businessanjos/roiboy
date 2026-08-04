@@ -1757,6 +1757,16 @@ export default function Dashboard() {
                 </CardTitle>
               </CardHeader>
               <CardContent>
+                {!hasMonthlyData ? (
+                  <DashboardChartEmptyState
+                    icon={BarChart3}
+                    description="Nenhuma movimentação de contratos foi registrada nos meses do período selecionado."
+                    periodStart={gestaoPeriodRange.periodStart}
+                    periodEnd={gestaoPeriodRange.periodEnd}
+                    sources={monthlyChartSources}
+                    className="min-h-[350px]"
+                  />
+                ) : (
                 <ChartContainer config={chartConfig} className="h-[350px] w-full">
                   <BarChart data={monthlyChartData} margin={{ top: 20, right: 20, left: 0, bottom: 5 }} barCategoryGap="20%">
                     <defs>
