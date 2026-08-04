@@ -1208,6 +1208,14 @@ export default function Dashboard() {
             );
           })()}
 
+          <ChurnRenewalBySegmentChart
+            accountId={currentUser?.account_id}
+            periodStart={gestaoPeriodRange.periodStart}
+            periodEnd={gestaoPeriodRange.periodEnd}
+          />
+
+
+
           {/* Comparecimento no último evento presencial + Tempo Ganho → Onboarding */}
           {gestaoViewMode === "operacoes" && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
