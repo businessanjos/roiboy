@@ -440,6 +440,36 @@ export default function Dashboard() {
     );
   }, [monthlyChartData]);
 
+  // Empty-state control for the monthly evolution charts
+  const hasMonthlyData = useMemo(
+    () =>
+      monthlyChartData.some(
+        (m: any) =>
+          (m.novos || 0) + (m.cancelamentos || 0) + (m.encerramentos || 0) + (m.suspensos || 0) + (m.pausados || 0) > 0,
+      ),
+    [monthlyChartData],
+  );
+
+  const monthlyChartSources = [
+    {
+      metric: "Novos contratos",
+      requirement: "Precisa de contratos com data de início no período (Clientes › Contratos).",
+      icon: FileText,
+    },
+    {
+      metric: "Cancelamentos e encerramentos",
+      requirement: "Precisa de contratos com status cancelado/encerrado e data de saída preenchida.",
+      icon: XCircle,
+    },
+    {
+      metric: "Suspensos e pausados",
+      requirement: "Precisa de contratos marcados como suspensos ou pausados com data da alteração.",
+      icon: Clock,
+    },
+  ];
+
+
+
   // Lost financial value (within filtered period)
   const lostContracts = useMemo(() => {
     const periodStart = gestaoPeriodRange.periodStart;
