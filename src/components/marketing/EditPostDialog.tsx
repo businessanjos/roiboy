@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { CalendarIcon, Link2, Pencil, Bookmark } from 'lucide-react';
+import { CalendarIcon, Link2, Pencil, Bookmark, AtSign } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Calendar } from '@/components/ui/calendar';
 import {
@@ -64,6 +64,7 @@ export interface EditPostFormData {
   profile_visits: number;
   specialist_version?: string;
   composition?: string[];
+  collaborator?: string;
 }
 
 const isValidInstagramUrl = (url: string): boolean => {
@@ -98,6 +99,7 @@ export function EditPostDialog({
   const [profileVisits, setProfileVisits] = useState('');
   const [specialistVersion, setSpecialistVersion] = useState('');
   const [composition, setComposition] = useState<string[]>([]);
+  const [collaborator, setCollaborator] = useState('');
   const [savePresetOpen, setSavePresetOpen] = useState(false);
 
   // Populate form when post changes
@@ -121,6 +123,7 @@ export function EditPostDialog({
       setProfileVisits((post.profile_visits || 0).toString());
       setSpecialistVersion(post.specialist_version || '');
       setComposition(post.composition || []);
+      setCollaborator((post as any).collaborator || '');
     }
   }, [post]);
 
@@ -163,6 +166,7 @@ export function EditPostDialog({
       profile_visits: profileVisitsNum,
       specialist_version: specialistVersion || undefined,
       composition: composition.length > 0 ? composition : undefined,
+      collaborator: collaborator.trim() || undefined,
     });
   };
 
@@ -493,6 +497,21 @@ export function EditPostDialog({
                   onDeletePreset={(id) => deletePreset.mutate(id)}
                   isLoading={isLoadingTemplates}
                 />
+              </div>
+
+              {/* Colaborador */}
+              <div className="space-y-2">
+                <Label htmlFor="edit-collaborator">Colaborador (opcional)</Label>
+                <div className="relative">
+                  <AtSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    id="edit-collaborator"
+                    placeholder="username_colaborador"
+                    value={collaborator}
+                    onChange={(e) => setCollaborator(e.target.value.replace('@', ''))}
+                    className="pl-10"
+                  />
+                </div>
               </div>
 
               {/* Composição */}

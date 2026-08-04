@@ -303,6 +303,7 @@ export function useSocialMediaData() {
           collaborator: data.collaborator || null,
           specialist_version: data.specialist_version || null,
           composition: data.composition || [],
+          collaborator: data.collaborator || null,
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
@@ -387,6 +388,7 @@ export function useSocialMediaData() {
         profile_visits: number;
         specialist_version?: string;
         composition?: string[];
+        collaborator?: string;
       };
     }) => {
       // Extract Instagram ID from permalink
