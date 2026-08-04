@@ -55,7 +55,10 @@ import {
   Maximize2,
   Minimize2,
   X,
+  FileText,
+  XCircle,
 } from "lucide-react";
+import { DashboardChartEmptyState } from "@/components/dashboard/DashboardChartEmptyState";
 import { toast } from "sonner";
 import { format, differenceInDays, addYears, isBefore, isSameDay, startOfMonth, endOfMonth, startOfYear, endOfYear, subMonths, subDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
