@@ -1,15 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Save, Loader2, Target } from 'lucide-react';
+import { Save, Loader2, Target, Users, PencilLine, ChevronDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { RecordsGoalsCharts, METRICS, type MetricKey } from './RecordsGoalsCharts';
+import { RecordsCompareView } from './RecordsCompareView';
+
 
 const MONTHS = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -43,6 +48,9 @@ export function ManualMetricsTab() {
   const [values, setValues] = useState<Record<number, RowValues>>({});
   const [goalValues, setGoalValues] = useState<RowValues>(emptyRow());
   const [saving, setSaving] = useState(false);
+  const [mode, setMode] = useState<'edit' | 'compare'>('edit');
+  const [compareIds, setCompareIds] = useState<string[]>([]);
+
 
 
   const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
@@ -207,19 +215,80 @@ export function ManualMetricsTab() {
     );
   }
 
+  const toggleCompare = (id: string) => {
+    setCompareIds((prev) => {
+      if (prev.includes(id)) return prev.filter((x) => x !== id);
+      if (prev.length >= 4) {
+        toast.info('Máximo de 4 perfis na comparação');
+        return prev;
+      }
+      return [...prev, id];
+    });
+  };
+
+  const compareProfiles = compareIds
+    .map((id) => profiles.find((p: any) => p.id === id))
+    .filter(Boolean) as any[];
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={profileId} onValueChange={setProfileId}>
-          <SelectTrigger className="w-[240px]"><SelectValue placeholder="Perfil" /></SelectTrigger>
-          <SelectContent>
-            {profiles.map((p: any) => (
-              <SelectItem key={p.id} value={p.id}>
-                {p.display_name ? `${p.display_name} (@${p.username})` : `@${p.username}`}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <ToggleGroup
+          type="single"
+          variant="outline"
+          value={mode}
+          onValueChange={(v) => {
+            if (!v) return;
+            setMode(v as 'edit' | 'compare');
+            if (v === 'compare' && compareIds.length === 0) {
+              setCompareIds(profiles.slice(0, 2).map((p: any) => p.id));
+            }
+          }}
+        >
+          <ToggleGroupItem value="edit" className="gap-2"><PencilLine className="h-4 w-4" />Preencher</ToggleGroupItem>
+          <ToggleGroupItem value="compare" className="gap-2"><Users className="h-4 w-4" />Comparar perfis</ToggleGroupItem>
+        </ToggleGroup>
+
+        {mode === 'edit' ? (
+          <Select value={profileId} onValueChange={setProfileId}>
+            <SelectTrigger className="w-[240px]"><SelectValue placeholder="Perfil" /></SelectTrigger>
+            <SelectContent>
+              {profiles.map((p: any) => (
+                <SelectItem key={p.id} value={p.id}>
+                  {p.display_name ? `${p.display_name} (@${p.username})` : `@${p.username}`}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        ) : (
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="min-w-[240px] justify-between gap-2">
+                {compareIds.length ? `${compareIds.length} perfis selecionados` : 'Selecionar perfis'}
+                <ChevronDown className="h-4 w-4 opacity-60" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent align="start" className="w-[280px] p-2">
+              <p className="px-2 py-1.5 text-xs text-muted-foreground">Selecione de 2 a 4 perfis</p>
+              <div className="max-h-64 overflow-y-auto">
+                {profiles.map((p: any) => {
+                  const checked = compareIds.includes(p.id);
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => toggleCompare(p.id)}
+                      className="flex w-full items-center gap-2 rounded-md px-2 py-2 text-left text-sm hover:bg-accent"
+                    >
+                      <Checkbox checked={checked} className="pointer-events-none" />
+                      <span className="truncate">{p.display_name ? `${p.display_name} (@${p.username})` : `@${p.username}`}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            </PopoverContent>
+          </Popover>
+        )}
 
         <Select value={month} onValueChange={setMonth}>
           <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
@@ -237,11 +306,27 @@ export function ManualMetricsTab() {
           </SelectContent>
         </Select>
 
-        <Button className="ml-auto gap-2" onClick={handleSave} disabled={saving}>
-          {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-          Salvar
-        </Button>
+        {mode === 'edit' && (
+          <Button className="ml-auto gap-2" onClick={handleSave} disabled={saving}>
+            {saving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Salvar
+          </Button>
+        )}
       </div>
+
+      {mode === 'compare' ? (
+        compareProfiles.length < 2 ? (
+          <Card>
+            <CardContent className="py-12 text-center text-muted-foreground">
+              Selecione pelo menos 2 perfis para comparar.
+            </CardContent>
+          </Card>
+        ) : (
+          <RecordsCompareView profiles={compareProfiles} year={Number(year)} month={Number(month)} />
+        )
+      ) : (
+        <>
+
 
       <Card>
         <CardContent className="p-0 overflow-x-auto">
@@ -339,7 +424,10 @@ export function ManualMetricsTab() {
         Preenchimento manual, semana a semana, com os números absolutos do mês de cada perfil. As metas são mensais e
         alimentam os gráficos comparativos (Hoje e 7d usam a semana corrente; 30d e “Este mês” usam as semanas do mês).
       </p>
+        </>
+      )}
     </div>
+
 
   );
 }
