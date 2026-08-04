@@ -4,7 +4,33 @@ import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
-import { Layers, XCircle, RefreshCw, Package } from "lucide-react";
+import { Layers, XCircle, RefreshCw, Package, Info } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
+const METRIC_HELP: { label: string; color: string; formula: string; detail: string }[] = [
+  {
+    label: "Churn %",
+    color: "hsl(var(--danger))",
+    formula: "cancelamentos no período ÷ base ativa no início do período × 100",
+    detail:
+      "Base inicial = contratos ativos hoje + saídas do período − entradas do período. Contam como cancelamento os contratos com status encerrado/cancelado e data de saída dentro do período.",
+  },
+  {
+    label: "Renovação %",
+    color: "hsl(var(--success))",
+    formula: "contratos vencidos com sucessor ÷ total de contratos vencidos × 100",
+    detail:
+      "Um contrato vencido é considerado renovado quando existe outro contrato do mesmo cliente e produto iniciado após o vencimento.",
+  },
+  {
+    label: "Estimativa por vencidos",
+    color: "hsl(var(--muted-foreground))",
+    formula: "usada quando não há desfechos registrados no período",
+    detail:
+      "Quando nenhum evento de renovação ou cancelamento foi registrado, o gráfico estima a renovação a partir dos contratos que venceram no período e da existência de um contrato sucessor ativo.",
+  },
+];
+
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -247,10 +273,34 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
             Churn e Renovação por segmento
           </CardTitle>
           <CardDescription>
-            Por produto/plano, no período selecionado. Churn = cancelamentos / base no início do período. Renovação =
-            contratos vencidos com sucessor. Clique em uma barra para ver os clientes e eventos.
+            Por produto/plano, no período selecionado. Clique em uma barra para ver os clientes e eventos.
           </CardDescription>
+          <TooltipProvider delayDuration={150}>
+            <div className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1.5">
+              {METRIC_HELP.map((m) => (
+                <Tooltip key={m.label}>
+                  <TooltipTrigger asChild>
+                    <button
+                      type="button"
+                      className="inline-flex items-center gap-1.5 text-xs text-muted-foreground hover:text-foreground transition-colors"
+                      aria-label={`Como ${m.label} é calculado`}
+                    >
+                      <span className="h-2 w-2 rounded-full" style={{ background: m.color }} />
+                      {m.label}
+                      <Info className="h-3 w-3" />
+                    </button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs">
+                    <p className="font-medium">{m.label}</p>
+                    <p className="mt-1 text-xs font-mono leading-relaxed">{m.formula}</p>
+                    <p className="mt-1.5 text-xs text-muted-foreground">{m.detail}</p>
+                  </TooltipContent>
+                </Tooltip>
+              ))}
+            </div>
+          </TooltipProvider>
         </CardHeader>
+
         <CardContent>
           {isLoading ? (
             <div className="h-[340px] w-full" aria-busy="true" aria-label="Carregando churn e renovação por segmento">
