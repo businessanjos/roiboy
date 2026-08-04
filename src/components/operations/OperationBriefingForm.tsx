@@ -336,8 +336,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
 
     const payload: any = {
       account_id: currentUser.account_id,
-      deal_id: dealId || null,
-      client_id: clientId || null,
+      deal_id: dealId || originalDealId || null,
+      client_id: clientId || originalClientId || null,
 
       // Localização
       pais: data.pais || null,
