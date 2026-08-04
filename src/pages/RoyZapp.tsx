@@ -503,9 +503,15 @@ export default function RoyZapp() {
     }
   }, [filterTagId]);
   const [filterAgentId, setFilterAgentId] = useState<string>("all");
-  const isCrmSectorView = activeView === "sector" && (selectedSectorId === "vendas" || currentUser?.role === "mentor");
+  const [forceCrmView, setForceCrmView] = useState(false);
+  const isCrmSectorView =
+    activeView === "sector" &&
+    (selectedSectorId === "vendas" || currentUser?.role === "mentor" || forceCrmView);
   const isMeetingsView = activeView === "meetings";
   const [crmCreateDealTick, setCrmCreateDealTick] = useState(0);
+  useEffect(() => {
+    if (activeView !== "sector") setForceCrmView(false);
+  }, [activeView]);
   const keepsConversationSelection = activeView === "inbox" || isCrmSectorView || isMeetingsView;
   const [selectedConversation, setSelectedConversation] = useState<ConversationAssignment | null>(null);
 
@@ -1936,14 +1942,11 @@ export default function RoyZapp() {
             canTransfer={zappCaps.canTransfer}
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
-            onOpenCreateDeal={
-              selectedSectorId === "vendas" || currentUser?.role === "mentor"
-                ? () => {
-                    setCrmCreateDealTick((n) => n + 1);
-                    changeView("sector");
-                  }
-                : undefined
-            }
+            onOpenCreateDeal={() => {
+              setForceCrmView(true);
+              setCrmCreateDealTick((n) => n + 1);
+              changeView("sector");
+            }}
         />
         )}
       </div>
