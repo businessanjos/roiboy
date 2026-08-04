@@ -156,9 +156,9 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
 
 export const BRIEFING_FIELD_LABELS: Record<string, string> = {
   tempo_atuacao_anos: "Tempo de atuação (anos)",
-  faturamento_mes_1: "Faturamento mês 1",
-  faturamento_mes_2: "Faturamento mês 2",
-  faturamento_mes_3: "Faturamento mês 3",
+  faturamento_mes_1: "Faturamento Mês -1",
+  faturamento_mes_2: "Faturamento Mês -2",
+  faturamento_mes_3: "Faturamento Mês -3",
   ticket_medio: "Ticket médio",
   margem_lucro_percent: "Margem de lucro (%)",
   foco_atuacao: "Foco de atuação",
@@ -167,9 +167,10 @@ export const BRIEFING_FIELD_LABELS: Record<string, string> = {
   estado_uf: "Estado (UF)",
   cidade: "Cidade",
   estrutura_clinica: "Estrutura da clínica",
-  numero_funcionarios_num: "Número de funcionários",
+  numero_funcionarios_num: "Nº de funcionários",
   meta_faturamento: "Meta de faturamento",
   especialidade: "Especialidade",
+
   briefing: "Briefing",
 };
 
@@ -578,9 +579,10 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           <div className="sm:col-span-2 space-y-2 rounded-md border p-3">
             <Label className="text-xs font-semibold">Últimos 3 faturamentos ({currencyCode}) *</Label>
             <div className="grid grid-cols-3 gap-2">
-              <MoneyField {...moneyProps} label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
-              <MoneyField {...moneyProps} label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
-              <MoneyField {...moneyProps} label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -3 *" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -2 *" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -1 *" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
+
             </div>
             <p className="text-[11px] text-muted-foreground">
               Digite só o número, sem &quot;mil&quot;. Ex.: 60000 (não &quot;60 mil&quot;).
