@@ -11,7 +11,6 @@ import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithMql, enr
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 
 
@@ -242,8 +241,7 @@ export function useStackedVisualData({ config, enabled = true }: UseStackedVisua
     return globalFilters;
   })();
 
-  const isMobile = useIsMobile();
-  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate, isMobile);
+  const effectiveConfig = rollUpLongDayGroupingStacked(config, filters.startDate, filters.endDate);
 
   return useQuery({
     queryKey: ['stacked-visual-data', effectiveConfig, filters, accountId],

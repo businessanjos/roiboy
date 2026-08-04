@@ -14,7 +14,6 @@ import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
 import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 
 
@@ -73,8 +72,7 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
     return globalFilters;
   })();
 
-  const isMobile = useIsMobile();
-  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate, isMobile);
+  const effectiveConfig = rollUpLongDayGrouping(config, filters.startDate, filters.endDate);
 
   return useQuery({
     queryKey: ['visual-data', effectiveConfig, chartType, filters, accountId],
