@@ -552,10 +552,57 @@ export default function Dashboard() {
         if (row.outcome === "renewed") renewed++;
         else if (row.outcome === "lost") lost++;
       }
-      const total = renewed + lost;
+      let total = renewed + lost;
+      let fallback = false;
+
+      // Fallback: sem desfechos registrados no período, usa contratos vencidos
+      // no período e detecta sucessor (mesmo cliente + produto começando após o fim).
+      if (total === 0) {
+        const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+        const endStr = gestaoPeriodRange.periodEnd.toISOString().slice(0, 10);
+        const { data: expired, error: expErr } = await supabase
+          .from("client_contracts")
+          .select("id, client_id, product_id, end_date, status")
+          .eq("account_id", currentUser!.account_id!)
+          .not("end_date", "is", null)
+          .gte("end_date", startStr)
+          .lte("end_date", endStr);
+        if (expErr) throw expErr;
+
+        const expiredRows = (expired ?? []).filter(
+          (c: any) => !["draft", "cancelled"].includes(String(c.status ?? "").toLowerCase())
+        );
+
+        if (expiredRows.length > 0) {
+          const clientIds = Array.from(new Set(expiredRows.map((c: any) => c.client_id).filter(Boolean)));
+          const { data: allContracts, error: allErr } = await supabase
+            .from("client_contracts")
+            .select("id, client_id, product_id, start_date, end_date, status, parent_contract_id")
+            .eq("account_id", currentUser!.account_id!)
+            .in("client_id", clientIds as string[]);
+          if (allErr) throw allErr;
+
+          for (const c of expiredRows as any[]) {
+            const hasSuccessor = (allContracts ?? []).some((s: any) => {
+              if (s.id === c.id) return false;
+              if (["draft", "cancelled"].includes(String(s.status ?? "").toLowerCase())) return false;
+              if (s.parent_contract_id === c.id) return true;
+              if (s.client_id !== c.client_id) return false;
+              if (c.product_id && s.product_id && s.product_id !== c.product_id) return false;
+              return !!s.start_date && s.start_date >= c.end_date;
+            });
+            if (hasSuccessor) renewed++;
+            else lost++;
+          }
+          total = renewed + lost;
+          fallback = total > 0;
+        }
+      }
+
       const rate = total > 0 ? (renewed / total) * 100 : 0;
-      return { rate, renewed, lost, total };
+      return { rate, renewed, lost, total, fallback };
     },
+
   });
 
   // NPS from latest vNPS snapshot per client (within current account)
@@ -1088,8 +1135,9 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">
                         {hasRenewalData
-                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} resolv.${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}`
+                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} ${renewalData?.fallback ? "vencidos" : "resolv."}${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}${renewalData?.fallback ? " (estimado por contratos vencidos)" : ""}`
                           : "Nenhum desfecho de renovação resolvido no período selecionado"}
+
                       </span>
                       {hasRenewalData && (
                         <span className={`font-semibold ${renewalColor}`}>
