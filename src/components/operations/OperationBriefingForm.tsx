@@ -154,9 +154,33 @@ export const REQUIRED_BRIEFING_FIELDS: (keyof OperationBriefingData)[] = [
   "especialidade",
 ];
 
+export const BRIEFING_FIELD_LABELS: Record<string, string> = {
+  tempo_atuacao_anos: "Tempo de atuação (anos)",
+  faturamento_mes_1: "Faturamento mês 1",
+  faturamento_mes_2: "Faturamento mês 2",
+  faturamento_mes_3: "Faturamento mês 3",
+  ticket_medio: "Ticket médio",
+  margem_lucro_percent: "Margem de lucro (%)",
+  foco_atuacao: "Foco de atuação",
+  objetivo_mentoria: "Objetivo com a mentoria",
+  pais_codigo: "País",
+  estado_uf: "Estado (UF)",
+  cidade: "Cidade",
+  estrutura_clinica: "Estrutura da clínica",
+  numero_funcionarios_num: "Número de funcionários",
+  meta_faturamento: "Meta de faturamento",
+  especialidade: "Especialidade",
+  briefing: "Briefing",
+};
+
+export function labelForBriefingField(field: string): string {
+  return BRIEFING_FIELD_LABELS[field] || field;
+}
+
 export function isBriefingComplete(b: Partial<OperationBriefingData> | null | undefined): boolean {
   return getMissingFields(b).length === 0;
 }
+
 
 interface OperationBriefingFormProps {
   dealId?: string | null;
@@ -176,6 +200,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showErrors, setShowErrors] = useState(false);
+
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
   const [originalDealId, setOriginalDealId] = useState<string | null>(null);
@@ -322,8 +348,19 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       toast.error("Usuário sem conta vinculada");
       return;
     }
+    const missingNow = getMissingFields(data);
+    if (missingNow.length > 0) {
+      setShowErrors(true);
+      toast.error(
+        `Preencha todos os campos obrigatórios (${missingNow.length} pendente(s))`,
+        { description: missingNow.map(labelForBriefingField).join(", ") },
+      );
+      return;
+    }
+    setShowErrors(false);
     setSaving(true);
-    const complete = isBriefingComplete(data);
+    const complete = true;
+
 
     const symbolForResume = country?.currencySymbol || "R$";
     const faturamentosResumo = [data.faturamento_mes_1, data.faturamento_mes_2, data.faturamento_mes_3]
@@ -641,10 +678,29 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         </Section>
 
         {!complete && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
-            Campos obrigatórios pendentes: {missing.length}. O Negócio só poderá ser marcado como Ganho com o briefing completo.
+          <div
+            className={`rounded-md border p-3 text-xs ${
+              showErrors
+                ? "border-destructive bg-destructive/10 text-destructive"
+                : "border-destructive/30 bg-destructive/5 text-destructive"
+            }`}
+          >
+            <p className="font-semibold">
+              {showErrors
+                ? `Não foi possível salvar: ${missing.length} campo(s) obrigatório(s) em branco.`
+                : `Campos obrigatórios pendentes: ${missing.length}.`}
+            </p>
+            <ul className="mt-1.5 list-disc pl-4 space-y-0.5">
+              {missing.map((f) => (
+                <li key={f}>{labelForBriefingField(f)}</li>
+              ))}
+            </ul>
+            <p className="mt-1.5 text-muted-foreground">
+              O briefing só pode ser salvo com todos os campos obrigatórios preenchidos.
+            </p>
           </div>
         )}
+
 
         {!readOnly && (
           <div className="flex justify-end">
