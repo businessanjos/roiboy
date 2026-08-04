@@ -578,9 +578,10 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
           <div className="sm:col-span-2 space-y-2 rounded-md border p-3">
             <Label className="text-xs font-semibold">Últimos 3 faturamentos ({currencyCode}) *</Label>
             <div className="grid grid-cols-3 gap-2">
-              <MoneyField {...moneyProps} label="Mês -3" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
-              <MoneyField {...moneyProps} label="Mês -2" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
-              <MoneyField {...moneyProps} label="Mês -1" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -3 *" value={data.faturamento_mes_3} onChange={(v) => update("faturamento_mes_3", v)} placeholder="60000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -2 *" value={data.faturamento_mes_2} onChange={(v) => update("faturamento_mes_2", v)} placeholder="55000" readOnly={readOnly} compact />
+              <MoneyField {...moneyProps} label="Mês -1 *" value={data.faturamento_mes_1} onChange={(v) => update("faturamento_mes_1", v)} placeholder="70000" readOnly={readOnly} compact />
+
             </div>
             <p className="text-[11px] text-muted-foreground">
               Digite só o número, sem &quot;mil&quot;. Ex.: 60000 (não &quot;60 mil&quot;).
