@@ -178,6 +178,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [saving, setSaving] = useState(false);
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
+  const [originalDealId, setOriginalDealId] = useState<string | null>(null);
+  const [originalClientId, setOriginalClientId] = useState<string | null>(null);
   const draftKey = !readOnly && (dealId || clientId)
     ? `roy:sales:operation-briefing-draft:${dealId ? `deal:${dealId}` : `client:${clientId}`}`
     : null;
@@ -195,17 +197,56 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       return;
     }
     setLoading(true);
-    let query = supabase.from("deal_operation_briefings").select("*").limit(1);
-    if (dealId) query = query.eq("deal_id", dealId);
-    else if (clientId) query = query.eq("client_id", clientId);
 
-    const { data: row, error } = await query.maybeSingle();
-    if (error && error.code !== "PGRST116") {
-      console.error("Erro ao carregar briefing:", error);
+    let row: any = null;
+
+    if (dealId) {
+      const { data: r, error } = await supabase
+        .from("deal_operation_briefings")
+        .select("*")
+        .eq("deal_id", dealId)
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      row = r;
+    } else if (clientId) {
+      // 1) Briefing já vinculado diretamente ao cliente
+      const { data: r, error } = await supabase
+        .from("deal_operation_briefings")
+        .select("*")
+        .eq("client_id", clientId)
+        .order("updated_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      row = r;
+
+      // 2) Fallback: briefing preenchido pelo Comercial no negócio deste cliente
+      if (!row) {
+        const { data: deals } = await supabase
+          .from("deals")
+          .select("id")
+          .eq("client_id", clientId);
+        const dealIds = (deals || []).map((d: any) => d.id);
+        if (dealIds.length > 0) {
+          const { data: r2 } = await supabase
+            .from("deal_operation_briefings")
+            .select("*")
+            .in("deal_id", dealIds)
+            .order("updated_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          row = r2;
+        }
+      }
     }
+
     if (row) {
       setOriginalId(row.id);
+      setOriginalDealId(row.deal_id ?? null);
+      setOriginalClientId(row.client_id ?? null);
       const r: any = row;
+
       const loadedData: OperationBriefingData = {
         ...EMPTY,
         pais: toStr(r.pais),
@@ -246,6 +287,8 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       setData({ ...loadedData, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     } else {
       setOriginalId(null);
+      setOriginalDealId(null);
+      setOriginalClientId(null);
       setData({ ...EMPTY, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     }
     setLoading(false);
@@ -291,10 +334,21 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       ? `${symbolForResume} ${data.trafego_investimento_valor}/${data.trafego_investimento_periodo || "—"}`
       : "";
 
+    // Garante o vínculo com o cliente para que o time de CS enxergue o briefing
+    let resolvedClientId = clientId || originalClientId || null;
+    if (!resolvedClientId && (dealId || originalDealId)) {
+      const { data: deal } = await supabase
+        .from("deals")
+        .select("client_id")
+        .eq("id", (dealId || originalDealId) as string)
+        .maybeSingle();
+      resolvedClientId = deal?.client_id ?? null;
+    }
+
     const payload: any = {
       account_id: currentUser.account_id,
-      deal_id: dealId || null,
-      client_id: clientId || null,
+      deal_id: dealId || originalDealId || null,
+      client_id: resolvedClientId,
 
       // Localização
       pais: data.pais || null,
