@@ -426,6 +426,7 @@ export function useSocialMediaData() {
           profile_visits: data.profile_visits || 0,
           specialist_version: data.specialist_version || null,
           composition: data.composition || [],
+          collaborator: data.collaborator || null,
           engagement_rate: Math.round(engagementRate * 100) / 100,
           virality_rate: Math.round(viralityRate * 100) / 100,
           is_trending: engagementRate >= 12 || viralityRate >= 1.5,
