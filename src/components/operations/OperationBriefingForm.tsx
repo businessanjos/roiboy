@@ -346,8 +346,19 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       toast.error("Usuário sem conta vinculada");
       return;
     }
+    const missingNow = getMissingFields(data);
+    if (missingNow.length > 0) {
+      setShowErrors(true);
+      toast.error(
+        `Preencha todos os campos obrigatórios (${missingNow.length} pendente(s))`,
+        { description: missingNow.map(labelForBriefingField).join(", ") },
+      );
+      return;
+    }
+    setShowErrors(false);
     setSaving(true);
-    const complete = isBriefingComplete(data);
+    const complete = true;
+
 
     const symbolForResume = country?.currencySymbol || "R$";
     const faturamentosResumo = [data.faturamento_mes_1, data.faturamento_mes_2, data.faturamento_mes_3]
