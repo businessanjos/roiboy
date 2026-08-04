@@ -1,5 +1,4 @@
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
-import { useIsMobile } from "@/hooks/use-mobile";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -50,8 +49,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   })();
 
   // Mesma granularidade adaptativa dos gráficos, para os rótulos baterem
-  const isMobile = useIsMobile();
-  const effectiveConfig = withAdaptiveDateGrain(config, filters.startDate, filters.endDate, isMobile);
+  const effectiveConfig = withAdaptiveDateGrain(config, filters.startDate, filters.endDate);
 
   return useQuery({
     queryKey: ['visual-drilldown', effectiveConfig, groupName, filters, accountId, extraCfColumns],
