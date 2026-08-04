@@ -240,9 +240,11 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     }
 
     if (row) {
-
       setOriginalId(row.id);
+      setOriginalDealId(row.deal_id ?? null);
+      setOriginalClientId(row.client_id ?? null);
       const r: any = row;
+
       const loadedData: OperationBriefingData = {
         ...EMPTY,
         pais: toStr(r.pais),
