@@ -11,6 +11,13 @@ import type { NavItem } from "@/config/sectors";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 export const SDR_ROLES = ["SDR"];
+/**
+ * Usuários SDR liberados para ver todo o setor Comercial (exceção nominal).
+ * Continuam sujeitos aos bloqueios de gestão (ex.: /sales-team, /insights).
+ */
+export const SDR_FULL_VENDAS_EMAILS = new Set<string>([
+  "rafaelaslongo@anjosbusiness.com",
+]);
 export const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/pipeline",
   "/leads",
@@ -19,6 +26,7 @@ export const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
   "/clients",
   "/sales/contracts",
 ]);
+
 
 /**
  * Itens de navegação do setor atual já filtrados por permissões, cargo e
@@ -50,13 +58,16 @@ export function useSectorNavItems(): NavItem[] {
       return currentSector.navItems.filter((item) => item.to !== "/notifications");
     }
 
-    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems;
+    const emailLower = (currentUser?.email || "").toLowerCase();
+    const isSdrExempt = SDR_FULL_VENDAS_EMAILS.has(emailLower);
+    const isSdrUser = roleNameMatches(teamRoleName, SDR_ROLES) && !showAllItems && !isSdrExempt;
 
     let sectorItems = currentSector.navItems.filter((item) => item.to !== "/notifications");
 
     if (isSdrUser && currentSector.id === "vendas") {
       sectorItems = sectorItems.filter((item) => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
     }
+
 
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
