@@ -1942,14 +1942,11 @@ export default function RoyZapp() {
             canTransfer={zappCaps.canTransfer}
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
-            onOpenCreateDeal={
-              selectedSectorId === "vendas" || currentUser?.role === "mentor"
-                ? () => {
-                    setCrmCreateDealTick((n) => n + 1);
-                    changeView("sector");
-                  }
-                : undefined
-            }
+            onOpenCreateDeal={() => {
+              setForceCrmView(true);
+              setCrmCreateDealTick((n) => n + 1);
+              changeView("sector");
+            }}
         />
         )}
       </div>

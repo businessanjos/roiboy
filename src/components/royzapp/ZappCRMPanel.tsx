@@ -368,6 +368,24 @@ export function ZappCRMPanel({
 
       if (stageError) throw stageError;
 
+      // Conversa ainda sem lead/cliente: cria o lead na hora para não travar o negócio
+      let leadId = conversationLeadId || null;
+      if (!leadId && !conversationClientId) {
+        const { data: newLead, error: leadError } = await supabase
+          .from("leads")
+          .insert({
+            account_id: currentUser.account_id,
+            full_name: newDealTitle || conversationContactName || conversationPhone || "Novo contato",
+            phone: conversationPhone || null,
+            source: "RoyZapp",
+            responsible_user_id: currentUser.id,
+          })
+          .select("id")
+          .single();
+        if (leadError) throw leadError;
+        leadId = newLead.id;
+      }
+
       const { data: newDeal, error } = await supabase
         .from("deals")
         .insert({
@@ -376,7 +394,7 @@ export function ZappCRMPanel({
           value: parseFloat(newDealValue.replace(/\D/g, "")) / 100 || 0,
           stage_id: stages[0].id,
           pipeline_id: stageData.pipeline_id,
-          lead_id: conversationLeadId || null,
+          lead_id: leadId,
           client_id: conversationClientId || null,
           status: "open",
           responsible_user_id: currentUser.id,
