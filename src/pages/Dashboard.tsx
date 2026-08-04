@@ -1516,6 +1516,8 @@ export default function Dashboard() {
                   />
                 </BarChart>
               </ChartContainer>
+              )}
+
             </CardContent>
           </Card>
 
