@@ -994,10 +994,14 @@ export default function Dashboard() {
             const npsBg = npsTone === "success" ? "bg-success/10" : npsTone === "warning" ? "bg-warning/10" : "bg-danger/10";
 
             const renewalRate = renewalData?.rate ?? 0;
-            const renewalTone = renewalRate >= RENEWAL_GOAL ? "success" : renewalRate >= RENEWAL_GOAL * 0.75 ? "warning" : "danger";
-            const renewalColor = renewalTone === "success" ? "text-success" : renewalTone === "warning" ? "text-warning" : "text-danger";
-            const renewalBorder = renewalTone === "success" ? "border-l-success" : renewalTone === "warning" ? "border-l-warning" : "border-l-danger";
-            const renewalBg = renewalTone === "success" ? "bg-success/10" : renewalTone === "warning" ? "bg-warning/10" : "bg-danger/10";
+            const hasRenewalData = (renewalData?.total ?? 0) > 0;
+            const renewalTone = !hasRenewalData
+              ? "neutral"
+              : renewalRate >= RENEWAL_GOAL ? "success" : renewalRate >= RENEWAL_GOAL * 0.75 ? "warning" : "danger";
+            const renewalColor = renewalTone === "success" ? "text-success" : renewalTone === "warning" ? "text-warning" : renewalTone === "danger" ? "text-danger" : "text-muted-foreground";
+            const renewalBorder = renewalTone === "success" ? "border-l-success" : renewalTone === "warning" ? "border-l-warning" : renewalTone === "danger" ? "border-l-danger" : "border-l-muted";
+            const renewalBg = renewalTone === "success" ? "bg-success/10" : renewalTone === "warning" ? "bg-warning/10" : renewalTone === "danger" ? "bg-danger/10" : "bg-muted";
+
 
             return (
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
