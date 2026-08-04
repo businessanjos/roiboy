@@ -73,6 +73,8 @@ import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttenda
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
+import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
+
 
 
 
@@ -1207,6 +1209,14 @@ export default function Dashboard() {
               </div>
             );
           })()}
+
+          <ChurnRenewalBySegmentChart
+            accountId={currentUser?.account_id}
+            periodStart={gestaoPeriodRange.periodStart}
+            periodEnd={gestaoPeriodRange.periodEnd}
+          />
+
+
 
           {/* Comparecimento no último evento presencial + Tempo Ganho → Onboarding */}
           {gestaoViewMode === "operacoes" && (
