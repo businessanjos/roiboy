@@ -259,6 +259,33 @@ export default function MentoriaEC() {
       toast.error(msg);
     },
   });
+  const historyQuery = useQuery({
+    queryKey: ["ec-mentoring-history", historyMember?.clientId],
+    enabled: !!historyMember?.clientId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ec_mentoring_attendance")
+        .select("id, session_date, notes")
+        .eq("client_id", historyMember!.clientId)
+        .order("session_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const deleteAttendanceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ec_mentoring_attendance").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Registro de mentoria excluído");
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-history", historyMember?.clientId] });
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
+    },
+    onError: (err: any) => toast.error(err?.message || "Não foi possível excluir o registro"),
+  });
+
 
   const members = membersQuery.data ?? [];
 
