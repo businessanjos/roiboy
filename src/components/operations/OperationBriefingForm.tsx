@@ -690,6 +690,19 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
             </div>
           </div>
         )}
+        {ingestionIssues.length > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Briefing salvo, mas pode não chegar ao Customer Success</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                {ingestionIssues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
         <Section title="Localização">
           <CountryStateCity
             value={{
