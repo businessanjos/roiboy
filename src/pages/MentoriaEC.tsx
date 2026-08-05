@@ -317,9 +317,10 @@ export default function MentoriaEC() {
     const total = members.length;
     const never = members.filter((m) => !m.lastAttendance).length;
     const attended = total - never;
+    const scheduled = members.filter((m) => m.nextScheduled).length;
     const ec = members.filter((m) => m.program === "EC").length;
     const rm = members.filter((m) => m.program === "RM").length;
-    return { total, never, attended, ec, rm };
+    return { total, never, attended, scheduled, ec, rm };
   }, [members]);
 
   return (
