@@ -197,6 +197,23 @@ const toNum = (v: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// Erros de RLS/permissão do PostgREST (política restritiva, grant ausente, sessão sem setor)
+const isAccessError = (err: any): boolean => {
+  if (!err) return false;
+  const code = String(err.code || "");
+  const msg = `${err.message || ""} ${err.details || ""} ${err.hint || ""}`.toLowerCase();
+  return (
+    code === "42501" ||
+    code === "PGRST301" ||
+    code === "PGRST116" ||
+    msg.includes("permission denied") ||
+    msg.includes("row-level security") ||
+    msg.includes("not authorized") ||
+    msg.includes("jwt")
+  );
+};
+
+
 export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = false }: OperationBriefingFormProps) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
