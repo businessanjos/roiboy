@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, ArrowDown, ArrowUpDown, History, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { usePracticeAreas } from "@/hooks/usePracticeAreas";
@@ -105,6 +105,7 @@ export default function MentoriaEC() {
   };
 
   const [dialogState, setDialogState] = useState<{ member: EcMember; mode: "record" | "schedule" } | null>(null);
+  const [historyMember, setHistoryMember] = useState<EcMember | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
   const [attendanceSort, setAttendanceSort] = useState<"none" | "desc" | "asc">("none");
@@ -258,6 +259,33 @@ export default function MentoriaEC() {
       toast.error(msg);
     },
   });
+  const historyQuery = useQuery({
+    queryKey: ["ec-mentoring-history", historyMember?.clientId],
+    enabled: !!historyMember?.clientId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ec_mentoring_attendance")
+        .select("id, session_date, notes")
+        .eq("client_id", historyMember!.clientId)
+        .order("session_date", { ascending: false });
+      if (error) throw error;
+      return data ?? [];
+    },
+  });
+
+  const deleteAttendanceMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ec_mentoring_attendance").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Registro de mentoria excluído");
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-history", historyMember?.clientId] });
+      qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
+    },
+    onError: (err: any) => toast.error(err?.message || "Não foi possível excluir o registro"),
+  });
+
 
   const members = membersQuery.data ?? [];
 
@@ -601,8 +629,17 @@ export default function MentoriaEC() {
                             Agendar próxima
                           </Button>
                         )}
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          title="Histórico de mentorias (excluir registros)"
+                          onClick={() => setHistoryMember(m)}
+                        >
+                          <History className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
+
                   </TableRow>
                 );
               })}
@@ -651,6 +688,49 @@ export default function MentoriaEC() {
             >
               {recordMutation.isPending ? "Salvando..." : "Confirmar"}
             </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!historyMember} onOpenChange={(open) => !open && setHistoryMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Histórico de mentorias — {historyMember?.fullName}</DialogTitle>
+            <DialogDescription>
+              Exclua registros lançados por engano. Ao excluir a última realizada, o membro volta para “Em aberto”.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto space-y-2">
+            {historyQuery.isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+            {!historyQuery.isLoading && (historyQuery.data?.length ?? 0) === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum registro de mentoria.</p>
+            )}
+            {(historyQuery.data ?? []).map((r: any) => {
+              const future = r.session_date > today;
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-3 rounded-md border p-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      {format(parseISO(r.session_date), "dd/MM/yyyy", { locale: ptBR })}{" "}
+                      <span className="text-xs text-muted-foreground">{future ? "(agendada)" : "(realizada)"}</span>
+                    </div>
+                    {r.notes && <div className="text-xs text-muted-foreground truncate">{r.notes}</div>}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    disabled={deleteAttendanceMutation.isPending}
+                    onClick={() => deleteAttendanceMutation.mutate(r.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryMember(null)}>Fechar</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
