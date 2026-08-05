@@ -379,8 +379,13 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
             </div>
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-220px)] overflow-x-auto -mx-1 px-1">
-            <div className="flex gap-3 h-full min-w-max pr-4">
+          <div
+            ref={mobileBoardRef}
+            className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain -mx-1 px-1"
+            style={{ height: mobileBoardHeight ? `${mobileBoardHeight}px` : "calc(100vh - 220px)" }}
+          >
+            <div className="flex gap-3 h-full w-max pr-4">
+
               {stages.map((stage, index) => (
                 <DealKanbanColumn
                   key={stage.id}
