@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Link, useSearchParams } from "react-router-dom";
 import { format, differenceInCalendarDays, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { GraduationCap, CheckCircle2, Clock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
+import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, ArrowDown, ArrowUpDown } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { usePracticeAreas } from "@/hooks/usePracticeAreas";
@@ -41,7 +41,7 @@ type MentorshipStatus =
   | "nao_quer_agendar"
   | "nao_respondeu";
 
-type StatusFilter = "all" | "never" | "attended" | "recent";
+type StatusFilter = "all" | "never" | "attended" | "scheduled" | "recent";
 type MentorshipStatusFilter = "all" | MentorshipStatus;
 
 interface EcMember {
@@ -51,6 +51,7 @@ interface EcMember {
   businessSegment: string | null;
   contractEnd: string | null;
   lastAttendance: string | null;
+  nextScheduled: string | null;
   attendanceCount: number;
   mentorshipStatus: MentorshipStatus | null;
   productId: string | null;
@@ -142,15 +143,21 @@ export default function MentoriaEC() {
       if (aErr) throw aErr;
       if (sErr) throw sErr;
 
-      const attMap = new Map<string, { last: string; count: number }>();
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
       (attendance || []).forEach((a) => {
-        const cur = attMap.get(a.client_id);
-        if (!cur) attMap.set(a.client_id, { last: a.session_date, count: 1 });
-        else {
+        const cur = attMap.get(a.client_id) ?? { last: null, next: null, count: 0 };
+        const isFuture = a.session_date > todayStr;
+        if (isFuture) {
+          // agendamento futuro: guarda o mais próximo de hoje
+          if (!cur.next || a.session_date < cur.next) cur.next = a.session_date;
+        } else {
           cur.count += 1;
-          if (a.session_date > cur.last) cur.last = a.session_date;
+          if (!cur.last || a.session_date > cur.last) cur.last = a.session_date;
         }
+        attMap.set(a.client_id, cur);
       });
+
 
       const statusMap = new Map<string, MentorshipStatus>();
       (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
@@ -166,6 +173,7 @@ export default function MentoriaEC() {
           businessSegment: c.business_segment,
           contractEnd: info?.endDate ?? null,
           lastAttendance: att?.last ?? null,
+          nextScheduled: att?.next ?? null,
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
           productId: info?.productId ?? null,
@@ -261,6 +269,7 @@ export default function MentoriaEC() {
         }
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
+        if (statusFilter === "scheduled" && !m.nextScheduled) return false;
         if (statusFilter === "recent") {
           if (!m.lastAttendance) return false;
           const days = differenceInCalendarDays(new Date(), parseISO(m.lastAttendance));
@@ -309,9 +318,10 @@ export default function MentoriaEC() {
     const total = members.length;
     const never = members.filter((m) => !m.lastAttendance).length;
     const attended = total - never;
+    const scheduled = members.filter((m) => m.nextScheduled).length;
     const ec = members.filter((m) => m.program === "EC").length;
     const rm = members.filter((m) => m.program === "RM").length;
-    return { total, never, attended, ec, rm };
+    return { total, never, attended, scheduled, ec, rm };
   }, [members]);
 
   return (
@@ -328,7 +338,7 @@ export default function MentoriaEC() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Membros ativos</div>
           <div className="text-2xl font-semibold mt-1">{totals.total}</div>
@@ -338,10 +348,15 @@ export default function MentoriaEC() {
           <div className="text-2xl font-semibold mt-1 text-emerald-600">{totals.attended}</div>
         </Card>
         <Card className="p-4">
+          <div className="text-xs text-muted-foreground uppercase">Agendadas (futuras)</div>
+          <div className="text-2xl font-semibold mt-1 text-violet-600">{totals.scheduled}</div>
+        </Card>
+        <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Nunca participaram</div>
           <div className="text-2xl font-semibold mt-1 text-red-600">{totals.never}</div>
         </Card>
       </div>
+
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-3 items-center">
@@ -360,6 +375,7 @@ export default function MentoriaEC() {
               <SelectItem value="all">Todas as participações</SelectItem>
               <SelectItem value="never">Nunca participaram</SelectItem>
               <SelectItem value="attended">Já participaram</SelectItem>
+              <SelectItem value="scheduled">Com mentoria agendada</SelectItem>
               <SelectItem value="recent">Últimos 30 dias</SelectItem>
             </SelectContent>
           </Select>
@@ -488,21 +504,28 @@ export default function MentoriaEC() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="date"
-                          value={m.lastAttendance ?? ""}
-                          max={format(new Date(new Date().setMonth(new Date().getMonth() + 12)), "yyyy-MM-dd")}
-                          onChange={(e) => {
-                            const date = e.target.value;
-                            if (!date) return;
-                            if (date === m.lastAttendance) return;
-                            recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
-                          }}
-                          className="h-8 w-[150px] text-xs"
-                        />
-                        {m.attendanceCount > 0 && (
-                          <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={m.lastAttendance ?? ""}
+                            max={format(new Date(), "yyyy-MM-dd")}
+                            onChange={(e) => {
+                              const date = e.target.value;
+                              if (!date) return;
+                              if (date === m.lastAttendance) return;
+                              recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
+                            }}
+                            className="h-8 w-[150px] text-xs"
+                          />
+                          {m.attendanceCount > 0 && (
+                            <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
+                          )}
+                        </div>
+                        {m.nextScheduled && (
+                          <span className="text-xs text-violet-600 dark:text-violet-300">
+                            Próxima: {format(parseISO(m.nextScheduled), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -511,12 +534,17 @@ export default function MentoriaEC() {
                         <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Já participou
                         </Badge>
+                      ) : m.nextScheduled ? (
+                        <Badge className="bg-violet-500/15 text-violet-700 border-violet-500/30 dark:text-violet-300 gap-1">
+                          <CalendarClock className="h-3 w-3" /> Agendada
+                        </Badge>
                       ) : (
                         <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
                           <Clock className="h-3 w-3" /> Pendente
                         </Badge>
                       )}
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => {
                         setRecordingFor(m);
