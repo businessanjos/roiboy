@@ -143,15 +143,21 @@ export default function MentoriaEC() {
       if (aErr) throw aErr;
       if (sErr) throw sErr;
 
-      const attMap = new Map<string, { last: string; count: number }>();
+      const todayStr = format(new Date(), "yyyy-MM-dd");
+      const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
       (attendance || []).forEach((a) => {
-        const cur = attMap.get(a.client_id);
-        if (!cur) attMap.set(a.client_id, { last: a.session_date, count: 1 });
-        else {
+        const cur = attMap.get(a.client_id) ?? { last: null, next: null, count: 0 };
+        const isFuture = a.session_date > todayStr;
+        if (isFuture) {
+          // agendamento futuro: guarda o mais próximo de hoje
+          if (!cur.next || a.session_date < cur.next) cur.next = a.session_date;
+        } else {
           cur.count += 1;
-          if (a.session_date > cur.last) cur.last = a.session_date;
+          if (!cur.last || a.session_date > cur.last) cur.last = a.session_date;
         }
+        attMap.set(a.client_id, cur);
       });
+
 
       const statusMap = new Map<string, MentorshipStatus>();
       (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
