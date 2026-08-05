@@ -572,6 +572,45 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {accessError && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 space-y-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-destructive">
+                  Nenhum briefing pôde ser carregado — acesso bloqueado
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O registro pode existir, mas as políticas de segurança do seu usuário não permitem lê-lo.
+                  Isso costuma acontecer quando o usuário não tem acesso ao setor de <strong>Vendas</strong> ou{" "}
+                  <strong>Operações/CS</strong>, ou quando o briefing pertence a outra conta.
+                </p>
+                <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                  <li>Peça a um administrador para liberar o setor correspondente no seu perfil.</li>
+                  <li>Confira se o negócio/cliente está vinculado à sua conta.</li>
+                  <li>Se você acabou de receber acesso, saia e entre novamente para atualizar a sessão.</li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground/80">Detalhe técnico: {accessError}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => load()}>
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+        {!accessError && notFound && (
+          <div className="rounded-lg border bg-muted/40 p-4 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Nenhum briefing preenchido ainda</p>
+              <p className="text-xs text-muted-foreground">
+                {readOnly
+                  ? "O time Comercial ainda não enviou o briefing deste cliente. Próximo passo: solicitar ao responsável pelo negócio o preenchimento do Briefing para Operação."
+                  : "Preencha os campos abaixo e salve para que o time de Customer Success visualize o briefing."}
+              </p>
+            </div>
+          </div>
+        )}
         <Section title="Localização">
           <CountryStateCity
             value={{
