@@ -236,6 +236,8 @@ export function DealDetailSheet({
   const [currentUser, setCurrentUser] = useState<{ id: string; name: string; avatar_url: string | null; account_id?: string } | null>(null);
   const [teamMembers, setTeamMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
   const [salesMembers, setSalesMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+  const [sdrMembers, setSdrMembers] = useState<{ id: string; name: string; avatar_url: string | null }[]>([]);
+
   const [updatingSDR, setUpdatingSDR] = useState(false);
   const [changingStage, setChangingStage] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
@@ -429,11 +431,28 @@ export function DealDetailSheet({
       // Use RPC-style query to avoid deep type instantiation
       const query = supabase.from("users").select("id, name, avatar_url");
       const { data } = await query.eq("account_id", userData.account_id);
-      setTeamMembers((data as any[] || []).filter((u: any) => u.name));
+      const members = (data as any[] || []).filter((u: any) => u.name);
+      setTeamMembers(members);
+
+      // SDRs: usuários com cargo que contenha "SDR" (+ exceções históricas por nome)
+      const { data: roleRows } = await supabase
+        .from("user_team_roles")
+        .select("user_id, team_roles(name)");
+      const sdrIds = new Set(
+        ((roleRows as any[]) || [])
+          .filter((r: any) => (r.team_roles?.name || "").toLowerCase().includes("sdr"))
+          .map((r: any) => r.user_id)
+      );
+      setSdrMembers(
+        members.filter(
+          (m: any) => sdrIds.has(m.id) || (m.name || "").toLowerCase().includes("george")
+        )
+      );
     } catch (err) {
       console.error("Error fetching team members:", err);
     }
   };
+
 
   const fetchDealCustomFields = async () => {
     if (!deal?.id) return;
@@ -1520,9 +1539,8 @@ export function DealDetailSheet({
                           <SelectItem value="none">
                             <span className="text-muted-foreground italic">Nenhum</span>
                           </SelectItem>
-                          {teamMembers
-                            .filter((member) => member.name?.toLowerCase().includes("george"))
-                            .map((member) => (
+                          {(sdrMembers.length > 0 ? sdrMembers : teamMembers).map((member) => (
+
                             <SelectItem key={member.id} value={member.id}>
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-4 w-4">
