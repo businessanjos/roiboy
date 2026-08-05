@@ -337,7 +337,7 @@ export default function MentoriaEC() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Membros ativos</div>
           <div className="text-2xl font-semibold mt-1">{totals.total}</div>
@@ -347,10 +347,15 @@ export default function MentoriaEC() {
           <div className="text-2xl font-semibold mt-1 text-emerald-600">{totals.attended}</div>
         </Card>
         <Card className="p-4">
+          <div className="text-xs text-muted-foreground uppercase">Agendadas (futuras)</div>
+          <div className="text-2xl font-semibold mt-1 text-violet-600">{totals.scheduled}</div>
+        </Card>
+        <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Nunca participaram</div>
           <div className="text-2xl font-semibold mt-1 text-red-600">{totals.never}</div>
         </Card>
       </div>
+
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-3 items-center">
