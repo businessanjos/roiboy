@@ -173,6 +173,7 @@ export default function MentoriaEC() {
           businessSegment: c.business_segment,
           contractEnd: info?.endDate ?? null,
           lastAttendance: att?.last ?? null,
+          nextScheduled: att?.next ?? null,
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
           productId: info?.productId ?? null,
