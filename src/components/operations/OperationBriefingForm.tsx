@@ -224,8 +224,11 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       return;
     }
     setLoading(true);
+    setAccessError(null);
+    setNotFound(false);
 
     let row: any = null;
+    let lastError: any = null;
 
     if (dealId) {
       const { data: r, error } = await supabase
@@ -234,7 +237,10 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .eq("deal_id", dealId)
         .limit(1)
         .maybeSingle();
-      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar briefing:", error);
+        lastError = error;
+      }
       row = r;
     } else if (clientId) {
       // 1) Briefing já vinculado diretamente ao cliente
@@ -245,28 +251,42 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar briefing:", error);
+        lastError = error;
+      }
       row = r;
 
       // 2) Fallback: briefing preenchido pelo Comercial no negócio deste cliente
       if (!row) {
-        const { data: deals } = await supabase
+        const { data: deals, error: dealsErr } = await supabase
           .from("deals")
           .select("id")
           .eq("client_id", clientId);
+        if (dealsErr) lastError = lastError || dealsErr;
         const dealIds = (deals || []).map((d: any) => d.id);
         if (dealIds.length > 0) {
-          const { data: r2 } = await supabase
+          const { data: r2, error: e2 } = await supabase
             .from("deal_operation_briefings")
             .select("*")
             .in("deal_id", dealIds)
             .order("updated_at", { ascending: false })
             .limit(1)
             .maybeSingle();
+          if (e2 && e2.code !== "PGRST116") lastError = lastError || e2;
           row = r2;
         }
       }
     }
+
+    if (!row) {
+      if (lastError && isAccessError(lastError)) {
+        setAccessError(lastError.message || "Acesso negado pelas políticas de segurança.");
+      } else {
+        setNotFound(true);
+      }
+    }
+
 
     if (row) {
       setOriginalId(row.id);
