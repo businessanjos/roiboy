@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClipboardList, Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { ClipboardList, Loader2, CheckCircle2, AlertCircle, ShieldAlert } from "lucide-react";
 import { toast } from "sonner";
 import { CountryStateCity, type LocationFields } from "./CountryStateCity";
 import { getCountry } from "@/lib/countries";
@@ -197,11 +197,30 @@ const toNum = (v: string): number | null => {
   return Number.isFinite(n) ? n : null;
 };
 
+// Erros de RLS/permissão do PostgREST (política restritiva, grant ausente, sessão sem setor)
+const isAccessError = (err: any): boolean => {
+  if (!err) return false;
+  const code = String(err.code || "");
+  const msg = `${err.message || ""} ${err.details || ""} ${err.hint || ""}`.toLowerCase();
+  return (
+    code === "42501" ||
+    code === "PGRST301" ||
+    code === "PGRST116" ||
+    msg.includes("permission denied") ||
+    msg.includes("row-level security") ||
+    msg.includes("not authorized") ||
+    msg.includes("jwt")
+  );
+};
+
+
 export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = false }: OperationBriefingFormProps) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
+  const [accessError, setAccessError] = useState<string | null>(null);
+  const [notFound, setNotFound] = useState(false);
 
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
@@ -224,8 +243,11 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       return;
     }
     setLoading(true);
+    setAccessError(null);
+    setNotFound(false);
 
     let row: any = null;
+    let lastError: any = null;
 
     if (dealId) {
       const { data: r, error } = await supabase
@@ -234,7 +256,10 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .eq("deal_id", dealId)
         .limit(1)
         .maybeSingle();
-      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar briefing:", error);
+        lastError = error;
+      }
       row = r;
     } else if (clientId) {
       // 1) Briefing já vinculado diretamente ao cliente
@@ -245,28 +270,42 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .order("updated_at", { ascending: false })
         .limit(1)
         .maybeSingle();
-      if (error && error.code !== "PGRST116") console.error("Erro ao carregar briefing:", error);
+      if (error && error.code !== "PGRST116") {
+        console.error("Erro ao carregar briefing:", error);
+        lastError = error;
+      }
       row = r;
 
       // 2) Fallback: briefing preenchido pelo Comercial no negócio deste cliente
       if (!row) {
-        const { data: deals } = await supabase
+        const { data: deals, error: dealsErr } = await supabase
           .from("deals")
           .select("id")
           .eq("client_id", clientId);
+        if (dealsErr) lastError = lastError || dealsErr;
         const dealIds = (deals || []).map((d: any) => d.id);
         if (dealIds.length > 0) {
-          const { data: r2 } = await supabase
+          const { data: r2, error: e2 } = await supabase
             .from("deal_operation_briefings")
             .select("*")
             .in("deal_id", dealIds)
             .order("updated_at", { ascending: false })
             .limit(1)
             .maybeSingle();
+          if (e2 && e2.code !== "PGRST116") lastError = lastError || e2;
           row = r2;
         }
       }
     }
+
+    if (!row) {
+      if (lastError && isAccessError(lastError)) {
+        setAccessError(lastError.message || "Acesso negado pelas políticas de segurança.");
+      } else {
+        setNotFound(true);
+      }
+    }
+
 
     if (row) {
       setOriginalId(row.id);
@@ -533,6 +572,45 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         </div>
       </CardHeader>
       <CardContent className="space-y-6">
+        {accessError && (
+          <div className="rounded-lg border border-destructive/40 bg-destructive/5 p-4 space-y-2">
+            <div className="flex items-start gap-2">
+              <ShieldAlert className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+              <div className="space-y-1">
+                <p className="text-sm font-medium text-destructive">
+                  Nenhum briefing pôde ser carregado — acesso bloqueado
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  O registro pode existir, mas as políticas de segurança do seu usuário não permitem lê-lo.
+                  Isso costuma acontecer quando o usuário não tem acesso ao setor de <strong>Vendas</strong> ou{" "}
+                  <strong>Operações/CS</strong>, ou quando o briefing pertence a outra conta.
+                </p>
+                <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                  <li>Peça a um administrador para liberar o setor correspondente no seu perfil.</li>
+                  <li>Confira se o negócio/cliente está vinculado à sua conta.</li>
+                  <li>Se você acabou de receber acesso, saia e entre novamente para atualizar a sessão.</li>
+                </ul>
+                <p className="text-[11px] text-muted-foreground/80">Detalhe técnico: {accessError}</p>
+              </div>
+            </div>
+            <Button variant="outline" size="sm" onClick={() => load()}>
+              Tentar novamente
+            </Button>
+          </div>
+        )}
+        {!accessError && notFound && (
+          <div className="rounded-lg border bg-muted/40 p-4 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Nenhum briefing preenchido ainda</p>
+              <p className="text-xs text-muted-foreground">
+                {readOnly
+                  ? "O time Comercial ainda não enviou o briefing deste cliente. Próximo passo: solicitar ao responsável pelo negócio o preenchimento do Briefing para Operação."
+                  : "Preencha os campos abaixo e salve para que o time de Customer Success visualize o briefing."}
+              </p>
+            </div>
+          </div>
+        )}
         <Section title="Localização">
           <CountryStateCity
             value={{
