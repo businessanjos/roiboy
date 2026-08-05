@@ -227,6 +227,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [originalId, setOriginalId] = useState<string | null>(null);
   const [originalDealId, setOriginalDealId] = useState<string | null>(null);
   const [originalClientId, setOriginalClientId] = useState<string | null>(null);
+  const [loadedDraftKey, setLoadedDraftKey] = useState<string | null>(null);
   const draftKey = !readOnly && (dealId || clientId)
     ? `roy:sales:operation-briefing-draft:${dealId ? `deal:${dealId}` : `client:${clientId}`}`
     : null;
@@ -351,13 +352,18 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         observacoes: toStr(r.observacoes),
         is_complete: !!r.is_complete,
       };
-      setData({ ...loadedData, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
+      // Um registro persistido é a fonte de verdade. Rascunhos antigos (inclusive
+      // os vazios criados quando a RLS ocultava a linha) nunca podem apagar na UI
+      // o briefing que o Comercial já salvou para o CS.
+      clearLocalAutosaveDraft(draftKey);
+      setData(loadedData);
     } else {
       setOriginalId(null);
       setOriginalDealId(null);
       setOriginalClientId(null);
       setData({ ...EMPTY, ...(readLocalAutosaveDraft<Partial<OperationBriefingData>>(draftKey) || {}) });
     }
+    setLoadedDraftKey(draftKey);
     setLoading(false);
   }, [dealId, clientId, draftKey]);
 
@@ -366,9 +372,12 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   }, [load]);
 
   useEffect(() => {
-    if (readOnly || loading || !draftKey) return;
+    // Aguarda o carregamento do contexto atual para não copiar os dados do
+    // cliente anterior durante a troca de rota/aba. Registros existentes já
+    // possuem persistência no banco e não precisam de uma segunda cópia local.
+    if (readOnly || loading || !draftKey || loadedDraftKey !== draftKey || originalId) return;
     writeLocalAutosaveDraft(draftKey, data);
-  }, [readOnly, loading, draftKey, data]);
+  }, [readOnly, loading, draftKey, loadedDraftKey, originalId, data]);
 
   const update = <K extends keyof OperationBriefingData>(key: K, value: OperationBriefingData[K]) => {
     setData((prev) => ({ ...prev, [key]: value }));
