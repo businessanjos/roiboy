@@ -259,21 +259,17 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
     }
   };
 
-  // Mede o espaço realmente disponível abaixo do cabeçalho para o board mobile,
-  // evitando altura fixa (que sobra ou corta conforme os filtros abrem/fecham).
+  // Mede o espaço realmente disponível abaixo do cabeçalho para o board
+  // (mobile e desktop), evitando altura fixa que sobra ou corta o final da lista.
   const mobileBoardRef = useRef<HTMLDivElement | null>(null);
   const [mobileBoardHeight, setMobileBoardHeight] = useState<number | null>(null);
 
   useLayoutEffect(() => {
-    if (!isMobile) {
-      setMobileBoardHeight(null);
-      return;
-    }
     const measure = () => {
       const el = mobileBoardRef.current;
       if (!el) return;
       const top = el.getBoundingClientRect().top;
-      const bottomBar = 64; // barra de abas inferior + safe area
+      const bottomBar = isMobile ? 64 : 16; // barra de abas inferior (mobile) / respiro
       const next = Math.max(240, Math.round(window.innerHeight - top - bottomBar));
       setMobileBoardHeight((prev) => (prev !== null && Math.abs(prev - next) < 2 ? prev : next));
     };
@@ -290,6 +286,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
       ro.disconnect();
     };
   }, [isMobile, activeStageId]);
+
 
   if (stages.length === 0) {
     return (
@@ -382,8 +379,13 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
             </div>
           </div>
         ) : (
-          <div className="w-full h-[calc(100vh-220px)] overflow-x-auto -mx-1 px-1">
-            <div className="flex gap-3 h-full min-w-max pr-4">
+          <div
+            ref={mobileBoardRef}
+            className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain -mx-1 px-1"
+            style={{ height: mobileBoardHeight ? `${mobileBoardHeight}px` : "calc(100vh - 220px)" }}
+          >
+            <div className="flex gap-3 h-full w-max pr-4">
+
               {stages.map((stage, index) => (
                 <DealKanbanColumn
                   key={stage.id}
