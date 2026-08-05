@@ -384,6 +384,66 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     if (c) update("moeda_codigo", c.currency);
   };
 
+  // Verificação de ingestão pós-salvamento: relê a linha pelos mesmos caminhos
+  // que o time de CS usa (por id e por client_id) e valida vínculos/permissão.
+  const verifyIngestion = async (
+    savedId: string | null,
+    resolvedClientId: string | null,
+  ): Promise<string[]> => {
+    const issues: string[] = [];
+    if (!savedId) {
+      return ["Não foi possível confirmar o registro salvo (id ausente)."];
+    }
+
+    const { data: row, error } = await supabase
+      .from("deal_operation_briefings")
+      .select("id, account_id, client_id, deal_id, is_complete")
+      .eq("id", savedId)
+      .maybeSingle();
+
+    if (error) {
+      return [
+        isAccessError(error)
+          ? "O briefing foi gravado, mas as políticas de acesso impedem a releitura — o CS provavelmente também não conseguirá abrir."
+          : `Falha ao reler o briefing salvo: ${error.message}`,
+      ];
+    }
+    if (!row) {
+      return ["O briefing não retornou na releitura (bloqueio de permissão/políticas). O CS não conseguirá visualizá-lo."];
+    }
+
+    if (row.account_id !== currentUser?.account_id) {
+      issues.push("O briefing ficou vinculado a outra conta — o CS desta conta não conseguirá lê-lo.");
+    }
+    if (!row.client_id) {
+      issues.push(
+        "O briefing não está vinculado a um cliente. O CS busca por cliente: vincule o negócio a um cliente para que ele apareça na Operação.",
+      );
+    }
+    if (!row.deal_id) {
+      issues.push("O briefing não está vinculado a um negócio do Comercial (deal).");
+    }
+
+    // Confirma que a consulta por cliente (caminho do CS) devolve este registro
+    const clientKey = row.client_id || resolvedClientId;
+    if (clientKey) {
+      const { data: byClient, error: byClientErr } = await supabase
+        .from("deal_operation_briefings")
+        .select("id")
+        .eq("client_id", clientKey)
+        .eq("id", savedId)
+        .maybeSingle();
+      if (byClientErr || !byClient) {
+        issues.push(
+          "A consulta por cliente (usada pelo Customer Success) não retornou este briefing. Verifique acesso aos setores Vendas/Operações.",
+        );
+      }
+    }
+
+    return issues;
+  };
+
+
   const handleSave = async () => {
     if (!currentUser?.account_id) {
       toast.error("Usuário sem conta vinculada");
