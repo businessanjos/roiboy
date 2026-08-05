@@ -111,6 +111,7 @@ export default function MentoriaEC() {
   const [practiceFilter, setPracticeFilter] = useState<string>("all");
 
   const today = format(new Date(), "yyyy-MM-dd");
+  const tomorrow = format(new Date(Date.now() + 86400000), "yyyy-MM-dd");
 
   const membersQuery = useQuery({
     queryKey: ["ec-mentoring-members", accountId],
@@ -628,7 +629,7 @@ export default function MentoriaEC() {
               <Input
                 type="date"
                 value={sessionDate}
-                min={dialogState?.mode === "schedule" ? today : undefined}
+                min={dialogState?.mode === "schedule" ? tomorrow : undefined}
                 max={dialogState?.mode === "record" ? today : undefined}
                 onChange={(e) => setSessionDate(e.target.value)}
               />
