@@ -15,7 +15,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -41,7 +42,9 @@ type MentorshipStatus =
   | "nao_quer_agendar"
   | "nao_respondeu";
 
-type StatusFilter = "all" | "never" | "attended" | "scheduled" | "recent";
+type TabKey = "abertas" | "realizadas";
+type OpenFilter = "all" | "pending" | "scheduled";
+type DoneFilter = "all" | "recent";
 type MentorshipStatusFilter = "all" | MentorshipStatus;
 
 interface EcMember {
@@ -70,13 +73,17 @@ const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; class
 
 const STATUS_MAP = new Map(MENTORSHIP_STATUS_OPTIONS.map((o) => [o.value, o]));
 
+// Regra de aba: quem tem próxima agendada volta para "Em aberto" (ciclo reaberto).
+const isDone = (m: EcMember) => !!m.lastAttendance && !m.nextScheduled;
+
 export default function MentoriaEC() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [openFilter, setOpenFilter] = useState<OpenFilter>("all");
+  const [doneFilter, setDoneFilter] = useState<DoneFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
   const [searchParams, setSearchParams] = useSearchParams();
   const programFilter = ((): ProgramFilter => {
@@ -89,17 +96,26 @@ export default function MentoriaEC() {
     else next.set("program", v);
     setSearchParams(next, { replace: true });
   };
-  const [recordingFor, setRecordingFor] = useState<EcMember | null>(null);
+  const tab: TabKey = searchParams.get("tab") === "realizadas" ? "realizadas" : "abertas";
+  const setTab = (v: TabKey) => {
+    const next = new URLSearchParams(searchParams);
+    if (v === "abertas") next.delete("tab");
+    else next.set("tab", v);
+    setSearchParams(next, { replace: true });
+  };
+
+  const [dialogState, setDialogState] = useState<{ member: EcMember; mode: "record" | "schedule" } | null>(null);
   const [sessionDate, setSessionDate] = useState(() => format(new Date(), "yyyy-MM-dd"));
   const [sessionNotes, setSessionNotes] = useState("");
   const [attendanceSort, setAttendanceSort] = useState<"none" | "desc" | "asc">("none");
   const [practiceFilter, setPracticeFilter] = useState<string>("all");
 
+  const today = format(new Date(), "yyyy-MM-dd");
+
   const membersQuery = useQuery({
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      // Active EC contracts
       const { data: contracts, error: cErr } = await supabase
         .from("client_contracts")
         .select("client_id, end_date, status, product_id")
@@ -149,7 +165,6 @@ export default function MentoriaEC() {
         const cur = attMap.get(a.client_id) ?? { last: null, next: null, count: 0 };
         const isFuture = a.session_date > todayStr;
         if (isFuture) {
-          // agendamento futuro: guarda o mais próximo de hoje
           if (!cur.next || a.session_date < cur.next) cur.next = a.session_date;
         } else {
           cur.count += 1;
@@ -157,7 +172,6 @@ export default function MentoriaEC() {
         }
         attMap.set(a.client_id, cur);
       });
-
 
       const statusMap = new Map<string, MentorshipStatus>();
       (statuses || []).forEach((s: any) => statusMap.set(s.client_id, s.status as MentorshipStatus));
@@ -189,11 +203,7 @@ export default function MentoriaEC() {
       const { error } = await supabase
         .from("ec_mentoring_client_status")
         .upsert(
-          {
-            account_id: accountId!,
-            client_id: clientId,
-            status,
-          },
+          { account_id: accountId!, client_id: clientId, status },
           { onConflict: "account_id,client_id" },
         );
       if (error) throw error;
@@ -213,82 +223,90 @@ export default function MentoriaEC() {
       if (ctx?.prev) qc.setQueryData(["ec-mentoring-members", accountId], ctx.prev);
       toast.error(err?.message || "Erro ao atualizar status");
     },
-    onSuccess: () => {
-      toast.success("Status atualizado");
-    },
-    onSettled: () => {
-      qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
-    },
+    onSuccess: () => toast.success("Status atualizado"),
+    onSettled: () => qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] }),
   });
 
   const recordMutation = useMutation({
     mutationFn: async ({ clientId, date, notes }: { clientId: string; date: string; notes: string }) => {
       if (!accountId) throw new Error("Conta não identificada. Recarregue a página.");
       if (!date) throw new Error("Selecione a data da mentoria.");
-      // upsert: registrar a mesma data novamente apenas atualiza (nunca quebra)
       const { error } = await supabase.from("ec_mentoring_attendance").upsert(
-        {
-          account_id: accountId,
-          client_id: clientId,
-          session_date: date,
-          notes: notes || null,
-        },
+        { account_id: accountId, client_id: clientId, session_date: date, notes: notes || null },
         { onConflict: "client_id,session_date" },
       );
       if (error) throw error;
+      return { date };
     },
-    onSuccess: () => {
-      toast.success("Participação registrada");
+    onSuccess: (res) => {
+      const future = !!res?.date && res.date > today;
+      toast.success(future ? "Mentoria agendada" : "Participação registrada", {
+        description: future
+          ? "Continua na aba Em aberto até a data chegar."
+          : "Movida para a aba Realizadas.",
+      });
       qc.invalidateQueries({ queryKey: ["ec-mentoring-members", accountId] });
-      setRecordingFor(null);
+      setDialogState(null);
       setSessionNotes("");
     },
     onError: (err: any) => {
       const msg = err?.code === "23505" || err?.message?.includes("duplicate")
         ? "Já existe registro para esta data"
-        : "Não foi possível registrar a participação. Tente novamente.";
-      console.error("[MentoriaEC] Erro ao registrar participação:", err);
+        : "Não foi possível salvar. Tente novamente.";
+      console.error("[MentoriaEC] Erro ao salvar mentoria:", err);
       toast.error(msg);
     },
   });
 
   const members = membersQuery.data ?? [];
 
-  const filtered = useMemo(() => {
+  const baseFiltered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return members
-      .filter((m) => {
-        if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
-          return false;
-        if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
-        if (programFilter !== "all" && m.program !== programFilter) return false;
-        if (practiceFilter !== "all") {
-          if (practiceFilter === "__none__") {
-            if (m.businessSegment) return false;
-          } else if ((m.businessSegment ?? "") !== practiceFilter) return false;
-        }
-        if (statusFilter === "never" && m.lastAttendance) return false;
-        if (statusFilter === "attended" && !m.lastAttendance) return false;
-        if (statusFilter === "scheduled" && !m.nextScheduled) return false;
-        if (statusFilter === "recent") {
-          if (!m.lastAttendance) return false;
-          const days = differenceInCalendarDays(new Date(), parseISO(m.lastAttendance));
-          if (days > 30) return false;
-        }
-        return true;
-      })
-      .sort((a, b) => {
-        if (attendanceSort !== "none") {
-          const at = a.lastAttendance ? parseISO(a.lastAttendance).getTime() : null;
-          const bt = b.lastAttendance ? parseISO(b.lastAttendance).getTime() : null;
-          if (at === null && bt === null) return a.fullName.localeCompare(b.fullName, "pt-BR");
-          if (at === null) return 1;
-          if (bt === null) return -1;
-          return attendanceSort === "desc" ? bt - at : at - bt;
-        }
-        return a.fullName.localeCompare(b.fullName, "pt-BR");
-      });
-  }, [members, search, statusFilter, mentorshipFilter, programFilter, practiceFilter, attendanceSort]);
+    return members.filter((m) => {
+      if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
+        return false;
+      if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
+      if (programFilter !== "all" && m.program !== programFilter) return false;
+      if (practiceFilter !== "all") {
+        if (practiceFilter === "__none__") {
+          if (m.businessSegment) return false;
+        } else if ((m.businessSegment ?? "") !== practiceFilter) return false;
+      }
+      return true;
+    });
+  }, [members, search, mentorshipFilter, programFilter, practiceFilter]);
+
+  const sortByDate = (list: EcMember[], key: "lastAttendance" | "nextScheduled") =>
+    [...list].sort((a, b) => {
+      if (attendanceSort !== "none") {
+        const at = a[key] ? parseISO(a[key]!).getTime() : null;
+        const bt = b[key] ? parseISO(b[key]!).getTime() : null;
+        if (at === null && bt === null) return a.fullName.localeCompare(b.fullName, "pt-BR");
+        if (at === null) return 1;
+        if (bt === null) return -1;
+        return attendanceSort === "desc" ? bt - at : at - bt;
+      }
+      return a.fullName.localeCompare(b.fullName, "pt-BR");
+    });
+
+  const openList = useMemo(() => {
+    const list = baseFiltered.filter((m) => !isDone(m)).filter((m) => {
+      if (openFilter === "pending") return !m.nextScheduled;
+      if (openFilter === "scheduled") return !!m.nextScheduled;
+      return true;
+    });
+    return sortByDate(list, "nextScheduled");
+  }, [baseFiltered, openFilter, attendanceSort]);
+
+  const doneList = useMemo(() => {
+    const list = baseFiltered.filter(isDone).filter((m) => {
+      if (doneFilter === "recent") {
+        return differenceInCalendarDays(new Date(), parseISO(m.lastAttendance!)) <= 30;
+      }
+      return true;
+    });
+    return sortByDate(list, "lastAttendance");
+  }, [baseFiltered, doneFilter, attendanceSort]);
 
   const { data: practiceAreas = [] } = usePracticeAreas();
 
@@ -300,13 +318,11 @@ export default function MentoriaEC() {
       if (!seg) noneCount += 1;
       else counts.set(seg, (counts.get(seg) ?? 0) + 1);
     });
-    // Base: áreas cadastradas em practice_areas (mesmo com 0 membros)
     const seen = new Set<string>();
     const list = practiceAreas.map((pa) => {
       seen.add(pa.label);
       return { value: pa.label, label: pa.label, count: counts.get(pa.label) ?? 0 };
     });
-    // Extras: valores presentes em membros mas ainda não cadastrados
     Array.from(counts.entries())
       .filter(([label]) => !seen.has(label))
       .sort((a, b) => a[0].localeCompare(b[0], "pt-BR"))
@@ -316,13 +332,22 @@ export default function MentoriaEC() {
 
   const totals = useMemo(() => {
     const total = members.length;
-    const never = members.filter((m) => !m.lastAttendance).length;
-    const attended = total - never;
-    const scheduled = members.filter((m) => m.nextScheduled).length;
+    const scheduled = members.filter((m) => !!m.nextScheduled).length;
+    const done = members.filter(isDone).length;
+    const pending = members.filter((m) => !m.lastAttendance && !m.nextScheduled).length;
     const ec = members.filter((m) => m.program === "EC").length;
     const rm = members.filter((m) => m.program === "RM").length;
-    return { total, never, attended, scheduled, ec, rm };
+    return { total, scheduled, done, pending, ec, rm };
   }, [members]);
+
+  const rows = tab === "abertas" ? openList : doneList;
+  const colSpan = 8;
+
+  const openDialog = (member: EcMember, mode: "record" | "schedule") => {
+    setDialogState({ member, mode });
+    setSessionDate(format(new Date(), "yyyy-MM-dd"));
+    setSessionNotes("");
+  };
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -344,19 +369,25 @@ export default function MentoriaEC() {
           <div className="text-2xl font-semibold mt-1">{totals.total}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs text-muted-foreground uppercase">Já participaram</div>
-          <div className="text-2xl font-semibold mt-1 text-emerald-600">{totals.attended}</div>
+          <div className="text-xs text-muted-foreground uppercase">Sem mentoria marcada</div>
+          <div className="text-2xl font-semibold mt-1 text-red-600">{totals.pending}</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Agendadas (futuras)</div>
           <div className="text-2xl font-semibold mt-1 text-violet-600">{totals.scheduled}</div>
         </Card>
         <Card className="p-4">
-          <div className="text-xs text-muted-foreground uppercase">Nunca participaram</div>
-          <div className="text-2xl font-semibold mt-1 text-red-600">{totals.never}</div>
+          <div className="text-xs text-muted-foreground uppercase">Realizadas</div>
+          <div className="text-2xl font-semibold mt-1 text-emerald-600">{totals.done}</div>
         </Card>
       </div>
 
+      <Tabs value={tab} onValueChange={(v) => setTab(v as TabKey)}>
+        <TabsList>
+          <TabsTrigger value="abertas">Em aberto e agendadas ({openList.length})</TabsTrigger>
+          <TabsTrigger value="realizadas">Realizadas ({doneList.length})</TabsTrigger>
+        </TabsList>
+      </Tabs>
 
       <Card className="p-4">
         <div className="flex flex-wrap gap-3 items-center">
@@ -369,16 +400,24 @@ export default function MentoriaEC() {
               className="pl-9"
             />
           </div>
-          <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as StatusFilter)}>
-            <SelectTrigger className="w-[190px]"><SelectValue placeholder="Participação" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todas as participações</SelectItem>
-              <SelectItem value="never">Nunca participaram</SelectItem>
-              <SelectItem value="attended">Já participaram</SelectItem>
-              <SelectItem value="scheduled">Com mentoria agendada</SelectItem>
-              <SelectItem value="recent">Últimos 30 dias</SelectItem>
-            </SelectContent>
-          </Select>
+          {tab === "abertas" ? (
+            <Select value={openFilter} onValueChange={(v) => setOpenFilter(v as OpenFilter)}>
+              <SelectTrigger className="w-[200px]"><SelectValue placeholder="Situação" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas em aberto</SelectItem>
+                <SelectItem value="pending">Sem data marcada</SelectItem>
+                <SelectItem value="scheduled">Agendadas</SelectItem>
+              </SelectContent>
+            </Select>
+          ) : (
+            <Select value={doneFilter} onValueChange={(v) => setDoneFilter(v as DoneFilter)}>
+              <SelectTrigger className="w-[200px]"><SelectValue placeholder="Período" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as realizadas</SelectItem>
+                <SelectItem value="recent">Últimos 30 dias</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
             <SelectContent>
@@ -428,9 +467,9 @@ export default function MentoriaEC() {
                       setAttendanceSort((s) => (s === "none" ? "desc" : s === "desc" ? "asc" : "none"))
                     }
                     className="inline-flex items-center gap-1 hover:text-foreground"
-                    title="Ordenar por última participação"
+                    title="Ordenar por data"
                   >
-                    Última participação
+                    {tab === "abertas" ? "Próxima mentoria" : "Data realizada"}
                     {attendanceSort === "desc" ? (
                       <ArrowDown className="h-3 w-3" />
                     ) : attendanceSort === "asc" ? (
@@ -440,18 +479,24 @@ export default function MentoriaEC() {
                     )}
                   </button>
                 </TableHead>
-                <TableHead>Participação</TableHead>
+                <TableHead>Situação</TableHead>
                 <TableHead className="text-right">Ação</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {membersQuery.isLoading && (
-                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
+                <TableRow><TableCell colSpan={colSpan} className="text-center py-10 text-muted-foreground">Carregando...</TableCell></TableRow>
               )}
-              {!membersQuery.isLoading && filtered.length === 0 && (
-                <TableRow><TableCell colSpan={8} className="text-center py-10 text-muted-foreground">Nenhum membro encontrado</TableCell></TableRow>
+              {!membersQuery.isLoading && rows.length === 0 && (
+                <TableRow>
+                  <TableCell colSpan={colSpan} className="text-center py-10 text-muted-foreground">
+                    {tab === "abertas"
+                      ? "Nenhuma mentoria em aberto ou agendada com os filtros atuais."
+                      : "Nenhuma mentoria realizada com os filtros atuais. Ao registrar uma data passada, o membro aparece aqui."}
+                  </TableCell>
+                </TableRow>
               )}
-              {filtered.map((m) => {
+              {rows.map((m) => {
                 const currentStatus = m.mentorshipStatus ? STATUS_MAP.get(m.mentorshipStatus) : null;
                 return (
                   <TableRow key={m.clientId}>
@@ -488,12 +533,7 @@ export default function MentoriaEC() {
                         value={m.mentorshipStatus ?? ""}
                         onValueChange={(v) => statusMutation.mutate({ clientId: m.clientId, status: v as MentorshipStatus })}
                       >
-                        <SelectTrigger
-                          className={cn(
-                            "h-8 w-full text-xs",
-                            currentStatus && currentStatus.className,
-                          )}
-                        >
+                        <SelectTrigger className={cn("h-8 w-full text-xs", currentStatus && currentStatus.className)}>
                           <SelectValue placeholder="Selecionar status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -504,35 +544,34 @@ export default function MentoriaEC() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col gap-1">
+                      {tab === "abertas" ? (
+                        <div className="flex flex-col gap-1">
+                          <span className={cn("text-sm", m.nextScheduled ? "text-violet-600 dark:text-violet-300 font-medium" : "text-muted-foreground")}>
+                            {m.nextScheduled
+                              ? format(parseISO(m.nextScheduled), "dd/MM/yyyy", { locale: ptBR })
+                              : "Sem data marcada"}
+                          </span>
+                          {m.lastAttendance && (
+                            <span className="text-xs text-muted-foreground">
+                              Última: {format(parseISO(m.lastAttendance), "dd/MM/yyyy", { locale: ptBR })}
+                            </span>
+                          )}
+                        </div>
+                      ) : (
                         <div className="flex items-center gap-2">
-                          <Input
-                            type="date"
-                            value={m.lastAttendance ?? ""}
-                            max={format(new Date(), "yyyy-MM-dd")}
-                            onChange={(e) => {
-                              const date = e.target.value;
-                              if (!date) return;
-                              if (date === m.lastAttendance) return;
-                              recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
-                            }}
-                            className="h-8 w-[150px] text-xs"
-                          />
+                          <span className="text-sm font-medium">
+                            {format(parseISO(m.lastAttendance!), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
                           {m.attendanceCount > 0 && (
                             <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
                           )}
                         </div>
-                        {m.nextScheduled && (
-                          <span className="text-xs text-violet-600 dark:text-violet-300">
-                            Próxima: {format(parseISO(m.nextScheduled), "dd/MM/yyyy", { locale: ptBR })}
-                          </span>
-                        )}
-                      </div>
+                      )}
                     </TableCell>
                     <TableCell>
-                      {m.lastAttendance ? (
+                      {tab === "realizadas" ? (
                         <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
-                          <CheckCircle2 className="h-3 w-3" /> Já participou
+                          <CheckCircle2 className="h-3 w-3" /> Realizada
                         </Badge>
                       ) : m.nextScheduled ? (
                         <Badge className="bg-violet-500/15 text-violet-700 border-violet-500/30 dark:text-violet-300 gap-1">
@@ -540,19 +579,28 @@ export default function MentoriaEC() {
                         </Badge>
                       ) : (
                         <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
-                          <Clock className="h-3 w-3" /> Pendente
+                          <Clock className="h-3 w-3" /> Em aberto
                         </Badge>
                       )}
                     </TableCell>
 
                     <TableCell className="text-right">
-                      <Button size="sm" variant="outline" onClick={() => {
-                        setRecordingFor(m);
-                        setSessionDate(format(new Date(), "yyyy-MM-dd"));
-                        setSessionNotes("");
-                      }}>
-                        Registrar participação
-                      </Button>
+                      <div className="flex justify-end gap-2">
+                        {tab === "abertas" ? (
+                          <>
+                            <Button size="sm" variant="ghost" onClick={() => openDialog(m, "schedule")}>
+                              {m.nextScheduled ? "Remarcar" : "Agendar"}
+                            </Button>
+                            <Button size="sm" variant="outline" onClick={() => openDialog(m, "record")}>
+                              Registrar participação
+                            </Button>
+                          </>
+                        ) : (
+                          <Button size="sm" variant="outline" onClick={() => openDialog(m, "schedule")}>
+                            Agendar próxima
+                          </Button>
+                        )}
+                      </div>
                     </TableCell>
                   </TableRow>
                 );
@@ -562,15 +610,28 @@ export default function MentoriaEC() {
         </div>
       </Card>
 
-      <Dialog open={!!recordingFor} onOpenChange={(open) => !open && setRecordingFor(null)}>
+      <Dialog open={!!dialogState} onOpenChange={(open) => !open && setDialogState(null)}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Registrar participação — {recordingFor?.fullName}</DialogTitle>
+            <DialogTitle>
+              {dialogState?.mode === "schedule" ? "Agendar mentoria" : "Registrar participação"} — {dialogState?.member.fullName}
+            </DialogTitle>
+            <DialogDescription>
+              {dialogState?.mode === "schedule"
+                ? "Escolha uma data futura. O membro continua na aba “Em aberto e agendadas” até a mentoria acontecer."
+                : "Informe a data em que a mentoria aconteceu. O membro passa para a aba “Realizadas”."}
+            </DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <div>
               <Label>Data da mentoria</Label>
-              <Input type="date" value={sessionDate} onChange={(e) => setSessionDate(e.target.value)} />
+              <Input
+                type="date"
+                value={sessionDate}
+                min={dialogState?.mode === "schedule" ? today : undefined}
+                max={dialogState?.mode === "record" ? today : undefined}
+                onChange={(e) => setSessionDate(e.target.value)}
+              />
             </div>
             <div>
               <Label>Observações (opcional)</Label>
@@ -578,11 +639,11 @@ export default function MentoriaEC() {
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setRecordingFor(null)}>Cancelar</Button>
+            <Button variant="outline" onClick={() => setDialogState(null)}>Cancelar</Button>
             <Button
               disabled={recordMutation.isPending || !sessionDate}
-              onClick={() => recordingFor && recordMutation.mutate({
-                clientId: recordingFor.clientId,
+              onClick={() => dialogState && recordMutation.mutate({
+                clientId: dialogState.member.clientId,
                 date: sessionDate,
                 notes: sessionNotes,
               })}
