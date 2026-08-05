@@ -131,7 +131,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
       {/* Cards Container */}
       <div 
         className={cn(
-          "flex-1 min-h-0 space-y-2 p-1.5 rounded-lg transition-all duration-200 overflow-y-auto overflow-x-hidden overscroll-contain border-2 border-transparent",
+          "flex-1 min-h-0 space-y-2 p-1.5 rounded-lg transition-all duration-200 overflow-y-auto overflow-x-hidden overscroll-y-contain border-2 border-transparent",
           // Drop target highlight
           isOver && "border-dashed bg-primary/5",
           // Drag active but not over — show it's a valid drop target

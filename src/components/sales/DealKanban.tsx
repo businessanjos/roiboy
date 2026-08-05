@@ -383,6 +383,15 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
             ref={mobileBoardRef}
             className="w-full overflow-x-auto overflow-y-hidden overscroll-x-contain -mx-1 px-1"
             style={{ height: mobileBoardHeight ? `${mobileBoardHeight}px` : "calc(100vh - 220px)" }}
+            onWheel={(e) => {
+              const el = e.currentTarget;
+              // Horizontal trackpad gesture or shift+wheel anywhere over the board
+              const dx = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : (e.shiftKey ? e.deltaY : 0);
+              if (dx !== 0) {
+                el.scrollLeft += dx;
+                e.preventDefault();
+              }
+            }}
           >
             <div className="flex gap-3 h-full w-max pr-4">
 
