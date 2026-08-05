@@ -502,21 +502,28 @@ export default function MentoriaEC() {
                       </Select>
                     </TableCell>
                     <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Input
-                          type="date"
-                          value={m.lastAttendance ?? ""}
-                          max={format(new Date(new Date().setMonth(new Date().getMonth() + 12)), "yyyy-MM-dd")}
-                          onChange={(e) => {
-                            const date = e.target.value;
-                            if (!date) return;
-                            if (date === m.lastAttendance) return;
-                            recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
-                          }}
-                          className="h-8 w-[150px] text-xs"
-                        />
-                        {m.attendanceCount > 0 && (
-                          <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex items-center gap-2">
+                          <Input
+                            type="date"
+                            value={m.lastAttendance ?? ""}
+                            max={format(new Date(), "yyyy-MM-dd")}
+                            onChange={(e) => {
+                              const date = e.target.value;
+                              if (!date) return;
+                              if (date === m.lastAttendance) return;
+                              recordMutation.mutate({ clientId: m.clientId, date, notes: "" });
+                            }}
+                            className="h-8 w-[150px] text-xs"
+                          />
+                          {m.attendanceCount > 0 && (
+                            <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
+                          )}
+                        </div>
+                        {m.nextScheduled && (
+                          <span className="text-xs text-violet-600 dark:text-violet-300">
+                            Próxima: {format(parseISO(m.nextScheduled), "dd/MM/yyyy", { locale: ptBR })}
+                          </span>
                         )}
                       </div>
                     </TableCell>
@@ -525,12 +532,17 @@ export default function MentoriaEC() {
                         <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Já participou
                         </Badge>
+                      ) : m.nextScheduled ? (
+                        <Badge className="bg-violet-500/15 text-violet-700 border-violet-500/30 dark:text-violet-300 gap-1">
+                          <CalendarClock className="h-3 w-3" /> Agendada
+                        </Badge>
                       ) : (
                         <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
                           <Clock className="h-3 w-3" /> Pendente
                         </Badge>
                       )}
                     </TableCell>
+
                     <TableCell className="text-right">
                       <Button size="sm" variant="outline" onClick={() => {
                         setRecordingFor(m);
