@@ -498,6 +498,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     };
 
     let error: any = null;
+    let savedId: string | null = originalId;
     if (originalId) {
       ({ error } = await supabase.from("deal_operation_briefings").update(payload).eq("id", originalId));
     } else {
@@ -508,19 +509,36 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .select("id")
         .single();
       error = insErr;
-      if (inserted) setOriginalId(inserted.id);
+      if (inserted) {
+        savedId = inserted.id;
+        setOriginalId(inserted.id);
+      }
     }
-    setSaving(false);
 
     if (error) {
+      setSaving(false);
       console.error("Erro ao salvar briefing:", error);
       toast.error("Erro ao salvar briefing operacional");
       return;
     }
-    toast.success(complete ? "Briefing salvo e completo" : "Briefing salvo (campos pendentes)");
+
+    // Verificação de ingestão: confirma que o registro realmente ficou legível
+    // pelo mesmo caminho que o CS usa (por cliente) e com os vínculos corretos.
+    const problems = await verifyIngestion(savedId, resolvedClientId);
+    setIngestionIssues(problems);
+    setSaving(false);
+
+    if (problems.length > 0) {
+      toast.warning("Briefing salvo, mas pode não chegar ao CS", {
+        description: problems[0],
+      });
+    } else {
+      toast.success(complete ? "Briefing salvo e completo" : "Briefing salvo (campos pendentes)");
+    }
     clearLocalAutosaveDraft(draftKey);
     onSaved?.({ ...data, is_complete: complete });
   };
+
 
   if (loading) {
     return (
