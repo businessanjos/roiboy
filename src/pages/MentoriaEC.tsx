@@ -41,7 +41,7 @@ type MentorshipStatus =
   | "nao_quer_agendar"
   | "nao_respondeu";
 
-type StatusFilter = "all" | "never" | "attended" | "recent";
+type StatusFilter = "all" | "never" | "attended" | "scheduled" | "recent";
 type MentorshipStatusFilter = "all" | MentorshipStatus;
 
 interface EcMember {
@@ -269,6 +269,7 @@ export default function MentoriaEC() {
         }
         if (statusFilter === "never" && m.lastAttendance) return false;
         if (statusFilter === "attended" && !m.lastAttendance) return false;
+        if (statusFilter === "scheduled" && !m.nextScheduled) return false;
         if (statusFilter === "recent") {
           if (!m.lastAttendance) return false;
           const days = differenceInCalendarDays(new Date(), parseISO(m.lastAttendance));
@@ -374,6 +375,7 @@ export default function MentoriaEC() {
               <SelectItem value="all">Todas as participações</SelectItem>
               <SelectItem value="never">Nunca participaram</SelectItem>
               <SelectItem value="attended">Já participaram</SelectItem>
+              <SelectItem value="scheduled">Com mentoria agendada</SelectItem>
               <SelectItem value="recent">Últimos 30 dias</SelectItem>
             </SelectContent>
           </Select>
