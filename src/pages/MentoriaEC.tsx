@@ -691,6 +691,49 @@ export default function MentoriaEC() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={!!historyMember} onOpenChange={(open) => !open && setHistoryMember(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Histórico de mentorias — {historyMember?.fullName}</DialogTitle>
+            <DialogDescription>
+              Exclua registros lançados por engano. Ao excluir a última realizada, o membro volta para “Em aberto”.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-80 overflow-y-auto space-y-2">
+            {historyQuery.isLoading && <p className="text-sm text-muted-foreground">Carregando...</p>}
+            {!historyQuery.isLoading && (historyQuery.data?.length ?? 0) === 0 && (
+              <p className="text-sm text-muted-foreground">Nenhum registro de mentoria.</p>
+            )}
+            {(historyQuery.data ?? []).map((r: any) => {
+              const future = r.session_date > today;
+              return (
+                <div key={r.id} className="flex items-center justify-between gap-3 rounded-md border p-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">
+                      {format(parseISO(r.session_date), "dd/MM/yyyy", { locale: ptBR })}{" "}
+                      <span className="text-xs text-muted-foreground">{future ? "(agendada)" : "(realizada)"}</span>
+                    </div>
+                    {r.notes && <div className="text-xs text-muted-foreground truncate">{r.notes}</div>}
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="text-destructive"
+                    disabled={deleteAttendanceMutation.isPending}
+                    onClick={() => deleteAttendanceMutation.mutate(r.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setHistoryMember(null)}>Fechar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
