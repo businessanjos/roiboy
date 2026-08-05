@@ -51,6 +51,7 @@ interface EcMember {
   businessSegment: string | null;
   contractEnd: string | null;
   lastAttendance: string | null;
+  nextScheduled: string | null;
   attendanceCount: number;
   mentorshipStatus: MentorshipStatus | null;
   productId: string | null;
