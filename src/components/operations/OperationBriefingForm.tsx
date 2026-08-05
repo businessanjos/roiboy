@@ -221,6 +221,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   const [showErrors, setShowErrors] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
   const [notFound, setNotFound] = useState(false);
+  const [ingestionIssues, setIngestionIssues] = useState<string[]>([]);
 
   const [data, setData] = useState<OperationBriefingData>(EMPTY);
   const [originalId, setOriginalId] = useState<string | null>(null);
@@ -383,6 +384,66 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     if (c) update("moeda_codigo", c.currency);
   };
 
+  // Verificação de ingestão pós-salvamento: relê a linha pelos mesmos caminhos
+  // que o time de CS usa (por id e por client_id) e valida vínculos/permissão.
+  const verifyIngestion = async (
+    savedId: string | null,
+    resolvedClientId: string | null,
+  ): Promise<string[]> => {
+    const issues: string[] = [];
+    if (!savedId) {
+      return ["Não foi possível confirmar o registro salvo (id ausente)."];
+    }
+
+    const { data: row, error } = await supabase
+      .from("deal_operation_briefings")
+      .select("id, account_id, client_id, deal_id, is_complete")
+      .eq("id", savedId)
+      .maybeSingle();
+
+    if (error) {
+      return [
+        isAccessError(error)
+          ? "O briefing foi gravado, mas as políticas de acesso impedem a releitura — o CS provavelmente também não conseguirá abrir."
+          : `Falha ao reler o briefing salvo: ${error.message}`,
+      ];
+    }
+    if (!row) {
+      return ["O briefing não retornou na releitura (bloqueio de permissão/políticas). O CS não conseguirá visualizá-lo."];
+    }
+
+    if (row.account_id !== currentUser?.account_id) {
+      issues.push("O briefing ficou vinculado a outra conta — o CS desta conta não conseguirá lê-lo.");
+    }
+    if (!row.client_id) {
+      issues.push(
+        "O briefing não está vinculado a um cliente. O CS busca por cliente: vincule o negócio a um cliente para que ele apareça na Operação.",
+      );
+    }
+    if (!row.deal_id) {
+      issues.push("O briefing não está vinculado a um negócio do Comercial (deal).");
+    }
+
+    // Confirma que a consulta por cliente (caminho do CS) devolve este registro
+    const clientKey = row.client_id || resolvedClientId;
+    if (clientKey) {
+      const { data: byClient, error: byClientErr } = await supabase
+        .from("deal_operation_briefings")
+        .select("id")
+        .eq("client_id", clientKey)
+        .eq("id", savedId)
+        .maybeSingle();
+      if (byClientErr || !byClient) {
+        issues.push(
+          "A consulta por cliente (usada pelo Customer Success) não retornou este briefing. Verifique acesso aos setores Vendas/Operações.",
+        );
+      }
+    }
+
+    return issues;
+  };
+
+
   const handleSave = async () => {
     if (!currentUser?.account_id) {
       toast.error("Usuário sem conta vinculada");
@@ -498,6 +559,7 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
     };
 
     let error: any = null;
+    let savedId: string | null = originalId;
     if (originalId) {
       ({ error } = await supabase.from("deal_operation_briefings").update(payload).eq("id", originalId));
     } else {
@@ -508,19 +570,36 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
         .select("id")
         .single();
       error = insErr;
-      if (inserted) setOriginalId(inserted.id);
+      if (inserted) {
+        savedId = inserted.id;
+        setOriginalId(inserted.id);
+      }
     }
-    setSaving(false);
 
     if (error) {
+      setSaving(false);
       console.error("Erro ao salvar briefing:", error);
       toast.error("Erro ao salvar briefing operacional");
       return;
     }
-    toast.success(complete ? "Briefing salvo e completo" : "Briefing salvo (campos pendentes)");
+
+    // Verificação de ingestão: confirma que o registro realmente ficou legível
+    // pelo mesmo caminho que o CS usa (por cliente) e com os vínculos corretos.
+    const problems = await verifyIngestion(savedId, resolvedClientId);
+    setIngestionIssues(problems);
+    setSaving(false);
+
+    if (problems.length > 0) {
+      toast.warning("Briefing salvo, mas pode não chegar ao CS", {
+        description: problems[0],
+      });
+    } else {
+      toast.success(complete ? "Briefing salvo e completo" : "Briefing salvo (campos pendentes)");
+    }
     clearLocalAutosaveDraft(draftKey);
     onSaved?.({ ...data, is_complete: complete });
   };
+
 
   if (loading) {
     return (
@@ -608,6 +687,19 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
                   ? "O time Comercial ainda não enviou o briefing deste cliente. Próximo passo: solicitar ao responsável pelo negócio o preenchimento do Briefing para Operação."
                   : "Preencha os campos abaixo e salve para que o time de Customer Success visualize o briefing."}
               </p>
+            </div>
+          </div>
+        )}
+        {ingestionIssues.length > 0 && (
+          <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-4 flex items-start gap-2">
+            <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5 shrink-0" />
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Briefing salvo, mas pode não chegar ao Customer Success</p>
+              <ul className="text-xs text-muted-foreground list-disc pl-4 space-y-0.5">
+                {ingestionIssues.map((issue, i) => (
+                  <li key={i}>{issue}</li>
+                ))}
+              </ul>
             </div>
           </div>
         )}
