@@ -429,11 +429,28 @@ export function DealDetailSheet({
       // Use RPC-style query to avoid deep type instantiation
       const query = supabase.from("users").select("id, name, avatar_url");
       const { data } = await query.eq("account_id", userData.account_id);
-      setTeamMembers((data as any[] || []).filter((u: any) => u.name));
+      const members = (data as any[] || []).filter((u: any) => u.name);
+      setTeamMembers(members);
+
+      // SDRs: usuários com cargo que contenha "SDR" (+ exceções históricas por nome)
+      const { data: roleRows } = await supabase
+        .from("user_team_roles")
+        .select("user_id, team_roles(name)");
+      const sdrIds = new Set(
+        ((roleRows as any[]) || [])
+          .filter((r: any) => (r.team_roles?.name || "").toLowerCase().includes("sdr"))
+          .map((r: any) => r.user_id)
+      );
+      setSdrMembers(
+        members.filter(
+          (m: any) => sdrIds.has(m.id) || (m.name || "").toLowerCase().includes("george")
+        )
+      );
     } catch (err) {
       console.error("Error fetching team members:", err);
     }
   };
+
 
   const fetchDealCustomFields = async () => {
     if (!deal?.id) return;
