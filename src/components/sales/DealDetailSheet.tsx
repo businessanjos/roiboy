@@ -1539,9 +1539,8 @@ export function DealDetailSheet({
                           <SelectItem value="none">
                             <span className="text-muted-foreground italic">Nenhum</span>
                           </SelectItem>
-                          {teamMembers
-                            .filter((member) => member.name?.toLowerCase().includes("george"))
-                            .map((member) => (
+                          {(sdrMembers.length > 0 ? sdrMembers : teamMembers).map((member) => (
+
                             <SelectItem key={member.id} value={member.id}>
                               <div className="flex items-center gap-2">
                                 <Avatar className="h-4 w-4">
