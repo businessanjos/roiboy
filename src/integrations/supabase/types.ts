@@ -18282,6 +18282,10 @@ export type Database = {
           tier: string | null
           tier_changed_at: string | null
           updated_at: string
+          verification_note: string | null
+          verification_status: string
+          verified_at: string | null
+          verified_by: string | null
           website: string | null
         }
         Insert: {
@@ -18307,6 +18311,10 @@ export type Database = {
           tier?: string | null
           tier_changed_at?: string | null
           updated_at?: string
+          verification_note?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
         }
         Update: {
@@ -18332,6 +18340,10 @@ export type Database = {
           tier?: string | null
           tier_changed_at?: string | null
           updated_at?: string
+          verification_note?: string | null
+          verification_status?: string
+          verified_at?: string | null
+          verified_by?: string | null
           website?: string | null
         }
         Relationships: []
