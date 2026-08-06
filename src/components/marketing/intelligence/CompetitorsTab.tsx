@@ -90,6 +90,19 @@ const tierClass: Record<string, string> = {
   bronze: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
 };
 
+const TIER_RANK: Record<string, number> = {
+  platinum: 0,
+  gold: 1,
+  silver: 2,
+  bronze: 3,
+};
+
+const tierRank = (tier?: string | null) => {
+  const r = TIER_RANK[(tier || "").toLowerCase()];
+  return r === undefined ? 99 : r;
+};
+
+
 export default function CompetitorsTab() {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
