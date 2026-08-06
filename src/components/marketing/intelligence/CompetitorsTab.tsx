@@ -85,7 +85,32 @@ const audienceLabels: Record<string, string> = {
   estetica: "Estética",
   odontologia: "Odontologia",
   saude_geral: "Saúde (geral)",
+  mentores: "Mentores / donos de mentoria",
 };
+
+type VerificationStatus = "nao_verificado" | "verificado" | "contestado" | "removido";
+
+const verificationMeta: Record<VerificationStatus, { label: string; className: string }> = {
+  nao_verificado: {
+    label: "Não verificado",
+    className: "bg-muted text-muted-foreground border-border",
+  },
+  verificado: {
+    label: "Verificado",
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  },
+  contestado: {
+    label: "Dado contestado",
+    className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  },
+  removido: {
+    label: "Descartado",
+    className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
+  },
+};
+
+const vStatus = (c: { verification_status?: string | null }): VerificationStatus =>
+  (c.verification_status as VerificationStatus) || "nao_verificado";
 
 const tierClass: Record<string, string> = {
   platinum: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30",
