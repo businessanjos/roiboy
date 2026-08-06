@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -10,21 +10,32 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown,
-  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords,
+  Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown, Search,
+  ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords, Users,
 } from "lucide-react";
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
 
+type CompetitorType = "direto" | "indireto" | "transversal";
+
 type Competitor = {
   id: string;
   name: string;
-  website: string;
+  website: string | null;
   notes: string | null;
   tags: string[] | null;
   last_scanned_at: string | null;
   created_at: string;
+  competitor_type: CompetitorType;
+  audience: string | null;
+  tier: string | null;
+  source: string | null;
+  name_confidence: string | null;
+  mentors: string[] | null;
+  positioning: string | null;
 };
 
 type Snapshot = {
@@ -42,12 +53,49 @@ const urgencyColors: Record<string, string> = {
   high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
 };
 
+const typeMeta: Record<CompetitorType, { label: string; hint: string; className: string }> = {
+  direto: {
+    label: "Direto",
+    hint: "Disputa o mesmo ICP (médico / estética avançada empresário).",
+    className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  },
+  indireto: {
+    label: "Indireto",
+    hint: "Saúde/odonto adjacente — mesmo bolso, ICP vizinho.",
+    className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  },
+  transversal: {
+    label: "Transversal",
+    hint: "Mentoria generalista de negócios que também atrai médicos.",
+    className: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30",
+  },
+};
+
+const audienceLabels: Record<string, string> = {
+  medicos: "Médicos",
+  estetica: "Estética",
+  odontologia: "Odontologia",
+  saude_geral: "Saúde (geral)",
+};
+
+const tierClass: Record<string, string> = {
+  platinum: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30",
+  gold: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+  silver: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30",
+  bronze: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+};
+
 export default function CompetitorsTab() {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ name: "", website: "", notes: "" });
+  const [form, setForm] = useState<{ name: string; website: string; notes: string; competitor_type: CompetitorType; audience: string }>({
+    name: "", website: "", notes: "", competitor_type: "direto", audience: "medicos",
+  });
   const [scanningId, setScanningId] = useState<string | null>(null);
+  const [typeFilter, setTypeFilter] = useState<"todos" | CompetitorType>("todos");
+  const [audienceFilter, setAudienceFilter] = useState<string>("todos");
+  const [search, setSearch] = useState("");
 
   const { data: competitors = [], isLoading } = useQuery({
     queryKey: ["mi-competitors", currentUser?.account_id],
@@ -56,9 +104,9 @@ export default function CompetitorsTab() {
       const { data, error } = await supabase
         .from("mi_competitors")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("name", { ascending: true });
       if (error) throw error;
-      return data as Competitor[];
+      return data as unknown as Competitor[];
     },
   });
 
@@ -80,25 +128,55 @@ export default function CompetitorsTab() {
     },
   });
 
+  const counts = useMemo(() => {
+    const base = { todos: competitors.length, direto: 0, indireto: 0, transversal: 0 } as Record<string, number>;
+    for (const c of competitors) base[c.competitor_type] = (base[c.competitor_type] || 0) + 1;
+    return base;
+  }, [competitors]);
+
+  const filtered = useMemo(() => {
+    const term = search.trim().toLowerCase();
+    return competitors.filter((c) => {
+      if (typeFilter !== "todos" && c.competitor_type !== typeFilter) return false;
+      if (audienceFilter !== "todos" && (c.audience || "") !== audienceFilter) return false;
+      if (!term) return true;
+      return [c.name, c.positioning, c.notes, (c.mentors || []).join(" "), (c.tags || []).join(" ")]
+        .filter(Boolean)
+        .some((v) => String(v).toLowerCase().includes(term));
+    });
+  }, [competitors, typeFilter, audienceFilter, search]);
+
   const addMutation = useMutation({
     mutationFn: async () => {
-      if (!form.name.trim() || !form.website.trim()) throw new Error("Nome e site obrigatórios");
+      if (!form.name.trim()) throw new Error("Nome obrigatório");
       if (!currentUser?.account_id) throw new Error("Sem conta");
       const { error } = await supabase.from("mi_competitors").insert({
         account_id: currentUser.account_id,
         name: form.name.trim(),
-        website: form.website.trim(),
+        website: form.website.trim() || null,
         notes: form.notes.trim() || null,
+        competitor_type: form.competitor_type,
+        audience: form.audience,
+        source: "manual",
         created_by: currentUser.id,
-      });
+      } as never);
       if (error) throw error;
     },
     onSuccess: () => {
       toast.success("Concorrente adicionado");
-      setForm({ name: "", website: "", notes: "" });
+      setForm({ name: "", website: "", notes: "", competitor_type: "direto", audience: "medicos" });
       setOpen(false);
       qc.invalidateQueries({ queryKey: ["mi-competitors"] });
     },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
+  const updateTypeMutation = useMutation({
+    mutationFn: async ({ id, competitor_type }: { id: string; competitor_type: CompetitorType }) => {
+      const { error } = await supabase.from("mi_competitors").update({ competitor_type } as never).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["mi-competitors"] }),
     onError: (e: Error) => toast.error(e.message),
   });
 
@@ -136,8 +214,8 @@ export default function CompetitorsTab() {
     <div className="space-y-4">
       <MiSectionHeader
         icon={Swords}
-        title="Concorrentes monitorados"
-        description="Cadastre sites de concorrentes. A cada scan, o Firecrawl extrai o conteúdo e a IA gera uma análise estruturada (posicionamento, ofertas, preços, ameaças e oportunidades) do ponto de vista da Eternum."
+        title="Mapa de concorrentes"
+        description="Diretos, indiretos e transversais. A base inicial veio do screening do Members Book 2026 da MLS (mentorias para médicos, estética e odontologia). Com site cadastrado, o scan usa Firecrawl + IA para detalhar posicionamento, ofertas, preços, ameaças e oportunidades."
         action={
           <Dialog open={open} onOpenChange={setOpen}>
             <DialogTrigger asChild>
@@ -156,8 +234,32 @@ export default function CompetitorsTab() {
                     placeholder="Ex: Concorrente XYZ"
                   />
                 </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-xs font-medium">Tipo</label>
+                    <Select value={form.competitor_type} onValueChange={(v) => setForm({ ...form, competitor_type: v as CompetitorType })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(typeMeta) as CompetitorType[]).map((t) => (
+                          <SelectItem key={t} value={t}>{typeMeta[t].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium">Público-alvo</label>
+                    <Select value={form.audience} onValueChange={(v) => setForm({ ...form, audience: v })}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(audienceLabels).map(([k, l]) => (
+                          <SelectItem key={k} value={k}>{l}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <div>
-                  <label className="text-xs font-medium">Site</label>
+                  <label className="text-xs font-medium">Site (opcional)</label>
                   <Input
                     value={form.website}
                     onChange={(e) => setForm({ ...form, website: e.target.value })}
@@ -185,22 +287,56 @@ export default function CompetitorsTab() {
         }
       />
 
+      <div className="flex flex-wrap items-center gap-2">
+        <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
+          <TabsList>
+            <TabsTrigger value="todos">Todos ({counts.todos})</TabsTrigger>
+            <TabsTrigger value="direto">Diretos ({counts.direto})</TabsTrigger>
+            <TabsTrigger value="indireto">Indiretos ({counts.indireto})</TabsTrigger>
+            <TabsTrigger value="transversal">Transversais ({counts.transversal})</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        <Select value={audienceFilter} onValueChange={setAudienceFilter}>
+          <SelectTrigger className="w-[180px]"><SelectValue placeholder="Público" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os públicos</SelectItem>
+            {Object.entries(audienceLabels).map(([k, l]) => (
+              <SelectItem key={k} value={k}>{l}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+          <Input
+            className="pl-7"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por nome, mentor ou posicionamento"
+          />
+        </div>
+      </div>
+
+      {typeFilter !== "todos" && (
+        <p className="text-xs text-muted-foreground">{typeMeta[typeFilter].hint}</p>
+      )}
+
       {isLoading && (
         <Card><CardContent className="pt-6 text-sm text-muted-foreground">Carregando…</CardContent></Card>
       )}
 
-      {!isLoading && competitors.length === 0 && (
+      {!isLoading && filtered.length === 0 && (
         <MiEmptyState
           icon={Swords}
-          title="Nenhum concorrente cadastrado"
-          description='Clique em "Adicionar" para monitorar posicionamento, ofertas e preços dos players que disputam seu ICP.'
+          title="Nenhum concorrente nesse recorte"
+          description='Ajuste os filtros ou clique em "Adicionar" para mapear novos players que disputam o mesmo ICP.'
         />
       )}
 
       <div className="space-y-3">
-        {competitors.map((c) => {
+        {filtered.map((c) => {
           const snap = snapshotsMap[c.id];
           const a = snap?.ai_analysis || null;
+          const meta = typeMeta[c.competitor_type] || typeMeta.direto;
           return (
             <Card key={c.id}>
               <CardContent className="pt-4 pb-4">
@@ -208,14 +344,26 @@ export default function CompetitorsTab() {
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="font-semibold text-base">{c.name}</h3>
-                      <a
-                        href={c.website.startsWith("http") ? c.website : `https://${c.website}`}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="text-xs text-primary hover:underline inline-flex items-center gap-1"
-                      >
-                        {c.website} <ExternalLink className="h-3 w-3" />
-                      </a>
+                      <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
+                      {c.audience && (
+                        <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
+                      )}
+                      {c.tier && (
+                        <Badge variant="outline" className={tierClass[c.tier] || ""}>MLS {c.tier}</Badge>
+                      )}
+                      {c.name_confidence === "baixa" && (
+                        <Badge variant="outline" className="bg-muted text-muted-foreground">nome a confirmar</Badge>
+                      )}
+                      {c.website && (
+                        <a
+                          href={c.website.startsWith("http") ? c.website : `https://${c.website}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-primary hover:underline inline-flex items-center gap-1"
+                        >
+                          {c.website} <ExternalLink className="h-3 w-3" />
+                        </a>
+                      )}
                       {a?.urgency && (
                         <Badge variant="outline" className={urgencyColors[a.urgency] || ""}>
                           urgência {a.urgency}
@@ -225,19 +373,36 @@ export default function CompetitorsTab() {
                         <Badge variant="outline">overlap {a.overlap_score}%</Badge>
                       )}
                     </div>
-                    {c.notes && <p className="text-xs text-muted-foreground mt-1">{c.notes}</p>}
+                    {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
+                    {c.mentors && c.mentors.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" /> {c.mentors.join(", ")}
+                      </p>
+                    )}
+                    {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
                     <p className="text-xs text-muted-foreground mt-1">
                       {c.last_scanned_at
                         ? `Último scan: ${new Date(c.last_scanned_at).toLocaleString("pt-BR")}`
-                        : "Ainda não escaneado"}
+                        : c.website ? "Ainda não escaneado" : "Sem site cadastrado — adicione para habilitar o scan por IA"}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
+                    <Select
+                      value={c.competitor_type}
+                      onValueChange={(v) => updateTypeMutation.mutate({ id: c.id, competitor_type: v as CompetitorType })}
+                    >
+                      <SelectTrigger className="h-8 w-[140px] text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(typeMeta) as CompetitorType[]).map((t) => (
+                          <SelectItem key={t} value={t}>{typeMeta[t].label}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                     <Button
                       size="sm"
                       variant="outline"
                       onClick={() => scan(c.id)}
-                      disabled={scanningId === c.id}
+                      disabled={scanningId === c.id || !c.website}
                     >
                       {scanningId === c.id ? (
                         <Loader2 className="h-3 w-3 mr-1 animate-spin" />
