@@ -412,13 +412,23 @@ export default function CompetitorsTab() {
                         <Badge variant="outline">overlap {a.overlap_score}%</Badge>
                       )}
                     </div>
-                    {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
-                    {c.mentors && c.mentors.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
-                        <Users className="h-3 w-3" /> {c.mentors.join(", ")}
+                    {c.mentors && c.mentors.length > 0 ? (
+                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        {c.mentors.map((m) => (
+                          <Badge key={m} variant="secondary" className="text-[11px] font-medium">
+                            {m}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1.5 inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" /> Mentor não identificado
                       </p>
                     )}
+                    {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
                     {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
+
                     <p className="text-xs text-muted-foreground mt-1">
                       {c.last_scanned_at
                         ? `Último scan: ${new Date(c.last_scanned_at).toLocaleString("pt-BR")}`
