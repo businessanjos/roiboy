@@ -18171,39 +18171,60 @@ export type Database = {
       mi_competitors: {
         Row: {
           account_id: string
+          audience: string | null
+          competitor_type: string
           created_at: string
           created_by: string | null
           id: string
           last_scanned_at: string | null
+          mentors: string[] | null
           name: string
+          name_confidence: string | null
           notes: string | null
+          positioning: string | null
+          source: string | null
           tags: string[] | null
+          tier: string | null
           updated_at: string
-          website: string
+          website: string | null
         }
         Insert: {
           account_id: string
+          audience?: string | null
+          competitor_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
           last_scanned_at?: string | null
+          mentors?: string[] | null
           name: string
+          name_confidence?: string | null
           notes?: string | null
+          positioning?: string | null
+          source?: string | null
           tags?: string[] | null
+          tier?: string | null
           updated_at?: string
-          website: string
+          website?: string | null
         }
         Update: {
           account_id?: string
+          audience?: string | null
+          competitor_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
           last_scanned_at?: string | null
+          mentors?: string[] | null
           name?: string
+          name_confidence?: string | null
           notes?: string | null
+          positioning?: string | null
+          source?: string | null
           tags?: string[] | null
+          tier?: string | null
           updated_at?: string
-          website?: string
+          website?: string | null
         }
         Relationships: []
       }
