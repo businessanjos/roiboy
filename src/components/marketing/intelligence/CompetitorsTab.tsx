@@ -373,11 +373,13 @@ export default function CompetitorsTab() {
                       {c.audience && (
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
                       )}
-                      {c.tier && (
-                        <Badge variant="outline" className={tierClass[c.tier] || ""}>
-                          MLS {tierLabel(c.tier)}
-                        </Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={c.tier ? tierClass[c.tier] || "" : "bg-muted text-muted-foreground border-border"}
+                      >
+                        {c.tier ? `MLS ${tierLabel(c.tier)}` : "Sem categoria"}
+                      </Badge>
+
                       {formatTicketRange(c.tier) && (
                         <Badge variant="outline" className="text-[11px] font-normal">
                           ticket {formatTicketRange(c.tier)}
