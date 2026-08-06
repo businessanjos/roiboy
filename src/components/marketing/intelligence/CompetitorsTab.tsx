@@ -38,7 +38,10 @@ type Competitor = {
   name_confidence: string | null;
   mentors: string[] | null;
   positioning: string | null;
+  previous_tier?: string | null;
+  tier_changed_at?: string | null;
 };
+
 
 type Snapshot = {
   id: string;
