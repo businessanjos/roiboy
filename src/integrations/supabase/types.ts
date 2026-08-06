@@ -18168,6 +18168,96 @@ export type Database = {
           },
         ]
       }
+      mi_competitor_sync_config: {
+        Row: {
+          account_id: string
+          auto_enabled: boolean
+          created_at: string
+          id: string
+          interval_days: number
+          last_run_at: string | null
+          next_run_at: string
+          source_url: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          auto_enabled?: boolean
+          created_at?: string
+          id?: string
+          interval_days?: number
+          last_run_at?: string | null
+          next_run_at?: string
+          source_url: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          auto_enabled?: boolean
+          created_at?: string
+          id?: string
+          interval_days?: number
+          last_run_at?: string | null
+          next_run_at?: string
+          source_url?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      mi_competitor_sync_runs: {
+        Row: {
+          account_id: string
+          changes: Json
+          clubs_found: number
+          created_at: string
+          error: string | null
+          finished_at: string | null
+          id: string
+          missing_count: number
+          new_count: number
+          source_url: string | null
+          started_at: string
+          status: string
+          tier_changed_count: number
+          trigger_source: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          changes?: Json
+          clubs_found?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          missing_count?: number
+          new_count?: number
+          source_url?: string | null
+          started_at?: string
+          status?: string
+          tier_changed_count?: number
+          trigger_source?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          changes?: Json
+          clubs_found?: number
+          created_at?: string
+          error?: string | null
+          finished_at?: string | null
+          id?: string
+          missing_count?: number
+          new_count?: number
+          source_url?: string | null
+          started_at?: string
+          status?: string
+          tier_changed_count?: number
+          trigger_source?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       mi_competitors: {
         Row: {
           account_id: string
@@ -18177,14 +18267,20 @@ export type Database = {
           created_by: string | null
           id: string
           last_scanned_at: string | null
+          last_seen_at: string | null
           mentors: string[] | null
           name: string
           name_confidence: string | null
           notes: string | null
           positioning: string | null
+          previous_tier: string | null
           source: string | null
+          source_url: string | null
           tags: string[] | null
+          ticket_max: number | null
+          ticket_min: number | null
           tier: string | null
+          tier_changed_at: string | null
           updated_at: string
           website: string | null
         }
@@ -18196,14 +18292,20 @@ export type Database = {
           created_by?: string | null
           id?: string
           last_scanned_at?: string | null
+          last_seen_at?: string | null
           mentors?: string[] | null
           name: string
           name_confidence?: string | null
           notes?: string | null
           positioning?: string | null
+          previous_tier?: string | null
           source?: string | null
+          source_url?: string | null
           tags?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
           tier?: string | null
+          tier_changed_at?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -18215,14 +18317,20 @@ export type Database = {
           created_by?: string | null
           id?: string
           last_scanned_at?: string | null
+          last_seen_at?: string | null
           mentors?: string[] | null
           name?: string
           name_confidence?: string | null
           notes?: string | null
           positioning?: string | null
+          previous_tier?: string | null
           source?: string | null
+          source_url?: string | null
           tags?: string[] | null
+          ticket_max?: number | null
+          ticket_min?: number | null
           tier?: string | null
+          tier_changed_at?: string | null
           updated_at?: string
           website?: string | null
         }
@@ -26788,6 +26896,7 @@ export type Database = {
         }
         Returns: string
       }
+      mi_tier_ticket_range: { Args: { _tier: string }; Returns: number[] }
       next_digital_contract_number: {
         Args: { p_account_id: string }
         Returns: string

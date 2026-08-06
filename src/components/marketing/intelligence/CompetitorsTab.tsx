@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
+import { CompetitorsSyncPanel } from "./CompetitorsSyncPanel";
+import { formatTicketRange, tierLabel } from "./tierTicket";
 
 type CompetitorType = "direto" | "indireto" | "transversal";
 
@@ -36,7 +38,10 @@ type Competitor = {
   name_confidence: string | null;
   mentors: string[] | null;
   positioning: string | null;
+  previous_tier?: string | null;
+  tier_changed_at?: string | null;
 };
+
 
 type Snapshot = {
   id: string;
@@ -287,7 +292,10 @@ export default function CompetitorsTab() {
         }
       />
 
+      <CompetitorsSyncPanel />
+
       <div className="flex flex-wrap items-center gap-2">
+
         <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
           <TabsList>
             <TabsTrigger value="todos">Todos ({counts.todos})</TabsTrigger>
@@ -349,7 +357,19 @@ export default function CompetitorsTab() {
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
                       )}
                       {c.tier && (
-                        <Badge variant="outline" className={tierClass[c.tier] || ""}>MLS {c.tier}</Badge>
+                        <Badge variant="outline" className={tierClass[c.tier] || ""}>
+                          MLS {tierLabel(c.tier)}
+                        </Badge>
+                      )}
+                      {formatTicketRange(c.tier) && (
+                        <Badge variant="outline" className="text-[11px] font-normal">
+                          ticket {formatTicketRange(c.tier)}
+                        </Badge>
+                      )}
+                      {c.previous_tier && c.tier_changed_at && (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[11px]">
+                          mudou de {tierLabel(c.previous_tier)} em {new Date(c.tier_changed_at).toLocaleDateString("pt-BR")}
+                        </Badge>
                       )}
                       {c.name_confidence === "baixa" && (
                         <Badge variant="outline" className="bg-muted text-muted-foreground">nome a confirmar</Badge>
