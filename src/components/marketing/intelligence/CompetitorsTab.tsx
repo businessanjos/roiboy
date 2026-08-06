@@ -354,7 +354,19 @@ export default function CompetitorsTab() {
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
                       )}
                       {c.tier && (
-                        <Badge variant="outline" className={tierClass[c.tier] || ""}>MLS {c.tier}</Badge>
+                        <Badge variant="outline" className={tierClass[c.tier] || ""}>
+                          MLS {tierLabel(c.tier)}
+                        </Badge>
+                      )}
+                      {formatTicketRange(c.tier) && (
+                        <Badge variant="outline" className="text-[11px] font-normal">
+                          ticket {formatTicketRange(c.tier)}
+                        </Badge>
+                      )}
+                      {c.previous_tier && c.tier_changed_at && (
+                        <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 text-[11px]">
+                          mudou de {tierLabel(c.previous_tier)} em {new Date(c.tier_changed_at).toLocaleDateString("pt-BR")}
+                        </Badge>
                       )}
                       {c.name_confidence === "baixa" && (
                         <Badge variant="outline" className="bg-muted text-muted-foreground">nome a confirmar</Badge>
