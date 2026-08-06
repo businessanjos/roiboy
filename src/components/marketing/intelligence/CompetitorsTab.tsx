@@ -91,8 +91,8 @@ const tierClass: Record<string, string> = {
 };
 
 const TIER_RANK: Record<string, number> = {
-  platinum: 0,
-  gold: 1,
+  gold: 0,
+  platinum: 1,
   silver: 2,
   bronze: 3,
 };
