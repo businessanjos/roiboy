@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown, Search,
   ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords, Users,
+  BadgeCheck, AlertTriangle, EyeOff,
 } from "lucide-react";
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
