@@ -590,14 +590,14 @@ export default function MarketingIntelligence() {
               </Tabs>
             </TabsContent>
 
-            {/* ————— OPORTUNIDADE: penetração + concorrentes ————— */}
+            {/* ————— OPORTUNIDADE: penetração ————— */}
             <TabsContent value="opportunity" className="space-y-8 mt-6">
               <MiCallout
                 icon={Compass}
                 eyebrow="Oportunidade"
                 tone="success"
-                look="Regiões subexploradas (whitespace) e movimento dos concorrentes diretos."
-                act="Aponte times de aquisição para os top 5 whitespace e monitore concorrentes de urgência alta."
+                look="Regiões subexploradas (whitespace) onde ainda temos pouca base."
+                act="Aponte times de aquisição para os top 5 whitespace."
               />
               <section>
                 <MiSectionHeader
@@ -607,17 +607,21 @@ export default function MarketingIntelligence() {
                 />
                 <PenetrationTab />
               </section>
+            </TabsContent>
 
-              <section>
-                <MiSectionHeader
-                  icon={Swords}
-                  title="Concorrentes"
-                  description="Quem disputa o mesmo mentorado, com posicionamento e ticket."
-                />
-                <CompetitorsTab />
-              </section>
+            {/* ————— CONCORRENTES ————— */}
+            <TabsContent value="competitors" className="space-y-8 mt-6">
+              <MiCallout
+                icon={Swords}
+                eyebrow="Concorrentes"
+                tone="accent"
+                look="Diretos (mesmo ICP), indiretos (saúde/odonto adjacente) e transversais (mentoria generalista que atrai médicos)."
+                act="Priorize os diretos de urgência alta e use as fraquezas mapeadas como argumento comercial."
+              />
+              <CompetitorsTab />
             </TabsContent>
           </Tabs>
+
         </>
       )}
     </div>
