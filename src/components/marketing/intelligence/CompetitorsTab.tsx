@@ -161,6 +161,10 @@ export default function CompetitorsTab() {
       return [c.name, c.positioning, c.notes, (c.mentors || []).join(" "), (c.tags || []).join(" ")]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(term));
+    }).sort((a, b) => {
+      const diff = tierRank(a.tier) - tierRank(b.tier);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name, "pt-BR");
     });
   }, [competitors, typeFilter, audienceFilter, search]);
 
