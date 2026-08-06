@@ -15,6 +15,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Plus, RefreshCw, Trash2, ExternalLink, Loader2, ChevronDown, Search,
   ShieldAlert, Lightbulb, Target, TrendingUp, TrendingDown, Sparkles, Swords, Users,
+  BadgeCheck, AlertTriangle, EyeOff,
 } from "lucide-react";
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
@@ -40,6 +41,9 @@ type Competitor = {
   positioning: string | null;
   previous_tier?: string | null;
   tier_changed_at?: string | null;
+  verification_status?: string | null;
+  verification_note?: string | null;
+  verified_at?: string | null;
 };
 
 
@@ -81,7 +85,32 @@ const audienceLabels: Record<string, string> = {
   estetica: "Estética",
   odontologia: "Odontologia",
   saude_geral: "Saúde (geral)",
+  mentores: "Mentores / donos de mentoria",
 };
+
+type VerificationStatus = "nao_verificado" | "verificado" | "contestado" | "removido";
+
+const verificationMeta: Record<VerificationStatus, { label: string; className: string }> = {
+  nao_verificado: {
+    label: "Não verificado",
+    className: "bg-muted text-muted-foreground border-border",
+  },
+  verificado: {
+    label: "Verificado",
+    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+  },
+  contestado: {
+    label: "Dado contestado",
+    className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  },
+  removido: {
+    label: "Descartado",
+    className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
+  },
+};
+
+const vStatus = (c: { verification_status?: string | null }): VerificationStatus =>
+  (c.verification_status as VerificationStatus) || "nao_verificado";
 
 const tierClass: Record<string, string> = {
   platinum: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30",
@@ -113,6 +142,7 @@ export default function CompetitorsTab() {
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"todos" | CompetitorType>("todos");
   const [audienceFilter, setAudienceFilter] = useState<string>("todos");
+  const [statusFilter, setStatusFilter] = useState<"ativos" | VerificationStatus | "todos">("ativos");
   const [search, setSearch] = useState("");
 
   const { data: competitors = [], isLoading } = useQuery({
@@ -152,9 +182,17 @@ export default function CompetitorsTab() {
     return base;
   }, [competitors]);
 
+  const statusCounts = useMemo(() => {
+    const base: Record<string, number> = { nao_verificado: 0, verificado: 0, contestado: 0, removido: 0 };
+    for (const c of competitors) base[vStatus(c)] = (base[vStatus(c)] || 0) + 1;
+    return base;
+  }, [competitors]);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return competitors.filter((c) => {
+      const st = vStatus(c);
+      if (statusFilter === "ativos" ? st === "removido" : statusFilter !== "todos" && st !== statusFilter) return false;
       if (typeFilter !== "todos" && c.competitor_type !== typeFilter) return false;
       if (audienceFilter !== "todos" && (c.audience || "") !== audienceFilter) return false;
       if (!term) return true;
@@ -166,7 +204,8 @@ export default function CompetitorsTab() {
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name, "pt-BR");
     });
-  }, [competitors, typeFilter, audienceFilter, search]);
+  }, [competitors, typeFilter, audienceFilter, statusFilter, search]);
+
 
   const addMutation = useMutation({
     mutationFn: async () => {
@@ -202,6 +241,31 @@ export default function CompetitorsTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: async ({ id, status, note }: { id: string; status: VerificationStatus; note?: string | null }) => {
+      const { error } = await supabase
+        .from("mi_competitors")
+        .update({
+          verification_status: status,
+          verification_note: note ?? null,
+          verified_by: currentUser?.id ?? null,
+          verified_at: new Date().toISOString(),
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(
+        v.status === "verificado" ? "Marcado como verificado"
+          : v.status === "contestado" ? "Marcado como contestado"
+          : v.status === "removido" ? "Descartado do mapa"
+          : "Status atualizado",
+      );
+      qc.invalidateQueries({ queryKey: ["mi-competitors"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("mi_competitors").delete().eq("id", id);
@@ -213,6 +277,7 @@ export default function CompetitorsTab() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const scan = async (id: string) => {
     setScanningId(id);
@@ -311,6 +376,20 @@ export default function CompetitorsTab() {
 
       <CompetitorsSyncPanel />
 
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          <p className="font-medium">Base gerada por IA — precisa de curadoria humana.</p>
+          <p className="mt-0.5">
+            O screening do Members Book pode errar nome, público ou até inventar um clube. Use{" "}
+            <strong>Verificar</strong> para confirmar, <strong>Contestar</strong> quando o dado estiver errado e{" "}
+            <strong>Descartar</strong> quando o clube não existir — descartados não voltam nas próximas sincronizações.
+            Hoje: {statusCounts.verificado} verificados · {statusCounts.nao_verificado} não verificados ·{" "}
+            {statusCounts.contestado} contestados · {statusCounts.removido} descartados.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
 
         <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
@@ -328,6 +407,17 @@ export default function CompetitorsTab() {
             {Object.entries(audienceLabels).map(([k, l]) => (
               <SelectItem key={k} value={k}>{l}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-[190px]"><SelectValue placeholder="Verificação" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ativos">Ativos (sem descartados)</SelectItem>
+            <SelectItem value="verificado">Verificados ({statusCounts.verificado})</SelectItem>
+            <SelectItem value="nao_verificado">Não verificados ({statusCounts.nao_verificado})</SelectItem>
+            <SelectItem value="contestado">Contestados ({statusCounts.contestado})</SelectItem>
+            <SelectItem value="removido">Descartados ({statusCounts.removido})</SelectItem>
+            <SelectItem value="todos">Todos</SelectItem>
           </SelectContent>
         </Select>
         <div className="relative flex-1 min-w-[200px]">
@@ -362,13 +452,16 @@ export default function CompetitorsTab() {
           const snap = snapshotsMap[c.id];
           const a = snap?.ai_analysis || null;
           const meta = typeMeta[c.competitor_type] || typeMeta.direto;
+          const st = vStatus(c);
+          const vMeta = verificationMeta[st];
           return (
-            <Card key={c.id}>
+            <Card key={c.id} className={st === "removido" ? "opacity-60" : st === "contestado" ? "border-red-500/40" : undefined}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-base">{c.name}</h3>
+                      <h3 className={`font-semibold text-base ${st === "removido" ? "line-through" : ""}`}>{c.name}</h3>
+                      <Badge variant="outline" className={vMeta.className}>{vMeta.label}</Badge>
                       <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
                       {c.audience && (
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
@@ -429,13 +522,20 @@ export default function CompetitorsTab() {
                     {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
                     {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
 
+                    {c.verification_note && (
+                      <p className="text-xs mt-1.5 text-red-700 dark:text-red-300 inline-flex items-start gap-1">
+                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {c.verification_note}
+                      </p>
+                    )}
+
                     <p className="text-xs text-muted-foreground mt-1">
                       {c.last_scanned_at
                         ? `Último scan: ${new Date(c.last_scanned_at).toLocaleString("pt-BR")}`
                         : c.website ? "Ainda não escaneado" : "Sem site cadastrado — adicione para habilitar o scan por IA"}
+                      {c.verified_at && ` · Curadoria em ${new Date(c.verified_at).toLocaleDateString("pt-BR")}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     <Select
                       value={c.competitor_type}
                       onValueChange={(v) => updateTypeMutation.mutate({ id: c.id, competitor_type: v as CompetitorType })}
@@ -447,6 +547,46 @@ export default function CompetitorsTab() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {st !== "verificado" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => verifyMutation.mutate({ id: c.id, status: "verificado", note: null })}
+                      >
+                        <BadgeCheck className="h-3 w-3 mr-1" /> Verificar
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const note = prompt(`O que está errado em "${c.name}"?`, c.verification_note || "");
+                        if (note === null) return;
+                        verifyMutation.mutate({ id: c.id, status: "contestado", note: note.trim() || null });
+                      }}
+                    >
+                      <AlertTriangle className="h-3 w-3 mr-1" /> Contestar
+                    </Button>
+                    {st !== "removido" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (!confirm(`Descartar "${c.name}" do mapa? Ele não volta nas próximas sincronizações.`)) return;
+                          verifyMutation.mutate({ id: c.id, status: "removido", note: "Clube não confirmado / inexistente" });
+                        }}
+                      >
+                        <EyeOff className="h-3 w-3 mr-1" /> Descartar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => verifyMutation.mutate({ id: c.id, status: "nao_verificado", note: null })}
+                      >
+                        Restaurar
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -464,12 +604,13 @@ export default function CompetitorsTab() {
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        if (confirm(`Remover ${c.name}?`)) deleteMutation.mutate(c.id);
+                        if (confirm(`Excluir ${c.name} definitivamente?`)) deleteMutation.mutate(c.id);
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
+
                 </div>
 
                 {a && (
