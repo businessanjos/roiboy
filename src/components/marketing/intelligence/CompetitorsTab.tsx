@@ -522,13 +522,20 @@ export default function CompetitorsTab() {
                     {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
                     {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
 
+                    {c.verification_note && (
+                      <p className="text-xs mt-1.5 text-red-700 dark:text-red-300 inline-flex items-start gap-1">
+                        <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {c.verification_note}
+                      </p>
+                    )}
+
                     <p className="text-xs text-muted-foreground mt-1">
                       {c.last_scanned_at
                         ? `Último scan: ${new Date(c.last_scanned_at).toLocaleString("pt-BR")}`
                         : c.website ? "Ainda não escaneado" : "Sem site cadastrado — adicione para habilitar o scan por IA"}
+                      {c.verified_at && ` · Curadoria em ${new Date(c.verified_at).toLocaleDateString("pt-BR")}`}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap justify-end">
                     <Select
                       value={c.competitor_type}
                       onValueChange={(v) => updateTypeMutation.mutate({ id: c.id, competitor_type: v as CompetitorType })}
@@ -540,6 +547,46 @@ export default function CompetitorsTab() {
                         ))}
                       </SelectContent>
                     </Select>
+                    {st !== "verificado" && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => verifyMutation.mutate({ id: c.id, status: "verificado", note: null })}
+                      >
+                        <BadgeCheck className="h-3 w-3 mr-1" /> Verificar
+                      </Button>
+                    )}
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        const note = prompt(`O que está errado em "${c.name}"?`, c.verification_note || "");
+                        if (note === null) return;
+                        verifyMutation.mutate({ id: c.id, status: "contestado", note: note.trim() || null });
+                      }}
+                    >
+                      <AlertTriangle className="h-3 w-3 mr-1" /> Contestar
+                    </Button>
+                    {st !== "removido" ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          if (!confirm(`Descartar "${c.name}" do mapa? Ele não volta nas próximas sincronizações.`)) return;
+                          verifyMutation.mutate({ id: c.id, status: "removido", note: "Clube não confirmado / inexistente" });
+                        }}
+                      >
+                        <EyeOff className="h-3 w-3 mr-1" /> Descartar
+                      </Button>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => verifyMutation.mutate({ id: c.id, status: "nao_verificado", note: null })}
+                      >
+                        Restaurar
+                      </Button>
+                    )}
                     <Button
                       size="sm"
                       variant="outline"
@@ -557,12 +604,13 @@ export default function CompetitorsTab() {
                       size="sm"
                       variant="ghost"
                       onClick={() => {
-                        if (confirm(`Remover ${c.name}?`)) deleteMutation.mutate(c.id);
+                        if (confirm(`Excluir ${c.name} definitivamente?`)) deleteMutation.mutate(c.id);
                       }}
                     >
                       <Trash2 className="h-3 w-3" />
                     </Button>
                   </div>
+
                 </div>
 
                 {a && (
