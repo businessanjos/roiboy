@@ -190,7 +190,7 @@ Deno.serve(async (req) => {
 
       const { data: existing } = await admin
         .from('mi_competitors')
-        .select('id, name, tier, mentors, positioning, audience')
+        .select('id, name, tier, mentors, positioning, audience, verification_status')
         .eq('account_id', job.account_id);
 
       const byName = new Map((existing ?? []).map((e) => [norm(e.name), e]));
@@ -213,23 +213,29 @@ Deno.serve(async (req) => {
             source: 'members_book_mls',
             source_url: job.source_url,
             last_seen_at: nowIso,
+            verification_status: 'nao_verificado',
           });
           if (!error) {
             newCount++;
             changes.push({ type: 'novo', name: club.name, tier: club.tier });
           }
+        } else if (match.verification_status === 'removido') {
+          // Curadoria humana descartou este clube — não reintroduzir nem sobrescrever.
+          changes.push({ type: 'ignorado_descartado', name: match.name });
         } else {
+          const curated = match.verification_status === 'verificado';
           const patch: Record<string, unknown> = { last_seen_at: nowIso, source_url: job.source_url };
-          if (club.tier && club.tier !== match.tier) {
+          if (!curated && club.tier && club.tier !== match.tier) {
             patch.tier = club.tier;
             tierChanged++;
             changes.push({ type: 'tier', name: match.name, from: match.tier, to: club.tier });
           }
-          if (club.mentors.length && (match.mentors ?? []).length === 0) patch.mentors = club.mentors;
-          if (club.positioning && !match.positioning) patch.positioning = club.positioning;
+          if (!curated && club.mentors.length && (match.mentors ?? []).length === 0) patch.mentors = club.mentors;
+          if (!curated && club.positioning && !match.positioning) patch.positioning = club.positioning;
           await admin.from('mi_competitors').update(patch).eq('id', match.id);
         }
       }
+
 
       const missing = (existing ?? []).filter(
         (e) => !found.has(norm(e.name)),
