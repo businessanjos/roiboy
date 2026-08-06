@@ -142,6 +142,7 @@ export default function CompetitorsTab() {
   const [scanningId, setScanningId] = useState<string | null>(null);
   const [typeFilter, setTypeFilter] = useState<"todos" | CompetitorType>("todos");
   const [audienceFilter, setAudienceFilter] = useState<string>("todos");
+  const [statusFilter, setStatusFilter] = useState<"ativos" | VerificationStatus | "todos">("ativos");
   const [search, setSearch] = useState("");
 
   const { data: competitors = [], isLoading } = useQuery({
