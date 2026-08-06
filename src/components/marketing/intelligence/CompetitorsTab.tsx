@@ -90,6 +90,19 @@ const tierClass: Record<string, string> = {
   bronze: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
 };
 
+const TIER_RANK: Record<string, number> = {
+  gold: 0,
+  platinum: 1,
+  silver: 2,
+  bronze: 3,
+};
+
+const tierRank = (tier?: string | null) => {
+  const r = TIER_RANK[(tier || "").toLowerCase()];
+  return r === undefined ? 99 : r;
+};
+
+
 export default function CompetitorsTab() {
   const { currentUser } = useCurrentUser();
   const qc = useQueryClient();
@@ -148,6 +161,10 @@ export default function CompetitorsTab() {
       return [c.name, c.positioning, c.notes, (c.mentors || []).join(" "), (c.tags || []).join(" ")]
         .filter(Boolean)
         .some((v) => String(v).toLowerCase().includes(term));
+    }).sort((a, b) => {
+      const diff = tierRank(a.tier) - tierRank(b.tier);
+      if (diff !== 0) return diff;
+      return a.name.localeCompare(b.name, "pt-BR");
     });
   }, [competitors, typeFilter, audienceFilter, search]);
 
@@ -356,11 +373,13 @@ export default function CompetitorsTab() {
                       {c.audience && (
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
                       )}
-                      {c.tier && (
-                        <Badge variant="outline" className={tierClass[c.tier] || ""}>
-                          MLS {tierLabel(c.tier)}
-                        </Badge>
-                      )}
+                      <Badge
+                        variant="outline"
+                        className={c.tier ? tierClass[c.tier] || "" : "bg-muted text-muted-foreground border-border"}
+                      >
+                        {c.tier ? `MLS ${tierLabel(c.tier)}` : "Sem categoria"}
+                      </Badge>
+
                       {formatTicketRange(c.tier) && (
                         <Badge variant="outline" className="text-[11px] font-normal">
                           ticket {formatTicketRange(c.tier)}
@@ -393,13 +412,23 @@ export default function CompetitorsTab() {
                         <Badge variant="outline">overlap {a.overlap_score}%</Badge>
                       )}
                     </div>
-                    {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
-                    {c.mentors && c.mentors.length > 0 && (
-                      <p className="text-xs text-muted-foreground mt-1 inline-flex items-center gap-1">
-                        <Users className="h-3 w-3" /> {c.mentors.join(", ")}
+                    {c.mentors && c.mentors.length > 0 ? (
+                      <div className="mt-1.5 flex items-center gap-1.5 flex-wrap">
+                        <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                        {c.mentors.map((m) => (
+                          <Badge key={m} variant="secondary" className="text-[11px] font-medium">
+                            {m}
+                          </Badge>
+                        ))}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-muted-foreground mt-1.5 inline-flex items-center gap-1">
+                        <Users className="h-3 w-3" /> Mentor não identificado
                       </p>
                     )}
+                    {c.positioning && <p className="text-sm mt-1">{c.positioning}</p>}
                     {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
+
                     <p className="text-xs text-muted-foreground mt-1">
                       {c.last_scanned_at
                         ? `Último scan: ${new Date(c.last_scanned_at).toLocaleString("pt-BR")}`
