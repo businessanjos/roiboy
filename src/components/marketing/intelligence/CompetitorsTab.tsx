@@ -376,6 +376,20 @@ export default function CompetitorsTab() {
 
       <CompetitorsSyncPanel />
 
+      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+        <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
+        <div>
+          <p className="font-medium">Base gerada por IA — precisa de curadoria humana.</p>
+          <p className="mt-0.5">
+            O screening do Members Book pode errar nome, público ou até inventar um clube. Use{" "}
+            <strong>Verificar</strong> para confirmar, <strong>Contestar</strong> quando o dado estiver errado e{" "}
+            <strong>Descartar</strong> quando o clube não existir — descartados não voltam nas próximas sincronizações.
+            Hoje: {statusCounts.verificado} verificados · {statusCounts.nao_verificado} não verificados ·{" "}
+            {statusCounts.contestado} contestados · {statusCounts.removido} descartados.
+          </p>
+        </div>
+      </div>
+
       <div className="flex flex-wrap items-center gap-2">
 
         <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
@@ -393,6 +407,17 @@ export default function CompetitorsTab() {
             {Object.entries(audienceLabels).map(([k, l]) => (
               <SelectItem key={k} value={k}>{l}</SelectItem>
             ))}
+          </SelectContent>
+        </Select>
+        <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as typeof statusFilter)}>
+          <SelectTrigger className="w-[190px]"><SelectValue placeholder="Verificação" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="ativos">Ativos (sem descartados)</SelectItem>
+            <SelectItem value="verificado">Verificados ({statusCounts.verificado})</SelectItem>
+            <SelectItem value="nao_verificado">Não verificados ({statusCounts.nao_verificado})</SelectItem>
+            <SelectItem value="contestado">Contestados ({statusCounts.contestado})</SelectItem>
+            <SelectItem value="removido">Descartados ({statusCounts.removido})</SelectItem>
+            <SelectItem value="todos">Todos</SelectItem>
           </SelectContent>
         </Select>
         <div className="relative flex-1 min-w-[200px]">
