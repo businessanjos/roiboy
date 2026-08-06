@@ -18,6 +18,8 @@ import {
 } from "lucide-react";
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
+import { CompetitorsSyncPanel } from "./CompetitorsSyncPanel";
+import { formatTicketRange, tierLabel } from "./tierTicket";
 
 type CompetitorType = "direto" | "indireto" | "transversal";
 
