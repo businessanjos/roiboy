@@ -386,7 +386,7 @@ export default function MarketingIntelligence() {
 
           {/* Navegação principal — 3 categorias narrativas */}
           <Tabs value={tab} onValueChange={setTab} className="space-y-4">
-            <TabsList className="grid grid-cols-3 w-full max-w-2xl">
+            <TabsList className="grid grid-cols-4 w-full max-w-3xl">
               <TabsTrigger value="market" className="gap-2">
                 <Telescope className="h-3.5 w-3.5" /> Mercado
               </TabsTrigger>
@@ -396,7 +396,11 @@ export default function MarketingIntelligence() {
               <TabsTrigger value="opportunity" className="gap-2">
                 <Target className="h-3.5 w-3.5" /> Oportunidade
               </TabsTrigger>
+              <TabsTrigger value="competitors" className="gap-2">
+                <Swords className="h-3.5 w-3.5" /> Concorrentes
+              </TabsTrigger>
             </TabsList>
+
 
             {/* ————— MERCADO: tamanho, snapshot, eventos, pesquisa ————— */}
             <TabsContent value="market" className="space-y-8 mt-6">
