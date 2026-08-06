@@ -182,9 +182,17 @@ export default function CompetitorsTab() {
     return base;
   }, [competitors]);
 
+  const statusCounts = useMemo(() => {
+    const base: Record<string, number> = { nao_verificado: 0, verificado: 0, contestado: 0, removido: 0 };
+    for (const c of competitors) base[vStatus(c)] = (base[vStatus(c)] || 0) + 1;
+    return base;
+  }, [competitors]);
+
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
     return competitors.filter((c) => {
+      const st = vStatus(c);
+      if (statusFilter === "ativos" ? st === "removido" : statusFilter !== "todos" && st !== statusFilter) return false;
       if (typeFilter !== "todos" && c.competitor_type !== typeFilter) return false;
       if (audienceFilter !== "todos" && (c.audience || "") !== audienceFilter) return false;
       if (!term) return true;
@@ -196,7 +204,8 @@ export default function CompetitorsTab() {
       if (diff !== 0) return diff;
       return a.name.localeCompare(b.name, "pt-BR");
     });
-  }, [competitors, typeFilter, audienceFilter, search]);
+  }, [competitors, typeFilter, audienceFilter, statusFilter, search]);
+
 
   const addMutation = useMutation({
     mutationFn: async () => {
