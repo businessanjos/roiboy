@@ -289,7 +289,10 @@ export default function CompetitorsTab() {
         }
       />
 
+      <CompetitorsSyncPanel />
+
       <div className="flex flex-wrap items-center gap-2">
+
         <Tabs value={typeFilter} onValueChange={(v) => setTypeFilter(v as typeof typeFilter)}>
           <TabsList>
             <TabsTrigger value="todos">Todos ({counts.todos})</TabsTrigger>
