@@ -41,6 +41,9 @@ type Competitor = {
   positioning: string | null;
   previous_tier?: string | null;
   tier_changed_at?: string | null;
+  verification_status?: string | null;
+  verification_note?: string | null;
+  verified_at?: string | null;
 };
 
 
