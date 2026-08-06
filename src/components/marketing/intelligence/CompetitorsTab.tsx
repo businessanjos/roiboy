@@ -241,6 +241,31 @@ export default function CompetitorsTab() {
     onError: (e: Error) => toast.error(e.message),
   });
 
+  const verifyMutation = useMutation({
+    mutationFn: async ({ id, status, note }: { id: string; status: VerificationStatus; note?: string | null }) => {
+      const { error } = await supabase
+        .from("mi_competitors")
+        .update({
+          verification_status: status,
+          verification_note: note ?? null,
+          verified_by: currentUser?.id ?? null,
+          verified_at: new Date().toISOString(),
+        } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, v) => {
+      toast.success(
+        v.status === "verificado" ? "Marcado como verificado"
+          : v.status === "contestado" ? "Marcado como contestado"
+          : v.status === "removido" ? "Descartado do mapa"
+          : "Status atualizado",
+      );
+      qc.invalidateQueries({ queryKey: ["mi-competitors"] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("mi_competitors").delete().eq("id", id);
@@ -252,6 +277,7 @@ export default function CompetitorsTab() {
     },
     onError: (e: Error) => toast.error(e.message),
   });
+
 
   const scan = async (id: string) => {
     setScanningId(id);
