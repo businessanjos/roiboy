@@ -452,13 +452,16 @@ export default function CompetitorsTab() {
           const snap = snapshotsMap[c.id];
           const a = snap?.ai_analysis || null;
           const meta = typeMeta[c.competitor_type] || typeMeta.direto;
+          const st = vStatus(c);
+          const vMeta = verificationMeta[st];
           return (
-            <Card key={c.id}>
+            <Card key={c.id} className={st === "removido" ? "opacity-60" : st === "contestado" ? "border-red-500/40" : undefined}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <h3 className="font-semibold text-base">{c.name}</h3>
+                      <h3 className={`font-semibold text-base ${st === "removido" ? "line-through" : ""}`}>{c.name}</h3>
+                      <Badge variant="outline" className={vMeta.className}>{vMeta.label}</Badge>
                       <Badge variant="outline" className={meta.className}>{meta.label}</Badge>
                       {c.audience && (
                         <Badge variant="outline">{audienceLabels[c.audience] || c.audience}</Badge>
