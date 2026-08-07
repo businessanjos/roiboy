@@ -184,8 +184,25 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   const labelFor = (raw: string) =>
     productLabels.get(raw) || valueToLabel.get(raw) || raw;
 
+  // When the user filtered this same field, only the selected options should
+  // appear in the labels — otherwise a record with several values produces a
+  // combined category like "[ORG-EVER], SDR - George".
+  const restrictSet = new Set<string>();
+  for (const v of restrictToValues || []) {
+    const s = String(v);
+    restrictSet.add(s);
+    const asLabel = valueToLabel.get(s);
+    if (asLabel) restrictSet.add(asLabel);
+  }
+  const isRestricted = restrictSet.size > 0;
+  const keepValue = (raw: string) => restrictSet.has(raw) || restrictSet.has(labelFor(raw));
+
   for (const [entityId, recs] of entityToRecords) {
-    const vals = rawByEntity.get(entityId);
+    let vals = rawByEntity.get(entityId);
+    if (vals && isRestricted) {
+      const kept = vals.filter(keepValue);
+      if (kept.length > 0) vals = kept;
+    }
     const label = vals ? vals.map(labelFor).join(', ') : 'Não informado';
     for (const r of recs) (r as any)[key] = label;
   }
