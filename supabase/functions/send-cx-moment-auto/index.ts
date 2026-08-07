@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
       await supabase
         .from("client_life_events")
         .update({
-          send_status: "skipped",
+          send_status: "cancelled",
           send_error: "Envio retroativo bloqueado (fora da janela de envio)",
         })
         .in("id", stale);
