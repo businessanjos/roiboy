@@ -104,6 +104,9 @@ export default function DocumentTemplatesTab() {
               {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-1.5 hidden sm:inline">Carregar padrões</span>
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setGenerate({ open: true })}>
+              <Send className="h-4 w-4 mr-1.5" /> Gerar para candidato
+            </Button>
             <Button size="sm" onClick={openNew}>
               <Plus className="h-4 w-4 mr-1.5" /> Novo modelo
             </Button>
