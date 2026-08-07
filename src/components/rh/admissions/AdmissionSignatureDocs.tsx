@@ -121,6 +121,53 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
         </div>
       )}
 
+      {/* Registro de aceites */}
+      {signDocs.length > 0 && (
+        <div className="mt-4 rounded-lg border bg-muted/30 p-3">
+          <div className="flex items-center justify-between gap-2 mb-2">
+            <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Registro de aceites
+            </p>
+            <Badge variant="outline" className="text-[11px]">
+              {signedCount} de {signDocs.length} concluídos
+            </Badge>
+          </div>
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden mb-3">
+            <div
+              className="h-full bg-emerald-500 transition-all"
+              style={{ width: `${signDocs.length ? (signedCount / signDocs.length) * 100 : 0}%` }}
+            />
+          </div>
+          {signedCount === 0 ? (
+            <p className="text-xs text-muted-foreground">Nenhum documento assinado até o momento.</p>
+          ) : (
+            <ul className="space-y-2">
+              {signDocs
+                .filter((d) => !!d.signed_at)
+                .sort((a, b) => (a.signed_at! < b.signed_at! ? 1 : -1))
+                .map((d) => (
+                  <li key={d.id} className="text-xs flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <span className="font-medium">{d.label}</span>
+                    <span className="text-muted-foreground">
+                      · {d.signer_name || "—"}
+                      {d.signer_cpf ? ` · CPF ${d.signer_cpf}` : ""} ·{" "}
+                      {new Date(d.signed_at!).toLocaleString("pt-BR")}
+                      {d.signer_ip ? ` · IP ${d.signer_ip}` : ""}
+                    </span>
+                  </li>
+                ))}
+            </ul>
+          )}
+          {signedCount < signDocs.length && (
+            <p className="text-xs text-muted-foreground mt-2">
+              Pendentes: {signDocs.filter((d) => !d.signed_at).map((d) => d.label).join(", ")}
+            </p>
+          )}
+        </div>
+      )}
+
+
       {/* Selecionar modelos */}
       <Dialog open={manage} onOpenChange={setManage}>
         <DialogContent className="max-w-lg">
