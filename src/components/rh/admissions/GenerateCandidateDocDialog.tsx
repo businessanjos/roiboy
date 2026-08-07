@@ -90,10 +90,10 @@ export default function GenerateCandidateDocDialog({ open, onOpenChange, initial
   });
 
   const values = useMemo(() => {
-    const base: Record<string, string> = {
-      ...signerDataFromOcr(ocrDocs || []),
-      ...(admission?.signer_data || {}),
-    };
+    const base: Record<string, string> = { ...signerDataFromOcr(ocrDocs || []) };
+    Object.entries(admission?.signer_data || {}).forEach(([k, v]) => {
+      if ((v || "").trim()) base[k] = v as string;
+    });
     if (admission && !base.NOME_COMPLETO) base.NOME_COMPLETO = admission.candidate_name;
     return { ...base, ...overrides };
   }, [admission, ocrDocs, overrides]);
