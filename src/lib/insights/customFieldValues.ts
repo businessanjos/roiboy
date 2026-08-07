@@ -29,15 +29,39 @@ export function buildCustomFieldKey(source: string, fieldId: string): string {
 }
 
 /**
+ * Given the visual filters, returns the values/labels selected for the field
+ * encoded in `key`. Used so multi-select dimensions only show the options the
+ * user actually filtered by (instead of the full combination of values).
+ */
+export function getSelectedValuesForKey(
+  filters: Array<{ source?: string; field?: string; operator?: string; values?: string[] }> | undefined,
+  key: string
+): string[] {
+  const parsed = parseCustomFieldKey(key);
+  if (!parsed || !filters?.length) return [];
+  const out = new Set<string>();
+  for (const f of filters) {
+    if (f.field !== parsed.fieldId) continue;
+    if (f.operator && !['is', 'is_any'].includes(f.operator)) continue;
+    (f.values || []).forEach((v) => out.add(String(v)));
+  }
+  return Array.from(out);
+}
+
+/**
  * Injects a custom field value into each record under the encoded key, so the
  * generic aggregation (group by / measure) can read it like a native column.
  * Text/select fields resolve to human labels; numeric fields resolve to numbers.
+ *
+ * `restrictToValues` (labels or option values) narrows multi-select labels to
+ * the options selected in the filters, so the chart legend matches the filter.
  */
 export async function enrichRecordsWithCustomField<T extends Record<string, any>>(
   records: T[],
   accountId: string,
   key: string,
-  dataSource: 'deals' | 'leads' | 'tasks'
+  dataSource: 'deals' | 'leads' | 'tasks',
+  restrictToValues?: string[]
 ): Promise<T[]> {
   const parsed = parseCustomFieldKey(key);
   if (!parsed || records.length === 0) return records;
