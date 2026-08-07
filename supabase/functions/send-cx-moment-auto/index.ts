@@ -193,7 +193,15 @@ Deno.serve(async (req) => {
         const primeiroNome = nameParts[0] || client.full_name;
         const sobrenome = nameParts.length > 1 ? nameParts.slice(1).join(" ") : "";
 
-        const personalizedMessage = (moment.message || "")
+        // Fallback template when the moment has no message saved (legacy records)
+        const fallbackMessage =
+          moment.event_type === "birthday"
+            ? `Feliz aniversário, {primeiro_nome}! 🎉\n\nQue este novo ciclo venha cheio de saúde, conquistas e realizações. Estamos muito felizes em ter você com a gente. Conte sempre conosco!`
+            : "";
+
+        const rawMessage = (moment.message || "").trim() || fallbackMessage;
+
+        const personalizedMessage = rawMessage
           .replace(/\{nome\}/gi, client.full_name)
           .replace(/\{primeiro_nome\}/gi, primeiroNome)
           .replace(/\{sobrenome\}/gi, sobrenome)
