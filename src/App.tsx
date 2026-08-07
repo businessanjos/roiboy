@@ -285,6 +285,7 @@ const App = () => (
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
                           <Route path="/admissao/:token" element={<PublicAdmissionPortal />} />
+                          <Route path="/relatorio-agencia/:token" element={<PublicAgencyWeeklyReport />} />
 
                           <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
                           <Route path="/oferta/:token" element={<PublicJobOffer />} />
