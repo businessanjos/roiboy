@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useHRAdmissions";
 import AdmissionDrawer from "@/components/rh/admissions/AdmissionDrawer";
 import DocumentTemplatesTab from "@/components/rh/admissions/DocumentTemplatesTab";
+import SignedDocsTab from "@/components/rh/admissions/SignedDocsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
@@ -127,8 +128,10 @@ export default function RHAdmissions() {
       <Tabs defaultValue="pipeline" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="docs">Documentos gerados</TabsTrigger>
           <TabsTrigger value="templates">Modelos de documentos</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="pipeline">
           <Card>
@@ -158,9 +161,14 @@ export default function RHAdmissions() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="docs">
+          <SignedDocsTab />
+        </TabsContent>
+
         <TabsContent value="templates">
           <DocumentTemplatesTab />
         </TabsContent>
+
       </Tabs>
 
 
