@@ -375,6 +375,59 @@ export default function SalesPipeline() {
     });
   }, [currentUser?.account_id, outcomeDealIds]);
 
+  // Fetch MQL custom field value (qualification) for won/lost deals
+  const MQL_FIELD_ID = '448404cd-0344-4892-a574-2387b1c17578';
+  const [dealMqlMap, setDealMqlMap] = useState<Record<string, { label: string; color?: string }>>({});
+
+  useEffect(() => {
+    if (!currentUser?.account_id || outcomeDeals.length === 0) {
+      setDealMqlMap({});
+      return;
+    }
+    let cancelled = false;
+    const dealIds = outcomeDeals.map((d) => d.id);
+    const chunks: string[][] = [];
+    for (let i = 0; i < dealIds.length; i += 200) chunks.push(dealIds.slice(i, i + 200));
+
+    (async () => {
+      try {
+        const [fieldRes, ...valueResults] = await Promise.all([
+          supabase.from('custom_fields').select('options').eq('id', MQL_FIELD_ID).maybeSingle(),
+          ...chunks.map((ids) =>
+            supabase
+              .from('deal_field_values')
+              .select('deal_id, value_text')
+              .eq('field_id', MQL_FIELD_ID)
+              .in('deal_id', ids)
+              .not('value_text', 'is', null)
+          ),
+        ]);
+        if (cancelled) return;
+
+        const optionMap: Record<string, { label: string; color?: string }> = {};
+        if (Array.isArray((fieldRes as any)?.data?.options)) {
+          ((fieldRes as any).data.options as Array<{ value: string; label: string; color?: string }>).forEach((o) => {
+            optionMap[o.value] = { label: o.label, color: o.color };
+          });
+        }
+
+        const map: Record<string, { label: string; color?: string }> = {};
+        valueResults.forEach((res: any) => {
+          (res?.data || []).forEach((row: any) => {
+            if (!row.deal_id || !row.value_text) return;
+            map[row.deal_id] = optionMap[row.value_text] || { label: String(row.value_text) };
+          });
+        });
+        setDealMqlMap(map);
+      } catch (error) {
+        console.error('[SalesPipeline] Error fetching MQL map:', error);
+        if (!cancelled) setDealMqlMap({});
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [currentUser?.account_id, outcomeDealIds]);
+
   // Fetch structured negotiation fields for WON deals to flag incomplete records.
   const [negotiationStatusMap, setNegotiationStatusMap] = useState<Record<string, string[]>>({});
   // Include updated_at so inline edits to Parcelas / Forma de Pagamento re-run the check
