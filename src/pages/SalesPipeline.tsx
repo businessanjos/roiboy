@@ -3241,6 +3241,19 @@ function DealListView({
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
                     )}
+                    {dealMqlMap?.[deal.id] && (() => {
+                      const mql = dealMqlMap[deal.id];
+                      const tone = mql.color === 'green'
+                        ? 'border-emerald-500/50 text-emerald-700 bg-emerald-500/10'
+                        : mql.color === 'red'
+                          ? 'border-destructive/50 text-destructive bg-destructive/10'
+                          : 'border-primary/40 text-primary bg-primary/10';
+                      return (
+                        <Badge variant="outline" className={cn("text-[10px] sm:text-xs", tone)}>
+                          MQL: {mql.label}
+                        </Badge>
+                      );
+                    })()}
                     {deal.status === 'won' && negotiationStatusMap?.[deal.id]?.length ? (
                       <TooltipProvider delayDuration={100}>
                         <Tooltip>
