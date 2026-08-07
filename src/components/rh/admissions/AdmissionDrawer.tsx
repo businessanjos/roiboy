@@ -467,7 +467,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum documento configurado.</p>
             ) : (
               <div className="space-y-2">
-                {(docs || []).map((doc) => {
+                {(docs || []).filter((d) => d.doc_type !== "signature").map((doc) => {
                   const fromCandidate = doc.uploaded_via === "candidate";
                   const highlight = doc.status === "received" && fromCandidate;
                   const isForm = doc.doc_type === "form";
