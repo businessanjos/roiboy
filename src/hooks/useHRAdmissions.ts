@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { autoSeedSignatureDocs } from "@/lib/hr/autoSeedSignatureDocs";
 
 export type AdmissionStage =
   | "accepted"
