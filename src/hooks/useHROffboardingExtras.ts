@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { getPublicOrigin } from "@/lib/publicLink";
 import { toast } from "sonner";
 
 // ============ Timeline ============
@@ -234,7 +235,7 @@ export const EXTERNAL_ACCESS_SYSTEMS = [
 
 // ============ Public exit interview link ============
 export function buildExitInterviewLink(token: string) {
-  return `${window.location.origin}/desligamento/saida/${token}`;
+  return `${getPublicOrigin()}/desligamento/saida/${token}`;
 }
 
 export async function ensureExitInterviewToken(offboardingId: string, existing?: string | null) {

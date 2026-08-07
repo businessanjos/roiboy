@@ -1024,7 +1024,7 @@ export default function RHOfferWizard() {
               <span className="flex items-center gap-2"><Eye className="h-4 w-4" /> Pré-visualização da Offer</span>
               {savedToken && (
                 <a
-                  href={`${window.location.origin}/oferta/${savedToken}`}
+                  href={`${getPublicOrigin()}/oferta/${savedToken}`}
                   target="_blank"
                   rel="noreferrer"
                   className="text-xs font-normal text-muted-foreground hover:text-foreground inline-flex items-center gap-1"
@@ -1037,7 +1037,7 @@ export default function RHOfferWizard() {
           {savedToken && (
             <iframe
               key={savedToken + (lastSavedAt?.getTime() || 0)}
-              src={`${window.location.origin}/oferta/${savedToken}`}
+              src={`${getPublicOrigin()}/oferta/${savedToken}`}
               className="flex-1 w-full border-0 bg-background"
               title="Pré-visualização"
             />
