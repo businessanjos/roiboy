@@ -19,6 +19,7 @@ import {
 } from "@/hooks/useHRAdmissions";
 import AdmissionDrawer from "@/components/rh/admissions/AdmissionDrawer";
 import DocumentTemplatesTab from "@/components/rh/admissions/DocumentTemplatesTab";
+import SignedDocsTab from "@/components/rh/admissions/SignedDocsTab";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 
