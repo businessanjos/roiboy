@@ -144,6 +144,7 @@ export function useApplyTemplatesToAdmission() {
     },
     onSuccess: (n, vars) => {
       qc.invalidateQueries({ queryKey: ["hr-admission-docs", vars.admissionId] });
+      qc.invalidateQueries({ queryKey: ["hr-signature-docs"] });
       toast.success(n > 0 ? `${n} documento(s) adicionados para assinatura` : "Nenhum documento novo");
     },
     onError: (e: any) => toast.error("Erro ao aplicar modelos: " + e.message),
