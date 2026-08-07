@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useHRDocumentTemplates, useApplyTemplatesToAdmission, type HRDocumentTemplate } from "@/hooks/useHRDocumentTemplates";
 import {
   SIGNER_FIELDS, renderTemplate, sanitizeDocumentHtml, missingVariables, signerFieldLabel,
+  signerDataFromOcr,
 } from "@/lib/hr/admissionDocVars";
 import { getPublicOrigin } from "@/lib/publicLink";
 
