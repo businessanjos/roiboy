@@ -12,7 +12,7 @@ import { buildFunnelStageData, detectDuplicateStagesInPipeline, normalizeStageNa
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { withQueryTimeout } from "@/lib/queryTimeout";
 import { scheduleVisualQuery } from "@/lib/queryScheduler";
-import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
+import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey } from "@/lib/insights/customFieldValues";
 import { withAdaptiveDateGrain } from "@/lib/insights/dateGrain";
 
 
@@ -1010,7 +1010,7 @@ async function fetchDealsData(
     filteredData = await enrichRecordsWithCustomField(filteredData, accountId, measure.field, 'deals');
   }
   if (isCustomFieldKey(dimension.field)) {
-    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, dimension.field, 'deals');
+    filteredData = await enrichRecordsWithCustomField(filteredData, accountId, dimension.field, 'deals', getSelectedValuesForKey(unifiedFilters as any, dimension.field));
     return aggregateData(filteredData, measure, dimension, dateDisplayFormat);
   }
 
@@ -1439,7 +1439,7 @@ async function fetchLeadsData(
     allData = await enrichRecordsWithCustomField(allData as any, accountId, measure.field, 'leads') as any;
   }
   if (isCustomFieldKey(dimension.field)) {
-    allData = await enrichRecordsWithCustomField(allData as any, accountId, dimension.field, 'leads') as any;
+    allData = await enrichRecordsWithCustomField(allData as any, accountId, dimension.field, 'leads', getSelectedValuesForKey(unifiedFilters as any, dimension.field)) as any;
     return aggregateData(allData, measure, dimension, dateDisplayFormat);
   }
 
@@ -2048,7 +2048,7 @@ async function fetchTasksData(
 
   let enrichedRows: any[] = rows;
   for (const key of customKeys) {
-    enrichedRows = await enrichRecordsWithCustomField(enrichedRows, accountId, key, 'tasks');
+    enrichedRows = await enrichRecordsWithCustomField(enrichedRows, accountId, key, 'tasks', key === dimension.field ? getSelectedValuesForKey(unifiedFilters as any, key) : undefined);
   }
 
   // Unified (Pipedrive-style) filters

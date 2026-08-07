@@ -29,15 +29,39 @@ export function buildCustomFieldKey(source: string, fieldId: string): string {
 }
 
 /**
+ * Given the visual filters, returns the values/labels selected for the field
+ * encoded in `key`. Used so multi-select dimensions only show the options the
+ * user actually filtered by (instead of the full combination of values).
+ */
+export function getSelectedValuesForKey(
+  filters: Array<{ source?: string; field?: string; operator?: string; values?: string[] }> | undefined,
+  key: string
+): string[] {
+  const parsed = parseCustomFieldKey(key);
+  if (!parsed || !filters?.length) return [];
+  const out = new Set<string>();
+  for (const f of filters) {
+    if (f.field !== parsed.fieldId) continue;
+    if (f.operator && !['is', 'is_any'].includes(f.operator)) continue;
+    (f.values || []).forEach((v) => out.add(String(v)));
+  }
+  return Array.from(out);
+}
+
+/**
  * Injects a custom field value into each record under the encoded key, so the
  * generic aggregation (group by / measure) can read it like a native column.
  * Text/select fields resolve to human labels; numeric fields resolve to numbers.
+ *
+ * `restrictToValues` (labels or option values) narrows multi-select labels to
+ * the options selected in the filters, so the chart legend matches the filter.
  */
 export async function enrichRecordsWithCustomField<T extends Record<string, any>>(
   records: T[],
   accountId: string,
   key: string,
-  dataSource: 'deals' | 'leads' | 'tasks'
+  dataSource: 'deals' | 'leads' | 'tasks',
+  restrictToValues?: string[]
 ): Promise<T[]> {
   const parsed = parseCustomFieldKey(key);
   if (!parsed || records.length === 0) return records;
@@ -160,8 +184,25 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   const labelFor = (raw: string) =>
     productLabels.get(raw) || valueToLabel.get(raw) || raw;
 
+  // When the user filtered this same field, only the selected options should
+  // appear in the labels — otherwise a record with several values produces a
+  // combined category like "[ORG-EVER], SDR - George".
+  const restrictSet = new Set<string>();
+  for (const v of restrictToValues || []) {
+    const s = String(v);
+    restrictSet.add(s);
+    const asLabel = valueToLabel.get(s);
+    if (asLabel) restrictSet.add(asLabel);
+  }
+  const isRestricted = restrictSet.size > 0;
+  const keepValue = (raw: string) => restrictSet.has(raw) || restrictSet.has(labelFor(raw));
+
   for (const [entityId, recs] of entityToRecords) {
-    const vals = rawByEntity.get(entityId);
+    let vals = rawByEntity.get(entityId);
+    if (vals && isRestricted) {
+      const kept = vals.filter(keepValue);
+      if (kept.length > 0) vals = kept;
+    }
     const label = vals ? vals.map(labelFor).join(', ') : 'Não informado';
     for (const r of recs) (r as any)[key] = label;
   }

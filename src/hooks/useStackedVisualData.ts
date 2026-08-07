@@ -415,9 +415,19 @@ async function fetchStackedDealsData(
     }
   }
 
+  // Se o mesmo campo estiver filtrado, só as opções selecionadas viram série.
+  const stackRestrict = new Set(
+    (config.filters || [])
+      .filter((f: any) => f.field === config.stackByCustomField?.fieldId && ['is', 'is_any'].includes(f.operator))
+      .flatMap((f: any) => (f.values || []).map((v: any) => String(v)))
+  );
+
   const getSeriesValues = (record: any): string[] => {
     if (config.stackByCustomField) {
-      return seriesValuesOf(record, 'Não informado');
+      const vals = seriesValuesOf(record, 'Não informado');
+      if (stackRestrict.size === 0) return vals;
+      const kept = vals.filter((v) => stackRestrict.has(v));
+      return kept.length ? kept : vals;
     }
     return [(record.users as any)?.name || 'Sem Responsável'];
   };

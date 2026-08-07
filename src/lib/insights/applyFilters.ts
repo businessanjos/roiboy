@@ -324,14 +324,15 @@ export function describeFilter(filter: VisualFilter): string {
 }
 
 /**
- * Filters already mirrored into the legacy lead/deal filter arrays are applied
- * by the existing engine. This returns only the ones that still need explicit
- * evaluation (native fields and negative/emptiness operators).
+ * Returns the filters that must be evaluated by the unified engine.
+ * The Visual Studio no longer mirrors custom-field filters into the legacy
+ * lead/deal filter arrays, so ALL filters must be applied here — otherwise a
+ * selected custom-field filter (e.g. "Origem da Venda é qualquer …") would be
+ * silently ignored and the visual would show every record.
+ * Applying a filter twice is idempotent (AND semantics), so legacy configs
+ * remain correct.
  */
 export function selectUnmirroredFilters(filters: VisualFilter[] | undefined): VisualFilter[] {
   if (!filters?.length) return [];
-  return filters.filter((f) => {
-    if (f.source === 'native') return true;
-    return !(f.operator !== 'is_not' && operatorNeedsValues(f.operator));
-  });
+  return filters;
 }

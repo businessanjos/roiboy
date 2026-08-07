@@ -11,7 +11,7 @@ import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { enrichDealsWithProduct, enrichDealsWithCanal, enrichDealsWithMql, enrichLeadsWithMql, getLeadIdsByDealConstraints } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
-import { isCustomFieldKey, enrichRecordsWithCustomField } from "@/lib/insights/customFieldValues";
+import { isCustomFieldKey, enrichRecordsWithCustomField, getSelectedValuesForKey } from "@/lib/insights/customFieldValues";
 
 export interface DrilldownRecord {
   id: string;
@@ -204,7 +204,7 @@ async function fetchDealsRecords(
 
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
-    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'deals') as any[];
+    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'deals', getSelectedValuesForKey(config.filters as any, config.dimension.field)) as any[];
   }
 
   // Apply hiddenCategories filter
@@ -410,7 +410,7 @@ async function fetchLeadsRecords(
 
   // Custom field dimension: inject values so grouping matches the chart
   if (isCustomFieldKey(config.dimension?.field)) {
-    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads') as any[];
+    filteredData = await enrichRecordsWithCustomField(filteredData as any, accountId, config.dimension.field, 'leads', getSelectedValuesForKey(config.filters as any, config.dimension.field)) as any[];
   }
 
   // Apply hiddenCategories filter
