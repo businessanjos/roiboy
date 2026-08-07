@@ -167,6 +167,31 @@ export default function PublicAdmissionPortal() {
       });
       setFormValues((prev) => ({ ...nextForm, ...prev }));
       setOcrValues((prev) => ({ ...nextOcr, ...prev }));
+
+      // hydrate dados do signatário (banco > OCR > nome da admissão)
+      const fromOcr: Record<string, string> = {};
+      (json.documents || []).forEach((d) => {
+        const o = d.ocr_data || {};
+        if (d.ocr_kind === "id" || d.ocr_kind === "cpf") {
+          if (o.nome) fromOcr.NOME_COMPLETO = o.nome;
+          if (o.cpf) fromOcr.CPF = o.cpf;
+          if (o.rg) fromOcr.RG = o.rg;
+        }
+        if (d.ocr_kind === "address") {
+          if (o.logradouro) fromOcr.RUA = o.logradouro;
+          if (o.numero) fromOcr.NUMERO = o.numero;
+          if (o.bairro) fromOcr.BAIRRO = o.bairro;
+          if (o.cidade) fromOcr.CIDADE = o.cidade;
+          if (o.uf) fromOcr.ESTADO = o.uf;
+        }
+      });
+      setSignerData((prev) => ({
+        NOME_COMPLETO: json.candidate_name || "",
+        ...fromOcr,
+        ...(json.signer_data || {}),
+        ...prev,
+      }));
+
     } catch {
       setData(null);
     } finally {
