@@ -42,6 +42,7 @@ async function scrapeFirecrawl(url: string) {
     markdown: (payload.markdown as string) ?? "",
     summary: (payload.summary as string) ?? "",
     metadata: payload.metadata ?? {},
+    blocked: false as const,
   };
 }
 
