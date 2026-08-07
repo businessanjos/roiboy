@@ -14,7 +14,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileSignature, Plus, Pencil, Trash2, Eye, RefreshCw, Loader2 } from "lucide-react";
+import { FileSignature, Plus, Pencil, Trash2, Eye, RefreshCw, Loader2, Send } from "lucide-react";
+import GenerateCandidateDocDialog from "./GenerateCandidateDocDialog";
 import { toast } from "sonner";
 import {
   useHRDocumentTemplates, useUpsertDocumentTemplate, useDeleteDocumentTemplate,
