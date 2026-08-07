@@ -359,6 +359,8 @@ export type Database = {
           mql_rate: number | null
           page_views: number
           spend: number
+          submitted_by_name: string | null
+          submitted_via_public_link: boolean
           summary: string | null
           team_actions: string | null
           updated_at: string
@@ -394,6 +396,8 @@ export type Database = {
           mql_rate?: number | null
           page_views?: number
           spend?: number
+          submitted_by_name?: string | null
+          submitted_via_public_link?: boolean
           summary?: string | null
           team_actions?: string | null
           updated_at?: string
@@ -429,6 +433,8 @@ export type Database = {
           mql_rate?: number | null
           page_views?: number
           spend?: number
+          submitted_by_name?: string | null
+          submitted_via_public_link?: boolean
           summary?: string | null
           team_actions?: string | null
           updated_at?: string
@@ -24048,6 +24054,7 @@ export type Database = {
           name: string
           name_patterns: string[]
           notes: string | null
+          public_report_token: string
           updated_at: string
         }
         Insert: {
@@ -24062,6 +24069,7 @@ export type Database = {
           name: string
           name_patterns?: string[]
           notes?: string | null
+          public_report_token?: string
           updated_at?: string
         }
         Update: {
@@ -24076,6 +24084,7 @@ export type Database = {
           name?: string
           name_patterns?: string[]
           notes?: string | null
+          public_report_token?: string
           updated_at?: string
         }
         Relationships: []
