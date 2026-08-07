@@ -18,6 +18,9 @@ import {
   ADMISSION_STAGES, ADMISSION_STAGE_LABELS,
 } from "@/hooks/useHRAdmissions";
 import AdmissionDrawer from "@/components/rh/admissions/AdmissionDrawer";
+import DocumentTemplatesTab from "@/components/rh/admissions/DocumentTemplatesTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
 
 function AdmissionCard({ adm, onClick, dragging }: { adm: HRAdmission; onClick: () => void; dragging?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: adm.id });
