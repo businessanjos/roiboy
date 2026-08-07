@@ -17,6 +17,7 @@ import { toast } from "sonner";
 import { useHRDocumentTemplates, useApplyTemplatesToAdmission, type HRDocumentTemplate } from "@/hooks/useHRDocumentTemplates";
 import {
   SIGNER_FIELDS, renderTemplate, sanitizeDocumentHtml, missingVariables, signerFieldLabel,
+  signerDataFromOcr,
 } from "@/lib/hr/admissionDocVars";
 import { getPublicOrigin } from "@/lib/publicLink";
 
@@ -75,11 +76,28 @@ export default function GenerateCandidateDocDialog({ open, onOpenChange, initial
     [admissions, admissionId],
   );
 
+  const { data: ocrDocs } = useQuery({
+    queryKey: ["hr-admission-ocr-docs", admissionId],
+    enabled: !!admissionId,
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("hr_admission_documents" as any)
+        .select("ocr_kind, ocr_data")
+        .eq("admission_id", admissionId);
+      if (error) throw error;
+      return (data || []) as unknown as { ocr_kind: string | null; ocr_data: Record<string, string> | null }[];
+    },
+  });
+
   const values = useMemo(() => {
-    const base: Record<string, string> = { ...(admission?.signer_data || {}) };
+    const base: Record<string, string> = { ...signerDataFromOcr(ocrDocs || []) };
+    Object.entries(admission?.signer_data || {}).forEach(([k, v]) => {
+      if ((v || "").trim()) base[k] = v as string;
+    });
     if (admission && !base.NOME_COMPLETO) base.NOME_COMPLETO = admission.candidate_name;
     return { ...base, ...overrides };
-  }, [admission, overrides]);
+  }, [admission, ocrDocs, overrides]);
+
 
   const missing = useMemo(
     () => (template ? missingVariables(template.body_html, values) : []),
