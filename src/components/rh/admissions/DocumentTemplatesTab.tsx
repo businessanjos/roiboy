@@ -14,7 +14,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { FileSignature, Plus, Pencil, Trash2, Eye, RefreshCw, Loader2 } from "lucide-react";
+import { FileSignature, Plus, Pencil, Trash2, Eye, RefreshCw, Loader2, Send } from "lucide-react";
+import GenerateCandidateDocDialog from "./GenerateCandidateDocDialog";
 import { toast } from "sonner";
 import {
   useHRDocumentTemplates, useUpsertDocumentTemplate, useDeleteDocumentTemplate,
@@ -54,6 +55,7 @@ export default function DocumentTemplatesTab() {
   const [draft, setDraft] = useState<typeof emptyDraft | null>(null);
   const [preview, setPreview] = useState<HRDocumentTemplate | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<HRDocumentTemplate | null>(null);
+  const [generate, setGenerate] = useState<{ open: boolean; templateId?: string }>({ open: false });
 
   const previewHtml = useMemo(
     () => (preview ? sanitizeDocumentHtml(renderTemplate(preview.body_html, PREVIEW_SAMPLE)) : ""),
@@ -103,6 +105,9 @@ export default function DocumentTemplatesTab() {
               {seed.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               <span className="ml-1.5 hidden sm:inline">Carregar padrões</span>
             </Button>
+            <Button variant="outline" size="sm" onClick={() => setGenerate({ open: true })}>
+              <Send className="h-4 w-4 mr-1.5" /> Gerar para candidato
+            </Button>
             <Button size="sm" onClick={openNew}>
               <Plus className="h-4 w-4 mr-1.5" /> Novo modelo
             </Button>
@@ -137,6 +142,13 @@ export default function DocumentTemplatesTab() {
                 <div className="flex items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPreview(t)} title="Pré-visualizar">
                     <Eye className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => setGenerate({ open: true, templateId: t.id })}
+                    title="Gerar para um candidato"
+                  >
+                    <Send className="h-4 w-4" />
                   </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(t)} title="Editar">
                     <Pencil className="h-4 w-4" />
@@ -253,6 +265,12 @@ export default function DocumentTemplatesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GenerateCandidateDocDialog
+        open={generate.open}
+        initialTemplateId={generate.templateId}
+        onOpenChange={(o) => setGenerate((p) => ({ ...p, open: o }))}
+      />
     </div>
   );
 }
