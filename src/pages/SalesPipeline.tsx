@@ -2768,6 +2768,17 @@ export default function SalesPipeline() {
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="open" className="mt-0">
+                {hiddenOpenCount > 0 && (
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
+                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                    <span className="text-amber-900 dark:text-amber-200">
+                      <b>{hiddenOpenCount}</b> {hiddenOpenCount === 1 ? "negócio em aberto está oculto" : "negócios em aberto estão ocultos"} pelos filtros ativos (de {openDeals.length} no funil).
+                    </span>
+                    <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
+                      Limpar filtros
+                    </Button>
+                  </div>
+                )}
                 {viewMode === 'kanban' ? (
                   <DealKanban
                     stages={stages}
