@@ -402,11 +402,52 @@ export default function PublicAdmissionPortal() {
 
 
 
+  // ===== Documentos para assinar =====
+  const changeSigner = (key: string, value: string) => {
+    setSignerData((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const { docs, required, sent, progress, allDone } = useMemo(() => {
-    const docs = data?.documents || [];
-    const required = docs.filter((d) => d.required);
+  const saveSigner = async () => {
+    if (!token) return;
+    await fetch(`${FN_URL}?action=save_signer`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ token, data: signerData }),
+    });
+  };
+
+  const signDoc = async (docId: string, signature: string, signedHtml: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${FN_URL}?action=sign`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          doc_id: docId,
+          signature,
+          signed_html: signedHtml,
+          signer_name: signerData.NOME_COMPLETO || "",
+          signer_cpf: signerData.CPF || "",
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao assinar");
+      toast.success("Documento assinado ✓");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao assinar");
+      throw e;
+    }
+  };
+
+  const { docs, signatureDocs, required, sent, progress, allDone } = useMemo(() => {
+    const all = data?.documents || [];
+    const docs = all.filter((d) => d.doc_type !== "signature");
+    const signatureDocs = all.filter((d) => d.doc_type === "signature");
+    const required = all.filter((d) => d.required);
     const sent = required.filter((d) => d.status === "received" || d.status === "approved").length;
+
     const progress = required.length > 0 ? Math.round((sent / required.length) * 100) : 0;
     const allDone = required.length > 0 && sent === required.length;
     return { docs, required, sent, progress, allDone };
