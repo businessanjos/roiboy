@@ -229,6 +229,7 @@ const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/Fi
 const FinancialActiveClientsPage = lazyRetry(() => import("./pages/financial/FinancialActiveClientsPage"));
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 const PublicAdmissionPortal = lazyRetry(() => import("./pages/public/PublicAdmissionPortal"));
+const PublicAgencyWeeklyReport = lazyRetry(() => import("./pages/public/PublicAgencyWeeklyReport"));
 
 const PublicIncentivePresentation = lazyRetry(() => import("./pages/public/PublicIncentivePresentation"));
 const PublicEventAlbum = lazyRetry(() => import("./pages/public/PublicEventAlbum"));
@@ -284,6 +285,7 @@ const App = () => (
                           <Route path="/contrato/:token" element={<PublicDigitalContract />} />
                           <Route path="/portal/prestador/:token" element={<PublicProviderPortal />} />
                           <Route path="/admissao/:token" element={<PublicAdmissionPortal />} />
+                          <Route path="/relatorio-agencia/:token" element={<PublicAgencyWeeklyReport />} />
 
                           <Route path="/external/incentive-plan/:token" element={<PublicIncentivePresentation />} />
                           <Route path="/oferta/:token" element={<PublicJobOffer />} />

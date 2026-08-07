@@ -2,7 +2,10 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Trophy, ExternalLink } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Trophy, ExternalLink, Link2 } from "lucide-react";
+import { toast } from "sonner";
+import { getPublicOrigin } from "@/lib/publicLink";
+import { useTrafficAgency } from "@/hooks/useTrafficAgencies";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -61,6 +64,10 @@ function TextSection({ title, body }: { title: string; body?: string | null }) {
 
 export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agencyId: string; color?: string }) {
   const { reports, isLoading, save, remove } = useAgencyWeeklyReports(agencyId);
+  const { data: agency } = useTrafficAgency(agencyId);
+  const publicUrl = agency?.public_report_token
+    ? `${getPublicOrigin()}/relatorio-agencia/${agency.public_report_token}`
+    : null;
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<AgencyWeeklyReport | null>(null);
   const [deleteId, setDeleteId] = useState<string | null>(null);
@@ -95,9 +102,23 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
           <h3 className="text-sm font-semibold">Relatórios semanais</h3>
           <p className="text-xs text-muted-foreground">Histórico das métricas enviadas pela agência</p>
         </div>
-        <Button size="sm" onClick={openNew}>
-          <Plus className="mr-1 h-4 w-4" /> Novo relatório
-        </Button>
+        <div className="flex items-center gap-2">
+          {publicUrl && (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                navigator.clipboard.writeText(publicUrl);
+                toast.success("Link copiado — envie para a agência preencher");
+              }}
+            >
+              <Link2 className="mr-1 h-4 w-4" /> Copiar link da agência
+            </Button>
+          )}
+          <Button size="sm" onClick={openNew}>
+            <Plus className="mr-1 h-4 w-4" /> Novo relatório
+          </Button>
+        </div>
       </div>
 
       {isLoading ? (
