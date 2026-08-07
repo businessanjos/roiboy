@@ -124,9 +124,17 @@ Deno.serve(async (req) => {
       .update({ last_scanned_at: new Date().toISOString() })
       .eq("id", competitorId);
 
-    return new Response(JSON.stringify({ success: true, snapshot: snap }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        snapshot: snap,
+        blocked: scrape.blocked,
+        warning: scrape.blocked
+          ? "Este site não é suportado para leitura automática (Firecrawl). A análise foi gerada apenas com conhecimento público — revise antes de usar."
+          : null,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e: any) {
     console.error("mi-competitor-scan", e);
     return new Response(JSON.stringify({ error: e.message || String(e) }), {
