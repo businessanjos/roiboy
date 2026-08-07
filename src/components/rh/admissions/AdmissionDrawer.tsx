@@ -15,6 +15,8 @@ import {
   Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff, FileText, Landmark, AlertTriangle,
 } from "lucide-react";
 import ExamReferralDialog from "./ExamReferralDialog";
+import AdmissionSignatureDocs from "./AdmissionSignatureDocs";
+
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
