@@ -5,11 +5,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { FileSignature, CheckCircle2, Clock, Eye, Plus, Trash2, Loader2 } from "lucide-react";
+import { FileSignature, CheckCircle2, Clock, Eye, Plus, Trash2, Loader2, Copy, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHRDocumentTemplates, useApplyTemplatesToAdmission } from "@/hooks/useHRDocumentTemplates";
+import { useHRAdmission } from "@/hooks/useHRAdmissions";
+import { getPublicOrigin } from "@/lib/publicLink";
 import { sanitizeDocumentHtml } from "@/lib/hr/admissionDocVars";
 import type { HRAdmissionDocument } from "@/hooks/useHRAdmissions";
 
