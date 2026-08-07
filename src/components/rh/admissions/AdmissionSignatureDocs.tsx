@@ -183,6 +183,31 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
               </DialogDescription>
             )}
           </DialogHeader>
+
+          {portalUrl && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Link que o funcionário vê no portal</p>
+                <a
+                  href={portalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-primary truncate block hover:underline"
+                >
+                  {portalUrl}
+                </a>
+              </div>
+              <Button size="sm" variant="outline" onClick={copyPortalLink} className="shrink-0 gap-1.5">
+                <Copy className="h-3.5 w-3.5" /> Copiar
+              </Button>
+              <Button size="icon" variant="ghost" asChild className="shrink-0 h-8 w-8">
+                <a href={portalUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          )}
+
           <div
             className="admission-doc rounded-md border border-border bg-background p-5 text-sm"
             dangerouslySetInnerHTML={{
