@@ -329,6 +329,122 @@ export type Database = {
           },
         ]
       }
+      agency_weekly_reports: {
+        Row: {
+          account_id: string
+          agency_id: string
+          best_creative_cpa: number | null
+          best_creative_mqls: number | null
+          best_creative_name: string | null
+          best_creative_notes: string | null
+          best_creative_spend: number | null
+          best_creative_url: string | null
+          bottleneck_notes: string | null
+          client_dependencies: string | null
+          comparison_notes: string | null
+          connect_rate: number | null
+          cost_per_mql: number | null
+          cpl: number | null
+          cpm: number | null
+          created_at: string
+          created_by: string | null
+          ctr: number | null
+          evolution_notes: string | null
+          id: string
+          impressions: number
+          leads_mql: number
+          leads_total: number
+          link_clicks: number
+          lp_conversion_rate: number | null
+          mql_rate: number | null
+          page_views: number
+          spend: number
+          summary: string | null
+          team_actions: string | null
+          updated_at: string
+          week_end: string
+          week_start: string
+        }
+        Insert: {
+          account_id: string
+          agency_id: string
+          best_creative_cpa?: number | null
+          best_creative_mqls?: number | null
+          best_creative_name?: string | null
+          best_creative_notes?: string | null
+          best_creative_spend?: number | null
+          best_creative_url?: string | null
+          bottleneck_notes?: string | null
+          client_dependencies?: string | null
+          comparison_notes?: string | null
+          connect_rate?: number | null
+          cost_per_mql?: number | null
+          cpl?: number | null
+          cpm?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          evolution_notes?: string | null
+          id?: string
+          impressions?: number
+          leads_mql?: number
+          leads_total?: number
+          link_clicks?: number
+          lp_conversion_rate?: number | null
+          mql_rate?: number | null
+          page_views?: number
+          spend?: number
+          summary?: string | null
+          team_actions?: string | null
+          updated_at?: string
+          week_end: string
+          week_start: string
+        }
+        Update: {
+          account_id?: string
+          agency_id?: string
+          best_creative_cpa?: number | null
+          best_creative_mqls?: number | null
+          best_creative_name?: string | null
+          best_creative_notes?: string | null
+          best_creative_spend?: number | null
+          best_creative_url?: string | null
+          bottleneck_notes?: string | null
+          client_dependencies?: string | null
+          comparison_notes?: string | null
+          connect_rate?: number | null
+          cost_per_mql?: number | null
+          cpl?: number | null
+          cpm?: number | null
+          created_at?: string
+          created_by?: string | null
+          ctr?: number | null
+          evolution_notes?: string | null
+          id?: string
+          impressions?: number
+          leads_mql?: number
+          leads_total?: number
+          link_clicks?: number
+          lp_conversion_rate?: number | null
+          mql_rate?: number | null
+          page_views?: number
+          spend?: number
+          summary?: string | null
+          team_actions?: string | null
+          updated_at?: string
+          week_end?: string
+          week_start?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agency_weekly_reports_agency_id_fkey"
+            columns: ["agency_id"]
+            isOneToOne: false
+            referencedRelation: "traffic_agencies"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_agent_functions: {
         Row: {
           account_id: string
