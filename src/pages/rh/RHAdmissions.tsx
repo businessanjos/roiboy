@@ -128,8 +128,10 @@ export default function RHAdmissions() {
       <Tabs defaultValue="pipeline" className="space-y-4">
         <TabsList>
           <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="docs">Documentos gerados</TabsTrigger>
           <TabsTrigger value="templates">Modelos de documentos</TabsTrigger>
         </TabsList>
+
 
         <TabsContent value="pipeline">
           <Card>
