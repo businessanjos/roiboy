@@ -34,8 +34,10 @@ export default function SignedDocsTab() {
   const admissionIds = useMemo(() => (admissions || []).map((a) => a.id), [admissions]);
 
   const { data: docs, isLoading } = useQuery({
-    queryKey: ["hr-signature-docs", admissionIds.length],
+    queryKey: ["hr-signature-docs", admissionIds],
     enabled: admissionIds.length > 0,
+    staleTime: 0,
+    refetchOnMount: "always",
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hr_admission_documents" as any)
