@@ -258,6 +258,12 @@ export default function DocumentTemplatesTab() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <GenerateCandidateDocDialog
+        open={generate.open}
+        initialTemplateId={generate.templateId}
+        onOpenChange={(o) => setGenerate((p) => ({ ...p, open: o }))}
+      />
     </div>
   );
 }
