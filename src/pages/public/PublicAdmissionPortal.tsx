@@ -450,7 +450,7 @@ export default function PublicAdmissionPortal() {
 
     const progress = required.length > 0 ? Math.round((sent / required.length) * 100) : 0;
     const allDone = required.length > 0 && sent === required.length;
-    return { docs, required, sent, progress, allDone };
+    return { docs, signatureDocs, required, sent, progress, allDone };
   }, [data]);
 
   if (loading) {
