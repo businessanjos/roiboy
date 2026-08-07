@@ -6,6 +6,9 @@ verify_jwt = false
 [functions.admission-portal]
 verify_jwt = false
 
+[functions.agency-report-portal]
+verify_jwt = false
+
 
 
 [functions.generate-oauth-state]
