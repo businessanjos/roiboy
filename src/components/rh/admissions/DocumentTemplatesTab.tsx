@@ -143,6 +143,13 @@ export default function DocumentTemplatesTab() {
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => setPreview(t)} title="Pré-visualizar">
                     <Eye className="h-4 w-4" />
                   </Button>
+                  <Button
+                    variant="ghost" size="icon" className="h-8 w-8"
+                    onClick={() => setGenerate({ open: true, templateId: t.id })}
+                    title="Gerar para um candidato"
+                  >
+                    <Send className="h-4 w-4" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEdit(t)} title="Editar">
                     <Pencil className="h-4 w-4" />
                   </Button>
