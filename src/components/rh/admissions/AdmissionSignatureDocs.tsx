@@ -24,6 +24,11 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
   const qc = useQueryClient();
   const { data: templates } = useHRDocumentTemplates();
   const apply = useApplyTemplatesToAdmission();
+  const { data: admission } = useHRAdmission(admissionId);
+  const portalUrl = useMemo(
+    () => (admission?.public_token ? `${getPublicOrigin()}/admissao/${admission.public_token}` : null),
+    [admission?.public_token]
+  );
   const [manage, setManage] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<HRAdmissionDocument | null>(null);
