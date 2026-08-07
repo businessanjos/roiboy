@@ -28,6 +28,12 @@ async function scrapeFirecrawl(url: string) {
   });
   if (!res.ok) {
     const t = await res.text();
+    const unsupported =
+      res.status === 403 || res.status === 401 || /do not support this site/i.test(t);
+    if (unsupported) {
+      // Sites como Instagram/Facebook/LinkedIn não são suportados pelo Firecrawl.
+      return { markdown: "", summary: "", metadata: {}, blocked: true as const };
+    }
     throw new Error(`Firecrawl ${res.status}: ${t.slice(0, 300)}`);
   }
   const data = await res.json();
@@ -36,6 +42,7 @@ async function scrapeFirecrawl(url: string) {
     markdown: (payload.markdown as string) ?? "",
     summary: (payload.summary as string) ?? "",
     metadata: payload.metadata ?? {},
+    blocked: false as const,
   };
 }
 
@@ -88,7 +95,15 @@ Deno.serve(async (req) => {
 
     const website = comp.website.startsWith("http") ? comp.website : `https://${comp.website}`;
     const scrape = await scrapeFirecrawl(website);
-    const analysis = await analyzeWithAI(comp.name, website, scrape.markdown, scrape.summary);
+    const analysis = await analyzeWithAI(
+      comp.name,
+      website,
+      scrape.markdown,
+      scrape.blocked
+        ? "(Site não suportado para leitura automática — analise apenas com conhecimento público sobre a marca e marque incertezas.)"
+        : scrape.summary,
+    );
+
 
     const { data: snap, error: sErr } = await supabase
       .from("mi_competitor_snapshots")
@@ -109,9 +124,17 @@ Deno.serve(async (req) => {
       .update({ last_scanned_at: new Date().toISOString() })
       .eq("id", competitorId);
 
-    return new Response(JSON.stringify({ success: true, snapshot: snap }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-    });
+    return new Response(
+      JSON.stringify({
+        success: true,
+        snapshot: snap,
+        blocked: scrape.blocked,
+        warning: scrape.blocked
+          ? "Este site não é suportado para leitura automática (Firecrawl). A análise foi gerada apenas com conhecimento público — revise antes de usar."
+          : null,
+      }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+    );
   } catch (e: any) {
     console.error("mi-competitor-scan", e);
     return new Response(JSON.stringify({ error: e.message || String(e) }), {
