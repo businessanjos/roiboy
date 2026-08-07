@@ -165,17 +165,38 @@ export function useUpdateAdmission() {
     mutationFn: async ({ id, ...patch }: { id: string } & Partial<HRAdmission>) => {
       const { error } = await supabase.from("hr_admissions" as any).update(patch as any).eq("id", id);
       if (error) throw error;
+
+      // Ao entrar em eSocial/Contabilidade, gera automaticamente os documentos para assinar
+      if (patch.stage === "esocial") {
+        try {
+          const { data: adm } = await supabase
+            .from("hr_admissions" as any)
+            .select("account_id")
+            .eq("id", id)
+            .maybeSingle();
+          const accountId = (adm as any)?.account_id as string | undefined;
+          if (accountId) {
+            const n = await autoSeedSignatureDocs(id, accountId);
+            if (n > 0) toast.success(`${n} documento(s) gerados para assinatura do candidato`);
+          }
+        } catch (e: any) {
+          toast.error("Não foi possível gerar os documentos de assinatura: " + e.message);
+        }
+      }
       return id;
     },
     onSuccess: (id) => {
       qc.invalidateQueries({ queryKey: ["hr-admissions"] });
       qc.invalidateQueries({ queryKey: ["hr-admission", id] });
+      qc.invalidateQueries({ queryKey: ["hr-admission-docs", id] });
+      qc.invalidateQueries({ queryKey: ["hr-signature-docs"] });
       qc.invalidateQueries({ queryKey: ["hr-jobs"] });
       qc.invalidateQueries({ queryKey: ["hr-jobs-stats"] });
     },
     onError: (e: any) => toast.error("Erro ao atualizar admissão: " + e.message),
   });
 }
+
 
 export function useUpdateAdmissionDoc() {
   const qc = useQueryClient();
