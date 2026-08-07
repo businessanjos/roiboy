@@ -88,9 +88,39 @@ Deno.serve(async (req) => {
     }
 
     // Filter out manually paused (extra defense; heal RPC already skips them)
-    const eligible = (moments || []).filter(
+    const notPaused = (moments || []).filter(
       (m) => !((m as { send_error?: string }).send_error || "").includes("PAUSADO MANUALMENTE")
     );
+
+    // NO RETROACTIVE SENDS: never fire messages for moments that were due before the
+    // cutoff (go-live) or that are older than the backlog window. They are archived
+    // as "skipped" so the queue stays clean and nobody receives a late message.
+    const cutoffIso = Deno.env.get("CX_NO_SEND_BEFORE") || "2026-08-07T19:40:00Z";
+    const cutoffMs = new Date(cutoffIso).getTime();
+    const backlogMs = Date.now() - 12 * 60 * 60 * 1000; // max 12h of backlog
+    const minDueMs = Math.max(cutoffMs, backlogMs);
+
+    const eligible: typeof notPaused = [];
+    const stale: string[] = [];
+    for (const m of notPaused) {
+      const dueMs = new Date((m as { scheduled_send_at: string }).scheduled_send_at).getTime();
+      if (!Number.isFinite(dueMs) || dueMs < minDueMs) {
+        stale.push((m as { id: string }).id);
+      } else {
+        eligible.push(m);
+      }
+    }
+
+    if (stale.length > 0) {
+      console.log(`[cx-auto] Skipping ${stale.length} retroactive moments (due before ${new Date(minDueMs).toISOString()})`);
+      await supabase
+        .from("client_life_events")
+        .update({
+          send_status: "skipped",
+          send_error: "Envio retroativo bloqueado (fora da janela de envio)",
+        })
+        .in("id", stale);
+    }
 
     if (eligible.length === 0) {
       console.log("No scheduled moments to process");
