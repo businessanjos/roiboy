@@ -1180,6 +1180,21 @@ export default function SalesPipeline() {
     [filteredOpenDeals],
   );
 
+  // Quantos negócios em aberto estão escondidos pelos filtros atuais.
+  // Evita a sensação de "lead sumiu do pipeline" quando um filtro ficou salvo.
+  const hiddenOpenCount = Math.max(0, openDeals.length - filteredOpenDeals.length);
+
+  const clearAllPipelineFilters = useCallback(() => {
+    setActiveFilter(null);
+    setSearchTerm("");
+    setTitleTagFilter([]);
+    setActivitySort('none');
+    setOpenDatePreset('all');
+    setOpenDateStart('');
+    setOpenDateEnd('');
+  }, [setActiveFilter, setSearchTerm, setTitleTagFilter, setActivitySort, setOpenDatePreset, setOpenDateStart, setOpenDateEnd]);
+
+
   const filteredOpenWeightedValue = useMemo(
     () => filteredOpenDeals.reduce((sum, deal) => {
       const stageProbability = (deal as any).stage?.probability ?? 0;
