@@ -55,6 +55,7 @@ export default function DocumentTemplatesTab() {
   const [draft, setDraft] = useState<typeof emptyDraft | null>(null);
   const [preview, setPreview] = useState<HRDocumentTemplate | null>(null);
   const [confirmDelete, setConfirmDelete] = useState<HRDocumentTemplate | null>(null);
+  const [generate, setGenerate] = useState<{ open: boolean; templateId?: string }>({ open: false });
 
   const previewHtml = useMemo(
     () => (preview ? sanitizeDocumentHtml(renderTemplate(preview.body_html, PREVIEW_SAMPLE)) : ""),
