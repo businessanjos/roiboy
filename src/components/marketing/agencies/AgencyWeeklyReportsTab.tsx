@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Trophy, ExternalLink, Link2, Copy } from "lucide-react";
+import { Plus, Pencil, Trash2, TrendingUp, TrendingDown, Minus, Trophy, ExternalLink, Link2 } from "lucide-react";
 import { toast } from "sonner";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { useTrafficAgency } from "@/hooks/useTrafficAgencies";
