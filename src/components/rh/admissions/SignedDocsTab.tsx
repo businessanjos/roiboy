@@ -61,6 +61,7 @@ export default function SignedDocsTab() {
         ...d,
         candidate_name: a?.candidate_name || "—",
         position_title: a?.position_title || null,
+        public_token: a?.public_token || null,
       };
     });
   }, [docs, admissions]);
