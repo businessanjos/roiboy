@@ -94,10 +94,21 @@ export interface HRAdmissionDocument {
   attachments: Array<{ name: string; url: string; path: string | null; uploaded_at: string | null; uploaded_via: "rh" | "candidate" | null }> | null;
   notes: string | null;
   sort_order: number;
-  doc_type?: "file" | "form";
+  doc_type?: "file" | "form" | "signature";
   form_schema?: Array<{ key: string; label: string; type: "text" | "select" | "textarea"; required?: boolean; placeholder?: string; options?: string[] }> | null;
   form_data?: Record<string, string> | null;
+  template_id?: string | null;
+  body_html?: string | null;
+  signature_image_url?: string | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
+  signer_cpf?: string | null;
+  signer_ip?: string | null;
+  signer_user_agent?: string | null;
+  signed_html?: string | null;
+  signature_hash?: string | null;
 }
+
 
 export function useHRAdmissions() {
   const { currentUser } = useCurrentUser();
