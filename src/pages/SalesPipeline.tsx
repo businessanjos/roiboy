@@ -3072,6 +3072,7 @@ function DealListView({
   showStatus = false,
   dealProductMap,
   negotiationStatusMap,
+  dealMqlMap,
 }: { 
   deals: Deal[];
   stages: DealStage[];
@@ -3079,6 +3080,7 @@ function DealListView({
   showStatus?: boolean;
   dealProductMap?: Record<string, { productId: string; productName: string; isUpsell?: boolean }>;
   negotiationStatusMap?: Record<string, string[]>;
+  dealMqlMap?: Record<string, { label: string; color?: string }>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
   
