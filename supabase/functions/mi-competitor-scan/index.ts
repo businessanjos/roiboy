@@ -95,7 +95,15 @@ Deno.serve(async (req) => {
 
     const website = comp.website.startsWith("http") ? comp.website : `https://${comp.website}`;
     const scrape = await scrapeFirecrawl(website);
-    const analysis = await analyzeWithAI(comp.name, website, scrape.markdown, scrape.summary);
+    const analysis = await analyzeWithAI(
+      comp.name,
+      website,
+      scrape.markdown,
+      scrape.blocked
+        ? "(Site não suportado para leitura automática — analise apenas com conhecimento público sobre a marca e marque incertezas.)"
+        : scrape.summary,
+    );
+
 
     const { data: snap, error: sErr } = await supabase
       .from("mi_competitor_snapshots")
