@@ -123,6 +123,9 @@
 - [No Em-Dashes Candidatura](mem://features/rh/no-em-dashes-pt) — Páginas públicas de candidatura nunca usam — ou –; renderer já remove
 - [Offboarding Suite](mem://features/rh/offboarding-suite-pt) — /rh/offboarding com rescisão CLT, checklist, corte de acesso e exit interview
 - [Company Benefits Catalog](mem://features/rh/company-benefits-catalog-pt) — /rh/benefits: catálogo oficial de benefícios, base das vagas e do benchmark
+- [Admission Candidate Portal](mem://features/rh/admission-candidate-portal-pt) — Portal público /admissao/:token para envio de documentos
+- [Admission Signature Docs](mem://features/rh/admission-signature-docs-pt) — Biblioteca editável de termos (regulamento, LGPD etc.) com assinatura desenhada no portal
+
 
 ### UI, Forms & General Architecture
 - [Mobile App Shell](mem://style/mobile-app-shell-pt) — Header compacto + bottom tab bar (lg:hidden), `useSectorNavItems` como fonte única, PWA instalável

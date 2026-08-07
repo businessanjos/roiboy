@@ -15,6 +15,8 @@ import {
   Copy, Link as LinkIcon, Sparkles, MessageSquareWarning, Eye, EyeOff, FileText, Landmark, AlertTriangle,
 } from "lucide-react";
 import ExamReferralDialog from "./ExamReferralDialog";
+import AdmissionSignatureDocs from "./AdmissionSignatureDocs";
+
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -437,8 +439,12 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
             </div>
           </div>
 
+          {/* Documentos para assinar */}
+          <AdmissionSignatureDocs admissionId={admission.id} docs={docs || []} />
+
           {/* Documents checklist */}
           <div>
+
             <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <FileCheck2 className="h-4 w-4" />
@@ -461,7 +467,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               <p className="text-sm text-muted-foreground text-center py-6">Nenhum documento configurado.</p>
             ) : (
               <div className="space-y-2">
-                {(docs || []).map((doc) => {
+                {(docs || []).filter((d) => d.doc_type !== "signature").map((doc) => {
                   const fromCandidate = doc.uploaded_via === "candidate";
                   const highlight = doc.status === "received" && fromCandidate;
                   const isForm = doc.doc_type === "form";

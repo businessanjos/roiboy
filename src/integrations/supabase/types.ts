@@ -11056,6 +11056,7 @@ export type Database = {
         Row: {
           admission_id: string
           attachments: Json
+          body_html: string | null
           created_at: string
           doc_key: string
           doc_type: string
@@ -11072,8 +11073,17 @@ export type Database = {
           ocr_processed_at: string | null
           ocr_status: string
           required: boolean
+          signature_hash: string | null
+          signature_image_url: string | null
+          signed_at: string | null
+          signed_html: string | null
+          signer_cpf: string | null
+          signer_ip: string | null
+          signer_name: string | null
+          signer_user_agent: string | null
           sort_order: number
           status: string
+          template_id: string | null
           updated_at: string
           uploaded_at: string | null
           uploaded_by: string | null
@@ -11083,6 +11093,7 @@ export type Database = {
         Insert: {
           admission_id: string
           attachments?: Json
+          body_html?: string | null
           created_at?: string
           doc_key: string
           doc_type?: string
@@ -11099,8 +11110,17 @@ export type Database = {
           ocr_processed_at?: string | null
           ocr_status?: string
           required?: boolean
+          signature_hash?: string | null
+          signature_image_url?: string | null
+          signed_at?: string | null
+          signed_html?: string | null
+          signer_cpf?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          signer_user_agent?: string | null
           sort_order?: number
           status?: string
+          template_id?: string | null
           updated_at?: string
           uploaded_at?: string | null
           uploaded_by?: string | null
@@ -11110,6 +11130,7 @@ export type Database = {
         Update: {
           admission_id?: string
           attachments?: Json
+          body_html?: string | null
           created_at?: string
           doc_key?: string
           doc_type?: string
@@ -11126,8 +11147,17 @@ export type Database = {
           ocr_processed_at?: string | null
           ocr_status?: string
           required?: boolean
+          signature_hash?: string | null
+          signature_image_url?: string | null
+          signed_at?: string | null
+          signed_html?: string | null
+          signer_cpf?: string | null
+          signer_ip?: string | null
+          signer_name?: string | null
+          signer_user_agent?: string | null
           sort_order?: number
           status?: string
+          template_id?: string | null
           updated_at?: string
           uploaded_at?: string | null
           uploaded_by?: string | null
@@ -11140,6 +11170,13 @@ export type Database = {
             columns: ["admission_id"]
             isOneToOne: false
             referencedRelation: "hr_admissions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_admission_documents_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "hr_document_templates"
             referencedColumns: ["id"]
           },
         ]
@@ -11175,6 +11212,7 @@ export type Database = {
           public_token: string | null
           referral_data: Json | null
           responsible_user_id: string | null
+          signer_data: Json
           stage: string
           start_date: string | null
           token_expires_at: string | null
@@ -11210,6 +11248,7 @@ export type Database = {
           public_token?: string | null
           referral_data?: Json | null
           responsible_user_id?: string | null
+          signer_data?: Json
           stage?: string
           start_date?: string | null
           token_expires_at?: string | null
@@ -11245,6 +11284,7 @@ export type Database = {
           public_token?: string | null
           referral_data?: Json | null
           responsible_user_id?: string | null
+          signer_data?: Json
           stage?: string
           start_date?: string | null
           token_expires_at?: string | null
@@ -11732,6 +11772,57 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hr_document_templates: {
+        Row: {
+          account_id: string
+          active: boolean
+          body_html: string
+          category: string
+          created_at: string
+          created_by: string | null
+          default_selected: boolean
+          description: string | null
+          doc_key: string
+          id: string
+          required: boolean
+          sort_order: number
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          active?: boolean
+          body_html?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_selected?: boolean
+          description?: string | null
+          doc_key: string
+          id?: string
+          required?: boolean
+          sort_order?: number
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          active?: boolean
+          body_html?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          default_selected?: boolean
+          description?: string | null
+          doc_key?: string
+          id?: string
+          required?: boolean
+          sort_order?: number
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       hr_documents: {
         Row: {
@@ -26982,6 +27073,14 @@ export type Database = {
         Returns: Json
       }
       revoke_user_access: { Args: { _user_id: string }; Returns: undefined }
+      save_admission_signer_data: {
+        Args: { _data: Json; _token: string }
+        Returns: Json
+      }
+      seed_admission_signature_docs: {
+        Args: { _admission_id: string; _template_ids?: string[] }
+        Returns: number
+      }
       seed_clt_admission_docs: {
         Args: { _admission_id: string }
         Returns: undefined
@@ -27002,6 +27101,19 @@ export type Database = {
       }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      sign_admission_document: {
+        Args: {
+          _doc_id: string
+          _ip: string
+          _signature_url: string
+          _signed_html: string
+          _signer_cpf: string
+          _signer_name: string
+          _token: string
+          _user_agent: string
+        }
+        Returns: Json
+      }
       submit_admission_doc:
         | {
             Args: {

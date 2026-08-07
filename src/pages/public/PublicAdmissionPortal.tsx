@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import DocumentCameraCapture from "@/components/admission/DocumentCameraCapture";
+import SignatureDocCard from "@/components/admission/SignatureDocCard";
+
 
 // Labels amigáveis dos campos extraídos por OCR
 const OCR_LABELS: Record<string, string> = {
@@ -72,13 +74,17 @@ interface Doc {
   attachments: Attachment[];
   notes: string | null;
   sort_order: number;
-  doc_type?: "file" | "form";
+  doc_type?: "file" | "form" | "signature";
   form_schema?: FormField[] | null;
   form_data?: Record<string, string> | null;
   ocr_kind?: "id" | "cpf" | "address" | null;
   ocr_status?: "idle" | "processing" | "ready" | "confirmed" | "failed";
   ocr_data?: Record<string, string> | null;
   ocr_error?: string | null;
+  body_html?: string | null;
+  signature_image_url?: string | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
 }
 
 interface PortalData {
@@ -89,11 +95,13 @@ interface PortalData {
   start_date: string | null;
   stage: string;
   documents: Doc[];
+  signer_data?: Record<string, string>;
   expired?: boolean;
 }
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admission-portal`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 
 // Paleta Eternum (mesma da Carta-Proposta)
 const BG = "#2a1b0f";
@@ -132,6 +140,8 @@ export default function PublicAdmissionPortal() {
   const [ocrValues, setOcrValues] = useState<Record<string, Record<string, string>>>({});
   const [ocrSaving, setOcrSaving] = useState<Record<string, boolean>>({});
   const [cameraDocId, setCameraDocId] = useState<string | null>(null);
+  const [signerData, setSignerData] = useState<Record<string, string>>({});
+
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const successTimers = useRef<Record<string, number>>({});
@@ -159,6 +169,31 @@ export default function PublicAdmissionPortal() {
       });
       setFormValues((prev) => ({ ...nextForm, ...prev }));
       setOcrValues((prev) => ({ ...nextOcr, ...prev }));
+
+      // hydrate dados do signatário (banco > OCR > nome da admissão)
+      const fromOcr: Record<string, string> = {};
+      (json.documents || []).forEach((d) => {
+        const o = d.ocr_data || {};
+        if (d.ocr_kind === "id" || d.ocr_kind === "cpf") {
+          if (o.nome) fromOcr.NOME_COMPLETO = o.nome;
+          if (o.cpf) fromOcr.CPF = o.cpf;
+          if (o.rg) fromOcr.RG = o.rg;
+        }
+        if (d.ocr_kind === "address") {
+          if (o.logradouro) fromOcr.RUA = o.logradouro;
+          if (o.numero) fromOcr.NUMERO = o.numero;
+          if (o.bairro) fromOcr.BAIRRO = o.bairro;
+          if (o.cidade) fromOcr.CIDADE = o.cidade;
+          if (o.uf) fromOcr.ESTADO = o.uf;
+        }
+      });
+      setSignerData((prev) => ({
+        NOME_COMPLETO: json.candidate_name || "",
+        ...fromOcr,
+        ...(json.signer_data || {}),
+        ...prev,
+      }));
+
     } catch {
       setData(null);
     } finally {
@@ -369,14 +404,55 @@ export default function PublicAdmissionPortal() {
 
 
 
+  // ===== Documentos para assinar =====
+  const changeSigner = (key: string, value: string) => {
+    setSignerData((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const { docs, required, sent, progress, allDone } = useMemo(() => {
-    const docs = data?.documents || [];
-    const required = docs.filter((d) => d.required);
+  const saveSigner = async () => {
+    if (!token) return;
+    await fetch(`${FN_URL}?action=save_signer`, {
+      method: "POST",
+      headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+      body: JSON.stringify({ token, data: signerData }),
+    });
+  };
+
+  const signDoc = async (docId: string, signature: string, signedHtml: string) => {
+    if (!token) return;
+    try {
+      const res = await fetch(`${FN_URL}?action=sign`, {
+        method: "POST",
+        headers: { apikey: ANON, Authorization: `Bearer ${ANON}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          token,
+          doc_id: docId,
+          signature,
+          signed_html: signedHtml,
+          signer_name: signerData.NOME_COMPLETO || "",
+          signer_cpf: signerData.CPF || "",
+        }),
+      });
+      const j = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(j.error || "falha ao assinar");
+      toast.success("Documento assinado ✓");
+      await load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "erro ao assinar");
+      throw e;
+    }
+  };
+
+  const { docs, signatureDocs, required, sent, progress, allDone } = useMemo(() => {
+    const all = data?.documents || [];
+    const docs = all.filter((d) => d.doc_type !== "signature");
+    const signatureDocs = all.filter((d) => d.doc_type === "signature");
+    const required = all.filter((d) => d.required);
     const sent = required.filter((d) => d.status === "received" || d.status === "approved").length;
+
     const progress = required.length > 0 ? Math.round((sent / required.length) * 100) : 0;
     const allDone = required.length > 0 && sent === required.length;
-    return { docs, required, sent, progress, allDone };
+    return { docs, signatureDocs, required, sent, progress, allDone };
   }, [data]);
 
   if (loading) {
@@ -1000,6 +1076,36 @@ export default function PublicAdmissionPortal() {
             })
           )}
         </div>
+
+        {/* Documentos para assinar */}
+        {signatureDocs.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 pt-8">
+              <span className="h-px w-8" style={{ background: GOLD }} />
+              <span className="text-[10px] uppercase tracking-[0.35em]" style={{ color: GOLD, fontWeight: 600 }}>
+                Documentos para assinar
+              </span>
+            </div>
+            <p className="text-xs -mt-2" style={{ color: CARD, opacity: 0.6 }}>
+              {signatureDocs.filter((d) => d.signed_at).length}/{signatureDocs.length} assinados · leitura e assinatura
+              digital, sem precisar imprimir.
+            </p>
+            <div className="space-y-3">
+              {signatureDocs.map((d) => (
+                <SignatureDocCard
+                  key={d.id}
+                  doc={d as never}
+                  signerData={signerData}
+                  onChangeSigner={changeSigner}
+                  onSaveSigner={saveSigner}
+                  onSign={signDoc}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+
 
         {/* Footer */}
         <div className="mt-12 space-y-2.5 text-center pt-8" style={{ borderTop: `1px solid ${GOLD}22` }}>

@@ -405,3 +405,38 @@
 .no-scrollbar::-webkit-scrollbar {
   display: none;
 }
+
+/* Documentos de admissão (contratos/termos renderizados a partir dos modelos do RH) */
+.admission-doc {
+  line-height: 1.65;
+  text-align: justify;
+  hyphens: auto;
+}
+.admission-doc p { margin: 0 0 0.85em; }
+.admission-doc h1,
+.admission-doc h2,
+.admission-doc h3,
+.admission-doc h4,
+.admission-doc h5,
+.admission-doc h6 {
+  font-weight: 700;
+  font-size: 1em;
+  text-align: left;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  margin: 1.4em 0 0.6em;
+}
+.admission-doc ul,
+.admission-doc ol { margin: 0 0 0.9em 1.25em; list-style: disc; }
+.admission-doc ol { list-style: decimal; }
+.admission-doc li { margin-bottom: 0.35em; }
+.admission-doc table { width: 100%; border-collapse: collapse; margin: 0 0 1em; }
+.admission-doc th,
+.admission-doc td { border: 1px solid rgba(0, 0, 0, 0.15); padding: 0.4em 0.6em; text-align: left; }
+.admission-doc .tpl-filled { font-weight: 700; text-decoration: underline; text-underline-offset: 2px; }
+.admission-doc .tpl-missing {
+  background: rgba(201, 168, 106, 0.28);
+  border-radius: 2px;
+  padding: 0 3px;
+  font-weight: 600;
+}
