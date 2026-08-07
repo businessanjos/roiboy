@@ -5,11 +5,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { FileSignature, CheckCircle2, Clock, Eye, Plus, Trash2, Loader2 } from "lucide-react";
+import { FileSignature, CheckCircle2, Clock, Eye, Plus, Trash2, Loader2, Copy, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { useHRDocumentTemplates, useApplyTemplatesToAdmission } from "@/hooks/useHRDocumentTemplates";
+import { useHRAdmission } from "@/hooks/useHRAdmissions";
+import { getPublicOrigin } from "@/lib/publicLink";
 import { sanitizeDocumentHtml } from "@/lib/hr/admissionDocVars";
 import type { HRAdmissionDocument } from "@/hooks/useHRAdmissions";
 
@@ -22,6 +24,11 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
   const qc = useQueryClient();
   const { data: templates } = useHRDocumentTemplates();
   const apply = useApplyTemplatesToAdmission();
+  const { data: admission } = useHRAdmission(admissionId);
+  const portalUrl = useMemo(
+    () => (admission?.public_token ? `${getPublicOrigin()}/admissao/${admission.public_token}` : null),
+    [admission?.public_token]
+  );
   const [manage, setManage] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [viewing, setViewing] = useState<HRAdmissionDocument | null>(null);
@@ -56,6 +63,16 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
       toast.error("Erro ao remover: " + e.message);
     } finally {
       setRemoving(null);
+    }
+  };
+
+  const copyPortalLink = async () => {
+    if (!portalUrl) return;
+    try {
+      await navigator.clipboard.writeText(portalUrl);
+      toast.success("Link do portal copiado");
+    } catch {
+      toast.error("Erro ao copiar link");
     }
   };
 
@@ -166,6 +183,31 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
               </DialogDescription>
             )}
           </DialogHeader>
+
+          {portalUrl && (
+            <div className="flex items-center gap-2 rounded-md border bg-muted/40 p-3">
+              <div className="min-w-0 flex-1">
+                <p className="text-xs text-muted-foreground mb-1">Link que o funcionário vê no portal</p>
+                <a
+                  href={portalUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm font-medium text-primary truncate block hover:underline"
+                >
+                  {portalUrl}
+                </a>
+              </div>
+              <Button size="sm" variant="outline" onClick={copyPortalLink} className="shrink-0 gap-1.5">
+                <Copy className="h-3.5 w-3.5" /> Copiar
+              </Button>
+              <Button size="icon" variant="ghost" asChild className="shrink-0 h-8 w-8">
+                <a href={portalUrl} target="_blank" rel="noreferrer">
+                  <ExternalLink className="h-4 w-4" />
+                </a>
+              </Button>
+            </div>
+          )}
+
           <div
             className="admission-doc rounded-md border border-border bg-background p-5 text-sm"
             dangerouslySetInnerHTML={{
