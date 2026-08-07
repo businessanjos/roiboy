@@ -72,13 +72,17 @@ interface Doc {
   attachments: Attachment[];
   notes: string | null;
   sort_order: number;
-  doc_type?: "file" | "form";
+  doc_type?: "file" | "form" | "signature";
   form_schema?: FormField[] | null;
   form_data?: Record<string, string> | null;
   ocr_kind?: "id" | "cpf" | "address" | null;
   ocr_status?: "idle" | "processing" | "ready" | "confirmed" | "failed";
   ocr_data?: Record<string, string> | null;
   ocr_error?: string | null;
+  body_html?: string | null;
+  signature_image_url?: string | null;
+  signed_at?: string | null;
+  signer_name?: string | null;
 }
 
 interface PortalData {
@@ -89,11 +93,13 @@ interface PortalData {
   start_date: string | null;
   stage: string;
   documents: Doc[];
+  signer_data?: Record<string, string>;
   expired?: boolean;
 }
 
 const FN_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/admission-portal`;
 const ANON = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+
 
 // Paleta Eternum (mesma da Carta-Proposta)
 const BG = "#2a1b0f";
