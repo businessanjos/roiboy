@@ -121,31 +121,45 @@ export default function RHAdmissions() {
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Pipeline de admissão ({admissions?.length || 0})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoading ? (
-            <div className="flex gap-4">{[1,2,3,4,5,6].map((i) => <Skeleton key={i} className="h-[420px] w-[270px]" />)}</div>
-          ) : (
-            <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={onDragEnd}>
-              <div className="flex gap-4 overflow-x-auto pb-4">
-                {ADMISSION_STAGES.map((s) => (
-                  <Column key={s} stage={s} items={byStage[s]} activeId={activeId} onClick={(a) => setDrawer({ open: true, admission: a })} />
-                ))}
-              </div>
-              <DragOverlay>
-                {activeAdm && (
-                  <div className="bg-card border rounded-lg p-3 shadow-lg">
-                    <p className="text-sm font-medium">{activeAdm.candidate_name}</p>
+      <Tabs defaultValue="pipeline" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="pipeline">Pipeline</TabsTrigger>
+          <TabsTrigger value="templates">Modelos de documentos</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="pipeline">
+          <Card>
+            <CardHeader>
+              <CardTitle className="text-base">Pipeline de admissão ({admissions?.length || 0})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoading ? (
+                <div className="flex gap-4">{[1,2,3,4,5,6].map((i) => <Skeleton key={i} className="h-[420px] w-[270px]" />)}</div>
+              ) : (
+                <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={(e) => setActiveId(e.active.id as string)} onDragEnd={onDragEnd}>
+                  <div className="flex gap-4 overflow-x-auto pb-4">
+                    {ADMISSION_STAGES.map((s) => (
+                      <Column key={s} stage={s} items={byStage[s]} activeId={activeId} onClick={(a) => setDrawer({ open: true, admission: a })} />
+                    ))}
                   </div>
-                )}
-              </DragOverlay>
-            </DndContext>
-          )}
-        </CardContent>
-      </Card>
+                  <DragOverlay>
+                    {activeAdm && (
+                      <div className="bg-card border rounded-lg p-3 shadow-lg">
+                        <p className="text-sm font-medium">{activeAdm.candidate_name}</p>
+                      </div>
+                    )}
+                  </DragOverlay>
+                </DndContext>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <DocumentTemplatesTab />
+        </TabsContent>
+      </Tabs>
+
 
       <AdmissionDrawer
         open={drawer.open}
