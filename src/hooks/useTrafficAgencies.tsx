@@ -14,6 +14,7 @@ export interface TrafficAgency {
   notes: string | null;
   is_active: boolean;
   name_patterns: string[];
+  public_report_token?: string;
   created_at: string;
   updated_at: string;
   // computed
