@@ -12,6 +12,7 @@ import { AgencyCampaignsTable } from "@/components/marketing/agencies/AgencyCamp
 import { AgencyFunnel } from "@/components/marketing/agencies/AgencyFunnel";
 import { MaterialRequestsList } from "@/components/marketing/agencies/MaterialRequestsList";
 import { MaterialRequestWizard } from "@/components/marketing/agencies/MaterialRequestWizard";
+import { AgencyWeeklyReportsTab } from "@/components/marketing/agencies/AgencyWeeklyReportsTab";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 
 const RANGES = [
@@ -75,6 +76,7 @@ export default function MarketingAgencyDetail() {
           <TabsTrigger value="overview">Visão geral</TabsTrigger>
           <TabsTrigger value="campaigns">Campanhas</TabsTrigger>
           <TabsTrigger value="funnel">Funil</TabsTrigger>
+          <TabsTrigger value="weekly">Relatórios semanais</TabsTrigger>
           <TabsTrigger value="requests">Solicitações</TabsTrigger>
         </TabsList>
 
@@ -113,6 +115,10 @@ export default function MarketingAgencyDetail() {
               color={agency.color}
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="weekly" className="mt-4">
+          {id && <AgencyWeeklyReportsTab agencyId={id} color={agency.color} />}
         </TabsContent>
 
         <TabsContent value="requests" className="space-y-4 mt-4">
