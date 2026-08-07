@@ -139,9 +139,14 @@ Deno.serve(async (req) => {
           return prov === "uazapi" && !!cfg.instance_token;
         });
 
+        // Prefer integrations that declare their own host_url (multi-host servers);
+        // falling back to the global default host caused "host not mapped" failures.
+        const withHost = usableUazapi.filter((i) => !!(i.config || {}).host_url);
+        const pool = withHost.length > 0 ? withHost : usableUazapi;
+
         whatsappIntegration =
-          (usableUazapi.find((i) => i.sector_id === "operacoes") as typeof whatsappIntegration) ||
-          (usableUazapi[0] as typeof whatsappIntegration) ||
+          (pool.find((i) => i.sector_id === "operacoes") as typeof whatsappIntegration) ||
+          (pool[0] as typeof whatsappIntegration) ||
           null;
 
         if (!whatsappIntegration) {
