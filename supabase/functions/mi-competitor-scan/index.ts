@@ -28,6 +28,12 @@ async function scrapeFirecrawl(url: string) {
   });
   if (!res.ok) {
     const t = await res.text();
+    const unsupported =
+      res.status === 403 || res.status === 401 || /do not support this site/i.test(t);
+    if (unsupported) {
+      // Sites como Instagram/Facebook/LinkedIn não são suportados pelo Firecrawl.
+      return { markdown: "", summary: "", metadata: {}, blocked: true as const };
+    }
     throw new Error(`Firecrawl ${res.status}: ${t.slice(0, 300)}`);
   }
   const data = await res.json();
