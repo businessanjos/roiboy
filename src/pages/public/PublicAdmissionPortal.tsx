@@ -1075,6 +1075,36 @@ export default function PublicAdmissionPortal() {
           )}
         </div>
 
+        {/* Documentos para assinar */}
+        {signatureDocs.length > 0 && (
+          <>
+            <div className="flex items-center gap-3 pt-8">
+              <span className="h-px w-8" style={{ background: GOLD }} />
+              <span className="text-[10px] uppercase tracking-[0.35em]" style={{ color: GOLD, fontWeight: 600 }}>
+                Documentos para assinar
+              </span>
+            </div>
+            <p className="text-xs -mt-2" style={{ color: CARD, opacity: 0.6 }}>
+              {signatureDocs.filter((d) => d.signed_at).length}/{signatureDocs.length} assinados · leitura e assinatura
+              digital, sem precisar imprimir.
+            </p>
+            <div className="space-y-3">
+              {signatureDocs.map((d) => (
+                <SignatureDocCard
+                  key={d.id}
+                  doc={d as never}
+                  signerData={signerData}
+                  onChangeSigner={changeSigner}
+                  onSaveSigner={saveSigner}
+                  onSign={signDoc}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+
+
         {/* Footer */}
         <div className="mt-12 space-y-2.5 text-center pt-8" style={{ borderTop: `1px solid ${GOLD}22` }}>
           <div className="flex items-center justify-center gap-2 text-xs" style={{ color: CARD, opacity: 0.65 }}>
