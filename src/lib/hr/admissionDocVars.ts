@@ -76,3 +76,29 @@ export function missingVariables(html: string, values: Record<string, string>): 
 export function signerFieldLabel(key: string): string {
   return SIGNER_FIELDS.find((f) => f.key === key)?.label || key.replace(/_/g, " ").toLowerCase();
 }
+
+export interface OcrDocLike {
+  ocr_kind?: string | null;
+  ocr_data?: Record<string, string> | null;
+}
+
+/** Deriva os dados do signatário a partir do OCR dos documentos enviados (RG/CNH, CPF, comprovante). */
+export function signerDataFromOcr(docs: OcrDocLike[]): Record<string, string> {
+  const out: Record<string, string> = {};
+  (docs || []).forEach((d) => {
+    const o = d.ocr_data || {};
+    if (d.ocr_kind === "id" || d.ocr_kind === "cpf") {
+      if (o.nome) out.NOME_COMPLETO = o.nome;
+      if (o.cpf) out.CPF = o.cpf;
+      if (o.rg) out.RG = o.rg;
+    }
+    if (d.ocr_kind === "address") {
+      if (o.logradouro) out.RUA = o.logradouro;
+      if (o.numero) out.NUMERO = o.numero;
+      if (o.bairro) out.BAIRRO = o.bairro;
+      if (o.cidade) out.CIDADE = o.cidade;
+      if (o.uf) out.ESTADO = o.uf;
+    }
+  });
+  return out;
+}
