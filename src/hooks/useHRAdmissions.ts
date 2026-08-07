@@ -170,16 +170,8 @@ export function useUpdateAdmission() {
       // Ao entrar em eSocial/Contabilidade, gera automaticamente os documentos para assinar
       if (patch.stage === "esocial") {
         try {
-          const { data: adm } = await supabase
-            .from("hr_admissions" as any)
-            .select("account_id")
-            .eq("id", id)
-            .maybeSingle();
-          const accountId = (adm as any)?.account_id as string | undefined;
-          if (accountId) {
-            const n = await autoSeedSignatureDocs(id, accountId);
-            if (n > 0) toast.success(`${n} documento(s) gerados para assinatura do candidato`);
-          }
+          const n = await autoSeedSignatureDocs(id);
+          if (n > 0) toast.success(`${n} documento(s) gerados para assinatura do candidato`);
         } catch (e: any) {
           toast.error("Não foi possível gerar os documentos de assinatura: " + e.message);
         }
