@@ -66,6 +66,16 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
     }
   };
 
+  const copyPortalLink = async () => {
+    if (!portalUrl) return;
+    try {
+      await navigator.clipboard.writeText(portalUrl);
+      toast.success("Link do portal copiado");
+    } catch {
+      toast.error("Erro ao copiar link");
+    }
+  };
+
   return (
     <div>
       <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
