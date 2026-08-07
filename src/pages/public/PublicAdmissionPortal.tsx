@@ -138,6 +138,8 @@ export default function PublicAdmissionPortal() {
   const [ocrValues, setOcrValues] = useState<Record<string, Record<string, string>>>({});
   const [ocrSaving, setOcrSaving] = useState<Record<string, boolean>>({});
   const [cameraDocId, setCameraDocId] = useState<string | null>(null);
+  const [signerData, setSignerData] = useState<Record<string, string>>({});
+
   const fileInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const cameraInputs = useRef<Record<string, HTMLInputElement | null>>({});
   const successTimers = useRef<Record<string, number>>({});
