@@ -158,7 +158,84 @@ Deno.serve(async (req) => {
       return json({ ok: true });
     }
 
+    if (action === "save_signer" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const token = String(body.token || "");
+      const data = body.data;
+      if (!token || !data || typeof data !== "object") {
+        return json({ error: "Campos obrigatórios faltando" }, 400);
+      }
+      const clean: Record<string, string> = {};
+      for (const [k, v] of Object.entries(data as Record<string, unknown>)) {
+        if (/^[A-Z_0-9]{1,40}$/.test(k)) clean[k] = String(v ?? "").slice(0, 200);
+      }
+      const { data: res, error: rpcErr } = await supabase.rpc("save_admission_signer_data", {
+        _token: token,
+        _data: clean,
+      });
+      if (rpcErr) throw rpcErr;
+      if (!res?.ok) return json({ error: "Link inválido ou expirado" }, 403);
+      return json({ ok: true });
+    }
+
+    if (action === "sign" && req.method === "POST") {
+      const body = await req.json().catch(() => ({}));
+      const token = String(body.token || "");
+      const docId = String(body.doc_id || "");
+      const signature = String(body.signature || "");
+      const signedHtml = String(body.signed_html || "").slice(0, 400000);
+      const signerName = String(body.signer_name || "").slice(0, 200);
+      const signerCpf = String(body.signer_cpf || "").slice(0, 40);
+      if (!token || !docId || !signature || !signerName) {
+        return json({ error: "Campos obrigatórios faltando" }, 400);
+      }
+      if (!signature.startsWith("data:image/png;base64,")) {
+        return json({ error: "Assinatura inválida" }, 400);
+      }
+
+      const b64 = signature.split(",")[1] || "";
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      if (bytes.byteLength === 0 || bytes.byteLength > 2 * 1024 * 1024) {
+        return json({ error: "Assinatura inválida" }, 400);
+      }
+
+      const { data: portal, error: pErr } = await supabase.rpc("get_admission_portal", { _token: token });
+      if (pErr) throw pErr;
+      if (!portal || portal.expired) return json({ error: "Link inválido ou expirado" }, 403);
+      const docs = (portal.documents || []) as Array<{ id: string }>;
+      if (!docs.find((d) => d.id === docId)) return json({ error: "Documento não encontrado" }, 404);
+
+      const path = `portal/${portal.id}/${docId}/assinatura-${Date.now()}.png`;
+      const { error: upErr } = await supabase.storage.from(BUCKET).upload(path, bytes, {
+        upsert: true,
+        contentType: "image/png",
+      });
+      if (upErr) throw upErr;
+      const { data: signed, error: sErr } = await supabase
+        .storage.from(BUCKET)
+        .createSignedUrl(path, 60 * 60 * 24 * 365);
+      if (sErr) throw sErr;
+
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || null;
+      const ua = req.headers.get("user-agent")?.slice(0, 400) || null;
+
+      const { data: res, error: rpcErr } = await supabase.rpc("sign_admission_document", {
+        _token: token,
+        _doc_id: docId,
+        _signature_url: signed.signedUrl,
+        _signed_html: signedHtml,
+        _signer_name: signerName,
+        _signer_cpf: signerCpf,
+        _ip: ip,
+        _user_agent: ua,
+      });
+      if (rpcErr) throw rpcErr;
+      if (!res?.ok) return json({ error: "Não foi possível registrar a assinatura." }, 400);
+      return json({ ok: true, signature_url: signed.signedUrl });
+    }
+
     return json({ error: "Ação desconhecida" }, 400);
+
   } catch (e) {
     console.error("admission-portal error", e);
     return json({ error: e instanceof Error ? e.message : "erro" }, 500);
