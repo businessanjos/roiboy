@@ -149,6 +149,7 @@
 - [Content Approval Checklist](mem://features/marketing/content-approval-checklist-pt) — Aba Checklist em Social Media com bloqueios automáticos e histórico
 - [Meta Token Auto-Refresh](mem://integrations/meta-token-auto-refresh-pt) — Renovação automática do token longo da Meta + retomada do sync do Instagram
 - [Campaign Forms (Formulários Roy)](mem://features/marketing/campaign-forms-pt) — Substitui Typeform: /c/:slug + tracking funil/UTM/abandono na aba "Formulários Roy" de /marketing/trafego-pago
+- [Relatórios semanais de agência](mem://features/marketing/agency-weekly-reports-pt) — Aba em Marketing > Agências com histórico semanal, métricas derivadas automáticas e comparativo
 - [Content HQ](mem://features/marketing/content-hq-pt) — Área /marketing/content-hq Bruna+Everton, multi-plataforma, IA gera estratégia/pautas/briefings
 - [External REST API](mem://integrations/external-rest-api-v1-pt) — `x-api-key` protected CRUD endpoints
 - [Clinica Ryka Integration](mem://integrations/clinica-ryka-sync-v2-pt) — Bidirectional sync
