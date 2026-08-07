@@ -15,13 +15,16 @@ import {
 import {
   Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
-import { CheckCircle2, Clock, Eye, Search, FileSignature } from "lucide-react";
+import { CheckCircle2, Clock, Eye, Search, FileSignature, Copy, ExternalLink } from "lucide-react";
 import { sanitizeDocumentHtml } from "@/lib/hr/admissionDocVars";
+import { getPublicOrigin } from "@/lib/publicLink";
 import { useHRAdmissions, type HRAdmissionDocument } from "@/hooks/useHRAdmissions";
+import { toast } from "sonner";
 
 type Row = HRAdmissionDocument & {
   candidate_name: string;
   position_title: string | null;
+  public_token: string | null;
   created_at?: string | null;
 };
 
