@@ -9,6 +9,8 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import letreiro from "@/assets/eternum/letreiro.png.asset.json";
 import DocumentCameraCapture from "@/components/admission/DocumentCameraCapture";
+import SignatureDocCard from "@/components/admission/SignatureDocCard";
+
 
 // Labels amigáveis dos campos extraídos por OCR
 const OCR_LABELS: Record<string, string> = {
