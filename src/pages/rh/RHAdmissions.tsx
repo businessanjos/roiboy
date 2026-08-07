@@ -161,9 +161,14 @@ export default function RHAdmissions() {
           </Card>
         </TabsContent>
 
+        <TabsContent value="docs">
+          <SignedDocsTab />
+        </TabsContent>
+
         <TabsContent value="templates">
           <DocumentTemplatesTab />
         </TabsContent>
+
       </Tabs>
 
 
