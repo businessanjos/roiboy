@@ -2922,6 +2922,7 @@ export default function SalesPipeline() {
                   showStatus
                   dealProductMap={dealProductMap}
                   negotiationStatusMap={negotiationStatusMap}
+                  dealMqlMap={dealMqlMap}
                 />
 
               </TabsContent>
