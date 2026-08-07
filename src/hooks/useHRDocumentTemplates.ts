@@ -90,7 +90,7 @@ export function useSeedDefaultTemplates() {
   const qc = useQueryClient();
   const { currentUser } = useCurrentUser();
   return useMutation({
-    mutationFn: async (overwrite = false) => {
+    mutationFn: async (overwrite: boolean = false) => {
       const rows = ADMISSION_DOC_TEMPLATE_SEEDS.map((t) => ({
         account_id: currentUser!.account_id,
         doc_key: t.doc_key,
