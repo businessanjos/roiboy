@@ -59,6 +59,7 @@ interface Contract {
   id: string;
   client_id: string;
   account_id: string;
+  deal_id: string | null;
   product_id: string | null;
   value: number;
   currency: string;
