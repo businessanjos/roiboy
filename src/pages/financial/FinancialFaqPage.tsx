@@ -592,7 +592,7 @@ export default function FinancialFaqPage() {
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
-                <Label>Palavras-chave (separadas por vírgula)</Label>
+                <Label>Tags / palavras-chave (separadas por vírgula)</Label>
                 <Input
                   value={form.keywords}
                   onChange={(e) => setForm({ ...form, keywords: e.target.value })}
