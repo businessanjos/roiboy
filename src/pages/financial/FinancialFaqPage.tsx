@@ -679,16 +679,18 @@ export default function FinancialFaqPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div>
-                <p className="text-sm font-medium">Publicado</p>
-                <p className="text-xs text-muted-foreground">Artigos não publicados não aparecem na busca.</p>
+            {editing && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-sm font-medium">
+                  Situação: {REVIEW_META[editing.review_status].label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Artigos só aparecem para o time depois de aprovados. Ao editar um artigo publicado, ele volta para
+                  revisão.
+                </p>
               </div>
-              <Switch
-                checked={form.is_published}
-                onCheckedChange={(v) => setForm({ ...form, is_published: v })}
-              />
-            </div>
+            )}
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
