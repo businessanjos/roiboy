@@ -40,6 +40,8 @@ import {
   Activity,
   Briefcase,
   UsersRound,
+  CircleHelp,
+
   GraduationCap,
   Brain,
   Star,
