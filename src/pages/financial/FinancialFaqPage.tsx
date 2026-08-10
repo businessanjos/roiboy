@@ -601,8 +601,59 @@ export default function FinancialFaqPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">Sem passo a passo cadastrado.</p>
                 )}
+                {a.review_status === "changes_requested" && a.review_notes && (
+                  <Alert>
+                    <TriangleAlert className="h-4 w-4" />
+                    <AlertDescription>Ajustes solicitados: {a.review_notes}</AlertDescription>
+                  </Alert>
+                )}
+                {a.review_status === "in_review" && (
+                  <p className="text-xs text-muted-foreground">
+                    Aguardando revisão — ainda não aparece na busca do time.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
+                  {(a.review_status === "draft" || a.review_status === "changes_requested") && (
+                    <Button
+                      size="sm"
+                      onClick={() => reviewMutation.mutate({ article: a, next: "in_review" })}
+                      disabled={reviewMutation.isPending}
+                    >
+                      Enviar para revisão
+                    </Button>
+                  )}
+                  {a.review_status === "in_review" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => reviewMutation.mutate({ article: a, next: "published" })}
+                        disabled={reviewMutation.isPending}
+                      >
+                        <CircleCheck className="mr-2 h-4 w-4" />
+                        Aprovar e publicar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => requestChanges(a)}
+                        disabled={reviewMutation.isPending}
+                      >
+                        Solicitar ajustes
+                      </Button>
+                    </>
+                  )}
+                  {a.review_status === "published" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reviewMutation.mutate({ article: a, next: "draft" })}
+                      disabled={reviewMutation.isPending}
+                    >
+                      Despublicar
+                    </Button>
+                  )}
                   {a.related_route && (
+
                     <Button size="sm" variant="outline" onClick={() => navigate(a.related_route!)}>
                       Abrir tela
                       <ArrowRight className="ml-2 h-4 w-4" />
