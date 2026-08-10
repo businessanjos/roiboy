@@ -180,7 +180,7 @@ export default function FinancialDashboardPage() {
               </span>
             }
             tone={collectionTone}
-            onClick={() => navigate("/financial/parcelas?status=overdue")}
+            onClick={() => navigate("/financial/recebiveis?tab=parcelas&status=overdue")}
           />
           <FinancialKpiCard
             icon={PiggyBank}
@@ -200,7 +200,7 @@ export default function FinancialDashboardPage() {
           title="Recebíveis"
           subtitle="Carteira em aberto, recorrência e ticket médio"
           action={
-            <Button variant="outline" size="sm" onClick={() => navigate("/financial/parcelas")}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/financial/recebiveis?tab=parcelas")}>
               Ver parcelas <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           }
@@ -244,7 +244,7 @@ export default function FinancialDashboardPage() {
           subtitle="Quanto está em atraso e quem deve atenção primeiro"
           action={
             <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={() => navigate("/financial/aging")}>
+              <Button variant="outline" size="sm" onClick={() => navigate("/financial/relatorios?tab=aging")}>
                 Relatório de aging
               </Button>
               <Button size="sm" onClick={() => navigate("/financial/cobranca")}>
@@ -499,7 +499,7 @@ export default function FinancialDashboardPage() {
           title="Próximos 7 dias"
           subtitle="O que vence na próxima semana"
           action={
-            <Button variant="outline" size="sm" onClick={() => navigate("/financial/parcelas")}>
+            <Button variant="outline" size="sm" onClick={() => navigate("/financial/recebiveis?tab=parcelas")}>
               Ver parcelas <ArrowRight className="h-3.5 w-3.5 ml-1" />
             </Button>
           }

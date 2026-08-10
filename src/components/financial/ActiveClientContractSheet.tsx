@@ -302,7 +302,7 @@ export function ActiveClientContractSheet({
               <Button
                 variant="ghost"
                 size="sm"
-                onClick={() => navigate(`/financial/parcelas?contract_id=${contractId}`)}
+                onClick={() => navigate(`/financial/recebiveis?tab=parcelas&contract_id=${contractId}`)}
               >
                 Ver todas as parcelas
               </Button>
