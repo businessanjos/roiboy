@@ -105,6 +105,7 @@
 - [Insights Entity Sources](mem://features/insights/entity-sources-pt) — Negócios, Leads (=Pessoas), Atividades, RoyZapp (conversas/mensagens); sem Organizações
 - [Financial Reconciliation](mem://features/financial/reconciliation-usability-pt) — Mandatory client/origin display
 - [Financial Sidebar Layout](mem://style/navigation/financial-sidebar-unification-v2-pt) — Main sidebar unification
+- [Faturamento só após assinatura](mem://features/financial/billing-on-signature-pt) — Parcelas e lançamentos só nascem quando o contrato digital vira `signed`
 - [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Financeiro nativo pós-remoção Omie; dados vêm de Comercial/CS + lançamentos manuais + importadores
 - [Portal de Prestadores](mem://features/financial/providers-portal-pt) — Link público /portal/prestador/:token para envio mensal de NF + dados bancários
 - [Payers & Cross-feed](mem://features/financial/payers-and-cross-feed-pt) — Pagadores (CRUD /financial/pagadores + PayerSelector + ensure_payer_from_client), quitação automática de contrato, write-off por cancelamento, badge "pronto p/ renovar"
