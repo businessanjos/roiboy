@@ -332,38 +332,47 @@ const App = () => (
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/dashboard" replace />} />
                               <Route path="dashboard" element={<FinancialDashboardPage />} />
-                              <Route path="entries" element={<FinancialEntriesPage />} />
                               <Route path="cash-flow" element={<FinancialCashFlowPage />} />
                               <Route path="bank-accounts" element={<FinancialBankAccountsPage />} />
                               <Route path="bank-accounts/:id/extrato" element={<FinancialBankAccountStatementPage />} />
                               <Route path="categories" element={<FinancialCategoriesPage />} />
                               <Route path="cost-centers" element={<FinancialCostCentersPage />} />
-                              <Route path="suppliers" element={<FinancialSuppliersPage />} />
-                              <Route path="recurring" element={<FinancialRecurringPage />} />
                               <Route path="budget" element={<FinancialBudgetPage />} />
-                              <Route path="reconciliation" element={<FinancialReconciliationPage />} />
-                              <Route path="sales-reconciliation" element={<FinancialSalesReconciliationPage />} />
                               <Route path="commissions" element={<FinancialCommissionsPage />} />
-                              <Route path="alerts" element={<FinancialAlertsPage />} />
-                              <Route path="aging" element={<FinancialAgingPage />} />
-                              <Route path="profitability" element={<FinancialProfitabilityPage />} />
-                              <Route path="dre" element={<FinancialDREPage />} />
-                              <Route path="drf" element={<FinancialDRFPage />} />
-                              <Route path="invoices" element={<FinancialInvoicesPage />} />
-                              <Route path="parcelas" element={<FinancialInstallmentsPage />} />
-                              <Route path="boletos" element={<FinancialBoletosPage />} />
-                              <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
-                              <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
-                              <Route path="importar" element={<FinancialImportPage />} />
-                              <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
-                              <Route path="regua-cobranca" element={<FinancialCollectionsRulerPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
-                              <Route path="pagadores" element={<FinancialPayersPage />} />
-                              <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />
-                              <Route path="clientes-ativos" element={<FinancialActiveClientsPage />} />
+
+                              {/* Áreas consolidadas (hubs com abas) */}
+                              <Route path="entries" element={<FinancialEntriesHubPage />} />
+                              <Route path="recebiveis" element={<FinancialReceivablesHubPage />} />
+                              <Route path="conciliacao" element={<FinancialReconciliationHubPage />} />
+                              <Route path="cobranca" element={<FinancialCollectionsHubPage />} />
+                              <Route path="notas-fiscais" element={<FinancialFiscalHubPage />} />
+                              <Route path="pessoas" element={<FinancialPeopleHubPage />} />
+                              <Route path="relatorios" element={<FinancialReportsHubPage />} />
+
+                              {/* Rotas antigas → abas correspondentes */}
+                              <Route path="recurring" element={<Navigate to="/financial/entries?tab=recorrentes" replace />} />
+                              <Route path="invoices" element={<Navigate to="/financial/recebiveis?tab=faturas" replace />} />
+                              <Route path="parcelas" element={<Navigate to="/financial/recebiveis?tab=parcelas" replace />} />
+                              <Route path="boletos" element={<Navigate to="/financial/recebiveis?tab=boletos" replace />} />
+                              <Route path="reconciliation" element={<Navigate to="/financial/conciliacao?tab=bancaria" replace />} />
+                              <Route path="sales-reconciliation" element={<Navigate to="/financial/conciliacao?tab=vendas" replace />} />
+                              <Route path="importar" element={<Navigate to="/financial/conciliacao?tab=importacoes" replace />} />
+                              <Route path="alerts" element={<Navigate to="/financial/cobranca?tab=alertas" replace />} />
+                              <Route path="regua-cobranca" element={<Navigate to="/financial/cobranca?tab=regua" replace />} />
+                              <Route path="configuracoes/fiscal" element={<Navigate to="/financial/notas-fiscais?tab=configuracoes" replace />} />
+                              <Route path="clientes-ativos" element={<Navigate to="/financial/pessoas?tab=clientes" replace />} />
+                              <Route path="pagadores" element={<Navigate to="/financial/pessoas?tab=pagadores" replace />} />
+                              <Route path="suppliers" element={<Navigate to="/financial/pessoas?tab=fornecedores" replace />} />
+                              <Route path="dre" element={<Navigate to="/financial/relatorios?tab=dre" replace />} />
+                              <Route path="aging" element={<Navigate to="/financial/relatorios?tab=aging" replace />} />
+                              <Route path="profitability" element={<Navigate to="/financial/relatorios?tab=rentabilidade" replace />} />
+                              <Route path="drf" element={<Navigate to="/financial/relatorios?tab=drf" replace />} />
+                              <Route path="balance-sheet" element={<Navigate to="/financial/relatorios?tab=balanco" replace />} />
                             </Route>
+
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
                             <Route path="/events/calendar" element={<EventsCalendar />} />
