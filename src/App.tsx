@@ -194,39 +194,26 @@ const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagno
 // Financial module with sub-routes (lazy loaded)
 const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout"));
 const FinancialDashboardPage = lazyRetry(() => import("./pages/financial/FinancialDashboardPage"));
-const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
 const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
 const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
 const FinancialBankAccountStatementPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountStatementPage"));
 const FinancialCategoriesPage = lazyRetry(() => import("./pages/financial/FinancialCategoriesPage"));
 const FinancialCostCentersPage = lazyRetry(() => import("./pages/financial/FinancialCostCentersPage"));
-const FinancialSuppliersPage = lazyRetry(() => import("./pages/financial/FinancialSuppliersPage"));
-const FinancialRecurringPage = lazyRetry(() => import("./pages/financial/FinancialRecurringPage"));
 const FinancialBudgetPage = lazyRetry(() => import("./pages/financial/FinancialBudgetPage"));
-const FinancialReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialReconciliationPage"));
-const FinancialSalesReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialSalesReconciliationPage"));
 const FinancialCommissionsPage = lazyRetry(() => import("./pages/financial/FinancialCommissionsPage"));
-const FinancialAlertsPage = lazyRetry(() => import("./pages/financial/FinancialAlertsPage"));
-const FinancialAgingPage = lazyRetry(() => import("./pages/financial/FinancialAgingPage"));
-const FinancialProfitabilityPage = lazyRetry(() => import("./pages/financial/FinancialProfitabilityPage"));
-const FinancialDREPage = lazyRetry(() => import("./pages/financial/FinancialDREPage"));
-const FinancialDRFPage = lazyRetry(() => import("./pages/financial/FinancialDRFPage"));
-const FinancialBoletosPage = lazyRetry(() => import("./pages/financial/FinancialBoletosPage"));
-const FinancialNotasFiscaisPage = lazyRetry(() => import("./pages/financial/FinancialNotasFiscaisPage"));
-const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/FinancialBalanceSheetPage"));
-const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
-const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
-
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
-const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
-const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
-const FinancialCollectionsRulerPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsRulerPage"));
-
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
-const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
-const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
-const FinancialActiveClientsPage = lazyRetry(() => import("./pages/financial/FinancialActiveClientsPage"));
+
+// Hubs consolidados (cada um agrupa páginas antigas em abas)
+const FinancialEntriesHubPage = lazyRetry(() => import("./pages/financial/FinancialEntriesHubPage"));
+const FinancialReceivablesHubPage = lazyRetry(() => import("./pages/financial/FinancialReceivablesHubPage"));
+const FinancialReconciliationHubPage = lazyRetry(() => import("./pages/financial/FinancialReconciliationHubPage"));
+const FinancialCollectionsHubPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsHubPage"));
+const FinancialFiscalHubPage = lazyRetry(() => import("./pages/financial/FinancialFiscalHubPage"));
+const FinancialPeopleHubPage = lazyRetry(() => import("./pages/financial/FinancialPeopleHubPage"));
+const FinancialReportsHubPage = lazyRetry(() => import("./pages/financial/FinancialReportsHubPage"));
+
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 const PublicAdmissionPortal = lazyRetry(() => import("./pages/public/PublicAdmissionPortal"));
 const PublicAgencyWeeklyReport = lazyRetry(() => import("./pages/public/PublicAgencyWeeklyReport"));
