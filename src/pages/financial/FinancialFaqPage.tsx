@@ -96,6 +96,15 @@ const CATEGORIES = [
   { value: "geral", label: "Geral" },
 ];
 
+/** Normaliza texto para busca: minúsculas, sem acentos e sem espaços extras. */
+const normalize = (value: string) =>
+  (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+
 
 const STATUS_META: Record<FaqArticle["status"], { label: string; className: string }> = {
   available: { label: "Disponível", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
