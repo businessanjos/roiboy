@@ -80,15 +80,22 @@ interface FaqAnswer {
 }
 
 const CATEGORIES = [
+  { value: "dashboard", label: "Dashboard & Fluxo de Caixa" },
+  { value: "lancamentos", label: "Lançamentos" },
+  { value: "bancos", label: "Contas Bancárias" },
   { value: "recebiveis", label: "Recebíveis" },
   { value: "cobranca", label: "Cobrança" },
+  { value: "notas_fiscais", label: "Notas Fiscais" },
   { value: "conciliacao", label: "Conciliação" },
-  { value: "lancamentos", label: "Lançamentos" },
+  { value: "comissoes", label: "Comissões" },
   { value: "contratos", label: "Contratos" },
   { value: "cadastros", label: "Cadastros" },
+  { value: "orcamento", label: "Orçamentos & Centros de Custo" },
   { value: "relatorios", label: "Relatórios" },
+  { value: "integracoes", label: "Integrações" },
   { value: "geral", label: "Geral" },
 ];
+
 
 const STATUS_META: Record<FaqArticle["status"], { label: string; className: string }> = {
   available: { label: "Disponível", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
