@@ -598,6 +598,7 @@ export default function FinancialSalesReconciliationPage() {
                     />
                   </TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Assinatura</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Descrição</TableHead>
