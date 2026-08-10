@@ -375,13 +375,9 @@ export default function FinancialFaqPage() {
           icon={CircleHelp}
           title="Nenhum artigo cadastrado"
           description="Cadastre o passo a passo das dúvidas mais frequentes do time."
-          action={
-            <Button onClick={openNew}>
-              <Plus className="mr-2 h-4 w-4" />
-              Novo artigo
-            </Button>
-          }
+          action={{ label: "Novo artigo", onClick: openNew, icon: Plus }}
         />
+
       ) : (
         <Accordion type="multiple" className="rounded-lg border border-border">
           {filtered.map((a) => (
