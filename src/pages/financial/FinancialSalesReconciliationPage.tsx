@@ -477,7 +477,68 @@ export default function FinancialSalesReconciliationPage() {
     }
   };
 
+  // Contratos assinados que ainda não geraram parcelas/lançamentos
+  const signedPending = useMemo(
+    () => pendingContracts.filter((c) => signatureStateOf(c) === "signed"),
+    [pendingContracts, signatureMap]
+  );
+
+  const signedReady = useMemo(
+    () =>
+      signedPending.filter(
+        (c) => c.payment_method && c.installments_count && c.first_due_date
+      ),
+    [signedPending]
+  );
+
+  const signedMissingConfig = signedPending.length - signedReady.length;
+
+  // Libera o faturamento em lote: marca receivables_generated = true e deixa
+  // o trigger do banco gerar lançamentos (financial_entries) + parcelas (invoices/installments).
+  const handleReleaseSignedBatch = async () => {
+    if (signedReady.length === 0) return;
+
+    setReleasing(true);
+    let ok = 0;
+    const failed: string[] = [];
+
+    for (const contract of signedReady) {
+      try {
+        const { error } = await supabase
+          .from("client_contracts")
+          .update({
+            receivables_generated: true,
+            receivables_generated_at: new Date().toISOString(),
+          })
+          .eq("id", contract.id)
+          .eq("receivables_generated", false);
+
+        if (error) throw error;
+        ok++;
+      } catch (error) {
+        console.error("Erro ao liberar faturamento:", contract.id, error);
+        failed.push(contract.client?.full_name || contract.id);
+      }
+    }
+
+    setReleasing(false);
+    setReleaseDialogOpen(false);
+    setSelectedIds([]);
+
+    if (ok > 0) {
+      toast.success(
+        `${ok} contrato(s) liberado(s). Parcelas e lançamentos gerados automaticamente.`
+      );
+    }
+    if (failed.length > 0) {
+      toast.error(`Falha em ${failed.length}: ${failed.slice(0, 3).join(", ")}`);
+    }
+
+    await fetchContracts();
+  };
+
   const openContractDetail = (contract: Contract) => {
+
     setDetailContract(contract);
     setDetailSheetOpen(true);
   };
