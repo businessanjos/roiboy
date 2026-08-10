@@ -114,6 +114,14 @@ const REVIEW_FILTERS: { value: string; label: string }[] = [
   { value: "draft", label: "Rascunhos" },
 ];
 
+const REVIEW_ACTION_TOAST: Record<ReviewStatus, string> = {
+  draft: "Artigo devolvido para rascunho",
+  in_review: "Artigo enviado para revisão",
+  published: "Artigo aprovado e publicado",
+  changes_requested: "Ajustes solicitados ao autor",
+};
+
+
 const emptyForm = {
   question: "",
   answer_steps: "",
