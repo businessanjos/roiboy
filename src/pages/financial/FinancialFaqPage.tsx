@@ -13,9 +13,12 @@ import {
   Loader2,
   ArrowRight,
   CircleHelp,
-  Tag,
   TriangleAlert,
   CircleCheck,
+  SlidersHorizontal,
+  X,
+  BookOpen,
+  Settings2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -25,6 +28,8 @@ import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Separator } from "@/components/ui/separator";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Accordion,
   AccordionContent,
@@ -45,8 +50,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { FinancialPageHeader } from "@/components/financial/_shared/FinancialPageHeader";
 import { FinancialEmptyState } from "@/components/financial/_shared/FinancialEmptyState";
+import { cn } from "@/lib/utils";
 
 type ReviewStatus = "draft" | "in_review" | "published" | "changes_requested";
 
@@ -96,6 +101,9 @@ const CATEGORIES = [
   { value: "geral", label: "Geral" },
 ];
 
+const categoryLabelOf = (value: string) =>
+  CATEGORIES.find((c) => c.value === value)?.label ?? value;
+
 /** Normaliza texto para busca: minúsculas, sem acentos e sem espaços extras. */
 const normalize = (value: string) =>
   (value ?? "")
@@ -103,8 +111,6 @@ const normalize = (value: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
     .trim();
-
-
 
 const STATUS_META: Record<FaqArticle["status"], { label: string; className: string }> = {
   available: { label: "Disponível", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
@@ -123,7 +129,7 @@ const REVIEW_META: Record<ReviewStatus, { label: string; className: string }> = 
 };
 
 const REVIEW_FILTERS: { value: string; label: string }[] = [
-  { value: "all", label: "Todos" },
+  { value: "all", label: "Todas as situações" },
   { value: "published", label: "Publicados" },
   { value: "in_review", label: "Em revisão" },
   { value: "changes_requested", label: "Ajustes solicitados" },
@@ -137,6 +143,12 @@ const REVIEW_ACTION_TOAST: Record<ReviewStatus, string> = {
   changes_requested: "Ajustes solicitados ao autor",
 };
 
+const SUGGESTIONS = [
+  "Como dar baixa em um boleto?",
+  "Como lançar uma despesa recorrente?",
+  "Como conciliar o extrato do banco?",
+  "Como emitir uma nota fiscal?",
+];
 
 const emptyForm = {
   question: "",
@@ -146,7 +158,6 @@ const emptyForm = {
   status: "available" as FaqArticle["status"],
   related_route: "",
 };
-
 
 function parseSteps(raw: string): string[] {
   return raw
@@ -167,6 +178,7 @@ export default function FinancialFaqPage() {
   const [searching, setSearching] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const [reviewFilter, setReviewFilter] = useState<string>("all");
+  const [manageMode, setManageMode] = useState(false);
 
   const [textFilter, setTextFilter] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
@@ -174,7 +186,7 @@ export default function FinancialFaqPage() {
   const [editing, setEditing] = useState<FaqArticle | null>(null);
   const [form, setForm] = useState(emptyForm);
 
-  const { data: articles = [], isLoading } = useQuery({
+  const { data: allArticles = [], isLoading } = useQuery({
     queryKey: ["financial-faq-articles", accountId],
     queryFn: async () => {
       if (!accountId) return [];
@@ -189,6 +201,12 @@ export default function FinancialFaqPage() {
     },
     enabled: !!accountId,
   });
+
+  // No modo leitura o time só vê o que está publicado — sem ruído de rascunho.
+  const articles = useMemo(
+    () => (manageMode ? allArticles : allArticles.filter((a) => a.review_status === "published")),
+    [allArticles, manageMode],
+  );
 
   const categoryCounts = useMemo(() => {
     const map = new Map<string, number>();
@@ -217,7 +235,7 @@ export default function FinancialFaqPage() {
     const scored = articles
       .filter((a) => {
         if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
-        if (reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
+        if (manageMode && reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
         const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
         if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
         return true;
@@ -228,7 +246,7 @@ export default function FinancialFaqPage() {
         const question = normalize(a.question);
         const steps = normalize(a.answer_steps);
         const tags = (a.keywords ?? []).map((k) => normalize(k));
-        const categoryLabel = normalize(CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category);
+        const categoryLabel = normalize(categoryLabelOf(a.category));
         const route = normalize(a.related_route ?? "");
 
         let score = 0;
@@ -246,7 +264,6 @@ export default function FinancialFaqPage() {
           score += tokenScore;
         }
 
-        // Frase completa vale bônus
         if (question.includes(term)) score += 10;
         if (a.review_status === "published") score += 2;
         if (a.status === "available") score += 1;
@@ -257,15 +274,37 @@ export default function FinancialFaqPage() {
 
     if (tokens.length > 0) scored.sort((a, b) => b.score - a.score);
     return scored.map((r) => r.article);
-  }, [articles, categoryFilter, reviewFilter, selectedTags, textFilter]);
+  }, [articles, categoryFilter, reviewFilter, selectedTags, textFilter, manageMode]);
 
   const isRanked = normalize(textFilter).split(/\s+/).filter((t) => t.length >= 2).length > 0;
 
+  // Agrupa por categoria quando não há busca por termo — leitura muito mais calma.
+  const grouped = useMemo(() => {
+    if (isRanked) return null;
+    const map = new Map<string, FaqArticle[]>();
+    filtered.forEach((a) => {
+      const list = map.get(a.category) ?? [];
+      list.push(a);
+      map.set(a.category, list);
+    });
+    return [...map.entries()].sort((a, b) =>
+      categoryLabelOf(a[0]).localeCompare(categoryLabelOf(b[0])),
+    );
+  }, [filtered, isRanked]);
 
-  const byId = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
+  const hasFilters = selectedTags.length > 0 || !!textFilter || categoryFilter !== "all" || reviewFilter !== "all";
+  const clearFilters = () => {
+    setSelectedTags([]);
+    setTextFilter("");
+    setCategoryFilter("all");
+    setReviewFilter("all");
+  };
 
-  const runSearch = async () => {
-    const q = query.trim();
+  const byId = useMemo(() => new Map(allArticles.map((a) => [a.id, a])), [allArticles]);
+
+  const runSearch = async (raw?: string) => {
+    const q = (raw ?? query).trim();
+    if (raw) setQuery(raw);
     if (q.length < 3) {
       toast({ title: "Escreva a pergunta", description: "Use pelo menos 3 caracteres.", variant: "destructive" });
       return;
@@ -315,7 +354,6 @@ export default function FinancialFaqPage() {
         updated_by: currentUser?.id ?? null,
       };
       if (editing) {
-        // Editar um artigo publicado devolve o conteúdo para revisão.
         const nextReview =
           editing.review_status === "published" ? { review_status: "in_review", review_notes: null } : {};
         const { error } = await supabase
@@ -329,7 +367,6 @@ export default function FinancialFaqPage() {
           .insert({ ...payload, review_status: "draft", created_by: currentUser?.id ?? null } as any);
         if (error) throw error;
       }
-
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-faq-articles"] });
@@ -380,6 +417,7 @@ export default function FinancialFaqPage() {
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm);
+    setManageMode(true);
     setDialogOpen(true);
   };
 
@@ -402,334 +440,428 @@ export default function FinancialFaqPage() {
     reviewMutation.mutate({ article: a, next: "changes_requested", notes });
   };
 
-
-  return (
-    <div className="space-y-6 p-6">
-      <FinancialPageHeader
-        title="Central de Ajuda"
-        description="Pergunte como fazer algo no Financeiro e receba o passo a passo. Se ainda não existir, avisamos."
-        icon={CircleHelp}
-        actions={
-          <Button onClick={openNew}>
-            <Plus className="mr-2 h-4 w-4" />
-            Novo artigo
-          </Button>
-        }
-      />
-
-      <Card>
-        <CardContent className="space-y-4 pt-6">
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={query}
-                onChange={(e) => setQuery(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") runSearch();
-                }}
-                placeholder="Ex.: como eu faço pra dar baixa em um boleto?"
-                className="pl-9"
-              />
-            </div>
-            <Button onClick={runSearch} disabled={searching} className="sm:w-40">
-              {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-              {searching ? "Buscando..." : "Perguntar"}
-            </Button>
-          </div>
-
-          {searching && (
-            <div className="space-y-2">
-              <Skeleton className="h-5 w-1/3" />
-              <Skeleton className="h-4 w-full" />
-              <Skeleton className="h-4 w-4/5" />
-            </div>
+  const renderArticle = (a: FaqArticle) => (
+    <AccordionItem
+      key={a.id}
+      value={a.id}
+      className="border-b border-border/60 last:border-b-0"
+    >
+      <AccordionTrigger className="px-4 py-3.5 text-left hover:no-underline">
+        <div className="flex min-w-0 flex-1 items-center gap-3 pr-3">
+          <span className="min-w-0 truncate text-sm font-medium">{a.question}</span>
+          {a.status !== "available" && (
+            <Badge variant="outline" className={cn("shrink-0 text-[11px]", STATUS_META[a.status].className)}>
+              {STATUS_META[a.status].label}
+            </Badge>
           )}
-
-          {answer && !searching && (
-            <div
-              className={`rounded-lg border p-4 ${
-                answer.status === "answered"
-                  ? "border-emerald-500/30 bg-emerald-500/5"
-                  : "border-amber-500/30 bg-amber-500/5"
-              }`}
-            >
-              <div className="flex items-start gap-2">
-                {answer.status === "answered" ? (
-                  <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
-                ) : (
-                  <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
-                )}
-                <div className="min-w-0 flex-1 space-y-3">
-                  <div>
-                    <p className="font-semibold">{answer.title}</p>
-                    <p className="text-sm text-muted-foreground">{answer.summary}</p>
-                  </div>
-
-                  {answer.steps?.length > 0 && (
-                    <ol className="list-decimal space-y-1.5 pl-5 text-sm">
-                      {answer.steps.map((s, i) => (
-                        <li key={i}>{s}</li>
-                      ))}
-                    </ol>
-                  )}
-
-                  <div className="flex flex-wrap gap-2">
-                    {answer.related_route && (
-                      <Button size="sm" variant="outline" onClick={() => navigate(answer.related_route!)}>
-                        Abrir tela
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    )}
-                    {answer.status !== "answered" && (
-                      <Button size="sm" variant="outline" onClick={openNew}>
-                        <Plus className="mr-2 h-4 w-4" />
-                        Cadastrar esse passo a passo
-                      </Button>
-                    )}
-                  </div>
-
-                  {answer.related_article_ids?.length > 0 && (
-                    <div className="space-y-1 border-t border-border pt-2">
-                      <p className="text-xs font-medium uppercase text-muted-foreground">Também pode ajudar</p>
-                      {answer.related_article_ids.map((id) => {
-                        const a = byId.get(id);
-                        if (!a) return null;
-                        return (
-                          <p key={id} className="text-sm text-muted-foreground">
-                            • {a.question}
-                          </p>
-                        );
-                      })}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          {manageMode && a.review_status !== "published" && (
+            <Badge variant="outline" className={cn("shrink-0 text-[11px]", REVIEW_META[a.review_status].className)}>
+              {REVIEW_META[a.review_status].label}
+            </Badge>
           )}
-        </CardContent>
-      </Card>
-
-      <div className="space-y-3">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <h2 className="text-lg font-semibold">
-            Todos os artigos
-            <span className="ml-2 text-sm font-normal text-muted-foreground">
-              {filtered.length} de {articles.length}
-            </span>
-            {isRanked && (
-              <span className="ml-2 text-xs font-normal text-muted-foreground">
-                · ordenados por relevância
-              </span>
-            )}
-          </h2>
-
-          <div className="flex flex-col gap-2 sm:flex-row">
-            <div className="relative sm:w-64">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                value={textFilter}
-                onChange={(e) => setTextFilter(e.target.value)}
-                placeholder="Filtrar por termo, tag ou tela"
-                className="pl-9"
-              />
-            </div>
-            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-              <SelectTrigger className="sm:w-52">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as categorias ({articles.length})</SelectItem>
-                {CATEGORIES.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>
-                    {c.label} ({categoryCounts.get(c.value) ?? 0})
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            <Select value={reviewFilter} onValueChange={setReviewFilter}>
-              <SelectTrigger className="sm:w-48">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {REVIEW_FILTERS.map((f) => (
-                  <SelectItem key={f.value} value={f.value}>
-                    {f.label}
-                    {f.value !== "all"
-                      ? ` (${articles.filter((a) => a.review_status === f.value).length})`
-                      : ` (${articles.length})`}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-          </div>
         </div>
-
-        {allTags.length > 0 && (
-          <div className="flex flex-wrap items-center gap-1.5">
-            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
-            {allTags.map(([tag, count]) => {
-              const active = selectedTags.includes(tag);
-              return (
-                <button key={tag} type="button" onClick={() => toggleTag(tag)}>
-                  <Badge
-                    variant={active ? "default" : "outline"}
-                    className="cursor-pointer text-xs font-normal"
-                  >
-                    {tag}
-                    <span className="ml-1 opacity-60">{count}</span>
-                  </Badge>
-                </button>
-              );
-            })}
-            {(selectedTags.length > 0 || textFilter || categoryFilter !== "all") && (
-              <Button
-                variant="ghost"
-                size="sm"
-                className="h-6 px-2 text-xs"
-                onClick={() => {
-                  setSelectedTags([]);
-                  setTextFilter("");
-                  setCategoryFilter("all");
-                }}
-              >
-                Limpar filtros
-              </Button>
-            )}
-          </div>
+      </AccordionTrigger>
+      <AccordionContent className="space-y-4 px-4 pb-5">
+        {parseSteps(a.answer_steps).length > 0 ? (
+          <ol className="space-y-2 text-sm">
+            {parseSteps(a.answer_steps).map((s, i) => (
+              <li key={i} className="flex gap-3">
+                <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                  {i + 1}
+                </span>
+                <span className="leading-relaxed text-foreground/90">{s}</span>
+              </li>
+            ))}
+          </ol>
+        ) : (
+          <p className="text-sm text-muted-foreground">Sem passo a passo cadastrado.</p>
         )}
-      </div>
 
-      {isLoading ? (
-        <div className="space-y-2">
-          {[0, 1, 2].map((i) => (
-            <Skeleton key={i} className="h-14 w-full" />
+        {a.review_status === "changes_requested" && a.review_notes && (
+          <Alert>
+            <TriangleAlert className="h-4 w-4" />
+            <AlertDescription>Ajustes solicitados: {a.review_notes}</AlertDescription>
+          </Alert>
+        )}
+
+        <div className="flex flex-wrap items-center gap-2">
+          {a.related_route && (
+            <Button size="sm" variant="secondary" onClick={() => navigate(a.related_route!)}>
+              Abrir tela
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          )}
+          {(a.keywords ?? []).slice(0, 4).map((k) => (
+            <button key={k} type="button" onClick={() => toggleTag(k.toLowerCase())}>
+              <Badge variant="outline" className="text-[11px] font-normal text-muted-foreground">
+                {k}
+              </Badge>
+            </button>
           ))}
         </div>
-      ) : filtered.length === 0 ? (
-        <FinancialEmptyState
-          icon={CircleHelp}
-          title={articles.length === 0 ? "Nenhum artigo cadastrado" : "Nenhum artigo com esses filtros"}
-          description={
-            articles.length === 0
-              ? "Cadastre o passo a passo das dúvidas mais frequentes do time."
-              : "Ajuste o termo, a categoria ou as tags selecionadas."
-          }
-          action={{ label: "Novo artigo", onClick: openNew, icon: Plus }}
-        />
 
-      ) : (
-        <Accordion type="multiple" className="rounded-lg border border-border">
-          {filtered.map((a) => (
-            <AccordionItem key={a.id} value={a.id} className="px-4">
-              <AccordionTrigger className="text-left">
-                <div className="flex flex-1 flex-wrap items-center gap-2 pr-3">
-                  <span className="font-medium">{a.question}</span>
-                  <Badge variant="outline" className={STATUS_META[a.status].className}>
-                    {STATUS_META[a.status].label}
-                  </Badge>
-                  <Badge variant="outline" className={REVIEW_META[a.review_status].className}>
-                    {REVIEW_META[a.review_status].label}
-                  </Badge>
+        {manageMode && (
+          <>
+            <Separator />
+            <div className="flex flex-wrap gap-2">
+              {(a.review_status === "draft" || a.review_status === "changes_requested") && (
+                <Button
+                  size="sm"
+                  onClick={() => reviewMutation.mutate({ article: a, next: "in_review" })}
+                  disabled={reviewMutation.isPending}
+                >
+                  Enviar para revisão
+                </Button>
+              )}
+              {a.review_status === "in_review" && (
+                <>
+                  <Button
+                    size="sm"
+                    onClick={() => reviewMutation.mutate({ article: a, next: "published" })}
+                    disabled={reviewMutation.isPending}
+                  >
+                    <CircleCheck className="mr-2 h-4 w-4" />
+                    Aprovar e publicar
+                  </Button>
+                  <Button size="sm" variant="outline" onClick={() => requestChanges(a)} disabled={reviewMutation.isPending}>
+                    Solicitar ajustes
+                  </Button>
+                </>
+              )}
+              {a.review_status === "published" && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => reviewMutation.mutate({ article: a, next: "draft" })}
+                  disabled={reviewMutation.isPending}
+                >
+                  Despublicar
+                </Button>
+              )}
+              <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
+                <Edit2 className="mr-2 h-4 w-4" />
+                Editar
+              </Button>
+              <Button
+                size="sm"
+                variant="ghost"
+                className="text-destructive"
+                onClick={() => deleteMutation.mutate(a.id)}
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Excluir
+              </Button>
+            </div>
+          </>
+        )}
+      </AccordionContent>
+    </AccordionItem>
+  );
 
-                  <Badge variant="secondary">
-                    {CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category}
-                  </Badge>
-                  {(a.keywords ?? []).slice(0, 4).map((k) => (
-                    <Badge key={k} variant="outline" className="text-[11px] font-normal text-muted-foreground">
-                      {k}
-                    </Badge>
-                  ))}
+  return (
+    <div className="mx-auto w-full max-w-4xl p-6 pb-16">
+      {/* Hero de busca — foco total na pergunta */}
+      <section className="pt-2 text-center">
+        <div className="mx-auto mb-4 flex h-11 w-11 items-center justify-center rounded-xl bg-primary/10">
+          <CircleHelp className="h-5 w-5 text-primary" />
+        </div>
+        <h1 className="text-2xl font-semibold tracking-tight">Como podemos ajudar?</h1>
+        <p className="mt-1 text-sm text-muted-foreground">
+          Pergunte com suas palavras e receba o passo a passo do Financeiro.
+        </p>
+
+        <div className="mx-auto mt-5 flex max-w-2xl flex-col gap-2 sm:flex-row">
+          <div className="relative flex-1">
+            <Search className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter") runSearch();
+              }}
+              placeholder="Ex.: como dar baixa em um boleto?"
+              className="h-11 rounded-xl pl-10 text-base shadow-sm"
+            />
+          </div>
+          <Button onClick={() => runSearch()} disabled={searching} className="h-11 rounded-xl sm:w-36">
+            {searching ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+            {searching ? "Buscando" : "Perguntar"}
+          </Button>
+        </div>
+
+        {!answer && !searching && (
+          <div className="mt-3 flex flex-wrap justify-center gap-1.5">
+            {SUGGESTIONS.map((s) => (
+              <button
+                key={s}
+                type="button"
+                onClick={() => runSearch(s)}
+                className="rounded-full border border-border bg-muted/40 px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              >
+                {s}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {searching && (
+        <Card className="mt-6">
+          <CardContent className="space-y-2 pt-6">
+            <Skeleton className="h-5 w-1/3" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-4/5" />
+          </CardContent>
+        </Card>
+      )}
+
+      {answer && !searching && (
+        <Card className="mt-6 overflow-hidden">
+          <div
+            className={cn(
+              "h-1 w-full",
+              answer.status === "answered" ? "bg-emerald-500" : "bg-amber-500",
+            )}
+          />
+          <CardContent className="pt-5">
+            <div className="flex items-start gap-3">
+              {answer.status === "answered" ? (
+                <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+              ) : (
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+              )}
+              <div className="min-w-0 flex-1 space-y-4">
+                <div>
+                  <p className="font-semibold">{answer.title}</p>
+                  <p className="mt-0.5 text-sm text-muted-foreground">{answer.summary}</p>
                 </div>
-              </AccordionTrigger>
-              <AccordionContent className="space-y-3 pb-4">
-                {parseSteps(a.answer_steps).length > 0 ? (
-                  <ol className="list-decimal space-y-1.5 pl-5 text-sm">
-                    {parseSteps(a.answer_steps).map((s, i) => (
-                      <li key={i}>{s}</li>
+
+                {answer.steps?.length > 0 && (
+                  <ol className="space-y-2 text-sm">
+                    {answer.steps.map((s, i) => (
+                      <li key={i} className="flex gap-3">
+                        <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[11px] font-semibold text-primary">
+                          {i + 1}
+                        </span>
+                        <span className="leading-relaxed text-foreground/90">{s}</span>
+                      </li>
                     ))}
                   </ol>
-                ) : (
-                  <p className="text-sm text-muted-foreground">Sem passo a passo cadastrado.</p>
                 )}
-                {a.review_status === "changes_requested" && a.review_notes && (
-                  <Alert>
-                    <TriangleAlert className="h-4 w-4" />
-                    <AlertDescription>Ajustes solicitados: {a.review_notes}</AlertDescription>
-                  </Alert>
-                )}
-                {a.review_status === "in_review" && (
-                  <p className="text-xs text-muted-foreground">
-                    Aguardando revisão — ainda não aparece na busca do time.
-                  </p>
-                )}
-                <div className="flex flex-wrap gap-2">
-                  {(a.review_status === "draft" || a.review_status === "changes_requested") && (
-                    <Button
-                      size="sm"
-                      onClick={() => reviewMutation.mutate({ article: a, next: "in_review" })}
-                      disabled={reviewMutation.isPending}
-                    >
-                      Enviar para revisão
-                    </Button>
-                  )}
-                  {a.review_status === "in_review" && (
-                    <>
-                      <Button
-                        size="sm"
-                        onClick={() => reviewMutation.mutate({ article: a, next: "published" })}
-                        disabled={reviewMutation.isPending}
-                      >
-                        <CircleCheck className="mr-2 h-4 w-4" />
-                        Aprovar e publicar
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => requestChanges(a)}
-                        disabled={reviewMutation.isPending}
-                      >
-                        Solicitar ajustes
-                      </Button>
-                    </>
-                  )}
-                  {a.review_status === "published" && (
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => reviewMutation.mutate({ article: a, next: "draft" })}
-                      disabled={reviewMutation.isPending}
-                    >
-                      Despublicar
-                    </Button>
-                  )}
-                  {a.related_route && (
 
-                    <Button size="sm" variant="outline" onClick={() => navigate(a.related_route!)}>
+                <div className="flex flex-wrap gap-2">
+                  {answer.related_route && (
+                    <Button size="sm" onClick={() => navigate(answer.related_route!)}>
                       Abrir tela
                       <ArrowRight className="ml-2 h-4 w-4" />
                     </Button>
                   )}
-                  <Button size="sm" variant="ghost" onClick={() => openEdit(a)}>
-                    <Edit2 className="mr-2 h-4 w-4" />
-                    Editar
-                  </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="text-destructive"
-                    onClick={() => deleteMutation.mutate(a.id)}
-                  >
-                    <Trash2 className="mr-2 h-4 w-4" />
-                    Excluir
+                  {answer.status !== "answered" && (
+                    <Button size="sm" variant="outline" onClick={openNew}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      Cadastrar esse passo a passo
+                    </Button>
+                  )}
+                  <Button size="sm" variant="ghost" onClick={() => setAnswer(null)}>
+                    Fechar
                   </Button>
                 </div>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+
+                {answer.related_article_ids?.length > 0 && (
+                  <div className="space-y-1 border-t border-border pt-3">
+                    <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                      Também pode ajudar
+                    </p>
+                    {answer.related_article_ids.map((id) => {
+                      const a = byId.get(id);
+                      if (!a) return null;
+                      return (
+                        <p key={id} className="text-sm text-muted-foreground">
+                          • {a.question}
+                        </p>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       )}
+
+      {/* Biblioteca */}
+      <section className="mt-10 space-y-4">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <h2 className="flex items-center gap-2 text-base font-semibold">
+              <BookOpen className="h-4 w-4 text-muted-foreground" />
+              Artigos
+              <span className="text-sm font-normal text-muted-foreground">
+                {filtered.length}
+                {isRanked && " · por relevância"}
+              </span>
+            </h2>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="relative w-44 sm:w-60">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={textFilter}
+                onChange={(e) => setTextFilter(e.target.value)}
+                placeholder="Filtrar artigos"
+                className="h-9 pl-9"
+              />
+            </div>
+
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="h-9 gap-2">
+                  <SlidersHorizontal className="h-4 w-4" />
+                  Filtros
+                  {(selectedTags.length > 0 || categoryFilter !== "all" || reviewFilter !== "all") && (
+                    <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-primary px-1 text-[10px] text-primary-foreground">
+                      {selectedTags.length + (categoryFilter !== "all" ? 1 : 0) + (reviewFilter !== "all" ? 1 : 0)}
+                    </span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 space-y-4">
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Categoria</Label>
+                  <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+                    <SelectTrigger className="h-9">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas as categorias</SelectItem>
+                      {CATEGORIES.filter((c) => (categoryCounts.get(c.value) ?? 0) > 0).map((c) => (
+                        <SelectItem key={c.value} value={c.value}>
+                          {c.label} ({categoryCounts.get(c.value)})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {manageMode && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Situação</Label>
+                    <Select value={reviewFilter} onValueChange={setReviewFilter}>
+                      <SelectTrigger className="h-9">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {REVIEW_FILTERS.map((f) => (
+                          <SelectItem key={f.value} value={f.value}>
+                            {f.label}
+                            {f.value !== "all" &&
+                              ` (${allArticles.filter((a) => a.review_status === f.value).length})`}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                {allTags.length > 0 && (
+                  <div className="space-y-1.5">
+                    <Label className="text-xs">Tags</Label>
+                    <div className="flex max-h-44 flex-wrap gap-1.5 overflow-y-auto">
+                      {allTags.map(([tag, count]) => (
+                        <button key={tag} type="button" onClick={() => toggleTag(tag)}>
+                          <Badge
+                            variant={selectedTags.includes(tag) ? "default" : "outline"}
+                            className="cursor-pointer text-[11px] font-normal"
+                          >
+                            {tag}
+                            <span className="ml-1 opacity-60">{count}</span>
+                          </Badge>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {hasFilters && (
+                  <Button variant="ghost" size="sm" className="w-full" onClick={clearFilters}>
+                    <X className="mr-2 h-4 w-4" />
+                    Limpar filtros
+                  </Button>
+                )}
+              </PopoverContent>
+            </Popover>
+
+            <Button
+              variant={manageMode ? "default" : "ghost"}
+              size="sm"
+              className="h-9 gap-2"
+              onClick={() => {
+                setManageMode((v) => !v);
+                setReviewFilter("all");
+              }}
+            >
+              <Settings2 className="h-4 w-4" />
+              Gerenciar
+            </Button>
+          </div>
+        </div>
+
+        {manageMode && (
+          <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-dashed border-border bg-muted/30 px-4 py-2.5">
+            <p className="text-xs text-muted-foreground">
+              Modo gestão: rascunhos e artigos em revisão também aparecem aqui.
+            </p>
+            <Button size="sm" onClick={openNew}>
+              <Plus className="mr-2 h-4 w-4" />
+              Novo artigo
+            </Button>
+          </div>
+        )}
+
+        {isLoading ? (
+          <div className="space-y-2">
+            {[0, 1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-12 w-full" />
+            ))}
+          </div>
+        ) : filtered.length === 0 ? (
+          <Card>
+            <FinancialEmptyState
+              icon={CircleHelp}
+              title={articles.length === 0 ? "Nenhum artigo publicado ainda" : "Nada encontrado com esses filtros"}
+              description={
+                articles.length === 0
+                  ? "Cadastre o passo a passo das dúvidas mais frequentes do time."
+                  : "Ajuste o termo, a categoria ou as tags selecionadas."
+              }
+              action={
+                hasFilters
+                  ? { label: "Limpar filtros", onClick: clearFilters, icon: X }
+                  : { label: "Novo artigo", onClick: openNew, icon: Plus }
+              }
+            />
+          </Card>
+        ) : grouped ? (
+          <div className="space-y-5">
+            {grouped.map(([category, list]) => (
+              <div key={category} className="space-y-2">
+                <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  {categoryLabelOf(category)}
+                  <span className="ml-2 font-normal opacity-70">{list.length}</span>
+                </p>
+                <Card className="overflow-hidden">
+                  <Accordion type="multiple">{list.map(renderArticle)}</Accordion>
+                </Card>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <Card className="overflow-hidden">
+            <Accordion type="multiple">{filtered.map(renderArticle)}</Accordion>
+          </Card>
+        )}
+      </section>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-2xl">
@@ -807,16 +939,13 @@ export default function FinancialFaqPage() {
             </div>
             {editing && (
               <div className="rounded-lg border border-border p-3">
-                <p className="text-sm font-medium">
-                  Situação: {REVIEW_META[editing.review_status].label}
-                </p>
+                <p className="text-sm font-medium">Situação: {REVIEW_META[editing.review_status].label}</p>
                 <p className="text-xs text-muted-foreground">
                   Artigos só aparecem para o time depois de aprovados. Ao editar um artigo publicado, ele volta para
                   revisão.
                 </p>
               </div>
             )}
-
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
