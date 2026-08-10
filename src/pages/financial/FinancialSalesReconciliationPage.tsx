@@ -120,6 +120,8 @@ export default function FinancialSalesReconciliationPage() {
   const [processing, setProcessing] = useState(false);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [detailContract, setDetailContract] = useState<Contract | null>(null);
+  const [signatureMap, setSignatureMap] = useState<Record<string, DigitalContractInfo>>({});
+  const [signatureFilter, setSignatureFilter] = useState<SignatureFilter>("all");
 
   const fetchContracts = async () => {
     if (!currentUser?.account_id) return;
