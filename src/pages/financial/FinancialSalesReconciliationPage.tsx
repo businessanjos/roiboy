@@ -50,6 +50,8 @@ import {
   Eye,
   Search,
   RefreshCw,
+  PenLine,
+  FileSignature,
 } from "lucide-react";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
@@ -59,6 +61,7 @@ interface Contract {
   id: string;
   client_id: string;
   account_id: string;
+  deal_id: string | null;
   product_id: string | null;
   value: number;
   currency: string;
@@ -90,6 +93,32 @@ interface PaymentConfig {
   firstDueDate: string;
 }
 
+interface DigitalContractInfo {
+  id: string;
+  status: string;
+  signed_at: string | null;
+  contract_number: string | null;
+  share_token: string | null;
+}
+
+type SignatureFilter = "all" | "awaiting" | "signed" | "none";
+
+const SIGNATURE_LABELS: Record<string, { label: string; className: string }> = {
+  signed: {
+    label: "Assinado",
+    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+  },
+  awaiting: {
+    label: "Aguardando assinatura",
+    className: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+  },
+  none: {
+    label: "Sem contrato digital",
+    className: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  },
+};
+
+
 const PAYMENT_METHODS = [
   { value: "pix", label: "PIX" },
   { value: "boleto", label: "Boleto" },
@@ -119,6 +148,8 @@ export default function FinancialSalesReconciliationPage() {
   const [processing, setProcessing] = useState(false);
   const [detailSheetOpen, setDetailSheetOpen] = useState(false);
   const [detailContract, setDetailContract] = useState<Contract | null>(null);
+  const [signatureMap, setSignatureMap] = useState<Record<string, DigitalContractInfo>>({});
+  const [signatureFilter, setSignatureFilter] = useState<SignatureFilter>("all");
 
   const fetchContracts = async () => {
     if (!currentUser?.account_id) return;
@@ -159,7 +190,47 @@ export default function FinancialSalesReconciliationPage() {
 
       if (processedError) throw processedError;
       setProcessedContracts((processed || []) as Contract[]);
-      
+
+      // Fetch digital contracts (signature status) for pending contracts
+      const pendingList = (pending || []) as Contract[];
+      const dealIds = pendingList.map((c) => c.deal_id).filter(Boolean) as string[];
+      const clientIds = pendingList.map((c) => c.client_id).filter(Boolean);
+
+      let digital: any[] = [];
+      if (pendingList.length > 0) {
+        const { data: digitalData } = await supabase
+          .from("digital_contracts")
+          .select("id, status, signed_at, contract_number, share_token, deal_id, client_id, created_at")
+          .eq("account_id", currentUser.account_id)
+          .or(
+            [
+              dealIds.length ? `deal_id.in.(${dealIds.join(",")})` : null,
+              clientIds.length ? `client_id.in.(${clientIds.join(",")})` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          )
+          .order("created_at", { ascending: false });
+        digital = digitalData || [];
+      }
+
+      const map: Record<string, DigitalContractInfo> = {};
+      for (const contract of pendingList) {
+        const match =
+          (digital as any[]).find((d) => contract.deal_id && d.deal_id === contract.deal_id) ||
+          (digital as any[]).find((d) => d.client_id === contract.client_id);
+        if (match) {
+          map[contract.id] = {
+            id: match.id,
+            status: match.status,
+            signed_at: match.signed_at,
+            contract_number: match.contract_number,
+            share_token: match.share_token,
+          };
+        }
+      }
+      setSignatureMap(map);
+
       // Sync detailContract with fresh data to prevent stale state
       if (detailContract) {
         const allContracts = [...(pending || []), ...(processed || [])];
@@ -180,15 +251,32 @@ export default function FinancialSalesReconciliationPage() {
     fetchContracts();
   }, [currentUser?.account_id]);
 
+  const signatureStateOf = (contract: Contract): SignatureFilter => {
+    const dc = signatureMap[contract.id];
+    if (!dc) return "none";
+    if (dc.status === "signed" || dc.signed_at) return "signed";
+    return "awaiting";
+  };
+
+  const signatureCounts = useMemo(() => {
+    const counts = { awaiting: 0, signed: 0, none: 0 };
+    for (const c of pendingContracts) counts[signatureStateOf(c) as "awaiting" | "signed" | "none"]++;
+    return counts;
+  }, [pendingContracts, signatureMap]);
+
   const filteredPending = useMemo(() => {
-    if (!searchQuery) return pendingContracts;
     const q = searchQuery.toLowerCase();
-    return pendingContracts.filter(
-      (c) =>
+    return pendingContracts.filter((c) => {
+      const matchesSearch =
+        !searchQuery ||
         c.client?.full_name.toLowerCase().includes(q) ||
-        c.product?.name?.toLowerCase().includes(q)
-    );
-  }, [pendingContracts, searchQuery]);
+        c.product?.name?.toLowerCase().includes(q);
+      const matchesSignature =
+        signatureFilter === "all" || signatureStateOf(c) === signatureFilter;
+      return matchesSearch && matchesSignature;
+    });
+  }, [pendingContracts, searchQuery, signatureFilter, signatureMap]);
+
 
   const totalPendingValue = useMemo(
     () => pendingContracts.reduce((sum, c) => sum + (c.value || 0), 0),
@@ -385,16 +473,23 @@ export default function FinancialSalesReconciliationPage() {
       <FinancialPageHeader
         icon={FileCheck}
         title="Conciliação de Vendas"
-        description="Confirme os contratos fechados e gere as parcelas a receber no fluxo financeiro."
+        description="Contratos fechados que ainda não geraram parcelas. O faturamento é liberado automaticamente quando o contrato digital é assinado."
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <FinancialKpiCard
           icon={Clock}
-          label="Pendentes"
+          label="Sem parcelas geradas"
           value={String(pendingContracts.length)}
-          hint="contratos aguardando conciliação"
+          hint="contratos aguardando faturamento"
+          tone="warning"
+        />
+        <FinancialKpiCard
+          icon={PenLine}
+          label="Aguardando assinatura"
+          value={String(signatureCounts.awaiting)}
+          hint="contrato digital enviado, sem assinatura"
           tone="warning"
         />
         <FinancialKpiCard
@@ -407,10 +502,11 @@ export default function FinancialSalesReconciliationPage() {
           icon={CheckCircle2}
           label="Processados (30d)"
           value={String(processedContracts.length)}
-          hint="contratos já conciliados"
+          hint="contratos já faturados"
           tone="success"
         />
       </div>
+
 
       {/* Tabs */}
       <Tabs defaultValue="pending" className="w-full">
@@ -460,6 +556,33 @@ export default function FinancialSalesReconciliationPage() {
             </div>
           </div>
 
+          {/* Signature filter chips */}
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: "all", label: `Todos (${pendingContracts.length})` },
+              { key: "awaiting", label: `Aguardando assinatura (${signatureCounts.awaiting})` },
+              { key: "signed", label: `Assinado sem parcelas (${signatureCounts.signed})` },
+              { key: "none", label: `Sem contrato digital (${signatureCounts.none})` },
+            ] as { key: SignatureFilter; label: string }[]).map((chip) => (
+              <Button
+                key={chip.key}
+                size="sm"
+                variant={signatureFilter === chip.key ? "default" : "outline"}
+                onClick={() => setSignatureFilter(chip.key)}
+              >
+                {chip.label}
+              </Button>
+            ))}
+          </div>
+
+          {signatureCounts.signed > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+              {signatureCounts.signed} contrato(s) já assinado(s) ainda sem parcelas geradas. Use
+              "Gerar" para liberar o faturamento manualmente.
+            </div>
+          )}
+
+
           {/* Table */}
           <Card>
             <Table>
@@ -475,6 +598,7 @@ export default function FinancialSalesReconciliationPage() {
                     />
                   </TableHead>
                   <TableHead>Cliente</TableHead>
+                  <TableHead>Assinatura</TableHead>
                   <TableHead>Produto</TableHead>
                   <TableHead className="text-right">Valor</TableHead>
                   <TableHead>Descrição</TableHead>
@@ -497,8 +621,8 @@ export default function FinancialSalesReconciliationPage() {
                   ))
                 ) : filteredPending.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Nenhum contrato pendente de conciliação
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      Nenhum contrato nesta situação
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -515,6 +639,30 @@ export default function FinancialSalesReconciliationPage() {
                       <TableCell className="font-medium">
                         {contract.client?.full_name || "—"}
                       </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const state = signatureStateOf(contract);
+                          const meta = SIGNATURE_LABELS[state];
+                          const dc = signatureMap[contract.id];
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant="outline" className={`gap-1 ${meta.className}`}>
+                                <FileSignature className="h-3 w-3" />
+                                {meta.label}
+                              </Badge>
+                              {dc?.contract_number && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {dc.contract_number}
+                                  {dc.signed_at
+                                    ? ` · ${format(new Date(dc.signed_at), "dd/MM/yyyy")}`
+                                    : ""}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+
                       <TableCell>
                         {contract.product ? (
                           <Badge
