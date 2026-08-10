@@ -652,12 +652,31 @@ export default function FinancialSalesReconciliationPage() {
             ))}
           </div>
 
-          {signatureCounts.signed > 0 && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              {signatureCounts.signed} contrato(s) já assinado(s) ainda sem parcelas geradas. Use
-              "Gerar" para liberar o faturamento manualmente.
+          {signedPending.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">
+                  {signedPending.length} contrato(s) assinado(s) ainda sem parcelas geradas.
+                </p>
+                <p className="text-xs opacity-90">
+                  {signedReady.length} pronto(s) para gerar parcelas e lançamentos
+                  {signedMissingConfig > 0
+                    ? ` · ${signedMissingConfig} sem configuração de pagamento (configure antes)`
+                    : ""}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setReleaseDialogOpen(true)}
+                disabled={releasing || processing || signedReady.length === 0}
+                className="shrink-0"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Gerar em lote ({signedReady.length})
+              </Button>
             </div>
           )}
+
 
 
           {/* Table */}
