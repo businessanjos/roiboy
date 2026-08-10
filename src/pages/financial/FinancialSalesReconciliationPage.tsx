@@ -1017,7 +1017,56 @@ export default function FinancialSalesReconciliationPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Batch release confirmation */}
+      <AlertDialog open={releaseDialogOpen} onOpenChange={setReleaseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Gerar parcelas e lançamentos de {signedReady.length} contrato(s)?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Apenas contratos com assinatura confirmada e configuração de pagamento
+                  definida serão processados. A ação é irreversível.
+                </p>
+                <div className="max-h-40 overflow-y-auto rounded-md border p-2 text-xs">
+                  {signedReady.map((c) => (
+                    <div key={c.id} className="flex justify-between gap-2 py-0.5">
+                      <span className="truncate">{c.client?.full_name || "Cliente"}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {c.installments_count}x · {formatCurrency(c.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={releasing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleReleaseSignedBatch();
+              }}
+              disabled={releasing}
+            >
+              {releasing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                "Confirmar geração"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Contract Detail Sheet */}
+
       {detailContract && (
         <ContractDetailSheet
           open={detailSheetOpen}
