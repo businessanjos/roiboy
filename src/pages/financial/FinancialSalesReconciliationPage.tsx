@@ -50,6 +50,8 @@ import {
   Eye,
   Search,
   RefreshCw,
+  PenLine,
+  FileSignature,
 } from "lucide-react";
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
