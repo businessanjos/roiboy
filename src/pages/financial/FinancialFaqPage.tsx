@@ -114,6 +114,8 @@ export default function FinancialFaqPage() {
   const [answer, setAnswer] = useState<FaqAnswer | null>(null);
   const [searching, setSearching] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [textFilter, setTextFilter] = useState("");
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<FaqArticle | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -134,10 +136,45 @@ export default function FinancialFaqPage() {
     enabled: !!accountId,
   });
 
+  const categoryCounts = useMemo(() => {
+    const map = new Map<string, number>();
+    articles.forEach((a) => map.set(a.category, (map.get(a.category) ?? 0) + 1));
+    return map;
+  }, [articles]);
+
+  const allTags = useMemo(() => {
+    const map = new Map<string, number>();
+    articles.forEach((a) =>
+      (a.keywords ?? []).forEach((k) => {
+        const tag = k.trim().toLowerCase();
+        if (tag) map.set(tag, (map.get(tag) ?? 0) + 1);
+      }),
+    );
+    return [...map.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]));
+  }, [articles]);
+
+  const toggleTag = (tag: string) =>
+    setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+
   const filtered = useMemo(() => {
-    if (categoryFilter === "all") return articles;
-    return articles.filter((a) => a.category === categoryFilter);
-  }, [articles, categoryFilter]);
+    const term = textFilter.trim().toLowerCase();
+    return articles.filter((a) => {
+      if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
+      const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
+      if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
+      if (!term) return true;
+      const haystack = [
+        a.question,
+        a.answer_steps,
+        a.related_route ?? "",
+        CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category,
+        ...tags,
+      ]
+        .join(" ")
+        .toLowerCase();
+      return haystack.includes(term);
+    });
+  }, [articles, categoryFilter, selectedTags, textFilter]);
 
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
 
