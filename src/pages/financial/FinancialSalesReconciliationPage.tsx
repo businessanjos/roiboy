@@ -209,7 +209,7 @@ export default function FinancialSalesReconciliationPage() {
               .join(",")
           )
           .order("created_at", { ascending: false });
-        digital = (digitalData || []) as never;
+        digital = digitalData || [];
       }
 
       const map: Record<string, DigitalContractInfo> = {};
