@@ -254,18 +254,24 @@ export default function FinancialFaqPage() {
         ),
         status: form.status,
         related_route: form.related_route.trim() || null,
-        is_published: form.is_published,
         updated_by: currentUser?.id ?? null,
       };
       if (editing) {
-        const { error } = await supabase.from("financial_faq_articles").update(payload as any).eq("id", editing.id);
+        // Editar um artigo publicado devolve o conteúdo para revisão.
+        const nextReview =
+          editing.review_status === "published" ? { review_status: "in_review", review_notes: null } : {};
+        const { error } = await supabase
+          .from("financial_faq_articles")
+          .update({ ...payload, ...nextReview } as any)
+          .eq("id", editing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("financial_faq_articles")
-          .insert({ ...payload, created_by: currentUser?.id ?? null } as any);
+          .insert({ ...payload, review_status: "draft", created_by: currentUser?.id ?? null } as any);
         if (error) throw error;
       }
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-faq-articles"] });
