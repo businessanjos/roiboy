@@ -42,6 +42,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   FileCheck,
   DollarSign,
   Clock,
@@ -52,7 +62,10 @@ import {
   RefreshCw,
   PenLine,
   FileSignature,
+  Zap,
+  Loader2,
 } from "lucide-react";
+
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
