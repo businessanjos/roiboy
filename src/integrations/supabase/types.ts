@@ -10204,7 +10204,13 @@ export type Database = {
           not_helpful_count: number
           question: string
           related_route: string | null
+          review_notes: string | null
+          review_status: string
+          reviewed_at: string | null
+          reviewed_by: string | null
           status: string
+          submitted_at: string | null
+          submitted_by: string | null
           updated_at: string
           updated_by: string | null
           view_count: number
@@ -10223,7 +10229,13 @@ export type Database = {
           not_helpful_count?: number
           question: string
           related_route?: string | null
+          review_notes?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
           updated_at?: string
           updated_by?: string | null
           view_count?: number
@@ -10242,7 +10254,13 @@ export type Database = {
           not_helpful_count?: number
           question?: string
           related_route?: string | null
+          review_notes?: string | null
+          review_status?: string
+          reviewed_at?: string | null
+          reviewed_by?: string | null
           status?: string
+          submitted_at?: string | null
+          submitted_by?: string | null
           updated_at?: string
           updated_by?: string | null
           view_count?: number

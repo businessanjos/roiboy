@@ -23,7 +23,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Switch } from "@/components/ui/switch";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Accordion,
@@ -48,6 +48,8 @@ import {
 import { FinancialPageHeader } from "@/components/financial/_shared/FinancialPageHeader";
 import { FinancialEmptyState } from "@/components/financial/_shared/FinancialEmptyState";
 
+type ReviewStatus = "draft" | "in_review" | "published" | "changes_requested";
+
 interface FaqArticle {
   id: string;
   question: string;
@@ -58,6 +60,13 @@ interface FaqArticle {
   related_route: string | null;
   display_order: number;
   is_published: boolean;
+  review_status: ReviewStatus;
+  review_notes: string | null;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_by: string | null;
 }
 
 interface FaqAnswer {
@@ -87,6 +96,32 @@ const STATUS_META: Record<FaqArticle["status"], { label: string; className: stri
   planned: { label: "Planejado", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
 };
 
+const REVIEW_META: Record<ReviewStatus, { label: string; className: string }> = {
+  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground border-border" },
+  in_review: { label: "Em revisão", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+  published: { label: "Publicado", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  changes_requested: {
+    label: "Ajustes solicitados",
+    className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  },
+};
+
+const REVIEW_FILTERS: { value: string; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "published", label: "Publicados" },
+  { value: "in_review", label: "Em revisão" },
+  { value: "changes_requested", label: "Ajustes solicitados" },
+  { value: "draft", label: "Rascunhos" },
+];
+
+const REVIEW_ACTION_TOAST: Record<ReviewStatus, string> = {
+  draft: "Artigo devolvido para rascunho",
+  in_review: "Artigo enviado para revisão",
+  published: "Artigo aprovado e publicado",
+  changes_requested: "Ajustes solicitados ao autor",
+};
+
+
 const emptyForm = {
   question: "",
   answer_steps: "",
@@ -94,8 +129,8 @@ const emptyForm = {
   keywords: "",
   status: "available" as FaqArticle["status"],
   related_route: "",
-  is_published: true,
 };
+
 
 function parseSteps(raw: string): string[] {
   return raw
@@ -115,6 +150,8 @@ export default function FinancialFaqPage() {
   const [answer, setAnswer] = useState<FaqAnswer | null>(null);
   const [searching, setSearching] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [reviewFilter, setReviewFilter] = useState<string>("all");
+
   const [textFilter, setTextFilter] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -161,6 +198,8 @@ export default function FinancialFaqPage() {
     const term = textFilter.trim().toLowerCase();
     return articles.filter((a) => {
       if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
+      if (reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
+
       const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
       if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
       if (!term) return true;
@@ -175,7 +214,7 @@ export default function FinancialFaqPage() {
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [articles, categoryFilter, selectedTags, textFilter]);
+  }, [articles, categoryFilter, reviewFilter, selectedTags, textFilter]);
 
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
 
@@ -227,18 +266,24 @@ export default function FinancialFaqPage() {
         ),
         status: form.status,
         related_route: form.related_route.trim() || null,
-        is_published: form.is_published,
         updated_by: currentUser?.id ?? null,
       };
       if (editing) {
-        const { error } = await supabase.from("financial_faq_articles").update(payload as any).eq("id", editing.id);
+        // Editar um artigo publicado devolve o conteúdo para revisão.
+        const nextReview =
+          editing.review_status === "published" ? { review_status: "in_review", review_notes: null } : {};
+        const { error } = await supabase
+          .from("financial_faq_articles")
+          .update({ ...payload, ...nextReview } as any)
+          .eq("id", editing.id);
         if (error) throw error;
       } else {
         const { error } = await supabase
           .from("financial_faq_articles")
-          .insert({ ...payload, created_by: currentUser?.id ?? null } as any);
+          .insert({ ...payload, review_status: "draft", created_by: currentUser?.id ?? null } as any);
         if (error) throw error;
       }
+
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["financial-faq-articles"] });
@@ -262,6 +307,30 @@ export default function FinancialFaqPage() {
     onError: (e: any) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async ({ article, next, notes }: { article: FaqArticle; next: ReviewStatus; notes?: string }) => {
+      const patch: Record<string, any> = {
+        review_status: next,
+        updated_by: currentUser?.id ?? null,
+      };
+      if (next === "in_review") {
+        patch.submitted_by = currentUser?.id ?? null;
+        patch.review_notes = null;
+      }
+      if (next === "published" || next === "changes_requested") {
+        patch.reviewed_by = currentUser?.id ?? null;
+        patch.review_notes = notes?.trim() || null;
+      }
+      const { error } = await supabase.from("financial_faq_articles").update(patch as any).eq("id", article.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["financial-faq-articles"] });
+      toast({ title: REVIEW_ACTION_TOAST[vars.next] });
+    },
+    onError: (e: any) => toast({ title: "Erro ao atualizar", description: e.message, variant: "destructive" }),
+  });
+
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm);
@@ -277,10 +346,16 @@ export default function FinancialFaqPage() {
       keywords: (a.keywords ?? []).join(", "),
       status: a.status,
       related_route: a.related_route ?? "",
-      is_published: a.is_published,
     });
     setDialogOpen(true);
   };
+
+  const requestChanges = (a: FaqArticle) => {
+    const notes = window.prompt("O que precisa ser ajustado neste artigo?");
+    if (notes === null) return;
+    reviewMutation.mutate({ article: a, next: "changes_requested", notes });
+  };
+
 
   return (
     <div className="space-y-6 p-6">
@@ -420,6 +495,22 @@ export default function FinancialFaqPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={reviewFilter} onValueChange={setReviewFilter}>
+              <SelectTrigger className="sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REVIEW_FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                    {f.value !== "all"
+                      ? ` (${articles.filter((a) => a.review_status === f.value).length})`
+                      : ` (${articles.length})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
           </div>
         </div>
 
@@ -486,7 +577,10 @@ export default function FinancialFaqPage() {
                   <Badge variant="outline" className={STATUS_META[a.status].className}>
                     {STATUS_META[a.status].label}
                   </Badge>
-                  {!a.is_published && <Badge variant="outline">Rascunho</Badge>}
+                  <Badge variant="outline" className={REVIEW_META[a.review_status].className}>
+                    {REVIEW_META[a.review_status].label}
+                  </Badge>
+
                   <Badge variant="secondary">
                     {CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category}
                   </Badge>
@@ -507,8 +601,59 @@ export default function FinancialFaqPage() {
                 ) : (
                   <p className="text-sm text-muted-foreground">Sem passo a passo cadastrado.</p>
                 )}
+                {a.review_status === "changes_requested" && a.review_notes && (
+                  <Alert>
+                    <TriangleAlert className="h-4 w-4" />
+                    <AlertDescription>Ajustes solicitados: {a.review_notes}</AlertDescription>
+                  </Alert>
+                )}
+                {a.review_status === "in_review" && (
+                  <p className="text-xs text-muted-foreground">
+                    Aguardando revisão — ainda não aparece na busca do time.
+                  </p>
+                )}
                 <div className="flex flex-wrap gap-2">
+                  {(a.review_status === "draft" || a.review_status === "changes_requested") && (
+                    <Button
+                      size="sm"
+                      onClick={() => reviewMutation.mutate({ article: a, next: "in_review" })}
+                      disabled={reviewMutation.isPending}
+                    >
+                      Enviar para revisão
+                    </Button>
+                  )}
+                  {a.review_status === "in_review" && (
+                    <>
+                      <Button
+                        size="sm"
+                        onClick={() => reviewMutation.mutate({ article: a, next: "published" })}
+                        disabled={reviewMutation.isPending}
+                      >
+                        <CircleCheck className="mr-2 h-4 w-4" />
+                        Aprovar e publicar
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => requestChanges(a)}
+                        disabled={reviewMutation.isPending}
+                      >
+                        Solicitar ajustes
+                      </Button>
+                    </>
+                  )}
+                  {a.review_status === "published" && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => reviewMutation.mutate({ article: a, next: "draft" })}
+                      disabled={reviewMutation.isPending}
+                    >
+                      Despublicar
+                    </Button>
+                  )}
                   {a.related_route && (
+
                     <Button size="sm" variant="outline" onClick={() => navigate(a.related_route!)}>
                       Abrir tela
                       <ArrowRight className="ml-2 h-4 w-4" />
@@ -608,16 +753,18 @@ export default function FinancialFaqPage() {
                 />
               </div>
             </div>
-            <div className="flex items-center justify-between rounded-lg border border-border p-3">
-              <div>
-                <p className="text-sm font-medium">Publicado</p>
-                <p className="text-xs text-muted-foreground">Artigos não publicados não aparecem na busca.</p>
+            {editing && (
+              <div className="rounded-lg border border-border p-3">
+                <p className="text-sm font-medium">
+                  Situação: {REVIEW_META[editing.review_status].label}
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  Artigos só aparecem para o time depois de aprovados. Ao editar um artigo publicado, ele volta para
+                  revisão.
+                </p>
               </div>
-              <Switch
-                checked={form.is_published}
-                onCheckedChange={(v) => setForm({ ...form, is_published: v })}
-              />
-            </div>
+            )}
+
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)}>
