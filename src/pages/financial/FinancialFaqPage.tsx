@@ -198,6 +198,8 @@ export default function FinancialFaqPage() {
     const term = textFilter.trim().toLowerCase();
     return articles.filter((a) => {
       if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
+      if (reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
+
       const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
       if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
       if (!term) return true;
