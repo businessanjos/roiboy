@@ -295,6 +295,30 @@ export default function FinancialFaqPage() {
     onError: (e: any) => toast({ title: "Erro ao excluir", description: e.message, variant: "destructive" }),
   });
 
+  const reviewMutation = useMutation({
+    mutationFn: async ({ article, next, notes }: { article: FaqArticle; next: ReviewStatus; notes?: string }) => {
+      const patch: Record<string, any> = {
+        review_status: next,
+        updated_by: currentUser?.id ?? null,
+      };
+      if (next === "in_review") {
+        patch.submitted_by = currentUser?.id ?? null;
+        patch.review_notes = null;
+      }
+      if (next === "published" || next === "changes_requested") {
+        patch.reviewed_by = currentUser?.id ?? null;
+        patch.review_notes = notes?.trim() || null;
+      }
+      const { error } = await supabase.from("financial_faq_articles").update(patch as any).eq("id", article.id);
+      if (error) throw error;
+    },
+    onSuccess: (_d, vars) => {
+      queryClient.invalidateQueries({ queryKey: ["financial-faq-articles"] });
+      toast({ title: REVIEW_ACTION_TOAST[vars.next] });
+    },
+    onError: (e: any) => toast({ title: "Erro ao atualizar", description: e.message, variant: "destructive" }),
+  });
+
   const openNew = () => {
     setEditing(null);
     setForm(emptyForm);
@@ -310,10 +334,16 @@ export default function FinancialFaqPage() {
       keywords: (a.keywords ?? []).join(", "),
       status: a.status,
       related_route: a.related_route ?? "",
-      is_published: a.is_published,
     });
     setDialogOpen(true);
   };
+
+  const requestChanges = (a: FaqArticle) => {
+    const notes = window.prompt("O que precisa ser ajustado neste artigo?");
+    if (notes === null) return;
+    reviewMutation.mutate({ article: a, next: "changes_requested", notes });
+  };
+
 
   return (
     <div className="space-y-6 p-6">
