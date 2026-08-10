@@ -150,6 +150,8 @@ export default function FinancialFaqPage() {
   const [answer, setAnswer] = useState<FaqAnswer | null>(null);
   const [searching, setSearching] = useState(false);
   const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [reviewFilter, setReviewFilter] = useState<string>("all");
+
   const [textFilter, setTextFilter] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
   const [dialogOpen, setDialogOpen] = useState(false);
