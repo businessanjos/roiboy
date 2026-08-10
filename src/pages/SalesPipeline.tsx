@@ -2081,6 +2081,10 @@ export default function SalesPipeline() {
                 }
               }
 
+              // IMPORTANTE: o faturamento (parcelas + lançamentos) NÃO é gerado aqui.
+              // Apenas preparamos o plano de pagamento no contrato; a geração ocorre
+              // automaticamente quando o contrato digital for confirmado como assinado
+              // (trigger trg_digital_contract_signed_release_billing).
               if (installmentsDetail.length > 0 && firstDueIso) {
                 const { error: prepErr } = await supabase
                   .from("client_contracts")
@@ -2094,36 +2098,16 @@ export default function SalesPipeline() {
                 if (prepErr) {
                   console.error("[MarkAsWon] Auto-installments prep error:", prepErr);
                 } else {
-                  const { error: flagErr } = await supabase
-                    .from("client_contracts")
-                    .update({
-                      receivables_generated: true,
-                      receivables_generated_at: new Date().toISOString(),
-                    })
-                    .eq("id", newContract.id);
-
-                  if (flagErr) {
-                    console.error("[MarkAsWon] Auto-installments flag error:", flagErr);
-                  } else {
-                    console.log(`[MarkAsWon] Auto-generated ${installmentsDetail.length} installment(s) from ${breakdown?.length ? "breakdown" : "parcelas"} starting ${firstDueIso}`);
-                    toast.success(`${installmentsDetail.length} parcela(s) geradas automaticamente no financeiro`);
-                  }
+                  console.log(`[MarkAsWon] Plano com ${installmentsDetail.length} parcela(s) preparado a partir de ${breakdown?.length ? "breakdown" : "parcelas"} iniciando ${firstDueIso} — aguardando assinatura`);
+                  toast.success(
+                    `${installmentsDetail.length} parcela(s) preparadas — serão geradas no financeiro após a assinatura do contrato`,
+                  );
                 }
               } else {
-                console.log("[MarkAsWon] Sem breakdown/parcelas — disparando geração de recebíveis a partir do valor do contrato");
-                const { error: fallbackFlagErr } = await supabase
-                  .from("client_contracts")
-                  .update({
-                    receivables_generated: true,
-                    receivables_generated_at: new Date().toISOString(),
-                  })
-                  .eq("id", newContract.id);
-                if (fallbackFlagErr) {
-                  console.error("[MarkAsWon] Fallback receivables flag error:", fallbackFlagErr);
-                } else {
-                  toast.success("Recebíveis do contrato gerados automaticamente no financeiro");
-                }
+                console.log("[MarkAsWon] Sem breakdown/parcelas — recebíveis serão gerados a partir do valor do contrato após a assinatura");
+                toast.info("Recebíveis serão gerados no financeiro após a assinatura do contrato");
               }
+
             } catch (autoErr) {
               console.error("[MarkAsWon] Error auto-generating installments:", autoErr);
               // Non-blocking — user can still generate manually in the Negociação tab.
