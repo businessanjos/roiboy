@@ -194,7 +194,7 @@ export default function FinancialSalesReconciliationPage() {
       const dealIds = pendingList.map((c) => c.deal_id).filter(Boolean) as string[];
       const clientIds = pendingList.map((c) => c.client_id).filter(Boolean);
 
-      let digital: DigitalContractInfo[] & { deal_id: string | null; client_id: string | null }[] = [] as never;
+      let digital: any[] = [];
       if (pendingList.length > 0) {
         const { data: digitalData } = await supabase
           .from("digital_contracts")
