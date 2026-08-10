@@ -96,6 +96,15 @@ const CATEGORIES = [
   { value: "geral", label: "Geral" },
 ];
 
+/** Normaliza texto para busca: minúsculas, sem acentos e sem espaços extras. */
+const normalize = (value: string) =>
+  (value ?? "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .trim();
+
+
 
 const STATUS_META: Record<FaqArticle["status"], { label: string; className: string }> = {
   available: { label: "Disponível", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
@@ -202,26 +211,56 @@ export default function FinancialFaqPage() {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
   const filtered = useMemo(() => {
-    const term = textFilter.trim().toLowerCase();
-    return articles.filter((a) => {
-      if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
-      if (reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
+    const term = normalize(textFilter);
+    const tokens = term.split(/\s+/).filter((t) => t.length >= 2);
 
-      const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
-      if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
-      if (!term) return true;
-      const haystack = [
-        a.question,
-        a.answer_steps,
-        a.related_route ?? "",
-        CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category,
-        ...tags,
-      ]
-        .join(" ")
-        .toLowerCase();
-      return haystack.includes(term);
-    });
+    const scored = articles
+      .filter((a) => {
+        if (categoryFilter !== "all" && a.category !== categoryFilter) return false;
+        if (reviewFilter !== "all" && a.review_status !== reviewFilter) return false;
+        const tags = (a.keywords ?? []).map((k) => k.trim().toLowerCase());
+        if (selectedTags.length > 0 && !selectedTags.every((t) => tags.includes(t))) return false;
+        return true;
+      })
+      .map((a) => {
+        if (tokens.length === 0) return { article: a, score: 0 };
+
+        const question = normalize(a.question);
+        const steps = normalize(a.answer_steps);
+        const tags = (a.keywords ?? []).map((k) => normalize(k));
+        const categoryLabel = normalize(CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category);
+        const route = normalize(a.related_route ?? "");
+
+        let score = 0;
+        let matchedAll = true;
+
+        for (const token of tokens) {
+          let tokenScore = 0;
+          if (question.includes(token)) tokenScore += question.startsWith(token) ? 12 : 8;
+          if (tags.some((t) => t === token)) tokenScore += 7;
+          else if (tags.some((t) => t.includes(token))) tokenScore += 4;
+          if (categoryLabel.includes(token)) tokenScore += 3;
+          if (steps.includes(token)) tokenScore += 2;
+          if (route.includes(token)) tokenScore += 1;
+          if (tokenScore === 0) matchedAll = false;
+          score += tokenScore;
+        }
+
+        // Frase completa vale bônus
+        if (question.includes(term)) score += 10;
+        if (a.review_status === "published") score += 2;
+        if (a.status === "available") score += 1;
+
+        return { article: a, score: matchedAll ? score : 0 };
+      })
+      .filter((r) => tokens.length === 0 || r.score > 0);
+
+    if (tokens.length > 0) scored.sort((a, b) => b.score - a.score);
+    return scored.map((r) => r.article);
   }, [articles, categoryFilter, reviewFilter, selectedTags, textFilter]);
+
+  const isRanked = normalize(textFilter).split(/\s+/).filter((t) => t.length >= 2).length > 0;
+
 
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
 
@@ -478,7 +517,13 @@ export default function FinancialFaqPage() {
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               {filtered.length} de {articles.length}
             </span>
+            {isRanked && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                · ordenados por relevância
+              </span>
+            )}
           </h2>
+
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
