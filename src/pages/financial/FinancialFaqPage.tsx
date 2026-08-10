@@ -214,7 +214,7 @@ export default function FinancialFaqPage() {
         .toLowerCase();
       return haystack.includes(term);
     });
-  }, [articles, categoryFilter, selectedTags, textFilter]);
+  }, [articles, categoryFilter, reviewFilter, selectedTags, textFilter]);
 
   const byId = useMemo(() => new Map(articles.map((a) => [a.id, a])), [articles]);
 
