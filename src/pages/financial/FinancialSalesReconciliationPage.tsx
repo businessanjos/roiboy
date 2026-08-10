@@ -91,6 +91,32 @@ interface PaymentConfig {
   firstDueDate: string;
 }
 
+interface DigitalContractInfo {
+  id: string;
+  status: string;
+  signed_at: string | null;
+  contract_number: string | null;
+  share_token: string | null;
+}
+
+type SignatureFilter = "all" | "awaiting" | "signed" | "none";
+
+const SIGNATURE_LABELS: Record<string, { label: string; className: string }> = {
+  signed: {
+    label: "Assinado",
+    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+  },
+  awaiting: {
+    label: "Aguardando assinatura",
+    className: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+  },
+  none: {
+    label: "Sem contrato digital",
+    className: "border-muted-foreground/30 bg-muted text-muted-foreground",
+  },
+};
+
+
 const PAYMENT_METHODS = [
   { value: "pix", label: "PIX" },
   { value: "boleto", label: "Boleto" },
