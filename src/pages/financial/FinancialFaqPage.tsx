@@ -13,6 +13,7 @@ import {
   Loader2,
   ArrowRight,
   CircleHelp,
+  Tag,
   TriangleAlert,
   CircleCheck,
 } from "lucide-react";
