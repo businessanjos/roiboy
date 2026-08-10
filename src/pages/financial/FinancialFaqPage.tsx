@@ -384,21 +384,73 @@ export default function FinancialFaqPage() {
         </CardContent>
       </Card>
 
-      <div className="flex items-center justify-between gap-3">
-        <h2 className="text-lg font-semibold">Todos os artigos</h2>
-        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
-          <SelectTrigger className="w-52">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as categorias</SelectItem>
-            {CATEGORIES.map((c) => (
-              <SelectItem key={c.value} value={c.value}>
-                {c.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+      <div className="space-y-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <h2 className="text-lg font-semibold">
+            Todos os artigos
+            <span className="ml-2 text-sm font-normal text-muted-foreground">
+              {filtered.length} de {articles.length}
+            </span>
+          </h2>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <div className="relative sm:w-64">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={textFilter}
+                onChange={(e) => setTextFilter(e.target.value)}
+                placeholder="Filtrar por termo, tag ou tela"
+                className="pl-9"
+              />
+            </div>
+            <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+              <SelectTrigger className="sm:w-52">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as categorias ({articles.length})</SelectItem>
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>
+                    {c.label} ({categoryCounts.get(c.value) ?? 0})
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        {allTags.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Tag className="h-3.5 w-3.5 text-muted-foreground" />
+            {allTags.map(([tag, count]) => {
+              const active = selectedTags.includes(tag);
+              return (
+                <button key={tag} type="button" onClick={() => toggleTag(tag)}>
+                  <Badge
+                    variant={active ? "default" : "outline"}
+                    className="cursor-pointer text-xs font-normal"
+                  >
+                    {tag}
+                    <span className="ml-1 opacity-60">{count}</span>
+                  </Badge>
+                </button>
+              );
+            })}
+            {(selectedTags.length > 0 || textFilter || categoryFilter !== "all") && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 px-2 text-xs"
+                onClick={() => {
+                  setSelectedTags([]);
+                  setTextFilter("");
+                  setCategoryFilter("all");
+                }}
+              >
+                Limpar filtros
+              </Button>
+            )}
+          </div>
+        )}
       </div>
 
       {isLoading ? (
@@ -410,8 +462,12 @@ export default function FinancialFaqPage() {
       ) : filtered.length === 0 ? (
         <FinancialEmptyState
           icon={CircleHelp}
-          title="Nenhum artigo cadastrado"
-          description="Cadastre o passo a passo das dúvidas mais frequentes do time."
+          title={articles.length === 0 ? "Nenhum artigo cadastrado" : "Nenhum artigo com esses filtros"}
+          description={
+            articles.length === 0
+              ? "Cadastre o passo a passo das dúvidas mais frequentes do time."
+              : "Ajuste o termo, a categoria ou as tags selecionadas."
+          }
           action={{ label: "Novo artigo", onClick: openNew, icon: Plus }}
         />
 
@@ -429,6 +485,11 @@ export default function FinancialFaqPage() {
                   <Badge variant="secondary">
                     {CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category}
                   </Badge>
+                  {(a.keywords ?? []).slice(0, 4).map((k) => (
+                    <Badge key={k} variant="outline" className="text-[11px] font-normal text-muted-foreground">
+                      {k}
+                    </Badge>
+                  ))}
                 </div>
               </AccordionTrigger>
               <AccordionContent className="space-y-3 pb-4">
