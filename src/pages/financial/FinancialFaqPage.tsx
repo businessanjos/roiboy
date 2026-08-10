@@ -217,10 +217,14 @@ export default function FinancialFaqPage() {
         question: form.question.trim(),
         answer_steps: form.answer_steps.trim(),
         category: form.category,
-        keywords: form.keywords
-          .split(",")
-          .map((k) => k.trim())
-          .filter(Boolean),
+        keywords: Array.from(
+          new Set(
+            form.keywords
+              .split(",")
+              .map((k) => k.trim().toLowerCase())
+              .filter(Boolean),
+          ),
+        ),
         status: form.status,
         related_route: form.related_route.trim() || null,
         is_published: form.is_published,
