@@ -194,39 +194,26 @@ const WhatsAppDiagnostics = lazyRetry(() => import("./pages/admin/WhatsAppDiagno
 // Financial module with sub-routes (lazy loaded)
 const FinancialLayout = lazyRetry(() => import("@/components/financial/FinancialLayout"));
 const FinancialDashboardPage = lazyRetry(() => import("./pages/financial/FinancialDashboardPage"));
-const FinancialEntriesPage = lazyRetry(() => import("./pages/financial/FinancialEntriesPage"));
 const FinancialCashFlowPage = lazyRetry(() => import("./pages/financial/FinancialCashFlowPage"));
 const FinancialBankAccountsPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountsPage"));
 const FinancialBankAccountStatementPage = lazyRetry(() => import("./pages/financial/FinancialBankAccountStatementPage"));
 const FinancialCategoriesPage = lazyRetry(() => import("./pages/financial/FinancialCategoriesPage"));
 const FinancialCostCentersPage = lazyRetry(() => import("./pages/financial/FinancialCostCentersPage"));
-const FinancialSuppliersPage = lazyRetry(() => import("./pages/financial/FinancialSuppliersPage"));
-const FinancialRecurringPage = lazyRetry(() => import("./pages/financial/FinancialRecurringPage"));
 const FinancialBudgetPage = lazyRetry(() => import("./pages/financial/FinancialBudgetPage"));
-const FinancialReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialReconciliationPage"));
-const FinancialSalesReconciliationPage = lazyRetry(() => import("./pages/financial/FinancialSalesReconciliationPage"));
 const FinancialCommissionsPage = lazyRetry(() => import("./pages/financial/FinancialCommissionsPage"));
-const FinancialAlertsPage = lazyRetry(() => import("./pages/financial/FinancialAlertsPage"));
-const FinancialAgingPage = lazyRetry(() => import("./pages/financial/FinancialAgingPage"));
-const FinancialProfitabilityPage = lazyRetry(() => import("./pages/financial/FinancialProfitabilityPage"));
-const FinancialDREPage = lazyRetry(() => import("./pages/financial/FinancialDREPage"));
-const FinancialDRFPage = lazyRetry(() => import("./pages/financial/FinancialDRFPage"));
-const FinancialBoletosPage = lazyRetry(() => import("./pages/financial/FinancialBoletosPage"));
-const FinancialNotasFiscaisPage = lazyRetry(() => import("./pages/financial/FinancialNotasFiscaisPage"));
-const FinancialBalanceSheetPage = lazyRetry(() => import("./pages/financial/FinancialBalanceSheetPage"));
-const FinancialInvoicesPage = lazyRetry(() => import("./pages/financial/FinancialInvoicesPage"));
-const FinancialInstallmentsPage = lazyRetry(() => import("./pages/financial/FinancialInstallmentsPage"));
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
-
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
-const FinancialImportPage = lazyRetry(() => import("./pages/financial/FinancialImportPage"));
-const FinancialDunningKanbanPage = lazyRetry(() => import("./pages/financial/FinancialDunningKanbanPage"));
-const FinancialCollectionsRulerPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsRulerPage"));
-
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
-const FinancialPayersPage = lazyRetry(() => import("./pages/financial/FinancialPayersPage"));
-const FinancialFiscalSettingsPage = lazyRetry(() => import("./pages/financial/FinancialFiscalSettingsPage"));
-const FinancialActiveClientsPage = lazyRetry(() => import("./pages/financial/FinancialActiveClientsPage"));
+
+// Hubs consolidados (cada um agrupa páginas antigas em abas)
+const FinancialEntriesHubPage = lazyRetry(() => import("./pages/financial/FinancialEntriesHubPage"));
+const FinancialReceivablesHubPage = lazyRetry(() => import("./pages/financial/FinancialReceivablesHubPage"));
+const FinancialReconciliationHubPage = lazyRetry(() => import("./pages/financial/FinancialReconciliationHubPage"));
+const FinancialCollectionsHubPage = lazyRetry(() => import("./pages/financial/FinancialCollectionsHubPage"));
+const FinancialFiscalHubPage = lazyRetry(() => import("./pages/financial/FinancialFiscalHubPage"));
+const FinancialPeopleHubPage = lazyRetry(() => import("./pages/financial/FinancialPeopleHubPage"));
+const FinancialReportsHubPage = lazyRetry(() => import("./pages/financial/FinancialReportsHubPage"));
+
 const PublicProviderPortal = lazyRetry(() => import("./pages/public/PublicProviderPortal"));
 const PublicAdmissionPortal = lazyRetry(() => import("./pages/public/PublicAdmissionPortal"));
 const PublicAgencyWeeklyReport = lazyRetry(() => import("./pages/public/PublicAgencyWeeklyReport"));
@@ -332,38 +319,47 @@ const App = () => (
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/dashboard" replace />} />
                               <Route path="dashboard" element={<FinancialDashboardPage />} />
-                              <Route path="entries" element={<FinancialEntriesPage />} />
                               <Route path="cash-flow" element={<FinancialCashFlowPage />} />
                               <Route path="bank-accounts" element={<FinancialBankAccountsPage />} />
                               <Route path="bank-accounts/:id/extrato" element={<FinancialBankAccountStatementPage />} />
                               <Route path="categories" element={<FinancialCategoriesPage />} />
                               <Route path="cost-centers" element={<FinancialCostCentersPage />} />
-                              <Route path="suppliers" element={<FinancialSuppliersPage />} />
-                              <Route path="recurring" element={<FinancialRecurringPage />} />
                               <Route path="budget" element={<FinancialBudgetPage />} />
-                              <Route path="reconciliation" element={<FinancialReconciliationPage />} />
-                              <Route path="sales-reconciliation" element={<FinancialSalesReconciliationPage />} />
                               <Route path="commissions" element={<FinancialCommissionsPage />} />
-                              <Route path="alerts" element={<FinancialAlertsPage />} />
-                              <Route path="aging" element={<FinancialAgingPage />} />
-                              <Route path="profitability" element={<FinancialProfitabilityPage />} />
-                              <Route path="dre" element={<FinancialDREPage />} />
-                              <Route path="drf" element={<FinancialDRFPage />} />
-                              <Route path="invoices" element={<FinancialInvoicesPage />} />
-                              <Route path="parcelas" element={<FinancialInstallmentsPage />} />
-                              <Route path="boletos" element={<FinancialBoletosPage />} />
-                              <Route path="notas-fiscais" element={<FinancialNotasFiscaisPage />} />
-                              <Route path="balance-sheet" element={<FinancialBalanceSheetPage />} />
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
-                              <Route path="importar" element={<FinancialImportPage />} />
-                              <Route path="cobranca" element={<FinancialDunningKanbanPage />} />
-                              <Route path="regua-cobranca" element={<FinancialCollectionsRulerPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
-                              <Route path="pagadores" element={<FinancialPayersPage />} />
-                              <Route path="configuracoes/fiscal" element={<FinancialFiscalSettingsPage />} />
-                              <Route path="clientes-ativos" element={<FinancialActiveClientsPage />} />
+
+                              {/* Áreas consolidadas (hubs com abas) */}
+                              <Route path="entries" element={<FinancialEntriesHubPage />} />
+                              <Route path="recebiveis" element={<FinancialReceivablesHubPage />} />
+                              <Route path="conciliacao" element={<FinancialReconciliationHubPage />} />
+                              <Route path="cobranca" element={<FinancialCollectionsHubPage />} />
+                              <Route path="notas-fiscais" element={<FinancialFiscalHubPage />} />
+                              <Route path="pessoas" element={<FinancialPeopleHubPage />} />
+                              <Route path="relatorios" element={<FinancialReportsHubPage />} />
+
+                              {/* Rotas antigas → abas correspondentes */}
+                              <Route path="recurring" element={<Navigate to="/financial/entries?tab=recorrentes" replace />} />
+                              <Route path="invoices" element={<Navigate to="/financial/recebiveis?tab=faturas" replace />} />
+                              <Route path="parcelas" element={<Navigate to="/financial/recebiveis?tab=parcelas" replace />} />
+                              <Route path="boletos" element={<Navigate to="/financial/recebiveis?tab=boletos" replace />} />
+                              <Route path="reconciliation" element={<Navigate to="/financial/conciliacao?tab=bancaria" replace />} />
+                              <Route path="sales-reconciliation" element={<Navigate to="/financial/conciliacao?tab=vendas" replace />} />
+                              <Route path="importar" element={<Navigate to="/financial/conciliacao?tab=importacoes" replace />} />
+                              <Route path="alerts" element={<Navigate to="/financial/cobranca?tab=alertas" replace />} />
+                              <Route path="regua-cobranca" element={<Navigate to="/financial/cobranca?tab=regua" replace />} />
+                              <Route path="configuracoes/fiscal" element={<Navigate to="/financial/notas-fiscais?tab=configuracoes" replace />} />
+                              <Route path="clientes-ativos" element={<Navigate to="/financial/pessoas?tab=clientes" replace />} />
+                              <Route path="pagadores" element={<Navigate to="/financial/pessoas?tab=pagadores" replace />} />
+                              <Route path="suppliers" element={<Navigate to="/financial/pessoas?tab=fornecedores" replace />} />
+                              <Route path="dre" element={<Navigate to="/financial/relatorios?tab=dre" replace />} />
+                              <Route path="aging" element={<Navigate to="/financial/relatorios?tab=aging" replace />} />
+                              <Route path="profitability" element={<Navigate to="/financial/relatorios?tab=rentabilidade" replace />} />
+                              <Route path="drf" element={<Navigate to="/financial/relatorios?tab=drf" replace />} />
+                              <Route path="balance-sheet" element={<Navigate to="/financial/relatorios?tab=balanco" replace />} />
                             </Route>
+
                             <Route path="/products" element={<Products />} />
                             <Route path="/events" element={<Events />} />
                             <Route path="/events/calendar" element={<EventsCalendar />} />

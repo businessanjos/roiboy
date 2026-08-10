@@ -109,6 +109,8 @@
 - [ROY Financial Roadmap](mem://features/financial/roy-financial-roadmap-pt) — Financeiro nativo pós-remoção Omie; dados vêm de Comercial/CS + lançamentos manuais + importadores
 - [Portal de Prestadores](mem://features/financial/providers-portal-pt) — Link público /portal/prestador/:token para envio mensal de NF + dados bancários
 - [Payers & Cross-feed](mem://features/financial/payers-and-cross-feed-pt) — Pagadores (CRUD /financial/pagadores + PayerSelector + ensure_payer_from_client), quitação automática de contrato, write-off por cancelamento, badge "pronto p/ renovar"
+- [Financial Sidebar Hubs](mem://features/financial/sidebar-consolidation-hubs-pt) — Menu do Financeiro consolidado em hubs com abas (?tab=) + redirects das rotas antigas
+
 - [NFS-e Emission Notazz](mem://features/financial/nfse-emission-notazz-pt) — Emissão NFS-e via Notazz: contratadas + nfse_issuances, trigger on_payment, edge functions nfse-issue/nfse-webhook, página /financial/configuracoes/fiscal, componente EmitirNFButton
 
 ### HR (Recursos Humanos)
