@@ -517,7 +517,13 @@ export default function FinancialFaqPage() {
             <span className="ml-2 text-sm font-normal text-muted-foreground">
               {filtered.length} de {articles.length}
             </span>
+            {isRanked && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground">
+                · ordenados por relevância
+              </span>
+            )}
           </h2>
+
           <div className="flex flex-col gap-2 sm:flex-row">
             <div className="relative sm:w-64">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
