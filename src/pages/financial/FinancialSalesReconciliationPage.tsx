@@ -42,6 +42,16 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   FileCheck,
   DollarSign,
   Clock,
@@ -52,7 +62,10 @@ import {
   RefreshCw,
   PenLine,
   FileSignature,
+  Zap,
+  Loader2,
 } from "lucide-react";
+
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
@@ -150,6 +163,9 @@ export default function FinancialSalesReconciliationPage() {
   const [detailContract, setDetailContract] = useState<Contract | null>(null);
   const [signatureMap, setSignatureMap] = useState<Record<string, DigitalContractInfo>>({});
   const [signatureFilter, setSignatureFilter] = useState<SignatureFilter>("all");
+  const [releaseDialogOpen, setReleaseDialogOpen] = useState(false);
+  const [releasing, setReleasing] = useState(false);
+
 
   const fetchContracts = async () => {
     if (!currentUser?.account_id) return;
@@ -461,7 +477,68 @@ export default function FinancialSalesReconciliationPage() {
     }
   };
 
+  // Contratos assinados que ainda não geraram parcelas/lançamentos
+  const signedPending = useMemo(
+    () => pendingContracts.filter((c) => signatureStateOf(c) === "signed"),
+    [pendingContracts, signatureMap]
+  );
+
+  const signedReady = useMemo(
+    () =>
+      signedPending.filter(
+        (c) => c.payment_method && c.installments_count && c.first_due_date
+      ),
+    [signedPending]
+  );
+
+  const signedMissingConfig = signedPending.length - signedReady.length;
+
+  // Libera o faturamento em lote: marca receivables_generated = true e deixa
+  // o trigger do banco gerar lançamentos (financial_entries) + parcelas (invoices/installments).
+  const handleReleaseSignedBatch = async () => {
+    if (signedReady.length === 0) return;
+
+    setReleasing(true);
+    let ok = 0;
+    const failed: string[] = [];
+
+    for (const contract of signedReady) {
+      try {
+        const { error } = await supabase
+          .from("client_contracts")
+          .update({
+            receivables_generated: true,
+            receivables_generated_at: new Date().toISOString(),
+          })
+          .eq("id", contract.id)
+          .or("receivables_generated.is.null,receivables_generated.eq.false");
+
+        if (error) throw error;
+        ok++;
+      } catch (error) {
+        console.error("Erro ao liberar faturamento:", contract.id, error);
+        failed.push(contract.client?.full_name || contract.id);
+      }
+    }
+
+    setReleasing(false);
+    setReleaseDialogOpen(false);
+    setSelectedIds([]);
+
+    if (ok > 0) {
+      toast.success(
+        `${ok} contrato(s) liberado(s). Parcelas e lançamentos gerados automaticamente.`
+      );
+    }
+    if (failed.length > 0) {
+      toast.error(`Falha em ${failed.length}: ${failed.slice(0, 3).join(", ")}`);
+    }
+
+    await fetchContracts();
+  };
+
   const openContractDetail = (contract: Contract) => {
+
     setDetailContract(contract);
     setDetailSheetOpen(true);
   };
@@ -575,12 +652,31 @@ export default function FinancialSalesReconciliationPage() {
             ))}
           </div>
 
-          {signatureCounts.signed > 0 && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
-              {signatureCounts.signed} contrato(s) já assinado(s) ainda sem parcelas geradas. Use
-              "Gerar" para liberar o faturamento manualmente.
+          {signedPending.length > 0 && (
+            <div className="flex flex-col gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="font-medium">
+                  {signedPending.length} contrato(s) assinado(s) ainda sem parcelas geradas.
+                </p>
+                <p className="text-xs opacity-90">
+                  {signedReady.length} pronto(s) para gerar parcelas e lançamentos
+                  {signedMissingConfig > 0
+                    ? ` · ${signedMissingConfig} sem configuração de pagamento (configure antes)`
+                    : ""}
+                </p>
+              </div>
+              <Button
+                size="sm"
+                onClick={() => setReleaseDialogOpen(true)}
+                disabled={releasing || processing || signedReady.length === 0}
+                className="shrink-0"
+              >
+                <Zap className="h-4 w-4 mr-2" />
+                Gerar em lote ({signedReady.length})
+              </Button>
             </div>
           )}
+
 
 
           {/* Table */}
@@ -921,7 +1017,56 @@ export default function FinancialSalesReconciliationPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Batch release confirmation */}
+      <AlertDialog open={releaseDialogOpen} onOpenChange={setReleaseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Gerar parcelas e lançamentos de {signedReady.length} contrato(s)?
+            </AlertDialogTitle>
+            <AlertDialogDescription asChild>
+              <div className="space-y-2">
+                <p>
+                  Apenas contratos com assinatura confirmada e configuração de pagamento
+                  definida serão processados. A ação é irreversível.
+                </p>
+                <div className="max-h-40 overflow-y-auto rounded-md border p-2 text-xs">
+                  {signedReady.map((c) => (
+                    <div key={c.id} className="flex justify-between gap-2 py-0.5">
+                      <span className="truncate">{c.client?.full_name || "Cliente"}</span>
+                      <span className="shrink-0 text-muted-foreground">
+                        {c.installments_count}x · {formatCurrency(c.value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={releasing}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault();
+                handleReleaseSignedBatch();
+              }}
+              disabled={releasing}
+            >
+              {releasing ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  Gerando...
+                </>
+              ) : (
+                "Confirmar geração"
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
       {/* Contract Detail Sheet */}
+
       {detailContract && (
         <ContractDetailSheet
           open={detailSheetOpen}
