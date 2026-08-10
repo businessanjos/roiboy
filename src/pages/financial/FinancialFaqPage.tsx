@@ -493,6 +493,22 @@ export default function FinancialFaqPage() {
                 ))}
               </SelectContent>
             </Select>
+            <Select value={reviewFilter} onValueChange={setReviewFilter}>
+              <SelectTrigger className="sm:w-48">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {REVIEW_FILTERS.map((f) => (
+                  <SelectItem key={f.value} value={f.value}>
+                    {f.label}
+                    {f.value !== "all"
+                      ? ` (${articles.filter((a) => a.review_status === f.value).length})`
+                      : ` (${articles.length})`}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
           </div>
         </div>
 
