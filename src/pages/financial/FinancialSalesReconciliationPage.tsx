@@ -556,6 +556,33 @@ export default function FinancialSalesReconciliationPage() {
             </div>
           </div>
 
+          {/* Signature filter chips */}
+          <div className="flex flex-wrap gap-2">
+            {([
+              { key: "all", label: `Todos (${pendingContracts.length})` },
+              { key: "awaiting", label: `Aguardando assinatura (${signatureCounts.awaiting})` },
+              { key: "signed", label: `Assinado sem parcelas (${signatureCounts.signed})` },
+              { key: "none", label: `Sem contrato digital (${signatureCounts.none})` },
+            ] as { key: SignatureFilter; label: string }[]).map((chip) => (
+              <Button
+                key={chip.key}
+                size="sm"
+                variant={signatureFilter === chip.key ? "default" : "outline"}
+                onClick={() => setSignatureFilter(chip.key)}
+              >
+                {chip.label}
+              </Button>
+            ))}
+          </div>
+
+          {signatureCounts.signed > 0 && (
+            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400">
+              {signatureCounts.signed} contrato(s) já assinado(s) ainda sem parcelas geradas. Use
+              "Gerar" para liberar o faturamento manualmente.
+            </div>
+          )}
+
+
           {/* Table */}
           <Card>
             <Table>
