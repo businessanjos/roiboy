@@ -10189,6 +10189,119 @@ export type Database = {
           },
         ]
       }
+      financial_faq_articles: {
+        Row: {
+          account_id: string
+          answer_steps: string
+          category: string
+          created_at: string
+          created_by: string | null
+          display_order: number
+          helpful_count: number
+          id: string
+          is_published: boolean
+          keywords: string[]
+          not_helpful_count: number
+          question: string
+          related_route: string | null
+          status: string
+          updated_at: string
+          updated_by: string | null
+          view_count: number
+        }
+        Insert: {
+          account_id: string
+          answer_steps?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          helpful_count?: number
+          id?: string
+          is_published?: boolean
+          keywords?: string[]
+          not_helpful_count?: number
+          question: string
+          related_route?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          view_count?: number
+        }
+        Update: {
+          account_id?: string
+          answer_steps?: string
+          category?: string
+          created_at?: string
+          created_by?: string | null
+          display_order?: number
+          helpful_count?: number
+          id?: string
+          is_published?: boolean
+          keywords?: string[]
+          not_helpful_count?: number
+          question?: string
+          related_route?: string | null
+          status?: string
+          updated_at?: string
+          updated_by?: string | null
+          view_count?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_faq_articles_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_faq_searches: {
+        Row: {
+          account_id: string
+          answered: boolean
+          created_at: string
+          id: string
+          matched_article_id: string | null
+          query: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          answered?: boolean
+          created_at?: string
+          id?: string
+          matched_article_id?: string | null
+          query: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          answered?: boolean
+          created_at?: string
+          id?: string
+          matched_article_id?: string | null
+          query?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "financial_faq_searches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "financial_faq_searches_matched_article_id_fkey"
+            columns: ["matched_article_id"]
+            isOneToOne: false
+            referencedRelation: "financial_faq_articles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       financial_import_batches: {
         Row: {
           account_id: string
