@@ -48,6 +48,8 @@ import {
 import { FinancialPageHeader } from "@/components/financial/_shared/FinancialPageHeader";
 import { FinancialEmptyState } from "@/components/financial/_shared/FinancialEmptyState";
 
+type ReviewStatus = "draft" | "in_review" | "published" | "changes_requested";
+
 interface FaqArticle {
   id: string;
   question: string;
@@ -58,6 +60,13 @@ interface FaqArticle {
   related_route: string | null;
   display_order: number;
   is_published: boolean;
+  review_status: ReviewStatus;
+  review_notes: string | null;
+  submitted_by: string | null;
+  submitted_at: string | null;
+  reviewed_by: string | null;
+  reviewed_at: string | null;
+  created_by: string | null;
 }
 
 interface FaqAnswer {
@@ -87,6 +96,24 @@ const STATUS_META: Record<FaqArticle["status"], { label: string; className: stri
   planned: { label: "Planejado", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
 };
 
+const REVIEW_META: Record<ReviewStatus, { label: string; className: string }> = {
+  draft: { label: "Rascunho", className: "bg-muted text-muted-foreground border-border" },
+  in_review: { label: "Em revisão", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
+  published: { label: "Publicado", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  changes_requested: {
+    label: "Ajustes solicitados",
+    className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+  },
+};
+
+const REVIEW_FILTERS: { value: string; label: string }[] = [
+  { value: "all", label: "Todos" },
+  { value: "published", label: "Publicados" },
+  { value: "in_review", label: "Em revisão" },
+  { value: "changes_requested", label: "Ajustes solicitados" },
+  { value: "draft", label: "Rascunhos" },
+];
+
 const emptyForm = {
   question: "",
   answer_steps: "",
@@ -94,8 +121,8 @@ const emptyForm = {
   keywords: "",
   status: "available" as FaqArticle["status"],
   related_route: "",
-  is_published: true,
 };
+
 
 function parseSteps(raw: string): string[] {
   return raw
