@@ -511,7 +511,7 @@ export default function FinancialSalesReconciliationPage() {
             receivables_generated_at: new Date().toISOString(),
           })
           .eq("id", contract.id)
-          .eq("receivables_generated", false);
+          .or("receivables_generated.is.null,receivables_generated.eq.false");
 
         if (error) throw error;
         ok++;
