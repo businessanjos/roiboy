@@ -471,16 +471,23 @@ export default function FinancialSalesReconciliationPage() {
       <FinancialPageHeader
         icon={FileCheck}
         title="Conciliação de Vendas"
-        description="Confirme os contratos fechados e gere as parcelas a receber no fluxo financeiro."
+        description="Contratos fechados que ainda não geraram parcelas. O faturamento é liberado automaticamente quando o contrato digital é assinado."
       />
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <FinancialKpiCard
           icon={Clock}
-          label="Pendentes"
+          label="Sem parcelas geradas"
           value={String(pendingContracts.length)}
-          hint="contratos aguardando conciliação"
+          hint="contratos aguardando faturamento"
+          tone="warning"
+        />
+        <FinancialKpiCard
+          icon={PenLine}
+          label="Aguardando assinatura"
+          value={String(signatureCounts.awaiting)}
+          hint="contrato digital enviado, sem assinatura"
           tone="warning"
         />
         <FinancialKpiCard
@@ -493,10 +500,11 @@ export default function FinancialSalesReconciliationPage() {
           icon={CheckCircle2}
           label="Processados (30d)"
           value={String(processedContracts.length)}
-          hint="contratos já conciliados"
+          hint="contratos já faturados"
           tone="success"
         />
       </div>
+
 
       {/* Tabs */}
       <Tabs defaultValue="pending" className="w-full">
