@@ -575,7 +575,10 @@ export default function FinancialFaqPage() {
                   <Badge variant="outline" className={STATUS_META[a.status].className}>
                     {STATUS_META[a.status].label}
                   </Badge>
-                  {!a.is_published && <Badge variant="outline">Rascunho</Badge>}
+                  <Badge variant="outline" className={REVIEW_META[a.review_status].className}>
+                    {REVIEW_META[a.review_status].label}
+                  </Badge>
+
                   <Badge variant="secondary">
                     {CATEGORIES.find((c) => c.value === a.category)?.label ?? a.category}
                   </Badge>
