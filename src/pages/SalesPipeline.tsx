@@ -1917,7 +1917,7 @@ export default function SalesPipeline() {
           value: deal.value || 0,
           contract_type: 'Compra',
           status: 'active',
-          receivables_generated: false, // será marcado true logo abaixo após preparar installments_detail (ou fallback)
+          receivables_generated: false, // só vira true quando o contrato digital for assinado
 
           notes: `Contrato gerado automaticamente do negócio: ${deal.title}`,
           product_id: contractDataFromDeal.product_id || null,
