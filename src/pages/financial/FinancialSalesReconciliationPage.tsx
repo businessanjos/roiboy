@@ -621,8 +621,8 @@ export default function FinancialSalesReconciliationPage() {
                   ))
                 ) : filteredPending.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={9} className="text-center py-8 text-muted-foreground">
-                      Nenhum contrato pendente de conciliação
+                    <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
+                      Nenhum contrato nesta situação
                     </TableCell>
                   </TableRow>
                 ) : (
@@ -639,6 +639,30 @@ export default function FinancialSalesReconciliationPage() {
                       <TableCell className="font-medium">
                         {contract.client?.full_name || "—"}
                       </TableCell>
+                      <TableCell>
+                        {(() => {
+                          const state = signatureStateOf(contract);
+                          const meta = SIGNATURE_LABELS[state];
+                          const dc = signatureMap[contract.id];
+                          return (
+                            <div className="flex flex-col gap-0.5">
+                              <Badge variant="outline" className={`gap-1 ${meta.className}`}>
+                                <FileSignature className="h-3 w-3" />
+                                {meta.label}
+                              </Badge>
+                              {dc?.contract_number && (
+                                <span className="text-[11px] text-muted-foreground">
+                                  {dc.contract_number}
+                                  {dc.signed_at
+                                    ? ` · ${format(new Date(dc.signed_at), "dd/MM/yyyy")}`
+                                    : ""}
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
+                      </TableCell>
+
                       <TableCell>
                         {contract.product ? (
                           <Badge
