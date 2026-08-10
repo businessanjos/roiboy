@@ -188,7 +188,47 @@ export default function FinancialSalesReconciliationPage() {
 
       if (processedError) throw processedError;
       setProcessedContracts((processed || []) as Contract[]);
-      
+
+      // Fetch digital contracts (signature status) for pending contracts
+      const pendingList = (pending || []) as Contract[];
+      const dealIds = pendingList.map((c) => c.deal_id).filter(Boolean) as string[];
+      const clientIds = pendingList.map((c) => c.client_id).filter(Boolean);
+
+      let digital: DigitalContractInfo[] & { deal_id: string | null; client_id: string | null }[] = [] as never;
+      if (pendingList.length > 0) {
+        const { data: digitalData } = await supabase
+          .from("digital_contracts")
+          .select("id, status, signed_at, contract_number, share_token, deal_id, client_id, created_at")
+          .eq("account_id", currentUser.account_id)
+          .or(
+            [
+              dealIds.length ? `deal_id.in.(${dealIds.join(",")})` : null,
+              clientIds.length ? `client_id.in.(${clientIds.join(",")})` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          )
+          .order("created_at", { ascending: false });
+        digital = (digitalData || []) as never;
+      }
+
+      const map: Record<string, DigitalContractInfo> = {};
+      for (const contract of pendingList) {
+        const match =
+          (digital as any[]).find((d) => contract.deal_id && d.deal_id === contract.deal_id) ||
+          (digital as any[]).find((d) => d.client_id === contract.client_id);
+        if (match) {
+          map[contract.id] = {
+            id: match.id,
+            status: match.status,
+            signed_at: match.signed_at,
+            contract_number: match.contract_number,
+            share_token: match.share_token,
+          };
+        }
+      }
+      setSignatureMap(map);
+
       // Sync detailContract with fresh data to prevent stale state
       if (detailContract) {
         const allContracts = [...(pending || []), ...(processed || [])];
@@ -209,15 +249,32 @@ export default function FinancialSalesReconciliationPage() {
     fetchContracts();
   }, [currentUser?.account_id]);
 
+  const signatureStateOf = (contract: Contract): SignatureFilter => {
+    const dc = signatureMap[contract.id];
+    if (!dc) return "none";
+    if (dc.status === "signed" || dc.signed_at) return "signed";
+    return "awaiting";
+  };
+
+  const signatureCounts = useMemo(() => {
+    const counts = { awaiting: 0, signed: 0, none: 0 };
+    for (const c of pendingContracts) counts[signatureStateOf(c) as "awaiting" | "signed" | "none"]++;
+    return counts;
+  }, [pendingContracts, signatureMap]);
+
   const filteredPending = useMemo(() => {
-    if (!searchQuery) return pendingContracts;
     const q = searchQuery.toLowerCase();
-    return pendingContracts.filter(
-      (c) =>
+    return pendingContracts.filter((c) => {
+      const matchesSearch =
+        !searchQuery ||
         c.client?.full_name.toLowerCase().includes(q) ||
-        c.product?.name?.toLowerCase().includes(q)
-    );
-  }, [pendingContracts, searchQuery]);
+        c.product?.name?.toLowerCase().includes(q);
+      const matchesSignature =
+        signatureFilter === "all" || signatureStateOf(c) === signatureFilter;
+      return matchesSearch && matchesSignature;
+    });
+  }, [pendingContracts, searchQuery, signatureFilter, signatureMap]);
+
 
   const totalPendingValue = useMemo(
     () => pendingContracts.reduce((sum, c) => sum + (c.value || 0), 0),
