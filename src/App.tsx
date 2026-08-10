@@ -204,6 +204,8 @@ const FinancialCommissionsPage = lazyRetry(() => import("./pages/financial/Finan
 const FinancialPaymentMethodsPage = lazyRetry(() => import("./pages/financial/FinancialPaymentMethodsPage"));
 const FinancialPluggyStatusPage = lazyRetry(() => import("./pages/financial/FinancialPluggyStatusPage"));
 const FinancialProvidersPortalPage = lazyRetry(() => import("./pages/financial/FinancialProvidersPortalPage"));
+const FinancialFaqPage = lazyRetry(() => import("./pages/financial/FinancialFaqPage"));
+
 
 // Hubs consolidados (cada um agrupa páginas antigas em abas)
 const FinancialEntriesHubPage = lazyRetry(() => import("./pages/financial/FinancialEntriesHubPage"));
@@ -329,6 +331,8 @@ const App = () => (
                               <Route path="payment-methods" element={<FinancialPaymentMethodsPage />} />
                               <Route path="integracoes/pluggy" element={<FinancialPluggyStatusPage />} />
                               <Route path="prestadores" element={<FinancialProvidersPortalPage />} />
+                              <Route path="ajuda" element={<FinancialFaqPage />} />
+
 
                               {/* Áreas consolidadas (hubs com abas) */}
                               <Route path="entries" element={<FinancialEntriesHubPage />} />

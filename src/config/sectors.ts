@@ -162,7 +162,9 @@ export const sectors: Sector[] = [
       // Integrações
       { to: "/financial/integracoes/pluggy", icon: Landmark, label: "Pluggy", permission: PERMISSIONS.CLIENTS_VIEW, group: "Integrações" },
       // Em Breve
+      { to: "/financial/ajuda", icon: CircleHelp, label: "Central de Ajuda", permission: PERMISSIONS.CLIENTS_VIEW, group: "Principal" },
       { to: "/financial/prestadores", icon: UsersRound, label: "Portal Prestadores", permission: PERMISSIONS.CLIENTS_VIEW, group: "Em Breve", comingSoon: true },
+
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
 
