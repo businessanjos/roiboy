@@ -67,8 +67,8 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
   }, [rawPercentage]);
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full">
-      <svg viewBox="0 0 300 180" className="w-full max-w-[280px]">
+    <div className="flex flex-col items-center justify-center h-full w-full min-h-0 overflow-hidden">
+      <svg viewBox="0 0 300 180" preserveAspectRatio="xMidYMid meet" className="w-full max-w-[280px] flex-1 min-h-0">
         {/* Color band arcs */}
         {GAUGE_BANDS.map((band, i) => {
           const startAngle = 180 - band.end * 180;
@@ -105,8 +105,8 @@ export function ConfigurableGauge({ value, min = 0, max, label, sublabel, format
           {displayValue}
         </text>
       </svg>
-      <p className="font-medium text-foreground mt-1 max-w-full truncate whitespace-nowrap" title={label} style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
-      {sublabel && <p className="text-muted-foreground max-w-full truncate whitespace-nowrap tabular-nums" title={sublabel} style={{ fontSize: `${Math.round(12 * fontScale)}px` }}>{sublabel}</p>}
+      <p className="font-medium text-foreground mt-1 shrink-0 max-w-full truncate whitespace-nowrap" title={label} style={{ fontSize: `${Math.round(14 * fontScale)}px` }}>{label}</p>
+      {sublabel && <p className="text-muted-foreground shrink-0 max-w-full truncate whitespace-nowrap tabular-nums" title={sublabel} style={{ fontSize: `${Math.round(12 * fontScale)}px` }}>{sublabel}</p>}
 
     </div>
   );
