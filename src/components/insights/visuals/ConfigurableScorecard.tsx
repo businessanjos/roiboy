@@ -65,7 +65,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
     return () => ro.disconnect();
   }, []);
 
-  const MAX_FONT = (tv.tv ? 46 : 28) * m;
+  const MAX_FONT = (tv.tv ? 40 : 28) * m;
   const MIN_FONT = Math.max(11, 12 * m);
   const suffixSize = Math.round(14 * m);
   const subtitleSize = Math.round(11 * m);
@@ -86,10 +86,11 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
     const widthAt100 = ctx.measureText(formattedValue).width || 1;
     const ideal = Math.floor((available / widthAt100) * 100);
     // Também limita pela altura real do card (evita estourar o cartão na TV)
-    const verticalBudget = containerHeight
+    const boxHeight = el.clientHeight || containerHeight;
+    const verticalBudget = boxHeight
       ? Math.max(
           MIN_FONT,
-          (containerHeight - 8 - (hasSubtitle ? subtitleSize * 1.6 + 4 : 0)) / 1.15
+          (boxHeight - 10 - (hasSubtitle ? subtitleSize * 1.7 + 4 : 0)) / 1.2
         )
       : MAX_FONT;
     const cap = Math.min(MAX_FONT, verticalBudget);
