@@ -48,13 +48,18 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   // Font size derived from the real container width (not the string length)
   const containerRef = useRef<HTMLDivElement>(null);
   const [containerWidth, setContainerWidth] = useState(0);
+  const [containerHeight, setContainerHeight] = useState(0);
 
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
     setContainerWidth(el.clientWidth);
+    setContainerHeight(el.clientHeight);
     const ro = new ResizeObserver((entries) => {
-      for (const entry of entries) setContainerWidth(entry.contentRect.width);
+      for (const entry of entries) {
+        setContainerWidth(entry.contentRect.width);
+        setContainerHeight(entry.contentRect.height);
+      }
     });
     ro.observe(el);
     return () => ro.disconnect();
@@ -64,6 +69,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   const MIN_FONT = Math.max(11, 12 * m);
   const suffixSize = Math.round(14 * m);
   const subtitleSize = Math.round(11 * m);
+  const hasSubtitle = isMetaScorecard || totalCount > 0;
 
   const [fittedFontSize, setFittedFontSize] = useState(MAX_FONT);
   const [isTruncated, setIsTruncated] = useState(false);
@@ -79,10 +85,18 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
     ctx.font = `700 100px ${family}`;
     const widthAt100 = ctx.measureText(formattedValue).width || 1;
     const ideal = Math.floor((available / widthAt100) * 100);
-    const next = Math.max(MIN_FONT, Math.min(MAX_FONT, ideal));
+    // Também limita pela altura real do card (evita estourar o cartão na TV)
+    const verticalBudget = containerHeight
+      ? Math.max(
+          MIN_FONT,
+          (containerHeight - 8 - (hasSubtitle ? subtitleSize * 1.6 + 4 : 0)) / 1.15
+        )
+      : MAX_FONT;
+    const cap = Math.min(MAX_FONT, verticalBudget);
+    const next = Math.max(MIN_FONT, Math.min(cap, ideal));
     setFittedFontSize(next);
     setIsTruncated(ideal < MIN_FONT);
-  }, [formattedValue, containerWidth, MAX_FONT, MIN_FONT, isSalesCycle, suffixSize]);
+  }, [formattedValue, containerWidth, containerHeight, MAX_FONT, MIN_FONT, isSalesCycle, suffixSize, subtitleSize, hasSubtitle]);
 
   const valueColor = config?.appearance?.valueColor;
 
