@@ -138,6 +138,16 @@ export default function Dashboard() {
     [products],
   );
 
+  // Só exibe produtos que possuem clientes ativos (oculta zerados)
+  const productsWithClients = useMemo(
+    () =>
+      visibleProducts.filter((p: any) =>
+        clients.some((c: any) => c.product_ids?.includes(p.id)),
+      ),
+    [visibleProducts, clients],
+  );
+
+
   // Contract stats from RPC for accurate Gestão metrics
   const { data: contractStats, refetch: refetchContractStats } = useDashboardContractStats(currentUser?.account_id);
 
