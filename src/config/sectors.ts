@@ -188,6 +188,7 @@ export const sectors: Sector[] = [
       { to: buildRoyZappUrl({ view: "settings" }), icon: Settings, label: "Configurações" },
       { to: buildRoyZappUrl({ view: "playbook" }), icon: BookOpen, label: "Playbook" },
       { to: buildRoyZappUrl({ view: "marketing" }), icon: Megaphone, label: "Eventos" },
+      { to: buildRoyZappUrl({ view: "analytics" }), icon: BarChart3, label: "Produtividade" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
 

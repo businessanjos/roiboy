@@ -7,6 +7,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { roleNameMatches } from "@/lib/roles";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { isTrafficAgencyUser } from "@/lib/agency";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import type { NavItem } from "@/config/sectors";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
@@ -97,7 +98,13 @@ export function useSectorNavItems(): NavItem[] {
       sectorItems = sectorItems.filter((item) => item.to !== "/marketing/market-intelligence");
     }
 
+    // Produtividade do ROY zAPP: apenas admins e heads (mesma regra da view interna).
+    if (!canViewZappAnalytics(currentUser)) {
+      sectorItems = sectorItems.filter((item) => !item.to.includes("view=analytics"));
+    }
+
     if (showAllItems) return sectorItems;
+
 
     return sectorItems.filter((item) => {
       if (isSalesRepUser && item.to === "/sales-team") return false;
