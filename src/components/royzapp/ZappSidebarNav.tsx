@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug, BarChart3 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -10,10 +10,13 @@ import {
 import { cn } from "@/lib/utils";
 import { ZappRoleHelpPopover } from "./ZappRoleHelpPopover";
 import type { ZappSectorRole } from "@/lib/royZappRoles";
+import type { ZappView } from "@/lib/royZappRoutes";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 interface ZappSidebarNavProps {
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
+  activeView: ZappView;
+  setActiveView: (view: ZappView) => void;
   filterConversationType: "all" | "individual" | "group";
   setFilterConversationType: (type: "all" | "individual" | "group") => void;
   onlineAgents: number;
@@ -40,6 +43,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   allowedViews,
   zappRole,
 }: ZappSidebarNavProps) {
+  const { currentUser } = useCurrentUser();
+  const canSeeAnalytics = canViewZappAnalytics(currentUser);
+
   // Mentors always see CRM functionality
   const isMentor = userRole === "mentor";
   const showCRMForMentor = isMentor;
@@ -86,6 +92,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     { view: "marketing", icon: Megaphone, label: "Eventos" },
     ...(showSectorButton ? [{ view: "sector" as NavView, icon: SectorIcon, label: getSectorLabel() }] : []),
     ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
+    ...(canSeeAnalytics ? [{ view: "analytics" as NavView, icon: BarChart3, label: "Produtividade" }] : []),
   ];
 
   let navItems = allowedViews
@@ -97,7 +104,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   // sem exceção (inclusive admins e pickers).
   const isLeanSalesMenu = sectorId === "vendas";
   if (isLeanSalesMenu) {
-    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings"];
+    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings", ...(canSeeAnalytics ? ["analytics" as NavView] : [])];
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
   }
 

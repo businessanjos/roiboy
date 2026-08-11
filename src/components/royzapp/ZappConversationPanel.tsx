@@ -46,6 +46,8 @@ import { ZappSettingsPanel } from "./ZappSettingsPanel";
 import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
 import { ZappDepartmentList } from "./ZappDepartmentList";
 import { ZappSidebarNav } from "./ZappSidebarNav";
+import { ZappAnalyticsPanel } from "./ZappAnalyticsPanel";
+import type { ZappView } from "@/lib/royZappRoutes";
 import { ZappPlaybookList } from "./ZappPlaybookList";
 import { ZappMarketingList } from "./ZappMarketingList";
 import { ZappCRMPanel } from "./ZappCRMPanel";
@@ -64,8 +66,8 @@ interface ZappConversationPanelProps {
   /** Usuário pode ver as conversas de todos os atendentes do setor. */
   canSeeAllSectorConversations?: boolean;
 
-  activeView: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin";
-  setActiveView: (view: "inbox" | "team" | "departments" | "tags" | "settings" | "playbook" | "marketing" | "sector" | "meetings" | "whatsapp-admin") => void;
+  activeView: ZappView;
+  setActiveView: (view: ZappView) => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -948,6 +950,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           </>
         )}
 
+        {activeView === "analytics" && (
+          <ZappAnalyticsPanel sectorId={sectorId} />
+        )}
         {activeView === "whatsapp-admin" && isAdmin && (
           <ZappWhatsAppAdminPanel sectorId={sectorId} />
         )}
