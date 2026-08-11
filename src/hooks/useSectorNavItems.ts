@@ -7,6 +7,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { roleNameMatches } from "@/lib/roles";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { isTrafficAgencyUser } from "@/lib/agency";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import type { NavItem } from "@/config/sectors";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
