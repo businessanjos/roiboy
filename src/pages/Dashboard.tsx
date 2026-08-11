@@ -1036,13 +1036,13 @@ export default function Dashboard() {
               <CardDescription>Distribuição em tempo real</CardDescription>
             </CardHeader>
             <CardContent>
-              {visibleProducts.length === 0 ? (
+              {productsWithClients.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
-                  Nenhum produto cadastrado.
+                  Nenhum produto com clientes ativos.
                 </p>
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                  {visibleProducts.map((product) => {
+                  {productsWithClients.map((product) => {
                     const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
                     return (
                       <div
@@ -1638,7 +1638,7 @@ export default function Dashboard() {
             <div style={{ zoom: focusZoom / 100 }}>
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-              {visibleProducts.map((product) => {
+              {productsWithClients.map((product) => {
                 const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
                 return (
                   <Card key={product.id}>
