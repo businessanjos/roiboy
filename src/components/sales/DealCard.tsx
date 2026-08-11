@@ -187,7 +187,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               </AvatarFallback>
             </Avatar>
             {deal.responsible_user && (
-              <Avatar className="h-3.5 w-3.5 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ring-background">
+              <Avatar
+                title={`${deal.responsible_user.name}${deal.responsible_user.is_active === false ? " (inativo)" : ""}`}
+                className={`h-3.5 w-3.5 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ${deal.responsible_user.is_active === false ? "ring-amber-500 grayscale" : "ring-background"}`}>
                 <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
                 <AvatarFallback className="text-[5px] bg-blue-500 text-white font-bold">
                   {deal.responsible_user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}

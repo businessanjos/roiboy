@@ -1475,6 +1475,9 @@ export function DealDetailSheet({
                                 </AvatarFallback>
                               </Avatar>
                               <span className="text-sm truncate">{deal.responsible_user.name}</span>
+                              {deal.responsible_user.is_active === false && (
+                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">Inativo</Badge>
+                              )}
                             </>
                           ) : (
                             <span className="text-sm text-muted-foreground italic">Sem responsável</span>
