@@ -76,6 +76,8 @@ import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttenda
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
+
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
 
 
@@ -740,8 +742,20 @@ export default function Dashboard() {
           <p className="text-sm sm:text-base text-muted-foreground">Visão geral do seu negócio</p>
         </div>
         <div className="flex items-center gap-2">
+          {canViewZappAnalytics(currentUser) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => navigate("/roy-zapp?view=analytics")}
+              title="Dashboard de Produtividade do ROY zAPP"
+            >
+              <BarChart3 className="h-4 w-4" />
+              <span className="hidden sm:inline ml-2">Produtividade zAPP</span>
+            </Button>
+          )}
           <Button
             variant="outline"
+
             size="sm"
             onClick={() => setGestaoViewMode(prev => prev === "operacoes" ? "comercial" : "operacoes")}
             title={gestaoViewMode === "operacoes" ? "Mudar para visual Comercial" : "Mudar para visual Operações"}
