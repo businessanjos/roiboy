@@ -261,10 +261,13 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
               // Altura proporcional: usa a altura salva (ou o peso por tipo),
               // então linhas de scorecards ficam baixas e tabelas ganham espaço.
               flex: `${row.weight} 1 0%`,
-              minHeight: 0,
+              // Piso de altura: sem ele, linhas de scorecard podem ficar tão
+              // baixas que o número estoura o card e cobre o título.
+              minHeight: row.isAllScorecards ? 132 : row.isAllCompact ? 200 : 220,
               gridAutoRows: "1fr",
             }
           : {}),
+
 
       }}
     >
