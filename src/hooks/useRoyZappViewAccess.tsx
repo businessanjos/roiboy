@@ -13,6 +13,7 @@ import {
   sanitizeZappSectorList,
   type ZappWhatsAppSector,
 } from "@/lib/royZappAccess";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 
 interface ZappAccessRow {
   views: ZappView[];
