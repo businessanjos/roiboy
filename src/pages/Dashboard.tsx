@@ -751,8 +751,9 @@ export default function Dashboard() {
               <span className="hidden sm:inline ml-2">Produtividade zAPP</span>
             </Button>
           )}
-
+          <Button
             variant="outline"
+
             size="sm"
             onClick={() => setGestaoViewMode(prev => prev === "operacoes" ? "comercial" : "operacoes")}
             title={gestaoViewMode === "operacoes" ? "Mudar para visual Comercial" : "Mudar para visual Operações"}
