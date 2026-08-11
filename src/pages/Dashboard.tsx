@@ -76,6 +76,8 @@ import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttenda
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
+import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
+
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
 
 
