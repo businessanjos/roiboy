@@ -27466,6 +27466,7 @@ export type Database = {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: boolean
       }
+      zapp_can_view_analytics: { Args: { _user_id?: string }; Returns: boolean }
       zapp_can_write_any: { Args: { _auth_user_id: string }; Returns: boolean }
       zapp_can_write_sector: {
         Args: { _auth_user_id: string; _sector_id: string }
@@ -27475,6 +27476,10 @@ export type Database = {
       zapp_is_unrestricted_user: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      zapp_productivity_metrics: {
+        Args: { _from: string; _sector_id: string; _to: string }
+        Returns: Json
       }
       zapp_sales_lean_views: { Args: never; Returns: string[] }
       zapp_sector_role: {

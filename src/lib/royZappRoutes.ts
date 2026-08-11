@@ -18,6 +18,7 @@ export const ZAPP_VIEWS = [
   "sector",
   "meetings",
   "whatsapp-admin",
+  "analytics",
 ] as const;
 
 export type ZappView = (typeof ZAPP_VIEWS)[number];

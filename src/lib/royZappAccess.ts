@@ -33,6 +33,7 @@ export const ZAPP_VIEW_LABELS: Record<ZappView, string> = {
   sector: "Área do setor",
   meetings: "Reuniões",
   "whatsapp-admin": "Conexões WhatsApp",
+  analytics: "Produtividade",
 };
 
 /**
