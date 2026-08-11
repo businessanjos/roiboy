@@ -63,13 +63,19 @@ export function useRoyZappViewAccess() {
     },
   });
 
+  const canSeeAnalytics = canViewZappAnalytics(currentUser);
+
   const allowedViews = useMemo<ZappView[]>(() => {
-    if (unrestricted) return ALL_ZAPP_VIEWS;
+    const withAnalytics = (list: ZappView[]): ZappView[] => {
+      const base = list.filter((v) => v !== "analytics");
+      return canSeeAnalytics ? [...base, "analytics"] : base;
+    };
+    if (unrestricted) return withAnalytics([...ALL_ZAPP_VIEWS]);
     const views = data?.views;
-    if (!views || views.length === 0) return DEFAULT_ZAPP_VIEWS;
+    if (!views || views.length === 0) return withAnalytics([...DEFAULT_ZAPP_VIEWS]);
     // Conversas é sempre necessária para operar o atendimento.
-    return views.includes("inbox") ? views : ["inbox", ...views];
-  }, [unrestricted, data]);
+    return withAnalytics(views.includes("inbox") ? views : ["inbox", ...views]);
+  }, [unrestricted, data, canSeeAnalytics]);
 
   /** `null` = sem restrição específica do RoyZapp (herda os setores gerais). */
   const allowedZappSectors = useMemo<ZappWhatsAppSector[] | null>(() => {
