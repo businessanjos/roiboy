@@ -67,6 +67,7 @@ export interface Deal {
     id: string;
     name: string;
     avatar_url: string | null;
+    is_active?: boolean | null;
   } | null;
   sdr_user?: {
     id: string;
@@ -231,7 +232,7 @@ export function useDeals(pipelineId?: string | null) {
           loss_reason_id, loss_sub_reason_id, loss_notes, tags, created_at, updated_at,
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
-          responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
+          responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url, is_active),
           sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url)
         `;
 
@@ -441,7 +442,7 @@ export function useDeals(pipelineId?: string | null) {
           *,
           client:clients(id, full_name, phone_e164, avatar_url),
           lead:leads(id, full_name, phone, email, avatar_url),
-          responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url),
+          responsible_user:users!deals_responsible_user_id_fkey(id, name, avatar_url, is_active),
           sdr_user:users!deals_sdr_user_id_fkey(id, name, avatar_url),
           stage:deal_stages(*)
         `)
