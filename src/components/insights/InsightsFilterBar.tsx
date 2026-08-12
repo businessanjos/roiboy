@@ -92,12 +92,8 @@ export function InsightsFilterBar() {
     },
   });
 
-  // Auto-select first pipeline when list loads if none chosen yet
-  useEffect(() => {
-    if (!filters.pipelineId && pipelines.length > 0) {
-      setPipelineId(pipelines[0].id);
-    }
-  }, [pipelines, filters.pipelineId, setPipelineId]);
+  // Sem funil selecionado = todos os funis (o filtro agora afeta os dados,
+  // então não podemos pré-selecionar um funil silenciosamente).
 
   const handleDateSelect = (range: { from?: Date; to?: Date } | undefined) => {
     if (range) {
