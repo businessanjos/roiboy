@@ -27,7 +27,18 @@ export default function Marketing() {
   const [defaultMonth, setDefaultMonth] = useState<number | undefined>();
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [contentMonth, setContentMonth] = useState(new Date());
+
+  // Aba ativa vive em `?tab=` para permitir links diretos e redirects das rotas antigas.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const TAB_VALUES = ['calendar', 'conteudo', 'events', 'attendance', 'reminders'];
+  const requestedTab = searchParams.get('tab');
+  const activeTab = requestedTab && TAB_VALUES.includes(requestedTab) ? requestedTab : 'calendar';
+  const setActiveTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', value);
+    setSearchParams(next, { replace: true });
+  };
 
   const { currentUser } = useCurrentUser();
   
