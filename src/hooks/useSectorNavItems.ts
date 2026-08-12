@@ -94,10 +94,6 @@ export function useSectorNavItems(): NavItem[] {
       sectorItems = sectorItems.filter((item) => item.to !== "/sales-dashboard");
     }
 
-    if (userEmail !== "m.quintana@me.com") {
-      sectorItems = sectorItems.filter((item) => item.to !== "/marketing/market-intelligence");
-    }
-
     // Produtividade do ROY zAPP: apenas admins e heads (mesma regra da view interna).
     if (!canViewZappAnalytics(currentUser)) {
       sectorItems = sectorItems.filter((item) => !item.to.includes("view=analytics"));

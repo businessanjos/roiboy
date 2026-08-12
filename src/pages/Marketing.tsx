@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarDays, Bell, Users, Grid3X3 } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3, Newspaper } from 'lucide-react';
+import { ContentCalendarView } from '@/components/marketing/ContentCalendarView';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
 import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
@@ -26,7 +27,18 @@ export default function Marketing() {
   const [defaultMonth, setDefaultMonth] = useState<number | undefined>();
   const [defaultDate, setDefaultDate] = useState<Date | undefined>();
   const [isDuplicating, setIsDuplicating] = useState(false);
-  const [activeTab, setActiveTab] = useState('calendar');
+  const [contentMonth, setContentMonth] = useState(new Date());
+
+  // Aba ativa vive em `?tab=` para permitir links diretos e redirects das rotas antigas.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const TAB_VALUES = ['calendar', 'conteudo', 'events', 'attendance', 'reminders'];
+  const requestedTab = searchParams.get('tab');
+  const activeTab = requestedTab && TAB_VALUES.includes(requestedTab) ? requestedTab : 'calendar';
+  const setActiveTab = (value: string) => {
+    const next = new URLSearchParams(searchParams);
+    next.set('tab', value);
+    setSearchParams(next, { replace: true });
+  };
 
   const { currentUser } = useCurrentUser();
   
@@ -182,8 +194,9 @@ export default function Marketing() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
-          <TabsTrigger value="events" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Eventos</TabsTrigger>
+           <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
+           <TabsTrigger value="conteudo" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />Conteúdo</TabsTrigger>
+           <TabsTrigger value="events" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Eventos</TabsTrigger>
           <TabsTrigger value="attendance" className="flex items-center gap-2"><Users className="h-4 w-4" />Presenças</TabsTrigger>
           <TabsTrigger value="reminders" className="flex items-center gap-2"><Bell className="h-4 w-4" />Lembretes</TabsTrigger>
         </TabsList>
@@ -218,6 +231,10 @@ export default function Marketing() {
               currentCategory="marketing"
             />
           )}
+        </TabsContent>
+
+        <TabsContent value="conteudo">
+          <ContentCalendarView currentMonth={contentMonth} onMonthChange={setContentMonth} />
         </TabsContent>
 
         <TabsContent value="events"><MarketingEventsTab /></TabsContent>
