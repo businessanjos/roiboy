@@ -1600,13 +1600,23 @@ export default function SalesPipeline() {
     }
 
     // Validate required fields for "won" outcome (unless skipping after modal fill)
-    // Briefing operacional é OPCIONAL — não bloqueia o ganho
+    // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
     if (!skipValidation && currentUser?.account_id) {
       const validation = await validateDealOutcome(dealId, "won", currentUser.account_id);
 
       const hasMissingFields = !validation.canMoveToStage && validation.missingFields.length > 0;
 
-      if (hasMissingFields) {
+      const { data: briefingRow } = await supabase
+        .from("deal_operation_briefings")
+        .select("is_complete")
+        .eq("deal_id", dealId)
+        .maybeSingle();
+      const briefingMissing = !briefingRow?.is_complete;
+
+      if (hasMissingFields || briefingMissing) {
+        if (!hasMissingFields && briefingMissing) {
+          toast.info("Preencha o briefing para operação antes de marcar como ganho.");
+        }
         setOutcomeRequiredFieldsModal({
           open: true,
           dealId,

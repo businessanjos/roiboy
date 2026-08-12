@@ -171,8 +171,8 @@ export function RequiredFieldsModal({
   });
 
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
-  // Briefing operacional é OPCIONAL — não bloqueia o salvamento do ganho
-  const briefingOk = true;
+  // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
+  const briefingOk = !showBriefing || briefingComplete;
   const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
   const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk;
 
@@ -429,7 +429,9 @@ export function RequiredFieldsModal({
             <Tabs defaultValue="fields" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="fields">Dados da Negociação</TabsTrigger>
-                <TabsTrigger value="briefing">Briefing para Operação</TabsTrigger>
+                <TabsTrigger value="briefing">
+                  Briefing para Operação {briefingComplete ? "✓" : "*"}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="fields" className="space-y-6 mt-4">
@@ -451,8 +453,10 @@ export function RequiredFieldsModal({
               </TabsContent>
 
               <TabsContent value="briefing" className="space-y-3 mt-4">
-                <p className="text-xs text-muted-foreground">
-                  Opcional — pode ser preenchido depois pela equipe de operações.
+                <p className={`text-xs ${briefingComplete ? "text-muted-foreground" : "text-amber-600"}`}>
+                  {briefingComplete
+                    ? "Briefing completo — a operação do CS já recebe estas informações."
+                    : "Obrigatório — preencha e salve o briefing para concluir o ganho (vale também para carteira/renovação)."}
                 </p>
                 <OperationBriefingForm
                   dealId={dealId}

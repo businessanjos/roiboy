@@ -436,7 +436,13 @@ export function ZappDealDetailSheet({
                       onClick={async () => {
                         if (currentUser?.account_id && deal) {
                           const result = await validateDealOutcome(dealId, "won", currentUser.account_id);
-                          if (!result.canMoveToStage) {
+                          // Briefing para operação é obrigatório em todo ganho (inclui carteira/renovação)
+                          const { data: briefingRow } = await supabase
+                            .from("deal_operation_briefings")
+                            .select("is_complete")
+                            .eq("deal_id", dealId)
+                            .maybeSingle();
+                          if (!result.canMoveToStage || !briefingRow?.is_complete) {
                             setRequiredFieldsModal({
                               open: true,
                               dealId: dealId,
