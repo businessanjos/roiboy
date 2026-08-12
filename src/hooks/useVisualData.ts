@@ -1360,6 +1360,30 @@ export async function getLeadIdsByDealConstraints(
   return leadIds;
 }
 
+async function getLeadIdsByPipeline(accountId: string, pipelineId: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  const pageSize = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('deals')
+      .select('lead_id')
+      .eq('account_id', accountId)
+      .eq('pipeline_id', pipelineId)
+      .is('deleted_at', null)
+      .not('lead_id', 'is', null)
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Error fetching pipeline lead ids:', error);
+      break;
+    }
+    (data || []).forEach((d: any) => d.lead_id && ids.add(d.lead_id));
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return ids;
+}
+
 async function fetchLeadsData(
   accountId: string,
   measure: VisualConfig['measure'],
@@ -1438,6 +1462,12 @@ async function fetchLeadsData(
   // Apply lead field filters if configured (AND logic)
   if (hasLeadFilter) {
     allData = await filterByLeadFields(allData, accountId, leadFilters!, 'leads');
+  }
+
+  // Restrição pelo funil global (via negócios vinculados ao lead)
+  if (hasPipelineFilter && allData.length > 0) {
+    const pipelineLeadIds = await getLeadIdsByPipeline(accountId, filters.pipelineId);
+    allData = allData.filter(lead => pipelineLeadIds.has(lead.id));
   }
 
   // Apply deal-based filters: find leads that have matching deals
