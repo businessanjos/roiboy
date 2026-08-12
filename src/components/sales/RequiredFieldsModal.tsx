@@ -453,8 +453,10 @@ export function RequiredFieldsModal({
               </TabsContent>
 
               <TabsContent value="briefing" className="space-y-3 mt-4">
-                <p className="text-xs text-muted-foreground">
-                  Opcional — pode ser preenchido depois pela equipe de operações.
+                <p className={`text-xs ${briefingComplete ? "text-muted-foreground" : "text-amber-600"}`}>
+                  {briefingComplete
+                    ? "Briefing completo — a operação do CS já recebe estas informações."
+                    : "Obrigatório — preencha e salve o briefing para concluir o ganho (vale também para carteira/renovação)."}
                 </p>
                 <OperationBriefingForm
                   dealId={dealId}
