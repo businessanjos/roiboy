@@ -349,6 +349,7 @@ async function fetchStackedDealsData(
   }
   if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
   if (filters.stageId && filters.stageId !== 'all') query = query.eq('stage_id', filters.stageId);
+  if (filters.pipelineId && filters.pipelineId !== 'all') query = query.eq('pipeline_id', filters.pipelineId);
 
   // Paginate
   let allDeals: any[] = [];

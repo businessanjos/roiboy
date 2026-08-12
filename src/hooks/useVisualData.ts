@@ -317,6 +317,7 @@ async function calculateSalesCycle(
   if (filters.endDate) query = query.lte('won_at', filters.endDate);
   if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
   if (filters.stageId && filters.stageId !== 'all') query = query.eq('stage_id', filters.stageId);
+  if (filters.pipelineId && filters.pipelineId !== 'all') query = query.eq('pipeline_id', filters.pipelineId);
 
   // Paginate to fetch all
   let allDeals: any[] = [];
@@ -970,6 +971,9 @@ async function fetchDealsData(
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
   }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
+  }
 
   // Paginate to fetch all deals (Supabase limits to 1000 per request)
   let allRawDeals: any[] = [];
@@ -1087,6 +1091,10 @@ async function calculateConversionRate(
     totalQuery = totalQuery.eq('stage_id', filters.stageId);
     wonQuery = wonQuery.eq('stage_id', filters.stageId);
   }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    totalQuery = totalQuery.eq('pipeline_id', filters.pipelineId);
+    wonQuery = wonQuery.eq('pipeline_id', filters.pipelineId);
+  }
 
   const [totalResult, wonResult] = await Promise.all([totalQuery, wonQuery]);
 
@@ -1142,6 +1150,9 @@ async function calculateConversionRateByTextDimension(
   }
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
+  }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
   }
 
   // Paginação obrigatória: sem ela o PostgREST corta em 1.000 linhas
@@ -1251,6 +1262,9 @@ async function calculateConversionRateByPeriod(
   }
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
+  }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
   }
 
   const data: any[] = [];
