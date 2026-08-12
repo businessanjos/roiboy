@@ -171,8 +171,8 @@ export function RequiredFieldsModal({
   });
 
   const breakdownOk = !needsBreakdown || isBreakdownComplete(breakdown);
-  // Briefing operacional é OPCIONAL — não bloqueia o salvamento do ganho
-  const briefingOk = true;
+  // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
+  const briefingOk = !showBriefing || briefingComplete;
   const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
   const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk;
 
