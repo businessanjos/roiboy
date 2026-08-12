@@ -253,9 +253,14 @@ export function InsightsFilterBar() {
 
       {/* Pipeline Filter */}
       {pipelines.length > 0 && (
+        <div className="flex items-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", filters.pipelineId && "rounded-r-none border-r-0")}
+            >
               <GitBranch className="h-4 w-4" />
               {selectedPipeline?.name || "Todos os Funis"}
               <ChevronDown className="h-3 w-3 opacity-50" />
