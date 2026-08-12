@@ -564,6 +564,8 @@ export default function ClientDetail() {
           timezone: editFormData.timezone || null,
           education: editFormData.education || null,
           education_specialty: editFormData.education_specialty || null,
+          business_segment: editFormData.business_segment || null,
+          business_niche: editFormData.business_niche || null,
         } as any)
         .eq("id", id);
 
