@@ -90,8 +90,8 @@ export default function BriefingLinkAudit() {
       const clientMap = new Map<string, string>();
       const uniqueClients = [...new Set(clientIds)];
       if (uniqueClients.length) {
-        const { data: clients } = await supabase.from("clients").select("id, name").in("id", uniqueClients);
-        (clients ?? []).forEach((c) => clientMap.set(c.id, c.name));
+        const { data: clients } = await supabase.from("clients").select("id, full_name").in("id", uniqueClients);
+        (clients ?? []).forEach((c) => clientMap.set(c.id, c.full_name));
       }
 
       return (briefings ?? []).map((b) => {
