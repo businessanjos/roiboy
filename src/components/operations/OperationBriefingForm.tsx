@@ -643,6 +643,29 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={syncing}
+              onClick={async () => {
+                setSyncing(true);
+                try {
+                  await load();
+                  toast.success("Briefing sincronizado");
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+            >
+              {syncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Sincronizar dados
+            </Button>
+
             {!isBRL && (
               <Badge variant="outline" className="gap-1">
                 Moeda: {currencyCode}
