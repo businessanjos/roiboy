@@ -317,6 +317,7 @@ async function calculateSalesCycle(
   if (filters.endDate) query = query.lte('won_at', filters.endDate);
   if (filters.userId && filters.userId !== 'all') query = query.eq('responsible_user_id', filters.userId);
   if (filters.stageId && filters.stageId !== 'all') query = query.eq('stage_id', filters.stageId);
+  if (filters.pipelineId && filters.pipelineId !== 'all') query = query.eq('pipeline_id', filters.pipelineId);
 
   // Paginate to fetch all
   let allDeals: any[] = [];
@@ -970,6 +971,9 @@ async function fetchDealsData(
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
   }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
+  }
 
   // Paginate to fetch all deals (Supabase limits to 1000 per request)
   let allRawDeals: any[] = [];
@@ -1087,6 +1091,10 @@ async function calculateConversionRate(
     totalQuery = totalQuery.eq('stage_id', filters.stageId);
     wonQuery = wonQuery.eq('stage_id', filters.stageId);
   }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    totalQuery = totalQuery.eq('pipeline_id', filters.pipelineId);
+    wonQuery = wonQuery.eq('pipeline_id', filters.pipelineId);
+  }
 
   const [totalResult, wonResult] = await Promise.all([totalQuery, wonQuery]);
 
@@ -1142,6 +1150,9 @@ async function calculateConversionRateByTextDimension(
   }
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
+  }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
   }
 
   // Paginação obrigatória: sem ela o PostgREST corta em 1.000 linhas
@@ -1252,6 +1263,9 @@ async function calculateConversionRateByPeriod(
   if (filters.stageId && filters.stageId !== 'all') {
     query = query.eq('stage_id', filters.stageId);
   }
+  if (filters.pipelineId && filters.pipelineId !== 'all') {
+    query = query.eq('pipeline_id', filters.pipelineId);
+  }
 
   const data: any[] = [];
   {
@@ -1346,6 +1360,30 @@ export async function getLeadIdsByDealConstraints(
   return leadIds;
 }
 
+async function getLeadIdsByPipeline(accountId: string, pipelineId: string): Promise<Set<string>> {
+  const ids = new Set<string>();
+  const pageSize = 1000;
+  let from = 0;
+  while (true) {
+    const { data, error } = await supabase
+      .from('deals')
+      .select('lead_id')
+      .eq('account_id', accountId)
+      .eq('pipeline_id', pipelineId)
+      .is('deleted_at', null)
+      .not('lead_id', 'is', null)
+      .range(from, from + pageSize - 1);
+    if (error) {
+      console.error('Error fetching pipeline lead ids:', error);
+      break;
+    }
+    (data || []).forEach((d: any) => d.lead_id && ids.add(d.lead_id));
+    if (!data || data.length < pageSize) break;
+    from += pageSize;
+  }
+  return ids;
+}
+
 async function fetchLeadsData(
   accountId: string,
   measure: VisualConfig['measure'],
@@ -1361,8 +1399,12 @@ async function fetchLeadsData(
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
   const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
+  // Filtro global de Funil: leads não têm pipeline_id, então restringimos aos
+  // leads que possuem um negócio no funil selecionado.
+  const hasPipelineFilter = !!filters.pipelineId && filters.pipelineId !== 'all';
+
   // For scorecard total count WITHOUT any filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !unifiedFilters?.length) {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !hasPipelineFilter && !unifiedFilters?.length) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
@@ -1420,6 +1462,12 @@ async function fetchLeadsData(
   // Apply lead field filters if configured (AND logic)
   if (hasLeadFilter) {
     allData = await filterByLeadFields(allData, accountId, leadFilters!, 'leads');
+  }
+
+  // Restrição pelo funil global (via negócios vinculados ao lead)
+  if (hasPipelineFilter && allData.length > 0) {
+    const pipelineLeadIds = await getLeadIdsByPipeline(accountId, filters.pipelineId);
+    allData = allData.filter(lead => pipelineLeadIds.has(lead.id));
   }
 
   // Apply deal-based filters: find leads that have matching deals
