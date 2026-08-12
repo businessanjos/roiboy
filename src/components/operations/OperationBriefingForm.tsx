@@ -217,6 +217,8 @@ const isAccessError = (err: any): boolean => {
 export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = false }: OperationBriefingFormProps) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
