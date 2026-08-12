@@ -1,8 +1,9 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Button } from '@/components/ui/button';
-import { Calendar, CalendarDays, Bell, Users, Grid3X3 } from 'lucide-react';
+import { Calendar, CalendarDays, Bell, Users, Grid3X3, Newspaper } from 'lucide-react';
+import { ContentCalendarView } from '@/components/marketing/ContentCalendarView';
 import { useMarketingEvents, MarketingEvent } from '@/hooks/useMarketingEvents';
 import { MonthlyCalendarView } from '@/components/marketing/MonthlyCalendarView';
 import { YearlyCalendarView } from '@/components/marketing/YearlyCalendarView';
