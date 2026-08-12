@@ -66,6 +66,7 @@ import {
   Rocket,
   BookOpenCheck,
   Boxes,
+  FileSearch,
   
   type LucideIcon,
   Stethoscope,
@@ -117,6 +118,7 @@ export const sectors: Sector[] = [
       { to: "/renewals", icon: Repeat, label: "Renovações", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/operations/mentoria-ec", icon: GraduationCap, label: "Mentoria Ao Vivo", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/operations/practice-areas", icon: Tags, label: "Áreas de Atuação" },
+      { to: "/operations/briefing-audit", icon: FileSearch, label: "Auditoria de Briefings", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/operations/presenca-eventos", icon: UserCheck, label: "Presença em Eventos", permission: PERMISSIONS.CLIENTS_VIEW },
       { to: "/operations/consultant-bonus", icon: Trophy, label: "Premiação & Bônus" },
       { to: "/operations/scripts", icon: MessageSquare, label: "Scripts" },

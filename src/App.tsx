@@ -86,6 +86,7 @@ const VipClients = lazyRetry(() => import("./pages/VipClients"));
 const Renewals = lazyRetry(() => import("./pages/Renewals"));
 const MentoriaEC = lazyRetry(() => import("./pages/MentoriaEC"));
 const PracticeAreasAdmin = lazyRetry(() => import("./pages/PracticeAreasAdmin"));
+const BriefingLinkAudit = lazyRetry(() => import("./pages/BriefingLinkAudit"));
 const ConsultantBonus = lazyRetry(() => import("./pages/ConsultantBonus"));
 const OperationsScripts = lazyRetry(() => import("./pages/OperationsScripts"));
 const InstagramRanking = lazyRetry(() => import("./pages/InstagramRanking"));
@@ -295,6 +296,7 @@ const App = () => (
                             <Route path="/renewals" element={<Renewals />} />
                             <Route path="/operations/mentoria-ec" element={<MentoriaEC />} />
                             <Route path="/operations/practice-areas" element={<PracticeAreasAdmin />} />
+                            <Route path="/operations/briefing-audit" element={<BriefingLinkAudit />} />
                             <Route path="/operations/onboarding" element={<ClientOnboardingHub />} />
                             <Route path="/operations/presenca-eventos" element={<EternumAttendance />} />
                             <Route path="/operations/clinica-ryka" element={<ClinicaRyka />} />
