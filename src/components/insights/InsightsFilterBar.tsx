@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User } from "lucide-react";
+import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User, X } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -253,9 +253,14 @@ export function InsightsFilterBar() {
 
       {/* Pipeline Filter */}
       {pipelines.length > 0 && (
+        <div className="flex items-center">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" size="sm" className="gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn("gap-2", filters.pipelineId && "rounded-r-none border-r-0")}
+            >
               <GitBranch className="h-4 w-4" />
               {selectedPipeline?.name || "Todos os Funis"}
               <ChevronDown className="h-3 w-3 opacity-50" />
@@ -280,6 +285,19 @@ export function InsightsFilterBar() {
             ))}
           </DropdownMenuContent>
         </DropdownMenu>
+        {filters.pipelineId && (
+          <Button
+            variant="outline"
+            size="sm"
+            aria-label="Limpar filtro de funil"
+            title="Limpar filtro de funil"
+            className="rounded-l-none px-2"
+            onClick={() => setPipelineId("")}
+          >
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        )}
+        </div>
       )}
       {/* Global Custom Field Filter */}
       <InsightsGlobalFieldFilter />
