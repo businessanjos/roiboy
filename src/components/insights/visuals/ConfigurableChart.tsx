@@ -551,13 +551,8 @@ function PieChartView({
               outerRadius={compact ? '78%' : '68%'}
               paddingAngle={2}
               dataKey="value"
-              label={
-                compact
-                  ? ({ percent }) => (percent >= 0.05 ? `${(percent * 100).toFixed(0)}%` : '')
-                  : ({ name, percent }) =>
-                      percent >= 0.03 ? `${truncateLabel(String(name ?? ''), 14)} ${(percent * 100).toFixed(0)}%` : ''
-              }
-              labelLine={compact ? false : { stroke: 'hsl(var(--muted-foreground))', strokeWidth: 1 }}
+              label={renderPiePercentLabel(labelFont)}
+              labelLine={false}
               onClick={(data) => onDrilldown?.(data.name)}
               style={{ cursor: onDrilldown ? 'pointer' : 'default', fontSize: labelFont }}
             >
