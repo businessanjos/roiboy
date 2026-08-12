@@ -110,7 +110,10 @@ export function InsightsFilterBar() {
   const selectedPipeline = pipelines.find((p) => p.id === filters.pipelineId);
 
   const hasActiveFilters =
-    filters.userId !== "all" || filters.productId !== "all" || !!filters.globalFieldFilter;
+    filters.userId !== "all" ||
+    filters.productId !== "all" ||
+    (!!filters.pipelineId && filters.pipelineId !== "all") ||
+    !!filters.globalFieldFilter;
 
   return (
     <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
@@ -254,11 +257,18 @@ export function InsightsFilterBar() {
           <DropdownMenuTrigger asChild>
             <Button variant="outline" size="sm" className="gap-2">
               <GitBranch className="h-4 w-4" />
-              {selectedPipeline?.name || "Selecionar Pipeline"}
+              {selectedPipeline?.name || "Todos os Funis"}
               <ChevronDown className="h-3 w-3 opacity-50" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start" className="max-h-64 overflow-auto">
+            <DropdownMenuItem
+              onClick={() => setPipelineId("")}
+              className={cn(!filters.pipelineId && "bg-accent")}
+            >
+              Todos os Funis
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
             {pipelines.map((pipeline) => (
               <DropdownMenuItem
                 key={pipeline.id}
