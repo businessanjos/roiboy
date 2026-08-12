@@ -66,6 +66,7 @@ import {
   Rocket,
   BookOpenCheck,
   Boxes,
+  FileSearch,
   
   type LucideIcon,
   Stethoscope,
