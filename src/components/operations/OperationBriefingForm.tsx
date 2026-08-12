@@ -15,7 +15,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ClipboardList, Loader2, CheckCircle2, AlertCircle, ShieldAlert } from "lucide-react";
+import { ClipboardList, Loader2, CheckCircle2, AlertCircle, ShieldAlert, RefreshCw } from "lucide-react";
 import { toast } from "sonner";
 import { CountryStateCity, type LocationFields } from "./CountryStateCity";
 import { getCountry } from "@/lib/countries";
@@ -217,6 +217,8 @@ const isAccessError = (err: any): boolean => {
 export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = false }: OperationBriefingFormProps) {
   const { currentUser } = useCurrentUser();
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
+
   const [saving, setSaving] = useState(false);
   const [showErrors, setShowErrors] = useState(false);
   const [accessError, setAccessError] = useState<string | null>(null);
@@ -611,13 +613,14 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   };
 
 
-  if (loading) {
+  if (loading && !syncing) {
     return (
       <div className="flex items-center justify-center py-10">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
 
   const missing = getMissingFields(data);
   const complete = missing.length === 0;
@@ -642,6 +645,29 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
             </div>
           </div>
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-1.5"
+              disabled={syncing}
+              onClick={async () => {
+                setSyncing(true);
+                try {
+                  await load();
+                  toast.success("Briefing sincronizado");
+                } finally {
+                  setSyncing(false);
+                }
+              }}
+            >
+              {syncing ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3.5 w-3.5" />
+              )}
+              Sincronizar dados
+            </Button>
+
             {!isBRL && (
               <Badge variant="outline" className="gap-1">
                 Moeda: {currencyCode}
