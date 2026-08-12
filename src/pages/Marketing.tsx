@@ -194,8 +194,9 @@ export default function Marketing() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList className="flex-wrap h-auto">
-          <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
-          <TabsTrigger value="events" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Eventos</TabsTrigger>
+           <TabsTrigger value="calendar" className="flex items-center gap-2"><Calendar className="h-4 w-4" />Calendário</TabsTrigger>
+           <TabsTrigger value="conteudo" className="flex items-center gap-2"><Newspaper className="h-4 w-4" />Conteúdo</TabsTrigger>
+           <TabsTrigger value="events" className="flex items-center gap-2"><CalendarDays className="h-4 w-4" />Eventos</TabsTrigger>
           <TabsTrigger value="attendance" className="flex items-center gap-2"><Users className="h-4 w-4" />Presenças</TabsTrigger>
           <TabsTrigger value="reminders" className="flex items-center gap-2"><Bell className="h-4 w-4" />Lembretes</TabsTrigger>
         </TabsList>
