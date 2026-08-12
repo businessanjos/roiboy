@@ -233,6 +233,10 @@ export default function Marketing() {
           )}
         </TabsContent>
 
+        <TabsContent value="conteudo">
+          <ContentCalendarView currentMonth={contentMonth} onMonthChange={setContentMonth} />
+        </TabsContent>
+
         <TabsContent value="events"><MarketingEventsTab /></TabsContent>
         <TabsContent value="attendance"><AttendanceReport accountId={currentUser?.account_id ?? null} /></TabsContent>
         <TabsContent value="reminders"><MarketingRemindersTab /></TabsContent>
