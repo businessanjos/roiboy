@@ -278,13 +278,14 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
       }
       row = r;
 
-      // 2) Fallback: briefing preenchido pelo Comercial no negócio deste cliente
+      // 2) Fallback legado: briefing antigo ainda sem client_id, vinculado ao negócio.
+      //    O CS não tem acesso à tabela `deals` (isolamento por setor), então um erro
+      //    aqui é esperado e NÃO deve virar "acesso negado" na ficha do cliente.
       if (!row) {
-        const { data: deals, error: dealsErr } = await supabase
+        const { data: deals } = await supabase
           .from("deals")
           .select("id")
           .eq("client_id", clientId);
-        if (dealsErr) lastError = lastError || dealsErr;
         const dealIds = (deals || []).map((d: any) => d.id);
         if (dealIds.length > 0) {
           const { data: r2, error: e2 } = await supabase
