@@ -149,20 +149,15 @@ const Leads = lazyRetry(() => import("./pages/Leads"));
 
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
 const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
-const SocialMedia = lazyRetry(() => import("./pages/SocialMedia"));
-const MarketingTasks = lazyRetry(() => import("./pages/MarketingTasks"));
-const MarketingInsights = lazyRetry(() => import("./pages/MarketingInsights"));
-const MarketingTrafegoPago = lazyRetry(() => import("./pages/marketing/MarketingTrafegoPago"));
-const ContentHQ = lazyRetry(() => import("./pages/marketing/ContentHQ"));
-const Rebranding = lazyRetry(() => import("./pages/marketing/Rebranding"));
-const MarketingProjects = lazyRetry(() => import("./pages/marketing/MarketingProjects"));
+const MarketingContentHub = lazyRetry(() => import("./pages/marketing/MarketingContentHub"));
+const MarketingCampaignsHub = lazyRetry(() => import("./pages/marketing/MarketingCampaignsHub"));
+const MarketingProjectsHub = lazyRetry(() => import("./pages/marketing/MarketingProjectsHub"));
+const MarketingIntelligenceHub = lazyRetry(() => import("./pages/marketing/MarketingIntelligenceHub"));
 const MarketingProjectDetail = lazyRetry(() => import("@/components/marketing/projects/ProjectDetailSheet"));
 const MarketingDashboard = lazyRetry(() => import("./pages/marketing/MarketingDashboard"));
-const MarketingAgencies = lazyRetry(() => import("./pages/marketing/MarketingAgencies"));
 const MarketingAgencyDetail = lazyRetry(() => import("./pages/marketing/MarketingAgencyDetail"));
 const MarketingAgenciesCompare = lazyRetry(() => import("./pages/marketing/MarketingAgenciesCompare"));
 const MarketingAgencyPortal = lazyRetry(() => import("./pages/marketing/MarketingAgencyPortal"));
-const MarketingIntelligence = lazyRetry(() => import("./pages/marketing/MarketingIntelligence"));
 
 const Insights = lazyRetry(() => import("./pages/Insights"));
 const InsightsGoals = lazyRetry(() => import("./pages/InsightsGoals"));
