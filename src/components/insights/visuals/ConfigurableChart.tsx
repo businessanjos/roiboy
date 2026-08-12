@@ -511,6 +511,30 @@ function LineChartView({
   );
 }
 
+/** Percentual desenhado DENTRO da fatia — nunca é cortado pelas bordas do card. */
+function renderPiePercentLabel(fontSize: number) {
+  return (props: any) => {
+    const { cx, cy, midAngle, innerRadius, outerRadius, percent } = props;
+    if (!percent || percent < 0.04) return null;
+    const RAD = Math.PI / 180;
+    const r = innerRadius + (outerRadius - innerRadius) * 0.5;
+    const x = cx + r * Math.cos(-midAngle * RAD);
+    const y = cy + r * Math.sin(-midAngle * RAD);
+    return (
+      <text
+        x={x}
+        y={y}
+        fill="hsl(var(--card))"
+        textAnchor="middle"
+        dominantBaseline="central"
+        style={{ fontSize, fontWeight: 700, paintOrder: 'stroke' }}
+      >
+        {`${(percent * 100).toFixed(0)}%`}
+      </text>
+    );
+  };
+}
+
 function PieChartView({ 
   data, 
   formatting, 
