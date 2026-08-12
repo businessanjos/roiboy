@@ -58,7 +58,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
   const accountId = filters.accountIdOverride || currentUser?.account_id;
 
   const dp = config.dailyPerformanceConfig || {};
-  const pipelineId = dp.pipelineId || null;
+  // Funil configurado no visual tem prioridade; senão respeita o filtro global.
+  const pipelineId =
+    dp.pipelineId || (filters.pipelineId && filters.pipelineId !== "all" ? filters.pipelineId : null);
   const userId = dp.userId && dp.userId !== "all" ? dp.userId : (filters.userId !== "all" ? filters.userId : null);
 
   const range = useMemo(() => {
