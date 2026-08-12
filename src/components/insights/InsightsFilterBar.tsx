@@ -1,4 +1,4 @@
-import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User } from "lucide-react";
+import { CalendarDays, ChevronDown, Filter, GitBranch, RotateCcw, User, X } from "lucide-react";
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
