@@ -147,6 +147,8 @@ const SalesDashboard = lazyRetry(() => import("./pages/SalesDashboard"));
 const CsIncentivePresentation = lazyRetry(() => import("./pages/CsIncentivePresentation"));
 const Leads = lazyRetry(() => import("./pages/Leads"));
 
+import { PreserveQueryRedirect } from "@/components/marketing/_shared/PreserveQueryRedirect";
+
 const Marketing = lazyRetry(() => import("./pages/Marketing"));
 const ContentCalendar = lazyRetry(() => import("./pages/ContentCalendar"));
 const MarketingContentHub = lazyRetry(() => import("./pages/marketing/MarketingContentHub"));
