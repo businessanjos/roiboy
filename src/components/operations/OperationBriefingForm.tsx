@@ -611,13 +611,14 @@ export function OperationBriefingForm({ dealId, clientId, onSaved, readOnly = fa
   };
 
 
-  if (loading) {
+  if (loading && !syncing) {
     return (
       <div className="flex items-center justify-center py-10">
         <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
       </div>
     );
   }
+
 
   const missing = getMissingFields(data);
   const complete = missing.length === 0;
