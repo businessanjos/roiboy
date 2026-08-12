@@ -429,7 +429,9 @@ export function RequiredFieldsModal({
             <Tabs defaultValue="fields" className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="fields">Dados da Negociação</TabsTrigger>
-                <TabsTrigger value="briefing">Briefing para Operação</TabsTrigger>
+                <TabsTrigger value="briefing">
+                  Briefing para Operação {briefingComplete ? "✓" : "*"}
+                </TabsTrigger>
               </TabsList>
 
               <TabsContent value="fields" className="space-y-6 mt-4">
