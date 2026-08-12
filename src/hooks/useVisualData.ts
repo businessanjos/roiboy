@@ -1375,8 +1375,12 @@ async function fetchLeadsData(
   const hasLeadFilter = leadFilters && leadFilters.length > 0;
   const hasDealFilter = (dealFilters && dealFilters.length > 0) || (dealStatusFilter && dealStatusFilter.length > 0);
 
+  // Filtro global de Funil: leads não têm pipeline_id, então restringimos aos
+  // leads que possuem um negócio no funil selecionado.
+  const hasPipelineFilter = !!filters.pipelineId && filters.pipelineId !== 'all';
+
   // For scorecard total count WITHOUT any filter, use server-side count
-  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !unifiedFilters?.length) {
+  if (dimension.field === '_total' && !hasLeadFilter && !hasDealFilter && !hasPipelineFilter && !unifiedFilters?.length) {
     let countQuery = supabase
       .from('leads')
       .select('*', { count: 'exact', head: true })
