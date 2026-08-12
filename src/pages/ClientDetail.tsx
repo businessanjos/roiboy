@@ -564,6 +564,8 @@ export default function ClientDetail() {
           timezone: editFormData.timezone || null,
           education: editFormData.education || null,
           education_specialty: editFormData.education_specialty || null,
+          business_segment: editFormData.business_segment || null,
+          business_niche: editFormData.business_niche || null,
         } as any)
         .eq("id", id);
 
@@ -604,7 +606,13 @@ export default function ClientDetail() {
         mls_level: editFormData.mls_level,
         responsible_user_id: editFormData.responsible_user_id,
         companies: editFormData.companies,
+        business_segment: editFormData.business_segment,
+        business_niche: editFormData.business_niche,
+        education: editFormData.education,
+        education_specialty: editFormData.education_specialty,
+        timezone: editFormData.timezone,
       } as any);
+
 
       pendingEmailRef.current = "";
       toast.success("Informações atualizadas!");
