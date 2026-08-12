@@ -388,21 +388,21 @@ const App = () => (
                             
                             <Route path="/marketing" element={<Marketing />} />
                             <Route path="/marketing/dashboard" element={<MarketingDashboard />} />
-                            <Route path="/content-calendar" element={<Navigate to="/social-media?platform=calendar" replace />} />
-                            <Route path="/social-media" element={<SocialMedia />} />
+                            <Route path="/content-calendar" element={<Navigate to="/marketing?tab=conteudo" replace />} />
+                            <Route path="/social-media" element={<PreserveQueryRedirect to="/marketing/content-hq" params={{ tab: "redes" }} />} />
                             <Route path="/criacao" element={<Navigate to="/marketing/content-hq" replace />} />
-                            <Route path="/marketing-tasks" element={<MarketingTasks />} />
-                            <Route path="/marketing-insights" element={<MarketingInsights />} />
-                            <Route path="/marketing/trafego-pago" element={<MarketingTrafegoPago />} />
-                            <Route path="/marketing/content-hq" element={<ContentHQ />} />
-                            <Route path="/marketing/rebranding" element={<Rebranding />} />
-                            <Route path="/marketing/projetos" element={<MarketingProjects />} />
+                            <Route path="/marketing-tasks" element={<Navigate to="/marketing/projetos?tab=tarefas" replace />} />
+                            <Route path="/marketing-insights" element={<MarketingIntelligenceHub />} />
+                            <Route path="/marketing/trafego-pago" element={<MarketingCampaignsHub />} />
+                            <Route path="/marketing/content-hq" element={<MarketingContentHub />} />
+                            <Route path="/marketing/rebranding" element={<Navigate to="/marketing/projetos?tab=rebranding" replace />} />
+                            <Route path="/marketing/projetos" element={<MarketingProjectsHub />} />
                             <Route path="/marketing/projetos/:id" element={<MarketingProjectDetail />} />
-                            <Route path="/marketing/agencias" element={<MarketingAgencies />} />
+                            <Route path="/marketing/agencias" element={<Navigate to="/marketing/trafego-pago?tab=agencias" replace />} />
                             <Route path="/marketing/agencias/comparativo" element={<MarketingAgenciesCompare />} />
                             <Route path="/marketing/agencias/:id" element={<MarketingAgencyDetail />} />
                             <Route path="/marketing/portal-agencia" element={<MarketingAgencyPortal />} />
-                            <Route path="/marketing/market-intelligence" element={<MarketingIntelligence />} />
+                            <Route path="/marketing/market-intelligence" element={<Navigate to="/marketing-insights?tab=market-intelligence" replace />} />
                             <Route path="/insights" element={<Insights />} />
                             <Route path="/insights/goals" element={<InsightsGoals />} />
                             <Route path="/insights/:dashboardId" element={<Insights />} />
