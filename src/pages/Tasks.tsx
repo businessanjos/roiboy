@@ -744,10 +744,13 @@ export default function Tasks() {
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
     const counts: Record<string, number> = {};
+    const defaultStatus = customStatuses.find(s => s.is_default);
     customStatuses.forEach(status => {
       counts[status.id] = baseFilteredTasks.filter(t => {
+        // Espelha exatamente o filtro da aba (filteredTasks)
+        if (!status.is_completed_status && t.completed_at) return false;
         if (t.custom_status_id === status.id) return true;
-        if (!t.custom_status_id && status.is_default && !t.completed_at) return true;
+        if (!t.custom_status_id && status.id === defaultStatus?.id && !t.completed_at) return true;
         if (!t.custom_status_id && t.completed_at && status.is_completed_status) return true;
         return false;
       }).length;
