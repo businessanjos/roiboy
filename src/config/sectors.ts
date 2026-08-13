@@ -245,6 +245,7 @@ export const sectors: Sector[] = [
       { to: "/marketing/dashboard", icon: LayoutDashboard, label: "Dashboard" },
       { to: "/marketing", icon: CalendarDays, label: "Calendário" },
       { to: "/marketing/content-hq", icon: Crown, label: "Conteúdo" },
+      { to: "/marketing/content-hq?tab=redes", icon: Instagram, label: "Social Media" },
       { to: "/marketing/trafego-pago", icon: TrendingUp, label: "Campanhas & Mídia" },
       { to: "/marketing/projetos", icon: FolderKanban, label: "Projetos & Tarefas" },
       { to: "/marketing-insights", icon: BarChart3, label: "Inteligência" },
