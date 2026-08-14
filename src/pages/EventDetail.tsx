@@ -678,6 +678,12 @@ export default function EventDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DuplicateEventDialog
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        eventId={id ?? null}
+      />
     </div>
   );
 }
