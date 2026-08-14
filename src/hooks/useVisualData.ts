@@ -23,6 +23,9 @@ export interface AggregatedDataPoint {
   count?: number;
   color?: string;
   secondaryValue?: number;
+  /** Negócios perdidos na etapa (apenas funil por etapa). */
+  lostValue?: number;
+  lostCount?: number;
 }
 
 interface UseVisualDataParams {
@@ -276,6 +279,30 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           'created_at'
         );
         const lostValue = lostResult.length > 0 ? lostResult[0].value : 0;
+
+        // Perdidos por etapa: usa a etapa em que o negócio estava ao ser perdido,
+        // para que o total vermelho possa ser conferido linha a linha.
+        const lostByStage = await fetchDealsData(
+          accountId,
+          measure,
+          { field: 'stage_name', type: 'text' },
+          { ...filters, startDate: filters.startDate, endDate: filters.endDate },
+          dateDisplayFormat,
+          'lost',
+          leadFilters,
+          dealFilters,
+          ['lost'],
+          unifiedFilters,
+          'created_at'
+        );
+        const lostMap = new Map(
+          lostByStage.map((r) => [normalizeStageName(r.name), r])
+        );
+        result = result.map((r) => {
+          const hit = lostMap.get(normalizeStageName(r.name));
+          return hit ? { ...r, lostValue: hit.value, lostCount: hit.count ?? hit.value } : r;
+        });
+
         result.push({
           name: 'Perdidos',
           value: lostValue,
