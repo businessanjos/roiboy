@@ -520,12 +520,21 @@ Deno.serve(async (req) => {
           count = merged.length;
         } else {
           merged.sort((a: any, b: any) => {
+            if (isRevenueSort) {
+              const an = a[orderColumn] === null || a[orderColumn] === undefined;
+              const bn = b[orderColumn] === null || b[orderColumn] === undefined;
+              if (an !== bn) return orderNullsFirst ? (an ? -1 : 1) : (an ? 1 : -1);
+              if (an && bn) return 0;
+              const diff = Number(a[orderColumn]) - Number(b[orderColumn]);
+              return orderAscending ? diff : -diff;
+            }
             const av = a[orderColumn] ?? "";
             const bv = b[orderColumn] ?? "";
             if (av < bv) return orderAscending ? -1 : 1;
             if (av > bv) return orderAscending ? 1 : -1;
             return 0;
           });
+
           count = merged.length;
           clients = merged.slice(offset, offset + limit);
         }
