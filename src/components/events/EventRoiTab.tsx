@@ -185,6 +185,12 @@ export default function EventRoiTab({
 
   const totalCost = data?.totalCost ?? 0;
   const revenue = data?.revenue ?? 0;
+  const currentIndex = (editions ?? []).findIndex((e) => e.isCurrent);
+  const current = currentIndex >= 0 ? editions![currentIndex] : null;
+  const previous =
+    currentIndex >= 0 && editions && currentIndex + 1 < editions.length
+      ? editions[currentIndex + 1]
+      : null;
   const roi = totalCost > 0 ? ((revenue - totalCost) / totalCost) * 100 : null;
   const positive = revenue >= totalCost;
   const attendanceRate =
