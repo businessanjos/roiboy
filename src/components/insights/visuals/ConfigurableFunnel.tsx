@@ -19,10 +19,11 @@ interface ConfigurableFunnelProps {
     decimals: number;
   };
   appearance?: AppearanceConfig;
+  onDrilldown?: (groupName?: string, status?: 'won' | 'lost' | 'open') => void;
 }
 
 export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelProps>(function ConfigurableFunnel(
-  { data, formatting, appearance },
+  { data, formatting, appearance, onDrilldown },
   ref
 ) {
   const config = appearance || DEFAULT_APPEARANCE;
@@ -84,8 +85,9 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                 {stagePct}%
               </span>
               <div
-                className="rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden"
+                className={`rounded-md flex items-center justify-between px-4 transition-all flex-1 min-w-0 overflow-hidden ${onDrilldown ? 'cursor-pointer hover:opacity-90' : ''}`}
                 style={{ backgroundColor: bgColor, height: barHeight }}
+                onClick={onDrilldown ? () => onDrilldown(item.name, 'open') : undefined}
               >
                 <span className="text-sm font-medium truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m), color: barText }}>
                   {item.name}
@@ -113,8 +115,9 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                 {ganhosStagePct}%
               </span>
               <div
-                className="rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden"
+                className={`rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden ${onDrilldown ? 'cursor-pointer hover:opacity-90' : ''}`}
                 style={{ backgroundColor: '#10b981', height: barHeight }}
+                onClick={onDrilldown ? () => onDrilldown('Ganhos', 'won') : undefined}
               >
                 <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   🏆 {ganhosItem.name}
@@ -138,8 +141,9 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
             <div className="flex items-center gap-1.5" style={{ width: `${perdidosWidthPct}%`, minWidth: `${Math.round(160 * m)}px` }}>
               <span className="shrink-0" style={{ width: Math.round(40 * m) }} />
               <div
-                className="rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-destructive/60 ring-offset-2 flex-1 min-w-0 overflow-hidden"
+                className={`rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-destructive/60 ring-offset-2 flex-1 min-w-0 overflow-hidden ${onDrilldown ? 'cursor-pointer hover:opacity-90' : ''}`}
                 style={{ backgroundColor: '#ef4444', height: barHeight }}
+                onClick={onDrilldown ? () => onDrilldown('Perdidos', 'lost') : undefined}
               >
                 <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
                   ✖ {perdidosItem.name}
