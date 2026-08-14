@@ -72,7 +72,11 @@ import {
   ChevronDown,
   ArrowUp,
   ArrowDown
+  List,
+  Columns3,
+  CalendarDays,
 } from "lucide-react";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { sectors, type SectorId } from "@/config/sectors";
 import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
