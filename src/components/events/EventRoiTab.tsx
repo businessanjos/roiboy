@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -5,9 +6,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, Users, DollarSign, Target, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, DollarSign, Target, Info, Copy } from "lucide-react";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 
 interface EventRoiTabProps {
   eventId: string;
@@ -39,6 +42,7 @@ export default function EventRoiTab({
   eventType,
   scheduledAt,
 }: EventRoiTabProps) {
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["event-roi", eventId, accountId],
     enabled: !!eventId && !!accountId,
@@ -109,8 +113,29 @@ export default function EventRoiTab({
 
       const [{ data: costs }, { data: parts }] = await Promise.all([
         supabase.from("event_costs").select("event_id, estimated_value, actual_value").in("event_id", ids),
-        supabase.from("event_participants").select("event_id, rsvp_status").in("event_id", ids),
+        supabase
+          .from("event_participants")
+          .select("event_id, rsvp_status, client_id")
+          .in("event_id", ids),
       ]);
+
+      const allClientIds = Array.from(
+        new Set((parts || []).map((p: any) => p.client_id).filter(Boolean)),
+      ) as string[];
+
+      let deals: { client_id: string; value: number; won_at: string | null }[] = [];
+      if (allClientIds.length > 0) {
+        const { data: d } = await supabase
+          .from("deals")
+          .select("client_id, value, won_at")
+          .in("client_id", allClientIds)
+          .eq("status", "won");
+        deals = (d || []).map((x: any) => ({
+          client_id: x.client_id,
+          value: Number(x.value) || 0,
+          won_at: x.won_at,
+        }));
+      }
 
       return matched.map((e: any) => {
         const cost = (costs || [])
@@ -118,13 +143,27 @@ export default function EventRoiTab({
           .reduce((s, c: any) => s + (Number(c.actual_value) || Number(c.estimated_value) || 0), 0);
         const rows = (parts || []).filter((p: any) => p.event_id === e.id);
         const attended = rows.filter((p: any) => p.rsvp_status === "attended").length;
+        const editionClients = new Set(
+          rows.map((p: any) => p.client_id).filter(Boolean) as string[],
+        );
+        const cutoff = e.scheduled_at ? new Date(e.scheduled_at).getTime() : null;
+        const revenue = deals
+          .filter(
+            (d) =>
+              editionClients.has(d.client_id) &&
+              (!cutoff || (d.won_at ? new Date(d.won_at).getTime() >= cutoff : false)),
+          )
+          .reduce((s, d) => s + d.value, 0);
         return {
           id: e.id,
           title: e.title as string,
           scheduled_at: e.scheduled_at as string | null,
           cost,
+          revenue,
+          roi: cost > 0 ? ((revenue - cost) / cost) * 100 : null,
           participants: rows.length,
           attended,
+          attendanceRate: rows.length > 0 ? (attended / rows.length) * 100 : null,
           isCurrent: e.id === eventId,
         };
       });
@@ -146,6 +185,12 @@ export default function EventRoiTab({
 
   const totalCost = data?.totalCost ?? 0;
   const revenue = data?.revenue ?? 0;
+  const currentIndex = (editions ?? []).findIndex((e) => e.isCurrent);
+  const current = currentIndex >= 0 ? editions![currentIndex] : null;
+  const previous =
+    currentIndex >= 0 && editions && currentIndex + 1 < editions.length
+      ? editions[currentIndex + 1]
+      : null;
   const roi = totalCost > 0 ? ((revenue - totalCost) / totalCost) * 100 : null;
   const positive = revenue >= totalCost;
   const attendanceRate =
@@ -250,67 +295,151 @@ export default function EventRoiTab({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Comparativo entre edições</CardTitle>
-          <CardDescription>
-            Edições anteriores com o mesmo nome-base e tipo, para comparar custo e presença.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="text-base">Comparativo entre edições</CardTitle>
+            <CardDescription>
+              Edições com o mesmo nome-base e tipo — presença, custo, receita atribuída e ROI.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setDuplicateOpen(true)}>
+            <Copy className="h-4 w-4 mr-2" />
+            Nova edição
+          </Button>
         </CardHeader>
         <CardContent>
           {loadingEditions ? (
             <Skeleton className="h-32 w-full" />
           ) : (editions?.length ?? 0) <= 1 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
-              Ainda não há outras edições deste evento para comparar.
+              Ainda não há outras edições deste evento para comparar. Use "Nova edição" para
+              duplicar este evento e manter o histórico comparável.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-muted-foreground border-b">
-                    <th className="py-2 pr-3 font-medium">Edição</th>
-                    <th className="py-2 pr-3 font-medium">Data</th>
-                    <th className="py-2 pr-3 font-medium text-right">Participantes</th>
-                    <th className="py-2 pr-3 font-medium text-right">Presença</th>
-                    <th className="py-2 font-medium text-right">Custo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editions!.map((e) => (
-                    <tr key={e.id} className="border-b last:border-0">
-                      <td className="py-2 pr-3">
-                        <Link
-                          to={`/events/${e.id}`}
-                          className="hover:underline font-medium inline-flex items-center gap-2"
+            <div className="space-y-4">
+              {previous && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    {
+                      label: "Presença vs edição anterior",
+                      value: current?.attendanceRate ?? null,
+                      prev: previous.attendanceRate,
+                      suffix: "%",
+                    },
+                    {
+                      label: "Custo vs edição anterior",
+                      value: current?.cost ?? 0,
+                      prev: previous.cost,
+                      money: true,
+                      invert: true,
+                    },
+                    {
+                      label: "Receita vs edição anterior",
+                      value: current?.revenue ?? 0,
+                      prev: previous.revenue,
+                      money: true,
+                    },
+                  ].map((m: any) => {
+                    const delta =
+                      m.value === null || m.prev === null ? null : Number(m.value) - Number(m.prev);
+                    const good = delta === null ? true : m.invert ? delta <= 0 : delta >= 0;
+                    return (
+                      <div key={m.label} className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">{m.label}</p>
+                        <p className="text-lg font-semibold mt-0.5">
+                          {m.value === null
+                            ? "—"
+                            : m.money
+                              ? brl(Number(m.value))
+                              : `${Number(m.value).toFixed(0)}%`}
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 ${good ? "text-primary" : "text-destructive"}`}
                         >
-                          <span className="truncate max-w-[220px]">{e.title}</span>
-                          {e.isCurrent && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              atual
-                            </Badge>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-3 text-muted-foreground">
-                        {e.scheduled_at
-                          ? format(new Date(e.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
-                      </td>
-                      <td className="py-2 pr-3 text-right">{e.participants}</td>
-                      <td className="py-2 pr-3 text-right">
-                        {e.participants > 0
-                          ? `${Math.round((e.attended / e.participants) * 100)}%`
-                          : "—"}
-                      </td>
-                      <td className="py-2 text-right">{brl(e.cost)}</td>
+                          {delta === null
+                            ? "sem base de comparação"
+                            : `${delta > 0 ? "+" : ""}${
+                                m.money ? brl(delta) : `${delta.toFixed(0)} p.p.`
+                              } vs ${
+                                previous.scheduled_at
+                                  ? format(new Date(previous.scheduled_at), "MMM/yyyy", {
+                                      locale: ptBR,
+                                    })
+                                  : "edição anterior"
+                              }`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-2 pr-3 font-medium">Edição</th>
+                      <th className="py-2 pr-3 font-medium">Data</th>
+                      <th className="py-2 pr-3 font-medium text-right">Participantes</th>
+                      <th className="py-2 pr-3 font-medium text-right">Presença</th>
+                      <th className="py-2 pr-3 font-medium text-right">Custo</th>
+                      <th className="py-2 pr-3 font-medium text-right">Receita</th>
+                      <th className="py-2 font-medium text-right">ROI</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {editions!.map((e) => (
+                      <tr key={e.id} className="border-b last:border-0">
+                        <td className="py-2 pr-3">
+                          <Link
+                            to={`/events/${e.id}`}
+                            className="hover:underline font-medium inline-flex items-center gap-2"
+                          >
+                            <span className="truncate max-w-[220px]">{e.title}</span>
+                            {e.isCurrent && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                atual
+                              </Badge>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-3 text-muted-foreground">
+                          {e.scheduled_at
+                            ? format(new Date(e.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
+                            : "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-right">{e.participants}</td>
+                        <td className="py-2 pr-3 text-right">
+                          {e.attendanceRate === null ? "—" : `${Math.round(e.attendanceRate)}%`}
+                        </td>
+                        <td className="py-2 pr-3 text-right">{brl(e.cost)}</td>
+                        <td className="py-2 pr-3 text-right">{brl(e.revenue)}</td>
+                        <td
+                          className={`py-2 text-right font-medium ${
+                            e.roi === null
+                              ? ""
+                              : e.roi >= 0
+                                ? "text-primary"
+                                : "text-destructive"
+                          }`}
+                        >
+                          {e.roi === null ? "—" : `${e.roi > 0 ? "+" : ""}${e.roi.toFixed(0)}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <DuplicateEventDialog
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        eventId={eventId}
+      />
     </div>
   );
 }

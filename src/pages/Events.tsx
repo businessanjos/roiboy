@@ -85,6 +85,7 @@ import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
@@ -162,6 +163,7 @@ export default function Events() {
   const [saving, setSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [duplicateEventId, setDuplicateEventId] = useState<string | null>(null);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
   const [copied, setCopied] = useState(false);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
@@ -1748,6 +1750,23 @@ export default function Events() {
                           >
                             <Pencil className="h-4 w-4" />
                           </Button>
+                          <TooltipProvider>
+                            <Tooltip>
+                              <TooltipTrigger asChild>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => setDuplicateEventId(event.id)}
+                                  aria-label="Duplicar evento"
+                                >
+                                  <Copy className="h-4 w-4" />
+                                </Button>
+                              </TooltipTrigger>
+                              <TooltipContent>
+                                <p>Duplicar como nova edição</p>
+                              </TooltipContent>
+                            </Tooltip>
+                          </TooltipProvider>
                           <Button
                             variant="ghost"
                             size="icon"
@@ -1934,6 +1953,17 @@ export default function Events() {
           <AttendanceReport accountId={accountId} />
         </TabsContent>
       </Tabs>
+
+      <DuplicateEventDialog
+        open={!!duplicateEventId}
+        onOpenChange={(o) => !o && setDuplicateEventId(null)}
+        eventId={duplicateEventId}
+        navigateOnSuccess={false}
+        onDuplicated={() => {
+          setDuplicateEventId(null);
+          invalidateEvents();
+        }}
+      />
     </div>
   );
 }

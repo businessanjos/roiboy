@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Copy } from "lucide-react";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import {
   EVENT_PHASES,
   phaseOfTab,
@@ -119,6 +120,7 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = sanitizeEventTab(searchParams.get("tab"));
   const [activePhase, setActivePhase] = useState<EventPhaseId>(() => phaseOfTab(activeTab));
@@ -430,6 +432,10 @@ export default function EventDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicar como nova edição
+                </DropdownMenuItem>
                 {!isLocked && (
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
@@ -672,6 +678,12 @@ export default function EventDetail() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <DuplicateEventDialog
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        eventId={id ?? null}
+      />
     </div>
   );
 }
