@@ -8,7 +8,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { MoreHorizontal } from "lucide-react";
+import { MoreHorizontal, Copy } from "lucide-react";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import {
   EVENT_PHASES,
   phaseOfTab,
