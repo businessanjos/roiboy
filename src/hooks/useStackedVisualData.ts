@@ -133,54 +133,103 @@ async function enrichWithCustomField(
   if (entityIds.length === 0) return records;
 
   // Fetch field values in batches
-  const selectColumns = isMultiSelect ? `${idColumn}, value_json` : `${idColumn}, value_text`;
-  let allValues: any[] = [];
-  const batchSize = 500;
-  const promises = [];
-  for (let i = 0; i < entityIds.length; i += batchSize) {
-    const batch = entityIds.slice(i, i + batchSize);
-    promises.push(
-      supabase
-        .from(table as any)
-        .select(selectColumns)
-        .eq("field_id", fieldId)
-        .eq("account_id", accountId)
-        .in(idColumn, batch) as any
-    );
-  }
-
-  const results = await Promise.all(promises);
-  for (const { data, error } of results) {
-    if (error) {
-      console.error("Error fetching custom field values for enrichment:", error);
-      continue;
+  const fetchValues = async (tbl: string, idCol: string, ids: string[]) => {
+    const selectColumns = isMultiSelect ? `${idCol}, value_json` : `${idCol}, value_text`;
+    const batchSize = 500;
+    const promises: any[] = [];
+    for (let i = 0; i < ids.length; i += batchSize) {
+      const batch = ids.slice(i, i + batchSize);
+      promises.push(
+        supabase
+          .from(tbl as any)
+          .select(selectColumns)
+          .eq("field_id", fieldId)
+          .eq("account_id", accountId)
+          .in(idCol, batch) as any
+      );
     }
-    allValues = allValues.concat(data || []);
-  }
+    const results = await Promise.all(promises);
+    let rows: any[] = [];
+    for (const { data, error } of results) {
+      if (error) {
+        console.error("Error fetching custom field values for enrichment:", error);
+        continue;
+      }
+      rows = rows.concat(data || []);
+    }
+    return rows;
+  };
+
+  const allValues = await fetchValues(table, idColumn, entityIds);
+
+  const toRaw = (row: any): string[] | null => {
+    if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
+      return row.value_json.map((v: string) => String(v));
+    }
+    if (row.value_text) return [String(row.value_text)];
+    return null;
+  };
 
   // Collect RAW values so coded ones (product UUIDs / legacy slugs) resolve to
   // the current product name — which wins over the stale option label.
   const rawByEntity = new Map<string, string[]>();
   for (const row of allValues) {
-    const entityId = row[idColumn];
-    if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
-      rawByEntity.set(entityId, row.value_json.map((v: string) => String(v)));
-    } else if (row.value_text) {
-      rawByEntity.set(entityId, [String(row.value_text)]);
+    const raw = toRaw(row);
+    if (raw) rawByEntity.set(row[idColumn], raw);
+  }
+
+  // Fallback: the same field can be stored on the counterpart entity
+  // (deal filled directly vs. lead). Without this, deals whose value lives on
+  // the other table were bucketed as "Não informado" even though the drilldown
+  // shows the value.
+  const rawByRecordId = new Map<string, string[]>();
+  if (dataSource === 'deals') {
+    const missing = records.filter(r => {
+      const entityId = source === 'lead' ? r.lead_id : r.id;
+      return !entityId || !rawByEntity.has(entityId);
+    });
+    if (missing.length > 0) {
+      const altTable = source === 'lead' ? 'deal_field_values' : 'lead_field_values';
+      const altIdColumn = source === 'lead' ? 'deal_id' : 'lead_id';
+      const altIds = Array.from(new Set(
+        missing.map(r => (source === 'lead' ? r.id : r.lead_id)).filter(Boolean)
+      )) as string[];
+      if (altIds.length > 0) {
+        const altRows = await fetchValues(altTable, altIdColumn, altIds);
+        const altByEntity = new Map<string, string[]>();
+        for (const row of altRows) {
+          const raw = toRaw(row);
+          if (raw) altByEntity.set(row[altIdColumn], raw);
+        }
+        for (const r of missing) {
+          const altId = source === 'lead' ? r.id : r.lead_id;
+          const raw = altId ? altByEntity.get(altId) : undefined;
+          if (raw) rawByRecordId.set(r.id, raw);
+        }
+      }
     }
   }
 
   const allRaw: string[] = [];
   for (const vals of rawByEntity.values()) allRaw.push(...vals);
+  for (const vals of rawByRecordId.values()) allRaw.push(...vals);
   const productLabels = await resolveProductLabels(allRaw);
 
   const labelFor = (raw: string) => productLabels.get(raw) || valueToLabel.get(raw) || raw;
+  const labelsOf = (vals: string[]) =>
+    Array.from(new Set(vals.map(labelFor).filter(Boolean)));
 
   // Build entityId -> labels map (multi_select keeps each option as its own series)
   const entityLabelMap = new Map<string, string[]>();
   for (const [entityId, vals] of rawByEntity) {
-    const labels = Array.from(new Set(vals.map(labelFor).filter(Boolean)));
+    const labels = labelsOf(vals);
     if (labels.length) entityLabelMap.set(entityId, labels);
+  }
+
+  const recordLabelMap = new Map<string, string[]>();
+  for (const [recordId, vals] of rawByRecordId) {
+    const labels = labelsOf(vals);
+    if (labels.length) recordLabelMap.set(recordId, labels);
   }
 
   // Inject _custom_stack_label(s) into records
@@ -191,7 +240,10 @@ async function enrichWithCustomField(
     } else {
       entityId = r.id;
     }
-    const labels = entityLabelMap.get(entityId) || ['Não informado'];
+    const labels =
+      (entityId ? entityLabelMap.get(entityId) : undefined) ||
+      recordLabelMap.get(r.id) ||
+      ['Não informado'];
     return { ...r, _custom_stack_label: labels[0], _custom_stack_labels: labels };
   });
 
