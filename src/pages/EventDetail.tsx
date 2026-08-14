@@ -1,3 +1,4 @@
+import { isEventLocked, resolveEventStatus } from "@/lib/events/eventStatus";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useParams, useNavigate, useSearchParams } from "react-router-dom";
 import { Progress } from "@/components/ui/progress";
@@ -254,7 +255,7 @@ export default function EventDetail() {
     });
   };
 
-  const isLocked = event?.status === 'completed' || event?.status === 'cancelled';
+  const isLocked = event ? isEventLocked(event) : false;
 
   /**
    * Prontidão do evento: média ponderada dos quatro sinais operacionais que
@@ -317,7 +318,8 @@ export default function EventDetail() {
   };
 
   const getStatusBadge = (status: string | null) => {
-    if (status === "completed") {
+    const effective = event ? resolveEventStatus({ ...event, status }) : (status === "cancelled" ? "cancelled" : "open");
+    if (effective === "completed") {
       return (
         <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
           <Check className="h-3 w-3 mr-1" />
@@ -332,7 +334,7 @@ export default function EventDetail() {
       in_progress: { label: "Em andamento", variant: "default" },
       cancelled: { label: "Cancelado", variant: "destructive" }
     };
-    const { label, variant } = config[status || 'draft'] || config.draft;
+    const { label, variant } = config[(effective === "cancelled" ? "cancelled" : status) || 'draft'] || config.draft;
     return <Badge variant={variant}>{label}</Badge>;
   };
 

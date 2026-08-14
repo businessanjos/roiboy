@@ -1,3 +1,4 @@
+import { isEventCompleted } from "@/lib/events/eventStatus";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -65,7 +66,7 @@ export default function EventsKpis() {
   }, [accountId, year]);
 
   const kpis = useMemo(() => {
-    const realized = events.filter((e) => e.status === "completed").length;
+    const realized = events.filter((e) => isEventCompleted(e)).length;
     const totalBudget = events.reduce((s, e) => s + Number(e.budget || 0), 0);
     const totalActual = Object.values(actualCosts).reduce((s, v) => s + v, 0);
     const totalExpected = events.reduce((s, e) => s + (e.expected_attendees || 0), 0);
@@ -81,7 +82,7 @@ export default function EventsKpis() {
   const monthly = useMemo(() => {
     return MONTHS.map((m, i) => {
       const monthEvents = events.filter((e) => e.scheduled_at && new Date(e.scheduled_at).getMonth() === i);
-      const realized = monthEvents.filter((e) => e.status === "completed").length;
+      const realized = monthEvents.filter((e) => isEventCompleted(e)).length;
       return {
         mes: m,
         total: monthEvents.length,

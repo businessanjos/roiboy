@@ -1,3 +1,4 @@
+import { resolveEventStatus } from "@/lib/events/eventStatus";
 import { useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { format, isSameDay } from "date-fns";
@@ -54,8 +55,9 @@ const COLUMNS: { id: KanbanColumnId; label: string; hint: string; accent: string
  * "Planejar" porque ainda dependem de definição de agenda (TBD).
  */
 export function kanbanColumnOfEvent(event: KanbanEvent, now = new Date()): KanbanColumnId {
-  if (event.status === "cancelled") return "cancelados";
-  if (event.status === "completed") return "pos";
+  const effective = resolveEventStatus(event, now);
+  if (effective === "cancelled") return "cancelados";
+  if (effective === "completed") return "pos";
 
   const start = event.scheduled_at ? new Date(event.scheduled_at) : null;
   const end = event.ends_at ? new Date(event.ends_at) : null;
