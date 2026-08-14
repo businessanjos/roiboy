@@ -10,6 +10,8 @@ interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  lostValue?: number;
+  lostCount?: number;
 }
 
 interface ConfigurableFunnelProps {
