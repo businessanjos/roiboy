@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -5,9 +6,11 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
-import { TrendingUp, TrendingDown, Users, DollarSign, Target, Info } from "lucide-react";
+import { TrendingUp, TrendingDown, Users, DollarSign, Target, Info, Copy } from "lucide-react";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 
 interface EventRoiTabProps {
   eventId: string;
