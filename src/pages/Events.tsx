@@ -158,13 +158,37 @@ export default function Events() {
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
   const [selectedEventForAttendance, setSelectedEventForAttendance] = useState<EventWithProducts | null>(null);
   
-  // Search and filter state
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterEventType, setFilterEventType] = useState<string>("all");
-  const [filterModality, setFilterModality] = useState<string>("all");
-  const [modalityTab, setModalityTab] = useState<"all" | "presencial" | "online">("all");
+  // Search and filter state — refletido na URL para ser compartilhável e
+  // sobreviver a refresh sem "esconder" eventos silenciosamente.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const searchTerm = searchParams.get("q") ?? "";
+  const filterEventType = searchParams.get("tipo") ?? "all";
+  const filterModality = searchParams.get("modalidade") ?? "all";
+  const modalityTab = (searchParams.get("aba") ?? "all") as "all" | "presencial" | "online";
+  const filterStatus = searchParams.get("status") ?? "open";
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [filterStatus, setFilterStatus] = useState<string>("open");
+
+  const setParam = useCallback(
+    (key: string, value: string, defaultValue: string) => {
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (!value || value === defaultValue) next.delete(key);
+          else next.set(key, value);
+          return next;
+        },
+        { replace: true },
+      );
+    },
+    [setSearchParams],
+  );
+
+  const setSearchTerm = useCallback((v: string) => setParam("q", v, ""), [setParam]);
+  const setFilterEventType = useCallback((v: string) => setParam("tipo", v, "all"), [setParam]);
+  const setFilterModality = useCallback((v: string) => setParam("modalidade", v, "all"), [setParam]);
+  const setModalityTab = useCallback((v: string) => setParam("aba", v, "all"), [setParam]);
+  const setFilterStatus = useCallback((v: string) => setParam("status", v, "open"), [setParam]);
+
 
   // Form state
   const [title, setTitle] = useState("");
