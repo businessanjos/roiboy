@@ -256,6 +256,21 @@ export default function EventDetail() {
 
   const isLocked = event?.status === 'completed' || event?.status === 'cancelled';
 
+  /**
+   * Prontidão do evento: média ponderada dos quatro sinais operacionais que
+   * indicam que o evento está pronto para acontecer.
+   */
+  const readiness = useMemo(() => {
+    const checklistScore = stats.checklistTotal > 0 ? stats.checklistDone / stats.checklistTotal : 0;
+    const scheduleScore = stats.scheduleItems > 0 ? 1 : 0;
+    const participantsScore = stats.attendeesCount > 0 ? 1 : 0;
+    const costsScore = stats.totalCosts > 0 ? 1 : 0;
+    return Math.round(
+      ((checklistScore * 0.4 + scheduleScore * 0.25 + participantsScore * 0.25 + costsScore * 0.1) as number) * 100,
+    );
+  }, [stats]);
+
+
   const handleChangeStatus = async (newStatus: string) => {
     if (!id) return;
     const { error } = await supabase
