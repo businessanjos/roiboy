@@ -120,6 +120,7 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = sanitizeEventTab(searchParams.get("tab"));
   const [activePhase, setActivePhase] = useState<EventPhaseId>(() => phaseOfTab(activeTab));
