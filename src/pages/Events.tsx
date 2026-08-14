@@ -1935,6 +1935,17 @@ export default function Events() {
           <AttendanceReport accountId={accountId} />
         </TabsContent>
       </Tabs>
+
+      <DuplicateEventDialog
+        open={!!duplicateEventId}
+        onOpenChange={(o) => !o && setDuplicateEventId(null)}
+        eventId={duplicateEventId}
+        navigateOnSuccess={false}
+        onDuplicated={() => {
+          setDuplicateEventId(null);
+          fetchEvents();
+        }}
+      />
     </div>
   );
 }
