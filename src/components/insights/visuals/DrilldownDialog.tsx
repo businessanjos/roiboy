@@ -51,6 +51,7 @@ export function DrilldownDialog({
   visual,
   visualId,
   groupName,
+  statusOverride,
 }: DrilldownDialogProps) {
   const config = visual.config as VisualConfig | null;
   const [currentPage, setCurrentPage] = useState(0);
