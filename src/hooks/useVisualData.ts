@@ -248,7 +248,8 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           leadFilters,
           dealFilters,
           ['won'],
-          unifiedFilters
+          unifiedFilters,
+          'created_at'
         );
         const wonValue = wonResult.length > 0 ? wonResult[0].value : 0;
         result.push({
@@ -271,7 +272,8 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           leadFilters,
           dealFilters,
           ['lost'],
-          unifiedFilters
+          unifiedFilters,
+          'created_at'
         );
         const lostValue = lostResult.length > 0 ? lostResult[0].value : 0;
         result.push({
@@ -883,7 +885,8 @@ async function fetchDealsData(
   leadFilters?: FieldFilter[],
   dealFilters?: FieldFilter[],
   dealStatusFilter?: string[],
-  unifiedFilters?: VisualFilter[]
+  unifiedFilters?: VisualFilter[],
+  dateFieldOverride?: string
 ): Promise<AggregatedDataPoint[]> {
   // Special handling for sales cycle calculation
   if (measure.aggregation === 'sales_cycle') {
@@ -947,6 +950,10 @@ async function fetchDealsData(
 
   if (explicitDateFilter) {
     dateFilterField = explicitDateFilter.field;
+  } else if (dateFieldOverride) {
+    // O funil por etapa recorta todas as barras pela mesma data (criação),
+    // então Ganhos/Perdidos não podem cair em won_at/lost_at.
+    dateFilterField = dateFieldOverride;
   } else if (statusFilter === 'won' || singleDealStatus === 'won') {
     dateFilterField = 'won_at';
   } else if (statusFilter === 'lost' || singleDealStatus === 'lost') {
