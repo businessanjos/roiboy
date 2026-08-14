@@ -287,8 +287,9 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     );
   }
 
-  const handleDrilldown = (groupName?: string) => {
+  const handleDrilldown = (groupName?: string, status?: 'won' | 'lost' | 'open') => {
     setDrilldownGroup(groupName);
+    setDrilldownStatus(status);
     setDrilldownOpen(true);
   };
 
