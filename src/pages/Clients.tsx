@@ -2136,8 +2136,9 @@ export default function Clients() {
             variant={showFilters ? "secondary" : "outline"} 
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="relative gap-2"
+            className="relative gap-2 shrink-0 h-10"
           >
+
             <Filter className="h-4 w-4" />
             <span>Filtros</span>
             {activeFilterCount > 0 && (
