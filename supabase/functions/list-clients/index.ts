@@ -547,7 +547,7 @@ Deno.serve(async (req) => {
         query = query.limit(5000);
       } else {
         query = query
-          .order(orderColumn, { ascending: orderAscending, nullsFirst: false })
+          .order(orderColumn, { ascending: orderAscending, nullsFirst: orderNullsFirst })
           .range(offset, offset + limit - 1);
       }
 
