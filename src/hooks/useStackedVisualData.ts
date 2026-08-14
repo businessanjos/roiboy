@@ -179,43 +179,10 @@ async function enrichWithCustomField(
     if (raw) rawByEntity.set(row[idColumn], raw);
   }
 
-  // Fallback: the same field can be stored on the counterpart entity
-  // (deal filled directly vs. lead). Without this, deals whose value lives on
-  // the other table were bucketed as "Não informado" even though the drilldown
-  // shows the value.
+  // Sem fallback cruzado: o valor exibido vem exclusivamente da entidade
+  // escolhida (negócio ou lead). Buscar na contraparte duplicava as séries.
   const rawByRecordId = new Map<string, string[]>();
-  if (dataSource === 'deals') {
-    const missing = records.filter(r => {
-      const entityId = source === 'lead' ? r.lead_id : r.id;
-      return !entityId || !rawByEntity.has(entityId);
-    });
-    if (missing.length > 0) {
-      const altTable = source === 'lead' ? 'deal_field_values' : 'lead_field_values';
-      const altIdColumn = source === 'lead' ? 'deal_id' : 'lead_id';
-      const altIds = Array.from(new Set(
-        missing.map(r => (source === 'lead' ? r.id : r.lead_id)).filter(Boolean)
-      )) as string[];
-      const counterpartId = await findCounterpartFieldId(
-        fieldId,
-        accountId,
-        source === 'lead' ? 'deal' : 'lead'
-      );
-      const altFieldIds = counterpartId ? [fieldId, counterpartId] : [fieldId];
-      if (altIds.length > 0) {
-        const altRows = await fetchValues(altTable, altIdColumn, altIds, altFieldIds);
-        const altByEntity = new Map<string, string[]>();
-        for (const row of altRows) {
-          const raw = toRaw(row);
-          if (raw) altByEntity.set(row[altIdColumn], raw);
-        }
-        for (const r of missing) {
-          const altId = source === 'lead' ? r.id : r.lead_id;
-          const raw = altId ? altByEntity.get(altId) : undefined;
-          if (raw) rawByRecordId.set(r.id, raw);
-        }
-      }
-    }
-  }
+
 
   const allRaw: string[] = [];
   for (const vals of rawByEntity.values()) allRaw.push(...vals);
