@@ -91,6 +91,10 @@ Deno.serve(async (req) => {
     const educationFilter = url.searchParams.get("education") || "";
     const areaFilter = url.searchParams.get("area") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
+    // "initial" | "current" | "any" — isola clientes sem faturamento preenchido
+    // (nulo ou zero) para mutirão de preenchimento no CS.
+    const revenueMissing = url.searchParams.get("revenue_missing") || "";
+
 
     // Native (DB-orderable) sort mapping.
     const NATIVE_SORTS: Record<string, { col: string; asc: boolean }> = {
