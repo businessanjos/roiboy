@@ -42,6 +42,7 @@ export default function EventRoiTab({
   eventType,
   scheduledAt,
 }: EventRoiTabProps) {
+  const [duplicateOpen, setDuplicateOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["event-roi", eventId, accountId],
     enabled: !!eventId && !!accountId,
