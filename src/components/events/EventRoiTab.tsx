@@ -109,8 +109,29 @@ export default function EventRoiTab({
 
       const [{ data: costs }, { data: parts }] = await Promise.all([
         supabase.from("event_costs").select("event_id, estimated_value, actual_value").in("event_id", ids),
-        supabase.from("event_participants").select("event_id, rsvp_status").in("event_id", ids),
+        supabase
+          .from("event_participants")
+          .select("event_id, rsvp_status, client_id")
+          .in("event_id", ids),
       ]);
+
+      const allClientIds = Array.from(
+        new Set((parts || []).map((p: any) => p.client_id).filter(Boolean)),
+      ) as string[];
+
+      let deals: { client_id: string; value: number; won_at: string | null }[] = [];
+      if (allClientIds.length > 0) {
+        const { data: d } = await supabase
+          .from("deals")
+          .select("client_id, value, won_at")
+          .in("client_id", allClientIds)
+          .eq("status", "won");
+        deals = (d || []).map((x: any) => ({
+          client_id: x.client_id,
+          value: Number(x.value) || 0,
+          won_at: x.won_at,
+        }));
+      }
 
       return matched.map((e: any) => {
         const cost = (costs || [])
@@ -118,13 +139,27 @@ export default function EventRoiTab({
           .reduce((s, c: any) => s + (Number(c.actual_value) || Number(c.estimated_value) || 0), 0);
         const rows = (parts || []).filter((p: any) => p.event_id === e.id);
         const attended = rows.filter((p: any) => p.rsvp_status === "attended").length;
+        const editionClients = new Set(
+          rows.map((p: any) => p.client_id).filter(Boolean) as string[],
+        );
+        const cutoff = e.scheduled_at ? new Date(e.scheduled_at).getTime() : null;
+        const revenue = deals
+          .filter(
+            (d) =>
+              editionClients.has(d.client_id) &&
+              (!cutoff || (d.won_at ? new Date(d.won_at).getTime() >= cutoff : false)),
+          )
+          .reduce((s, d) => s + d.value, 0);
         return {
           id: e.id,
           title: e.title as string,
           scheduled_at: e.scheduled_at as string | null,
           cost,
+          revenue,
+          roi: cost > 0 ? ((revenue - cost) / cost) * 100 : null,
           participants: rows.length,
           attended,
+          attendanceRate: rows.length > 0 ? (attended / rows.length) * 100 : null,
           isCurrent: e.id === eventId,
         };
       });
