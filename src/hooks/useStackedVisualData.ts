@@ -194,8 +194,14 @@ async function enrichWithCustomField(
       const altIds = Array.from(new Set(
         missing.map(r => (source === 'lead' ? r.id : r.lead_id)).filter(Boolean)
       )) as string[];
+      const counterpartId = await findCounterpartFieldId(
+        fieldId,
+        accountId,
+        source === 'lead' ? 'deal' : 'lead'
+      );
+      const altFieldIds = counterpartId ? [fieldId, counterpartId] : [fieldId];
       if (altIds.length > 0) {
-        const altRows = await fetchValues(altTable, altIdColumn, altIds);
+        const altRows = await fetchValues(altTable, altIdColumn, altIds, altFieldIds);
         const altByEntity = new Map<string, string[]>();
         for (const row of altRows) {
           const raw = toRaw(row);
