@@ -27,9 +27,11 @@ interface UseVisualDrilldownParams {
   groupName?: string; // Filter to specific group (e.g., "Janeiro/24")
   enabled?: boolean;
   extraCfColumns?: string[]; // Additional cf_* columns from drilldown column selector
+  /** Restringe a um status (barras Ganhos/Perdidos e etapas do funil). */
+  statusOverride?: 'won' | 'lost' | 'open';
 }
 
-export function useVisualDrilldown({ config, groupName, enabled = true, extraCfColumns }: UseVisualDrilldownParams) {
+export function useVisualDrilldown({ config, groupName, enabled = true, extraCfColumns, statusOverride }: UseVisualDrilldownParams) {
   const { currentUser } = useCurrentUser();
   const { filters: globalFilters } = useInsightsFilters();
 
@@ -52,7 +54,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
   const effectiveConfig = withAdaptiveDateGrain(config, filters.startDate, filters.endDate);
 
   return useQuery({
-    queryKey: ['visual-drilldown', effectiveConfig, groupName, filters, accountId, extraCfColumns],
+    queryKey: ['visual-drilldown', effectiveConfig, groupName, filters, accountId, extraCfColumns, statusOverride],
     queryFn: async (): Promise<DrilldownRecord[]> => {
       const config = effectiveConfig;
       if (!config || !accountId) return [];
@@ -63,7 +65,7 @@ export function useVisualDrilldown({ config, groupName, enabled = true, extraCfC
       switch (dataSource) {
         case 'deals':
         case 'sale_items':
-          return fetchDealsRecords(accountId, config, filters, groupName, extraCfColumns);
+          return fetchDealsRecords(accountId, config, filters, groupName, extraCfColumns, statusOverride);
         case 'leads':
           return fetchLeadsRecords(accountId, config, filters, groupName);
         case 'products':
@@ -87,7 +89,8 @@ async function fetchDealsRecords(
   config: VisualConfig,
   filters: any,
   groupName?: string,
-  extraCfColumns?: string[]
+  extraCfColumns?: string[],
+  statusOverride?: 'won' | 'lost' | 'open'
 ): Promise<DrilldownRecord[]> {
   let query = supabase
     .from('deals')
@@ -154,6 +157,10 @@ async function fetchDealsRecords(
     query = query.eq('stage_id', filters.stageId);
   }
 
+  if (statusOverride) {
+    query = query.eq('status', statusOverride);
+  }
+
   const { data, error } = await query.order(dateFilterField, { ascending: false });
 
   if (error) {
@@ -215,8 +222,11 @@ async function fetchDealsRecords(
     });
   }
 
+  // As barras Ganhos / Perdidos do funil não são etapas: o recorte já é o status.
+  const isFunnelStatusBucket = groupName === 'Ganhos' || groupName === 'Perdidos';
+
   // Filter by group name if provided
-  if (groupName && config.dimension) {
+  if (groupName && config.dimension && !isFunnelStatusBucket) {
     filteredData = filteredData.filter(item => {
       return matchesGroup(item, config.dimension, config, groupName);
     });
@@ -646,8 +656,11 @@ async function fetchTasksRecords(
     from += pageSize;
   }
 
+  // As barras Ganhos / Perdidos do funil não são etapas: o recorte já é o status.
+  const isFunnelStatusBucket = groupName === 'Ganhos' || groupName === 'Perdidos';
+
   // Filter by group name if provided
-  if (groupName && config.dimension) {
+  if (groupName && config.dimension && !isFunnelStatusBucket) {
     allData = allData.filter((task: any) => {
       let taskGroup: string;
       switch (config.dimension.field) {
