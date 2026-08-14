@@ -631,7 +631,18 @@ export default function EventDetail() {
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
+        <TabsContent value="roi">
+          <EventRoiTab
+            eventId={event.id}
+            accountId={accountId}
+            eventTitle={event.title}
+            eventType={event.event_type}
+            scheduledAt={event.scheduled_at}
+          />
+        </TabsContent>
+
         <TabsContent value="summaries">
+
           <EventSummariesTab
             eventId={event.id}
             accountId={accountId}
