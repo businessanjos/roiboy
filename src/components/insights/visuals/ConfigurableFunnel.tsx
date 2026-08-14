@@ -10,6 +10,8 @@ interface AggregatedDataPoint {
   value: number;
   count?: number;
   color?: string;
+  lostValue?: number;
+  lostCount?: number;
 }
 
 interface ConfigurableFunnelProps {
@@ -99,6 +101,16 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
               <span className="text-xs font-semibold text-muted-foreground shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
                 {overallPct}%
               </span>
+              {typeof item.lostValue === 'number' && item.lostValue > 0 && (
+                <span
+                  title={`Perdidos nesta etapa: ${item.lostValue}`}
+                  onClick={onDrilldown ? (e) => { e.stopPropagation(); onDrilldown(item.name, 'lost'); } : undefined}
+                  className={`shrink-0 rounded-md bg-destructive/15 text-destructive font-semibold px-2 py-0.5 whitespace-nowrap ${onDrilldown ? 'cursor-pointer hover:bg-destructive/25' : ''}`}
+                  style={{ fontSize: Math.round(11 * m) }}
+                >
+                  ✖ {formatValueCompact(item.lostValue, formatting.type)}
+                </span>
+              )}
             </div>
           </div>
         );
@@ -146,7 +158,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                 onClick={onDrilldown ? () => onDrilldown('Perdidos', 'lost') : undefined}
               >
                 <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
-                  ✖ {perdidosItem.name}
+                  ✖ {perdidosItem.name} (total)
                 </span>
                 <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
                   {formatValueCompact(perdidosItem.value, formatting.type)}
