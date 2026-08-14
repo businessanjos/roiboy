@@ -85,6 +85,7 @@ import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import AttendanceReport from "@/components/events/AttendanceReport";
+import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 
@@ -1943,7 +1944,7 @@ export default function Events() {
         navigateOnSuccess={false}
         onDuplicated={() => {
           setDuplicateEventId(null);
-          fetchEvents();
+          invalidateEvents();
         }}
       />
     </div>
