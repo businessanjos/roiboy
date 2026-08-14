@@ -18,6 +18,7 @@ import {
   type EventPhaseId,
 } from "@/lib/events/eventPhases";
 import EventRoiTab from "@/components/events/EventRoiTab";
+import EventRemindersTab from "@/components/events/EventRemindersTab";
 
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
@@ -628,6 +629,10 @@ export default function EventDetail() {
         <TabsContent value="media" className="space-y-4">
           <EventGalleryShareBar eventId={event.id} accountId={accountId} eventName={event.title} />
           <EventMediaTab eventId={event.id} accountId={accountId} />
+        </TabsContent>
+
+        <TabsContent value="reminders">
+          <EventRemindersTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
         <TabsContent value="design">

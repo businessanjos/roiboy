@@ -119,7 +119,7 @@ Deno.serve(async (req) => {
       const UAZAPI_ADMIN_TOKEN = Deno.env.get("UAZAPI_ADMIN_TOKEN") || "";
 
       // Derive app URL
-      const appUrl = "https://preview--roy-ai.lovable.app";
+      const appUrl = Deno.env.get("PUBLIC_APP_URL") || "https://iamroy.app";
 
       let sentCount = campaign.sent_count || 0;
       let failedCount = campaign.failed_count || 0;

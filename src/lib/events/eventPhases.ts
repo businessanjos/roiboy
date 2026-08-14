@@ -12,6 +12,7 @@ import {
   MessageSquare,
   Sparkles,
   TrendingUp,
+  BellRing,
   type LucideIcon,
 } from "lucide-react";
 
@@ -41,6 +42,7 @@ export const EVENT_TABS: EventTabDef[] = [
 
   { value: "participants", label: "Participantes", icon: Users, phase: "executar" },
   { value: "notes", label: "Notas", icon: FileText, phase: "executar" },
+  { value: "reminders", label: "Lembretes", icon: BellRing, phase: "executar" },
 
   { value: "media", label: "Mídia", icon: Image, phase: "pos" },
   { value: "feedback", label: "Feedback", icon: MessageSquare, phase: "pos" },

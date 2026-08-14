@@ -9375,6 +9375,8 @@ export type Database = {
           address: string | null
           allow_external_guests: boolean
           auto_generate_content: boolean
+          auto_reminder_types: string[]
+          auto_reminders_enabled: boolean
           budget: number | null
           category: Database["public"]["Enums"]["event_category"]
           checkin_code: string | null
@@ -9420,6 +9422,8 @@ export type Database = {
           address?: string | null
           allow_external_guests?: boolean
           auto_generate_content?: boolean
+          auto_reminder_types?: string[]
+          auto_reminders_enabled?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
@@ -9465,6 +9469,8 @@ export type Database = {
           address?: string | null
           allow_external_guests?: boolean
           auto_generate_content?: boolean
+          auto_reminder_types?: string[]
+          auto_reminders_enabled?: boolean
           budget?: number | null
           category?: Database["public"]["Enums"]["event_category"]
           checkin_code?: string | null
