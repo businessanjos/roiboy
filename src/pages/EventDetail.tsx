@@ -1,5 +1,22 @@
-import { useState, useEffect } from "react";
-import { useParams, useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useCallback } from "react";
+import { useParams, useNavigate, useSearchParams } from "react-router-dom";
+import { Progress } from "@/components/ui/progress";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { MoreHorizontal } from "lucide-react";
+import {
+  EVENT_PHASES,
+  phaseOfTab,
+  sanitizeEventTab,
+  tabsOfPhase,
+  type EventPhaseId,
+} from "@/lib/events/eventPhases";
+import EventRoiTab from "@/components/events/EventRoiTab";
+
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -101,7 +118,25 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = sanitizeEventTab(searchParams.get("tab"));
+  const [activePhase, setActivePhase] = useState<EventPhaseId>(() => phaseOfTab(activeTab));
+
+  // Mantém a fase em sincronia com a aba vinda da URL (links compartilháveis).
+  useEffect(() => {
+    setActivePhase(phaseOfTab(activeTab));
+  }, [activeTab]);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("tab", tab);
+      setSearchParams(next, { replace: true });
+      setActivePhase(phaseOfTab(tab));
+    },
+    [searchParams, setSearchParams],
+  );
+
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
@@ -220,6 +255,21 @@ export default function EventDetail() {
   };
 
   const isLocked = event?.status === 'completed' || event?.status === 'cancelled';
+
+  /**
+   * Prontidão do evento: média ponderada dos quatro sinais operacionais que
+   * indicam que o evento está pronto para acontecer.
+   */
+  const readiness = useMemo(() => {
+    const checklistScore = stats.checklistTotal > 0 ? stats.checklistDone / stats.checklistTotal : 0;
+    const scheduleScore = stats.scheduleItems > 0 ? 1 : 0;
+    const participantsScore = stats.attendeesCount > 0 ? 1 : 0;
+    const costsScore = stats.totalCosts > 0 ? 1 : 0;
+    return Math.round(
+      ((checklistScore * 0.4 + scheduleScore * 0.25 + participantsScore * 0.25 + costsScore * 0.1) as number) * 100,
+    );
+  }, [stats]);
+
 
   const handleChangeStatus = async (newStatus: string) => {
     if (!id) return;
@@ -361,188 +411,147 @@ export default function EventDetail() {
               </Button>
             )}
             {!isLocked ? (
-              <>
-                <Button 
-                  size="sm" 
-                  className="bg-green-600 hover:bg-green-700 text-white"
-                  onClick={() => confirmStatusChange('completed')}
-                >
-                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                  Evento Concluído
-                </Button>
-                <Button 
-                  size="sm" 
-                  variant="destructive"
-                  onClick={() => confirmStatusChange('cancelled')}
-                >
-                  <AlertTriangle className="h-4 w-4 mr-2" />
-                  Evento Cancelado
-                </Button>
-              </>
+              <Button size="sm" onClick={() => confirmStatusChange("completed")}>
+                <CheckCircle2 className="h-4 w-4 mr-2" />
+                Concluir evento
+              </Button>
             ) : (
-              <Button 
-                size="sm" 
-                variant="secondary"
-                onClick={() => confirmStatusChange('planned')}
-              >
+              <Button size="sm" variant="secondary" onClick={() => confirmStatusChange("planned")}>
                 <RotateCcw className="h-4 w-4 mr-2" />
-                Reabrir Evento
+                Reabrir evento
               </Button>
             )}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" aria-label="Mais ações do evento">
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {!isLocked && (
+                  <DropdownMenuItem
+                    className="text-destructive focus:text-destructive"
+                    onClick={() => confirmStatusChange("cancelled")}
+                  >
+                    <AlertTriangle className="h-4 w-4 mr-2" />
+                    Cancelar evento
+                  </DropdownMenuItem>
+                )}
+                {isLocked && (
+                  <DropdownMenuItem onClick={() => confirmStatusChange("planned")}>
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Reabrir evento
+                  </DropdownMenuItem>
+                )}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-3 sm:grid-cols-3 lg:grid-cols-7">
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-primary/10">
-              <Users className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-primary" />
+      {/* KPIs primários + prontidão */}
+      <div className="grid grid-cols-1 gap-2 sm:gap-3 sm:grid-cols-3">
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Users className="h-4 w-4 text-primary" />
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-bold">{stats.attendeesCount}</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Participantes</p>
+              <p className="text-2xl font-bold">{stats.attendeesCount}</p>
+              <p className="text-xs text-muted-foreground">
+                Participantes{stats.noShowCount > 0 ? ` · ${stats.noShowCount} no-show` : ""}
+              </p>
             </div>
           </div>
         </Card>
 
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-red-500/10">
-              <UserX className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-red-500" />
-            </div>
+        <Card className="p-4">
+          <div className="flex items-center justify-between gap-3">
             <div>
-              <p className="text-xl sm:text-2xl font-bold">{stats.noShowCount}</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Não Compareceu</p>
+              <p className="text-2xl font-bold">{readiness}%</p>
+              <p className="text-xs text-muted-foreground">Prontidão do evento</p>
             </div>
+            <Badge variant={readiness >= 80 ? "default" : readiness >= 40 ? "secondary" : "outline"}>
+              {readiness >= 80 ? "Pronto" : readiness >= 40 ? "Em andamento" : "Início"}
+            </Badge>
           </div>
+          <Progress value={readiness} className="h-1.5 mt-3" />
         </Card>
-        
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-blue-500/10">
-              <ListOrdered className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-blue-500" />
+
+        <Card className="p-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-muted">
+              <DollarSign className="h-4 w-4 text-muted-foreground" />
             </div>
             <div>
-              <p className="text-xl sm:text-2xl font-bold">{stats.scheduleItems}</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Programação</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-green-500/10">
-              <CheckSquare className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-green-500" />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold">{stats.checklistDone}/{stats.checklistTotal}</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Checklist</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-purple-500/10">
-              <Gift className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-purple-500" />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold">{stats.giftsTotal}</p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Brindes</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-orange-500" />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(stats.totalCosts)}
+              <p className="text-2xl font-bold">
+                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" }).format(stats.totalCosts)}
               </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Custo Total</p>
-            </div>
-          </div>
-        </Card>
-        
-        <Card className="p-3 sm:p-4">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="p-1.5 sm:p-2 rounded-lg bg-emerald-500/10">
-              <DollarSign className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-emerald-500" />
-            </div>
-            <div>
-              <p className="text-xl sm:text-2xl font-bold">
-                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL', notation: 'compact' }).format(stats.paidCosts)}
+              <p className="text-xs text-muted-foreground">
+                Custo total ·{" "}
+                {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", notation: "compact" }).format(stats.paidCosts)}{" "}
+                pago
               </p>
-              <p className="text-[10px] sm:text-xs text-muted-foreground">Pago</p>
             </div>
           </div>
         </Card>
+      </div>
+
+      {/* Detalhes secundários */}
+      <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-xs text-muted-foreground">
+        <span className="inline-flex items-center gap-1.5">
+          <CheckSquare className="h-3.5 w-3.5" />
+          Checklist {stats.checklistDone}/{stats.checklistTotal}
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <ListOrdered className="h-3.5 w-3.5" />
+          {stats.scheduleItems} item(ns) de programação
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <Gift className="h-3.5 w-3.5" />
+          {stats.giftsTotal} brinde(s)
+        </span>
       </div>
 
       {/* Main Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-        <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
-          <TabsList className="inline-flex h-auto gap-1 p-1 min-w-max">
-            <TabsTrigger value="overview" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Settings className="h-4 w-4" />
-              Geral
-            </TabsTrigger>
-            <TabsTrigger value="briefing" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <FileText className="h-4 w-4" />
-              Briefing
-            </TabsTrigger>
-            <TabsTrigger value="schedule" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <ListOrdered className="h-4 w-4" />
-              Agenda
-            </TabsTrigger>
-            <TabsTrigger value="checklist" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <CheckSquare className="h-4 w-4" />
-              Checklist
-            </TabsTrigger>
-            <TabsTrigger value="gifts" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Gift className="h-4 w-4" />
-              Brindes
-            </TabsTrigger>
-            <TabsTrigger value="costs" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <DollarSign className="h-4 w-4" />
-              Custos
-            </TabsTrigger>
-            <TabsTrigger value="notes" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <FileText className="h-4 w-4" />
-              Notas
-            </TabsTrigger>
-            <TabsTrigger value="participants" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Users className="h-4 w-4" />
-              Participantes
-            </TabsTrigger>
-            <TabsTrigger value="team" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Users2 className="h-4 w-4" />
-              Equipe
-            </TabsTrigger>
-            <TabsTrigger value="media" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Image className="h-4 w-4" />
-              Mídia
-            </TabsTrigger>
-            <TabsTrigger value="design" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Palette className="h-4 w-4" />
-              Design
-            </TabsTrigger>
-            <TabsTrigger value="feedback" className="gap-2 text-xs sm:text-sm px-3 py-2">
+      <Tabs value={activeTab} onValueChange={handleTabChange} className="space-y-4 sm:space-y-6">
+        <div className="space-y-2">
+          <div className="inline-flex rounded-lg bg-muted p-1 gap-1">
+            {EVENT_PHASES.map((p) => (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => handleTabChange(tabsOfPhase(p.id)[0].value)}
+                className={`px-3 py-1.5 text-xs sm:text-sm rounded-md transition-colors ${
+                  activePhase === p.id
+                    ? "bg-background text-foreground shadow-sm font-medium"
+                    : "text-muted-foreground hover:text-foreground"
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
 
-              <MessageSquare className="h-4 w-4" />
-              Feedback
-            </TabsTrigger>
-            <TabsTrigger value="summaries" className="gap-2 text-xs sm:text-sm px-3 py-2">
-              <Sparkles className="h-4 w-4" />
-              Resumos IA
-            </TabsTrigger>
-          </TabsList>
+          <div className="overflow-x-auto -mx-4 sm:mx-0 px-4 sm:px-0">
+            <TabsList className="inline-flex h-auto gap-1 p-1 min-w-max">
+              {tabsOfPhase(activePhase).map((t) => {
+                const Icon = t.icon;
+                return (
+                  <TabsTrigger
+                    key={t.value}
+                    value={t.value}
+                    className="gap-2 text-xs sm:text-sm px-3 py-2"
+                  >
+                    <Icon className="h-4 w-4" />
+                    {t.label}
+                  </TabsTrigger>
+                );
+              })}
+            </TabsList>
+          </div>
         </div>
+
 
         <TabsContent value="overview">
           <EventOverviewTab 
@@ -622,7 +631,18 @@ export default function EventDetail() {
           <EventFeedbackTab eventId={event.id} accountId={accountId} />
         </TabsContent>
 
+        <TabsContent value="roi">
+          <EventRoiTab
+            eventId={event.id}
+            accountId={accountId}
+            eventTitle={event.title}
+            eventType={event.event_type}
+            scheduledAt={event.scheduled_at}
+          />
+        </TabsContent>
+
         <TabsContent value="summaries">
+
           <EventSummariesTab
             eventId={event.id}
             accountId={accountId}
