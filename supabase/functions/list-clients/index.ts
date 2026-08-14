@@ -484,6 +484,18 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Sem faturamento preenchido: trata nulo e zero como "faltando".
+      if (revenueMissing === "initial") {
+        q = q.or("initial_revenue.is.null,initial_revenue.eq.0");
+      } else if (revenueMissing === "current") {
+        q = q.or("current_revenue.is.null,current_revenue.eq.0");
+      } else if (revenueMissing === "any") {
+        q = q.or(
+          "initial_revenue.is.null,initial_revenue.eq.0,current_revenue.is.null,current_revenue.eq.0"
+        );
+      }
+
+
       return q;
     };
 
