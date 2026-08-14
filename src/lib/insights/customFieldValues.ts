@@ -246,14 +246,21 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
   const isRestricted = restrictSet.size > 0;
   const keepValue = (raw: string) => restrictSet.has(raw) || restrictSet.has(labelFor(raw));
 
-  for (const [entityId, recs] of entityToRecords) {
-    let vals = rawByEntity.get(entityId);
+  const entityIdOf = (r: T): string | undefined => {
+    if (entity === 'deal' && dataSource === 'deals') return r.id;
+    if (entity === 'lead' && dataSource === 'leads') return r.id;
+    if (entity === 'lead' && dataSource === 'deals') return (r as any).lead_id;
+    return (r as any)[entity === 'deal' ? 'deal_id' : 'lead_id'];
+  };
+
+  for (const r of records) {
+    const entityId = entityIdOf(r);
+    let vals = (entityId ? rawByEntity.get(entityId) : undefined) || rawByRecordId.get(r.id);
     if (vals && isRestricted) {
       const kept = vals.filter(keepValue);
       if (kept.length > 0) vals = kept;
     }
-    const label = vals ? vals.map(labelFor).join(', ') : 'Não informado';
-    for (const r of recs) (r as any)[key] = label;
+    (r as any)[key] = vals ? vals.map(labelFor).join(', ') : 'Não informado';
   }
 
 
