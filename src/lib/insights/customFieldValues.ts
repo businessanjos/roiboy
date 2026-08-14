@@ -48,6 +48,57 @@ export function getSelectedValuesForKey(
   return Array.from(out);
 }
 
+const normalizeName = (s: string) =>
+  s.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim();
+
+const counterpartCache = new Map<string, string | null>();
+
+/**
+ * Finds the equivalent custom field on the counterpart entity (deal <-> lead).
+ * Names are often not identical ("Canal" no lead vs "Canal de Venda" no negócio),
+ * so we accept exact match first and then name containment with the same type.
+ */
+export async function findCounterpartFieldId(
+  fieldId: string,
+  accountId: string,
+  targetEntity: 'deal' | 'lead'
+): Promise<string | null> {
+  const cacheKey = `${fieldId}:${targetEntity}`;
+  if (counterpartCache.has(cacheKey)) return counterpartCache.get(cacheKey)!;
+
+  const { data: src } = await supabase
+    .from('custom_fields')
+    .select('name, field_type')
+    .eq('id', fieldId)
+    .maybeSingle();
+
+  let result: string | null = null;
+  if (src?.name) {
+    const flag = targetEntity === 'deal' ? 'show_in_deals' : 'show_in_leads';
+    const { data: candidates } = await supabase
+      .from('custom_fields')
+      .select('id, name, field_type')
+      .eq('account_id', accountId)
+      .eq('is_active', true)
+      .eq(flag, true);
+
+    const srcName = normalizeName(src.name);
+    const pool = (candidates || []).filter(
+      (c: any) => c.id !== fieldId && c.field_type === src.field_type
+    );
+    const exact = pool.find((c: any) => normalizeName(c.name) === srcName);
+    const partial = pool.find((c: any) => {
+      const n = normalizeName(c.name);
+      return n.includes(srcName) || srcName.includes(n);
+    });
+    result = (exact || partial)?.id ?? null;
+  }
+
+  counterpartCache.set(cacheKey, result);
+  return result;
+}
+
+
 /**
  * Injects a custom field value into each record under the encoded key, so the
  * generic aggregation (group by / measure) can read it like a native column.
