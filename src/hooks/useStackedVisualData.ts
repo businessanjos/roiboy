@@ -7,6 +7,7 @@ import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInt
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
+import { findCounterpartFieldId } from "@/lib/insights/customFieldValues";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
@@ -133,7 +134,7 @@ async function enrichWithCustomField(
   if (entityIds.length === 0) return records;
 
   // Fetch field values in batches
-  const fetchValues = async (tbl: string, idCol: string, ids: string[]) => {
+  const fetchValues = async (tbl: string, idCol: string, ids: string[], fieldIds: string[]) => {
     const selectColumns = isMultiSelect ? `${idCol}, value_json` : `${idCol}, value_text`;
     const batchSize = 500;
     const promises: any[] = [];
@@ -143,7 +144,7 @@ async function enrichWithCustomField(
         supabase
           .from(tbl as any)
           .select(selectColumns)
-          .eq("field_id", fieldId)
+          .in("field_id", fieldIds)
           .eq("account_id", accountId)
           .in(idCol, batch) as any
       );
@@ -160,7 +161,7 @@ async function enrichWithCustomField(
     return rows;
   };
 
-  const allValues = await fetchValues(table, idColumn, entityIds);
+  const allValues = await fetchValues(table, idColumn, entityIds, [fieldId]);
 
   const toRaw = (row: any): string[] | null => {
     if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
@@ -194,8 +195,14 @@ async function enrichWithCustomField(
       const altIds = Array.from(new Set(
         missing.map(r => (source === 'lead' ? r.id : r.lead_id)).filter(Boolean)
       )) as string[];
+      const counterpartId = await findCounterpartFieldId(
+        fieldId,
+        accountId,
+        source === 'lead' ? 'deal' : 'lead'
+      );
+      const altFieldIds = counterpartId ? [fieldId, counterpartId] : [fieldId];
       if (altIds.length > 0) {
-        const altRows = await fetchValues(altTable, altIdColumn, altIds);
+        const altRows = await fetchValues(altTable, altIdColumn, altIds, altFieldIds);
         const altByEntity = new Map<string, string[]>();
         for (const row of altRows) {
           const raw = toRaw(row);
