@@ -7,6 +7,7 @@ import { format, parseISO, eachDayOfInterval, eachWeekOfInterval, eachMonthOfInt
 import { filterByLeadFields } from "@/hooks/useLeadFieldFilter";
 import { filterByDealFields } from "@/hooks/useDealFieldFilter";
 import { applyVisualFilters, selectUnmirroredFilters } from "@/lib/insights/applyFilters";
+import { findCounterpartFieldId } from "@/lib/insights/customFieldValues";
 import { enrichLeadsWithFaturamento, enrichLeadsWithMql, enrichDealsWithMql, enrichDealsWithCanal, enrichDealsWithProduct } from "@/hooks/useVisualData";
 import { applyDeletedFilter } from "@/lib/sales/dealDeletedFilter";
 import { resolveProductLabels, applyProductLabels } from "@/lib/insights/productLabelResolver";
