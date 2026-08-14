@@ -2310,21 +2310,8 @@ export default function Clients() {
                 </Select>
               </div>
 
-              {/* Faturamento pendente de preenchimento */}
-              <div className="space-y-1.5 min-w-[190px]">
-                <Label className="text-xs text-muted-foreground">Faturamento</Label>
-                <Select value={filterRevenueMissing} onValueChange={setFilterRevenueMissing}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="any">Sem faturamento (inicial ou atual)</SelectItem>
-                    <SelectItem value="initial">Sem faturamento inicial</SelectItem>
-                    <SelectItem value="current">Sem faturamento atual</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+
+
 
 
 
