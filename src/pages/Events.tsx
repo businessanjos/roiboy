@@ -1493,6 +1493,29 @@ export default function Events() {
               ? "Lives, webinars e eventos online"
               : "Todos os eventos e entregáveis cadastrados"}
           </CardDescription>
+          {/* Alternância de visão: mesma coleção filtrada, leituras diferentes. */}
+          <div className="pt-2">
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v)}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="lista" aria-label="Visão em lista" className="gap-1.5 text-xs">
+                <List className="h-3.5 w-3.5" />
+                Lista
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Visão kanban por fase" className="gap-1.5 text-xs">
+                <Columns3 className="h-3.5 w-3.5" />
+                Kanban por fase
+              </ToggleGroupItem>
+              <ToggleGroupItem value="agenda" aria-label="Agenda semanal" className="gap-1.5 text-xs">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Agenda semanal
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </CardHeader>
         <CardContent>
             {loading ? (
@@ -1506,7 +1529,12 @@ export default function Events() {
                 : "Nenhum evento encontrado com os filtros selecionados."
               }
             </div>
+          ) : viewMode === "kanban" ? (
+            <EventsPhaseKanban events={filteredEvents as any} />
+          ) : viewMode === "agenda" ? (
+            <EventsWeekAgenda events={filteredEvents as any} />
           ) : (
+
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <Table className="min-w-[800px]">
                 <TableHeader>
