@@ -47,8 +47,11 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   }
 
   const isGanhos = (name: string) => name === 'Ganhos';
-  const regularData = data.filter((d) => !isGanhos(d.name));
+  const isPerdidos = (name: string) => name === 'Perdidos';
+  const regularData = data.filter((d) => !isGanhos(d.name) && !isPerdidos(d.name));
   const ganhosItem = data.find((d) => isGanhos(d.name));
+  const perdidosItem = data.find((d) => isPerdidos(d.name));
+
 
   const cumulativeCounts: number[] = new Array(regularData.length);
   for (let i = regularData.length - 1; i >= 0; i--) {
