@@ -177,8 +177,57 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
     }
   }
 
+  // Fallback: the value may live on the counterpart entity (filled directly on
+  // the deal instead of the lead, or vice-versa). Without this the record was
+  // shown as "Não informado" even though the drilldown displays the value.
+  const rawByRecordId = new Map<string, string[]>();
+  if (dataSource === 'deals') {
+    const missing = records.filter(r => {
+      const fk = entity === 'lead' ? (r as any).lead_id : r.id;
+      return !fk || !rawByEntity.has(fk);
+    });
+    const altIdColumn = entity === 'lead' ? 'deal_id' : 'lead_id';
+    const altTable = entity === 'lead' ? 'deal_field_values' : 'lead_field_values';
+    const altIds = Array.from(new Set(
+      missing.map(r => (entity === 'lead' ? r.id : (r as any).lead_id)).filter(Boolean)
+    )) as string[];
+    if (altIds.length > 0) {
+      const altRequests = [];
+      for (let i = 0; i < altIds.length; i += batchSize) {
+        const batch = altIds.slice(i, i + batchSize);
+        altRequests.push(
+          (supabase as any)
+            .from(altTable)
+            .select(`${altIdColumn}, ${valueColumn}`)
+            .eq('field_id', fieldId)
+            .eq('account_id', accountId)
+            .in(altIdColumn, batch)
+        );
+      }
+      const altByEntity = new Map<string, string[]>();
+      for (const { data, error } of await Promise.all(altRequests)) {
+        if (error) continue;
+        for (const row of data || []) {
+          if (isMultiSelect && Array.isArray(row.value_json)) {
+            altByEntity.set(row[altIdColumn], row.value_json.map((v: string) => String(v)));
+          } else if (isDate && row.value_date) {
+            altByEntity.set(row[altIdColumn], [String(row.value_date)]);
+          } else if (row.value_text) {
+            altByEntity.set(row[altIdColumn], [String(row.value_text)]);
+          }
+        }
+      }
+      for (const r of missing) {
+        const altId = entity === 'lead' ? r.id : (r as any).lead_id;
+        const vals = altId ? altByEntity.get(altId) : undefined;
+        if (vals) rawByRecordId.set(r.id, vals);
+      }
+    }
+  }
+
   const allRaw: string[] = [];
   for (const vals of rawByEntity.values()) allRaw.push(...vals);
+  for (const vals of rawByRecordId.values()) allRaw.push(...vals);
   const productLabels = await resolveProductLabels(allRaw);
 
   const labelFor = (raw: string) =>
