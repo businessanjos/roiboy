@@ -285,67 +285,151 @@ export default function EventRoiTab({
       </Card>
 
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Comparativo entre edições</CardTitle>
-          <CardDescription>
-            Edições anteriores com o mesmo nome-base e tipo, para comparar custo e presença.
-          </CardDescription>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div>
+            <CardTitle className="text-base">Comparativo entre edições</CardTitle>
+            <CardDescription>
+              Edições com o mesmo nome-base e tipo — presença, custo, receita atribuída e ROI.
+            </CardDescription>
+          </div>
+          <Button size="sm" variant="outline" onClick={() => setDuplicateOpen(true)}>
+            <Copy className="h-4 w-4 mr-2" />
+            Nova edição
+          </Button>
         </CardHeader>
         <CardContent>
           {loadingEditions ? (
             <Skeleton className="h-32 w-full" />
           ) : (editions?.length ?? 0) <= 1 ? (
             <p className="text-sm text-muted-foreground py-6 text-center">
-              Ainda não há outras edições deste evento para comparar.
+              Ainda não há outras edições deste evento para comparar. Use "Nova edição" para
+              duplicar este evento e manter o histórico comparável.
             </p>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="text-left text-xs text-muted-foreground border-b">
-                    <th className="py-2 pr-3 font-medium">Edição</th>
-                    <th className="py-2 pr-3 font-medium">Data</th>
-                    <th className="py-2 pr-3 font-medium text-right">Participantes</th>
-                    <th className="py-2 pr-3 font-medium text-right">Presença</th>
-                    <th className="py-2 font-medium text-right">Custo</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {editions!.map((e) => (
-                    <tr key={e.id} className="border-b last:border-0">
-                      <td className="py-2 pr-3">
-                        <Link
-                          to={`/events/${e.id}`}
-                          className="hover:underline font-medium inline-flex items-center gap-2"
+            <div className="space-y-4">
+              {previous && (
+                <div className="grid gap-3 sm:grid-cols-3">
+                  {[
+                    {
+                      label: "Presença vs edição anterior",
+                      value: current?.attendanceRate ?? null,
+                      prev: previous.attendanceRate,
+                      suffix: "%",
+                    },
+                    {
+                      label: "Custo vs edição anterior",
+                      value: current?.cost ?? 0,
+                      prev: previous.cost,
+                      money: true,
+                      invert: true,
+                    },
+                    {
+                      label: "Receita vs edição anterior",
+                      value: current?.revenue ?? 0,
+                      prev: previous.revenue,
+                      money: true,
+                    },
+                  ].map((m: any) => {
+                    const delta =
+                      m.value === null || m.prev === null ? null : Number(m.value) - Number(m.prev);
+                    const good = delta === null ? true : m.invert ? delta <= 0 : delta >= 0;
+                    return (
+                      <div key={m.label} className="rounded-lg border p-3">
+                        <p className="text-xs text-muted-foreground">{m.label}</p>
+                        <p className="text-lg font-semibold mt-0.5">
+                          {m.value === null
+                            ? "—"
+                            : m.money
+                              ? brl(Number(m.value))
+                              : `${Number(m.value).toFixed(0)}%`}
+                        </p>
+                        <p
+                          className={`text-xs mt-0.5 ${good ? "text-primary" : "text-destructive"}`}
                         >
-                          <span className="truncate max-w-[220px]">{e.title}</span>
-                          {e.isCurrent && (
-                            <Badge variant="secondary" className="text-[10px]">
-                              atual
-                            </Badge>
-                          )}
-                        </Link>
-                      </td>
-                      <td className="py-2 pr-3 text-muted-foreground">
-                        {e.scheduled_at
-                          ? format(new Date(e.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
-                      </td>
-                      <td className="py-2 pr-3 text-right">{e.participants}</td>
-                      <td className="py-2 pr-3 text-right">
-                        {e.participants > 0
-                          ? `${Math.round((e.attended / e.participants) * 100)}%`
-                          : "—"}
-                      </td>
-                      <td className="py-2 text-right">{brl(e.cost)}</td>
+                          {delta === null
+                            ? "sem base de comparação"
+                            : `${delta > 0 ? "+" : ""}${
+                                m.money ? brl(delta) : `${delta.toFixed(0)} p.p.`
+                              } vs ${
+                                previous.scheduled_at
+                                  ? format(new Date(previous.scheduled_at), "MMM/yyyy", {
+                                      locale: ptBR,
+                                    })
+                                  : "edição anterior"
+                              }`}
+                        </p>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="text-left text-xs text-muted-foreground border-b">
+                      <th className="py-2 pr-3 font-medium">Edição</th>
+                      <th className="py-2 pr-3 font-medium">Data</th>
+                      <th className="py-2 pr-3 font-medium text-right">Participantes</th>
+                      <th className="py-2 pr-3 font-medium text-right">Presença</th>
+                      <th className="py-2 pr-3 font-medium text-right">Custo</th>
+                      <th className="py-2 pr-3 font-medium text-right">Receita</th>
+                      <th className="py-2 font-medium text-right">ROI</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {editions!.map((e) => (
+                      <tr key={e.id} className="border-b last:border-0">
+                        <td className="py-2 pr-3">
+                          <Link
+                            to={`/events/${e.id}`}
+                            className="hover:underline font-medium inline-flex items-center gap-2"
+                          >
+                            <span className="truncate max-w-[220px]">{e.title}</span>
+                            {e.isCurrent && (
+                              <Badge variant="secondary" className="text-[10px]">
+                                atual
+                              </Badge>
+                            )}
+                          </Link>
+                        </td>
+                        <td className="py-2 pr-3 text-muted-foreground">
+                          {e.scheduled_at
+                            ? format(new Date(e.scheduled_at), "dd/MM/yyyy", { locale: ptBR })
+                            : "—"}
+                        </td>
+                        <td className="py-2 pr-3 text-right">{e.participants}</td>
+                        <td className="py-2 pr-3 text-right">
+                          {e.attendanceRate === null ? "—" : `${Math.round(e.attendanceRate)}%`}
+                        </td>
+                        <td className="py-2 pr-3 text-right">{brl(e.cost)}</td>
+                        <td className="py-2 pr-3 text-right">{brl(e.revenue)}</td>
+                        <td
+                          className={`py-2 text-right font-medium ${
+                            e.roi === null
+                              ? ""
+                              : e.roi >= 0
+                                ? "text-primary"
+                                : "text-destructive"
+                          }`}
+                        >
+                          {e.roi === null ? "—" : `${e.roi > 0 ? "+" : ""}${e.roi.toFixed(0)}%`}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           )}
         </CardContent>
       </Card>
+
+      <DuplicateEventDialog
+        open={duplicateOpen}
+        onOpenChange={setDuplicateOpen}
+        eventId={eventId}
+      />
     </div>
   );
 }
