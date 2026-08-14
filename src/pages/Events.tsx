@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import EventsPhaseKanban from "@/components/events/EventsPhaseKanban";
+import EventsWeekAgenda from "@/components/events/EventsWeekAgenda";
 import {
   Dialog,
   DialogContent,
@@ -68,8 +71,13 @@ import {
   Eye,
   ChevronDown,
   ArrowUp,
-  ArrowDown
+  ArrowDown,
+
+  List,
+  Columns3,
+  CalendarDays,
 } from "lucide-react";
+
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { sectors, type SectorId } from "@/config/sectors";
 import { format, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
@@ -166,6 +174,10 @@ export default function Events() {
   const filterModality = searchParams.get("modalidade") ?? "all";
   const modalityTab = (searchParams.get("aba") ?? "all") as "all" | "presencial" | "online";
   const filterStatus = searchParams.get("status") ?? "open";
+  // Visão da coleção: lista (padrão), kanban por fase ou agenda semanal.
+  const viewModeParam = searchParams.get("view") ?? "lista";
+  const viewMode: "lista" | "kanban" | "agenda" =
+    viewModeParam === "kanban" || viewModeParam === "agenda" ? viewModeParam : "lista";
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const setParam = useCallback(
@@ -188,6 +200,7 @@ export default function Events() {
   const setFilterModality = useCallback((v: string) => setParam("modalidade", v, "all"), [setParam]);
   const setModalityTab = useCallback((v: string) => setParam("aba", v, "all"), [setParam]);
   const setFilterStatus = useCallback((v: string) => setParam("status", v, "open"), [setParam]);
+  const setViewMode = useCallback((v: string) => setParam("view", v, "lista"), [setParam]);
 
 
   // Form state
@@ -1485,6 +1498,29 @@ export default function Events() {
               ? "Lives, webinars e eventos online"
               : "Todos os eventos e entregáveis cadastrados"}
           </CardDescription>
+          {/* Alternância de visão: mesma coleção filtrada, leituras diferentes. */}
+          <div className="pt-2">
+            <ToggleGroup
+              type="single"
+              value={viewMode}
+              onValueChange={(v) => v && setViewMode(v)}
+              variant="outline"
+              size="sm"
+            >
+              <ToggleGroupItem value="lista" aria-label="Visão em lista" className="gap-1.5 text-xs">
+                <List className="h-3.5 w-3.5" />
+                Lista
+              </ToggleGroupItem>
+              <ToggleGroupItem value="kanban" aria-label="Visão kanban por fase" className="gap-1.5 text-xs">
+                <Columns3 className="h-3.5 w-3.5" />
+                Kanban por fase
+              </ToggleGroupItem>
+              <ToggleGroupItem value="agenda" aria-label="Agenda semanal" className="gap-1.5 text-xs">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Agenda semanal
+              </ToggleGroupItem>
+            </ToggleGroup>
+          </div>
         </CardHeader>
         <CardContent>
             {loading ? (
@@ -1498,7 +1534,12 @@ export default function Events() {
                 : "Nenhum evento encontrado com os filtros selecionados."
               }
             </div>
+          ) : viewMode === "kanban" ? (
+            <EventsPhaseKanban events={filteredEvents as any} />
+          ) : viewMode === "agenda" ? (
+            <EventsWeekAgenda events={filteredEvents as any} />
           ) : (
+
             <div className="overflow-x-auto -mx-4 sm:mx-0">
               <Table className="min-w-[800px]">
                 <TableHeader>
