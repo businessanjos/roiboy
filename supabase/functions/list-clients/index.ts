@@ -411,6 +411,12 @@ Deno.serve(async (req) => {
 
     const orderColumn = nativeSort.col;
     const orderAscending = nativeSort.asc;
+    // Colunas de faturamento: na ordem CRESCENTE os clientes sem preenchimento
+    // (null) devem vir agrupados primeiro, seguidos dos zerados, para que o time
+    // consiga localizar e completar o cadastro. Na decrescente eles vão para o fim.
+    const isRevenueSort = orderColumn === "initial_revenue" || orderColumn === "current_revenue";
+    const orderNullsFirst = isRevenueSort ? orderAscending : false;
+
 
     const applyCommonFilters = (q: any) => {
       if (search) {
