@@ -10,6 +10,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import EventsPhaseKanban from "@/components/events/EventsPhaseKanban";
+import EventsWeekAgenda from "@/components/events/EventsWeekAgenda";
 import {
   Dialog,
   DialogContent,
@@ -166,6 +169,10 @@ export default function Events() {
   const filterModality = searchParams.get("modalidade") ?? "all";
   const modalityTab = (searchParams.get("aba") ?? "all") as "all" | "presencial" | "online";
   const filterStatus = searchParams.get("status") ?? "open";
+  // Visão da coleção: lista (padrão), kanban por fase ou agenda semanal.
+  const viewModeParam = searchParams.get("view") ?? "lista";
+  const viewMode: "lista" | "kanban" | "agenda" =
+    viewModeParam === "kanban" || viewModeParam === "agenda" ? viewModeParam : "lista";
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
 
   const setParam = useCallback(
@@ -188,6 +195,7 @@ export default function Events() {
   const setFilterModality = useCallback((v: string) => setParam("modalidade", v, "all"), [setParam]);
   const setModalityTab = useCallback((v: string) => setParam("aba", v, "all"), [setParam]);
   const setFilterStatus = useCallback((v: string) => setParam("status", v, "open"), [setParam]);
+  const setViewMode = useCallback((v: string) => setParam("view", v, "lista"), [setParam]);
 
 
   // Form state
