@@ -39,6 +39,8 @@ interface DrilldownDialogProps {
   };
   visualId?: string;
   groupName?: string;
+  /** Restringe o detalhamento a um status (usado pelas barras Ganhos/Perdidos do funil). */
+  statusOverride?: 'won' | 'lost' | 'open';
 }
 
 const PAGE_SIZE = 15;
