@@ -77,9 +77,13 @@ export default function DuplicateEventDialog({
       const { data } = await supabase.from("events").select("*").eq("id", eventId).maybeSingle();
       if (!data) return;
       setSource(data);
-      const year = new Date().getFullYear();
-      const base = (data.title || "").replace(/\s*[–-]?\s*(19|20)\d{2}\s*$/, "").trim();
-      setTitle(`${base} — ${year + (data.scheduled_at && new Date(data.scheduled_at).getFullYear() >= year ? 1 : 0)}`);
+      const raw = data.title || "";
+      const match = raw.match(/(19|20)\d{2}\s*$/);
+      const base = raw.replace(/\s*[–—-]?\s*(19|20)\d{2}\s*$/, "").trim();
+      const nextYear = match
+        ? Number(match[0]) + 1
+        : new Date().getFullYear() + 1;
+      setTitle(`${base} — ${nextYear}`);
       setScheduledAt("");
     })();
   }, [open, eventId]);
