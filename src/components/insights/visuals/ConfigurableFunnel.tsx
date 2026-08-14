@@ -47,8 +47,11 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   }
 
   const isGanhos = (name: string) => name === 'Ganhos';
-  const regularData = data.filter((d) => !isGanhos(d.name));
+  const isPerdidos = (name: string) => name === 'Perdidos';
+  const regularData = data.filter((d) => !isGanhos(d.name) && !isPerdidos(d.name));
   const ganhosItem = data.find((d) => isGanhos(d.name));
+  const perdidosItem = data.find((d) => isPerdidos(d.name));
+
 
   const cumulativeCounts: number[] = new Array(regularData.length);
   for (let i = regularData.length - 1; i >= 0; i--) {
@@ -127,7 +130,33 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
           </div>
         );
       })()}
+      {perdidosItem && (() => {
+        const perdidosOverallPct = maxValue > 0 ? Math.round((perdidosItem.value / maxValue) * 100) : 0;
+        const perdidosWidthPct = Math.max((Math.sqrt(perdidosItem.value) / Math.sqrt(maxValue)) * 100, 15);
+        return (
+          <div className="w-full flex justify-center items-center">
+            <div className="flex items-center gap-1.5" style={{ width: `${perdidosWidthPct}%`, minWidth: `${Math.round(160 * m)}px` }}>
+              <span className="shrink-0" style={{ width: Math.round(40 * m) }} />
+              <div
+                className="rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-destructive/60 ring-offset-2 flex-1 min-w-0 overflow-hidden"
+                style={{ backgroundColor: '#ef4444', height: barHeight }}
+              >
+                <span className="text-sm font-medium text-white flex items-center gap-1.5 truncate whitespace-nowrap" style={{ fontSize: Math.round(13 * m) }}>
+                  ✖ {perdidosItem.name}
+                </span>
+                <span className="text-sm font-bold text-white ml-2 shrink-0" style={{ fontSize: Math.round(13 * m) }}>
+                  {formatValueCompact(perdidosItem.value, formatting.type)}
+                </span>
+              </div>
+              <span className="text-xs font-semibold text-muted-foreground shrink-0" style={{ fontSize: Math.round(11 * m), width: Math.round(40 * m) }}>
+                {perdidosOverallPct}%
+              </span>
+            </div>
+          </div>
+        );
+      })()}
       </div>
+
     </div>
   );
 });

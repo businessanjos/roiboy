@@ -258,6 +258,30 @@ export function useVisualData({ config: rawConfig, chartType, enabled = true }: 
           color: '#10b981',
         });
 
+        // Append "Perdidos" (lost deals) as a separate closing bar, using the
+        // same measure/filters. It is not part of the stage progression, so it
+        // never enters the cumulative funnel math.
+        const lostResult = await fetchDealsData(
+          accountId,
+          measure,
+          { field: '_total', type: 'text' },
+          { ...filters, startDate: filters.startDate, endDate: filters.endDate },
+          dateDisplayFormat,
+          'lost',
+          leadFilters,
+          dealFilters,
+          ['lost'],
+          unifiedFilters
+        );
+        const lostValue = lostResult.length > 0 ? lostResult[0].value : 0;
+        result.push({
+          name: 'Perdidos',
+          value: lostValue,
+          count: lostResult.length > 0 ? lostResult[0].count : undefined,
+          color: '#ef4444',
+        });
+
+
       } else if (chartType === 'funnel' && dataSource === 'tasks') {
         // Task funnel: order is already fixed by TASK_FUNNEL_ORDER, skip sorting
       } else if (chartType === 'funnel' && dimension.type !== 'date') {
