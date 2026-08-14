@@ -91,6 +91,10 @@ Deno.serve(async (req) => {
     const educationFilter = url.searchParams.get("education") || "";
     const areaFilter = url.searchParams.get("area") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
+    // "initial" | "current" | "any" — isola clientes sem faturamento preenchido
+    // (nulo ou zero) para mutirão de preenchimento no CS.
+    const revenueMissing = url.searchParams.get("revenue_missing") || "";
+
 
     // Native (DB-orderable) sort mapping.
     const NATIVE_SORTS: Record<string, { col: string; asc: boolean }> = {
@@ -411,6 +415,12 @@ Deno.serve(async (req) => {
 
     const orderColumn = nativeSort.col;
     const orderAscending = nativeSort.asc;
+    // Colunas de faturamento: na ordem CRESCENTE os clientes sem preenchimento
+    // (null) devem vir agrupados primeiro, seguidos dos zerados, para que o time
+    // consiga localizar e completar o cadastro. Na decrescente eles vão para o fim.
+    const isRevenueSort = orderColumn === "initial_revenue" || orderColumn === "current_revenue";
+    const orderNullsFirst = isRevenueSort ? orderAscending : false;
+
 
     const applyCommonFilters = (q: any) => {
       if (search) {
@@ -474,6 +484,18 @@ Deno.serve(async (req) => {
         }
       }
 
+      // Sem faturamento preenchido: trata nulo e zero como "faltando".
+      if (revenueMissing === "initial") {
+        q = q.or("initial_revenue.is.null,initial_revenue.eq.0");
+      } else if (revenueMissing === "current") {
+        q = q.or("current_revenue.is.null,current_revenue.eq.0");
+      } else if (revenueMissing === "any") {
+        q = q.or(
+          "initial_revenue.is.null,initial_revenue.eq.0,current_revenue.is.null,current_revenue.eq.0"
+        );
+      }
+
+
       return q;
     };
 
@@ -514,12 +536,21 @@ Deno.serve(async (req) => {
           count = merged.length;
         } else {
           merged.sort((a: any, b: any) => {
+            if (isRevenueSort) {
+              const an = a[orderColumn] === null || a[orderColumn] === undefined;
+              const bn = b[orderColumn] === null || b[orderColumn] === undefined;
+              if (an !== bn) return orderNullsFirst ? (an ? -1 : 1) : (an ? 1 : -1);
+              if (an && bn) return 0;
+              const diff = Number(a[orderColumn]) - Number(b[orderColumn]);
+              return orderAscending ? diff : -diff;
+            }
             const av = a[orderColumn] ?? "";
             const bv = b[orderColumn] ?? "";
             if (av < bv) return orderAscending ? -1 : 1;
             if (av > bv) return orderAscending ? 1 : -1;
             return 0;
           });
+
           count = merged.length;
           clients = merged.slice(offset, offset + limit);
         }
@@ -541,7 +572,7 @@ Deno.serve(async (req) => {
         query = query.limit(5000);
       } else {
         query = query
-          .order(orderColumn, { ascending: orderAscending, nullsFirst: false })
+          .order(orderColumn, { ascending: orderAscending, nullsFirst: orderNullsFirst })
           .range(offset, offset + limit - 1);
       }
 

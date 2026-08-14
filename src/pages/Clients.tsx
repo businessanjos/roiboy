@@ -282,6 +282,7 @@ export default function Clients() {
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
   const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
   const [filterArea, setFilterArea] = usePersistedFilter<string>("clients", "area", "all");
+  const [filterRevenueMissing, setFilterRevenueMissing] = usePersistedFilter<string>("clients", "revenueMissing", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
@@ -399,6 +400,7 @@ export default function Clients() {
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
       if (filterArea !== "all") baseParams["area"] = filterArea;
+      if (filterRevenueMissing !== "all") baseParams["revenue_missing"] = filterRevenueMissing;
       baseParams["sort"] = sortOrder;
 
       const pageSize = 200;
@@ -552,6 +554,7 @@ export default function Clients() {
       if (filterCountry !== "all") params.set("country", filterCountry);
       if (filterEducation !== "all") params.set("education", filterEducation);
       if (filterArea !== "all") params.set("area", filterArea);
+      if (filterRevenueMissing !== "all") params.set("revenue_missing", filterRevenueMissing);
       params.set("sort", sortOrder);
       
       const response = await fetch(
@@ -819,6 +822,7 @@ export default function Clients() {
       if (filterCountry !== "all") p.set("country", filterCountry);
       if (filterEducation !== "all") p.set("education", filterEducation);
       if (filterArea !== "all") p.set("area", filterArea);
+      if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
       return p;
     };
     try {
@@ -851,7 +855,7 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterRevenueMissing, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1363,6 +1367,7 @@ export default function Clients() {
     filterCountry !== "all",
     filterEducation !== "all",
     filterArea !== "all",
+    filterRevenueMissing !== "all",
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1373,6 +1378,7 @@ export default function Clients() {
     setFilterLinks("all");
     setFilterCountry("all");
     setFilterEducation("all");
+    setFilterRevenueMissing("all");
     setFilterArea("all");
   };
 
@@ -2304,6 +2310,22 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Faturamento pendente de preenchimento */}
+              <div className="space-y-1.5 min-w-[190px]">
+                <Label className="text-xs text-muted-foreground">Faturamento</Label>
+                <Select value={filterRevenueMissing} onValueChange={setFilterRevenueMissing}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="any">Sem faturamento (inicial ou atual)</SelectItem>
+                    <SelectItem value="initial">Sem faturamento inicial</SelectItem>
+                    <SelectItem value="current">Sem faturamento atual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
 
 
 
@@ -2387,6 +2409,18 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Área: {filterArea === "none" ? "Sem área" : filterArea}
                     <button onClick={() => setFilterArea("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterRevenueMissing !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    {filterRevenueMissing === "initial"
+                      ? "Sem fat. inicial"
+                      : filterRevenueMissing === "current"
+                        ? "Sem fat. atual"
+                        : "Sem faturamento"}
+                    <button onClick={() => setFilterRevenueMissing("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
