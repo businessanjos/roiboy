@@ -242,6 +242,14 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
     const altIds = Array.from(new Set(
       missing.map(r => (entity === 'lead' ? r.id : (r as any).lead_id)).filter(Boolean)
     )) as string[];
+    const altFieldIds = [fieldId];
+    const counterpartId = await findCounterpartFieldId(
+      fieldId,
+      accountId,
+      entity === 'lead' ? 'deal' : 'lead'
+    );
+    if (counterpartId) altFieldIds.push(counterpartId);
+
     if (altIds.length > 0) {
       const altRequests = [];
       for (let i = 0; i < altIds.length; i += batchSize) {
@@ -250,7 +258,7 @@ export async function enrichRecordsWithCustomField<T extends Record<string, any>
           (supabase as any)
             .from(altTable)
             .select(`${altIdColumn}, ${valueColumn}`)
-            .eq('field_id', fieldId)
+            .in('field_id', altFieldIds)
             .eq('account_id', accountId)
             .in(altIdColumn, batch)
         );
