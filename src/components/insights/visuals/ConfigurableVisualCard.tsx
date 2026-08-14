@@ -497,6 +497,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           visual={visual}
           visualId={visual.id}
           groupName={drilldownGroup}
+          statusOverride={drilldownStatus}
         />
 
         {settingsOpen && (
