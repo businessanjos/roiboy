@@ -26897,6 +26897,7 @@ export type Database = {
         Returns: Json
       }
       auto_heal_inactive_assignments: { Args: never; Returns: Json }
+      autocomplete_past_events: { Args: never; Returns: number }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }

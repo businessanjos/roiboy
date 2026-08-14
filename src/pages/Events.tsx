@@ -1,3 +1,4 @@
+import { resolveEventStatus } from "@/lib/events/eventStatus";
 import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -785,18 +786,7 @@ export default function Events() {
     );
   };
 
-  const isEventPast = (event: Event) => {
-    const dateToCompare = event.ends_at || event.scheduled_at;
-    if (!dateToCompare) return false;
-    const eventDate = new Date(dateToCompare);
-    if (Number.isNaN(eventDate.getTime())) return false;
-    return eventDate.getTime() < Date.now();
-  };
-
-  const isEventOpen = (event: Event) => {
-    const hasFinalStatus = event.status === "completed" || event.status === "cancelled";
-    return !hasFinalStatus && !isEventPast(event);
-  };
+  const isEventOpen = (event: Event) => resolveEventStatus(event) === "open";
 
   // Filter events based on search, filters, and modality tab
   const filteredEvents = events.filter((event) => {
@@ -812,9 +802,9 @@ export default function Events() {
     if (filterStatus === "open") {
       matchesStatus = isEventOpen(event);
     } else if (filterStatus === "completed") {
-      matchesStatus = event.status === "completed" || (event.status !== "cancelled" && isEventPast(event));
+      matchesStatus = resolveEventStatus(event) === "completed";
     } else if (filterStatus === "cancelled") {
-      matchesStatus = event.status === "cancelled";
+      matchesStatus = resolveEventStatus(event) === "cancelled";
     }
     
     return matchesSearch && matchesType && matchesModality && matchesModalityTab && matchesStatus;
@@ -1680,19 +1670,14 @@ export default function Events() {
                         </div>
                       </TableCell>
                       <TableCell>
-                        {event.status === "completed" ? (
+                        {resolveEventStatus(event) === "completed" ? (
                           <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
                             <Check className="h-3 w-3 mr-1" />
                             Concluído
                           </Badge>
-                        ) : event.status === "cancelled" ? (
+                        ) : resolveEventStatus(event) === "cancelled" ? (
                           <Badge variant="destructive">
                             Cancelado
-                          </Badge>
-                        ) : isEventPast(event) ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
-                            <Check className="h-3 w-3 mr-1" />
-                            Concluído
                           </Badge>
                         ) : (
                           <Badge variant="outline">
