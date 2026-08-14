@@ -162,6 +162,7 @@ export default function Events() {
   const [saving, setSaving] = useState(false);
   const [editingEvent, setEditingEvent] = useState<EventWithProducts | null>(null);
   const [qrDialogOpen, setQrDialogOpen] = useState(false);
+  const [duplicateEventId, setDuplicateEventId] = useState<string | null>(null);
   const [selectedEventForQr, setSelectedEventForQr] = useState<EventWithProducts | null>(null);
   const [copied, setCopied] = useState(false);
   const [attendanceDialogOpen, setAttendanceDialogOpen] = useState(false);
