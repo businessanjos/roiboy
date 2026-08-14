@@ -118,7 +118,25 @@ export default function EventDetail() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
   const [accountId, setAccountId] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState("overview");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = sanitizeEventTab(searchParams.get("tab"));
+  const [activePhase, setActivePhase] = useState<EventPhaseId>(() => phaseOfTab(activeTab));
+
+  // Mantém a fase em sincronia com a aba vinda da URL (links compartilháveis).
+  useEffect(() => {
+    setActivePhase(phaseOfTab(activeTab));
+  }, [activeTab]);
+
+  const handleTabChange = useCallback(
+    (tab: string) => {
+      const next = new URLSearchParams(searchParams);
+      next.set("tab", tab);
+      setSearchParams(next, { replace: true });
+      setActivePhase(phaseOfTab(tab));
+    },
+    [searchParams, setSearchParams],
+  );
+
   const [statusDialogOpen, setStatusDialogOpen] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<string | null>(null);
 
