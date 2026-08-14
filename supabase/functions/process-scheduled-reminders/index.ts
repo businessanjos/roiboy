@@ -83,7 +83,23 @@ Deno.serve(async (req) => {
         continue;
       }
 
+      // Map participant_id -> rsvp_token (the public RSVP page resolves by token)
+      const participantIds = (recipients || [])
+        .map((r: Record<string, unknown>) => r.participant_id as string | null)
+        .filter((v): v is string => !!v);
+      const rsvpTokenByParticipant = new Map<string, string>();
+      if (participantIds.length > 0) {
+        const { data: parts } = await supabase
+          .from("event_participants")
+          .select("id, rsvp_token")
+          .in("id", participantIds);
+        for (const p of parts || []) {
+          if (p.rsvp_token) rsvpTokenByParticipant.set(p.id as string, p.rsvp_token as string);
+        }
+      }
+
       if (!recipients || recipients.length === 0) {
+
         console.log(`No pending recipients for campaign ${campaign.id}`);
         await supabase
           .from("reminder_campaigns")
@@ -134,7 +150,8 @@ Deno.serve(async (req) => {
         }
 
         // Build dynamic links
-        const linkRsvp = `${appUrl}/rsvp/${recipient.participant_id}`;
+        const rsvpToken = rsvpTokenByParticipant.get(recipient.participant_id) || recipient.participant_id;
+        const linkRsvp = `${appUrl}/rsvp/${rsvpToken}`;
         const linkCheckin = campaign.events?.checkin_code 
           ? `${appUrl}/checkin/${campaign.events.checkin_code}` 
           : `${appUrl}/checkin/code`;
