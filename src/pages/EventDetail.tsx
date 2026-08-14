@@ -430,6 +430,10 @@ export default function EventDetail() {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={() => setDuplicateOpen(true)}>
+                  <Copy className="h-4 w-4 mr-2" />
+                  Duplicar como nova edição
+                </DropdownMenuItem>
                 {!isLocked && (
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive"
