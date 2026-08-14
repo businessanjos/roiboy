@@ -133,7 +133,7 @@ async function enrichWithCustomField(
   if (entityIds.length === 0) return records;
 
   // Fetch field values in batches
-  const fetchValues = async (tbl: string, idCol: string, ids: string[]) => {
+  const fetchValues = async (tbl: string, idCol: string, ids: string[], fieldIds: string[]) => {
     const selectColumns = isMultiSelect ? `${idCol}, value_json` : `${idCol}, value_text`;
     const batchSize = 500;
     const promises: any[] = [];
@@ -143,7 +143,7 @@ async function enrichWithCustomField(
         supabase
           .from(tbl as any)
           .select(selectColumns)
-          .eq("field_id", fieldId)
+          .in("field_id", fieldIds)
           .eq("account_id", accountId)
           .in(idCol, batch) as any
       );
@@ -160,7 +160,7 @@ async function enrichWithCustomField(
     return rows;
   };
 
-  const allValues = await fetchValues(table, idColumn, entityIds);
+  const allValues = await fetchValues(table, idColumn, entityIds, [fieldId]);
 
   const toRaw = (row: any): string[] | null => {
     if (isMultiSelect && row.value_json && Array.isArray(row.value_json)) {
