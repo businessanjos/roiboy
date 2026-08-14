@@ -2093,8 +2093,8 @@ export default function Clients() {
 
       {/* Search and Filters */}
       <div className="space-y-3">
-        <div className="flex gap-2">
-          <div className="relative flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por nome, telefone ou cidade..."
@@ -2104,7 +2104,7 @@ export default function Clients() {
             />
           </div>
           <Select value={sortOrder} onValueChange={(v) => setSortOrder(v)}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="w-full sm:w-[200px] shrink-0">
               <SelectValue placeholder="Ordenar" />
             </SelectTrigger>
             <SelectContent>
@@ -2121,9 +2121,10 @@ export default function Clients() {
             </SelectContent>
           </Select>
           <Select value={filterRevenueMissing} onValueChange={setFilterRevenueMissing}>
-            <SelectTrigger className="w-[240px]" aria-label="Filtro de faturamento">
+            <SelectTrigger className="w-full sm:w-[230px] shrink-0" aria-label="Filtro de faturamento">
               <SelectValue placeholder="Faturamento" />
             </SelectTrigger>
+
             <SelectContent>
               <SelectItem value="all">Faturamento: todos</SelectItem>
               <SelectItem value="any">Sem faturamento (inicial ou atual)</SelectItem>
@@ -2135,8 +2136,9 @@ export default function Clients() {
             variant={showFilters ? "secondary" : "outline"} 
             size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="relative gap-2"
+            className="relative gap-2 shrink-0 h-10"
           >
+
             <Filter className="h-4 w-4" />
             <span>Filtros</span>
             {activeFilterCount > 0 && (
