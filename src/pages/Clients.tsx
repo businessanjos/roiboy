@@ -2120,19 +2120,32 @@ export default function Clients() {
               <SelectItem value="record_asc">Recorde (menor)</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={filterRevenueMissing} onValueChange={setFilterRevenueMissing}>
+            <SelectTrigger className="w-[240px]" aria-label="Filtro de faturamento">
+              <SelectValue placeholder="Faturamento" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Faturamento: todos</SelectItem>
+              <SelectItem value="any">Sem faturamento (inicial ou atual)</SelectItem>
+              <SelectItem value="initial">Sem faturamento inicial</SelectItem>
+              <SelectItem value="current">Sem faturamento atual</SelectItem>
+            </SelectContent>
+          </Select>
           <Button 
             variant={showFilters ? "secondary" : "outline"} 
-            size="icon"
+            size="sm"
             onClick={() => setShowFilters(!showFilters)}
-            className="relative"
+            className="relative gap-2"
           >
             <Filter className="h-4 w-4" />
+            <span>Filtros</span>
             {activeFilterCount > 0 && (
               <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-medium">
                 {activeFilterCount}
               </span>
             )}
           </Button>
+
         </div>
 
         {/* Filter Panel */}
