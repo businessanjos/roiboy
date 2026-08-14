@@ -71,6 +71,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     (config?.formatting?.type === 'percentage') && (config?.formatting?.percentMode ?? 'share') === 'share';
   const [drilldownOpen, setDrilldownOpen] = useState(false);
   const [drilldownGroup, setDrilldownGroup] = useState<string | undefined>();
+  const [drilldownStatus, setDrilldownStatus] = useState<'won' | 'lost' | 'open' | undefined>();
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [presentDialogOpen, setPresentDialogOpen] = useState(false);
   const [presentationOptions, setPresentationOptions] = useState<PresentationOptions | null>(null);
@@ -286,8 +287,9 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
     );
   }
 
-  const handleDrilldown = (groupName?: string) => {
+  const handleDrilldown = (groupName?: string, status?: 'won' | 'lost' | 'open') => {
     setDrilldownGroup(groupName);
+    setDrilldownStatus(status);
     setDrilldownOpen(true);
   };
 
@@ -495,6 +497,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
           visual={visual}
           visualId={visual.id}
           groupName={drilldownGroup}
+          statusOverride={drilldownStatus}
         />
 
         {settingsOpen && (

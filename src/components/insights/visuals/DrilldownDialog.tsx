@@ -39,6 +39,8 @@ interface DrilldownDialogProps {
   };
   visualId?: string;
   groupName?: string;
+  /** Restringe o detalhamento a um status (usado pelas barras Ganhos/Perdidos do funil). */
+  statusOverride?: 'won' | 'lost' | 'open';
 }
 
 const PAGE_SIZE = 15;
@@ -49,6 +51,7 @@ export function DrilldownDialog({
   visual,
   visualId,
   groupName,
+  statusOverride,
 }: DrilldownDialogProps) {
   const config = visual.config as VisualConfig | null;
   const [currentPage, setCurrentPage] = useState(0);
@@ -167,6 +170,7 @@ export function DrilldownDialog({
   const { data: records = [], isLoading } = useVisualDrilldown({
     config,
     groupName,
+    statusOverride,
     enabled: open && !!config,
     extraCfColumns: extraCfColumns.length > 0 ? extraCfColumns : undefined,
   });

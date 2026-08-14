@@ -174,7 +174,7 @@ export function ConfigurableChart({ type, data: rawData, formatting, appearance,
     case 'pie':
       return <PieChartView data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'funnel':
-      return <ConfigurableFunnel data={data} formatting={formatting} appearance={config} />;
+      return <ConfigurableFunnel data={data} formatting={formatting} appearance={config} onDrilldown={onDrilldown} />;
     case 'data_table':
       return <ConfigurableTable config={visualConfig!} />;
     case 'daily_performance':
