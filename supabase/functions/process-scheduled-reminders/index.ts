@@ -150,7 +150,8 @@ Deno.serve(async (req) => {
         }
 
         // Build dynamic links
-        const linkRsvp = `${appUrl}/rsvp/${recipient.participant_id}`;
+        const rsvpToken = rsvpTokenByParticipant.get(recipient.participant_id) || recipient.participant_id;
+        const linkRsvp = `${appUrl}/rsvp/${rsvpToken}`;
         const linkCheckin = campaign.events?.checkin_code 
           ? `${appUrl}/checkin/${campaign.events.checkin_code}` 
           : `${appUrl}/checkin/code`;
