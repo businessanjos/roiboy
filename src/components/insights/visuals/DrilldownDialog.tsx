@@ -170,6 +170,7 @@ export function DrilldownDialog({
   const { data: records = [], isLoading } = useVisualDrilldown({
     config,
     groupName,
+    statusOverride,
     enabled: open && !!config,
     extraCfColumns: extraCfColumns.length > 0 ? extraCfColumns : undefined,
   });
