@@ -45,6 +45,8 @@ export default function Settings() {
         ) : null;
       case "team":
         return canManageTeam ? <TeamManager /> : null;
+      case "companies":
+        return canEditSettings ? <CompaniesManager /> : null;
       case "sectors":
         return isAdmin ? (
           <div className="space-y-4">
