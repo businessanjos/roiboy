@@ -18,6 +18,7 @@ import { PlanUsageCard } from "@/components/plan";
 
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
+import { CompaniesManager } from "@/components/settings/CompaniesManager";
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
