@@ -13,6 +13,7 @@ export interface Company {
 
 interface CompanyContextValue {
   companies: Company[];
+  /** null = "Todas as empresas" (consolidado) */
   currentCompanyId: string | null;
   currentCompany: Company | null;
   setCurrentCompanyId: (id: string | null) => void;
@@ -21,23 +22,30 @@ interface CompanyContextValue {
 }
 
 const STORAGE_KEY = "roy:current_company_id";
+/** Valor persistido quando o usuário escolhe explicitamente "Todas as empresas". */
+export const ALL_COMPANIES = "__all__";
 
 const CompanyContext = createContext<CompanyContextValue | undefined>(undefined);
+
+function readStored(): { value: string | null; hasChoice: boolean } {
+  if (typeof window === "undefined") return { value: null, hasChoice: false };
+  const raw = localStorage.getItem(STORAGE_KEY);
+  if (!raw) return { value: null, hasChoice: false };
+  if (raw === ALL_COMPANIES) return { value: null, hasChoice: true };
+  return { value: raw, hasChoice: true };
+}
 
 export function CompanyProvider({ children }: { children: ReactNode }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const [companies, setCompanies] = useState<Company[]>([]);
-  const [currentCompanyId, setCurrentCompanyIdState] = useState<string | null>(
-    () => (typeof window !== "undefined" ? localStorage.getItem(STORAGE_KEY) : null)
-  );
+  const [currentCompanyId, setCurrentCompanyIdState] = useState<string | null>(() => readStored().value);
   const [loading, setLoading] = useState(false);
 
   const setCurrentCompanyId = useCallback((id: string | null) => {
     setCurrentCompanyIdState(id);
     if (typeof window !== "undefined") {
-      if (id) localStorage.setItem(STORAGE_KEY, id);
-      else localStorage.removeItem(STORAGE_KEY);
+      localStorage.setItem(STORAGE_KEY, id ?? ALL_COMPANIES);
     }
   }, []);
 
@@ -59,15 +67,14 @@ export function CompanyProvider({ children }: { children: ReactNode }) {
     const list = (data || []) as Company[];
     setCompanies(list);
 
-    // Pick default if nothing selected or selected disappeared
+    const stored = readStored();
     setCurrentCompanyIdState((prev) => {
+      // Escolha explícita por "Todas" é respeitada.
+      if (stored.hasChoice && stored.value === null) return null;
       if (prev && list.some((c) => c.id === prev)) return prev;
       const def = list.find((c) => c.is_default) || list[0];
       const next = def?.id ?? null;
-      if (typeof window !== "undefined") {
-        if (next) localStorage.setItem(STORAGE_KEY, next);
-        else localStorage.removeItem(STORAGE_KEY);
-      }
+      if (typeof window !== "undefined" && next) localStorage.setItem(STORAGE_KEY, next);
       return next;
     });
   }, [accountId]);
