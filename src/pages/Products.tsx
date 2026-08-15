@@ -333,10 +333,11 @@ export default function Products() {
       toast.error("Nome do produto é obrigatório");
       return;
     }
-    if (companies.length > 1 && !companyId) {
+    if (companies.length > 0 && !companyId) {
       toast.error("Selecione a empresa emissora do produto");
       return;
     }
+
 
     setSaving(true);
     try {
@@ -543,10 +544,11 @@ export default function Products() {
                   />
                 </div>
 
-                {companies.length > 1 && (
+                {companies.length > 0 && (
                   <div className="space-y-2">
                     <Label>Empresa emissora *</Label>
                     <Select value={companyId} onValueChange={setCompanyId}>
+
                       <SelectTrigger>
                         <SelectValue placeholder="Selecione a empresa" />
                       </SelectTrigger>
