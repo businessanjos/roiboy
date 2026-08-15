@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, parseISO, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -38,6 +39,7 @@ type ViewMode = "all" | "realized" | "forecast";
 export default function FinancialCashFlowPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const { currentCompanyId } = useCompany();
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [view, setView] = useState<ViewMode>("all");
 
@@ -45,16 +47,17 @@ export default function FinancialCashFlowPage() {
   const endDate = endOfMonth(currentMonth);
 
   const { data: entries = [], isLoading } = useQuery({
-    queryKey: ["cash-flow-entries", accountId, format(currentMonth, "yyyy-MM")],
+    queryKey: ["cash-flow-entries", accountId, currentCompanyId, format(currentMonth, "yyyy-MM")],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      let q = supabase
         .from("financial_entries")
         .select("*")
         .eq("account_id", accountId)
         .gte("due_date", format(startDate, "yyyy-MM-dd"))
-        .lte("due_date", format(endDate, "yyyy-MM-dd"))
-        .order("due_date");
+        .lte("due_date", format(endDate, "yyyy-MM-dd"));
+      if (currentCompanyId) q = q.eq("company_id", currentCompanyId);
+      const { data, error } = await q.order("due_date");
       if (error) throw error;
       return data;
     },

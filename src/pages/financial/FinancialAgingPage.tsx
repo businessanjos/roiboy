@@ -3,6 +3,7 @@ import { useTablePagination } from "@/hooks/useTablePagination";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { format, parseISO, differenceInDays } from "date-fns";
 import { Button } from "@/components/ui/button";
@@ -63,18 +64,19 @@ interface AgingBucket {
 export default function FinancialAgingPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const { currentCompanyId } = useCompany();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBucket, setSelectedBucket] = useState<string>("all");
 
   const { data: overdueEntries = [], isLoading } = useQuery({
-    queryKey: ["aging-report", accountId],
+    queryKey: ["aging-report", accountId, currentCompanyId],
     queryFn: async () => {
       if (!accountId) return [];
       
       const today = format(new Date(), "yyyy-MM-dd");
       
-      const { data, error } = await supabase
+      let agingQuery = supabase
         .from("financial_entries")
         .select(`
           id, description, amount, due_date, entry_type, status, client_id,
@@ -83,8 +85,9 @@ export default function FinancialAgingPage() {
         .eq("account_id", accountId)
         .eq("entry_type", "receivable")
         .in("status", ["pending", "overdue"])
-        .lt("due_date", today)
-        .order("due_date", { ascending: true });
+        .lt("due_date", today);
+      if (currentCompanyId) agingQuery = agingQuery.eq("company_id", currentCompanyId);
+      const { data, error } = await agingQuery.order("due_date", { ascending: true });
       
       if (error) throw error;
       

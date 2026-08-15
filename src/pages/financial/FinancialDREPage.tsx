@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -68,17 +69,18 @@ function getDateRange(period: string): { start: Date; end: Date } {
 }
 
 export default function FinancialDREPage() {
+  const { currentCompanyId } = useCompany();
   const [period, setPeriod] = useState("current_month");
   const dateRange = getDateRange(period);
 
   const { data: dreData, isLoading } = useQuery({
-    queryKey: ["dre-report", period],
+    queryKey: ["dre-report", period, currentCompanyId],
     queryFn: async () => {
       const startDate = format(dateRange.start, "yyyy-MM-dd");
       const endDate = format(dateRange.end, "yyyy-MM-dd");
 
       // Fetch all paid entries with their categories
-      const { data: entries, error } = await supabase
+      let dreQuery = supabase
         .from("financial_entries")
         .select(`
           id,
@@ -95,6 +97,8 @@ export default function FinancialDREPage() {
         .eq("status", "paid")
         .gte("payment_date", startDate)
         .lte("payment_date", endDate);
+      if (currentCompanyId) dreQuery = dreQuery.eq("company_id", currentCompanyId);
+      const { data: entries, error } = await dreQuery;
 
       if (error) throw error;
 
