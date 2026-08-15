@@ -144,6 +144,7 @@ interface Product {
   consultant_seniority?: string[] | null;
   deliverables: ProductDeliverables | null;
   mql_criteria: MqlCriteria | null;
+  company_id: string | null;
   created_at: string;
 }
 
@@ -211,6 +212,7 @@ export default function Products() {
   const [mqlCriteria, setMqlCriteria] = useState<MqlCriteria>({ ...DEFAULT_MQL_CRITERIA });
   const [newSegment, setNewSegment] = useState("");
   const [newSpecialty, setNewSpecialty] = useState("");
+  const [companyId, setCompanyId] = useState<string>("");
 
   // Format number with thousand separators (pt-BR)
   const formatNumberInput = (raw: string): string => {
@@ -282,6 +284,7 @@ export default function Products() {
     setAllowsSecondSeat(false);
     setMlsLevel("");
     setColor("#10b981");
+    setCompanyId(defaultCompanyId ?? "");
     setEditingId(null);
   };
 
@@ -302,6 +305,7 @@ export default function Products() {
     setAllowsSecondSeat(product.allows_second_seat ?? false);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
+    setCompanyId(product.company_id || defaultCompanyId || "");
     const rawDeliverables = product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES };
     // Migrate old single-field format to phases if needed
     if (rawDeliverables.individual_session_enabled && (!rawDeliverables.individual_session_phases || rawDeliverables.individual_session_phases.length === 0)) {
@@ -351,6 +355,7 @@ export default function Products() {
         allows_second_seat: allowsSecondSeat,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
+        company_id: companyId || null,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
         mql_criteria: isRenewal ? null : (
           (mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) 
