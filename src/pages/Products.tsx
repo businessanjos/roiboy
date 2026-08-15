@@ -333,6 +333,10 @@ export default function Products() {
       toast.error("Nome do produto é obrigatório");
       return;
     }
+    if (companies.length > 1 && !companyId) {
+      toast.error("Selecione a empresa emissora do produto");
+      return;
+    }
 
     setSaving(true);
     try {
