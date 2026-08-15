@@ -1996,6 +1996,7 @@ export type Database = {
           clinica_ryka_external_id: string | null
           clinica_ryka_status: string | null
           clinica_ryka_synced_at: string | null
+          company_id: string | null
           contract_type: string
           created_at: string
           currency: string
@@ -2037,6 +2038,7 @@ export type Database = {
           clinica_ryka_external_id?: string | null
           clinica_ryka_status?: string | null
           clinica_ryka_synced_at?: string | null
+          company_id?: string | null
           contract_type?: string
           created_at?: string
           currency?: string
@@ -2078,6 +2080,7 @@ export type Database = {
           clinica_ryka_external_id?: string | null
           clinica_ryka_status?: string | null
           clinica_ryka_synced_at?: string | null
+          company_id?: string | null
           contract_type?: string
           created_at?: string
           currency?: string
@@ -2129,6 +2132,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_contracts_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -5754,6 +5764,7 @@ export type Database = {
           aliquota_iss: number | null
           cnpj: string
           codigo_tributacao_municipio: string | null
+          company_id: string | null
           created_at: string
           endereco: Json | null
           id: string
@@ -5774,6 +5785,7 @@ export type Database = {
           aliquota_iss?: number | null
           cnpj: string
           codigo_tributacao_municipio?: string | null
+          company_id?: string | null
           created_at?: string
           endereco?: Json | null
           id?: string
@@ -5794,6 +5806,7 @@ export type Database = {
           aliquota_iss?: number | null
           cnpj?: string
           codigo_tributacao_municipio?: string | null
+          company_id?: string | null
           created_at?: string
           endereco?: Json | null
           id?: string
@@ -5808,7 +5821,15 @@ export type Database = {
           regime_tributario?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "contratadas_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       conversations: {
         Row: {
@@ -6890,6 +6911,7 @@ export type Database = {
           account_id: string
           agency_id: string | null
           client_id: string | null
+          company_id: string | null
           contact_email: string | null
           contact_name: string | null
           contact_phone: string | null
@@ -6931,6 +6953,7 @@ export type Database = {
           account_id: string
           agency_id?: string | null
           client_id?: string | null
+          company_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -6972,6 +6995,7 @@ export type Database = {
           account_id?: string
           agency_id?: string | null
           client_id?: string | null
+          company_id?: string | null
           contact_email?: string | null
           contact_name?: string | null
           contact_phone?: string | null
@@ -7036,6 +7060,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
           {
@@ -19754,6 +19785,7 @@ export type Database = {
           billing_period: Database["public"]["Enums"]["billing_period"]
           cash_price: number | null
           color: string | null
+          company_id: string | null
           consultant_seniority: string[]
           created_at: string
           deliverables: Json | null
@@ -19781,6 +19813,7 @@ export type Database = {
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null
+          company_id?: string | null
           consultant_seniority?: string[]
           created_at?: string
           deliverables?: Json | null
@@ -19808,6 +19841,7 @@ export type Database = {
           billing_period?: Database["public"]["Enums"]["billing_period"]
           cash_price?: number | null
           color?: string | null
+          company_id?: string | null
           consultant_seniority?: string[]
           created_at?: string
           deliverables?: Json | null
@@ -19835,6 +19869,13 @@ export type Database = {
             columns: ["account_id"]
             isOneToOne: false
             referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "products_company_id_fkey"
+            columns: ["company_id"]
+            isOneToOne: false
+            referencedRelation: "companies"
             referencedColumns: ["id"]
           },
         ]
