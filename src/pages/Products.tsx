@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCompany } from "@/contexts/CompanyContext";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -185,6 +186,8 @@ const billingPeriodLabels = {
 
 export default function Products() {
   const { currentUser } = useCurrentUser();
+  const { companies } = useCompany();
+  const defaultCompanyId = companies.find((c) => c.is_default)?.id ?? companies[0]?.id ?? null;
   const { canCreate } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -535,6 +538,27 @@ export default function Products() {
                     rows={2}
                   />
                 </div>
+
+                {companies.length > 1 && (
+                  <div className="space-y-2">
+                    <Label>Empresa emissora *</Label>
+                    <Select value={companyId} onValueChange={setCompanyId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a empresa" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.trade_name || c.legal_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Define o CNPJ que fatura e emite nota para este produto.
+                    </p>
+                  </div>
+                )}
 
                 {/* Row 3: Valor, Parcelado, Periodicidade */}
                 <div className="grid grid-cols-3 gap-4">
