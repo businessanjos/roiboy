@@ -154,6 +154,7 @@ const recurrenceLabels: Record<string, string> = {
 export default function FinancialEntriesPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const { currentCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
