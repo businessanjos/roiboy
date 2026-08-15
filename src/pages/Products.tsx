@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from "react";
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useCompany } from "@/contexts/CompanyContext";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -144,6 +145,7 @@ interface Product {
   consultant_seniority?: string[] | null;
   deliverables: ProductDeliverables | null;
   mql_criteria: MqlCriteria | null;
+  company_id: string | null;
   created_at: string;
 }
 
@@ -184,6 +186,8 @@ const billingPeriodLabels = {
 
 export default function Products() {
   const { currentUser } = useCurrentUser();
+  const { companies } = useCompany();
+  const defaultCompanyId = companies.find((c) => c.is_default)?.id ?? companies[0]?.id ?? null;
   const { canCreate } = usePlanLimits();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
@@ -211,6 +215,7 @@ export default function Products() {
   const [mqlCriteria, setMqlCriteria] = useState<MqlCriteria>({ ...DEFAULT_MQL_CRITERIA });
   const [newSegment, setNewSegment] = useState("");
   const [newSpecialty, setNewSpecialty] = useState("");
+  const [companyId, setCompanyId] = useState<string>("");
 
   // Format number with thousand separators (pt-BR)
   const formatNumberInput = (raw: string): string => {
@@ -282,6 +287,7 @@ export default function Products() {
     setAllowsSecondSeat(false);
     setMlsLevel("");
     setColor("#10b981");
+    setCompanyId(defaultCompanyId ?? "");
     setEditingId(null);
   };
 
@@ -302,6 +308,7 @@ export default function Products() {
     setAllowsSecondSeat(product.allows_second_seat ?? false);
     setMlsLevel(product.mls_level || "");
     setColor(product.color || "#10b981");
+    setCompanyId(product.company_id || defaultCompanyId || "");
     const rawDeliverables = product.deliverables ? { ...DEFAULT_DELIVERABLES, ...product.deliverables } : { ...DEFAULT_DELIVERABLES };
     // Migrate old single-field format to phases if needed
     if (rawDeliverables.individual_session_enabled && (!rawDeliverables.individual_session_phases || rawDeliverables.individual_session_phases.length === 0)) {
@@ -324,6 +331,10 @@ export default function Products() {
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Nome do produto é obrigatório");
+      return;
+    }
+    if (companies.length > 1 && !companyId) {
+      toast.error("Selecione a empresa emissora do produto");
       return;
     }
 
@@ -351,6 +362,7 @@ export default function Products() {
         allows_second_seat: allowsSecondSeat,
         mls_level: isMls ? (mlsLevel || null) : null,
         color: color,
+        company_id: companyId || null,
         deliverables: JSON.parse(JSON.stringify(deliverables)),
         mql_criteria: isRenewal ? null : (
           (mqlCriteria.revenue_ranges.length > 0 || mqlCriteria.segments.length > 0 || mqlCriteria.specialties.length > 0) 
@@ -530,6 +542,27 @@ export default function Products() {
                     rows={2}
                   />
                 </div>
+
+                {companies.length > 1 && (
+                  <div className="space-y-2">
+                    <Label>Empresa emissora *</Label>
+                    <Select value={companyId} onValueChange={setCompanyId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione a empresa" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-popover z-50">
+                        {companies.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>
+                            {c.trade_name || c.legal_name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Define o CNPJ que fatura e emite nota para este produto.
+                    </p>
+                  </div>
+                )}
 
                 {/* Row 3: Valor, Parcelado, Periodicidade */}
                 <div className="grid grid-cols-3 gap-4">

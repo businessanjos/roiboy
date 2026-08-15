@@ -3,6 +3,7 @@ import { useTablePagination } from "@/hooks/useTablePagination";
 import { TablePagination } from "@/components/ui/table-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCompany } from "@/contexts/CompanyContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { format, startOfMonth, endOfMonth, parseISO, addMonths, isBefore, startOfQuarter, endOfQuarter, startOfYear, endOfYear, addQuarters, addYears, getQuarter } from "date-fns";
@@ -153,6 +154,7 @@ const recurrenceLabels: Record<string, string> = {
 export default function FinancialEntriesPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
+  const { currentCompanyId } = useCompany();
   const { toast } = useToast();
   const queryClient = useQueryClient();
   
@@ -252,10 +254,10 @@ export default function FinancialEntriesPage() {
 
   // Fetch entries
   const { data: entries = [], isLoading: entriesLoading } = useQuery({
-    queryKey: ["financial-entries", accountId, activeTab, startDate, endDate],
+    queryKey: ["financial-entries", accountId, currentCompanyId, activeTab, startDate, endDate],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
+      let entriesQuery = supabase
         .from("financial_entries")
         .select(`
           *,
@@ -267,8 +269,9 @@ export default function FinancialEntriesPage() {
         .eq("account_id", accountId)
         .eq("entry_type", activeTab)
         .gte("due_date", startDate)
-        .lte("due_date", endDate)
-        .order("due_date", { ascending: true });
+        .lte("due_date", endDate);
+      if (currentCompanyId) entriesQuery = entriesQuery.eq("company_id", currentCompanyId);
+      const { data, error } = await entriesQuery.order("due_date", { ascending: true });
       
       if (error) throw error;
       return data as any[];

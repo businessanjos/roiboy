@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Shield, Book, Plug, Users, UserCircle, Target, User,
-  CreditCard, Video, Key, ArrowLeft, Activity,
+  CreditCard, Video, Key, ArrowLeft, Activity, Building2,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
@@ -56,6 +56,9 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
       ];
       if (isAdmin) {
         adminItems.push({ id: "sectors", label: "Setores", icon: Users });
+      }
+      if (canEditSettings) {
+        adminItems.push({ id: "companies", label: "Empresas", icon: Building2 });
       }
       if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });

@@ -18,6 +18,7 @@ import { PlanUsageCard } from "@/components/plan";
 
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
+import { CompaniesManager } from "@/components/settings/CompaniesManager";
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
@@ -44,6 +45,8 @@ export default function Settings() {
         ) : null;
       case "team":
         return canManageTeam ? <TeamManager /> : null;
+      case "companies":
+        return canEditSettings ? <CompaniesManager /> : null;
       case "sectors":
         return isAdmin ? (
           <div className="space-y-4">
