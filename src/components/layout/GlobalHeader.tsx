@@ -30,6 +30,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 
 import { FailedZappSendsAlert } from "@/components/royzapp/FailedZappSendsAlert";
+import { CompanySelector } from "@/components/companies/CompanySelector";
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
@@ -69,6 +70,11 @@ export function GlobalHeader() {
 
       {/* Right controls */}
       <div className="flex items-center gap-1 md:gap-2">
+
+        {/* Empresa (CNPJ) */}
+        <CompanySelector className="hidden md:flex w-[190px] h-9" />
+
+
 
         {/* Theme toggle */}
         <TooltipProvider>
