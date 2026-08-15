@@ -57,6 +57,9 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
       if (isAdmin) {
         adminItems.push({ id: "sectors", label: "Setores", icon: Users });
       }
+      if (canEditSettings) {
+        adminItems.push({ id: "companies", label: "Empresas", icon: Building2 });
+      }
       if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });
       }
