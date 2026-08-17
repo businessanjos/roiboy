@@ -459,8 +459,9 @@ export function RenewalLosses() {
   // Monthly chart data
   const monthlyData: Record<string, { month: string; lost: number; renewed: number }> = {};
   items.forEach(item => {
-    const d = parseLocalDate(item.end_date);
-    if (!d) return;
+    const d = item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date);
+    if (!d || isNaN(d.getTime())) return;
+
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
     if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0 };
