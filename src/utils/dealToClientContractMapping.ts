@@ -26,11 +26,13 @@ export const NEGOTIATION_REQUIRED_FIELDS: Array<{ id: string; label: string; kin
 const ITEM_VENDA_TO_PRODUCT: Record<string, string> = {
   // Existentes
   'eternum_private': 'Eternum Private',
-  'ren_eternum_private': 'Eternum Private',
+  'ren_eternum_private': 'REN. EP l Eternum Private',
   'eternum_club': 'Eternum Club',
-  'ren_eternum_club': 'Eternum Club',
+  'ren_eternum_club': 'REN. EC l Eternum Club',
   'rykas_mentoring': 'Rykas Mentoring',
-  'ren_rykas_mentoring': 'Rykas Mentoring',
+  // Rebranding RM -> EM: renovações novas usam o SKU de renovação do Eternum Mentoring
+  'ren_rykas_mentoring': 'REN. EM l Eternum Mentoring (1)',
+  'ren_eternum_mentoring': 'REN. EM l Eternum Mentoring (1)',
   'conselho_anjo': 'Conselho de Anjo',
   'makers_club': 'Makers Club',
   'mentoria_makers': 'Mentoria Makers',
@@ -119,8 +121,25 @@ export async function getProductIdByName(productName: string): Promise<string | 
     console.log('[DealMapping] Partial match found:', normalizedSearch, '->', partialMatch);
     return productCache[partialMatch];
   }
-  
+
   return null;
+}
+
+// Encontra o SKU de renovação ("REN. XX l <nome base>") a partir do nome base do produto
+async function findRenewalProductByBaseName(baseName: string): Promise<string | null> {
+  const clean = baseName.toLowerCase().trim();
+  if (!clean) return null;
+  const { data } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('is_active', true)
+    .ilike('name', 'REN.%');
+  const match = (data || []).find((p: { id: string; name: string }) => {
+    const withoutPrefix = p.name.toLowerCase().replace(/^ren\.?\s*/i, '');
+    const afterCode = withoutPrefix.split(/\s+l\s+/).pop()?.trim() ?? withoutPrefix.trim();
+    return afterCode === clean || afterCode.includes(clean) || clean.includes(afterCode);
+  });
+  return match?.id ?? null;
 }
 
 export async function mapItemVendaToProductId(itemVendaValue: string): Promise<string | null> {
@@ -169,13 +188,25 @@ export async function mapItemVendaToProductId(itemVendaValue: string): Promise<s
     return null;
   }
   
-  // Limpar prefixo "Ren. " ou "Ren " se existir para match
+  // Renovações: preservar o SKU "REN." em vez de cair no produto base
+  const isRenewal = /^ren\.?\s/i.test(label);
   const cleanLabel = label.replace(/^Ren\.?\s*/i, '').trim();
-  console.log('[DealMapping] Trying dynamic match with label:', label, '-> cleaned:', cleanLabel);
-  
+  console.log('[DealMapping] Trying dynamic match with label:', label, '-> cleaned:', cleanLabel, 'renewal:', isRenewal);
+
+  // Para renovações, tentar primeiro o SKU de renovação ("REN. ... <nome base>")
+  let productId: string | null = null;
+  if (isRenewal) {
+    productId = await getProductIdByName(label);
+    if (!productId) productId = await getProductIdByName(`REN. ${cleanLabel}`);
+    if (!productId) {
+      const renewalMatch = await findRenewalProductByBaseName(cleanLabel);
+      productId = renewalMatch;
+    }
+  }
+
   // Tentar com label limpo
-  let productId = await getProductIdByName(cleanLabel);
-  
+  if (!productId) productId = await getProductIdByName(cleanLabel);
+
   // Se não encontrou, tentar com label original
   if (!productId && cleanLabel !== label) {
     productId = await getProductIdByName(label);
