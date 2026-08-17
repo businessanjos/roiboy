@@ -128,6 +128,7 @@ interface Task {
   deal_id: string | null;
   lead_id: string | null;
   assigned_to: string | null;
+  created_by: string | null;
   created_at: string;
   completed_at: string | null;
   meeting_url: string | null;
@@ -268,9 +269,9 @@ export default function Tasks() {
 
         // User filter (server-side) para não estourar limites em contas grandes.
         if (filterUser === "mine" && currentUser?.id) {
-          q = q.eq("assigned_to", currentUser.id);
+          q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
         } else if (filterUser !== "all" && filterUser) {
-          q = q.eq("assigned_to", filterUser);
+          q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
         }
         return q;
       };
@@ -295,18 +296,51 @@ export default function Tasks() {
     staleTime: 30000,
   });
 
-  // Fetch users with React Query
+  // Fetch users with React Query.
+  // No setor Comercial, restringe a pessoas do comercial (atuais e antigas):
+  // quem tem cargo da área "Comercial" ou quem já foi responsável/SDR de negócios.
   const { data: users = [] } = useQuery({
-    queryKey: ["team-users-tasks"],
+    queryKey: ["team-users-tasks", currentSector?.id],
     queryFn: async () => {
       const { data } = await supabase
         .from("users")
         .select("id, name, avatar_url")
         .order("name");
-      return (data || []) as User[];
+      const allUsers = (data || []) as User[];
+
+      if (currentSector?.id !== "vendas") return allUsers;
+
+      const commercial = new Set<string>();
+
+      const { data: roles } = await supabase
+        .from("team_roles")
+        .select("id")
+        .eq("area", "Comercial");
+      const roleIds = (roles || []).map((r: any) => r.id);
+      if (roleIds.length > 0) {
+        const { data: userRoles } = await supabase
+          .from("user_team_roles")
+          .select("user_id")
+          .in("team_role_id", roleIds);
+        (userRoles || []).forEach((r: any) => commercial.add(r.user_id));
+      }
+
+      // Ex-comerciais (usuários inativos ou sem cargo) detectados por negócios
+      const { data: deals } = await supabase
+        .from("deals")
+        .select("responsible_user_id, sdr_user_id")
+        .limit(20000);
+      (deals || []).forEach((d: any) => {
+        if (d.responsible_user_id) commercial.add(d.responsible_user_id);
+        if (d.sdr_user_id) commercial.add(d.sdr_user_id);
+      });
+
+      const filtered = allUsers.filter((u) => commercial.has(u.id));
+      return filtered.length > 0 ? filtered : allUsers;
     },
     staleTime: 60000,
   });
+
 
   // Realtime subscription
   useEffect(() => {
@@ -531,7 +565,7 @@ export default function Tasks() {
     
     // User filter
     const matchesUser = filterUser === "all" || 
-      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
 
     // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
@@ -591,7 +625,7 @@ export default function Tasks() {
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesUser = filterUser === "all" ||
-      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
@@ -1507,7 +1541,7 @@ export default function Tasks() {
               task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesUser = filterUser === "all" || 
-              (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+              (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
 
             const matchesActivityType = filterActivityType === "all" || 
               task.activity_type?.id === filterActivityType;
