@@ -373,6 +373,24 @@ export default function Renewals() {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? endDate.getTime() - today.getTime() : 0;
         const daysUntil = Math.ceil(diffMs / (1000 * 60 * 60 * 24));
+        const currentOutcome = allOutcomesMap[c.id]?.outcome || null;
+        const isExpired = daysUntil < 0;
+        const listName = isExpired ? "Vencido" : "A Vencer";
+        const reason = isExpired
+          ? [
+              `Vencido há ${Math.abs(daysUntil)} dia(s) (fim em ${formatLocalDate(c.end_date)}).`,
+              currentOutcome
+                ? `Desfecho atual: "${currentOutcome === "negotiating" ? "Em negociação" : "Pendente"}".`
+                : "Nenhum desfecho registrado (nem Renovado, nem Cancelou).",
+              "Nenhum contrato sucessor do mesmo produto foi encontrado na janela de -30 a +365 dias do vencimento.",
+            ].join(" ")
+          : [
+              `Contrato ativo com vencimento em ${formatLocalDate(c.end_date)} (${daysUntil} dia(s)), dentro da janela até 31/12/2026.`,
+              currentOutcome
+                ? `Desfecho atual: "${currentOutcome === "negotiating" ? "Em negociação" : "Pendente"}".`
+                : "Nenhum desfecho registrado.",
+              "Nenhum contrato sucessor do mesmo produto foi encontrado na janela de -30 a +365 dias do vencimento.",
+            ].join(" ");
 
         return {
           id: c.id,
@@ -410,8 +428,11 @@ export default function Renewals() {
           })(),
           responsible_name: (c.clients as any)?.users?.name || null,
           responsible_user_id: (c.clients as any)?.responsible_user_id || null,
+          list_name: listName,
+          classification_reason: reason,
         };
       });
+
 
       const hasFullAccess = currentUser.role === "admin" || currentUser.role === "super_admin" 
         || currentUser.is_also_admin 
