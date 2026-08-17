@@ -548,9 +548,14 @@ export function RenewalLosses() {
             <SelectItem value="90">Últimos 90 dias</SelectItem>
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground self-center">
+          Período considera a data em que a consultora registrou o status (Renovado / Cancelou).
+        </p>
       </div>
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
