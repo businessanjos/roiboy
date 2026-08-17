@@ -42,7 +42,12 @@ import {
   AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
+  CalendarDays,
   Clock,
+  Inbox,
+  Send,
+  UserPlus,
+
   MessageSquare,
   RefreshCw,
   Timer,
@@ -59,6 +64,8 @@ interface AgentRow {
   name: string;
   messages_sent: number;
   conversations: number;
+  avg_conversations_per_day?: number | null;
+  new_started?: number | null;
   avg_response_seconds: number | null;
 }
 
@@ -75,6 +82,15 @@ interface Metrics {
   messages_out: number;
   active_conversations: number;
   total_conversations: number;
+  new_conversations: number;
+  new_by_client: number;
+  new_by_team: number;
+  new_by_team_agent: { user_id: string | null; name: string; count: number }[];
+  active_days: number;
+  avg_conversations_per_day: number | null;
+  avg_messages_per_day: number | null;
+  avg_new_conversations_per_day: number | null;
+  by_day_new: { day: string; new_by_client: number; new_by_team: number }[];
   avg_response_seconds: number | null;
   median_response_seconds: number | null;
   p90_response_seconds: number | null;
@@ -87,9 +103,10 @@ interface Metrics {
   risk_mentions: number;
   risk_samples: RiskSample[];
   by_agent: AgentRow[];
-  by_day: { day: string; inbound: number; outbound: number }[];
+  by_day: { day: string; inbound: number; outbound: number; conversations?: number }[];
   by_hour: { hour: number; inbound: number; outbound: number }[];
 }
+
 
 type PeriodKey = "current_month" | "last_7" | "last_30" | "last_month";
 
@@ -333,6 +350,114 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
               <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`${data.silent_conversations} conversas só com envio nosso`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
             </div>
 
+            {/* Conversas novas e média diária */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Kpi
+                icon={UserPlus}
+                label="Conversas novas"
+                value={(data.new_conversations ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  data.active_conversations > 0
+                    ? `${Math.round(((data.new_conversations ?? 0) / data.active_conversations) * 100)}% das ${data.active_conversations} ativas`
+                    : "primeiro contato no período"
+                }
+              />
+              <Kpi
+                icon={Inbox}
+                label="Novas — cliente chamou"
+                value={(data.new_by_client ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  (data.new_conversations ?? 0) > 0
+                    ? `${Math.round(((data.new_by_client ?? 0) / data.new_conversations) * 100)}% das novas`
+                    : "—"
+                }
+              />
+              <Kpi
+                icon={Send}
+                label="Novas — time chamou"
+                value={(data.new_by_team ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  (data.new_conversations ?? 0) > 0
+                    ? `${Math.round(((data.new_by_team ?? 0) / data.new_conversations) * 100)}% das novas (prospecção ativa)`
+                    : "—"
+                }
+                tone="success"
+              />
+              <Kpi
+                icon={CalendarDays}
+                label="Média de atendimento por dia"
+                value={data.avg_conversations_per_day === null || data.avg_conversations_per_day === undefined ? "—" : `${Number(data.avg_conversations_per_day).toLocaleString("pt-BR")}`}
+                hint={`conversas/dia em ${data.active_days ?? 0} dias com movimento · ${data.avg_new_conversations_per_day ?? 0} novas/dia`}
+              />
+            </div>
+
+            {/* Quem iniciou as conversas novas */}
+            <div className="grid gap-3 lg:grid-cols-2">
+              <Card className="bg-zapp-panel border-zapp-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-zapp-text">Conversas novas por dia — quem iniciou</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[240px]">
+                  {(data.by_day_new || []).length === 0 ? (
+                    <p className="text-sm text-zapp-text-muted">Nenhuma conversa nova no período.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={(data.by_day_new || []).map((d) => ({
+                          ...d,
+                          label: format(new Date(`${d.day}T12:00:00`), "dd/MM", { locale: ptBR }),
+                        }))}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                        <RTooltip />
+                        <Legend />
+                        <Bar dataKey="new_by_client" stackId="n" name="Cliente chamou" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="new_by_team" stackId="n" name="Time chamou" fill="hsl(var(--chart-2, 142 71% 45%))" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zapp-panel border-zapp-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-zapp-text flex items-center gap-2">
+                    <Send className="h-4 w-4" /> Prospecção ativa por consultora
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Consultora</TableHead>
+                        <TableHead className="text-right">Conversas iniciadas</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(data.new_by_team_agent || []).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-sm text-zapp-text-muted py-6">
+                            Nenhuma conversa iniciada pelo time no período.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.new_by_team_agent.map((a) => (
+                          <TableRow key={a.user_id || a.name}>
+                            <TableCell className="font-medium">{a.name}</TableCell>
+                            <TableCell className="text-right">{a.count.toLocaleString("pt-BR")}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+
+
             {/* Volume por dia */}
             <Card className="bg-zapp-panel border-zapp-border">
               <CardHeader className="pb-2">
@@ -391,13 +516,16 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
                         <TableHead>Atendente</TableHead>
                         <TableHead className="text-right">Enviadas</TableHead>
                         <TableHead className="text-right">Conversas</TableHead>
+                        <TableHead className="text-right">Média/dia</TableHead>
+                        <TableHead className="text-right">Novas iniciadas</TableHead>
                         <TableHead className="text-right">Resposta média</TableHead>
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(data.by_agent || []).length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-sm text-zapp-text-muted py-6">
+                          <TableCell colSpan={6} className="text-center text-sm text-zapp-text-muted py-6">
                             Nenhum envio identificado no período.
                           </TableCell>
                         </TableRow>
@@ -407,7 +535,10 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
                             <TableCell className="font-medium">{a.name}</TableCell>
                             <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
                             <TableCell className="text-right">{a.conversations}</TableCell>
+                            <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
+                            <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
                             <TableCell className="text-right">{fmtDuration(a.avg_response_seconds)}</TableCell>
+
                           </TableRow>
                         ))
                       )}
