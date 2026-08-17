@@ -101,6 +101,12 @@ interface Metrics {
   silent_conversations: number;
   clients_never_messaged: number;
   risk_mentions: number;
+  risk_conversations?: number;
+  messages_out_unattributed?: number;
+  messages_from_history?: number;
+  group_conversations_excluded?: number;
+  new_conversations_from_history?: number;
+  responses_count?: number;
   risk_samples: RiskSample[];
   by_agent: AgentRow[];
   by_day: { day: string; inbound: number; outbound: number; conversations?: number }[];
@@ -180,7 +186,7 @@ function Kpi({
   );
 }
 
-export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
+export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
   const { currentUser } = useCurrentUser();
   const { sectorAccess } = useSectorAccess();
   const { unrestricted, canOpenZappSector } = useRoyZappViewAccess();
@@ -204,14 +210,17 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
     (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
   );
   const [period, setPeriod] = useState<PeriodKey>("current_month");
+  const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
+  const [includeGroups, setIncludeGroups] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
   const range = useMemo(() => periodRange(period), [period]);
   const effectiveSector = sector === "all" ? null : sector;
+  const effectiveIntegration = scope === "instance" ? (integrationId || null) : null;
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
-    queryKey: ["zapp-productivity", effectiveSector, period],
+    queryKey: ["zapp-productivity", effectiveSector, period, effectiveIntegration, includeGroups],
     enabled: allowed,
     staleTime: 60_000,
     queryFn: async (): Promise<Metrics> => {
@@ -219,6 +228,8 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
         _sector_id: effectiveSector,
         _from: range.from.toISOString(),
         _to: range.to.toISOString(),
+        _integration_id: effectiveIntegration,
+        _include_groups: includeGroups,
       });
       if (error) throw error;
       return data as Metrics;
@@ -318,10 +329,49 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
               <SelectItem value="last_month">Mês passado</SelectItem>
             </SelectContent>
           </Select>
+          {integrationId && (
+            <Select value={scope} onValueChange={(v) => setScope(v as any)}>
+              <SelectTrigger className="w-[210px] bg-zapp-panel border-zapp-border text-zapp-text">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="instance">Somente esta conexão</SelectItem>
+                <SelectItem value="sector">Todas as conexões da área</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={includeGroups ? "yes" : "no"} onValueChange={(v) => setIncludeGroups(v === "yes")}>
+            <SelectTrigger className="w-[175px] bg-zapp-panel border-zapp-border text-zapp-text">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no">Sem grupos</SelectItem>
+              <SelectItem value="yes">Incluir grupos</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Atualizar">
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </Button>
         </div>
+
+        {data && (
+          <p className="text-[11px] leading-relaxed text-zapp-text-muted">
+            Base do cálculo: {includeGroups ? "conversas individuais e grupos" : "somente conversas individuais"}
+            {!includeGroups && (data.group_conversations_excluded ?? 0) > 0
+              ? ` (${data.group_conversations_excluded} grupos fora da conta)`
+              : ""}
+            {" · "}
+            {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
+            {" · "}mensagens apagadas ignoradas
+            {(data.new_conversations_from_history ?? 0) > 0
+              ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como novas`
+              : ""}
+            {(data.messages_out_unattributed ?? 0) > 0
+              ? ` · ${data.messages_out_unattributed} envios sem atendente identificado (fora do ranking por pessoa)`
+              : ""}
+          </p>
+        )}
+
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
@@ -341,13 +391,22 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Kpi icon={ArrowDownLeft} label="Recebidas" value={data.messages_in.toLocaleString("pt-BR")} hint="mensagens de clientes" />
-              <Kpi icon={ArrowUpRight} label="Enviadas" value={data.messages_out.toLocaleString("pt-BR")} hint="mensagens do time" />
-              <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`de ${data.total_conversations.toLocaleString("pt-BR")} no total`} />
+              <Kpi
+                icon={ArrowUpRight}
+                label="Enviadas"
+                value={data.messages_out.toLocaleString("pt-BR")}
+                hint={
+                  (data.messages_out_unattributed ?? 0) > 0
+                    ? `${(data.messages_out - (data.messages_out_unattributed ?? 0)).toLocaleString("pt-BR")} com atendente identificado`
+                    : "mensagens do time"
+                }
+              />
+              <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`com mensagem no período · ${data.total_conversations.toLocaleString("pt-BR")} conversas no escopo`} />
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
-              <Kpi icon={Clock} label="Tempo médio de resposta" value={fmtDuration(data.avg_response_seconds)} hint={`mediana ${fmtDuration(data.median_response_seconds)} · p90 ${fmtDuration(data.p90_response_seconds)}`} />
+              <Kpi icon={Clock} label="Tempo médio de resposta" value={fmtDuration(data.avg_response_seconds)} hint={`mediana ${fmtDuration(data.median_response_seconds)} · p90 ${fmtDuration(data.p90_response_seconds)} · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas`} />
               <Kpi icon={Timer} label="Respostas em até 5 min" value={data.responses_under_5min_pct === null ? "—" : `${data.responses_under_5min_pct}%`} tone={(data.responses_under_5min_pct ?? 0) < 50 ? "warning" : "success"} />
-              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
-              <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`${data.silent_conversations} conversas só com envio nosso`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
+              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
+              <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`clientes ativos, histórico total · ${data.silent_conversations} conversas só com envio nosso no período`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
             </div>
 
             {/* Conversas novas e média diária */}

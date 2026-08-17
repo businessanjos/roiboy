@@ -951,7 +951,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         )}
 
         {activeView === "analytics" && (
-          <ZappAnalyticsPanel sectorId={sectorId} />
+          <ZappAnalyticsPanel sectorId={sectorId} integrationId={selectedIntegrationId || null} />
         )}
         {activeView === "whatsapp-admin" && isAdmin && (
           <ZappWhatsAppAdminPanel sectorId={sectorId} />

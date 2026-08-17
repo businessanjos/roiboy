@@ -1,0 +1,1 @@
+DROP FUNCTION IF EXISTS public.zapp_productivity_metrics(text, timestamptz, timestamptz);
