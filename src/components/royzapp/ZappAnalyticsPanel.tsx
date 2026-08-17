@@ -329,10 +329,49 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               <SelectItem value="last_month">Mês passado</SelectItem>
             </SelectContent>
           </Select>
+          {integrationId && (
+            <Select value={scope} onValueChange={(v) => setScope(v as any)}>
+              <SelectTrigger className="w-[210px] bg-zapp-panel border-zapp-border text-zapp-text">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="instance">Somente esta conexão</SelectItem>
+                <SelectItem value="sector">Todas as conexões da área</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+          <Select value={includeGroups ? "yes" : "no"} onValueChange={(v) => setIncludeGroups(v === "yes")}>
+            <SelectTrigger className="w-[175px] bg-zapp-panel border-zapp-border text-zapp-text">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="no">Sem grupos</SelectItem>
+              <SelectItem value="yes">Incluir grupos</SelectItem>
+            </SelectContent>
+          </Select>
           <Button variant="outline" size="icon" onClick={() => refetch()} disabled={isFetching} aria-label="Atualizar">
             <RefreshCw className={cn("h-4 w-4", isFetching && "animate-spin")} />
           </Button>
         </div>
+
+        {data && (
+          <p className="text-[11px] leading-relaxed text-zapp-text-muted">
+            Base do cálculo: {includeGroups ? "conversas individuais e grupos" : "somente conversas individuais"}
+            {!includeGroups && (data.group_conversations_excluded ?? 0) > 0
+              ? ` (${data.group_conversations_excluded} grupos fora da conta)`
+              : ""}
+            {" · "}
+            {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
+            {" · "}mensagens apagadas ignoradas
+            {(data.new_conversations_from_history ?? 0) > 0
+              ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como novas`
+              : ""}
+            {(data.messages_out_unattributed ?? 0) > 0
+              ? ` · ${data.messages_out_unattributed} envios sem atendente identificado (fora do ranking por pessoa)`
+              : ""}
+          </p>
+        )}
+
 
         {error && (
           <Card className="border-destructive/40 bg-destructive/5">
