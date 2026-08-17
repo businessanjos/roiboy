@@ -2358,6 +2358,25 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Especialidade Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Especialidade</Label>
+                <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as especialidades</SelectItem>
+                    {specialtyOptions.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem especialidade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+
 
 
 
