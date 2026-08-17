@@ -214,16 +214,12 @@ export default function Tasks() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
 
-  // Feedback visual para carregamentos longos: após 2.5s buscando,
-  // exibe uma mensagem de fallback para que o usuário não ache que travou.
+  // Busca incremental: só consulta o servidor após o usuário parar de digitar.
   useEffect(() => {
-    if (!fetchingTasks) {
-      setShowSlowLoadMessage(false);
-      return;
-    }
-    const t = setTimeout(() => setShowSlowLoadMessage(true), 2500);
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
     return () => clearTimeout(t);
-  }, [fetchingTasks]);
+  }, [searchTerm]);
+
 
 
   // Busca incremental: só consulta o servidor após o usuário parar de digitar.
