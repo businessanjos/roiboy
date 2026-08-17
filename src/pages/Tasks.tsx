@@ -210,6 +210,23 @@ export default function Tasks() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
 
+  const isHistoricalUserFilter = filterUser !== "all" && filterUser !== "mine";
+
+  const handleUserFilterChange = useCallback((value: string) => {
+    setFilterUser(value);
+
+    // Ao consultar uma pessoa específica, a intenção é auditar todo o histórico
+    // ligado a ela, independentemente dos demais filtros que ficaram persistidos.
+    if (value !== "all" && value !== "mine") {
+      setActiveTab(null);
+      setFilterActivityType("all");
+      setFilterDateStart("");
+      setFilterDateEnd("");
+      setFilterStage("all");
+      setSearchTerm("");
+    }
+  }, [setFilterUser, setFilterActivityType, setFilterDateStart, setFilterDateEnd, setFilterStage]);
+
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
   
@@ -261,7 +278,7 @@ export default function Tasks() {
 
         // Sector filter (server-side). Inclui NULL para não perder tarefas
         // de leads criados via automação sem tipo de atividade definido.
-        if (sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
+        if (!isHistoricalUserFilter && sectorActivityTypeIds && sectorActivityTypeIds.length > 0) {
           q = q.or(
             `activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`
           );
@@ -575,7 +592,11 @@ export default function Tasks() {
     const activitySectorId = task.activity_type?.sector_id;
     
     let matchesSector = true;
-    if (currentSector?.id === "vendas") {
+    if (isHistoricalUserFilter) {
+      // O filtro nominal é uma auditoria histórica: não oculta atividades que
+      // tenham sido classificadas em outro setor antes da saída do colaborador.
+      matchesSector = true;
+    } else if (currentSector?.id === "vendas") {
       // For Sales: include if activity belongs to vendas, or has deal_id/lead_id with no sector specified
       // EXCLUDE if activity explicitly belongs to another sector
       if (activitySectorId && activitySectorId !== "vendas") {
@@ -616,7 +637,7 @@ export default function Tasks() {
       task.deals?.stage?.id === filterStage;
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage]);
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
@@ -630,7 +651,9 @@ export default function Tasks() {
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
     let matchesSector = true;
-    if (currentSector?.id === "vendas") {
+    if (isHistoricalUserFilter) {
+      matchesSector = true;
+    } else if (currentSector?.id === "vendas") {
       if (activitySectorId && activitySectorId !== "vendas") matchesSector = false;
       else matchesSector = activitySectorId === "vendas" || ((!!task.deal_id || !!task.lead_id) && !activitySectorId);
     } else if (currentSector?.id === "operacoes") {
@@ -641,7 +664,7 @@ export default function Tasks() {
     }
     const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage]);
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, isHistoricalUserFilter]);
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
@@ -1433,11 +1456,11 @@ export default function Tasks() {
         }}
       >
         <FilterItem>
-          <Select value={filterUser} onValueChange={setFilterUser}>
+          <Select value={filterUser} onValueChange={handleUserFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-10">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Responsável" />
+                <SelectValue placeholder="Pessoa vinculada" />
               </div>
             </SelectTrigger>
             <SelectContent>
