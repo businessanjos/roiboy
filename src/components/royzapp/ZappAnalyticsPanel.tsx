@@ -59,6 +59,8 @@ interface AgentRow {
   name: string;
   messages_sent: number;
   conversations: number;
+  avg_conversations_per_day?: number | null;
+  new_started?: number | null;
   avg_response_seconds: number | null;
 }
 
@@ -75,6 +77,15 @@ interface Metrics {
   messages_out: number;
   active_conversations: number;
   total_conversations: number;
+  new_conversations: number;
+  new_by_client: number;
+  new_by_team: number;
+  new_by_team_agent: { user_id: string | null; name: string; count: number }[];
+  active_days: number;
+  avg_conversations_per_day: number | null;
+  avg_messages_per_day: number | null;
+  avg_new_conversations_per_day: number | null;
+  by_day_new: { day: string; new_by_client: number; new_by_team: number }[];
   avg_response_seconds: number | null;
   median_response_seconds: number | null;
   p90_response_seconds: number | null;
@@ -87,9 +98,10 @@ interface Metrics {
   risk_mentions: number;
   risk_samples: RiskSample[];
   by_agent: AgentRow[];
-  by_day: { day: string; inbound: number; outbound: number }[];
+  by_day: { day: string; inbound: number; outbound: number; conversations?: number }[];
   by_hour: { hour: number; inbound: number; outbound: number }[];
 }
+
 
 type PeriodKey = "current_month" | "last_7" | "last_30" | "last_month";
 
