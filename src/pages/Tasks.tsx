@@ -11,6 +11,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
   Select,
@@ -211,6 +212,15 @@ export default function Tasks() {
   const [pageSize, setPageSize] = useState(20);
   const [loadedChunks, setLoadedChunks] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
+
+  // Busca incremental: só consulta o servidor após o usuário parar de digitar.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+
 
   // Busca incremental: só consulta o servidor após o usuário parar de digitar.
   useEffect(() => {
@@ -347,6 +357,18 @@ export default function Tasks() {
 
   const tasks = tasksResult?.rows ?? [];
   const hasMoreTasks = !!tasksResult?.hasMore;
+
+  // Feedback visual para carregamentos longos: após 2.5s buscando,
+  // exibe uma mensagem de fallback para que o usuário não ache que travou.
+  useEffect(() => {
+    if (!fetchingTasks) {
+      setShowSlowLoadMessage(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSlowLoadMessage(true), 2500);
+    return () => clearTimeout(t);
+  }, [fetchingTasks]);
+
 
 
   // Fetch users with React Query.
@@ -903,7 +925,7 @@ export default function Tasks() {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
   }
 
-  const TaskTable = ({ tasks }: { tasks: Task[] }) => (
+  const TaskTable = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => (
     <Card className="shadow-card overflow-hidden">
       <ScrollArea className="w-full">
         <div className="min-w-max">
@@ -984,7 +1006,27 @@ export default function Tasks() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.length === 0 ? (
+              {isLoading && tasks.length === 0 ? (
+                // Skeleton de carregamento inicial para não parecer que travou
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={`sk-${i}`} className="hover:bg-transparent">
+                    <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-24 mx-auto" /></TableCell>
+                    {isInVendasSector && <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>}
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-7 w-7 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded" /></TableCell>
+                  </TableRow>
+                ))
+              ) : tasks.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isInVendasSector ? 9 : 8} className="text-center py-12">
                     <div className="flex flex-col items-center text-muted-foreground">
@@ -1661,15 +1703,15 @@ export default function Tasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <TaskTable tasks={paginatedTasks} />
+            <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
             <TabsContent key={status.id} value={status.id} className="mt-6">
-              <TaskTable tasks={paginatedTasks} />
+              <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
             </TabsContent>
           ))}
           <TabsContent value="__overdue__" className="mt-6">
-            <TaskTable tasks={paginatedTasks} />
+            <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
           {/* Carregamento incremental do histórico */}
@@ -1683,6 +1725,14 @@ export default function Tasks() {
               >
                 {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
               </Button>
+            </div>
+          )}
+
+          {/* Mensagem de fallback para buscas históricas demoradas */}
+          {showSlowLoadMessage && (
+            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>A busca está demorando mais que o esperado... aguarde enquanto o histórico é carregado.</span>
             </div>
           )}
 
