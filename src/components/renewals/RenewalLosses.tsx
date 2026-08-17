@@ -598,9 +598,10 @@ export function RenewalLosses() {
               <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{losses.length} / {items.length}</p>
-              <p className="text-xs text-muted-foreground">Perdas / Total vencidos</p>
+              <p className="text-2xl font-bold">{renewed.length} / {items.length}</p>
+              <p className="text-xs text-muted-foreground">Renovados / Total resolvidos</p>
             </div>
+
           </CardContent>
         </Card>
       </div>
