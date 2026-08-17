@@ -295,10 +295,13 @@ export default function Tasks() {
 
       // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
       // query a cada iteração para não acumular parâmetros de estado.
+      // Sem filtro nominal, limita o volume para a tela abrir rápido; a
+      // varredura completa do histórico só acontece ao auditar uma pessoa.
       const PAGE = 1000;
+      const MAX_PAGES = isHistoricalUserFilter ? 50 : 3;
       const all: Task[] = [];
       let from = 0;
-      for (let page = 0; page < 50; page++) {
+      for (let page = 0; page < MAX_PAGES; page++) {
         const { data, error } = await buildQuery()
           .order("created_at", { ascending: false })
           .range(from, from + PAGE - 1);
@@ -309,6 +312,7 @@ export default function Tasks() {
         from += PAGE;
       }
       return all;
+
     },
     staleTime: 30000,
   });
