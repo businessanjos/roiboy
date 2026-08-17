@@ -121,7 +121,24 @@ export async function getProductIdByName(productName: string): Promise<string | 
     console.log('[DealMapping] Partial match found:', normalizedSearch, '->', partialMatch);
     return productCache[partialMatch];
   }
-  
+
+// Encontra o SKU de renovação ("REN. XX l <nome base>") a partir do nome base do produto
+async function findRenewalProductByBaseName(baseName: string): Promise<string | null> {
+  const clean = baseName.toLowerCase().trim();
+  if (!clean) return null;
+  const { data } = await supabase
+    .from('products')
+    .select('id, name')
+    .eq('is_active', true)
+    .ilike('name', 'REN.%');
+  const match = (data || []).find((p: { id: string; name: string }) => {
+    const withoutPrefix = p.name.toLowerCase().replace(/^ren\.?\s*/i, '');
+    const afterCode = withoutPrefix.split(/\s+l\s+/).pop()?.trim() ?? withoutPrefix.trim();
+    return afterCode === clean || afterCode.includes(clean) || clean.includes(afterCode);
+  });
+  return match?.id ?? null;
+}
+
   return null;
 }
 
