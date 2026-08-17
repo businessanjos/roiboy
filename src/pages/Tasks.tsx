@@ -412,7 +412,8 @@ export default function Tasks() {
       const filtered = allUsers.filter((u) => commercial.has(u.id));
       return filtered.length > 0 ? filtered : allUsers;
     },
-    staleTime: 60000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
 
