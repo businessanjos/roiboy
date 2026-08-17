@@ -525,7 +525,7 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
                     <TableBody>
                       {(data.by_agent || []).length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={4} className="text-center text-sm text-zapp-text-muted py-6">
+                          <TableCell colSpan={6} className="text-center text-sm text-zapp-text-muted py-6">
                             Nenhum envio identificado no período.
                           </TableCell>
                         </TableRow>
@@ -535,7 +535,10 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
                             <TableCell className="font-medium">{a.name}</TableCell>
                             <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
                             <TableCell className="text-right">{a.conversations}</TableCell>
+                            <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
+                            <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
                             <TableCell className="text-right">{fmtDuration(a.avg_response_seconds)}</TableCell>
+
                           </TableRow>
                         ))
                       )}
