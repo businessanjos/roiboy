@@ -320,56 +320,6 @@ export function RenewalLosses() {
         };
       });
 
-      // 2b) Renovações vendidas pelo Comercial: contratos de produtos de renovação
-      // (products.is_renewal) contam como "Renovado" mesmo sem registro manual.
-      const { data: renewalContracts } = await supabase
-        .from("client_contracts")
-        .select(`
-          id, client_id, status, start_date, end_date, value, product_id, created_at,
-          clients!inner(full_name, logo_url, responsible_user_id, users:responsible_user_id(name)),
-          products!inner(name, color, is_renewal)
-        `)
-        .eq("account_id", currentUser.account_id)
-        .eq("products.is_renewal", true)
-        .in("status", ["active", "ended", "paused", "suspended"])
-        .is("parent_contract_id", null)
-        .order("start_date", { ascending: false })
-        .limit(2000);
-
-      const existingIds = new Set(mapped.map(m => m.id));
-      const implicit: ExpiredContract[] = [];
-      for (const rc of (renewalContracts || []) as any[]) {
-        if (existingIds.has(rc.id)) continue;
-        // evita duplicar quando o contrato antigo do mesmo cliente já tem desfecho registrado
-        const alreadyResolvedForClient = mapped.some(
-          m => m.client_id === rc.client_id && m.outcome === "renewed"
-        );
-        if (alreadyResolvedForClient) continue;
-        existingIds.add(rc.id);
-        implicit.push({
-          id: rc.id,
-          client_id: rc.client_id,
-          client_name: rc.clients?.full_name || "—",
-          client_photo_url: rc.clients?.logo_url || null,
-          end_date: rc.end_date,
-          value: rc.value || 0,
-          renewal_value: rc.value || 0,
-          product_name: rc.products?.name || null,
-          product_color: rc.products?.color || null,
-          responsible_name: rc.clients?.users?.name || null,
-          responsible_user_id: rc.clients?.responsible_user_id || null,
-          outcome: "renewed",
-          outcome_id: null,
-          loss_reason: null,
-          loss_notes: null,
-          resolved_at: rc.start_date
-            ? new Date(`${rc.start_date}T12:00:00`).toISOString()
-            : rc.created_at || null,
-          days_expired: 0,
-          has_new_contract: true,
-        });
-      }
-
       // 3) Period filter: based on when the status was registered (resolved_at),
       // falling back to the contract end_date when there is no resolution date.
       const inPeriod = (item: ExpiredContract) => {
@@ -379,7 +329,7 @@ export function RenewalLosses() {
         return ref.getTime() >= cutoff.getTime();
       };
 
-      const resolvedItems = [...mapped, ...implicit].filter(
+      const resolvedItems = mapped.filter(
         item => (item.outcome === "renewed" || item.outcome === "lost") && inPeriod(item)
       );
 
