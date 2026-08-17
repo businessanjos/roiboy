@@ -101,6 +101,12 @@ interface Metrics {
   silent_conversations: number;
   clients_never_messaged: number;
   risk_mentions: number;
+  risk_conversations?: number;
+  messages_out_unattributed?: number;
+  messages_from_history?: number;
+  group_conversations_excluded?: number;
+  new_conversations_from_history?: number;
+  responses_count?: number;
   risk_samples: RiskSample[];
   by_agent: AgentRow[];
   by_day: { day: string; inbound: number; outbound: number; conversations?: number }[];
