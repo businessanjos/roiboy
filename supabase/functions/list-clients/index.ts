@@ -427,24 +427,49 @@ Deno.serve(async (req) => {
         // Normalize: strip accents + lowercase to match generated normalized columns
         const stripAccents = (s: string) =>
           s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
-        const normalized = stripAccents(search.trim());
+        const raw = search.trim();
+        const normalized = stripAccents(raw);
         const searchTerms = normalized
           .split(/\s+/)
           .filter((s: string) => s.length > 0);
+        const rawTerms = raw.split(/\s+/).filter((s: string) => s.length > 0);
+
+        // Escapa vírgulas/parênteses que quebrariam a expressão do PostgREST
+        const safe = (s: string) => s.replace(/[,()]/g, " ").trim();
+
+        // Busca ampla: nome, contato, empresa, localidade, formação, área de
+        // atuação, método, diferencial, instagram, documentos e observações.
+        const buildOr = (term: string, rawTerm: string) => {
+          const t = safe(term);
+          const r = safe(rawTerm || term);
+          const parts = [
+            `full_name_normalized.ilike.%${t}%`,
+            `company_name_normalized.ilike.%${t}%`,
+            `phone_e164.ilike.%${t}%`,
+            `city.ilike.%${r}%`,
+            `state.ilike.%${r}%`,
+            `education.ilike.%${r}%`,
+            `education_specialty.ilike.%${r}%`,
+            `business_niche.ilike.%${r}%`,
+            `method_name.ilike.%${r}%`,
+            `differential.ilike.%${r}%`,
+            `instagram.ilike.%${r}%`,
+            `cpf.ilike.%${r}%`,
+            `cnpj.ilike.%${r}%`,
+            `notes.ilike.%${r}%`,
+          ];
+          return parts.join(",");
+        };
 
         if (searchTerms.length === 1) {
-          const term = searchTerms[0];
-          q = q.or(
-            `full_name_normalized.ilike.%${term}%,phone_e164.ilike.%${term}%,company_name_normalized.ilike.%${term}%,city.ilike.%${term}%`
-          );
+          q = q.or(buildOr(searchTerms[0], rawTerms[0]));
         } else {
-          for (const term of searchTerms) {
-            q = q.or(
-              `full_name_normalized.ilike.%${term}%,city.ilike.%${term}%`
-            );
-          }
+          searchTerms.forEach((term, i) => {
+            q = q.or(buildOr(term, rawTerms[i]));
+          });
         }
       }
+
       if (statusFilter) q = q.eq("status", statusFilter);
       if (clientStatus && clientStatus !== "all" && clientStatus !== "no_contract") {
         q = q.eq("status", clientStatus);
