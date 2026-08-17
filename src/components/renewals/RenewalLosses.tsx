@@ -361,6 +361,31 @@ export function RenewalLosses() {
     fetchExpired();
   }, [fetchExpired]);
 
+  // Consultoras válidas para o ranking: papéis de CS/CX (ou admins)
+  const [csUserIds, setCsUserIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const loadCsUsers = async () => {
+      const ids = [...new Set(items.map(i => i.responsible_user_id).filter(Boolean))] as string[];
+      if (ids.length === 0) { setCsUserIds(new Set()); return; }
+      const [{ data: users }, { data: roles }] = await Promise.all([
+        supabase.from("users").select("id, role").in("id", ids),
+        supabase.from("user_team_roles").select("user_id, team_roles(name, area)").in("user_id", ids),
+      ]);
+      const allowed = new Set<string>();
+      (users || []).forEach((u: any) => {
+        if (u.role === "admin" || u.role === "super_admin") allowed.add(u.id);
+      });
+      const CS_PATTERN = /(cx|customer|cs\b|consultor|mentor|sucesso)/i;
+      (roles || []).forEach((r: any) => {
+        const label = `${r.team_roles?.name || ""} ${r.team_roles?.area || ""}`;
+        if (CS_PATTERN.test(label)) allowed.add(r.user_id);
+      });
+      setCsUserIds(allowed);
+    };
+    loadCsUsers();
+  }, [items]);
+
+
   const handleMarkAsLost = (item: ExpiredContract) => {
     setEditItem(item);
     setEditReason(item.loss_reason || "");
