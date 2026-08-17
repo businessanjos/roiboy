@@ -204,14 +204,17 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
     (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
   );
   const [period, setPeriod] = useState<PeriodKey>("current_month");
+  const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
+  const [includeGroups, setIncludeGroups] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
   const range = useMemo(() => periodRange(period), [period]);
   const effectiveSector = sector === "all" ? null : sector;
+  const effectiveIntegration = scope === "instance" ? (integrationId || null) : null;
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
-    queryKey: ["zapp-productivity", effectiveSector, period],
+    queryKey: ["zapp-productivity", effectiveSector, period, effectiveIntegration, includeGroups],
     enabled: allowed,
     staleTime: 60_000,
     queryFn: async (): Promise<Metrics> => {
@@ -219,6 +222,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
         _sector_id: effectiveSector,
         _from: range.from.toISOString(),
         _to: range.to.toISOString(),
+        _integration_id: effectiveIntegration,
+        _include_groups: includeGroups,
       });
       if (error) throw error;
       return data as Metrics;
