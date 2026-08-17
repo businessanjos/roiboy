@@ -1398,6 +1398,7 @@ export default function Clients() {
     filterCountry !== "all",
     filterEducation !== "all",
     filterArea !== "all",
+    filterSpecialty !== "all",
     filterRevenueMissing !== "all",
   ].filter(Boolean).length;
 
