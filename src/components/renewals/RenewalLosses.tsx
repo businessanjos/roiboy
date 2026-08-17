@@ -853,7 +853,9 @@ export function RenewalLosses() {
                       {formatLocalDate(item.end_date)}
                     </TableCell>
                     <TableCell className="text-center text-sm font-medium">
-                      {item.resolved_at ? formatLocalDate(item.resolved_at) : "—"}
+                      {item.resolved_at
+                        ? new Date(item.resolved_at).toLocaleDateString("pt-BR")
+                        : "—"}
                     </TableCell>
                     <TableCell className="text-center">
                       {item.outcome === "renewed" ? (
