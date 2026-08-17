@@ -301,17 +301,27 @@ export default function Tasks() {
         } else if (filterUser !== "all" && filterUser) {
           q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
         }
+
+        // Busca incremental no servidor: procura em todo o histórico sem
+        // precisar carregar tudo no cliente.
+        if (serverSearch) {
+          const safe = serverSearch.replace(/[,()*]/g, " ").trim();
+          if (safe) {
+            q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+          }
+        }
         return q;
       };
 
       // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
       // query a cada iteração para não acumular parâmetros de estado.
-      // Sem filtro nominal, limita o volume para a tela abrir rápido; a
-      // varredura completa do histórico só acontece ao auditar uma pessoa.
+      // O volume cresce sob demanda (botão "Carregar mais"); a varredura
+      // completa do histórico só acontece ao auditar uma pessoa.
       const PAGE = 1000;
-      const MAX_PAGES = isHistoricalUserFilter ? 50 : 3;
+      const MAX_PAGES = isHistoricalUserFilter ? 50 : loadedChunks;
       const all: Task[] = [];
       let from = 0;
+      let hasMore = false;
       for (let page = 0; page < MAX_PAGES; page++) {
         const { data, error } = await buildQuery()
           .order("created_at", { ascending: false })
@@ -321,12 +331,17 @@ export default function Tasks() {
         all.push(...chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
+        if (page === MAX_PAGES - 1) hasMore = true;
       }
-      return all;
-
+      return { rows: all, hasMore };
     },
     staleTime: 30000,
+    placeholderData: (prev) => prev,
   });
+
+  const tasks = tasksResult?.rows ?? [];
+  const hasMoreTasks = !!tasksResult?.hasMore;
+
 
   // Fetch users with React Query.
   // No setor Comercial, restringe a pessoas do comercial (atuais e antigas):
