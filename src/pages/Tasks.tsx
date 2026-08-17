@@ -1703,15 +1703,15 @@ export default function Tasks() {
           </TabsList>
 
           <TabsContent value="all" className="mt-6">
-            <TaskTable tasks={paginatedTasks} />
+            <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
             <TabsContent key={status.id} value={status.id} className="mt-6">
-              <TaskTable tasks={paginatedTasks} />
+              <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
             </TabsContent>
           ))}
           <TabsContent value="__overdue__" className="mt-6">
-            <TaskTable tasks={paginatedTasks} />
+            <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
           {/* Carregamento incremental do histórico */}
