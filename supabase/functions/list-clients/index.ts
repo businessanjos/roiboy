@@ -90,6 +90,7 @@ Deno.serve(async (req) => {
     const countryCode = (url.searchParams.get("country") || "").toUpperCase();
     const educationFilter = url.searchParams.get("education") || "";
     const areaFilter = url.searchParams.get("area") || "";
+    const specialtyFilter = url.searchParams.get("specialty") || "";
     const sortParam = url.searchParams.get("sort") || "recent";
     // "initial" | "current" | "any" — isola clientes sem faturamento preenchido
     // (nulo ou zero) para mutirão de preenchimento no CS.
