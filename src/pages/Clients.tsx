@@ -1412,6 +1412,7 @@ export default function Clients() {
     setFilterEducation("all");
     setFilterRevenueMissing("all");
     setFilterArea("all");
+    setFilterSpecialty("all");
   };
 
   // Country options for the filter dropdown.
