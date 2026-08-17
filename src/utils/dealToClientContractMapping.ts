@@ -26,11 +26,13 @@ export const NEGOTIATION_REQUIRED_FIELDS: Array<{ id: string; label: string; kin
 const ITEM_VENDA_TO_PRODUCT: Record<string, string> = {
   // Existentes
   'eternum_private': 'Eternum Private',
-  'ren_eternum_private': 'Eternum Private',
+  'ren_eternum_private': 'REN. EP l Eternum Private',
   'eternum_club': 'Eternum Club',
-  'ren_eternum_club': 'Eternum Club',
+  'ren_eternum_club': 'REN. EC l Eternum Club',
   'rykas_mentoring': 'Rykas Mentoring',
-  'ren_rykas_mentoring': 'Rykas Mentoring',
+  // Rebranding RM -> EM: renovações novas usam o SKU de renovação do Eternum Mentoring
+  'ren_rykas_mentoring': 'REN. EM l Eternum Mentoring (1)',
+  'ren_eternum_mentoring': 'REN. EM l Eternum Mentoring (1)',
   'conselho_anjo': 'Conselho de Anjo',
   'makers_club': 'Makers Club',
   'mentoria_makers': 'Mentoria Makers',
