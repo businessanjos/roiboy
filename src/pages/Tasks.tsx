@@ -250,8 +250,8 @@ export default function Tasks() {
   // No need to set default tab - "all" is the default
 
   // Fetch tasks with React Query
-  const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id],
+  const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks } = useQuery({
+    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch, loadedChunks],
     queryFn: async () => {
       // First, get activity type IDs for the current sector to filter server-side
       let sectorActivityTypeIds: string[] | null = null;
