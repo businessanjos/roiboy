@@ -460,9 +460,11 @@ export function RenewalLosses() {
   });
   const reasonPieData = Object.entries(reasonCounts).map(([name, value]) => ({ name, value }));
 
-  // Ranking by consultant
+  // Ranking by consultant — apenas responsáveis de CS/CX (exclui Financeiro, Administrativo, etc.)
   const consultantStats: Record<string, { name: string; lost: number; renewed: number; lostValue: number }> = {};
   items.forEach(item => {
+    const uid = item.responsible_user_id;
+    if (!uid || !csUserIds.has(uid)) return;
     const name = item.responsible_name || "Sem consultora";
     if (!consultantStats[name]) consultantStats[name] = { name, lost: 0, renewed: 0, lostValue: 0 };
     if (item.outcome === "lost") {
@@ -473,6 +475,7 @@ export function RenewalLosses() {
     }
   });
   const consultantRanking = Object.values(consultantStats).sort((a, b) => b.lostValue - a.lostValue);
+
 
   const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
   const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
