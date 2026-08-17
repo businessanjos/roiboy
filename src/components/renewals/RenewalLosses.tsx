@@ -882,7 +882,33 @@ export function RenewalLosses() {
                         </Avatar>
                         <span className="text-sm font-medium break-words max-w-[180px]">{item.client_name}</span>
                       </Link>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "mt-1 ml-11 text-[10px] font-medium cursor-help",
+                                item.has_new_contract
+                                  ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400"
+                                  : "border-sky-500/50 text-sky-600 dark:text-sky-400"
+                              )}
+                            >
+                              Lista: Resultados
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p className="font-semibold mb-1">Por que está em "Resultados"</p>
+                            <p className="text-xs leading-relaxed">
+                              {item.has_new_contract
+                                ? "Classificado automaticamente como Renovado: existe um contrato de produto de renovação (REN.) para este cliente. A data de renovação usa o início desse contrato."
+                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Cancelou"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
+
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {item.responsible_name || "—"}
                     </TableCell>
