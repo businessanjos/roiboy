@@ -209,8 +209,19 @@ export default function Tasks() {
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [loadedChunks, setLoadedChunks] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Busca incremental: só consulta o servidor após o usuário parar de digitar.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const serverSearch = debouncedSearch.length >= 2 ? debouncedSearch : "";
 
   const isHistoricalUserFilter = filterUser !== "all" && filterUser !== "mine";
+
 
   const handleUserFilterChange = useCallback((value: string) => {
     setFilterUser(value);
