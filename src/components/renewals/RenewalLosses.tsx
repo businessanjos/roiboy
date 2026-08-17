@@ -11,6 +11,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+
 import { Input } from "@/components/ui/input";
 import { Link } from "react-router-dom";
 import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percent, CheckCircle2, XCircle, Filter, ArrowUpDown, ArrowUp, ArrowDown, Search } from "lucide-react";
@@ -882,7 +884,33 @@ export function RenewalLosses() {
                         </Avatar>
                         <span className="text-sm font-medium break-words max-w-[180px]">{item.client_name}</span>
                       </Link>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "mt-1 ml-11 text-[10px] font-medium cursor-help",
+                                item.has_new_contract
+                                  ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400"
+                                  : "border-sky-500/50 text-sky-600 dark:text-sky-400"
+                              )}
+                            >
+                              Lista: Resultados
+                            </Badge>
+                          </TooltipTrigger>
+                          <TooltipContent side="right" className="max-w-xs">
+                            <p className="font-semibold mb-1">Por que está em "Resultados"</p>
+                            <p className="text-xs leading-relaxed">
+                              {item.has_new_contract
+                                ? "Classificado automaticamente como Renovado: existe um contrato de produto de renovação (REN.) para este cliente. A data de renovação usa o início desse contrato."
+                                : `Classificado manualmente: a consultora registrou o desfecho "${item.outcome === "renewed" ? "Renovado" : "Cancelou"}" em ${item.resolved_at ? new Date(item.resolved_at).toLocaleDateString("pt-BR") : "—"}.`}
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
                     </TableCell>
+
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {item.responsible_name || "—"}
                     </TableCell>
