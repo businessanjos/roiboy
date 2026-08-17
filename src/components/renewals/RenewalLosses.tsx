@@ -230,49 +230,45 @@ export function RenewalLosses() {
 
     try {
       const today = new Date();
+      const isAllPeriod = filterPeriod === "all";
       const daysBack = parseInt(filterPeriod);
       const cutoff = new Date(today);
-      cutoff.setDate(today.getDate() - daysBack);
+      if (!isAllPeriod) cutoff.setDate(today.getDate() - daysBack);
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
-      // Fetch expired contracts (end_date < today) within period
-      const { data: expiredContracts, error } = await supabase
-        .from("client_contracts")
-        .select(`
-          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
-          clients!inner(full_name, logo_url, responsible_user_id, users:responsible_user_id(name)),
-          products(name, color, price, cash_price, installment_price, renewal_discount_percent)
-        `)
+      // 1) Source of truth for "Resultados": explicit outcomes (renovado / perdido)
+      const { data: outcomes, error: outcomesError } = await supabase
+        .from("renewal_outcomes")
+        .select("*")
         .eq("account_id", currentUser.account_id)
-        .not("end_date", "is", null)
-        .lt("end_date", formatDate(today))
-        .gte("end_date", formatDate(cutoff))
-        .is("parent_contract_id", null)
-        .order("end_date", { ascending: false });
+        .in("outcome", ["renewed", "lost"]);
 
-      if (error) {
-        console.error("Error fetching expired contracts:", error);
+      if (outcomesError) {
+        console.error("Error fetching renewal outcomes:", outcomesError);
         setItems([]);
         setLoading(false);
         return;
       }
 
-      // ALSO fetch contracts resolved early (renewed/lost before expiry) within the period
-      // window, based on renewal_outcomes.resolved_at — ensures Renovados antecipados aparecem.
-      const { data: earlyOutcomes } = await supabase
-        .from("renewal_outcomes")
-        .select("contract_id")
-        .eq("account_id", currentUser.account_id)
-        .in("outcome", ["renewed", "lost"])
-        .gte("resolved_at", cutoff.toISOString());
+      const outcomesMap: Record<string, any> = {};
+      (outcomes || []).forEach((o: any) => {
+        const prev = outcomesMap[o.contract_id];
+        const prevDate = prev ? new Date(prev.resolved_at || prev.created_at).getTime() : -1;
+        const curDate = new Date(o.resolved_at || o.created_at).getTime();
+        if (!prev || curDate >= prevDate) outcomesMap[o.contract_id] = o;
+      });
 
-      const expiredIdSet = new Set((expiredContracts || []).map((c: any) => c.id));
-      const earlyContractIds = (earlyOutcomes || [])
-        .map((o: any) => o.contract_id)
-        .filter((id: string) => id && !expiredIdSet.has(id));
+      const contractIds = Object.keys(outcomesMap);
+      if (contractIds.length === 0) {
+        setItems([]);
+        setLoading(false);
+        return;
+      }
 
-      let earlyContracts: any[] = [];
-      if (earlyContractIds.length > 0) {
+      // 2) Load the contracts for those outcomes (chunked to avoid long URLs)
+      const chunkSize = 200;
+      let allContracts: any[] = [];
+      for (let i = 0; i < contractIds.length; i += chunkSize) {
         const { data } = await supabase
           .from("client_contracts")
           .select(`
@@ -281,27 +277,11 @@ export function RenewalLosses() {
             products(name, color, price, cash_price, installment_price, renewal_discount_percent)
           `)
           .eq("account_id", currentUser.account_id)
-          .in("id", earlyContractIds)
+          .in("id", contractIds.slice(i, i + chunkSize))
           .is("parent_contract_id", null);
-        earlyContracts = data || [];
+        allContracts = allContracts.concat(data || []);
       }
 
-      const allContracts = [...(expiredContracts || []), ...earlyContracts];
-
-      // Fetch outcomes for all contracts
-      const contractIds = allContracts.map((c: any) => c.id);
-      let outcomesMap: Record<string, any> = {};
-      if (contractIds.length > 0) {
-        const { data: outcomes } = await supabase
-          .from("renewal_outcomes")
-          .select("*")
-          .in("contract_id", contractIds);
-        (outcomes || []).forEach((o: any) => {
-          outcomesMap[o.contract_id] = o;
-        });
-      }
-
-      // No more auto-detection: only use explicit outcomes from renewal_outcomes table
       const mapped: ExpiredContract[] = allContracts.map((c: any) => {
         const endDate = parseLocalDate(c.end_date);
         const diffMs = endDate ? today.getTime() - endDate.getTime() : 0;
@@ -317,8 +297,6 @@ export function RenewalLosses() {
         else priceToUse = c.value || 0;
 
         const outcome = outcomesMap[c.id];
-        // Only show in results if explicitly marked as renewed or lost
-        const effectiveOutcome = outcome?.outcome || null;
 
         return {
           id: c.id,
@@ -327,23 +305,36 @@ export function RenewalLosses() {
           client_photo_url: c.clients?.logo_url || null,
           end_date: c.end_date,
           value: c.value || 0,
-          renewal_value: priceToUse * (discountPercent / 100),
+          renewal_value: outcome?.renewal_value && outcome.renewal_value > 0
+            ? outcome.renewal_value
+            : priceToUse * (discountPercent / 100),
           product_name: c.products?.name || null,
           product_color: c.products?.color || null,
           responsible_name: (c.clients as any)?.users?.name || null,
           responsible_user_id: (c.clients as any)?.responsible_user_id || null,
-          outcome: effectiveOutcome,
+          outcome: outcome?.outcome || null,
           outcome_id: outcome?.id || null,
           loss_reason: outcome?.loss_reason || null,
           loss_notes: outcome?.loss_notes || null,
-          resolved_at: outcome?.resolved_at || null,
+          resolved_at: outcome?.resolved_at || outcome?.created_at || null,
           days_expired: daysExpired,
           has_new_contract: false,
         };
       });
 
-      // Only show in Resultados contracts explicitly marked as renewed or lost
-      const resolvedItems = mapped.filter(item => item.outcome === "renewed" || item.outcome === "lost");
+      // 3) Period filter: based on when the status was registered (resolved_at),
+      // falling back to the contract end_date when there is no resolution date.
+      const inPeriod = (item: ExpiredContract) => {
+        if (isAllPeriod) return true;
+        const ref = item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date);
+        if (!ref) return false;
+        return ref.getTime() >= cutoff.getTime();
+      };
+
+      const resolvedItems = mapped.filter(
+        item => (item.outcome === "renewed" || item.outcome === "lost") && inPeriod(item)
+      );
+
       // Apply visibility filter
       if (hasFullAccess) {
         setItems(resolvedItems);
@@ -356,6 +347,7 @@ export function RenewalLosses() {
       setLoading(false);
     }
   }, [currentUser?.account_id, currentUser?.id, currentUser?.role, currentUser?.is_also_admin, filterPeriod, hasFullAccess]);
+
 
   useEffect(() => {
     fetchExpired();
@@ -467,8 +459,9 @@ export function RenewalLosses() {
   // Monthly chart data
   const monthlyData: Record<string, { month: string; lost: number; renewed: number }> = {};
   items.forEach(item => {
-    const d = parseLocalDate(item.end_date);
-    if (!d) return;
+    const d = item.resolved_at ? new Date(item.resolved_at) : parseLocalDate(item.end_date);
+    if (!d || isNaN(d.getTime())) return;
+
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
     const label = `${String(d.getMonth() + 1).padStart(2, "0")}/${d.getFullYear()}`;
     if (!monthlyData[key]) monthlyData[key] = { month: label, lost: 0, renewed: 0 };
@@ -555,9 +548,14 @@ export function RenewalLosses() {
             <SelectItem value="90">Últimos 90 dias</SelectItem>
             <SelectItem value="180">Últimos 6 meses</SelectItem>
             <SelectItem value="365">Último ano</SelectItem>
+            <SelectItem value="all">Todo o período</SelectItem>
           </SelectContent>
         </Select>
+        <p className="text-xs text-muted-foreground self-center">
+          Período considera a data em que a consultora registrou o status (Renovado / Cancelou).
+        </p>
       </div>
+
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -600,9 +598,10 @@ export function RenewalLosses() {
               <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             </div>
             <div>
-              <p className="text-2xl font-bold">{losses.length} / {items.length}</p>
-              <p className="text-xs text-muted-foreground">Perdas / Total vencidos</p>
+              <p className="text-2xl font-bold">{renewed.length} / {items.length}</p>
+              <p className="text-xs text-muted-foreground">Renovados / Total resolvidos</p>
             </div>
+
           </CardContent>
         </Card>
       </div>
