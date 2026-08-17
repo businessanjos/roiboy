@@ -516,7 +516,10 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
                         <TableHead>Atendente</TableHead>
                         <TableHead className="text-right">Enviadas</TableHead>
                         <TableHead className="text-right">Conversas</TableHead>
+                        <TableHead className="text-right">Média/dia</TableHead>
+                        <TableHead className="text-right">Novas iniciadas</TableHead>
                         <TableHead className="text-right">Resposta média</TableHead>
+
                       </TableRow>
                     </TableHeader>
                     <TableBody>
