@@ -128,6 +128,7 @@ interface Task {
   deal_id: string | null;
   lead_id: string | null;
   assigned_to: string | null;
+  created_by: string | null;
   created_at: string;
   completed_at: string | null;
   meeting_url: string | null;
