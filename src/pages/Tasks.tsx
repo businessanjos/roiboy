@@ -220,6 +220,12 @@ export default function Tasks() {
 
   const serverSearch = debouncedSearch.length >= 2 ? debouncedSearch : "";
 
+  // Ao trocar de contexto, volta a carregar apenas o primeiro bloco.
+  useEffect(() => {
+    setLoadedChunks(1);
+  }, [serverSearch, filterUser, currentSector?.id]);
+
+
   const isHistoricalUserFilter = filterUser !== "all" && filterUser !== "mine";
 
 
