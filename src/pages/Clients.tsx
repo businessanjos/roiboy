@@ -900,6 +900,32 @@ export default function Clients() {
     })();
   }, [accountId, currentUser?.account_id]);
 
+  // Opções do filtro de Especialidade: valores já cadastrados nos clientes
+  useEffect(() => {
+    const accId = accountId || currentUser?.account_id;
+    if (!accId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("education_specialty")
+        .eq("account_id", accId)
+        .not("education_specialty", "is", null)
+        .neq("education_specialty", "")
+        .limit(2000);
+      const used = Array.from(
+        new Set(
+          (data || [])
+            .flatMap((r: any) => String(r.education_specialty || "").split(","))
+            .map((s: string) => s.trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setSpecialtyOptions(used);
+    })();
+  }, [accountId, currentUser?.account_id]);
+
+
+
 
   // Fetch field values when clients are loaded
   // Note: pendingFormSends now comes from edge function response
