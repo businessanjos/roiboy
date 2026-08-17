@@ -27525,10 +27525,21 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
-      zapp_productivity_metrics: {
-        Args: { _from: string; _sector_id: string; _to: string }
-        Returns: Json
-      }
+      zapp_productivity_metrics:
+        | {
+            Args: { _from: string; _sector_id: string; _to: string }
+            Returns: Json
+          }
+        | {
+            Args: {
+              _from: string
+              _include_groups?: boolean
+              _integration_id?: string
+              _sector_id: string
+              _to: string
+            }
+            Returns: Json
+          }
       zapp_sales_lean_views: { Args: never; Returns: string[] }
       zapp_sector_role: {
         Args: { _auth_user_id: string; _sector_id: string }
