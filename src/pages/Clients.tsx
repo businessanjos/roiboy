@@ -402,6 +402,7 @@ export default function Clients() {
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
       if (filterArea !== "all") baseParams["area"] = filterArea;
+      if (filterSpecialty !== "all") baseParams["specialty"] = filterSpecialty;
       if (filterRevenueMissing !== "all") baseParams["revenue_missing"] = filterRevenueMissing;
       baseParams["sort"] = sortOrder;
 
