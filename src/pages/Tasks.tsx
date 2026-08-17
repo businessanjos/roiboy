@@ -329,12 +329,11 @@ export default function Tasks() {
         return q;
       };
 
-      // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
-      // query a cada iteração para não acumular parâmetros de estado.
-      // O volume cresce sob demanda (botão "Carregar mais"); a varredura
-      // completa do histórico só acontece ao auditar uma pessoa.
+      // Primeira abertura é sempre leve (1 bloco). O volume cresce apenas sob
+      // demanda pelo botão "Carregar mais", inclusive na auditoria nominal —
+      // assim filtros amplos nunca travam a tela no carregamento inicial.
       const PAGE = 1000;
-      const MAX_PAGES = isHistoricalUserFilter ? 50 : loadedChunks;
+      const MAX_PAGES = Math.max(1, loadedChunks);
       const all: Task[] = [];
       let from = 0;
       let hasMore = false;
