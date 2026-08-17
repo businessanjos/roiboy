@@ -818,7 +818,7 @@ export function RenewalLosses() {
               <TableBody>
                 {paginatedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16">
+                    <TableCell colSpan={9} className="py-16">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <TrendingDown className="h-10 w-10 mb-3 opacity-50" />
                         <p className="font-medium">Nenhum contrato vencido no período</p>
