@@ -69,7 +69,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
-  Loader2,
 
 } from "lucide-react";
 import { toast } from "sonner";
