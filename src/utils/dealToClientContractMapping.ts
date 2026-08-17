@@ -122,6 +122,9 @@ export async function getProductIdByName(productName: string): Promise<string | 
     return productCache[partialMatch];
   }
 
+  return null;
+}
+
 // Encontra o SKU de renovação ("REN. XX l <nome base>") a partir do nome base do produto
 async function findRenewalProductByBaseName(baseName: string): Promise<string | null> {
   const clean = baseName.toLowerCase().trim();
@@ -137,9 +140,6 @@ async function findRenewalProductByBaseName(baseName: string): Promise<string | 
     return afterCode === clean || afterCode.includes(clean) || clean.includes(afterCode);
   });
   return match?.id ?? null;
-}
-
-  return null;
 }
 
 export async function mapItemVendaToProductId(itemVendaValue: string): Promise<string | null> {
