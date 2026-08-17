@@ -826,6 +826,7 @@ export default function Clients() {
       if (filterCountry !== "all") p.set("country", filterCountry);
       if (filterEducation !== "all") p.set("education", filterEducation);
       if (filterArea !== "all") p.set("area", filterArea);
+      if (filterSpecialty !== "all") p.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
       return p;
     };
