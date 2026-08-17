@@ -259,11 +259,7 @@ export function RenewalLosses() {
       });
 
       const contractIds = Object.keys(outcomesMap);
-      if (contractIds.length === 0) {
-        setItems([]);
-        setLoading(false);
-        return;
-      }
+
 
       // 2) Load the contracts for those outcomes (chunked to avoid long URLs)
       const chunkSize = 200;
