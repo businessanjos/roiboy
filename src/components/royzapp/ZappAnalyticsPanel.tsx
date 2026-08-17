@@ -180,7 +180,7 @@ function Kpi({
   );
 }
 
-export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
+export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
   const { currentUser } = useCurrentUser();
   const { sectorAccess } = useSectorAccess();
   const { unrestricted, canOpenZappSector } = useRoyZappViewAccess();
