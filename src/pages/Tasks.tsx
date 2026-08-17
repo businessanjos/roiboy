@@ -1672,6 +1672,20 @@ export default function Tasks() {
             <TaskTable tasks={paginatedTasks} />
           </TabsContent>
 
+          {/* Carregamento incremental do histórico */}
+          {hasMoreTasks && !isHistoricalUserFilter && (
+            <div className="flex justify-center py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetchingTasks}
+                onClick={() => setLoadedChunks((c) => c + 1)}
+              >
+                {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
+              </Button>
+            </div>
+          )}
+
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
             <div className="flex items-center justify-between px-2 py-3">
