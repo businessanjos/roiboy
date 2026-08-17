@@ -2467,6 +2467,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterSpecialty !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Especialidade: {filterSpecialty === "none" ? "Sem especialidade" : filterSpecialty}
+                    <button onClick={() => setFilterSpecialty("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
                 {filterRevenueMissing !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     {filterRevenueMissing === "initial"
