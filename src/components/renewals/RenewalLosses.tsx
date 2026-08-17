@@ -852,6 +852,9 @@ export function RenewalLosses() {
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {formatLocalDate(item.end_date)}
                     </TableCell>
+                    <TableCell className="text-center text-sm font-medium">
+                      {item.resolved_at ? formatLocalDate(item.resolved_at) : "—"}
+                    </TableCell>
                     <TableCell className="text-center">
                       {item.outcome === "renewed" ? (
                         <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
