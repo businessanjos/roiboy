@@ -358,6 +358,18 @@ export default function Tasks() {
   const tasks = tasksResult?.rows ?? [];
   const hasMoreTasks = !!tasksResult?.hasMore;
 
+  // Feedback visual para carregamentos longos: após 2.5s buscando,
+  // exibe uma mensagem de fallback para que o usuário não ache que travou.
+  useEffect(() => {
+    if (!fetchingTasks) {
+      setShowSlowLoadMessage(false);
+      return;
+    }
+    const t = setTimeout(() => setShowSlowLoadMessage(true), 2500);
+    return () => clearTimeout(t);
+  }, [fetchingTasks]);
+
+
 
   // Fetch users with React Query.
   // No setor Comercial, restringe a pessoas do comercial (atuais e antigas):
