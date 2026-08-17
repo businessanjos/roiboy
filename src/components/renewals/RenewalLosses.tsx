@@ -361,6 +361,31 @@ export function RenewalLosses() {
     fetchExpired();
   }, [fetchExpired]);
 
+  // Consultoras válidas para o ranking: papéis de CS/CX (ou admins)
+  const [csUserIds, setCsUserIds] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const loadCsUsers = async () => {
+      const ids = [...new Set(items.map(i => i.responsible_user_id).filter(Boolean))] as string[];
+      if (ids.length === 0) { setCsUserIds(new Set()); return; }
+      const [{ data: users }, { data: roles }] = await Promise.all([
+        supabase.from("users").select("id, role").in("id", ids),
+        supabase.from("user_team_roles").select("user_id, team_roles(name, area)").in("user_id", ids),
+      ]);
+      const allowed = new Set<string>();
+      (users || []).forEach((u: any) => {
+        if (u.role === "admin" || u.role === "super_admin") allowed.add(u.id);
+      });
+      const CS_PATTERN = /(cx|customer|cs\b|consultor|mentor|sucesso)/i;
+      (roles || []).forEach((r: any) => {
+        const label = `${r.team_roles?.name || ""} ${r.team_roles?.area || ""}`;
+        if (CS_PATTERN.test(label)) allowed.add(r.user_id);
+      });
+      setCsUserIds(allowed);
+    };
+    loadCsUsers();
+  }, [items]);
+
+
   const handleMarkAsLost = (item: ExpiredContract) => {
     setEditItem(item);
     setEditReason(item.loss_reason || "");
@@ -460,9 +485,11 @@ export function RenewalLosses() {
   });
   const reasonPieData = Object.entries(reasonCounts).map(([name, value]) => ({ name, value }));
 
-  // Ranking by consultant
+  // Ranking by consultant — apenas responsáveis de CS/CX (exclui Financeiro, Administrativo, etc.)
   const consultantStats: Record<string, { name: string; lost: number; renewed: number; lostValue: number }> = {};
   items.forEach(item => {
+    const uid = item.responsible_user_id;
+    if (!uid || !csUserIds.has(uid)) return;
     const name = item.responsible_name || "Sem consultora";
     if (!consultantStats[name]) consultantStats[name] = { name, lost: 0, renewed: 0, lostValue: 0 };
     if (item.outcome === "lost") {
@@ -473,6 +500,7 @@ export function RenewalLosses() {
     }
   });
   const consultantRanking = Object.values(consultantStats).sort((a, b) => b.lostValue - a.lostValue);
+
 
   const uniqueConsultoras = [...new Set(items.map(c => c.responsible_name).filter(Boolean))] as string[];
   const uniqueProdutos = [...new Set(items.map(c => c.product_name).filter(Boolean))] as string[];
