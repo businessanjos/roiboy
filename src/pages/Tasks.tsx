@@ -565,7 +565,7 @@ export default function Tasks() {
     
     // User filter
     const matchesUser = filterUser === "all" || 
-      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
 
     // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
@@ -625,7 +625,7 @@ export default function Tasks() {
       task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesUser = filterUser === "all" ||
-      (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
@@ -1541,7 +1541,7 @@ export default function Tasks() {
               task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
             
             const matchesUser = filterUser === "all" || 
-              (filterUser === "mine" ? task.assigned_to === currentUser?.id : task.assigned_to === filterUser);
+              (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
 
             const matchesActivityType = filterActivityType === "all" || 
               task.activity_type?.id === filterActivityType;
