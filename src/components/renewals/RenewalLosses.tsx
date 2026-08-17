@@ -781,6 +781,17 @@ export function RenewalLosses() {
                     />
                   </TableHead>
                   <TableHead className="text-center">
+                    <SortHeader
+                      label="Data renovação"
+                      active={sortKey === "resolved_at"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "resolved_at") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("resolved_at"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
                     <MultiSelectHeader
                       label="Status"
                       options={["renewed", "lost"]}
