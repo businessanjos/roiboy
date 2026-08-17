@@ -1006,7 +1006,27 @@ export default function Tasks() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {tasks.length === 0 ? (
+              {isLoading && tasks.length === 0 ? (
+                // Skeleton de carregamento inicial para não parecer que travou
+                Array.from({ length: 6 }).map((_, i) => (
+                  <TableRow key={`sk-${i}`} className="hover:bg-transparent">
+                    <TableCell><Skeleton className="h-4 w-4 rounded" /></TableCell>
+                    <TableCell>
+                      <div className="space-y-2">
+                        <Skeleton className="h-4 w-48" />
+                        <Skeleton className="h-3 w-32" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-20 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-5 w-24 mx-auto" /></TableCell>
+                    {isInVendasSector && <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>}
+                    <TableCell><Skeleton className="h-4 w-28" /></TableCell>
+                    <TableCell className="text-center"><Skeleton className="h-7 w-7 mx-auto rounded-full" /></TableCell>
+                    <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded" /></TableCell>
+                  </TableRow>
+                ))
+              ) : tasks.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isInVendasSector ? 9 : 8} className="text-center py-12">
                     <div className="flex flex-col items-center text-muted-foreground">
