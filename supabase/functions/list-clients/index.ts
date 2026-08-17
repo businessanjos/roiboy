@@ -508,6 +508,15 @@ Deno.serve(async (req) => {
           q = q.ilike("business_niche", `%${areaFilter}%`);
         }
       }
+      if (specialtyFilter && specialtyFilter !== "all") {
+        if (specialtyFilter === "none") {
+          q = q.or("education_specialty.is.null,education_specialty.eq.");
+        } else {
+          q = q.ilike("education_specialty", `%${specialtyFilter}%`);
+        }
+      }
+
+
 
       // Sem faturamento preenchido: trata nulo e zero como "faltando".
       if (revenueMissing === "initial") {
