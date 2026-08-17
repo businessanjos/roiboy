@@ -688,7 +688,29 @@ export default function Renewals() {
                         )}
                       </div>
                     </Link>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Badge
+                            variant="outline"
+                            className={cn(
+                              "mt-1 ml-11 text-[10px] font-medium cursor-help",
+                              contract.list_name === "Vencido"
+                                ? "border-red-500/50 text-red-600 dark:text-red-400"
+                                : "border-amber-500/50 text-amber-600 dark:text-amber-400"
+                            )}
+                          >
+                            Lista: {contract.list_name}
+                          </Badge>
+                        </TooltipTrigger>
+                        <TooltipContent side="right" className="max-w-xs">
+                          <p className="font-semibold mb-1">Por que está em "{contract.list_name}"</p>
+                          <p className="text-xs leading-relaxed">{contract.classification_reason}</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </TableCell>
+
                   <TableCell className="hidden xl:table-cell text-center text-sm text-muted-foreground">
                     {contract.responsible_name || "—"}
                   </TableCell>
