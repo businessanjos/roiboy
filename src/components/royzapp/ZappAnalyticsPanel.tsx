@@ -391,13 +391,22 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
           <>
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Kpi icon={ArrowDownLeft} label="Recebidas" value={data.messages_in.toLocaleString("pt-BR")} hint="mensagens de clientes" />
-              <Kpi icon={ArrowUpRight} label="Enviadas" value={data.messages_out.toLocaleString("pt-BR")} hint="mensagens do time" />
-              <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`de ${data.total_conversations.toLocaleString("pt-BR")} no total`} />
+              <Kpi
+                icon={ArrowUpRight}
+                label="Enviadas"
+                value={data.messages_out.toLocaleString("pt-BR")}
+                hint={
+                  (data.messages_out_unattributed ?? 0) > 0
+                    ? `${(data.messages_out - (data.messages_out_unattributed ?? 0)).toLocaleString("pt-BR")} com atendente identificado`
+                    : "mensagens do time"
+                }
+              />
+              <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`com mensagem no período · ${data.total_conversations.toLocaleString("pt-BR")} conversas no escopo`} />
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
-              <Kpi icon={Clock} label="Tempo médio de resposta" value={fmtDuration(data.avg_response_seconds)} hint={`mediana ${fmtDuration(data.median_response_seconds)} · p90 ${fmtDuration(data.p90_response_seconds)}`} />
+              <Kpi icon={Clock} label="Tempo médio de resposta" value={fmtDuration(data.avg_response_seconds)} hint={`mediana ${fmtDuration(data.median_response_seconds)} · p90 ${fmtDuration(data.p90_response_seconds)} · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas`} />
               <Kpi icon={Timer} label="Respostas em até 5 min" value={data.responses_under_5min_pct === null ? "—" : `${data.responses_under_5min_pct}%`} tone={(data.responses_under_5min_pct ?? 0) < 50 ? "warning" : "success"} />
-              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
-              <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`${data.silent_conversations} conversas só com envio nosso`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
+              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
+              <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`clientes ativos, histórico total · ${data.silent_conversations} conversas só com envio nosso no período`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
             </div>
 
             {/* Conversas novas e média diária */}
