@@ -282,10 +282,12 @@ export default function Clients() {
   const [filterRisk, setFilterRisk] = usePersistedFilter<string>("clients", "risk", "all");
   const [filterEducation, setFilterEducation] = usePersistedFilter<string>("clients", "education", "all");
   const [filterArea, setFilterArea] = usePersistedFilter<string>("clients", "area", "all");
+  const [filterSpecialty, setFilterSpecialty] = usePersistedFilter<string>("clients", "specialty", "all");
   const [filterRevenueMissing, setFilterRevenueMissing] = usePersistedFilter<string>("clients", "revenueMissing", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
+  const [specialtyOptions, setSpecialtyOptions] = useState<string[]>([]);
 
   // Tab → contract filter mapping (overrides filterContract on fetch)
   const tabContractFilter: Record<string, string | null> = {
@@ -400,6 +402,7 @@ export default function Clients() {
       if (filterCountry !== "all") baseParams["country"] = filterCountry;
       if (filterEducation !== "all") baseParams["education"] = filterEducation;
       if (filterArea !== "all") baseParams["area"] = filterArea;
+      if (filterSpecialty !== "all") baseParams["specialty"] = filterSpecialty;
       if (filterRevenueMissing !== "all") baseParams["revenue_missing"] = filterRevenueMissing;
       baseParams["sort"] = sortOrder;
 
@@ -554,6 +557,7 @@ export default function Clients() {
       if (filterCountry !== "all") params.set("country", filterCountry);
       if (filterEducation !== "all") params.set("education", filterEducation);
       if (filterArea !== "all") params.set("area", filterArea);
+      if (filterSpecialty !== "all") params.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") params.set("revenue_missing", filterRevenueMissing);
       params.set("sort", sortOrder);
       
@@ -822,6 +826,7 @@ export default function Clients() {
       if (filterCountry !== "all") p.set("country", filterCountry);
       if (filterEducation !== "all") p.set("education", filterEducation);
       if (filterArea !== "all") p.set("area", filterArea);
+      if (filterSpecialty !== "all") p.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
       return p;
     };
@@ -855,7 +860,7 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterRevenueMissing, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -894,6 +899,32 @@ export default function Clients() {
       setAreaOptions([...catalogLabels, ...extras]);
     })();
   }, [accountId, currentUser?.account_id]);
+
+  // Opções do filtro de Especialidade: valores já cadastrados nos clientes
+  useEffect(() => {
+    const accId = accountId || currentUser?.account_id;
+    if (!accId) return;
+    (async () => {
+      const { data } = await supabase
+        .from("clients")
+        .select("education_specialty")
+        .eq("account_id", accId)
+        .not("education_specialty", "is", null)
+        .neq("education_specialty", "")
+        .limit(2000);
+      const used = Array.from(
+        new Set(
+          (data || [])
+            .flatMap((r: any) => String(r.education_specialty || "").split(","))
+            .map((s: string) => s.trim())
+            .filter(Boolean),
+        ),
+      ).sort((a, b) => a.localeCompare(b, "pt-BR"));
+      setSpecialtyOptions(used);
+    })();
+  }, [accountId, currentUser?.account_id]);
+
+
 
 
   // Fetch field values when clients are loaded
@@ -1367,6 +1398,7 @@ export default function Clients() {
     filterCountry !== "all",
     filterEducation !== "all",
     filterArea !== "all",
+    filterSpecialty !== "all",
     filterRevenueMissing !== "all",
   ].filter(Boolean).length;
 
@@ -1380,6 +1412,7 @@ export default function Clients() {
     setFilterEducation("all");
     setFilterRevenueMissing("all");
     setFilterArea("all");
+    setFilterSpecialty("all");
   };
 
   // Country options for the filter dropdown.
@@ -2325,6 +2358,25 @@ export default function Clients() {
                 </Select>
               </div>
 
+              {/* Especialidade Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Especialidade</Label>
+                <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as especialidades</SelectItem>
+                    {specialtyOptions.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem especialidade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+
 
 
 
@@ -2411,6 +2463,14 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Área: {filterArea === "none" ? "Sem área" : filterArea}
                     <button onClick={() => setFilterArea("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filterSpecialty !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Especialidade: {filterSpecialty === "none" ? "Sem especialidade" : filterSpecialty}
+                    <button onClick={() => setFilterSpecialty("all")} className="hover:text-destructive">
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
