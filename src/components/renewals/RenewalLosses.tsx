@@ -519,6 +519,10 @@ export function RenewalLosses() {
       av = parseLocalDate(a.end_date).getTime();
       bv = parseLocalDate(b.end_date).getTime();
     }
+    else if (sortKey === "resolved_at") {
+      av = a.resolved_at ? new Date(a.resolved_at).getTime() : 0;
+      bv = b.resolved_at ? new Date(b.resolved_at).getTime() : 0;
+    }
     return sortDir === "asc" ? av - bv : bv - av;
   });
 
