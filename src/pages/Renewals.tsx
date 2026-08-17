@@ -44,7 +44,10 @@ interface RenewalContract {
   renewal_value: number;
   responsible_name: string | null;
   responsible_user_id: string | null;
+  list_name: string;
+  classification_reason: string;
 }
+
 
 // Users with full visibility on renewals (everyone else sees only their own)
 const RENEWALS_FULL_ACCESS_USER_IDS = [
