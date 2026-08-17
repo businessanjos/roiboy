@@ -329,12 +329,11 @@ export default function Tasks() {
         return q;
       };
 
-      // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
-      // query a cada iteração para não acumular parâmetros de estado.
-      // O volume cresce sob demanda (botão "Carregar mais"); a varredura
-      // completa do histórico só acontece ao auditar uma pessoa.
+      // Primeira abertura é sempre leve (1 bloco). O volume cresce apenas sob
+      // demanda pelo botão "Carregar mais", inclusive na auditoria nominal —
+      // assim filtros amplos nunca travam a tela no carregamento inicial.
       const PAGE = 1000;
-      const MAX_PAGES = isHistoricalUserFilter ? 50 : loadedChunks;
+      const MAX_PAGES = Math.max(1, loadedChunks);
       const all: Task[] = [];
       let from = 0;
       let hasMore = false;
@@ -413,7 +412,8 @@ export default function Tasks() {
       const filtered = allUsers.filter((u) => commercial.has(u.id));
       return filtered.length > 0 ? filtered : allUsers;
     },
-    staleTime: 60000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
   });
 
 
@@ -1715,8 +1715,8 @@ export default function Tasks() {
           </TabsContent>
 
           {/* Carregamento incremental do histórico */}
-          {hasMoreTasks && !isHistoricalUserFilter && (
-            <div className="flex justify-center py-3">
+          {hasMoreTasks && (
+            <div className="flex flex-col items-center gap-1 py-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -1725,6 +1725,9 @@ export default function Tasks() {
               >
                 {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
               </Button>
+              <span className="text-xs text-muted-foreground">
+                {tasks.length} tarefas carregadas{isHistoricalUserFilter ? " (auditoria histórica)" : ""}
+              </span>
             </div>
           )}
 
