@@ -557,6 +557,7 @@ export default function Clients() {
       if (filterCountry !== "all") params.set("country", filterCountry);
       if (filterEducation !== "all") params.set("education", filterEducation);
       if (filterArea !== "all") params.set("area", filterArea);
+      if (filterSpecialty !== "all") params.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") params.set("revenue_missing", filterRevenueMissing);
       params.set("sort", sortOrder);
       
