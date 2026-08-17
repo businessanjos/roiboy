@@ -565,8 +565,8 @@ export function RenewalLosses() {
     let av: number = 0, bv: number = 0;
     if (sortKey === "value") { av = a.renewal_value; bv = b.renewal_value; }
     else if (sortKey === "date") {
-      av = parseLocalDate(a.end_date).getTime();
-      bv = parseLocalDate(b.end_date).getTime();
+      av = parseLocalDate(a.end_date)?.getTime() ?? 0;
+      bv = parseLocalDate(b.end_date)?.getTime() ?? 0;
     }
     else if (sortKey === "resolved_at") {
       av = a.resolved_at ? new Date(a.resolved_at).getTime() : 0;
