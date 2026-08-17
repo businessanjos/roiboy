@@ -269,9 +269,9 @@ export default function Tasks() {
 
         // User filter (server-side) para não estourar limites em contas grandes.
         if (filterUser === "mine" && currentUser?.id) {
-          q = q.eq("assigned_to", currentUser.id);
+          q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
         } else if (filterUser !== "all" && filterUser) {
-          q = q.eq("assigned_to", filterUser);
+          q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
         }
         return q;
       };
