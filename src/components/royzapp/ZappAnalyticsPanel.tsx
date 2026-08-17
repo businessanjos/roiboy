@@ -42,7 +42,12 @@ import {
   AlertTriangle,
   ArrowDownLeft,
   ArrowUpRight,
+  CalendarDays,
   Clock,
+  Inbox,
+  Send,
+  UserPlus,
+
   MessageSquare,
   RefreshCw,
   Timer,
