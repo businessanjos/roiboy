@@ -1728,6 +1728,14 @@ export default function Tasks() {
             </div>
           )}
 
+          {/* Mensagem de fallback para buscas históricas demoradas */}
+          {showSlowLoadMessage && (
+            <div className="flex items-center justify-center gap-2 py-2 text-sm text-muted-foreground animate-pulse">
+              <Loader2 className="h-4 w-4 animate-spin" />
+              <span>A busca está demorando mais que o esperado... aguarde enquanto o histórico é carregado.</span>
+            </div>
+          )}
+
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
             <div className="flex items-center justify-between px-2 py-3">
