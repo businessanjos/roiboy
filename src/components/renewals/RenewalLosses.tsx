@@ -210,7 +210,7 @@ export function RenewalLosses() {
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMotivo, setFilterMotivo] = useState<string[]>([]);
   const [searchClient, setSearchClient] = useState("");
-  const [sortKey, setSortKey] = useState<"value" | "date" | null>("date");
+  const [sortKey, setSortKey] = useState<"value" | "date" | "resolved_at" | null>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
@@ -519,6 +519,10 @@ export function RenewalLosses() {
       av = parseLocalDate(a.end_date).getTime();
       bv = parseLocalDate(b.end_date).getTime();
     }
+    else if (sortKey === "resolved_at") {
+      av = a.resolved_at ? new Date(a.resolved_at).getTime() : 0;
+      bv = b.resolved_at ? new Date(b.resolved_at).getTime() : 0;
+    }
     return sortDir === "asc" ? av - bv : bv - av;
   });
 
@@ -781,6 +785,17 @@ export function RenewalLosses() {
                     />
                   </TableHead>
                   <TableHead className="text-center">
+                    <SortHeader
+                      label="Data renovação"
+                      active={sortKey === "resolved_at"}
+                      dir={sortDir}
+                      onClick={() => {
+                        if (sortKey === "resolved_at") setSortDir(d => d === "asc" ? "desc" : "asc");
+                        else { setSortKey("resolved_at"); setSortDir("desc"); }
+                      }}
+                    />
+                  </TableHead>
+                  <TableHead className="text-center">
                     <MultiSelectHeader
                       label="Status"
                       options={["renewed", "lost"]}
@@ -803,7 +818,7 @@ export function RenewalLosses() {
               <TableBody>
                 {paginatedItems.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="py-16">
+                    <TableCell colSpan={9} className="py-16">
                       <div className="flex flex-col items-center justify-center text-muted-foreground">
                         <TrendingDown className="h-10 w-10 mb-3 opacity-50" />
                         <p className="font-medium">Nenhum contrato vencido no período</p>
@@ -836,6 +851,9 @@ export function RenewalLosses() {
                     </TableCell>
                     <TableCell className="text-center text-sm text-muted-foreground">
                       {formatLocalDate(item.end_date)}
+                    </TableCell>
+                    <TableCell className="text-center text-sm font-medium">
+                      {item.resolved_at ? formatLocalDate(item.resolved_at) : "—"}
                     </TableCell>
                     <TableCell className="text-center">
                       {item.outcome === "renewed" ? (
