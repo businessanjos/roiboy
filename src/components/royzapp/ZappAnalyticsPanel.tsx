@@ -345,6 +345,114 @@ export function ZappAnalyticsPanel({ sectorId }: { sectorId?: string | null }) {
               <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`${data.silent_conversations} conversas só com envio nosso`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
             </div>
 
+            {/* Conversas novas e média diária */}
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Kpi
+                icon={UserPlus}
+                label="Conversas novas"
+                value={(data.new_conversations ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  data.active_conversations > 0
+                    ? `${Math.round(((data.new_conversations ?? 0) / data.active_conversations) * 100)}% das ${data.active_conversations} ativas`
+                    : "primeiro contato no período"
+                }
+              />
+              <Kpi
+                icon={Inbox}
+                label="Novas — cliente chamou"
+                value={(data.new_by_client ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  (data.new_conversations ?? 0) > 0
+                    ? `${Math.round(((data.new_by_client ?? 0) / data.new_conversations) * 100)}% das novas`
+                    : "—"
+                }
+              />
+              <Kpi
+                icon={Send}
+                label="Novas — time chamou"
+                value={(data.new_by_team ?? 0).toLocaleString("pt-BR")}
+                hint={
+                  (data.new_conversations ?? 0) > 0
+                    ? `${Math.round(((data.new_by_team ?? 0) / data.new_conversations) * 100)}% das novas (prospecção ativa)`
+                    : "—"
+                }
+                tone="success"
+              />
+              <Kpi
+                icon={CalendarDays}
+                label="Média de atendimento por dia"
+                value={data.avg_conversations_per_day === null || data.avg_conversations_per_day === undefined ? "—" : `${Number(data.avg_conversations_per_day).toLocaleString("pt-BR")}`}
+                hint={`conversas/dia em ${data.active_days ?? 0} dias com movimento · ${data.avg_new_conversations_per_day ?? 0} novas/dia`}
+              />
+            </div>
+
+            {/* Quem iniciou as conversas novas */}
+            <div className="grid gap-3 lg:grid-cols-2">
+              <Card className="bg-zapp-panel border-zapp-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-zapp-text">Conversas novas por dia — quem iniciou</CardTitle>
+                </CardHeader>
+                <CardContent className="h-[240px]">
+                  {(data.by_day_new || []).length === 0 ? (
+                    <p className="text-sm text-zapp-text-muted">Nenhuma conversa nova no período.</p>
+                  ) : (
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={(data.by_day_new || []).map((d) => ({
+                          ...d,
+                          label: format(new Date(`${d.day}T12:00:00`), "dd/MM", { locale: ptBR }),
+                        }))}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
+                        <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
+                        <RTooltip />
+                        <Legend />
+                        <Bar dataKey="new_by_client" stackId="n" name="Cliente chamou" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="new_by_team" stackId="n" name="Time chamou" fill="hsl(var(--chart-2, 142 71% 45%))" radius={[3, 3, 0, 0]} />
+                      </BarChart>
+                    </ResponsiveContainer>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="bg-zapp-panel border-zapp-border">
+                <CardHeader className="pb-2">
+                  <CardTitle className="text-sm text-zapp-text flex items-center gap-2">
+                    <Send className="h-4 w-4" /> Prospecção ativa por consultora
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="p-0">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Consultora</TableHead>
+                        <TableHead className="text-right">Conversas iniciadas</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {(data.new_by_team_agent || []).length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={2} className="text-center text-sm text-zapp-text-muted py-6">
+                            Nenhuma conversa iniciada pelo time no período.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        data.new_by_team_agent.map((a) => (
+                          <TableRow key={a.user_id || a.name}>
+                            <TableCell className="font-medium">{a.name}</TableCell>
+                            <TableCell className="text-right">{a.count.toLocaleString("pt-BR")}</TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            </div>
+
+
+
             {/* Volume por dia */}
             <Card className="bg-zapp-panel border-zapp-border">
               <CardHeader className="pb-2">
