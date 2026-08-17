@@ -209,8 +209,25 @@ export default function Tasks() {
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+  const [loadedChunks, setLoadedChunks] = useState(1);
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+
+  // Busca incremental: só consulta o servidor após o usuário parar de digitar.
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchTerm]);
+
+  const serverSearch = debouncedSearch.length >= 2 ? debouncedSearch : "";
+
+  // Ao trocar de contexto, volta a carregar apenas o primeiro bloco.
+  useEffect(() => {
+    setLoadedChunks(1);
+  }, [serverSearch, filterUser, currentSector?.id]);
+
 
   const isHistoricalUserFilter = filterUser !== "all" && filterUser !== "mine";
+
 
   const handleUserFilterChange = useCallback((value: string) => {
     setFilterUser(value);
@@ -239,8 +256,8 @@ export default function Tasks() {
   // No need to set default tab - "all" is the default
 
   // Fetch tasks with React Query
-  const { data: tasks = [], isLoading: loading } = useQuery({
-    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id],
+  const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks } = useQuery({
+    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch, loadedChunks],
     queryFn: async () => {
       // First, get activity type IDs for the current sector to filter server-side
       let sectorActivityTypeIds: string[] | null = null;
@@ -290,17 +307,27 @@ export default function Tasks() {
         } else if (filterUser !== "all" && filterUser) {
           q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
         }
+
+        // Busca incremental no servidor: procura em todo o histórico sem
+        // precisar carregar tudo no cliente.
+        if (serverSearch) {
+          const safe = serverSearch.replace(/[,()*]/g, " ").trim();
+          if (safe) {
+            q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+          }
+        }
         return q;
       };
 
       // Pagina em blocos de 1000 (limite padrão do PostgREST). Rebuilda a
       // query a cada iteração para não acumular parâmetros de estado.
-      // Sem filtro nominal, limita o volume para a tela abrir rápido; a
-      // varredura completa do histórico só acontece ao auditar uma pessoa.
+      // O volume cresce sob demanda (botão "Carregar mais"); a varredura
+      // completa do histórico só acontece ao auditar uma pessoa.
       const PAGE = 1000;
-      const MAX_PAGES = isHistoricalUserFilter ? 50 : 3;
+      const MAX_PAGES = isHistoricalUserFilter ? 50 : loadedChunks;
       const all: Task[] = [];
       let from = 0;
+      let hasMore = false;
       for (let page = 0; page < MAX_PAGES; page++) {
         const { data, error } = await buildQuery()
           .order("created_at", { ascending: false })
@@ -310,12 +337,17 @@ export default function Tasks() {
         all.push(...chunk);
         if (chunk.length < PAGE) break;
         from += PAGE;
+        if (page === MAX_PAGES - 1) hasMore = true;
       }
-      return all;
-
+      return { rows: all, hasMore };
     },
     staleTime: 30000,
+    placeholderData: (prev) => prev,
   });
+
+  const tasks = tasksResult?.rows ?? [];
+  const hasMoreTasks = !!tasksResult?.hasMore;
+
 
   // Fetch users with React Query.
   // No setor Comercial, restringe a pessoas do comercial (atuais e antigas):
@@ -1639,6 +1671,20 @@ export default function Tasks() {
           <TabsContent value="__overdue__" className="mt-6">
             <TaskTable tasks={paginatedTasks} />
           </TabsContent>
+
+          {/* Carregamento incremental do histórico */}
+          {hasMoreTasks && !isHistoricalUserFilter && (
+            <div className="flex justify-center py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetchingTasks}
+                onClick={() => setLoadedChunks((c) => c + 1)}
+              >
+                {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
+              </Button>
+            </div>
+          )}
 
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
