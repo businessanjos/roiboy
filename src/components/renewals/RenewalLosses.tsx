@@ -210,7 +210,7 @@ export function RenewalLosses() {
   const [filterStatus, setFilterStatus] = useState<string[]>([]);
   const [filterMotivo, setFilterMotivo] = useState<string[]>([]);
   const [searchClient, setSearchClient] = useState("");
-  const [sortKey, setSortKey] = useState<"value" | "date" | null>("date");
+  const [sortKey, setSortKey] = useState<"value" | "date" | "resolved_at" | null>("date");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 20;
