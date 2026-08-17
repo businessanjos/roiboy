@@ -925,7 +925,7 @@ export default function Tasks() {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
   }
 
-  const TaskTable = ({ tasks }: { tasks: Task[] }) => (
+  const TaskTable = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => (
     <Card className="shadow-card overflow-hidden">
       <ScrollArea className="w-full">
         <div className="min-w-max">
