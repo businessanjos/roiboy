@@ -82,6 +82,7 @@ interface ClientRow {
   account_id: string;
   full_name: string | null;
   logo_url: string | null;
+  avatar_url: string | null;
   initial_revenue: number | null;
   current_revenue: number | null;
   current_revenue_month: string | null;
