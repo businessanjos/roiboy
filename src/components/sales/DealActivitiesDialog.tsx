@@ -96,6 +96,7 @@ export function DealActivitiesDialog({
         priority,
         completed_at,
         created_at,
+        contact_channel,
         activity_type:activity_types(id, name, color, icon),
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url)
@@ -427,6 +428,7 @@ export function DealActivitiesDialog({
           completed_at: editingTask.completed_at,
           custom_status_id: editingTask.custom_status?.id,
           activity_type_id: editingTask.activity_type?.id,
+          contact_channel: (editingTask as any).contact_channel ?? null,
         } : null}
         dealId={dealId}
         leadId={leadId}
