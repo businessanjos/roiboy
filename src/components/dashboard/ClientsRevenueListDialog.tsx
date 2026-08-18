@@ -327,8 +327,8 @@ export function ClientsRevenueListDialog({
                           {r.product_name}
                         </Badge>
                       </TableCell>
-                      <TableCell className="text-right font-semibold">{brl(r.period_total)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
+                      <TableCell className="text-right font-semibold whitespace-nowrap">{brl(r.period_total)}</TableCell>
+                      <TableCell className="text-right text-muted-foreground whitespace-nowrap">
                         {r.last_month_revenue > 0 ? brl(r.last_month_revenue) : "—"}
                         {r.last_month && r.last_month !== bounds.to && (
                           <span className="block text-[10px] text-muted-foreground">{monthLabel(r.last_month)}</span>
