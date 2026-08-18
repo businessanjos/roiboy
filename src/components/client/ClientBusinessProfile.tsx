@@ -464,6 +464,35 @@ export function ClientBusinessProfile({
 
   const mentoringStartMonth = mentoringStart ? format(mentoringStart, "yyyy-MM") : null;
 
+  // Semeia o mês de entrada na mentoria com o faturamento inicial (uma única vez)
+  const seededInitialMonth = useRef(false);
+  useEffect(() => {
+    seededInitialMonth.current = false;
+  }, [clientId]);
+  useEffect(() => {
+    if (loading || seededInitialMonth.current) return;
+    if (!client || !currentUser?.account_id) return;
+    if (!mentoringStartMonth || client.initial_revenue == null) return;
+    if (revenueByMonth.has(mentoringStartMonth)) return;
+    seededInitialMonth.current = true;
+    (async () => {
+      const { error } = await supabase.from("client_revenue_history").upsert(
+        {
+          client_id: client.id,
+          account_id: client.account_id,
+          month: mentoringStartMonth,
+          revenue: client.initial_revenue,
+          notes: "Faturamento inicial (entrada na mentoria)",
+          created_by: currentUser.id,
+        } as any,
+        { onConflict: "client_id,month" }
+      );
+      if (!error) fetchAll();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, client?.id, mentoringStartMonth, client?.initial_revenue, revenueByMonth]);
+
+
   const revenueRecord = useMemo(() => {
     if (!history || history.length === 0) return null;
     const eligible = mentoringStartMonth
