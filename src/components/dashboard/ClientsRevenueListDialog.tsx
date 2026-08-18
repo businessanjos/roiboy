@@ -21,6 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useTablePagination } from "@/hooks/useTablePagination";
 import { ArrowUpDown, Search, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
@@ -205,12 +207,23 @@ export function ClientsRevenueListDialog({
     return rows;
   }, [data, search, sort]);
 
+  const {
+    paginatedItems,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filtered, 20);
+
   const totals = useMemo(() => {
     return filtered.reduce((acc, r) => acc + r.period_total, 0);
   }, [filtered]);
 
   const toggleSort = (key: SortKey) => {
     setSort((prev) => ({ key, desc: prev.key === key ? !prev.desc : true }));
+    handlePageChange(1);
   };
 
   return (
@@ -229,12 +242,18 @@ export function ClientsRevenueListDialog({
             <Input
               placeholder="Buscar por nome ou produto..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                handlePageChange(1);
+              }}
               className="pl-9 pr-9"
             />
             {search && (
               <button
-                onClick={() => setSearch("")}
+                onClick={() => {
+                  setSearch("");
+                  handlePageChange(1);
+                }}
                 className="absolute right-2.5 top-2.5 text-muted-foreground hover:text-foreground"
               >
                 <X className="h-4 w-4" />
@@ -297,7 +316,7 @@ export function ClientsRevenueListDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {paginatedItems.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -340,6 +359,16 @@ export function ClientsRevenueListDialog({
                 </TableBody>
               </Table>
               </div>
+            )}
+            {totalPages > 1 && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
             )}
           </div>
         </div>
