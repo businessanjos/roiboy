@@ -142,10 +142,43 @@ export default function SalesPipeline() {
   } = useDeals(activePipelineId);
   
   const { users: salesUsersRaw } = useSectorUsers({ sectorId: "vendas" });
-  const salesUsers = useMemo(
-    () => salesUsersRaw.filter(u => !["Bruna Pieri", "Arthur Mudri"].includes(u.name?.trim() ?? "")),
-    [salesUsersRaw],
-  );
+  // Vendedores inativos (ex-comercial) continuam disponíveis no filtro para
+  // consultar o histórico deles — marcados com badge "Inativo".
+  const [inactiveSalesUsers, setInactiveSalesUsers] = useState<
+    { id: string; name: string; avatar_url: string | null; is_inactive: true }[]
+  >([]);
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("users")
+        .select("id, name, avatar_url")
+        .eq("is_active", false)
+        .in("name", ["George Oliveira", "Vanessa Minelli"]);
+      if (!cancelled && data) {
+        setInactiveSalesUsers(
+          data.map((u: any) => ({
+            id: u.id,
+            name: u.name,
+            avatar_url: u.avatar_url,
+            is_inactive: true as const,
+          })),
+        );
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const salesUsers = useMemo(() => {
+    const HIDDEN = ["Bruna Pieri", "Arthur Mudri", "Jessica Campos"];
+    const active = salesUsersRaw.filter(u => !HIDDEN.includes(u.name?.trim() ?? ""));
+    const activeIds = new Set(active.map(u => u.id));
+    const extras = inactiveSalesUsers.filter(u => !activeIds.has(u.id));
+    return [...active, ...extras].sort((a, b) => a.name.localeCompare(b.name)) as any[];
+  }, [salesUsersRaw, inactiveSalesUsers]);
+
   const { isAdmin } = usePermissions();
   const { validateDealOutcome } = useRequiredFieldsValidation();
 
