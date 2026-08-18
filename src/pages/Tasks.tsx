@@ -893,7 +893,7 @@ export default function Tasks() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, sortBy, sortDirection]);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
