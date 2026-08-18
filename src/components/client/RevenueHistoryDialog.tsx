@@ -42,7 +42,8 @@ export interface RevenueHistoryPoint {
 
 interface ClientIdentity {
   name: string | null;
-  logoUrl: string | null;
+  avatarUrl?: string | null;
+  logoUrl?: string | null;
   segment?: string | null;
   niche?: string | null;
 }
@@ -169,7 +170,7 @@ export function RevenueHistoryDialog({
         <DialogHeader className="p-6 pb-2">
           <div className="flex items-start gap-3">
             <Avatar className="h-12 w-12 shrink-0 border border-border">
-              <AvatarImage src={client?.logoUrl || undefined} alt={client?.name || ""} />
+              <AvatarImage src={client?.avatarUrl || client?.logoUrl || undefined} alt={client?.name || ""} />
               <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
                 {client?.name
                   ?.split(" ")
