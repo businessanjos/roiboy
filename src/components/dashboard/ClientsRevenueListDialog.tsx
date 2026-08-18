@@ -255,10 +255,11 @@ export function ClientsRevenueListDialog({
                 Nenhum cliente encontrado com faturamento para os filtros selecionados.
               </p>
             ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="min-w-[200px]">
+              <div className="overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="min-w-[260px] max-w-[360px]">
                       <Button
                         variant="ghost"
                         size="sm"
