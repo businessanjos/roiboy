@@ -1652,6 +1652,67 @@ export default function Tasks() {
           </FilterItem>
         )}
         <FilterItem>
+          <Popover open={leadFilterOpen} onOpenChange={setLeadFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={leadFilterOpen}
+                className="w-full sm:w-[240px] h-10 justify-between font-normal"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {selectedLeadOption ? selectedLeadOption.label : "Todas as negociações"}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar negociação ou lead..." />
+                <CommandList>
+                  <CommandEmpty>Nenhuma negociação nas tarefas carregadas.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todas as negociações"
+                      onSelect={() => {
+                        setFilterLead("all");
+                        setLeadFilterOpen(false);
+                      }}
+                    >
+                      Todas as negociações
+                    </CommandItem>
+                    {leadOptions.map((opt) => (
+                      <CommandItem
+                        key={opt.key}
+                        value={`${opt.label} ${opt.sublabel ?? ""}`}
+                        onSelect={() => {
+                          setFilterLead(opt.key);
+                          setLeadFilterOpen(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">{opt.label}</p>
+                            {opt.sublabel && (
+                              <p className="truncate text-xs text-muted-foreground">{opt.sublabel}</p>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            {opt.count}
+                          </Badge>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </FilterItem>
+        <FilterItem>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-full sm:w-[160px] h-10">
               <div className="flex items-center gap-2">
