@@ -1563,13 +1563,14 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all"}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all"}
         onClearFilters={() => {
           setFilterUser("all");
           setFilterActivityType("all");
           setFilterDateStart("");
           setFilterDateEnd("");
           setFilterStage("all");
+          setFilterLead("all");
         }}
       >
         <FilterItem>
