@@ -697,8 +697,11 @@ export default function Tasks() {
     const matchesStage = filterStage === "all" || 
       task.deals?.stage?.id === filterStage;
 
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, isHistoricalUserFilter]);
+    // Negotiation (deal/lead) filter
+    const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
+
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
