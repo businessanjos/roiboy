@@ -1049,6 +1049,11 @@ export default function Dashboard() {
                 ? undefined
                 : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).map((c: any) => c.id)
             }
+            totalClients={
+              gestaoProductFilter === "all"
+                ? clients.length
+                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).length
+            }
             productLabel={
               gestaoProductFilter === "all"
                 ? undefined
