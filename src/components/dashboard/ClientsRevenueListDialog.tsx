@@ -256,10 +256,10 @@ export function ClientsRevenueListDialog({
               </p>
             ) : (
               <div className="overflow-x-auto w-full min-w-0">
-                <Table className="min-w-[900px]">
+                <Table className="min-w-[900px] table-fixed">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[240px] max-w-[320px]">
+                      <TableHead className="w-[260px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -270,8 +270,8 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-center min-w-[140px]">Produto</TableHead>
-                    <TableHead className="text-right min-w-[150px]">
+                    <TableHead className="w-[160px] text-center">Produto</TableHead>
+                    <TableHead className="w-[180px] text-right">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -282,7 +282,7 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-right min-w-[120px]">
+                    <TableHead className="w-[150px] text-right">
                       <Button
                         variant="ghost"
                         size="sm"
