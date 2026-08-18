@@ -35,13 +35,13 @@ const LOSS_REASONS = [
   "Outro",
 ];
 
+// Visão completa dos Resultados de renovação (todos os consultores)
 const RENEWALS_FULL_ACCESS_USER_IDS = [
-  "d20201f6-a9bd-4934-ae50-07ce7a47574b",
-  "de43a643-0109-4afb-ac35-be768dbf4090",
-  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f",
-  "a1625047-8b72-4b1b-a42c-24bbdc9fd143",
-  "c064c5d5-cdb5-47cc-99ce-ad416b6407b1",
-  "b625a448-23e6-40bf-a503-d876a9a701db",
+  "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
+  "de43a643-0109-4afb-ac35-be768dbf4090", // Everton Pieri
+  "e0017d78-21d4-413a-befc-5197df7ad666", // Andréia Barros
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  "0a9f7f34-cce9-4687-9f94-51f84f7324ea", // Maria (Suporte)
 ];
 
 interface ExpiredContract {
