@@ -205,6 +205,9 @@ export default function Tasks() {
   const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
   const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
   const [filterStage, setFilterStage] = usePersistedFilter<string>("tasks", "filterStage", "all");
+  // Filtro por negociação (deal ou lead) para comparar tarefas com o pipeline
+  const [filterLead, setFilterLead] = usePersistedFilter<string>("tasks", "filterLead", "all");
+  const [leadFilterOpen, setLeadFilterOpen] = useState(false);
   const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
