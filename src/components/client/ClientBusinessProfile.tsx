@@ -794,6 +794,12 @@ export function ClientBusinessProfile({
         history={history}
         initialRevenue={client.initial_revenue}
         mentoringStartMonth={mentoringStartMonth}
+        client={{
+          name: client.full_name,
+          logoUrl: client.logo_url,
+          segment: client.business_segment,
+          niche: client.business_niche,
+        }}
       />
 
       <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
