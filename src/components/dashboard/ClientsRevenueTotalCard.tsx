@@ -282,6 +282,15 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
           </>
         )}
       </CardContent>
+      <ClientsRevenueListDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        accountId={accountId}
+        clientIds={clientIds}
+        productLabel={productLabel}
+        periodFilter={periodFilter}
+        customRange={customRange}
+      />
     </Card>
   );
 }
