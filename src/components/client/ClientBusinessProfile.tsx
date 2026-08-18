@@ -219,8 +219,13 @@ export function ClientBusinessProfile({
     notes: "",
   });
 
+  // Mês selecionado no card "Faturamento atual" (apenas visualização/edição, nunca grava sozinho)
+  const [selectedMonth, setSelectedMonth] = useState<string>(format(new Date(), "yyyy-MM"));
+  const monthInitialized = useRef(false);
+
   // Local drafts for inline editable text fields
   const [drafts, setDrafts] = useState<Partial<Record<keyof ClientRow, string>>>({});
+
 
   const fetchAll = async () => {
     setLoading(true);
