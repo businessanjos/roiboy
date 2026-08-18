@@ -401,19 +401,15 @@ export function ClientBusinessProfile({
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                   <TrendingUp className="h-3.5 w-3.5" /> Faturamento atual
                 </span>
-                <Input
-                  type="month"
-                  defaultValue={client.current_revenue_month || format(new Date(), "yyyy-MM")}
-                  onBlur={(e) => {
-                    if (e.target.value !== (client.current_revenue_month || "")) {
-                      commitCurrentRevenue(
-                        String(client.current_revenue ?? ""),
-                        e.target.value
-                      );
+                <MonthYearSelect
+                  value={client.current_revenue_month || format(new Date(), "yyyy-MM")}
+                  onChange={(m) => {
+                    if (m !== (client.current_revenue_month || "")) {
+                      commitCurrentRevenue(String(client.current_revenue ?? ""), m);
                     }
                   }}
-                  className="h-6 w-[130px] text-[11px] px-1"
                 />
+
               </div>
               <InlineCurrencyInput
                 value={client.current_revenue}
