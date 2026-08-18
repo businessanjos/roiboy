@@ -191,6 +191,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         lead_id: task.lead_id || "",
         assigned_to: task.assigned_to || "",
         activity_type_id: task.activity_type_id || "",
+        contact_channel: task.contact_channel || "",
       });
       setIsCompleted(!!task.completed_at);
       setCurrentTaskId(task.id);
@@ -213,6 +214,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         lead_id: leadId || "",
         assigned_to: currentUser?.id || "",
         activity_type_id: initialActivityTypeId || "",
+        contact_channel: "",
       });
       setIsCompleted(false);
       setCurrentTaskId(null);
