@@ -57,7 +57,7 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
   }
 }
 
-export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, periodFilter, customRange }: Props) {
+export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, productLabel, periodFilter, customRange }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-clients-revenue-history", accountId],
     enabled: !!accountId,
