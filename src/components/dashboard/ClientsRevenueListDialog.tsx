@@ -207,6 +207,20 @@ export function ClientsRevenueListDialog({
     return rows;
   }, [data, search, sort]);
 
+  const {
+    paginatedItems,
+    currentPage,
+    pageSize,
+    totalPages,
+    totalItems,
+    handlePageChange,
+    handlePageSizeChange,
+  } = useTablePagination(filtered, 20);
+
+  useEffect(() => {
+    handlePageChange(1);
+  }, [search]);
+
   const totals = useMemo(() => {
     return filtered.reduce((acc, r) => acc + r.period_total, 0);
   }, [filtered]);
