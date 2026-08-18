@@ -282,14 +282,15 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-right min-w-[180px]">
+                    <TableHead className="text-right min-w-[150px]">
                       <Button
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 -ml-2 font-medium"
                         onClick={() => toggleSort("last_month_revenue")}
+                        title="Último mês preenchido"
                       >
-                        Último mês preenchido
+                        Mês mais recente
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
