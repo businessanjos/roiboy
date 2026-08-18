@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid } from "recharts";
-import { DollarSign, Info, TrendingDown, TrendingUp } from "lucide-react";
+import { DollarSign, Eye, Info, TrendingDown, TrendingUp } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { ClientsRevenueListDialog } from "./ClientsRevenueListDialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   accountId?: string;
