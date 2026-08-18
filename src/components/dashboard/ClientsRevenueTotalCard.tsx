@@ -13,6 +13,8 @@ interface Props {
   accountId?: string;
   /** Client ids already filtered by the Gestão product filter (undefined = all clients). */
   clientIds?: string[];
+  /** Total clients in the current scope (used to calculate missing revenue). */
+  totalClients?: number;
   productLabel?: string;
   periodFilter: string;
   customRange?: DateRange;
@@ -55,7 +57,7 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
   }
 }
 
-export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, periodFilter, customRange }: Props) {
+export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, productLabel, periodFilter, customRange }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-clients-revenue-history", accountId],
     enabled: !!accountId,
@@ -107,7 +109,16 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, pe
     const chart = Array.from(byMonth.entries())
       .filter(([m]) => m >= bounds.from && m <= bounds.to)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([m, v]) => ({ month: m, label: monthLabel(m), total: v.total, clients: v.clients.size }));
+      .map(([m, v]) => ({
+        month: m,
+        label: monthLabel(m),
+        total: v.total,
+        clients: v.clients.size,
+        missing: totalClients != null ? Math.max(0, totalClients - v.clients.size) : null,
+      }));
+
+    const clientsWithData = new Set(rows.map((r) => r.client_id)).size;
+    const missingClients = totalClients != null ? Math.max(0, totalClients - clientsWithData) : null;
 
     return {
       yearTotal,
@@ -120,10 +131,12 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, pe
       momDelta,
       yoyDelta,
       chart,
-      clientsWithData: new Set(rows.map((r) => r.client_id)).size,
+      clientsWithData,
+      totalClients,
+      missingClients,
       hasData: rows.length > 0,
     };
-  }, [data, allowed, periodFilter, customRange]);
+  }, [data, allowed, periodFilter, customRange, totalClients]);
 
   return (
     <Card className="shadow-card">
@@ -146,8 +159,12 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, pe
               </TooltipProvider>
             </CardTitle>
             <CardDescription>
-              {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {stats.clientsWithData} cliente(s) com
-              faturamento informado
+              {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {stats.clientsWithData} de{" "}
+              {stats.totalClients != null ? stats.totalClients : stats.clientsWithData} cliente(s) com faturamento
+              informado
+              {stats.missingClients != null && stats.missingClients > 0 && (
+                <> · <span className="text-warning font-medium">{stats.missingClients} sem preenchimento</span></>
+              )}
             </CardDescription>
           </div>
           <Badge variant="secondary">{stats.periodLabel}</Badge>
@@ -216,12 +233,32 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, pe
                       tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
                     />
                     <RTooltip
-                      formatter={(value: number, _n, item: any) => [
-                        brl(Number(value)),
-                        `${item?.payload?.clients ?? 0} cliente(s)`,
-                      ]}
-                      labelClassName="text-xs"
-                      contentStyle={{ fontSize: 12 }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const p = payload[0]?.payload as {
+                          month: string;
+                          total: number;
+                          clients: number;
+                          missing: number | null;
+                        };
+                        return (
+                          <div className="rounded-md border bg-popover px-3 py-2 shadow-md">
+                            <p className="text-xs font-medium text-foreground mb-1">{label}</p>
+                            <p className="text-sm font-semibold text-primary">{brl(p.total)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {p.clients} cliente(s) com faturamento
+                            </p>
+                            {p.missing != null && p.missing > 0 && (
+                              <p className="text-xs text-warning mt-0.5">
+                                {p.missing} cliente(s) sem faturamento preenchido
+                              </p>
+                            )}
+                            {p.missing === 0 && (
+                              <p className="text-xs text-success mt-0.5">Todos os clientes preenchidos</p>
+                            )}
+                          </div>
+                        );
+                      }}
                     />
                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
