@@ -163,7 +163,9 @@ function MonthYearSelect({
       key: `${year}-${String(idx + 1).padStart(2, "0")}`,
       label: name,
       disabled: year === currentYear && idx > now.getMonth(),
-    })).filter((m) => !m.disabled),
+    }))
+      .filter((m) => !m.disabled)
+      .reverse(),
   }));
 
   return (
