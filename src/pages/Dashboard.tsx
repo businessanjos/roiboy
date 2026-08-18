@@ -74,6 +74,7 @@ import { CancellationAnalyticsModal, canAccessCancellationAnalytics } from "@/co
 import { LostValueBreakdownDialog } from "@/components/dashboard/LostValueBreakdownDialog";
 import { LastEventAttendanceCard } from "@/components/dashboard/LastEventAttendanceCard";
 import { WonToOnboardingCard } from "@/components/dashboard/WonToOnboardingCard";
+import { ClientsRevenueTotalCard } from "@/components/dashboard/ClientsRevenueTotalCard";
 import { EditableGoal } from "@/components/dashboard/EditableGoal";
 import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
@@ -1040,6 +1041,23 @@ export default function Dashboard() {
 
         {/* Gestão Tab */}
         <TabsContent value="gestao" className="space-y-6">
+          {/* Faturamento combinado dos clientes */}
+          <ClientsRevenueTotalCard
+            accountId={currentUser?.account_id}
+            clientIds={
+              gestaoProductFilter === "all"
+                ? undefined
+                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).map((c: any) => c.id)
+            }
+            productLabel={
+              gestaoProductFilter === "all"
+                ? undefined
+                : products.find((p: any) => p.id === gestaoProductFilter)?.name
+            }
+            periodFilter={gestaoPeriodFilter}
+            customRange={gestaoCustomDateRange}
+          />
+
           {/* Clients per Product */}
           <Card className="shadow-card">
             <CardHeader>
