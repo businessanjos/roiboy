@@ -368,15 +368,23 @@ export function PipelineFilterButton({
                           : ""
                       }`}
                     >
-                      <Avatar className="h-8 w-8">
+                      <Avatar className={`h-8 w-8 ${user.is_inactive ? "grayscale opacity-70" : ""}`}>
                         <AvatarImage src={user.avatar_url || undefined} />
                         <AvatarFallback className="text-xs">
                           {getInitials(user.name)}
                         </AvatarFallback>
                       </Avatar>
-                      <span className="font-medium text-sm">{user.name}</span>
+                      <span className={`font-medium text-sm ${user.is_inactive ? "text-muted-foreground" : ""}`}>
+                        {user.name}
+                      </span>
+                      {user.is_inactive && (
+                        <Badge variant="outline" className="ml-auto text-[10px] px-1.5 py-0 h-4">
+                          Inativo
+                        </Badge>
+                      )}
                     </button>
                   ))}
+
 
                   {filteredSalesUsers.length === 0 && (
                     <p className="text-sm text-muted-foreground text-center py-8">
