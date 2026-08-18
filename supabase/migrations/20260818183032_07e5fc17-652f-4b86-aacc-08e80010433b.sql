@@ -1,0 +1,2 @@
+delete from public.client_revenue_history where client_id='dc6f69a5-0e5a-4eac-903f-b6a8991e7bbf' and month in ('2026-05','2026-08');
+update public.clients set current_revenue=389000, current_revenue_month='2026-07' where id='dc6f69a5-0e5a-4eac-903f-b6a8991e7bbf';
