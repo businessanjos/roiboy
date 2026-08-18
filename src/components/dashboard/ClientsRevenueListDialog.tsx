@@ -242,8 +242,8 @@ export function ClientsRevenueListDialog({
             )}
           </div>
         </div>
-        <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
-          <div className="px-6 pb-6 min-w-0">
+        <div className="max-h-[60vh] overflow-y-auto overflow-x-auto w-full min-w-0">
+          <div className="px-6 pb-6 min-w-0 w-full">
             {isLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -255,8 +255,8 @@ export function ClientsRevenueListDialog({
                 Nenhum cliente encontrado com faturamento para os filtros selecionados.
               </p>
             ) : (
-              <div className="overflow-x-auto">
-                <Table className="min-w-full">
+              <div className="overflow-x-auto w-full min-w-0">
+                <Table className="min-w-[900px]">
                   <TableHeader>
                     <TableRow>
                       <TableHead className="min-w-[240px] max-w-[320px]">
