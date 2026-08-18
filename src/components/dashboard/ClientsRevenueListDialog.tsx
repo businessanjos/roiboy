@@ -338,6 +338,7 @@ export function ClientsRevenueListDialog({
                   ))}
                 </TableBody>
               </Table>
+            </div>
             )}
           </div>
         </ScrollArea>
