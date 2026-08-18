@@ -167,15 +167,44 @@ export function RevenueHistoryDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[90vh] p-0">
         <DialogHeader className="p-6 pb-2">
-          <DialogTitle className="flex items-center gap-2">
-            <TrendingUp className="h-5 w-5 text-primary" />
-            Histórico de faturamento
-          </DialogTitle>
-          <DialogDescription>
-            {mentoringStartMonth
-              ? `Evolução desde a entrada na mentoria (${monthLabelLong(mentoringStartMonth)})`
-              : "Evolução do faturamento mensal do cliente"}
-          </DialogDescription>
+          <div className="flex items-start gap-3">
+            <Avatar className="h-12 w-12 shrink-0 border border-border">
+              <AvatarImage src={client?.logoUrl || undefined} alt={client?.name || ""} />
+              <AvatarFallback className="bg-primary/10 text-primary text-sm font-semibold">
+                {client?.name
+                  ?.split(" ")
+                  .slice(0, 2)
+                  .map((n) => n[0])
+                  .join("")
+                  .toUpperCase() || "CL"}
+              </AvatarFallback>
+            </Avatar>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="text-lg leading-tight flex items-center gap-2 flex-wrap">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <span className="truncate">{client?.name || "Cliente"}</span>
+              </DialogTitle>
+              <DialogDescription className="mt-0.5">
+                {mentoringStartMonth
+                  ? `Evolução desde a entrada na mentoria (${monthLabelLong(mentoringStartMonth)})`
+                  : "Evolução do faturamento mensal do cliente"}
+              </DialogDescription>
+              {(client?.segment || client?.niche) && (
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  {client?.segment && (
+                    <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                      {client.segment}
+                    </Badge>
+                  )}
+                  {client?.niche && (
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5">
+                      {client.niche}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </DialogHeader>
 
         <ScrollArea className="max-h-[75vh]">
