@@ -242,8 +242,8 @@ export function ClientsRevenueListDialog({
             )}
           </div>
         </div>
-        <ScrollArea className="max-h-[60vh]">
-          <div className="px-6 pb-6">
+        <div className="max-h-[60vh] overflow-y-auto overflow-x-auto">
+          <div className="px-6 pb-6 min-w-0">
             {isLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 6 }).map((_, i) => (
@@ -270,8 +270,8 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-center min-w-[140px]">Produto</TableHead>
-                    <TableHead className="text-right min-w-[150px]">
+                    <TableHead className="text-center min-w-[160px]">Produto</TableHead>
+                    <TableHead className="text-right min-w-[160px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -282,7 +282,7 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-right min-w-[130px]">
+                    <TableHead className="text-right min-w-[150px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -339,10 +339,10 @@ export function ClientsRevenueListDialog({
                   ))}
                 </TableBody>
               </Table>
-            </div>
+              </div>
             )}
           </div>
-        </ScrollArea>
+        </div>
       </DialogContent>
     </Dialog>
   );
