@@ -36,6 +36,16 @@ import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectLabel,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -129,6 +139,54 @@ const growthPct = (initial: number | null, current: number | null) => {
   if (!initial || initial <= 0 || current == null) return null;
   return ((current - initial) / initial) * 100;
 };
+
+const MONTH_NAMES = [
+  "Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho",
+  "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro",
+];
+
+/** Seletor de mês/ano com o mês atual como padrão e anos recentes agrupados. */
+function MonthYearSelect({
+  value,
+  onChange,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  const now = new Date();
+  const currentYear = now.getFullYear();
+  const years = [currentYear, currentYear - 1];
+
+  const options = years.map((year) => ({
+    year,
+    months: MONTH_NAMES.map((name, idx) => ({
+      key: `${year}-${String(idx + 1).padStart(2, "0")}`,
+      label: name,
+      disabled: year === currentYear && idx > now.getMonth(),
+    })).filter((m) => !m.disabled),
+  }));
+
+  return (
+    <Select value={value} onValueChange={onChange}>
+      <SelectTrigger className="h-7 w-[150px] text-[11px] px-2">
+        <SelectValue placeholder="Selecione o mês" />
+      </SelectTrigger>
+      <SelectContent className="max-h-72 bg-popover z-50">
+        {options.map((group) => (
+          <SelectGroup key={group.year}>
+            <SelectLabel className="text-[10px] uppercase tracking-wider">{group.year}</SelectLabel>
+            {group.months.map((m) => (
+              <SelectItem key={m.key} value={m.key} className="text-xs">
+                {m.label} de {group.year}
+              </SelectItem>
+            ))}
+          </SelectGroup>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
 
 export function ClientBusinessProfile({
   clientId,
@@ -401,19 +459,15 @@ export function ClientBusinessProfile({
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
                   <TrendingUp className="h-3.5 w-3.5" /> Faturamento atual
                 </span>
-                <Input
-                  type="month"
-                  defaultValue={client.current_revenue_month || format(new Date(), "yyyy-MM")}
-                  onBlur={(e) => {
-                    if (e.target.value !== (client.current_revenue_month || "")) {
-                      commitCurrentRevenue(
-                        String(client.current_revenue ?? ""),
-                        e.target.value
-                      );
+                <MonthYearSelect
+                  value={client.current_revenue_month || format(new Date(), "yyyy-MM")}
+                  onChange={(m) => {
+                    if (m !== (client.current_revenue_month || "")) {
+                      commitCurrentRevenue(String(client.current_revenue ?? ""), m);
                     }
                   }}
-                  className="h-6 w-[130px] text-[11px] px-1"
                 />
+
               </div>
               <InlineCurrencyInput
                 value={client.current_revenue}
