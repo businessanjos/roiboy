@@ -240,7 +240,7 @@ export function ClientBusinessProfile({
     const { data: c, error: cErr } = await supabase
       .from("clients")
       .select(
-        "id, account_id, full_name, logo_url, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, business_segment, onboarding_started_at, contract_start_date, created_at, city, state, country, zip_code, business_zip_code, business_city, business_state, cpf, cnpj, responsible_user_id"
+        "id, account_id, full_name, logo_url, avatar_url, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, business_segment, onboarding_started_at, contract_start_date, created_at, city, state, country, zip_code, business_zip_code, business_city, business_state, cpf, cnpj, responsible_user_id"
       )
       .eq("id", clientId)
       .single();
