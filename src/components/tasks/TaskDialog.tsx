@@ -6,6 +6,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { formatLocalISOString } from "@/lib/dateUtils";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { CONTACT_CHANNELS, activityRequiresContactChannel } from "@/lib/tasks/contactChannels";
 import { useSector } from "@/contexts/SectorContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -318,6 +319,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     const selectedActivityType = activityTypes.find(t => t.id === formData.activity_type_id);
     const taskTitle = selectedActivityType?.name || "Atividade";
 
+    const needsChannel = activityRequiresContactChannel(selectedActivityType?.name);
+    if (needsChannel && !formData.contact_channel) {
+      toast.error("Selecione a ferramenta usada na ligação");
+      return;
+    }
+    const contactChannel = needsChannel ? formData.contact_channel : null;
+
     if (!formData.assigned_to) {
       toast.error("Selecione o responsável");
       return;
@@ -363,6 +371,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
+          contact_channel: contactChannel,
           completed_at: isCompleted ? (task.completed_at || new Date().toISOString()) : null,
           custom_status_id: targetStatusId,
         };
@@ -436,6 +445,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
+          contact_channel: contactChannel,
           created_by: currentUser.id,
           completed_at: isCompleted ? new Date().toISOString() : null,
         };
