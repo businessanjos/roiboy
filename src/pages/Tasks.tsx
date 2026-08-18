@@ -634,6 +634,13 @@ export default function Tasks() {
     return { text: formattedDate, className: "text-muted-foreground" };
   }, [customStatuses]);
 
+  // Chave da negociação vinculada a uma tarefa (negócio tem prioridade sobre lead)
+  const negotiationKey = useCallback((task: Task): string | null => {
+    if (task.deal_id) return `deal:${task.deal_id}`;
+    if (task.lead_id) return `lead:${task.lead_id}`;
+    return null;
+  }, []);
+
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
   const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
     // Search filter
