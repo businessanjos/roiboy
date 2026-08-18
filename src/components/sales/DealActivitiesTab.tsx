@@ -35,6 +35,7 @@ interface Task {
   lead_id: string | null;
   client_id: string | null;
   activity_type_id: string | null;
+  contact_channel?: string | null;
   meeting_url: string | null;
   meeting_platform: string | null;
   assigned_user?: {
@@ -140,6 +141,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         lead_id,
         client_id,
         activity_type_id,
+        contact_channel,
         meeting_url,
         meeting_platform,
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url),

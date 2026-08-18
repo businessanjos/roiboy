@@ -81,6 +81,7 @@ interface PendingTask {
   due_date: string | null;
   due_time: string | null;
   activity_type_id: string | null;
+  contact_channel?: string | null;
   activity_type?: { name: string; color: string; icon: string | null } | null;
 }
 
@@ -299,7 +300,7 @@ export function ZappCRMPanel({
       let query = supabase
         .from("internal_tasks")
         .select(`
-          id, title, due_date, due_time, activity_type_id,
+          id, title, due_date, due_time, activity_type_id, contact_channel,
           activity_type:activity_types(name, color, icon)
         `)
         .is("completed_at", null)
@@ -944,6 +945,7 @@ export function ZappCRMPanel({
           lead_id: conversationLeadId || null,
           assigned_to: null,
           activity_type_id: editingTask.activity_type_id || null,
+          contact_channel: editingTask.contact_channel ?? null,
         } : null}
         dealId={activeDeal?.id}
         leadId={conversationLeadId || undefined}
