@@ -22,8 +22,10 @@ import {
   Trophy,
   Activity,
   MapPin,
+  LineChart as LineChartIcon,
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
+import { RevenueHistoryDialog } from "./RevenueHistoryDialog";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
@@ -225,6 +227,7 @@ export function ClientBusinessProfile({
 
   // Local drafts for inline editable text fields
   const [drafts, setDrafts] = useState<Partial<Record<keyof ClientRow, string>>>({});
+  const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false);
 
 
   const fetchAll = async () => {
@@ -557,8 +560,20 @@ export function ClientBusinessProfile({
                 </CardDescription>
               </div>
             </div>
-            {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <div className="flex items-center gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8"
+                onClick={() => setRevenueHistoryOpen(true)}
+              >
+                <LineChartIcon className="h-3.5 w-3.5 mr-1.5" />
+                Histórico de faturamento
+              </Button>
+            </div>
           </div>
+
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Revenue row */}
@@ -768,6 +783,14 @@ export function ClientBusinessProfile({
           />
         </CardContent>
       </Card>
+
+      <RevenueHistoryDialog
+        open={revenueHistoryOpen}
+        onOpenChange={setRevenueHistoryOpen}
+        history={history}
+        initialRevenue={client.initial_revenue}
+        mentoringStartMonth={mentoringStartMonth}
+      />
 
       <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
       </>
