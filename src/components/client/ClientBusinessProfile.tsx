@@ -80,6 +80,8 @@ interface ClientBusinessProfileProps {
 interface ClientRow {
   id: string;
   account_id: string;
+  full_name: string | null;
+  logo_url: string | null;
   initial_revenue: number | null;
   current_revenue: number | null;
   current_revenue_month: string | null;
@@ -100,6 +102,8 @@ interface ClientRow {
   business_state: string | null;
   cpf: string | null;
   cnpj: string | null;
+  responsible_user_id: string | null;
+  business_segment: string | null;
 }
 
 interface HistoryRow {
@@ -235,7 +239,7 @@ export function ClientBusinessProfile({
     const { data: c, error: cErr } = await supabase
       .from("clients")
       .select(
-        "id, account_id, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, onboarding_started_at, contract_start_date, created_at, city, state, country, zip_code, business_zip_code, business_city, business_state, cpf, cnpj"
+        "id, account_id, full_name, logo_url, initial_revenue, current_revenue, current_revenue_month, differential, method_name, education, education_specialty, business_niche, business_segment, onboarding_started_at, contract_start_date, created_at, city, state, country, zip_code, business_zip_code, business_city, business_state, cpf, cnpj, responsible_user_id"
       )
       .eq("id", clientId)
       .single();
@@ -790,6 +794,12 @@ export function ClientBusinessProfile({
         history={history}
         initialRevenue={client.initial_revenue}
         mentoringStartMonth={mentoringStartMonth}
+        client={{
+          name: client.full_name,
+          logoUrl: client.logo_url,
+          segment: client.business_segment,
+          niche: client.business_niche,
+        }}
       />
 
       <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
