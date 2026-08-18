@@ -797,6 +797,7 @@ export function ClientBusinessProfile({
         mentoringStartMonth={mentoringStartMonth}
         client={{
           name: client.full_name,
+          avatarUrl: client.avatar_url,
           logoUrl: client.logo_url,
           segment: client.business_segment,
           niche: client.business_niche,
