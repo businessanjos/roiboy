@@ -42,7 +42,8 @@ export interface RevenueHistoryPoint {
 
 interface ClientIdentity {
   name: string | null;
-  logoUrl: string | null;
+  avatarUrl?: string | null;
+  logoUrl?: string | null;
   segment?: string | null;
   niche?: string | null;
 }
