@@ -109,7 +109,16 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
     const chart = Array.from(byMonth.entries())
       .filter(([m]) => m >= bounds.from && m <= bounds.to)
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([m, v]) => ({ month: m, label: monthLabel(m), total: v.total, clients: v.clients.size }));
+      .map(([m, v]) => ({
+        month: m,
+        label: monthLabel(m),
+        total: v.total,
+        clients: v.clients.size,
+        missing: totalClients != null ? Math.max(0, totalClients - v.clients.size) : null,
+      }));
+
+    const clientsWithData = new Set(rows.map((r) => r.client_id)).size;
+    const missingClients = totalClients != null ? Math.max(0, totalClients - clientsWithData) : null;
 
     return {
       yearTotal,
@@ -122,10 +131,12 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
       momDelta,
       yoyDelta,
       chart,
-      clientsWithData: new Set(rows.map((r) => r.client_id)).size,
+      clientsWithData,
+      totalClients,
+      missingClients,
       hasData: rows.length > 0,
     };
-  }, [data, allowed, periodFilter, customRange]);
+  }, [data, allowed, periodFilter, customRange, totalClients]);
 
   return (
     <Card className="shadow-card">
