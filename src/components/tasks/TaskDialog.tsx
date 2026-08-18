@@ -567,7 +567,16 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             <Label>Tipo de Atividade *</Label>
             <Select
               value={formData.activity_type_id}
-              onValueChange={(value) => setFormData({ ...formData, activity_type_id: value })}
+              onValueChange={(value) => {
+                const nextType = activityTypes.find((t) => t.id === value);
+                setFormData({
+                  ...formData,
+                  activity_type_id: value,
+                  contact_channel: activityRequiresContactChannel(nextType?.name)
+                    ? formData.contact_channel
+                    : "",
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de atividade" />
@@ -587,6 +596,32 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               </SelectContent>
             </Select>
           </div>
+
+          {activityRequiresContactChannel(
+            activityTypes.find((t) => t.id === formData.activity_type_id)?.name
+          ) && (
+            <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <Label>Ferramenta utilizada *</Label>
+              <Select
+                value={formData.contact_channel}
+                onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Como a ligação foi feita?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_CHANNELS.map((channel) => (
+                    <SelectItem key={channel.value} value={channel.value}>
+                      {channel.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Usado para mapear qual canal é mais eficiente nas ligações.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="task-description">Descrição</Label>
