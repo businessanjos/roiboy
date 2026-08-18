@@ -242,7 +242,10 @@ export function ClientsRevenueListDialog({
             <Input
               placeholder="Buscar por nome ou produto..."
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e) => {
+                setSearch(e.target.value);
+                handlePageChange(1);
+              }}
               className="pl-9 pr-9"
             />
             {search && (
