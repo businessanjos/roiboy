@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -6,8 +6,10 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { BarChart, Bar, ResponsiveContainer, XAxis, YAxis, Tooltip as RTooltip, CartesianGrid } from "recharts";
-import { DollarSign, Info, TrendingDown, TrendingUp } from "lucide-react";
+import { DollarSign, Eye, Info, TrendingDown, TrendingUp } from "lucide-react";
 import type { DateRange } from "react-day-picker";
+import { ClientsRevenueListDialog } from "./ClientsRevenueListDialog";
+import { Button } from "@/components/ui/button";
 
 interface Props {
   accountId?: string;
@@ -58,6 +60,7 @@ function periodBounds(periodFilter: string, customRange?: DateRange): { from: st
 }
 
 export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, productLabel, periodFilter, customRange }: Props) {
+  const [dialogOpen, setDialogOpen] = useState(false);
   const { data, isLoading } = useQuery({
     queryKey: ["dashboard-clients-revenue-history", accountId],
     enabled: !!accountId,
@@ -168,6 +171,17 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
             </CardDescription>
           </div>
           <Badge variant="secondary">{stats.periodLabel}</Badge>
+          {stats.hasData && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-8 gap-1"
+              onClick={() => setDialogOpen(true)}
+            >
+              <Eye className="h-3.5 w-3.5" />
+              Ver clientes
+            </Button>
+          )}
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -268,6 +282,15 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
           </>
         )}
       </CardContent>
+      <ClientsRevenueListDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        accountId={accountId}
+        clientIds={clientIds}
+        productLabel={productLabel}
+        periodFilter={periodFilter}
+        customRange={customRange}
+      />
     </Card>
   );
 }
