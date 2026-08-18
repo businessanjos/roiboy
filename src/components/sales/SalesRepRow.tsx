@@ -102,12 +102,19 @@ export const SalesRepRow = memo(function SalesRepRow({ rep, onViewDetails }: Sal
       </TableCell>
 
       {/* Scheduling */}
-      <TableCell className="text-center py-3">
+      <TableCell
+        className="text-center py-3"
+        title={`Contagem real (sem dedupe por negócio): ${rep.scheduled_calls_raw} agendamentos, ${rep.noshow_calls_raw} no-show, ${rep.meetings_held_raw} reuniões realizadas + ${rep.scheduled_completed_raw} agendadas concluídas`}
+      >
         <span className="font-semibold text-sm">{rep.scheduled_calls}</span>
+        {rep.scheduled_calls_raw !== rep.scheduled_calls && (
+          <span className="text-[10px] text-muted-foreground"> (real {rep.scheduled_calls_raw})</span>
+        )}
         {rep.noshow_calls > 0 && (
           <div>
             <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-red-500 text-red-600">
               {rep.noshow_calls} no-show
+              {rep.noshow_calls_raw !== rep.noshow_calls ? ` (real ${rep.noshow_calls_raw})` : ""}
             </Badge>
           </div>
         )}

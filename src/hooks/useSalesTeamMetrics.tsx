@@ -37,6 +37,13 @@ export interface SalesRepMetrics {
   scheduled_calls: number;
   noshow_calls: number;
   meetings_held: number;
+
+  // Contagem REAL (bruta) de tarefas por tipo — sem dedupe por negócio
+  scheduled_calls_raw: number;
+  noshow_calls_raw: number;
+  meetings_held_raw: number;
+  /** Tarefas "Call Comercial Agendada" que foram concluídas no período (não contam em meetings_held) */
+  scheduled_completed_raw: number;
 }
 
 interface UseSalesTeamMetricsOptions {
@@ -204,6 +211,10 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           scheduled_calls: 0,
           noshow_calls: 0,
           meetings_held: 0,
+          scheduled_calls_raw: 0,
+          noshow_calls_raw: 0,
+          meetings_held_raw: 0,
+          scheduled_completed_raw: 0,
         };
       }
 
@@ -328,12 +339,18 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
             task.title,
           );
           const key = meetingDedupeKey(task.assigned_to, task);
-          if (kind === "scheduled" && !seenScheduled.has(key)) {
-            seenScheduled.add(key);
-            metricsMap[task.assigned_to].scheduled_calls++;
-          } else if (kind === "noshow" && !seenNoshow.has(key)) {
-            seenNoshow.add(key);
-            metricsMap[task.assigned_to].noshow_calls++;
+          if (kind === "scheduled") {
+            metricsMap[task.assigned_to].scheduled_calls_raw++;
+            if (!seenScheduled.has(key)) {
+              seenScheduled.add(key);
+              metricsMap[task.assigned_to].scheduled_calls++;
+            }
+          } else if (kind === "noshow") {
+            metricsMap[task.assigned_to].noshow_calls_raw++;
+            if (!seenNoshow.has(key)) {
+              seenNoshow.add(key);
+              metricsMap[task.assigned_to].noshow_calls++;
+            }
           }
         }
       }
@@ -347,7 +364,13 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
             (task.activity_types as any)?.name,
             task.title,
           );
+          // Agendadas concluídas: reuniões que aconteceram mas ficam de fora do total
+          if (kind === "scheduled") {
+            metricsMap[task.assigned_to].scheduled_completed_raw++;
+            continue;
+          }
           if (kind !== "held") continue;
+          metricsMap[task.assigned_to].meetings_held_raw++;
           const key = meetingDedupeKey(task.assigned_to, task);
           if (seenHeld.has(key)) continue;
           seenHeld.add(key);
