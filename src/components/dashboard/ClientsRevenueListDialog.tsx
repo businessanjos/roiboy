@@ -259,7 +259,7 @@ export function ClientsRevenueListDialog({
                 <Table className="min-w-full">
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="min-w-[260px] max-w-[360px]">
+                      <TableHead className="min-w-[240px] max-w-[320px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -270,8 +270,8 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-center min-w-[160px]">Produto</TableHead>
-                    <TableHead className="text-right min-w-[160px]">
+                    <TableHead className="text-center min-w-[140px]">Produto</TableHead>
+                    <TableHead className="text-right min-w-[150px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -282,7 +282,7 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-right min-w-[150px]">
+                    <TableHead className="text-right min-w-[120px]">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -290,7 +290,7 @@ export function ClientsRevenueListDialog({
                         onClick={() => toggleSort("last_month_revenue")}
                         title="Último mês preenchido"
                       >
-                        Mês mais recente
+                        Último mês
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
