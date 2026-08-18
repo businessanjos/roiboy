@@ -544,24 +544,29 @@ export function ClientBusinessProfile({
             <div className="rounded-lg border bg-card p-3">
               <div className="flex items-center justify-between mb-1">
                 <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                  <TrendingUp className="h-3.5 w-3.5" /> Faturamento atual
+                  <TrendingUp className="h-3.5 w-3.5" /> Faturamento
                 </span>
                 <MonthYearSelect
-                  value={client.current_revenue_month || format(new Date(), "yyyy-MM")}
-                  onChange={(m) => {
-                    if (m !== (client.current_revenue_month || "")) {
-                      commitCurrentRevenue(String(client.current_revenue ?? ""), m);
-                    }
-                  }}
+                  value={selectedMonth}
+                  onChange={setSelectedMonth}
+                  filledMonths={new Set(revenueByMonth.keys())}
                 />
-
               </div>
               <InlineCurrencyInput
-                value={client.current_revenue}
-                onCommit={(raw) => commitCurrentRevenue(raw)}
+                key={selectedMonth}
+                value={selectedMonthRevenue}
+                onCommit={commitMonthRevenue}
                 className="text-lg font-bold text-primary"
               />
+              <p className="text-[10px] text-muted-foreground mt-1">
+                {selectedMonthRevenue == null
+                  ? `Sem faturamento informado para ${monthLabel(selectedMonth)}`
+                  : selectedMonth === client.current_revenue_month
+                  ? "Mês mais recente informado"
+                  : `Valor de ${monthLabel(selectedMonth)}`}
+              </p>
             </div>
+
             <div className="rounded-lg border bg-card p-3 flex flex-col justify-center">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold">
                 Evolução
