@@ -339,12 +339,18 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
             task.title,
           );
           const key = meetingDedupeKey(task.assigned_to, task);
-          if (kind === "scheduled" && !seenScheduled.has(key)) {
-            seenScheduled.add(key);
-            metricsMap[task.assigned_to].scheduled_calls++;
-          } else if (kind === "noshow" && !seenNoshow.has(key)) {
-            seenNoshow.add(key);
-            metricsMap[task.assigned_to].noshow_calls++;
+          if (kind === "scheduled") {
+            metricsMap[task.assigned_to].scheduled_calls_raw++;
+            if (!seenScheduled.has(key)) {
+              seenScheduled.add(key);
+              metricsMap[task.assigned_to].scheduled_calls++;
+            }
+          } else if (kind === "noshow") {
+            metricsMap[task.assigned_to].noshow_calls_raw++;
+            if (!seenNoshow.has(key)) {
+              seenNoshow.add(key);
+              metricsMap[task.assigned_to].noshow_calls++;
+            }
           }
         }
       }
@@ -358,7 +364,13 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
             (task.activity_types as any)?.name,
             task.title,
           );
+          // Agendadas concluídas: reuniões que aconteceram mas ficam de fora do total
+          if (kind === "scheduled") {
+            metricsMap[task.assigned_to].scheduled_completed_raw++;
+            continue;
+          }
           if (kind !== "held") continue;
+          metricsMap[task.assigned_to].meetings_held_raw++;
           const key = meetingDedupeKey(task.assigned_to, task);
           if (seenHeld.has(key)) continue;
           seenHeld.add(key);
