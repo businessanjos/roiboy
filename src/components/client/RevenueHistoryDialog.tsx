@@ -120,6 +120,7 @@ export function RevenueHistoryDialog({
   history,
   initialRevenue,
   mentoringStartMonth,
+  client,
 }: Props) {
   const rows = useMemo(() => {
     const filtered = history
