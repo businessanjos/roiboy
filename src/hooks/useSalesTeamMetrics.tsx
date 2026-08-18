@@ -37,6 +37,13 @@ export interface SalesRepMetrics {
   scheduled_calls: number;
   noshow_calls: number;
   meetings_held: number;
+
+  // Contagem REAL (bruta) de tarefas por tipo — sem dedupe por negócio
+  scheduled_calls_raw: number;
+  noshow_calls_raw: number;
+  meetings_held_raw: number;
+  /** Tarefas "Call Comercial Agendada" que foram concluídas no período (não contam em meetings_held) */
+  scheduled_completed_raw: number;
 }
 
 interface UseSalesTeamMetricsOptions {
