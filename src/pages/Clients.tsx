@@ -47,6 +47,7 @@ import { MergeClientDialog } from "@/components/client/MergeClientDialog";
 import { useClientMerge } from "@/hooks/useClientMerge";
 import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
 import { OverdueBadge } from "@/components/client/OverdueBadge";
+import { RevenueImportDialog } from "@/components/client/RevenueImportDialog";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -1640,6 +1641,9 @@ export default function Clients() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
+
+          {/* Monthly revenue importer */}
+          <RevenueImportDialog onImported={() => fetchClients()} />
 
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
