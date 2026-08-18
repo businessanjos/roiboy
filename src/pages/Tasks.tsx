@@ -256,6 +256,7 @@ export default function Tasks() {
       setFilterDateStart("");
       setFilterDateEnd("");
       setFilterStage("all");
+      setFilterLead("all");
       setSearchTerm("");
     }
   }, [setFilterUser, setFilterActivityType, setFilterDateStart, setFilterDateEnd, setFilterStage]);
