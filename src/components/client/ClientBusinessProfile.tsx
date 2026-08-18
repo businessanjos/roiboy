@@ -355,13 +355,13 @@ export function ClientBusinessProfile({
           .from("client_revenue_history")
           .delete()
           .eq("client_id", client.id)
-          .eq("month", `${selectedMonth}-01`);
+          .eq("month", selectedMonth);
       } else {
         const { error } = await supabase.from("client_revenue_history").upsert(
           {
             client_id: client.id,
             account_id: client.account_id,
-            month: `${selectedMonth}-01`,
+            month: selectedMonth,
             revenue: value,
             created_by: currentUser.id,
           } as any,
