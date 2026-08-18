@@ -13,6 +13,9 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Briefcase, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -205,6 +208,9 @@ export default function Tasks() {
   const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
   const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
   const [filterStage, setFilterStage] = usePersistedFilter<string>("tasks", "filterStage", "all");
+  // Filtro por negociação (deal ou lead) para comparar tarefas com o pipeline
+  const [filterLead, setFilterLead] = usePersistedFilter<string>("tasks", "filterLead", "all");
+  const [leadFilterOpen, setLeadFilterOpen] = useState(false);
   const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
@@ -250,6 +256,7 @@ export default function Tasks() {
       setFilterDateStart("");
       setFilterDateEnd("");
       setFilterStage("all");
+      setFilterLead("all");
       setSearchTerm("");
     }
   }, [setFilterUser, setFilterActivityType, setFilterDateStart, setFilterDateEnd, setFilterStage]);
@@ -631,6 +638,13 @@ export default function Tasks() {
     return { text: formattedDate, className: "text-muted-foreground" };
   }, [customStatuses]);
 
+  // Chave da negociação vinculada a uma tarefa (negócio tem prioridade sobre lead)
+  const negotiationKey = useCallback((task: Task): string | null => {
+    if (task.deal_id) return `deal:${task.deal_id}`;
+    if (task.lead_id) return `lead:${task.lead_id}`;
+    return null;
+  }, []);
+
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
   const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
     // Search filter
@@ -694,8 +708,11 @@ export default function Tasks() {
     const matchesStage = filterStage === "all" || 
       task.deals?.stage?.id === filterStage;
 
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, isHistoricalUserFilter]);
+    // Negotiation (deal/lead) filter
+    const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
+
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
@@ -721,8 +738,31 @@ export default function Tasks() {
       matchesSector = activitySectorId === currentSector.id;
     }
     const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, isHistoricalUserFilter]);
+    const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage && matchesLead;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
+
+  // Opções de negociação disponíveis a partir das tarefas carregadas
+  const leadOptions = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; sublabel: string | null; count: number }>();
+    tasks.forEach((task) => {
+      const key = negotiationKey(task);
+      if (!key) return;
+      const label =
+        task.deals?.title ||
+        task.deals?.client?.full_name ||
+        task.deals?.lead?.full_name ||
+        task.leads?.full_name ||
+        "Negociação sem título";
+      const sublabel = task.deals ? (task.deals.stage?.name || null) : "Lead";
+      const existing = map.get(key);
+      if (existing) existing.count += 1;
+      else map.set(key, { key, label, sublabel, count: 1 });
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [tasks]);
+
+  const selectedLeadOption = leadOptions.find((o) => o.key === filterLead) || null;
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
@@ -854,7 +894,7 @@ export default function Tasks() {
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, sortBy, sortDirection]);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
@@ -1524,13 +1564,14 @@ export default function Tasks() {
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all"}
+        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all"}
         onClearFilters={() => {
           setFilterUser("all");
           setFilterActivityType("all");
           setFilterDateStart("");
           setFilterDateEnd("");
           setFilterStage("all");
+          setFilterLead("all");
         }}
       >
         <FilterItem>
@@ -1613,6 +1654,82 @@ export default function Tasks() {
                 ))}
               </SelectContent>
             </Select>
+          </FilterItem>
+        )}
+        <FilterItem>
+          <Popover open={leadFilterOpen} onOpenChange={setLeadFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={leadFilterOpen}
+                className="w-full sm:w-[240px] h-10 justify-between font-normal"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {selectedLeadOption ? selectedLeadOption.label : "Todas as negociações"}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar negociação ou lead..." />
+                <CommandList>
+                  <CommandEmpty>Nenhuma negociação nas tarefas carregadas.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todas as negociações"
+                      onSelect={() => {
+                        setFilterLead("all");
+                        setLeadFilterOpen(false);
+                      }}
+                    >
+                      Todas as negociações
+                    </CommandItem>
+                    {leadOptions.map((opt) => (
+                      <CommandItem
+                        key={opt.key}
+                        value={`${opt.label} ${opt.sublabel ?? ""}`}
+                        onSelect={() => {
+                          setFilterLead(opt.key);
+                          setLeadFilterOpen(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">{opt.label}</p>
+                            {opt.sublabel && (
+                              <p className="truncate text-xs text-muted-foreground">{opt.sublabel}</p>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            {opt.count}
+                          </Badge>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </FilterItem>
+        {selectedLeadOption && (
+          <FilterItem>
+            <Button
+              variant="secondary"
+              className="h-10 gap-2"
+              onClick={() => {
+                const [kind, id] = filterLead.split(":");
+                navigate(kind === "deal" ? `/pipeline?deal=${id}` : `/leads?lead=${id}`);
+              }}
+            >
+              <ArrowRight className="h-4 w-4" />
+              Ver no pipeline
+            </Button>
           </FilterItem>
         )}
         <FilterItem>
