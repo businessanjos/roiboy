@@ -1717,6 +1717,21 @@ export default function Tasks() {
             </PopoverContent>
           </Popover>
         </FilterItem>
+        {selectedLeadOption && (
+          <FilterItem>
+            <Button
+              variant="secondary"
+              className="h-10 gap-2"
+              onClick={() => {
+                const [kind, id] = filterLead.split(":");
+                navigate(kind === "deal" ? `/pipeline?deal=${id}` : `/leads?lead=${id}`);
+              }}
+            >
+              <ArrowRight className="h-4 w-4" />
+              Ver no pipeline
+            </Button>
+          </FilterItem>
+        )}
         <FilterItem>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
             <SelectTrigger className="w-full sm:w-[160px] h-10">
