@@ -40,12 +40,20 @@ export interface RevenueHistoryPoint {
   notes?: string | null;
 }
 
+interface ClientIdentity {
+  name: string | null;
+  logoUrl: string | null;
+  segment?: string | null;
+  niche?: string | null;
+}
+
 interface Props {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   history: RevenueHistoryPoint[];
   initialRevenue: number | null;
   mentoringStartMonth: string | null;
+  client?: ClientIdentity;
 }
 
 const currency = (v: number | null | undefined) =>
