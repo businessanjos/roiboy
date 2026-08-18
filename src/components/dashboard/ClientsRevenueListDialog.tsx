@@ -224,6 +224,7 @@ export function ClientsRevenueListDialog({
 
   const toggleSort = (key: SortKey) => {
     setSort((prev) => ({ key, desc: prev.key === key ? !prev.desc : true }));
+    handlePageChange(1);
   };
 
   return (
