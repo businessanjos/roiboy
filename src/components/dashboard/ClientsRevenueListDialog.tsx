@@ -317,7 +317,7 @@ export function ClientsRevenueListDialog({
                       <TableCell className="text-center">
                         <Badge
                           variant="outline"
-                          className="text-xs font-medium"
+                          className="text-xs font-medium whitespace-nowrap"
                           style={{
                             backgroundColor: r.product_color ? `${r.product_color}20` : undefined,
                             borderColor: r.product_color || "#6b7280",
