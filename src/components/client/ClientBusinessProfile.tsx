@@ -22,8 +22,10 @@ import {
   Trophy,
   Activity,
   MapPin,
+  LineChart as LineChartIcon,
 } from "lucide-react";
 import { ClientClinicsManager } from "./ClientClinicsManager";
+import { RevenueHistoryDialog } from "./RevenueHistoryDialog";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
@@ -225,6 +227,7 @@ export function ClientBusinessProfile({
 
   // Local drafts for inline editable text fields
   const [drafts, setDrafts] = useState<Partial<Record<keyof ClientRow, string>>>({});
+  const [revenueHistoryOpen, setRevenueHistoryOpen] = useState(false);
 
 
   const fetchAll = async () => {
@@ -780,6 +783,14 @@ export function ClientBusinessProfile({
           />
         </CardContent>
       </Card>
+
+      <RevenueHistoryDialog
+        open={revenueHistoryOpen}
+        onOpenChange={setRevenueHistoryOpen}
+        history={history}
+        initialRevenue={client.initial_revenue}
+        mentoringStartMonth={mentoringStartMonth}
+      />
 
       <ClientClinicsManager clientId={clientId} accountId={client.account_id} />
       </>
