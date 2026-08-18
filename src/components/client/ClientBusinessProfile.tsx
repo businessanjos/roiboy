@@ -149,9 +149,11 @@ const MONTH_NAMES = [
 function MonthYearSelect({
   value,
   onChange,
+  filledMonths,
 }: {
   value: string;
   onChange: (value: string) => void;
+  filledMonths?: Set<string>;
 }) {
   const now = new Date();
   const currentYear = now.getFullYear();
@@ -179,7 +181,15 @@ function MonthYearSelect({
             <SelectLabel className="text-[10px] uppercase tracking-wider">{group.year}</SelectLabel>
             {group.months.map((m) => (
               <SelectItem key={m.key} value={m.key} className="text-xs">
-                {m.label} de {group.year}
+                <span className="flex items-center gap-1.5">
+                  <span
+                    className={
+                      "h-1.5 w-1.5 rounded-full " +
+                      (filledMonths?.has(m.key) ? "bg-emerald-500" : "bg-muted-foreground/30")
+                    }
+                  />
+                  {m.label} de {group.year}
+                </span>
               </SelectItem>
             ))}
           </SelectGroup>
@@ -188,6 +198,7 @@ function MonthYearSelect({
     </Select>
   );
 }
+
 
 
 export function ClientBusinessProfile({
