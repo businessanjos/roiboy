@@ -211,6 +211,10 @@ export function useSalesTeamMetrics(options: UseSalesTeamMetricsOptions = {}) {
           scheduled_calls: 0,
           noshow_calls: 0,
           meetings_held: 0,
+          scheduled_calls_raw: 0,
+          noshow_calls_raw: 0,
+          meetings_held_raw: 0,
+          scheduled_completed_raw: 0,
         };
       }
 
