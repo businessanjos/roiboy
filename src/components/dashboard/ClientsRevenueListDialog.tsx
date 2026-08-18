@@ -313,7 +313,7 @@ export function ClientsRevenueListDialog({
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {paginatedItems.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell>
                         <div className="flex items-center gap-3">
@@ -356,6 +356,16 @@ export function ClientsRevenueListDialog({
                 </TableBody>
               </Table>
               </div>
+            )}
+            {totalPages > 1 && (
+              <TablePagination
+                currentPage={currentPage}
+                totalPages={totalPages}
+                totalItems={totalItems}
+                pageSize={pageSize}
+                onPageChange={handlePageChange}
+                onPageSizeChange={handlePageSizeChange}
+              />
             )}
           </div>
         </div>
