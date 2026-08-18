@@ -557,8 +557,20 @@ export function ClientBusinessProfile({
                 </CardDescription>
               </div>
             </div>
-            {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            <div className="flex items-center gap-2">
+              {saving && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8"
+                onClick={() => setRevenueHistoryOpen(true)}
+              >
+                <LineChartIcon className="h-3.5 w-3.5 mr-1.5" />
+                Histórico de faturamento
+              </Button>
+            </div>
           </div>
+
         </CardHeader>
         <CardContent className="space-y-4">
           {/* Revenue row */}
