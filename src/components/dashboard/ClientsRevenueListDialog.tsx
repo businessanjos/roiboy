@@ -215,7 +215,7 @@ export function ClientsRevenueListDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl max-h-[90vh] p-0">
+      <DialogContent className="max-w-6xl max-h-[90vh] p-0 w-[calc(100vw-3rem)]">
         <DialogHeader className="p-6 pb-2">
           <DialogTitle className="text-lg">Clientes com faturamento informado</DialogTitle>
           <DialogDescription>
