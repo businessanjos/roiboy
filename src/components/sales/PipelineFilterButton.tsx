@@ -35,7 +35,9 @@ interface SalesUser {
   id: string;
   name: string;
   avatar_url: string | null;
+  is_inactive?: boolean;
 }
+
 
 interface ProductOption {
   id: string;
