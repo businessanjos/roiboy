@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { getContactChannelLabel } from "@/lib/tasks/contactChannels";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -142,6 +143,7 @@ interface Task {
   leads: Lead | null;
   assigned_user: User | null;
   custom_status_id: string | null;
+  contact_channel: string | null;
   activity_type?: {
     id: string;
     name: string;
@@ -867,6 +869,7 @@ export default function Tasks() {
         "Status": statusName(task),
         "Prioridade": PRIORITY_CONFIG[task.priority]?.label || task.priority,
         "Tipo de atividade": task.activity_type?.name || "",
+        "Ferramenta": getContactChannelLabel(task.contact_channel),
         "Responsável": task.assigned_user?.name || "",
         "Cliente": task.clients?.full_name || "",
         "Lead": task.leads?.full_name || "",
@@ -1023,6 +1026,8 @@ export default function Tasks() {
                   </TableHead>
                 )}
                 
+                <TableHead className="font-medium text-center min-w-[110px]">Ferramenta</TableHead>
+
                 <TableHead className="font-medium min-w-[120px]">
                   {isInVendasSector ? "Contexto" : "Cliente"}
                 </TableHead>
@@ -1061,6 +1066,7 @@ export default function Tasks() {
                     <TableCell className="text-center"><Skeleton className="h-6 w-16 mx-auto rounded-full" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-5 w-24 mx-auto" /></TableCell>
                     {isInVendasSector && <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>}
+                    <TableCell className="text-center"><Skeleton className="h-5 w-20 mx-auto" /></TableCell>
                     <TableCell><Skeleton className="h-4 w-28" /></TableCell>
                     <TableCell className="text-center"><Skeleton className="h-7 w-7 mx-auto rounded-full" /></TableCell>
                     <TableCell className="text-right"><Skeleton className="h-8 w-8 ml-auto rounded" /></TableCell>
@@ -1068,7 +1074,7 @@ export default function Tasks() {
                 ))
               ) : tasks.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={isInVendasSector ? 9 : 8} className="text-center py-12">
+                  <TableCell colSpan={isInVendasSector ? 10 : 9} className="text-center py-12">
                     <div className="flex flex-col items-center text-muted-foreground">
                       <div className="p-4 rounded-full bg-muted/50 mb-4">
                         <ClipboardList className="h-10 w-10 opacity-50" />
@@ -1268,6 +1274,15 @@ export default function Tasks() {
                           )}
                         </TableCell>
                       )}
+                      <TableCell className="text-center">
+                        {task.contact_channel ? (
+                          <span className="inline-flex px-2 py-1 rounded-md text-xs font-medium bg-muted text-foreground/80">
+                            {getContactChannelLabel(task.contact_channel)}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        )}
+                      </TableCell>
                       <TableCell>
                         <div className="flex flex-col gap-0.5">
                           {isInVendasSector && task.deals ? (
