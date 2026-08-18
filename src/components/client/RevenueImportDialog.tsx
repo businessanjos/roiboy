@@ -354,8 +354,8 @@ export function RevenueImportDialog({ onImported }: { onImported?: () => void })
                     {rows.map((r) => (
                       <TableRow key={r.line} className={r.error ? "bg-destructive/5" : undefined}>
                         <TableCell className="text-xs text-muted-foreground">{r.line}</TableCell>
-                        <TableCell className="text-sm">{r.clientName ?? r.rawClient || "—"}</TableCell>
-                        <TableCell className="text-sm">{r.month ?? r.rawMonth || "—"}</TableCell>
+                        <TableCell className="text-sm">{r.clientName ?? (r.rawClient || "—")}</TableCell>
+                        <TableCell className="text-sm">{r.month ?? (r.rawMonth || "—")}</TableCell>
                         <TableCell className="text-sm">
                           {r.revenue !== null
                             ? r.revenue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
