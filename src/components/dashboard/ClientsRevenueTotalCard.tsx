@@ -159,8 +159,12 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
               </TooltipProvider>
             </CardTitle>
             <CardDescription>
-              {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {stats.clientsWithData} cliente(s) com
-              faturamento informado
+              {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {stats.clientsWithData} de{" "}
+              {stats.totalClients != null ? stats.totalClients : stats.clientsWithData} cliente(s) com faturamento
+              informado
+              {stats.missingClients != null && stats.missingClients > 0 && (
+                <> · <span className="text-warning font-medium">{stats.missingClients} sem preenchimento</span></>
+              )}
             </CardDescription>
           </div>
           <Badge variant="secondary">{stats.periodLabel}</Badge>
