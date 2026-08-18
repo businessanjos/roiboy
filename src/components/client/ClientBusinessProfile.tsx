@@ -312,19 +312,88 @@ export function ClientBusinessProfile({
     await saveField({ initial_revenue: value } as any);
   };
 
-  const commitCurrentRevenue = async (raw: string, month?: string) => {
+  // Mapa mês -> faturamento (histórico + o mês do faturamento atual do cliente)
+  const revenueByMonth = useMemo(() => {
+    const map = new Map<string, number>();
+    history.forEach((h) => {
+      if (h.month) map.set(String(h.month).slice(0, 7), Number(h.revenue));
+    });
+    if (client?.current_revenue_month && client.current_revenue != null && !map.has(client.current_revenue_month)) {
+      map.set(client.current_revenue_month, client.current_revenue);
+    }
+    return map;
+  }, [history, client?.current_revenue_month, client?.current_revenue]);
+
+  const selectedMonthRevenue = revenueByMonth.has(selectedMonth)
+    ? (revenueByMonth.get(selectedMonth) as number)
+    : null;
+
+  // Inicializa o mês exibido com o mês do último faturamento registrado (só uma vez)
+  useEffect(() => {
+    if (monthInitialized.current || loading || !client) return;
+    monthInitialized.current = true;
+    const months = Array.from(revenueByMonth.keys()).sort();
+    const latest = months[months.length - 1];
+    setSelectedMonth(client.current_revenue_month || latest || format(new Date(), "yyyy-MM"));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, client?.id]);
+
+  useEffect(() => {
+    monthInitialized.current = false;
+  }, [clientId]);
+
+  /** Grava o faturamento do mês selecionado (histórico) e sincroniza o "atual" se for o mês mais recente. */
+  const commitMonthRevenue = async (raw: string) => {
+    if (!client || !currentUser?.account_id) return;
     const value = parseCurrencyInput(raw);
-    const targetMonth = month || client?.current_revenue_month || format(new Date(), "yyyy-MM");
-    if (
-      (client?.current_revenue ?? null) === value &&
-      (client?.current_revenue_month ?? null) === targetMonth
-    )
-      return;
-    await saveField({
-      current_revenue: value,
-      current_revenue_month: targetMonth,
-    } as any);
+    if ((selectedMonthRevenue ?? null) === value) return;
+
+    setSaving(true);
+    try {
+      if (value == null) {
+        await supabase
+          .from("client_revenue_history")
+          .delete()
+          .eq("client_id", client.id)
+          .eq("month", `${selectedMonth}-01`);
+      } else {
+        const { error } = await supabase.from("client_revenue_history").upsert(
+          {
+            client_id: client.id,
+            account_id: client.account_id,
+            month: `${selectedMonth}-01`,
+            revenue: value,
+            created_by: currentUser.id,
+          } as any,
+          { onConflict: "client_id,month" }
+        );
+        if (error) throw error;
+      }
+
+      // O card "atual" sempre reflete o mês mais recente preenchido
+      const months = new Map(revenueByMonth);
+      if (value == null) months.delete(selectedMonth);
+      else months.set(selectedMonth, value);
+      const sorted = Array.from(months.keys()).sort();
+      const latest = sorted[sorted.length - 1] || null;
+      await supabase
+        .from("clients")
+        .update({
+          current_revenue: latest ? (months.get(latest) as number) : null,
+          current_revenue_month: latest,
+        } as any)
+        .eq("id", client.id);
+
+      toast.success(value == null ? "Faturamento removido" : "Faturamento atualizado");
+      await fetchAll();
+    } catch (e) {
+      console.error(e);
+      toast.error("Erro ao salvar faturamento");
+    } finally {
+      setSaving(false);
+    }
   };
+
 
   const saveHistoryRow = async () => {
     if (!client || !currentUser?.account_id) return;
