@@ -727,8 +727,31 @@ export default function Tasks() {
       matchesSector = activitySectorId === currentSector.id;
     }
     const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
-    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, isHistoricalUserFilter]);
+    const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
+    return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage && matchesLead;
+  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
+
+  // Opções de negociação disponíveis a partir das tarefas carregadas
+  const leadOptions = useMemo(() => {
+    const map = new Map<string, { key: string; label: string; sublabel: string | null; count: number }>();
+    tasks.forEach((task) => {
+      const key = negotiationKey(task);
+      if (!key) return;
+      const label =
+        task.deals?.title ||
+        task.deals?.client?.full_name ||
+        task.deals?.lead?.full_name ||
+        task.leads?.full_name ||
+        "Negociação sem título";
+      const sublabel = task.deals ? (task.deals.stage?.name || null) : "Lead";
+      const existing = map.get(key);
+      if (existing) existing.count += 1;
+      else map.set(key, { key, label, sublabel, count: 1 });
+    });
+    return Array.from(map.values()).sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+  }, [tasks]);
+
+  const selectedLeadOption = leadOptions.find((o) => o.key === filterLead) || null;
 
   // Final filtered tasks - applies tab filter on top of base filters
   const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
