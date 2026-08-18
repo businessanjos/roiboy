@@ -13,6 +13,8 @@ interface Props {
   accountId?: string;
   /** Client ids already filtered by the Gestão product filter (undefined = all clients). */
   clientIds?: string[];
+  /** Total clients in the current scope (used to calculate missing revenue). */
+  totalClients?: number;
   productLabel?: string;
   periodFilter: string;
   customRange?: DateRange;
