@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -21,6 +21,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
+import { TablePagination } from "@/components/ui/table-pagination";
+import { useTablePagination } from "@/hooks/useTablePagination";
 import { ArrowUpDown, Search, X } from "lucide-react";
 import type { DateRange } from "react-day-picker";
 
