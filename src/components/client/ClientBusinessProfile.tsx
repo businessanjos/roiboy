@@ -80,6 +80,8 @@ interface ClientBusinessProfileProps {
 interface ClientRow {
   id: string;
   account_id: string;
+  full_name: string | null;
+  logo_url: string | null;
   initial_revenue: number | null;
   current_revenue: number | null;
   current_revenue_month: string | null;
@@ -100,6 +102,8 @@ interface ClientRow {
   business_state: string | null;
   cpf: string | null;
   cnpj: string | null;
+  responsible_user_id: string | null;
+  business_segment: string | null;
 }
 
 interface HistoryRow {
