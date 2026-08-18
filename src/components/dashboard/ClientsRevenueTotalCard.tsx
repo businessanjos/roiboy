@@ -143,7 +143,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, productLabel, pe
                     de produto e período da aba Gestão.
                   </TooltipContent>
                 </Tooltip>
-              </TooltipContent2Fix>
+              </TooltipProvider>
             </CardTitle>
             <CardDescription>
               {productLabel ? `Produto: ${productLabel}` : "Todos os produtos"} · {stats.clientsWithData} cliente(s) com
