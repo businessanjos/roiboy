@@ -233,12 +233,32 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
                       tickFormatter={(v) => `${Math.round(Number(v) / 1000)}k`}
                     />
                     <RTooltip
-                      formatter={(value: number, _n, item: any) => [
-                        brl(Number(value)),
-                        `${item?.payload?.clients ?? 0} cliente(s)`,
-                      ]}
-                      labelClassName="text-xs"
-                      contentStyle={{ fontSize: 12 }}
+                      content={({ active, payload, label }) => {
+                        if (!active || !payload?.length) return null;
+                        const p = payload[0]?.payload as {
+                          month: string;
+                          total: number;
+                          clients: number;
+                          missing: number | null;
+                        };
+                        return (
+                          <div className="rounded-md border bg-popover px-3 py-2 shadow-md">
+                            <p className="text-xs font-medium text-foreground mb-1">{label}</p>
+                            <p className="text-sm font-semibold text-primary">{brl(p.total)}</p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {p.clients} cliente(s) com faturamento
+                            </p>
+                            {p.missing != null && p.missing > 0 && (
+                              <p className="text-xs text-warning mt-0.5">
+                                {p.missing} cliente(s) sem faturamento preenchido
+                              </p>
+                            )}
+                            {p.missing === 0 && (
+                              <p className="text-xs text-success mt-0.5">Todos os clientes preenchidos</p>
+                            )}
+                          </div>
+                        );
+                      }}
                     />
                     <Bar dataKey="total" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
                   </BarChart>
