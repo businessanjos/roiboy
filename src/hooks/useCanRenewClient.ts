@@ -11,34 +11,21 @@ export interface RenewalBlockCheck {
 }
 
 /**
- * Bloqueia renovação quando cliente está inadimplente (>30 dias em atraso).
- * Fonte única para o UI decidir se mostra o wizard ou o modal de bloqueio.
+ * DESATIVADO: o módulo financeiro ainda não é usado no ROY, então inadimplência
+ * não pode bloquear renovação. Mantido o hook (mesma assinatura) retornando
+ * sempre liberado. Para reativar, voltar a usar useClientFinancialStatus.
  */
-export function useCanRenewClient(clientId: string | undefined): RenewalBlockCheck {
-  const { status, overdueCount, overdueAmount, maxDaysOverdue, isLoading } =
-    useClientFinancialStatus(clientId || "");
-
-  return useMemo(() => {
-    if (!clientId) {
-      return {
-        isBlocked: false,
-        isLoading: false,
-        reason: null,
-        overdueCount: 0,
-        overdueAmount: 0,
-        maxDaysOverdue: 0,
-      };
-    }
-    const isBlocked = status === "inadimplente";
-    return {
-      isBlocked,
-      isLoading,
-      reason: isBlocked
-        ? `Cliente inadimplente — ${overdueCount} parcela(s) em atraso há ${maxDaysOverdue} dias.`
-        : null,
-      overdueCount,
-      overdueAmount,
-      maxDaysOverdue,
-    };
-  }, [clientId, status, overdueCount, overdueAmount, maxDaysOverdue, isLoading]);
+export function useCanRenewClient(_clientId: string | undefined): RenewalBlockCheck {
+  return useMemo(
+    () => ({
+      isBlocked: false,
+      isLoading: false,
+      reason: null,
+      overdueCount: 0,
+      overdueAmount: 0,
+      maxDaysOverdue: 0,
+    }),
+    [],
+  );
 }
+
