@@ -270,7 +270,7 @@ export function ClientsRevenueListDialog({
                         <ArrowUpDown className="ml-2 h-3.5 w-3.5" />
                       </Button>
                     </TableHead>
-                    <TableHead className="text-center min-w-[140px]">Produto</TableHead>
+                    <TableHead className="text-center min-w-[160px]">Produto</TableHead>
                     <TableHead className="text-right min-w-[160px]">
                       <Button
                         variant="ghost"
