@@ -76,6 +76,7 @@ interface Task {
   completed_at?: string | null;
   custom_status_id?: string | null;
   activity_type_id?: string | null;
+  contact_channel?: string | null;
   meeting_url?: string | null;
   meeting_platform?: string | null;
 }
