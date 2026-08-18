@@ -178,6 +178,53 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
             </div>
           </div>
         )}
+
+        {/* Contagem real de tarefas (sem dedupe por negócio) */}
+        {(rep.meetings_held_raw > 0 ||
+          rep.scheduled_calls_raw > 0 ||
+          rep.noshow_calls_raw > 0 ||
+          rep.scheduled_completed_raw > 0) && (
+          <div className="rounded-lg border border-dashed p-3 mb-4 space-y-1.5">
+            <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+              Contagem real de tarefas
+            </p>
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1 text-xs">
+              <span className="text-muted-foreground">Reuniões realizadas</span>
+              <span className="text-right font-medium">
+                {rep.meetings_held_raw}
+                {rep.meetings_held_raw !== rep.meetings_held && (
+                  <span className="text-muted-foreground"> (únicas: {rep.meetings_held})</span>
+                )}
+              </span>
+              <span className="text-muted-foreground">Agendadas concluídas</span>
+              <span className="text-right font-medium">{rep.scheduled_completed_raw}</span>
+              <span className="text-muted-foreground">Agendamentos criados</span>
+              <span className="text-right font-medium">
+                {rep.scheduled_calls_raw}
+                {rep.scheduled_calls_raw !== rep.scheduled_calls && (
+                  <span className="text-muted-foreground"> (únicos: {rep.scheduled_calls})</span>
+                )}
+              </span>
+              <span className="text-muted-foreground">No-show</span>
+              <span className="text-right font-medium">
+                {rep.noshow_calls_raw}
+                {rep.noshow_calls_raw !== rep.noshow_calls && (
+                  <span className="text-muted-foreground"> (únicos: {rep.noshow_calls})</span>
+                )}
+              </span>
+              <span className="font-medium">Total de reuniões</span>
+              <span className="text-right font-semibold">
+                {rep.meetings_held_raw + rep.scheduled_completed_raw}
+              </span>
+            </div>
+            <p className="text-[11px] text-muted-foreground leading-snug pt-1">
+              Divergência: o painel mostra{" "}
+              <strong>{rep.meetings_held}</strong> porque deduplica por negócio (
+              {Math.max(0, rep.meetings_held_raw - rep.meetings_held)} repetidas no mesmo
+              negócio) e ignora {rep.scheduled_completed_raw} tarefas "Agendada" já concluídas.
+            </p>
+          </div>
+        )}
         {rep.assigned_leads > 0 && (
           <div className="flex items-center justify-between pt-3 border-t">
             <div className="flex items-center gap-2">
