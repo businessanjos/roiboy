@@ -15131,6 +15131,7 @@ export type Database = {
           checklist_item_id: string | null
           client_id: string | null
           completed_at: string | null
+          contact_channel: string | null
           created_at: string
           created_by: string
           custom_status_id: string | null
@@ -15156,6 +15157,7 @@ export type Database = {
           checklist_item_id?: string | null
           client_id?: string | null
           completed_at?: string | null
+          contact_channel?: string | null
           created_at?: string
           created_by: string
           custom_status_id?: string | null
@@ -15181,6 +15183,7 @@ export type Database = {
           checklist_item_id?: string | null
           client_id?: string | null
           completed_at?: string | null
+          contact_channel?: string | null
           created_at?: string
           created_by?: string
           custom_status_id?: string | null

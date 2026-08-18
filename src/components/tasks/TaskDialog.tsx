@@ -6,6 +6,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { formatLocalISOString } from "@/lib/dateUtils";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
+import { CONTACT_CHANNELS, activityRequiresContactChannel } from "@/lib/tasks/contactChannels";
 import { useSector } from "@/contexts/SectorContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -76,6 +77,7 @@ interface Task {
   completed_at?: string | null;
   custom_status_id?: string | null;
   activity_type_id?: string | null;
+  contact_channel?: string | null;
   meeting_url?: string | null;
   meeting_platform?: string | null;
 }
@@ -137,6 +139,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     lead_id: leadId || "",
     assigned_to: "",
     activity_type_id: "",
+    contact_channel: "",
   });
   
   // Track if form was initialized for current open session
@@ -189,6 +192,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         lead_id: task.lead_id || "",
         assigned_to: task.assigned_to || "",
         activity_type_id: task.activity_type_id || "",
+        contact_channel: task.contact_channel || "",
       });
       setIsCompleted(!!task.completed_at);
       setCurrentTaskId(task.id);
@@ -211,6 +215,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         lead_id: leadId || "",
         assigned_to: currentUser?.id || "",
         activity_type_id: initialActivityTypeId || "",
+        contact_channel: "",
       });
       setIsCompleted(false);
       setCurrentTaskId(null);
@@ -314,6 +319,13 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     const selectedActivityType = activityTypes.find(t => t.id === formData.activity_type_id);
     const taskTitle = selectedActivityType?.name || "Atividade";
 
+    const needsChannel = activityRequiresContactChannel(selectedActivityType?.name);
+    if (needsChannel && !formData.contact_channel) {
+      toast.error("Selecione a ferramenta usada na ligação");
+      return;
+    }
+    const contactChannel = needsChannel ? formData.contact_channel : null;
+
     if (!formData.assigned_to) {
       toast.error("Selecione o responsável");
       return;
@@ -359,6 +371,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
+          contact_channel: contactChannel,
           completed_at: isCompleted ? (task.completed_at || new Date().toISOString()) : null,
           custom_status_id: targetStatusId,
         };
@@ -432,6 +445,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           lead_id: formData.lead_id || null,
           assigned_to: formData.assigned_to,
           activity_type_id: formData.activity_type_id || null,
+          contact_channel: contactChannel,
           created_by: currentUser.id,
           completed_at: isCompleted ? new Date().toISOString() : null,
         };
@@ -553,7 +567,16 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             <Label>Tipo de Atividade *</Label>
             <Select
               value={formData.activity_type_id}
-              onValueChange={(value) => setFormData({ ...formData, activity_type_id: value })}
+              onValueChange={(value) => {
+                const nextType = activityTypes.find((t) => t.id === value);
+                setFormData({
+                  ...formData,
+                  activity_type_id: value,
+                  contact_channel: activityRequiresContactChannel(nextType?.name)
+                    ? formData.contact_channel
+                    : "",
+                });
+              }}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o tipo de atividade" />
@@ -573,6 +596,32 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               </SelectContent>
             </Select>
           </div>
+
+          {activityRequiresContactChannel(
+            activityTypes.find((t) => t.id === formData.activity_type_id)?.name
+          ) && (
+            <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
+              <Label>Ferramenta utilizada *</Label>
+              <Select
+                value={formData.contact_channel}
+                onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Como a ligação foi feita?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {CONTACT_CHANNELS.map((channel) => (
+                    <SelectItem key={channel.value} value={channel.value}>
+                      {channel.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Usado para mapear qual canal é mais eficiente nas ligações.
+              </p>
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="task-description">Descrição</Label>
