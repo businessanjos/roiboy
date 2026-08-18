@@ -138,6 +138,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
     lead_id: leadId || "",
     assigned_to: "",
     activity_type_id: "",
+    contact_channel: "",
   });
   
   // Track if form was initialized for current open session
