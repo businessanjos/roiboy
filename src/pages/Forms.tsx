@@ -408,7 +408,7 @@ const FORM_TEMPLATES: FormTemplate[] = [
           { value: "vendas", label: "Vendas", color: "#22c55e" },
           { value: "marketing", label: "Marketing", color: "#3b82f6" },
           { value: "financeiro", label: "Financeiro", color: "#f59e0b" },
-          { value: "operacoes", label: "Operações", color: "#8b5cf6" },
+          { value: "operacoes", label: "Customer Success", color: "#8b5cf6" },
           { value: "equipe", label: "Gestão de Equipe", color: "#ec4899" },
           { value: "processos", label: "Processos", color: "#06b6d4" },
           { value: "tecnologia", label: "Tecnologia", color: "#6366f1" },

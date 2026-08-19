@@ -26,7 +26,7 @@ import { toast } from "sonner";
 
 // Sector name mapping for display
 const SECTOR_NAMES: Record<string, string> = {
-  operacoes: "Operações",
+  operacoes: "Customer Success",
   financeiro: "Finanças",
   vendas: "Vendas",
   sdr: "SDR",
