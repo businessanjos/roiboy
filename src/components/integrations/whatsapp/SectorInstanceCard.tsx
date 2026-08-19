@@ -251,7 +251,24 @@ export function SectorInstanceCard({
 
           {/* Actions */}
           <div className="flex items-center gap-1">
+            {/* Force status sync */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSyncStatus}
+              disabled={isSyncingStatus}
+              title="Sincronizar status agora"
+            >
+              {isSyncingStatus ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+
             {/* QR Code connect button for disconnected instances */}
+
             {!isConnected && (
               <Button
                 variant="outline"
