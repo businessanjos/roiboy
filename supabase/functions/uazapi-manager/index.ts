@@ -791,6 +791,35 @@ async function uazapiInstance(endpoint: string, method: string, token: string, b
   return json;
 }
 
+function connectResultIsReady(result: any): boolean {
+  const instance = result?.instance || result?.data?.instance;
+  return Boolean(
+    instance?.qrcode ||
+    instance?.paircode ||
+    result?.qrcode ||
+    result?.paircode ||
+    instance?.status === "connected" ||
+    result?.status === "connected"
+  );
+}
+
+async function connectWithQrRetry(token: string, server?: ServerConfig): Promise<any> {
+  let lastResult: any = null;
+
+  // UAZAPI starts QR generation asynchronously. Its first successful response
+  // may still be disconnected with an empty QR, so retry with bounded backoff.
+  for (let attempt = 0; attempt < 4; attempt += 1) {
+    if (attempt > 0) {
+      await new Promise((resolve) => setTimeout(resolve, 1000 * (2 ** (attempt - 1))));
+    }
+
+    lastResult = await uazapiInstance("/instance/connect", "POST", token, {}, server);
+    if (connectResultIsReady(lastResult)) return lastResult;
+  }
+
+  return lastResult;
+}
+
 /**
  * Setores de WhatsApp que o usuário pode operar dentro do ROY zAPP.
  * Independente do acesso geral ao setor: `user_royzapp_views.zapp_sectors`
@@ -1474,14 +1503,14 @@ Deno.serve(async (req) => {
 
       // Try connect with current token; if auth fails (token belongs to a different server), re-init and retry
       try {
-        const ensuredToken = activeToken!;
-        const connectResult: any = await uazapiInstance("/instance/connect", "POST", ensuredToken, {}, sectorServer);
+        if (!activeToken) throw new Error("Instance token unavailable after initialization");
+        const connectResult: any = await connectWithQrRetry(activeToken, sectorServer);
         result = connectResult;
         const isAuthError = connectResult?.code === 401 || /invalid token/i.test(connectResult?.message || "");
         if (isAuthError) {
           console.warn("[uazapi-manager] Connect returned auth error, re-initializing instance on sector server");
           activeToken = await initOnSectorServer();
-          result = await uazapiInstance("/instance/connect", "POST", activeToken!, {}, sectorServer);
+          result = await connectWithQrRetry(activeToken, sectorServer);
         }
       } catch (e) {
         const msg = (e as Error)?.message || "";
@@ -1489,7 +1518,7 @@ Deno.serve(async (req) => {
           try {
             console.warn("[uazapi-manager] Connect failed with invalid token, re-initializing instance on sector server");
             activeToken = await initOnSectorServer();
-            result = await uazapiInstance("/instance/connect", "POST", activeToken!, {}, sectorServer);
+            result = await connectWithQrRetry(activeToken, sectorServer);
           } catch (retryErr) {
             console.error("[uazapi-manager] connect retry after invalid token failed:", retryErr);
             return new Response(
@@ -1561,7 +1590,7 @@ Deno.serve(async (req) => {
 
       // Immediately request a QR code with the new token.
       try {
-        const connectResult: any = await uazapiInstance("/instance/connect", "POST", freshToken, {}, sectorServer);
+        const connectResult: any = await connectWithQrRetry(freshToken, sectorServer);
         result = {
           ...connectResult,
           reset: true,
@@ -1640,7 +1669,7 @@ Deno.serve(async (req) => {
       let qrPayload: any = null;
       if (!snapshot.connected) {
         try {
-          qrPayload = await uazapiInstance("/instance/connect", "POST", pastedToken, {}, sectorServer);
+          qrPayload = await connectWithQrRetry(pastedToken, sectorServer);
         } catch (e) {
           console.warn(`[uazapi-manager] adopt: /instance/connect failed (non-fatal):`, e);
         }
