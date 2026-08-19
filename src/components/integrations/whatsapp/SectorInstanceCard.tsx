@@ -68,6 +68,41 @@ export function SectorInstanceCard({
   const [showRemoveDialog, setShowRemoveDialog] = useState(false);
   const [isReconfiguringWebhook, setIsReconfiguringWebhook] = useState(false);
   const [showQRDialog, setShowQRDialog] = useState(false);
+  const [isSyncingStatus, setIsSyncingStatus] = useState(false);
+
+  const handleSyncStatus = async () => {
+    setIsSyncingStatus(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        body: {
+          action: "status",
+          integration_id: instance.id,
+          sector_id: instance.sector_id,
+        },
+      });
+      if (error) throw error;
+
+      const payload = (data as any)?.data ?? data;
+      const connected = payload?.connected === true;
+      const state = payload?.state ?? (connected ? "connected" : "disconnected");
+
+      if (payload?.match_error) {
+        toast.warning(payload.match_error);
+      } else if (connected) {
+        toast.success("Status sincronizado: conectado");
+      } else {
+        toast.info(`Status sincronizado: ${state === "disconnected" ? "desconectado" : state}`);
+      }
+
+      onRefresh?.();
+    } catch (err) {
+      console.error("Failed to sync instance status:", err);
+      toast.error("Erro ao sincronizar status da instância");
+    } finally {
+      setIsSyncingStatus(false);
+    }
+  };
+
 
   const status = getInstanceStatus({
     status: instance.status,
@@ -216,7 +251,24 @@ export function SectorInstanceCard({
 
           {/* Actions */}
           <div className="flex items-center gap-1">
+            {/* Force status sync */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8"
+              onClick={handleSyncStatus}
+              disabled={isSyncingStatus}
+              title="Sincronizar status agora"
+            >
+              {isSyncingStatus ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4" />
+              )}
+            </Button>
+
             {/* QR Code connect button for disconnected instances */}
+
             {!isConnected && (
               <Button
                 variant="outline"
