@@ -32,7 +32,7 @@ const typeIcon = (t: string) => {
 
 const sectorLabel = (s: string | null) => {
   if (!s) return "—";
-  if (s === "operacoes") return "Operações";
+  if (s === "operacoes") return "Customer Success";
   if (s === "vendas") return "Vendas";
   return s;
 };

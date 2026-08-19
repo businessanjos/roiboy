@@ -32,7 +32,7 @@ import { toast } from "sonner";
 const SECTOR_OPTIONS = [
   { value: "", label: "Todos os setores" },
   { value: "vendas", label: "Vendas" },
-  { value: "operacoes", label: "Operações" },
+  { value: "operacoes", label: "Customer Success" },
   { value: "marketing", label: "Marketing" },
 ];
 

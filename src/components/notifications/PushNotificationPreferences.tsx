@@ -52,7 +52,7 @@ const CATEGORIES = [
 ];
 
 const SECTOR_OPTIONS = [
-  { id: "operacoes", label: "Operações" },
+  { id: "operacoes", label: "Customer Success" },
   { id: "vendas", label: "Vendas" },
   { id: "financeiro", label: "Finanças" },
   { id: "marketing", label: "Marketing" },
