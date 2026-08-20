@@ -1,0 +1,1 @@
+ALTER TABLE public.contact_channels ADD COLUMN IF NOT EXISTS description text;
