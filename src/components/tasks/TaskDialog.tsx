@@ -114,6 +114,26 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   // Use forceSectorId if provided, otherwise use currentSector
   const effectiveSectorId = forceSectorId || currentSector?.id;
   const { activityTypes } = useActivityTypes(effectiveSectorId);
+  const { channels: contactChannels, addChannel } = useContactChannels();
+  const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [newChannelLabel, setNewChannelLabel] = useState("");
+  const [isSavingChannel, setIsSavingChannel] = useState(false);
+
+  const handleCreateChannel = async () => {
+    if (!newChannelLabel.trim()) return;
+    setIsSavingChannel(true);
+    try {
+      const created = await addChannel(newChannelLabel);
+      setFormData((prev) => ({ ...prev, contact_channel: created.value }));
+      setNewChannelLabel("");
+      setIsAddingChannel(false);
+      toast.success(`Ferramenta "${created.label}" cadastrada`);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao cadastrar ferramenta");
+    } finally {
+      setIsSavingChannel(false);
+    }
+  };
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
