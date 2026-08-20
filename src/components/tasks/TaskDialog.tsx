@@ -114,18 +114,23 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   // Use forceSectorId if provided, otherwise use currentSector
   const effectiveSectorId = forceSectorId || currentSector?.id;
   const { activityTypes } = useActivityTypes(effectiveSectorId);
-  const { channels: contactChannels, addChannel } = useContactChannels();
+  const { channels: contactChannels, addChannel, updateChannel } = useContactChannels();
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [newChannelLabel, setNewChannelLabel] = useState("");
+  const [newChannelDescription, setNewChannelDescription] = useState("");
   const [isSavingChannel, setIsSavingChannel] = useState(false);
+  const [editingChannelValue, setEditingChannelValue] = useState<string | null>(null);
+  const [editChannelLabel, setEditChannelLabel] = useState("");
+  const [editChannelDescription, setEditChannelDescription] = useState("");
 
   const handleCreateChannel = async () => {
     if (!newChannelLabel.trim()) return;
     setIsSavingChannel(true);
     try {
-      const created = await addChannel(newChannelLabel);
+      const created = await addChannel(newChannelLabel, newChannelDescription);
       setFormData((prev) => ({ ...prev, contact_channel: created.value }));
       setNewChannelLabel("");
+      setNewChannelDescription("");
       setIsAddingChannel(false);
       toast.success(`Ferramenta "${created.label}" cadastrada`);
     } catch (error: any) {
@@ -134,6 +139,36 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setIsSavingChannel(false);
     }
   };
+
+  const startEditChannel = () => {
+    const current = contactChannels.find((c) => c.value === formData.contact_channel);
+    if (!current) return;
+    if (!current.isCustom) {
+      toast.error("Ferramentas padrão não podem ser editadas.");
+      return;
+    }
+    setEditingChannelValue(current.value);
+    setEditChannelLabel(current.label);
+    setEditChannelDescription(current.description || "");
+  };
+
+  const handleUpdateChannel = async () => {
+    if (!editingChannelValue || !editChannelLabel.trim()) return;
+    setIsSavingChannel(true);
+    try {
+      const updated = await updateChannel(editingChannelValue, {
+        label: editChannelLabel,
+        description: editChannelDescription,
+      });
+      setEditingChannelValue(null);
+      toast.success(`Ferramenta atualizada para "${updated.label}"`);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar ferramenta");
+    } finally {
+      setIsSavingChannel(false);
+    }
+  };
+
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
