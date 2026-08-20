@@ -709,9 +709,39 @@ Deno.serve(async (req) => {
         
         // Check for media URL at various locations (UAZAPI puts it in different places)
         const msgAny = msg as Record<string, unknown>;
-        const contentObj = (typeof msg.content === "object" && msg.content !== null) 
-          ? msg.content as Record<string, unknown> 
+
+        // Unwrap WhatsApp envelopes (visualização única, mensagens efêmeras,
+        // documento com legenda, vídeo-nota). Sem isso a mídia real fica
+        // escondida dentro do envelope e a mensagem era descartada inteira.
+        const unwrapEnvelope = (obj: Record<string, unknown> | null): Record<string, unknown> | null => {
+          let current = obj;
+          for (let depth = 0; current && depth < 4; depth++) {
+            const inner =
+              (current.viewOnceMessageV2Extension as Record<string, unknown> | undefined) ??
+              (current.viewOnceMessageV2 as Record<string, unknown> | undefined) ??
+              (current.viewOnceMessage as Record<string, unknown> | undefined) ??
+              (current.ephemeralMessage as Record<string, unknown> | undefined) ??
+              (current.documentWithCaptionMessage as Record<string, unknown> | undefined);
+            if (!inner || typeof inner !== "object") break;
+            const nested = (inner.message as Record<string, unknown> | undefined) ?? inner;
+            if (!nested || typeof nested !== "object") break;
+            current = nested;
+          }
+          if (current && current.ptvMessage && typeof current.ptvMessage === "object") {
+            current = { ...current, videoMessage: current.ptvMessage };
+          }
+          return current;
+        };
+
+        const rawContentObj = (typeof msg.content === "object" && msg.content !== null)
+          ? msg.content as Record<string, unknown>
           : null;
+        const contentObj = unwrapEnvelope(rawContentObj);
+        if (contentObj && contentObj !== rawContentObj) {
+          console.log(`[WEBHOOK] Unwrapped media envelope for msgId ${msg.id}, keys: [${Object.keys(contentObj).join(",")}]`);
+          (msg as Record<string, unknown>).content = contentObj;
+        }
+
         
         // UAZAPI puts media URL in msg.content.URL (uppercase) for media messages
         mediaUrl = msg.mediaUrl || msg.media_url || msg.url || 
