@@ -21,6 +21,7 @@ import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { MultiSelectFilter } from "@/components/renewals/MultiSelectFilter";
 import { VipBadge } from "@/components/client/VipBadge";
+import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
 
 interface RenewalContract {
   id: string;
@@ -151,7 +152,6 @@ export default function Renewals() {
     if (!contract || !currentUser?.account_id) return;
     setSavingRenewal(true);
 
-    const existing = outcomeMap[contract.id];
     const renewalValue = parseFloat(renewalForm.value) || contract.renewal_value;
 
     try {
@@ -168,42 +168,17 @@ export default function Renewals() {
           : null,
       };
 
-      let outcomeId: string | null = null;
+      const saved = await saveRenewalOutcome({
+        accountId: payload.account_id,
+        contractId: payload.contract_id,
+        clientId: payload.client_id,
+        outcome: "renewed",
+        renewalValue: payload.renewal_value,
+        resolvedBy: payload.resolved_by,
+        lossNotes: payload.loss_notes,
+      });
 
-      if (existing) {
-        const { data, error } = await supabase
-          .from("renewal_outcomes")
-          .update(payload)
-          .eq("id", existing.id)
-          .select("id")
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) throw new Error("Nenhuma linha atualizada (verifique suas permissões)");
-        outcomeId = data.id;
-      } else {
-        const { data, error } = await supabase
-          .from("renewal_outcomes")
-          .insert(payload)
-          .select("id")
-          .maybeSingle();
-        if (error) throw error;
-        if (!data) throw new Error("Registro não criado (verifique suas permissões)");
-        outcomeId = data.id;
-      }
-
-      // Checagem automática: relê a linha para confirmar que a gravação
-      // realmente persistiu para este usuário (RLS/permissões).
-      const { data: check, error: checkError } = await supabase
-        .from("renewal_outcomes")
-        .select("id, outcome")
-        .eq("id", outcomeId)
-        .maybeSingle();
-      if (checkError) throw checkError;
-      if (!check || check.outcome !== "renewed") {
-        throw new Error("A renovação não foi confirmada no banco. Tente novamente.");
-      }
-
-      setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: outcomeId as string, outcome: "renewed" } }));
+      setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: saved.id, outcome: "renewed" } }));
       toast.success(`Renovação de ${contract.client_name} registrada e confirmada!`);
       setRenewalDialog({ open: false, contract: null });
       // Remove from pending list

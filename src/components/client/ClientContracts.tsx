@@ -76,6 +76,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
 
 
 interface Contract {
@@ -306,7 +307,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       : `parcelado_${installments}`;
   };
 
-  const openRenewalDialog = (contract: Contract, _bypass = false) => {
+  const openRenewalDialog = (contract: Contract) => {
     setRenewingContract(contract);
     const nextDay = contract.end_date 
       ? format(new Date(parseLocalDate(contract.end_date)!.getTime() + 86400000), "yyyy-MM-dd")
@@ -463,7 +464,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
 
       const { data: userProfile } = await supabase
         .from("users")
-        .select("account_id")
+        .select("id, account_id")
         .eq("auth_user_id", userData.user.id)
         .single();
 
@@ -507,20 +508,35 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         if (error) throw error;
         toast.success("Contrato atualizado");
       } else {
-        const { error } = await supabase
+        const { data: createdContract, error } = await supabase
           .from("client_contracts")
-          .insert(contractData);
+          .insert(contractData)
+          .select("id, parent_contract_id")
+          .single();
 
         if (error) throw error;
+        if (!createdContract) throw new Error("O contrato não foi confirmado após a gravação.");
+
+        if (renewingContract) {
+          await saveRenewalOutcome({
+            accountId: userProfile.account_id,
+            contractId: renewingContract.id,
+            clientId,
+            outcome: "renewed",
+            renewalValue: parseFloat(formData.value) || renewingContract.value || 0,
+            resolvedBy: userProfile.id,
+            lossNotes: `Renovado pelo Perfil do Cliente. Novo contrato: ${createdContract.id}`,
+          });
+        }
         toast.success(renewingContract ? "Contrato renovado" : "Contrato adicionado");
       }
 
       setDialogOpen(false);
       resetForm();
       fetchContracts();
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error saving contract:", error);
-      toast.error("Erro ao salvar contrato");
+      toast.error("Erro ao salvar contrato: " + (error?.message || "falha desconhecida"));
     } finally {
       setSaving(false);
     }
