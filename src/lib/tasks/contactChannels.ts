@@ -8,7 +8,12 @@ export type ContactChannel = (typeof CONTACT_CHANNELS)[number]["value"];
 
 export function getContactChannelLabel(value?: string | null): string {
   if (!value) return "";
-  return CONTACT_CHANNELS.find((c) => c.value === value)?.label || value;
+  const known = CONTACT_CHANNELS.find((c) => c.value === value)?.label;
+  if (known) return known;
+  // Ferramentas personalizadas ficam salvas como slug; exibe de forma legível
+  return value
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (l) => l.toUpperCase());
 }
 
 /**
