@@ -6,7 +6,8 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useAuditLog } from "@/hooks/useAuditLog";
 import { formatLocalISOString } from "@/lib/dateUtils";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
-import { CONTACT_CHANNELS, activityRequiresContactChannel } from "@/lib/tasks/contactChannels";
+import { activityRequiresContactChannel } from "@/lib/tasks/contactChannels";
+import { useContactChannels } from "@/hooks/useContactChannels";
 import { useSector } from "@/contexts/SectorContext";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
@@ -113,6 +114,26 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   // Use forceSectorId if provided, otherwise use currentSector
   const effectiveSectorId = forceSectorId || currentSector?.id;
   const { activityTypes } = useActivityTypes(effectiveSectorId);
+  const { channels: contactChannels, addChannel } = useContactChannels();
+  const [isAddingChannel, setIsAddingChannel] = useState(false);
+  const [newChannelLabel, setNewChannelLabel] = useState("");
+  const [isSavingChannel, setIsSavingChannel] = useState(false);
+
+  const handleCreateChannel = async () => {
+    if (!newChannelLabel.trim()) return;
+    setIsSavingChannel(true);
+    try {
+      const created = await addChannel(newChannelLabel);
+      setFormData((prev) => ({ ...prev, contact_channel: created.value }));
+      setNewChannelLabel("");
+      setIsAddingChannel(false);
+      toast.success(`Ferramenta "${created.label}" cadastrada`);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao cadastrar ferramenta");
+    } finally {
+      setIsSavingChannel(false);
+    }
+  };
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -601,22 +622,74 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             activityTypes.find((t) => t.id === formData.activity_type_id)?.name
           ) && (
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-              <Label>Ferramenta utilizada *</Label>
-              <Select
-                value={formData.contact_channel}
-                onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Como a ligação foi feita?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTACT_CHANNELS.map((channel) => (
-                    <SelectItem key={channel.value} value={channel.value}>
-                      {channel.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Ferramenta utilizada *</Label>
+                {!isAddingChannel && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setIsAddingChannel(true)}
+                  >
+                    + Nova ferramenta
+                  </Button>
+                )}
+              </div>
+              {isAddingChannel ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newChannelLabel}
+                    onChange={(e) => setNewChannelLabel(e.target.value)}
+                    placeholder="Ex: Ligação via CRM"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateChannel();
+                      } else if (e.key === "Escape") {
+                        setIsAddingChannel(false);
+                        setNewChannelLabel("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateChannel}
+                    disabled={!newChannelLabel.trim() || isSavingChannel}
+                  >
+                    {isSavingChannel ? "Salvando..." : "Salvar"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsAddingChannel(false);
+                      setNewChannelLabel("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={formData.contact_channel}
+                  onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Como a ligação foi feita?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactChannels.map((channel) => (
+                      <SelectItem key={channel.value} value={channel.value}>
+                        {channel.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <p className="text-xs text-muted-foreground">
                 Usado para mapear qual canal é mais eficiente nas ligações.
               </p>
