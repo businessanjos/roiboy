@@ -614,11 +614,12 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col p-0">
+        <DialogHeader className="px-6 pt-6">
           <DialogTitle>{task ? "Editar Tarefa" : "Nova Tarefa"}</DialogTitle>
         </DialogHeader>
-        <div className="space-y-4 pt-4">
+        <div className="space-y-4 pt-4 flex-1 overflow-y-auto px-6">
+
           <div className="space-y-2">
             <Label>Tipo de Atividade *</Label>
             <Select
