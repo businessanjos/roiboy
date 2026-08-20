@@ -19,6 +19,7 @@ import { Loader2, TrendingDown, DollarSign, Users, BarChart3, ArrowRight, Percen
 import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
+import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend
@@ -399,17 +400,20 @@ export function RenewalLosses() {
         resolved_by: currentUser.id,
       };
 
-      if (item.outcome_id) {
-        await supabase.from("renewal_outcomes").update(payload).eq("id", item.outcome_id);
-      } else {
-        await supabase.from("renewal_outcomes").insert(payload);
-      }
+      await saveRenewalOutcome({
+        accountId: payload.account_id,
+        contractId: payload.contract_id,
+        clientId: payload.client_id,
+        outcome: "renewed",
+        renewalValue: payload.renewal_value,
+        resolvedBy: payload.resolved_by,
+      });
 
-      toast({ title: "Renovação confirmada!" });
-      fetchExpired();
-    } catch (err) {
+      toast({ title: "Renovação confirmada!", description: `${item.client_name} foi marcado como Renovado.` });
+      await fetchExpired();
+    } catch (err: any) {
       console.error(err);
-      toast({ title: "Erro ao confirmar", variant: "destructive" });
+      toast({ title: "Erro ao confirmar renovação", description: err?.message || "Não foi possível salvar o status.", variant: "destructive" });
     } finally {
       setConfirmingRenewal(null);
     }
@@ -431,18 +435,23 @@ export function RenewalLosses() {
         resolved_by: currentUser.id,
       };
 
-      if (editItem.outcome_id) {
-        await supabase.from("renewal_outcomes").update(payload).eq("id", editItem.outcome_id);
-      } else {
-        await supabase.from("renewal_outcomes").insert(payload);
-      }
+      await saveRenewalOutcome({
+        accountId: payload.account_id,
+        contractId: payload.contract_id,
+        clientId: payload.client_id,
+        outcome,
+        renewalValue: payload.renewal_value,
+        resolvedBy: payload.resolved_by,
+        lossReason: payload.loss_reason,
+        lossNotes: payload.loss_notes,
+      });
 
       toast({ title: outcome === "lost" ? "Perda registrada" : "Renovação registrada" });
       setEditItem(null);
-      fetchExpired();
-    } catch (err) {
+      await fetchExpired();
+    } catch (err: any) {
       console.error(err);
-      toast({ title: "Erro ao salvar", variant: "destructive" });
+      toast({ title: "Erro ao salvar", description: err?.message || "Não foi possível salvar o status.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
