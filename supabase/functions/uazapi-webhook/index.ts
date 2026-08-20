@@ -1228,12 +1228,22 @@ Deno.serve(async (req) => {
           });
         }
 
-        if (direction === "inbound" && !hasContent && !hasMedia) {
+        if (direction === "inbound" && !hasContent && !hasMedia && mediaType) {
+          // Mídia identificada mas sem URL utilizável: em vez de sumir com a
+          // mensagem, salvamos um marcador para o atendente saber que existe.
+          console.warn(`[WEBHOOK] Media without URL, saving placeholder. msgId: ${msg.id}, mediaType: ${mediaType}, msgType: ${msg.type}`);
+          content = "[mídia não recebida - veja no WhatsApp]";
+        }
+
+        const hasContentAfterFallback = content && content.trim().length > 0;
+
+        if (direction === "inbound" && !hasContentAfterFallback && !hasMedia) {
           console.warn(`[WEBHOOK] BLOCKED: Inbound message without content/media. msgId: ${msg.id}, phone: ${phone}, content: "${content?.substring(0, 50) || ''}", mediaType: ${mediaType}, mediaUrl: ${mediaUrl?.substring(0, 50) || 'N/A'}, msgType: ${msg.type}`);
           return new Response(JSON.stringify({ ignored: true, reason: "missing_content_and_media", msgId: msg.id, phone }), { 
             headers: { ...corsHeaders, "Content-Type": "application/json" } 
           });
         }
+
         
         if (direction === "outbound" && !hasContent && !hasMedia) {
           
