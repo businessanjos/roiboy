@@ -602,22 +602,74 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             activityTypes.find((t) => t.id === formData.activity_type_id)?.name
           ) && (
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
-              <Label>Ferramenta utilizada *</Label>
-              <Select
-                value={formData.contact_channel}
-                onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Como a ligação foi feita?" />
-                </SelectTrigger>
-                <SelectContent>
-                  {CONTACT_CHANNELS.map((channel) => (
-                    <SelectItem key={channel.value} value={channel.value}>
-                      {channel.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="flex items-center justify-between gap-2">
+                <Label>Ferramenta utilizada *</Label>
+                {!isAddingChannel && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-6 px-2 text-xs"
+                    onClick={() => setIsAddingChannel(true)}
+                  >
+                    + Nova ferramenta
+                  </Button>
+                )}
+              </div>
+              {isAddingChannel ? (
+                <div className="flex gap-2">
+                  <Input
+                    autoFocus
+                    value={newChannelLabel}
+                    onChange={(e) => setNewChannelLabel(e.target.value)}
+                    placeholder="Ex: Ligação via CRM"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleCreateChannel();
+                      } else if (e.key === "Escape") {
+                        setIsAddingChannel(false);
+                        setNewChannelLabel("");
+                      }
+                    }}
+                  />
+                  <Button
+                    type="button"
+                    size="sm"
+                    onClick={handleCreateChannel}
+                    disabled={!newChannelLabel.trim() || isSavingChannel}
+                  >
+                    {isSavingChannel ? "Salvando..." : "Salvar"}
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    onClick={() => {
+                      setIsAddingChannel(false);
+                      setNewChannelLabel("");
+                    }}
+                  >
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <Select
+                  value={formData.contact_channel}
+                  onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Como a ligação foi feita?" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {contactChannels.map((channel) => (
+                      <SelectItem key={channel.value} value={channel.value}>
+                        {channel.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <p className="text-xs text-muted-foreground">
                 Usado para mapear qual canal é mais eficiente nas ligações.
               </p>
