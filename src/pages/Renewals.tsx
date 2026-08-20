@@ -152,7 +152,6 @@ export default function Renewals() {
     if (!contract || !currentUser?.account_id) return;
     setSavingRenewal(true);
 
-    const existing = outcomeMap[contract.id];
     const renewalValue = parseFloat(renewalForm.value) || contract.renewal_value;
 
     try {
