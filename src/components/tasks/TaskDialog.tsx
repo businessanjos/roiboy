@@ -114,18 +114,23 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
   // Use forceSectorId if provided, otherwise use currentSector
   const effectiveSectorId = forceSectorId || currentSector?.id;
   const { activityTypes } = useActivityTypes(effectiveSectorId);
-  const { channels: contactChannels, addChannel } = useContactChannels();
+  const { channels: contactChannels, addChannel, updateChannel } = useContactChannels();
   const [isAddingChannel, setIsAddingChannel] = useState(false);
   const [newChannelLabel, setNewChannelLabel] = useState("");
+  const [newChannelDescription, setNewChannelDescription] = useState("");
   const [isSavingChannel, setIsSavingChannel] = useState(false);
+  const [editingChannelValue, setEditingChannelValue] = useState<string | null>(null);
+  const [editChannelLabel, setEditChannelLabel] = useState("");
+  const [editChannelDescription, setEditChannelDescription] = useState("");
 
   const handleCreateChannel = async () => {
     if (!newChannelLabel.trim()) return;
     setIsSavingChannel(true);
     try {
-      const created = await addChannel(newChannelLabel);
+      const created = await addChannel(newChannelLabel, newChannelDescription);
       setFormData((prev) => ({ ...prev, contact_channel: created.value }));
       setNewChannelLabel("");
+      setNewChannelDescription("");
       setIsAddingChannel(false);
       toast.success(`Ferramenta "${created.label}" cadastrada`);
     } catch (error: any) {
@@ -134,6 +139,36 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
       setIsSavingChannel(false);
     }
   };
+
+  const startEditChannel = () => {
+    const current = contactChannels.find((c) => c.value === formData.contact_channel);
+    if (!current) return;
+    if (!current.isCustom) {
+      toast.error("Ferramentas padrão não podem ser editadas.");
+      return;
+    }
+    setEditingChannelValue(current.value);
+    setEditChannelLabel(current.label);
+    setEditChannelDescription(current.description || "");
+  };
+
+  const handleUpdateChannel = async () => {
+    if (!editingChannelValue || !editChannelLabel.trim()) return;
+    setIsSavingChannel(true);
+    try {
+      const updated = await updateChannel(editingChannelValue, {
+        label: editChannelLabel,
+        description: editChannelDescription,
+      });
+      setEditingChannelValue(null);
+      toast.success(`Ferramenta atualizada para "${updated.label}"`);
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao atualizar ferramenta");
+    } finally {
+      setIsSavingChannel(false);
+    }
+  };
+
   const [isCompleted, setIsCompleted] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -624,20 +659,34 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center justify-between gap-2">
                 <Label>Ferramenta utilizada *</Label>
-                {!isAddingChannel && (
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    className="h-6 px-2 text-xs"
-                    onClick={() => setIsAddingChannel(true)}
-                  >
-                    + Nova ferramenta
-                  </Button>
+                {!isAddingChannel && !editingChannelValue && (
+                  <div className="flex items-center gap-1">
+                    {contactChannels.find((c) => c.value === formData.contact_channel)
+                      ?.isCustom && (
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        className="h-6 px-2 text-xs"
+                        onClick={startEditChannel}
+                      >
+                        Editar
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 px-2 text-xs"
+                      onClick={() => setIsAddingChannel(true)}
+                    >
+                      + Nova ferramenta
+                    </Button>
+                  </div>
                 )}
               </div>
               {isAddingChannel ? (
-                <div className="flex gap-2">
+                <div className="space-y-2">
                   <Input
                     autoFocus
                     value={newChannelLabel}
@@ -650,28 +699,77 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                       } else if (e.key === "Escape") {
                         setIsAddingChannel(false);
                         setNewChannelLabel("");
+                        setNewChannelDescription("");
                       }
                     }}
                   />
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleCreateChannel}
-                    disabled={!newChannelLabel.trim() || isSavingChannel}
-                  >
-                    {isSavingChannel ? "Salvando..." : "Salvar"}
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => {
-                      setIsAddingChannel(false);
-                      setNewChannelLabel("");
+                  <Input
+                    value={newChannelDescription}
+                    onChange={(e) => setNewChannelDescription(e.target.value)}
+                    placeholder="Detalhes (opcional)"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleCreateChannel}
+                      disabled={!newChannelLabel.trim() || isSavingChannel}
+                    >
+                      {isSavingChannel ? "Salvando..." : "Salvar"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => {
+                        setIsAddingChannel(false);
+                        setNewChannelLabel("");
+                        setNewChannelDescription("");
+                      }}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
+                </div>
+              ) : editingChannelValue ? (
+                <div className="space-y-2">
+                  <Input
+                    autoFocus
+                    value={editChannelLabel}
+                    onChange={(e) => setEditChannelLabel(e.target.value)}
+                    placeholder="Nome da ferramenta"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleUpdateChannel();
+                      } else if (e.key === "Escape") {
+                        setEditingChannelValue(null);
+                      }
                     }}
-                  >
-                    Cancelar
-                  </Button>
+                  />
+                  <Input
+                    value={editChannelDescription}
+                    onChange={(e) => setEditChannelDescription(e.target.value)}
+                    placeholder="Detalhes (opcional)"
+                  />
+                  <div className="flex gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      onClick={handleUpdateChannel}
+                      disabled={!editChannelLabel.trim() || isSavingChannel}
+                    >
+                      {isSavingChannel ? "Salvando..." : "Salvar alterações"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => setEditingChannelValue(null)}
+                    >
+                      Cancelar
+                    </Button>
+                  </div>
                 </div>
               ) : (
                 <Select
@@ -684,7 +782,14 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                   <SelectContent>
                     {contactChannels.map((channel) => (
                       <SelectItem key={channel.value} value={channel.value}>
-                        {channel.label}
+                        <span className="flex flex-col text-left">
+                          <span>{channel.label}</span>
+                          {channel.description && (
+                            <span className="text-[11px] text-muted-foreground">
+                              {channel.description}
+                            </span>
+                          )}
+                        </span>
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -693,6 +798,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               <p className="text-xs text-muted-foreground">
                 Usado para mapear qual canal é mais eficiente nas ligações.
               </p>
+
             </div>
           )}
 

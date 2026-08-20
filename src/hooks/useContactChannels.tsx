@@ -6,6 +6,7 @@ import { CONTACT_CHANNELS } from "@/lib/tasks/contactChannels";
 export interface ContactChannelOption {
   value: string;
   label: string;
+  description?: string | null;
   isCustom?: boolean;
 }
 
@@ -30,12 +31,17 @@ export function useContactChannels() {
     queryFn: async (): Promise<ContactChannelOption[]> => {
       const { data, error } = await supabase
         .from("contact_channels")
-        .select("value, label")
+        .select("value, label, description")
         .eq("account_id", accountId!)
         .eq("is_active", true)
         .order("label");
       if (error) throw error;
-      return (data || []).map((c) => ({ value: c.value, label: c.label, isCustom: true }));
+      return (data || []).map((c) => ({
+        value: c.value,
+        label: c.label,
+        description: (c as { description?: string | null }).description ?? null,
+        isCustom: true,
+      }));
     },
   });
 
@@ -49,7 +55,10 @@ export function useContactChannels() {
     ...custom.filter((c) => !defaults.some((d) => d.value === c.value)),
   ];
 
-  const addChannel = async (rawLabel: string): Promise<ContactChannelOption> => {
+  const addChannel = async (
+    rawLabel: string,
+    rawDescription?: string
+  ): Promise<ContactChannelOption> => {
     const label = rawLabel.trim();
     if (!label) throw new Error("Informe o nome da ferramenta.");
     if (!accountId) throw new Error("Conta não identificada.");
@@ -66,16 +75,70 @@ export function useContactChannels() {
         account_id: accountId,
         value,
         label,
+        description: rawDescription?.trim() || null,
         created_by: currentUser?.id ?? null,
       })
-      .select("value, label")
+      .select("value, label, description")
       .single();
 
     if (error) throw error;
 
     await queryClient.invalidateQueries({ queryKey: ["contact-channels", accountId] });
-    return { value: data.value, label: data.label, isCustom: true };
+    return {
+      value: data.value,
+      label: data.label,
+      description: (data as { description?: string | null }).description ?? null,
+      isCustom: true,
+    };
   };
 
-  return { channels, isLoading, addChannel };
+  /**
+   * Atualiza nome/detalhes de uma ferramenta já cadastrada.
+   * O `value` (slug) é mantido para não quebrar atividades existentes.
+   */
+  const updateChannel = async (
+    value: string,
+    updates: { label?: string; description?: string | null }
+  ): Promise<ContactChannelOption> => {
+    if (!accountId) throw new Error("Conta não identificada.");
+    const isDefault = CONTACT_CHANNELS.some((c) => c.value === value);
+    if (isDefault) throw new Error("Ferramentas padrão não podem ser editadas.");
+
+    const label = updates.label?.trim();
+    if (updates.label !== undefined && !label) {
+      throw new Error("Informe o nome da ferramenta.");
+    }
+    const duplicated =
+      label &&
+      channels.some(
+        (c) => c.value !== value && c.label.toLowerCase() === label.toLowerCase()
+      );
+    if (duplicated) throw new Error("Já existe uma ferramenta com esse nome.");
+
+    const { data, error } = await supabase
+      .from("contact_channels")
+      .update({
+        ...(label ? { label } : {}),
+        ...(updates.description !== undefined
+          ? { description: updates.description?.trim() || null }
+          : {}),
+      })
+      .eq("account_id", accountId)
+      .eq("value", value)
+      .select("value, label, description")
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error("Ferramenta não encontrada para atualizar.");
+
+    await queryClient.invalidateQueries({ queryKey: ["contact-channels", accountId] });
+    return {
+      value: data.value,
+      label: data.label,
+      description: (data as { description?: string | null }).description ?? null,
+      isCustom: true,
+    };
+  };
+
+  return { channels, isLoading, addChannel, updateChannel };
 }
