@@ -879,6 +879,28 @@ Deno.serve(async (req) => {
             console.log(`[WEBHOOK] Inferred mediaType="${mediaType}" from mimetype="${mediaMimetype}" / msgType="${msg.type}"`);
           }
         }
+
+        // Rede de segurança: se o payload tem qualquer indício de mídia
+        // (mimetype, nome de arquivo, mediaKey ou tipo declarado) mas não
+        // conseguimos classificar, tratamos como documento em vez de
+        // descartar a mensagem inteira.
+        if (!mediaType) {
+          const declaredType = String((msg as any).type || (msg as any).messageType || msgAny.messageType || "").toLowerCase();
+          const looksLikeMedia =
+            !!mediaMimetype ||
+            !!mediaFilename ||
+            !!(contentObj?.mediaKey) ||
+            /image|video|audio|ptt|ptv|document|sticker|media|view_?once/.test(declaredType);
+          if (looksLikeMedia) {
+            const mimePrefix = mediaMimetype ? mediaMimetype.split("/")[0].toLowerCase() : "";
+            mediaType =
+              mimePrefix === "audio" ? "audio" :
+              mimePrefix === "image" ? "image" :
+              mimePrefix === "video" ? "video" : "document";
+            console.warn(`[WEBHOOK] Media fallback applied. msgId=${msg.id}, declaredType="${declaredType}", mimetype="${mediaMimetype}", hasUrl=${!!mediaUrl}`);
+          }
+        }
+
         
         // Media content: don't add labels, just use caption if available
         // The UI will show emojis for media types in previews
