@@ -6,6 +6,7 @@ import { CONTACT_CHANNELS } from "@/lib/tasks/contactChannels";
 export interface ContactChannelOption {
   value: string;
   label: string;
+  description?: string | null;
   isCustom?: boolean;
 }
 
