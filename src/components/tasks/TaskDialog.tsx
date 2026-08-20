@@ -1050,36 +1050,37 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               )}
             </div>
           )}
+        </div>
 
-          <div className="flex items-center justify-between pt-4">
-            {/* Botão de excluir - só aparece em modo edição */}
-            {task ? (
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-destructive"
-                onClick={() => setDeleteDialogOpen(true)}
-                title="Excluir tarefa"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            ) : (
-              <div />
-            )}
-            
-            <div className="flex gap-2">
-              <Button variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button onClick={handleSubmit} disabled={submitting}>
-                {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                {task ? "Salvar" : "Criar Tarefa"}
-              </Button>
-            </div>
+        <div className="flex items-center justify-between gap-2 border-t px-6 py-4 bg-background">
+          {/* Botão de excluir - só aparece em modo edição */}
+          {task ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setDeleteDialogOpen(true)}
+              title="Excluir tarefa"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          ) : (
+            <div />
+          )}
+
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSubmit} disabled={submitting}>
+              {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {task ? "Salvar" : "Criar Tarefa"}
+            </Button>
           </div>
         </div>
       </DialogContent>
+
 
       {/* Meeting Configuration Dialog */}
       {(currentTaskId || task?.id) && (
