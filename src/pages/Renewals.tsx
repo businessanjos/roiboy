@@ -168,23 +168,49 @@ export default function Renewals() {
           : null,
       };
 
+      let outcomeId: string | null = null;
+
       if (existing) {
-        await supabase.from("renewal_outcomes").update(payload).eq("id", existing.id);
-        setOutcomeMap(prev => ({ ...prev, [contract.id]: { ...existing, outcome: "renewed" } }));
+        const { data, error } = await supabase
+          .from("renewal_outcomes")
+          .update(payload)
+          .eq("id", existing.id)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Nenhuma linha atualizada (verifique suas permissões)");
+        outcomeId = data.id;
       } else {
-        const { data } = await supabase.from("renewal_outcomes").insert(payload).select("id").single();
-        if (data) {
-          setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: data.id, outcome: "renewed" } }));
-        }
+        const { data, error } = await supabase
+          .from("renewal_outcomes")
+          .insert(payload)
+          .select("id")
+          .maybeSingle();
+        if (error) throw error;
+        if (!data) throw new Error("Registro não criado (verifique suas permissões)");
+        outcomeId = data.id;
       }
 
-      toast.success("Renovação registrada com sucesso!");
+      // Checagem automática: relê a linha para confirmar que a gravação
+      // realmente persistiu para este usuário (RLS/permissões).
+      const { data: check, error: checkError } = await supabase
+        .from("renewal_outcomes")
+        .select("id, outcome")
+        .eq("id", outcomeId)
+        .maybeSingle();
+      if (checkError) throw checkError;
+      if (!check || check.outcome !== "renewed") {
+        throw new Error("A renovação não foi confirmada no banco. Tente novamente.");
+      }
+
+      setOutcomeMap(prev => ({ ...prev, [contract.id]: { id: outcomeId as string, outcome: "renewed" } }));
+      toast.success(`Renovação de ${contract.client_name} registrada e confirmada!`);
       setRenewalDialog({ open: false, contract: null });
       // Remove from pending list
       setContracts(prev => prev.filter(c => c.id !== contract.id));
-    } catch (err) {
+    } catch (err: any) {
       console.error("Error confirming renewal:", err);
-      toast.error("Erro ao registrar renovação");
+      toast.error("Erro ao registrar renovação: " + (err?.message || "desconhecido"));
     } finally {
       setSavingRenewal(false);
     }
