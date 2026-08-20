@@ -3,9 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { withRetry } from "@/lib/retryFetch";
 import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
-import { useCanRenewClient } from "@/hooks/useCanRenewClient";
 import { usePermissions } from "@/hooks/usePermissions";
-import { RenewalBlockedDialog } from "@/components/client/RenewalBlockedDialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -162,9 +160,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   const [contractToDelete, setContractToDelete] = useState<string | null>(null);
   const [editingContract, setEditingContract] = useState<Contract | null>(null);
   const [renewingContract, setRenewingContract] = useState<Contract | null>(null);
-  const [renewalBlockedOpen, setRenewalBlockedOpen] = useState(false);
-  const [pendingRenewalContract, setPendingRenewalContract] = useState<Contract | null>(null);
-  const renewalBlock = useCanRenewClient(clientId);
   const { isAdmin } = usePermissions();
   const [expandedHistory, setExpandedHistory] = useState<string | null>(null);
   const [uploading, setUploading] = useState(false);
@@ -311,13 +306,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       : `parcelado_${installments}`;
   };
 
-  const openRenewalDialog = (contract: Contract, bypass = false) => {
-    // Bloqueio de renovação para clientes inadimplentes (admin pode ignorar)
-    if (!bypass && renewalBlock.isBlocked) {
-      setPendingRenewalContract(contract);
-      setRenewalBlockedOpen(true);
-      return;
-    }
+  const openRenewalDialog = (contract: Contract, _bypass = false) => {
     setRenewingContract(contract);
     const nextDay = contract.end_date 
       ? format(new Date(parseLocalDate(contract.end_date)!.getTime() + 86400000), "yyyy-MM-dd")
@@ -1272,24 +1261,6 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
         </DialogContent>
       </Dialog>
 
-      <RenewalBlockedDialog
-        open={renewalBlockedOpen}
-        onClose={() => {
-          setRenewalBlockedOpen(false);
-          setPendingRenewalContract(null);
-        }}
-        clientName={contracts[0] ? ((contracts[0] as any).client_name || "Cliente") : "Cliente"}
-        overdueCount={renewalBlock.overdueCount}
-        overdueAmount={renewalBlock.overdueAmount}
-        maxDaysOverdue={renewalBlock.maxDaysOverdue}
-        canOverride={isAdmin}
-        onOverrideAsAdmin={() => {
-          const c = pendingRenewalContract;
-          setRenewalBlockedOpen(false);
-          setPendingRenewalContract(null);
-          if (c) openRenewalDialog(c, true);
-        }}
-      />
     </div>
   );
 }
