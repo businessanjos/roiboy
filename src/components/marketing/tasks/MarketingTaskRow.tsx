@@ -1,4 +1,4 @@
-import { format, isPast, isToday, isTomorrow } from "date-fns";
+import { format, isPast, isToday, isTomorrow, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { cn } from "@/lib/utils";
-import { GripVertical } from "lucide-react";
+import { GripVertical, AlertCircle } from "lucide-react";
 
 interface MarketingTaskRowProps {
   task: MarketingTask;
@@ -25,6 +25,12 @@ const statusConfig = {
   in_progress: { label: "Em andamento", className: "bg-blue-100 text-blue-700" },
   done: { label: "Concluído", className: "bg-emerald-100 text-emerald-700" },
 };
+
+function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
 
 export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
@@ -50,7 +56,8 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
     <div
       className={cn(
         "grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-2 items-center hover:bg-muted/30 transition-colors cursor-pointer group border-b last:border-b-0",
-        task.is_completed && "opacity-60"
+        task.is_completed && "opacity-60",
+        isTaskOverdue(task) && "bg-destructive/5 hover:bg-destructive/10"
       )}
       onClick={onEdit}
     >
@@ -69,7 +76,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
       </div>
 
       {/* Task Title */}
-      <div className="min-w-0">
+      <div className="min-w-0 flex items-center gap-2">
         <span
           className={cn(
             "text-sm truncate block",
@@ -78,6 +85,12 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
         >
           {task.title}
         </span>
+        {isTaskOverdue(task) && (
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 gap-1 shrink-0">
+            <AlertCircle className="h-3 w-3" />
+            Atrasada
+          </Badge>
+        )}
       </div>
 
       {/* Assignee */}

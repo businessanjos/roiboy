@@ -1,12 +1,19 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
+import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
-import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip } from "lucide-react";
+import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
+
+function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
 
 interface MarketingKanbanCardProps {
   task: MarketingTask;
@@ -63,7 +70,8 @@ export function MarketingKanbanCard({
         "bg-card border rounded-lg p-3 shadow-sm cursor-pointer transition-all",
         "hover:shadow-md hover:border-primary/30",
         isDragging && "opacity-50 shadow-lg rotate-2",
-        task.is_completed && "opacity-60"
+        task.is_completed && "opacity-60",
+        isTaskOverdue(task) && "border-destructive/60 bg-destructive/5 hover:border-destructive"
       )}
       onClick={onEdit}
     >
@@ -95,14 +103,22 @@ export function MarketingKanbanCard({
 
         {/* Content */}
         <div className="flex-1 min-w-0">
-          <p
-            className={cn(
-              "text-sm font-medium line-clamp-2",
-              task.is_completed && "line-through text-muted-foreground"
+          <div className="flex items-start gap-2">
+            <p
+              className={cn(
+                "text-sm font-medium line-clamp-2 flex-1",
+                task.is_completed && "line-through text-muted-foreground"
+              )}
+            >
+              {task.title}
+            </p>
+            {isTaskOverdue(task) && (
+              <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 gap-1 shrink-0">
+                <AlertCircle className="h-3 w-3" />
+                Atrasada
+              </Badge>
             )}
-          >
-            {task.title}
-          </p>
+          </div>
 
           {/* Meta info */}
           <div className="flex items-center gap-2 mt-2 flex-wrap">

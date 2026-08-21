@@ -57,21 +57,24 @@ export function MarketingTaskKanban({
   );
 
   const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 8 } })
+    useSensor(PointerSensor, {
+      activationConstraint: { distance: 8 },
+    })
   );
 
   const tasksByColumn = useMemo(() => {
     const grouped: Record<string, MarketingTask[]> = {};
     columns.forEach((c) => (grouped[c.id] = []));
+    // Preserve the order provided by the parent (e.g., due date sorting)
     tasks.forEach((task) => {
       const key = task.column_id && grouped[task.column_id] ? task.column_id : firstColumnId;
       if (key) grouped[key].push(task);
     });
-    Object.keys(grouped).forEach((k) => grouped[k].sort((a, b) => a.display_order - b.display_order));
     return grouped;
   }, [tasks, columns, firstColumnId]);
 
   const handleDragStart = (e: DragStartEvent) => {
+    if (!onReorderTasks) return;
     const task = tasks.find((t) => t.id === e.active.id);
     if (task) setActiveTask(task);
   };
@@ -79,7 +82,7 @@ export function MarketingTaskKanban({
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     setActiveTask(null);
-    if (!over) return;
+    if (!over || !onReorderTasks) return;
 
     const taskId = active.id as string;
     const overId = over.id as string;
@@ -103,7 +106,7 @@ export function MarketingTaskKanban({
       const newIdx = list.findIndex((t) => t.id === overId);
       if (oldIdx !== -1 && newIdx !== -1 && oldIdx !== newIdx) {
         const reordered = arrayMove(list, oldIdx, newIdx);
-        onReorderTasks?.(reordered.map((t, i) => ({ id: t.id, display_order: i })));
+        onReorderTasks(reordered.map((t, i) => ({ id: t.id, display_order: i })));
       }
     } else {
       const target = columns.find((c) => c.id === overTask.column_id);

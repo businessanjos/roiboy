@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,18 +15,19 @@ import { MarketingTaskDialog } from "./MarketingTaskDialog";
 import { MarketingTaskSection } from "./MarketingTaskSection";
 import { MarketingTaskKanban } from "./MarketingTaskKanban";
 import { MarketingColumnsManagerDialog } from "./MarketingColumnsManagerDialog";
-import { useMarketingTasks } from "@/hooks/useMarketingTasks";
+import { useMarketingTasks, MarketingTask } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useMarketingTaskColumns, MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { MarketingTaskStatus } from "@/hooks/useMarketingTasks";
+import { isPast, isToday, parseISO, startOfDay } from "date-fns";
 
 type ViewMode = "list" | "board";
 
-type StatusFilter = "all" | MarketingTaskStatus;
+type StatusFilter = "all" | MarketingTask["status"];
+type SortFilter = "manual" | "due_date_asc" | "due_date_desc";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
   { value: "all", label: "Todas as etapas", icon: <Filter className="h-4 w-4 mr-2 text-muted-foreground" /> },
@@ -35,11 +36,24 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNod
   { value: "done", label: "Concluídas", icon: <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> },
 ];
 
+const SORT_OPTIONS: { value: SortFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "manual", label: "Ordem manual", icon: <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "due_date_asc", label: "Vencimento ↑", icon: <CalendarArrowUp className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "due_date_desc", label: "Vencimento ↓", icon: <CalendarArrowDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
+];
+
+export function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
+
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
   const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
+  const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
@@ -85,15 +99,30 @@ export function MarketingTasksTab() {
     );
   }, [tasks]);
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAssignee =
-      assigneeFilter === "all" ||
-      (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    return matchesSearch && matchesAssignee && matchesStatus;
-  });
+  const filteredTasks = useMemo(() => {
+    const filtered = tasks.filter((t) => {
+      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesAssignee =
+        assigneeFilter === "all" ||
+        (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      return matchesSearch && matchesAssignee && matchesStatus;
+    });
 
+    if (sortFilter === "manual") {
+      return filtered.sort((a, b) => a.display_order - b.display_order);
+    }
+
+    return filtered.sort((a, b) => {
+      const aDue = a.due_date ? startOfDay(parseISO(a.due_date)).getTime() : Infinity;
+      const bDue = b.due_date ? startOfDay(parseISO(b.due_date)).getTime() : Infinity;
+      if (aDue === bDue) return a.display_order - b.display_order;
+      return sortFilter === "due_date_asc" ? aDue - bDue : bDue - aDue;
+    });
+  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter]);
+
+
+  const isSortManual = sortFilter === "manual";
 
   const tasksBySection = sections.reduce((acc, section) => {
     acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
@@ -156,6 +185,23 @@ export function MarketingTasksTab() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Select value={sortFilter} onValueChange={(value) => setSortFilter(value as SortFilter)}>
+            <SelectTrigger className="w-44">
+              {SORT_OPTIONS.find((s) => s.value === sortFilter)?.icon}
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  <div className="flex items-center">
+                    {s.icon}
+                    {s.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
             <SelectTrigger className="w-44">
               {STATUS_OPTIONS.find((s) => s.value === statusFilter)?.icon}
@@ -219,7 +265,7 @@ export function MarketingTasksTab() {
           onColumnChange={handleColumnChange}
           onAddTask={(columnId) => handleAddTask(undefined, columnId)}
           subtaskCounts={subtaskCounts}
-          onReorderTasks={(updates) => reorderTasks.mutate(updates)}
+          onReorderTasks={isSortManual ? (updates) => reorderTasks.mutate(updates) : undefined}
         />
       )}
 
