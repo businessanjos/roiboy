@@ -90,15 +90,35 @@ export function MarketingTasksTab() {
 
   const isLoading = tasksLoading || sectionsLoading || columnsLoading;
 
+  const { data: fixedTeamMembers = [] } = useQuery({
+    queryKey: ["marketing-task-fixed-team-members"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("users")
+        .select("id, name")
+        .in("email", [
+          "fernanda@anjosbusiness.com.br",
+          "jessicacampos@anjosbususiness.com.br",
+          "videomaker@anjosbusiness.com.br",
+          "m.quintana@me.com",
+        ]);
+      if (error) throw error;
+      return (data || []) as { id: string; name: string }[];
+    },
+  });
+
   const assigneeOptions = useMemo(() => {
     const map = new Map<string, string>();
     tasks.forEach((t) => {
       if (t.assignee?.id) map.set(t.assignee.id, t.assignee.name || "Sem nome");
     });
+    fixedTeamMembers.forEach((u) => {
+      if (!map.has(u.id)) map.set(u.id, u.name || "Sem nome");
+    });
     return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
       a.name.localeCompare(b.name, "pt-BR"),
     );
-  }, [tasks]);
+  }, [tasks, fixedTeamMembers]);
 
   const selectedAssignee = useMemo(
     () => assigneeOptions.find((a) => a.id === assigneeFilter) || null,
