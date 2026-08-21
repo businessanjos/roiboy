@@ -2051,8 +2051,8 @@ export default function Tasks() {
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
-          {/* Carregamento incremental do histórico */}
-          {(hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
+          {/* Carregamento incremental do histórico (busca já varre todo o histórico) */}
+          {!serverSearch && (hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
             <div className="flex flex-col items-center gap-1 py-3">
               <Button
                 variant="outline"
@@ -2069,6 +2069,12 @@ export default function Tasks() {
               </span>
             </div>
           )}
+          {serverSearch && (
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              Busca aplicada em todo o histórico — {tasks.length} tarefa(s) encontrada(s).
+            </div>
+          )}
+
 
 
           {/* Mensagem de fallback para buscas históricas demoradas */}
