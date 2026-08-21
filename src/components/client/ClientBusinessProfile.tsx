@@ -505,15 +505,17 @@ export function ClientBusinessProfile({
 
   const revenueRecord = useMemo(() => {
     if (!history || history.length === 0) return null;
-    const eligible = mentoringStartMonth
-      ? history.filter((h) => h.month >= mentoringStartMonth)
-      : history;
-    const pool = eligible.length ? eligible : history;
-    return pool.reduce(
-      (best, h) => (Number(h.revenue) > Number(best.revenue) ? h : best),
-      pool[0]
+    // Recorde é sempre o maior faturamento já registrado. Em empates, vence o
+    // mês mais antigo (o recorde foi batido primeiro naquele mês).
+    const sorted = [...history].sort((a, b) => String(a.month).localeCompare(String(b.month)));
+    const best = sorted.reduce(
+      (acc, h) => (Number(h.revenue) > Number(acc.revenue) ? h : acc),
+      sorted[0]
     );
+    const withinMentoring = !mentoringStartMonth || String(best.month) >= mentoringStartMonth;
+    return { ...best, withinMentoring };
   }, [history, mentoringStartMonth]);
+
 
   const mentoringMonths = useMemo(() => {
     if (!mentoringStart) return null;
@@ -763,7 +765,7 @@ export function ClientBusinessProfile({
                     {currency(Number(revenueRecord.revenue))}
                   </div>
                   <div className="text-[11px] text-muted-foreground capitalize">
-                    {monthLabel(revenueRecord.month)} • desde o início da mentoria
+                    {monthLabel(revenueRecord.month)} • {revenueRecord.withinMentoring ? "desde o início da mentoria" : "antes da mentoria"}
                   </div>
                 </div>
               ) : (
