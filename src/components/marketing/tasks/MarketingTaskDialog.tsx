@@ -50,6 +50,7 @@ interface MarketingTaskDialogProps {
   taskId?: string | null;
   defaultSectionId?: string | null;
   defaultColumnId?: string | null;
+  defaultAssigneeId?: string | null;
 }
 
 export function MarketingTaskDialog({
@@ -58,6 +59,7 @@ export function MarketingTaskDialog({
   taskId,
   defaultSectionId,
   defaultColumnId,
+  defaultAssigneeId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
@@ -110,14 +112,14 @@ export function MarketingTaskDialog({
         setDescription("");
         setSectionId(defaultSectionId || undefined);
         setColumnId(defaultColumnId || columns[0]?.id);
-        setAssigneeId(undefined);
+        setAssigneeId(defaultAssigneeId || undefined);
         setDueDate(undefined);
         setPriority("medium");
         setStatus("pending");
         setMediaAttachments([]);
       }
     }
-  }, [open, existingTask, defaultSectionId, defaultColumnId, columns]);
+  }, [open, existingTask, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

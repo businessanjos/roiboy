@@ -60,6 +60,7 @@ export function MarketingTasksTab() {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [addingToSection, setAddingToSection] = useState<string | null>(null);
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
+  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | undefined>(undefined);
 
   const { tasks, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
@@ -99,6 +100,11 @@ export function MarketingTasksTab() {
     );
   }, [tasks]);
 
+  const selectedAssignee = useMemo(
+    () => assigneeOptions.find((a) => a.id === assigneeFilter) || null,
+    [assigneeOptions, assigneeFilter],
+  );
+
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((t) => {
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -137,9 +143,10 @@ export function MarketingTasksTab() {
 
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
-  const handleAddTask = (sectionId?: string, columnId?: string) => {
+  const handleAddTask = (sectionId?: string, columnId?: string, assigneeId?: string) => {
     setAddingToSection(sectionId || null);
     setDefaultColumnId(columnId);
+    setDefaultAssigneeId(assigneeId);
     setEditingTask(null);
     setIsDialogOpen(true);
   };
@@ -148,6 +155,7 @@ export function MarketingTasksTab() {
     setEditingTask(taskId);
     setAddingToSection(null);
     setDefaultColumnId(undefined);
+    setDefaultAssigneeId(undefined);
     setIsDialogOpen(true);
   };
 
@@ -184,6 +192,16 @@ export function MarketingTasksTab() {
             <Plus className="h-4 w-4" />
             Add task
           </Button>
+          {selectedAssignee && (
+            <Button
+              variant="secondary"
+              onClick={() => handleAddTask(undefined, undefined, selectedAssignee.id)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Nova tarefa para {selectedAssignee.name}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setIsColumnsManagerOpen(true)} className="gap-2">
             <Settings2 className="h-4 w-4" />
             Etapas
@@ -320,6 +338,7 @@ export function MarketingTasksTab() {
         taskId={editingTask}
         defaultSectionId={addingToSection}
         defaultColumnId={defaultColumnId}
+        defaultAssigneeId={defaultAssigneeId}
       />
 
       <MarketingColumnsManagerDialog open={isColumnsManagerOpen} onOpenChange={setIsColumnsManagerOpen} />
