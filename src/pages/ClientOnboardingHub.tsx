@@ -334,6 +334,13 @@ function SmartClientList({
           : health === "at_risk" ? "border-l-amber-500"
           : health === "on_track" ? "border-l-emerald-500"
           : "border-l-muted-foreground/30";
+        const stageItems = checklistItems.filter(i => i.stage_id === c.stage_id);
+        const status = c.stage_id
+          ? getChecklistStatus(c.id, c.stage_id, checklistItems, checklistProgress)
+          : { total: 0, completed: 0, isComplete: true };
+        const completedItemIds = checklistProgress
+          .filter(p => p.client_id === c.id && p.completed_at !== null)
+          .map(p => p.checklist_item_id);
         return (
           <Card key={c.id} className={`border-l-4 ${healthColor}`}>
             <CardContent className="p-3 flex items-center gap-3">
@@ -372,6 +379,60 @@ function SmartClientList({
                   {c.ai_next_step && <Badge variant="outline" className="text-[9px] gap-0.5"><Brain className="h-2.5 w-2.5" />IA</Badge>}
                 </div>
               </div>
+
+              {/* Checklist inline: dar baixa sem sair da lista */}
+              {!notStarted && stageItems.length > 0 && accountId && (
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="ghost" size="sm" className="gap-1.5 shrink-0">
+                      <CheckSquare className="h-4 w-4" />
+                      <span className="text-xs">{status.completed}/{status.total}</span>
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-80" align="end">
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-2">
+                        <h4 className="font-medium text-sm truncate">Checklist — {stage?.name}</h4>
+                        <Badge variant={status.isComplete ? "default" : "secondary"} className="text-xs">
+                          {status.completed}/{status.total}
+                        </Badge>
+                      </div>
+                      <Progress value={status.total ? (status.completed / status.total) * 100 : 0} className="h-2" />
+                      <div className="space-y-1 max-h-64 overflow-y-auto">
+                        {stageItems.map(item => {
+                          const isCompleted = completedItemIds.includes(item.id);
+                          return (
+                            <label
+                              key={item.id}
+                              className="flex items-start gap-2 p-2 rounded-md hover:bg-muted cursor-pointer"
+                            >
+                              <Checkbox
+                                checked={isCompleted}
+                                onCheckedChange={() =>
+                                  toggleChecklistItem.mutate({
+                                    clientId: c.id,
+                                    checklistItemId: item.id,
+                                    accountId,
+                                    completed: !isCompleted,
+                                    currentStageId: c.stage_id,
+                                    allStageItems: stageItems,
+                                    allProgress: checklistProgress,
+                                  })
+                                }
+                                className="mt-0.5"
+                              />
+                              <span className={`text-sm ${isCompleted ? "line-through text-muted-foreground" : ""}`}>
+                                {item.title}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+              )}
+
               {notStarted && firstActiveStage ? (
                 <Button
                   size="sm"
@@ -385,6 +446,7 @@ function SmartClientList({
                   Continuar <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               )}
+
             </CardContent>
           </Card>
         );
