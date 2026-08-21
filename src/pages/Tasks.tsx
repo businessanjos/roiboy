@@ -289,7 +289,37 @@ export default function Tasks() {
         sectorActivityTypeIds = (sectorTypes || []).map(t => t.id);
       }
 
+      // Busca também por entidades relacionadas (cliente, lead e negociação),
+      // para que tarefas genéricas ("Follow Up") apareçam ao buscar pelo nome.
+      const safeSearch = serverSearch ? serverSearch.replace(/[,()*%]/g, " ").trim() : "";
+      let relatedClientIds: string[] = [];
+      let relatedLeadIds: string[] = [];
+      let relatedDealIds: string[] = [];
+      if (safeSearch) {
+        const [clientsRes, leadsRes, dealsRes] = await Promise.all([
+          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
+          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
+          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(200),
+        ]);
+        relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
+        relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
+        relatedDealIds = (dealsRes.data || []).map((r: any) => r.id);
+      }
+
+      const searchOrFilter = safeSearch
+        ? [
+            `title.ilike.*${safeSearch}*`,
+            `description.ilike.*${safeSearch}*`,
+            relatedClientIds.length ? `client_id.in.(${relatedClientIds.join(",")})` : null,
+            relatedLeadIds.length ? `lead_id.in.(${relatedLeadIds.join(",")})` : null,
+            relatedDealIds.length ? `deal_id.in.(${relatedDealIds.join(",")})` : null,
+          ]
+            .filter(Boolean)
+            .join(",")
+        : "";
+
       const buildQuery = () => {
+
         let q = supabase
           .from("internal_tasks")
           .select(`
@@ -329,12 +359,10 @@ export default function Tasks() {
 
         // Busca incremental no servidor: procura em todo o histórico sem
         // precisar carregar tudo no cliente.
-        if (serverSearch) {
-          const safe = serverSearch.replace(/[,()*]/g, " ").trim();
-          if (safe) {
-            q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
-          }
+        if (searchOrFilter) {
+          q = q.or(searchOrFilter);
         }
+
         return q;
       };
 
@@ -391,9 +419,30 @@ export default function Tasks() {
         q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
       }
       if (serverSearch) {
-        const safe = serverSearch.replace(/[,()*]/g, " ").trim();
-        if (safe) q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+        const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
+        if (safe) {
+          const [clientsRes, leadsRes, dealsRes] = await Promise.all([
+            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(200),
+            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(200),
+            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(200),
+          ]);
+          const cIds = (clientsRes.data || []).map((r: any) => r.id);
+          const lIds = (leadsRes.data || []).map((r: any) => r.id);
+          const dIds = (dealsRes.data || []).map((r: any) => r.id);
+          q = q.or(
+            [
+              `title.ilike.*${safe}*`,
+              `description.ilike.*${safe}*`,
+              cIds.length ? `client_id.in.(${cIds.join(",")})` : null,
+              lIds.length ? `lead_id.in.(${lIds.join(",")})` : null,
+              dIds.length ? `deal_id.in.(${dIds.join(",")})` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          );
+        }
       }
+
 
       const { count, error } = await q;
       if (error) throw error;
@@ -757,12 +806,28 @@ export default function Tasks() {
     return null;
   }, []);
 
+  // Busca local: título, descrição e também cliente, lead e negociação vinculados.
+  const matchesTaskSearch = useCallback((task: Task): boolean => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return true;
+    const haystack = [
+      task.title,
+      task.description,
+      task.clients?.full_name,
+      task.leads?.full_name,
+      task.deals?.title,
+      task.deals?.contact_name,
+      task.deals?.client?.full_name,
+      task.deals?.lead?.full_name,
+    ];
+    return haystack.some((v) => !!v && v.toLowerCase().includes(term));
+  }, [searchTerm]);
+
+
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
   const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
     // Search filter
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesTaskSearch(task);
     
     // User filter
     const matchesUser = filterUser === "all" || 
@@ -824,14 +889,12 @@ export default function Tasks() {
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
   const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesTaskSearch(task);
     const matchesUser = filterUser === "all" ||
       (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
@@ -852,7 +915,7 @@ export default function Tasks() {
     const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage && matchesLead;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Opções de negociação disponíveis a partir das tarefas carregadas
   const leadOptions = useMemo(() => {
@@ -1909,9 +1972,7 @@ export default function Tasks() {
       {viewMode === "kanban" ? (
         <TaskKanban
           tasks={tasks.filter((task) => {
-            const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = matchesTaskSearch(task);
             
             const matchesUser = filterUser === "all" || 
               (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
