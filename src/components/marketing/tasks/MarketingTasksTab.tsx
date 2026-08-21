@@ -19,6 +19,8 @@ type ViewMode = "list" | "board";
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [searchQuery, setSearchQuery] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<string | null>(null);
