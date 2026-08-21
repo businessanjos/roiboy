@@ -53,7 +53,24 @@ export function MarketingTasksTab() {
 
   const isLoading = tasksLoading || sectionsLoading || columnsLoading;
 
-  const filteredTasks = tasks.filter((t) => t.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const assigneeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    tasks.forEach((t) => {
+      if (t.assignee?.id) map.set(t.assignee.id, t.assignee.name || "Sem nome");
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR"),
+    );
+  }, [tasks]);
+
+  const filteredTasks = tasks.filter((t) => {
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesAssignee =
+      assigneeFilter === "all" ||
+      (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
+    return matchesSearch && matchesAssignee;
+  });
+
 
   const tasksBySection = sections.reduce((acc, section) => {
     acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
