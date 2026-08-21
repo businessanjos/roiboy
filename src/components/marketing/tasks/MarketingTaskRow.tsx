@@ -56,7 +56,8 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
     <div
       className={cn(
         "grid grid-cols-[auto,1fr,140px,120px,100px,100px] gap-2 px-4 py-2 items-center hover:bg-muted/30 transition-colors cursor-pointer group border-b last:border-b-0",
-        task.is_completed && "opacity-60"
+        task.is_completed && "opacity-60",
+        isTaskOverdue(task) && "bg-destructive/5 hover:bg-destructive/10"
       )}
       onClick={onEdit}
     >
@@ -75,7 +76,7 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
       </div>
 
       {/* Task Title */}
-      <div className="min-w-0">
+      <div className="min-w-0 flex items-center gap-2">
         <span
           className={cn(
             "text-sm truncate block",
@@ -84,6 +85,12 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
         >
           {task.title}
         </span>
+        {isTaskOverdue(task) && (
+          <Badge variant="destructive" className="text-[10px] px-1.5 py-0 h-5 gap-1 shrink-0">
+            <AlertCircle className="h-3 w-3" />
+            Atrasada
+          </Badge>
+        )}
       </div>
 
       {/* Assignee */}
