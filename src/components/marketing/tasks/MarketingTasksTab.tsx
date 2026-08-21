@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,13 +22,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { MarketingTaskStatus } from "@/hooks/useMarketingTasks";
 
 type ViewMode = "list" | "board";
+
+type StatusFilter = "all" | MarketingTaskStatus;
+
+const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "all", label: "Todas as etapas", icon: <Filter className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "pending", label: "Abertas", icon: <Circle className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "in_progress", label: "Em andamento", icon: <PlayCircle className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "done", label: "Concluídas", icon: <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> },
+];
 
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
+  const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
@@ -79,7 +90,8 @@ export function MarketingTasksTab() {
     const matchesAssignee =
       assigneeFilter === "all" ||
       (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
-    return matchesSearch && matchesAssignee;
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchesSearch && matchesAssignee && matchesStatus;
   });
 
 
@@ -144,6 +156,23 @@ export function MarketingTasksTab() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+            <SelectTrigger className="w-44">
+              {STATUS_OPTIONS.find((s) => s.value === statusFilter)?.icon}
+              <SelectValue placeholder="Todas as etapas" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  <div className="flex items-center">
+                    {s.icon}
+                    {s.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
             <SelectTrigger className="w-52">
               <User className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -161,7 +190,6 @@ export function MarketingTasksTab() {
           </Select>
 
           <div className="relative">
-
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar tarefas..."
