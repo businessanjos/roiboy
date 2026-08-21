@@ -187,6 +187,16 @@ export function MarketingTasksTab() {
             <Plus className="h-4 w-4" />
             Add task
           </Button>
+          {selectedAssignee && (
+            <Button
+              variant="secondary"
+              onClick={() => handleAddTask(undefined, undefined, selectedAssignee.id)}
+              className="gap-2"
+            >
+              <Plus className="h-4 w-4" />
+              Nova tarefa para {selectedAssignee.name}
+            </Button>
+          )}
           <Button variant="outline" onClick={() => setIsColumnsManagerOpen(true)} className="gap-2">
             <Settings2 className="h-4 w-4" />
             Etapas
