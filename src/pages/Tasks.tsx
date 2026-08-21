@@ -827,9 +827,7 @@ export default function Tasks() {
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
   const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
     // Search filter
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesTaskSearch(task);
     
     // User filter
     const matchesUser = filterUser === "all" || 
@@ -891,14 +889,12 @@ export default function Tasks() {
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
   const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
-    const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = matchesTaskSearch(task);
     const matchesUser = filterUser === "all" ||
       (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
@@ -919,7 +915,7 @@ export default function Tasks() {
     const matchesStage = filterStage === "all" || task.deals?.stage?.id === filterStage;
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesStage && matchesLead;
-  }), [tasks, searchTerm, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Opções de negociação disponíveis a partir das tarefas carregadas
   const leadOptions = useMemo(() => {
@@ -1976,9 +1972,7 @@ export default function Tasks() {
       {viewMode === "kanban" ? (
         <TaskKanban
           tasks={tasks.filter((task) => {
-            const matchesSearch = task.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              task.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-              task.clients?.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+            const matchesSearch = matchesTaskSearch(task);
             
             const matchesUser = filterUser === "all" || 
               (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
