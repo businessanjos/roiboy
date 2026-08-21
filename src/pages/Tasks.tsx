@@ -1057,8 +1057,32 @@ export default function Tasks() {
       return dueDate < today;
     }).length;
 
-    return { pendingCount, overdueCount, inProgressCount, doneCount };
-  }, [baseFilteredTasks, baseFilteredTasksIgnoringDate, customStatuses, filterDateStart, filterDateEnd]);
+    // Sem filtros locais aplicados, o card mostra o total real do banco
+    // (o histórico carregado é paginado em blocos e subestimaria o número).
+    const hasLocalFilters =
+      hasDateFilter ||
+      filterActivityType !== "all" ||
+      filterStage !== "all" ||
+      filterLead !== "all" ||
+      searchTerm.trim() !== "";
+
+    const displayDoneCount =
+      !hasLocalFilters && typeof totalDoneCount === "number" ? totalDoneCount : doneCount;
+
+    return { pendingCount, overdueCount, inProgressCount, doneCount: displayDoneCount };
+  }, [
+    baseFilteredTasks,
+    baseFilteredTasksIgnoringDate,
+    customStatuses,
+    filterDateStart,
+    filterDateEnd,
+    filterActivityType,
+    filterStage,
+    filterLead,
+    searchTerm,
+    totalDoneCount,
+  ]);
+
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
