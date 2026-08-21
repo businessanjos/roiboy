@@ -297,9 +297,9 @@ export default function Tasks() {
       let relatedDealIds: string[] = [];
       if (safeSearch) {
         const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
-          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
-          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(200),
+          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
+          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
+          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(1000),
         ]);
         relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
         relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
@@ -426,9 +426,9 @@ export default function Tasks() {
         const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
         if (safe) {
           const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(200),
-            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(200),
-            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(200),
+            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(1000),
+            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(1000),
+            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(1000),
           ]);
           const cIds = (clientsRes.data || []).map((r: any) => r.id);
           const lIds = (leadsRes.data || []).map((r: any) => r.id);
