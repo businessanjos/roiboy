@@ -118,6 +118,14 @@ export default function PracticeAreasAdmin() {
     onError: (e: any) => toast.error(e.message ?? "Falha ao reordenar"),
   });
 
+  if (sectorsLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
+
   if (!canManage) {
     return (
       <div className="p-6 max-w-2xl">
