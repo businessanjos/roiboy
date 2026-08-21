@@ -50,6 +50,7 @@ interface MarketingTaskDialogProps {
   taskId?: string | null;
   defaultSectionId?: string | null;
   defaultColumnId?: string | null;
+  defaultAssigneeId?: string | null;
 }
 
 export function MarketingTaskDialog({
@@ -58,6 +59,7 @@ export function MarketingTaskDialog({
   taskId,
   defaultSectionId,
   defaultColumnId,
+  defaultAssigneeId,
 }: MarketingTaskDialogProps) {
   const { tasks, createTask, updateTask, deleteTask } = useMarketingTasks();
   const { sections } = useMarketingTaskSections();
