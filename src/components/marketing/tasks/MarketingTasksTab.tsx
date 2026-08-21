@@ -185,6 +185,23 @@ export function MarketingTasksTab() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Select value={sortFilter} onValueChange={(value) => setSortFilter(value as SortFilter)}>
+            <SelectTrigger className="w-44">
+              {SORT_OPTIONS.find((s) => s.value === sortFilter)?.icon}
+              <SelectValue placeholder="Ordenar por" />
+            </SelectTrigger>
+            <SelectContent>
+              {SORT_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  <div className="flex items-center">
+                    {s.icon}
+                    {s.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
             <SelectTrigger className="w-44">
               {STATUS_OPTIONS.find((s) => s.value === statusFilter)?.icon}
