@@ -289,7 +289,37 @@ export default function Tasks() {
         sectorActivityTypeIds = (sectorTypes || []).map(t => t.id);
       }
 
+      // Busca também por entidades relacionadas (cliente, lead e negociação),
+      // para que tarefas genéricas ("Follow Up") apareçam ao buscar pelo nome.
+      const safeSearch = serverSearch ? serverSearch.replace(/[,()*%]/g, " ").trim() : "";
+      let relatedClientIds: string[] = [];
+      let relatedLeadIds: string[] = [];
+      let relatedDealIds: string[] = [];
+      if (safeSearch) {
+        const [clientsRes, leadsRes, dealsRes] = await Promise.all([
+          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
+          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
+          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(200),
+        ]);
+        relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
+        relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
+        relatedDealIds = (dealsRes.data || []).map((r: any) => r.id);
+      }
+
+      const searchOrFilter = safeSearch
+        ? [
+            `title.ilike.*${safeSearch}*`,
+            `description.ilike.*${safeSearch}*`,
+            relatedClientIds.length ? `client_id.in.(${relatedClientIds.join(",")})` : null,
+            relatedLeadIds.length ? `lead_id.in.(${relatedLeadIds.join(",")})` : null,
+            relatedDealIds.length ? `deal_id.in.(${relatedDealIds.join(",")})` : null,
+          ]
+            .filter(Boolean)
+            .join(",")
+        : "";
+
       const buildQuery = () => {
+
         let q = supabase
           .from("internal_tasks")
           .select(`
