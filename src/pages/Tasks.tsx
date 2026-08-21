@@ -1884,7 +1884,7 @@ export default function Tasks() {
           </TabsContent>
 
           {/* Carregamento incremental do histórico */}
-          {hasMoreTasks && (
+          {(hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
             <div className="flex flex-col items-center gap-1 py-3">
               <Button
                 variant="outline"
@@ -1895,10 +1895,13 @@ export default function Tasks() {
                 {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
               </Button>
               <span className="text-xs text-muted-foreground">
-                {tasks.length} tarefas carregadas{isHistoricalUserFilter ? " (auditoria histórica)" : ""}
+                Exibindo {tasks.length}
+                {typeof totalHistoryCount === "number" ? ` de ${totalHistoryCount}` : ""} tarefas do histórico
+                {isHistoricalUserFilter ? " (auditoria histórica)" : ""}
               </span>
             </div>
           )}
+
 
           {/* Mensagem de fallback para buscas históricas demoradas */}
           {showSlowLoadMessage && (
