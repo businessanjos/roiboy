@@ -1,12 +1,19 @@
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { format, isToday, isTomorrow, isPast } from "date-fns";
+import { format, isToday, isTomorrow, isPast, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
-import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip } from "lucide-react";
+import { CalendarIcon, GripVertical, CheckCircle2, Circle, ListTodo, Paperclip, AlertCircle } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
+
+function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
 
 interface MarketingKanbanCardProps {
   task: MarketingTask;
