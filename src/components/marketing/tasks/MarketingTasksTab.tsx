@@ -333,6 +333,7 @@ export function MarketingTasksTab() {
         taskId={editingTask}
         defaultSectionId={addingToSection}
         defaultColumnId={defaultColumnId}
+        defaultAssigneeId={defaultAssigneeId}
       />
 
       <MarketingColumnsManagerDialog open={isColumnsManagerOpen} onOpenChange={setIsColumnsManagerOpen} />
