@@ -138,9 +138,10 @@ export function MarketingTasksTab() {
 
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
-  const handleAddTask = (sectionId?: string, columnId?: string) => {
+  const handleAddTask = (sectionId?: string, columnId?: string, assigneeId?: string) => {
     setAddingToSection(sectionId || null);
     setDefaultColumnId(columnId);
+    setDefaultAssigneeId(assigneeId);
     setEditingTask(null);
     setIsDialogOpen(true);
   };
@@ -149,6 +150,7 @@ export function MarketingTasksTab() {
     setEditingTask(taskId);
     setAddingToSection(null);
     setDefaultColumnId(undefined);
+    setDefaultAssigneeId(undefined);
     setIsDialogOpen(true);
   };
 
