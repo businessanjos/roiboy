@@ -625,7 +625,8 @@ export default function EventDetail() {
             maxCapacity={event.max_capacity}
             eventScheduledAt={event.scheduled_at}
             onUpdate={fetchStats}
-            isLocked={isLocked}
+            isLocked={isParticipantsLocked}
+
           />
         </TabsContent>
 
