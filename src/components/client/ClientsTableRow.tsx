@@ -13,6 +13,7 @@ import { CustomField } from "@/components/custom-fields";
 import { FieldValueEditor } from "@/components/custom-fields";
 import { CheckCircle2, AlertCircle, MessageCircle, Wifi, WifiOff, ArrowRight, Trash2, Clock, PauseCircle, XCircle, Ban, GraduationCap, Briefcase, TrendingUp, TrendingDown, Trophy, Building2, Activity, CalendarDays } from "lucide-react";
 import { getMlsBadgeClasses, getMlsLevelLabel } from "@/lib/mls-utils";
+import { getCurrentClientProduct } from "@/lib/client/currentProduct";
 import { cn } from "@/lib/utils";
 import { 
   getInitials, 
@@ -87,34 +88,44 @@ export const ClientsTableRow = memo(function ClientsTableRow({
           onClick={() => onProductClick(client)}
           className="cursor-pointer hover:opacity-80 transition-opacity"
         >
-          {client.client_products && client.client_products.length > 0 ? (
+          {client.client_products && client.client_products.length > 0 ? (() => {
+            const currentProduct = getCurrentClientProduct(client) || client.client_products[0];
+            return (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
                   <div className="flex flex-wrap justify-center gap-1">
-                    {client.client_products.slice(0, 2).map((cp: any) => (
-                      <Badge key={cp.product_id} variant="secondary" className="text-xs">
-                        {cp.products?.name || "Produto"}
-                      </Badge>
-                    ))}
-                    {client.client_products.length > 2 && (
-                      <Badge variant="outline" className="text-xs">
-                        +{client.client_products.length - 2}
-                      </Badge>
-                    )}
+                    <Badge
+                      className="text-xs font-medium"
+                      variant="outline"
+                      style={{
+                        backgroundColor: `${currentProduct.products?.color || "#6b7280"}20`,
+                        borderColor: currentProduct.products?.color || "#6b7280",
+                        color: currentProduct.products?.color || "#6b7280",
+                      }}
+                    >
+                      {currentProduct.products?.name || "Produto"}
+                    </Badge>
                   </div>
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-xs">
-                    {client.client_products.map((cp: any) => (
-                      <p key={cp.product_id}>{cp.products?.name}</p>
-                    ))}
+                    <p className="font-medium">Produto atual: {currentProduct.products?.name}</p>
+                    {client.client_products.length > 1 && (
+                      <>
+                        <p className="mt-1 text-muted-foreground">Histórico</p>
+                        {client.client_products.map((cp: any) => (
+                          <p key={cp.product_id}>{cp.products?.name}</p>
+                        ))}
+                      </>
+                    )}
                     <p className="mt-1 text-primary">Clique para editar</p>
                   </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>
-          ) : (
+            );
+          })() : (
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>

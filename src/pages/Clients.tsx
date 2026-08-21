@@ -48,6 +48,7 @@ import { useClientMerge } from "@/hooks/useClientMerge";
 import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
 import { OverdueBadge } from "@/components/client/OverdueBadge";
 import { RevenueImportDialog } from "@/components/client/RevenueImportDialog";
+import { getCurrentClientProduct } from "@/lib/client/currentProduct";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -2639,50 +2640,60 @@ export default function Clients() {
                             }}
                             className="cursor-pointer hover:opacity-80 transition-opacity"
                           >
-                            {client.client_products && client.client_products.length > 0 ? (
+                            {client.client_products && client.client_products.length > 0 ? (() => {
+                              const currentProduct = getCurrentClientProduct(client) || client.client_products[0];
+                              const historyCount = client.client_products.length;
+                              return (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
                                     <div className="flex flex-col gap-1 items-center">
-                                      {client.client_products.slice(0, 2).map((cp: any) => (
-                                        <Badge 
-                                          key={cp.product_id} 
-                                          className="text-xs font-medium whitespace-nowrap shadow-sm"
-                                          style={{ 
-                                            backgroundColor: cp.products?.color || '#6b7280',
-                                            borderColor: cp.products?.color || '#6b7280',
-                                            color: '#fff',
-                                            textShadow: '0 1px 2px rgba(0,0,0,0.2)',
-                                            boxShadow: `0 0 8px ${cp.products?.color || '#6b7280'}50`
-                                          }}
-                                        >
-                                          {cp.products?.name || "Produto"}
-                                        </Badge>
-                                      ))}
-                                      {client.client_products.length > 2 && (
-                                        <Badge variant="outline" className="text-xs">
-                                          +{client.client_products.length - 2}
-                                        </Badge>
-                                      )}
+                                      <Badge 
+                                        key={currentProduct.product_id} 
+                                        className="text-xs font-medium whitespace-nowrap shadow-sm"
+                                        style={{ 
+                                          backgroundColor: currentProduct.products?.color || '#6b7280',
+                                          borderColor: currentProduct.products?.color || '#6b7280',
+                                          color: '#fff',
+                                          textShadow: '0 1px 2px rgba(0,0,0,0.2)',
+                                          boxShadow: `0 0 8px ${currentProduct.products?.color || '#6b7280'}50`
+                                        }}
+                                      >
+                                        {currentProduct.products?.name || "Produto"}
+                                      </Badge>
                                     </div>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <div className="text-xs space-y-1">
-                                      {client.client_products.map((cp: any) => (
-                                        <div key={cp.product_id} className="flex items-center gap-2">
-                                          <div 
-                                            className="w-2 h-2 rounded-full" 
-                                            style={{ backgroundColor: cp.products?.color || '#6b7280' }}
-                                          />
-                                          <span>{cp.products?.name}</span>
-                                        </div>
-                                      ))}
+                                      <p className="font-medium">Produto atual</p>
+                                      <div className="flex items-center gap-2">
+                                        <div 
+                                          className="w-2 h-2 rounded-full" 
+                                          style={{ backgroundColor: currentProduct.products?.color || '#6b7280' }}
+                                        />
+                                        <span>{currentProduct.products?.name}</span>
+                                      </div>
+                                      {historyCount > 1 && (
+                                        <>
+                                          <p className="pt-1 font-medium text-muted-foreground">Histórico</p>
+                                          {client.client_products.map((cp: any) => (
+                                            <div key={cp.product_id} className="flex items-center gap-2">
+                                              <div 
+                                                className="w-2 h-2 rounded-full" 
+                                                style={{ backgroundColor: cp.products?.color || '#6b7280' }}
+                                              />
+                                              <span>{cp.products?.name}</span>
+                                            </div>
+                                          ))}
+                                        </>
+                                      )}
                                       <p className="mt-1 text-primary">Clique para editar</p>
                                     </div>
                                   </TooltipContent>
                                 </Tooltip>
                               </TooltipProvider>
-                            ) : (
+                              );
+                            })() : (
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
