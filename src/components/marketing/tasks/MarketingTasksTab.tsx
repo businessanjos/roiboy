@@ -99,22 +99,30 @@ export function MarketingTasksTab() {
     );
   }, [tasks]);
 
-  const filteredTasks = tasks.filter((t) => {
-    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesAssignee =
-      assigneeFilter === "all" ||
-      (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
-    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
-    return matchesSearch && matchesAssignee && matchesStatus;
-  });
+  const filteredTasks = useMemo(() => {
+    const filtered = tasks.filter((t) => {
+      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesAssignee =
+        assigneeFilter === "all" ||
+        (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      return matchesSearch && matchesAssignee && matchesStatus;
+    });
+
+    if (sortFilter === "manual") {
+      return filtered.sort((a, b) => a.display_order - b.display_order);
+    }
+
+    return filtered.sort((a, b) => {
+      const aDue = a.due_date ? startOfDay(parseISO(a.due_date)).getTime() : Infinity;
+      const bDue = b.due_date ? startOfDay(parseISO(b.due_date)).getTime() : Infinity;
+      if (aDue === bDue) return a.display_order - b.display_order;
+      return sortFilter === "due_date_asc" ? aDue - bDue : bDue - aDue;
+    });
+  }, [tasks, searchQuery, assigneeFilter, statusFilter, sortFilter]);
 
 
-  const tasksBySection = sections.reduce((acc, section) => {
-    acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
-    return acc;
-  }, {} as Record<string, typeof tasks>);
-
-  const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
+  const isSortManual = sortFilter === "manual";
 
   const handleAddTask = (sectionId?: string, columnId?: string) => {
     setAddingToSection(sectionId || null);
