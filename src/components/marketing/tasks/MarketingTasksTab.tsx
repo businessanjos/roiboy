@@ -19,15 +19,16 @@ import { useMarketingTasks } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useMarketingTaskColumns, MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 
 type ViewMode = "list" | "board";
 
 export function MarketingTasksTab() {
-  const [viewMode, setViewMode] = useState<ViewMode>("board");
-  const [searchQuery, setSearchQuery] = useState("");
-  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+  const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
+  const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
+  const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
