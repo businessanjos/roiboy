@@ -765,7 +765,7 @@ export function ClientBusinessProfile({
                     {currency(Number(revenueRecord.revenue))}
                   </div>
                   <div className="text-[11px] text-muted-foreground capitalize">
-                    {monthLabel(revenueRecord.month)} • desde o início da mentoria
+                    {monthLabel(revenueRecord.month)} • {revenueRecord.withinMentoring ? "desde o início da mentoria" : "antes da mentoria"}
                   </div>
                 </div>
               ) : (
