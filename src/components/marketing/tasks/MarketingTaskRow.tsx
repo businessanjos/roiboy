@@ -1,4 +1,4 @@
-import { format, isPast, isToday, isTomorrow } from "date-fns";
+import { format, isPast, isToday, isTomorrow, startOfDay, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { parseLocalDate } from "@/lib/dateUtils";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
 import { cn } from "@/lib/utils";
-import { GripVertical } from "lucide-react";
+import { GripVertical, AlertCircle } from "lucide-react";
 
 interface MarketingTaskRowProps {
   task: MarketingTask;
@@ -25,6 +25,12 @@ const statusConfig = {
   in_progress: { label: "Em andamento", className: "bg-blue-100 text-blue-700" },
   done: { label: "Concluído", className: "bg-emerald-100 text-emerald-700" },
 };
+
+function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
 
 export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTaskRowProps) {
   const dueDate = task.due_date ? parseLocalDate(task.due_date) : null;
