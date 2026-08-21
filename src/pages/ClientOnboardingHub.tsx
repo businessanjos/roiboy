@@ -141,7 +141,10 @@ export default function ClientOnboardingHub() {
             clients={filtered}
             stages={stages}
             stageById={stageById}
+            accountId={accountId}
+            onAdvance={moveClient}
             onOpenClient={setDrawerClient}
+
             onStart={async (clientId, stageId) => {
               try {
                 await moveClient(clientId, stageId);
