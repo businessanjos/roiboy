@@ -2,6 +2,8 @@ import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -32,11 +34,16 @@ function slugify(s: string) {
 
 export default function PracticeAreasAdmin() {
   const { currentUser } = useCurrentUser();
+  const { hasSectorAccess, isLoading: sectorsLoading } = useSectorAccess();
   const qc = useQueryClient();
   const [newLabel, setNewLabel] = useState("");
 
+  // Liberado para qualquer usuário com acesso ao setor de Customer Success.
   const canManage =
-    currentUser?.role === "admin" || (currentUser as any)?.is_also_admin === true;
+    currentUser?.role === "admin" ||
+    (currentUser as any)?.is_also_admin === true ||
+    hasSectorAccess("operacoes");
+
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["practice-areas", "admin"],
@@ -110,6 +117,14 @@ export default function PracticeAreasAdmin() {
     onSuccess: () => invalidate(),
     onError: (e: any) => toast.error(e.message ?? "Falha ao reordenar"),
   });
+
+  if (sectorsLoading) {
+    return (
+      <div className="flex justify-center py-16">
+        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
   if (!canManage) {
     return (
