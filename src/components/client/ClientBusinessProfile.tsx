@@ -654,15 +654,16 @@ export function ClientBusinessProfile({
 
           {/* Qualitative row */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-3">
-            <InlineTextField
-              label="Formação"
-              icon={<GraduationCap className="h-3.5 w-3.5" />}
-              value={client.education}
-              draft={drafts.education}
-              onDraft={(v) => setDrafts((d) => ({ ...d, education: v }))}
-              onCommit={() => commitText("education")}
-              placeholder="Ex: Medicina"
-            />
+            <div className="rounded-lg border bg-card p-3">
+              <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1 mb-1">
+                <GraduationCap className="h-3.5 w-3.5" /> Formação
+              </span>
+              <EducationSelect
+                value={client.education}
+                onChange={(v) => saveField({ education: v } as any)}
+              />
+            </div>
+
             <InlineTextField
               label="Especialidade"
               icon={<Stethoscope className="h-3.5 w-3.5" />}
