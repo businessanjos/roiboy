@@ -297,9 +297,9 @@ export default function Tasks() {
       let relatedDealIds: string[] = [];
       if (safeSearch) {
         const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
-          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(200),
-          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(200),
+          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
+          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
+          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(1000),
         ]);
         relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
         relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
@@ -369,8 +369,11 @@ export default function Tasks() {
       // Primeira abertura é sempre leve (1 bloco). O volume cresce apenas sob
       // demanda pelo botão "Carregar mais", inclusive na auditoria nominal —
       // assim filtros amplos nunca travam a tela no carregamento inicial.
+      // Exceção: quando há busca ativa, varremos TODO o histórico que casa com
+      // o termo (independente do que já foi carregado na tela).
       const PAGE = 1000;
-      const MAX_PAGES = Math.max(1, loadedChunks);
+      const SEARCH_MAX_PAGES = 20; // até 20k resultados de busca
+      const MAX_PAGES = searchOrFilter ? SEARCH_MAX_PAGES : Math.max(1, loadedChunks);
       const all: Task[] = [];
       let from = 0;
       let hasMore = false;
@@ -385,6 +388,7 @@ export default function Tasks() {
         from += PAGE;
         if (page === MAX_PAGES - 1) hasMore = true;
       }
+
       return { rows: all, hasMore };
     },
     staleTime: 30000,
@@ -422,9 +426,9 @@ export default function Tasks() {
         const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
         if (safe) {
           const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(200),
-            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(200),
-            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(200),
+            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(1000),
+            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(1000),
+            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(1000),
           ]);
           const cIds = (clientsRes.data || []).map((r: any) => r.id);
           const lIds = (leadsRes.data || []).map((r: any) => r.id);
@@ -2047,8 +2051,8 @@ export default function Tasks() {
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
-          {/* Carregamento incremental do histórico */}
-          {(hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
+          {/* Carregamento incremental do histórico (busca já varre todo o histórico) */}
+          {!serverSearch && (hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
             <div className="flex flex-col items-center gap-1 py-3">
               <Button
                 variant="outline"
@@ -2065,6 +2069,12 @@ export default function Tasks() {
               </span>
             </div>
           )}
+          {serverSearch && (
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              Busca aplicada em todo o histórico — {tasks.length} tarefa(s) encontrada(s).
+            </div>
+          )}
+
 
 
           {/* Mensagem de fallback para buscas históricas demoradas */}
