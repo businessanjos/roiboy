@@ -168,15 +168,26 @@ export function EducationSelect({
           )}
         </PopoverContent>
       </Popover>
-      {suggestion && (
+      {suggestion ? (
         <button
           type="button"
           onClick={() => onChange(suggestion)}
-          className="text-[11px] text-amber-600 hover:underline text-left"
+          className="text-[11px] text-amber-600 hover:underline text-left block"
         >
           Valor fora do padrão. Converter para "{suggestion}"?
         </button>
+      ) : (
+        !isKnown && (
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            className="text-[11px] text-amber-600 hover:underline text-left block"
+          >
+            "{value}" está fora do padrão. Clique para escolher uma formação da lista.
+          </button>
+        )
       )}
+
     </div>
   );
 }
