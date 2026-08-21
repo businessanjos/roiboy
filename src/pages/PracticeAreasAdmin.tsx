@@ -32,11 +32,16 @@ function slugify(s: string) {
 
 export default function PracticeAreasAdmin() {
   const { currentUser } = useCurrentUser();
+  const { hasSectorAccess, isLoading: sectorsLoading } = useSectorAccess();
   const qc = useQueryClient();
   const [newLabel, setNewLabel] = useState("");
 
+  // Liberado para qualquer usuário com acesso ao setor de Customer Success.
   const canManage =
-    currentUser?.role === "admin" || (currentUser as any)?.is_also_admin === true;
+    currentUser?.role === "admin" ||
+    (currentUser as any)?.is_also_admin === true ||
+    hasSectorAccess("operacoes");
+
 
   const { data: rows, isLoading } = useQuery({
     queryKey: ["practice-areas", "admin"],
