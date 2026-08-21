@@ -1,7 +1,15 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { MarketingTaskList } from "./MarketingTaskList";
 import { MarketingTaskDialog } from "./MarketingTaskDialog";
 import { MarketingTaskSection } from "./MarketingTaskSection";
