@@ -265,7 +265,7 @@ export function MarketingTasksTab() {
           onColumnChange={handleColumnChange}
           onAddTask={(columnId) => handleAddTask(undefined, columnId)}
           subtaskCounts={subtaskCounts}
-          onReorderTasks={(updates) => reorderTasks.mutate(updates)}
+          onReorderTasks={isSortManual ? (updates) => reorderTasks.mutate(updates) : undefined}
         />
       )}
 
