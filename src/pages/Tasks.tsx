@@ -366,6 +366,43 @@ export default function Tasks() {
   const tasks = tasksResult?.rows ?? [];
   const hasMoreTasks = !!tasksResult?.hasMore;
 
+  // Total real de tarefas no histórico (mesmos filtros de servidor), só contagem.
+  const { data: totalHistoryCount } = useQuery({
+    queryKey: ["internal-tasks-total", filterUser, currentUser?.id, currentSector?.id, serverSearch],
+    queryFn: async () => {
+      let sectorActivityTypeIds: string[] = [];
+      if (currentSector?.id) {
+        const { data: sectorTypes } = await supabase
+          .from("activity_types")
+          .select("id")
+          .eq("sector_id", currentSector.id)
+          .eq("is_active", true);
+        sectorActivityTypeIds = (sectorTypes || []).map((t: any) => t.id);
+      }
+
+      let q = supabase.from("internal_tasks").select("id", { count: "exact", head: true });
+
+      if (!isHistoricalUserFilter && sectorActivityTypeIds.length > 0) {
+        q = q.or(`activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`);
+      }
+      if (filterUser === "mine" && currentUser?.id) {
+        q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+      } else if (filterUser !== "all" && filterUser) {
+        q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
+      }
+      if (serverSearch) {
+        const safe = serverSearch.replace(/[,()*]/g, " ").trim();
+        if (safe) q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+      }
+
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 60000,
+  });
+
+
   // Feedback visual para carregamentos longos: após 2.5s buscando,
   // exibe uma mensagem de fallback para que o usuário não ache que travou.
   useEffect(() => {
@@ -1847,7 +1884,7 @@ export default function Tasks() {
           </TabsContent>
 
           {/* Carregamento incremental do histórico */}
-          {hasMoreTasks && (
+          {(hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
             <div className="flex flex-col items-center gap-1 py-3">
               <Button
                 variant="outline"
@@ -1858,10 +1895,13 @@ export default function Tasks() {
                 {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
               </Button>
               <span className="text-xs text-muted-foreground">
-                {tasks.length} tarefas carregadas{isHistoricalUserFilter ? " (auditoria histórica)" : ""}
+                Exibindo {tasks.length}
+                {typeof totalHistoryCount === "number" ? ` de ${totalHistoryCount}` : ""} tarefas do histórico
+                {isHistoricalUserFilter ? " (auditoria histórica)" : ""}
               </span>
             </div>
           )}
+
 
           {/* Mensagem de fallback para buscas históricas demoradas */}
           {showSlowLoadMessage && (
