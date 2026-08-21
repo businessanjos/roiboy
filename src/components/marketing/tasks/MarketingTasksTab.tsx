@@ -105,6 +105,29 @@ export function MarketingTasksTab() {
     [assigneeOptions, assigneeFilter],
   );
 
+  const baseFilteredForCounts = useMemo(() => {
+    return tasks.filter((t) => {
+      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tasks, searchQuery, statusFilter]);
+
+  const assigneeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: baseFilteredForCounts.length, none: 0 };
+    assigneeOptions.forEach((a) => {
+      counts[a.id] = 0;
+    });
+    baseFilteredForCounts.forEach((t) => {
+      if (t.assignee_id) {
+        counts[t.assignee_id] = (counts[t.assignee_id] || 0) + 1;
+      } else {
+        counts.none += 1;
+      }
+    });
+    return counts;
+  }, [baseFilteredForCounts, assigneeOptions]);
+
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((t) => {
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
@@ -244,18 +267,37 @@ export function MarketingTasksTab() {
           </Select>
 
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
-            <SelectTrigger className="w-52">
+            <SelectTrigger className="w-60">
               <User className="h-4 w-4 mr-2 text-muted-foreground" />
               <SelectValue placeholder="Todas as pessoas" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas as pessoas</SelectItem>
+              <SelectItem value="all">
+                <div className="flex items-center justify-between w-full">
+                  <span>Todas as pessoas</span>
+                  <span className="ml-3 inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {assigneeCounts.all || 0}
+                  </span>
+                </div>
+              </SelectItem>
               {assigneeOptions.map((a) => (
                 <SelectItem key={a.id} value={a.id}>
-                  {a.name}
+                  <div className="flex items-center justify-between w-full">
+                    <span>{a.name}</span>
+                    <span className="ml-3 inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                      {assigneeCounts[a.id] || 0}
+                    </span>
+                  </div>
                 </SelectItem>
               ))}
-              <SelectItem value="none">Sem responsável</SelectItem>
+              <SelectItem value="none">
+                <div className="flex items-center justify-between w-full">
+                  <span>Sem responsável</span>
+                  <span className="ml-3 inline-flex items-center justify-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground">
+                    {assigneeCounts.none || 0}
+                  </span>
+                </div>
+              </SelectItem>
             </SelectContent>
           </Select>
 
