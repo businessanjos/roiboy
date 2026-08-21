@@ -3,24 +3,37 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Progress } from "@/components/ui/progress";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
   Rocket, Search, Sparkles, Users, AlertCircle, RefreshCw, Settings2,
-  Brain, Activity, AlertTriangle, Timer, TrendingUp, Play, ArrowRight,
+  Brain, Activity, AlertTriangle, Timer, TrendingUp, Play, ArrowRight, CheckSquare,
 } from "lucide-react";
 import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
 import { useOnboardingHub, computeHealth, daysInStage, OnboardingClient } from "@/hooks/useOnboardingHub";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import {
+  useStageChecklistItems,
+  useClientChecklistProgress,
+  useToggleChecklistItem,
+  getChecklistStatus,
+  getNextStage,
+} from "@/hooks/useStageChecklist";
 
 export default function ClientOnboardingHub() {
   const { stages, clients, loading, summary, moveClient, refetch } = useOnboardingHub();
+  const { currentUser } = useCurrentUser();
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [drawerClient, setDrawerClient] = useState<OnboardingClient | null>(null);
-  const accountId = stages[0] && (stages[0] as any).account_id; // not exposed; ignore
+  const accountId = currentUser?.account_id;
+
 
   const filtered = useMemo(() => {
     if (!search.trim()) return clients;
