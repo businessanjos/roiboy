@@ -806,6 +806,24 @@ export default function Tasks() {
     return null;
   }, []);
 
+  // Busca local: título, descrição e também cliente, lead e negociação vinculados.
+  const matchesTaskSearch = useCallback((task: Task): boolean => {
+    const term = searchTerm.trim().toLowerCase();
+    if (!term) return true;
+    const haystack = [
+      task.title,
+      task.description,
+      task.clients?.full_name,
+      task.leads?.full_name,
+      task.deals?.title,
+      task.deals?.contact_name,
+      task.deals?.client?.full_name,
+      task.deals?.lead?.full_name,
+    ];
+    return haystack.some((v) => !!v && v.toLowerCase().includes(term));
+  }, [searchTerm]);
+
+
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
   const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
     // Search filter
