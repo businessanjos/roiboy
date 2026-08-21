@@ -271,19 +271,43 @@ function KpiCard({
 }
 
 function SmartClientList({
-  clients, stages, stageById, onOpenClient, onStart,
+  clients, stages, stageById, onOpenClient, onStart, accountId, onAdvance,
 }: {
   clients: OnboardingClient[];
   stages: { id: string; display_order: number; name: string }[];
   stageById: Map<string, any>;
   onOpenClient: (c: OnboardingClient) => void;
   onStart: (clientId: string, stageId: string) => Promise<void>;
+  accountId?: string;
+  onAdvance: (clientId: string, stageId: string | null) => Promise<void>;
 }) {
   // Primeira etapa "ativa" da jornada (display_order = 1, ou a menor > 0; fallback: a primeira)
-  const firstActiveStage = useMemo(() => {
-    const sorted = [...stages].sort((a, b) => a.display_order - b.display_order);
-    return sorted.find(s => s.display_order >= 1) ?? sorted[0] ?? null;
-  }, [stages]);
+  const sortedStages = useMemo(
+    () => [...stages].sort((a, b) => a.display_order - b.display_order),
+    [stages],
+  );
+  const firstActiveStage = useMemo(
+    () => sortedStages.find(s => s.display_order >= 1) ?? sortedStages[0] ?? null,
+    [sortedStages],
+  );
+
+  const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
+  const clientIds = useMemo(() => clients.slice(0, 50).map(c => c.id), [clients]);
+  const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
+  const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
+
+  const toggleChecklistItem = useToggleChecklistItem({
+    onChecklistComplete: async (clientId, currentStageId) => {
+      const next = getNextStage(currentStageId, sortedStages as any);
+      if (!next) return;
+      try {
+        await onAdvance(clientId, next.id);
+        toast.success(`Etapa concluída — avançou para "${next.name}"`);
+      } catch {
+        toast.error("Erro ao avançar de etapa");
+      }
+    },
+  });
 
   if (clients.length === 0) {
     return (
@@ -294,6 +318,7 @@ function SmartClientList({
       </Card>
     );
   }
+
 
   return (
     <div className="grid gap-2">
