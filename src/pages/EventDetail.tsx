@@ -259,6 +259,13 @@ export default function EventDetail() {
   };
 
   const isLocked = event ? isEventLocked(event) : false;
+  /**
+   * Participantes continuam editáveis após o evento: a presença (e quem faltou)
+   * só é registrada depois que o evento acontece. Apenas eventos cancelados
+   * bloqueiam a inclusão/importação de participantes.
+   */
+  const isParticipantsLocked = event?.status === "cancelled";
+
 
   /**
    * Prontidão do evento: média ponderada dos quatro sinais operacionais que
