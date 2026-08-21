@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2, ArrowUpDown, CalendarArrowDown, CalendarArrowUp } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -15,18 +15,19 @@ import { MarketingTaskDialog } from "./MarketingTaskDialog";
 import { MarketingTaskSection } from "./MarketingTaskSection";
 import { MarketingTaskKanban } from "./MarketingTaskKanban";
 import { MarketingColumnsManagerDialog } from "./MarketingColumnsManagerDialog";
-import { useMarketingTasks } from "@/hooks/useMarketingTasks";
+import { useMarketingTasks, MarketingTask } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useMarketingTaskColumns, MarketingTaskColumn } from "@/hooks/useMarketingTaskColumns";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
-import { MarketingTaskStatus } from "@/hooks/useMarketingTasks";
+import { isPast, isToday, parseISO, startOfDay } from "date-fns";
 
 type ViewMode = "list" | "board";
 
-type StatusFilter = "all" | MarketingTaskStatus;
+type StatusFilter = "all" | MarketingTask["status"];
+type SortFilter = "manual" | "due_date_asc" | "due_date_desc";
 
 const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
   { value: "all", label: "Todas as etapas", icon: <Filter className="h-4 w-4 mr-2 text-muted-foreground" /> },
@@ -35,11 +36,24 @@ const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNod
   { value: "done", label: "Concluídas", icon: <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> },
 ];
 
+const SORT_OPTIONS: { value: SortFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "manual", label: "Ordem manual", icon: <ArrowUpDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "due_date_asc", label: "Vencimento ↑", icon: <CalendarArrowUp className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "due_date_desc", label: "Vencimento ↓", icon: <CalendarArrowDown className="h-4 w-4 mr-2 text-muted-foreground" /> },
+];
+
+export function isTaskOverdue(task: MarketingTask): boolean {
+  if (!task.due_date || task.is_completed || task.status === "done") return false;
+  const due = startOfDay(parseISO(task.due_date));
+  return isPast(due) && !isToday(due);
+}
+
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
   const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
+  const [sortFilter, setSortFilter] = usePersistedFilter<SortFilter>("marketing-tasks", "sort", "manual");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
