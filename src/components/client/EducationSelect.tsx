@@ -42,13 +42,17 @@ export function EducationSelect({
   const favorites = useMemo(() => filter(FAVORITE_EDUCATION_OPTIONS), [query]);
   const others = useMemo(() => filter(OTHER_EDUCATION_OPTIONS), [query]);
 
-  // Valor legado fora da lista: mostra sugestão de conversão
-  const suggestion = useMemo(() => {
-    if (!value) return null;
-    const known = [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS].includes(value);
-    if (known) return null;
-    return normalizeEducation(value);
+  // Valor legado fora da lista: mostra sugestão de conversão (ou aviso simples)
+  const isKnown = useMemo(() => {
+    if (!value) return true;
+    return [...FAVORITE_EDUCATION_OPTIONS, ...OTHER_EDUCATION_OPTIONS].includes(value);
   }, [value]);
+
+  const suggestion = useMemo(() => {
+    if (!value || isKnown) return null;
+    return normalizeEducation(value);
+  }, [value, isKnown]);
+
 
   const select = (v: string) => {
     onChange(v);
