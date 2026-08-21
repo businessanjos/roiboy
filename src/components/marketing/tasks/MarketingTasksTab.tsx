@@ -1,7 +1,15 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2 } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
 import { MarketingTaskList } from "./MarketingTaskList";
 import { MarketingTaskDialog } from "./MarketingTaskDialog";
 import { MarketingTaskSection } from "./MarketingTaskSection";
@@ -19,6 +27,8 @@ type ViewMode = "list" | "board";
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = useState<ViewMode>("board");
   const [searchQuery, setSearchQuery] = useState("");
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<string | null>(null);
@@ -53,7 +63,24 @@ export function MarketingTasksTab() {
 
   const isLoading = tasksLoading || sectionsLoading || columnsLoading;
 
-  const filteredTasks = tasks.filter((t) => t.title.toLowerCase().includes(searchQuery.toLowerCase()));
+  const assigneeOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    tasks.forEach((t) => {
+      if (t.assignee?.id) map.set(t.assignee.id, t.assignee.name || "Sem nome");
+    });
+    return Array.from(map, ([id, name]) => ({ id, name })).sort((a, b) =>
+      a.name.localeCompare(b.name, "pt-BR"),
+    );
+  }, [tasks]);
+
+  const filteredTasks = tasks.filter((t) => {
+    const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesAssignee =
+      assigneeFilter === "all" ||
+      (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
+    return matchesSearch && matchesAssignee;
+  });
+
 
   const tasksBySection = sections.reduce((acc, section) => {
     acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
@@ -115,8 +142,25 @@ export function MarketingTasksTab() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            <SelectTrigger className="w-52">
+              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Todas as pessoas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as pessoas</SelectItem>
+              {assigneeOptions.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+              <SelectItem value="none">Sem responsável</SelectItem>
+            </SelectContent>
+          </Select>
+
           <div className="relative">
+
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar tarefas..."
