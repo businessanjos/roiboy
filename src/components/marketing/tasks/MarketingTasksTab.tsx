@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Plus, Search, List, LayoutGrid, Settings2, User } from "lucide-react";
+import { Plus, Search, List, LayoutGrid, Settings2, User, Filter, Circle, PlayCircle, CheckCircle2 } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -22,13 +22,24 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
+import { MarketingTaskStatus } from "@/hooks/useMarketingTasks";
 
 type ViewMode = "list" | "board";
+
+type StatusFilter = "all" | MarketingTaskStatus;
+
+const STATUS_OPTIONS: { value: StatusFilter; label: string; icon: React.ReactNode }[] = [
+  { value: "all", label: "Todas as etapas", icon: <Filter className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "pending", label: "Abertas", icon: <Circle className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "in_progress", label: "Em andamento", icon: <PlayCircle className="h-4 w-4 mr-2 text-muted-foreground" /> },
+  { value: "done", label: "Concluídas", icon: <CheckCircle2 className="h-4 w-4 mr-2 text-muted-foreground" /> },
+];
 
 export function MarketingTasksTab() {
   const [viewMode, setViewMode] = usePersistedFilter<ViewMode>("marketing-tasks", "viewMode", "board");
   const [searchQuery, setSearchQuery] = usePersistedFilter<string>("marketing-tasks", "search", "");
   const [assigneeFilter, setAssigneeFilter] = usePersistedFilter<string>("marketing-tasks", "assignee", "all");
+  const [statusFilter, setStatusFilter] = usePersistedFilter<StatusFilter>("marketing-tasks", "status", "all");
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isColumnsManagerOpen, setIsColumnsManagerOpen] = useState(false);
@@ -79,7 +90,8 @@ export function MarketingTasksTab() {
     const matchesAssignee =
       assigneeFilter === "all" ||
       (assigneeFilter === "none" ? !t.assignee_id : t.assignee_id === assigneeFilter);
-    return matchesSearch && matchesAssignee;
+    const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+    return matchesSearch && matchesAssignee && matchesStatus;
   });
 
 
