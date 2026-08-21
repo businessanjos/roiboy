@@ -65,11 +65,11 @@ export function MarketingTaskKanban({
   const tasksByColumn = useMemo(() => {
     const grouped: Record<string, MarketingTask[]> = {};
     columns.forEach((c) => (grouped[c.id] = []));
+    // Preserve the order provided by the parent (e.g., due date sorting)
     tasks.forEach((task) => {
       const key = task.column_id && grouped[task.column_id] ? task.column_id : firstColumnId;
       if (key) grouped[key].push(task);
     });
-    Object.keys(grouped).forEach((k) => grouped[k].sort((a, b) => a.display_order - b.display_order));
     return grouped;
   }, [tasks, columns, firstColumnId]);
 
