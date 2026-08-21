@@ -402,60 +402,70 @@ export default function Tasks() {
     staleTime: 60000,
   });
 
-  // Total real de tarefas concluídas no histórico (mesmos filtros de servidor).
+  // IDs usados tanto nas abas quanto nas contagens exatas do histórico.
   const completedStatusIdsServer = useMemo(
     () => customStatuses.filter((s: any) => s.is_completed_status).map((s: any) => s.id),
     [customStatuses]
   );
 
-  const { data: totalDoneCount } = useQuery({
+  // Sem filtros, os cards devem representar a conta inteira e nunca o lote
+  // paginado de 1.000 linhas. A consulta só inicia depois que conta e status
+  // estiverem hidratados, evitando números intermediários durante o reload.
+  const { data: accountTaskTotals } = useQuery({
     queryKey: [
-      "internal-tasks-done-total",
-      filterUser,
-      currentUser?.id,
-      currentSector?.id,
-      serverSearch,
+      "internal-tasks-account-kpis",
+      currentUser?.account_id,
       completedStatusIdsServer.join(","),
     ],
     queryFn: async () => {
-      let sectorActivityTypeIds: string[] = [];
-      if (currentSector?.id) {
-        const { data: sectorTypes } = await supabase
-          .from("activity_types")
-          .select("id")
-          .eq("sector_id", currentSector.id)
-          .eq("is_active", true);
-        sectorActivityTypeIds = (sectorTypes || []).map((t: any) => t.id);
-      }
+      if (!currentUser?.account_id) return null;
 
-      let q = supabase.from("internal_tasks").select("id", { count: "exact", head: true });
+      const completedFilter = completedStatusIdsServer.length > 0
+        ? `completed_at.not.is.null,custom_status_id.in.(${completedStatusIdsServer.join(",")})`
+        : "completed_at.not.is.null";
+      const incompleteStatusFilter = completedStatusIdsServer.length > 0
+        ? `custom_status_id.is.null,custom_status_id.not.in.(${completedStatusIdsServer.join(",")})`
+        : "custom_status_id.is.null,custom_status_id.not.is.null";
+      const pendingStatus = customStatuses.find((s) => s.name.toLowerCase().includes("pendente"));
+      const inProgressStatus = customStatuses.find((s) => s.name.toLowerCase().includes("andamento"));
+      const today = format(new Date(), "yyyy-MM-dd");
+      const baseCount = () => supabase
+        .from("internal_tasks")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", currentUser.account_id);
 
-      if (!isHistoricalUserFilter && sectorActivityTypeIds.length > 0) {
-        q = q.or(`activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`);
-      }
-      if (filterUser === "mine" && currentUser?.id) {
-        q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
-      } else if (filterUser !== "all" && filterUser) {
-        q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
-      }
-      if (serverSearch) {
-        const safe = serverSearch.replace(/[,()*]/g, " ").trim();
-        if (safe) q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
-      }
-
-      // Concluída = tem completed_at OU está em um status marcado como concluído
-      if (completedStatusIdsServer.length > 0) {
-        q = q.or(
-          `completed_at.not.is.null,custom_status_id.in.(${completedStatusIdsServer.join(",")})`
+      let pendingQuery = baseCount()
+        .is("completed_at", null)
+        .or(incompleteStatusFilter);
+      if (pendingStatus) {
+        pendingQuery = pendingQuery.or(
+          pendingStatus.is_default
+            ? `custom_status_id.eq.${pendingStatus.id},custom_status_id.is.null`
+            : `custom_status_id.eq.${pendingStatus.id}`
         );
-      } else {
-        q = q.not("completed_at", "is", null);
       }
 
-      const { count, error } = await q;
-      if (error) throw error;
-      return count ?? 0;
+      let inProgressQuery = baseCount().is("completed_at", null);
+      if (inProgressStatus) inProgressQuery = inProgressQuery.eq("custom_status_id", inProgressStatus.id);
+      else inProgressQuery = inProgressQuery.eq("custom_status_id", "00000000-0000-0000-0000-000000000000");
+
+      const [pending, inProgress, overdue, done] = await Promise.all([
+        pendingQuery,
+        inProgressQuery,
+        baseCount().is("completed_at", null).or(incompleteStatusFilter).lt("due_date", today),
+        baseCount().or(completedFilter),
+      ]);
+      const firstError = [pending.error, inProgress.error, overdue.error, done.error].find(Boolean);
+      if (firstError) throw firstError;
+
+      return {
+        pending: pending.count ?? 0,
+        inProgress: inProgress.count ?? 0,
+        overdue: overdue.count ?? 0,
+        done: done.count ?? 0,
+      };
     },
+    enabled: !!currentUser?.account_id && !statusesLoading,
     staleTime: 60000,
   });
 
@@ -530,7 +540,10 @@ export default function Tasks() {
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "internal_tasks", filter: `account_id=eq.${currentUser.account_id}` },
-        () => queryClient.invalidateQueries({ queryKey: ["internal-tasks"] })
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+          queryClient.invalidateQueries({ queryKey: ["internal-tasks-account-kpis"] });
+        }
       )
       .subscribe();
 
@@ -541,6 +554,7 @@ export default function Tasks() {
 
   const invalidateTasks = useCallback(() => {
     queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["internal-tasks-account-kpis"] });
   }, [queryClient]);
 
   const handleToggleComplete = useCallback(async (task: Task) => {
@@ -1057,30 +1071,36 @@ export default function Tasks() {
       return dueDate < today;
     }).length;
 
-    // Sem filtros locais aplicados, o card mostra o total real do banco
-    // (o histórico carregado é paginado em blocos e subestimaria o número).
-    const hasLocalFilters =
+    const hasAnyFilter =
       hasDateFilter ||
+      filterUser !== "all" ||
       filterActivityType !== "all" ||
       filterStage !== "all" ||
       filterLead !== "all" ||
       searchTerm.trim() !== "";
 
-    const displayDoneCount =
-      !hasLocalFilters && typeof totalDoneCount === "number" ? totalDoneCount : doneCount;
+    if (!hasAnyFilter && accountTaskTotals) {
+      return {
+        pendingCount: accountTaskTotals.pending,
+        overdueCount: accountTaskTotals.overdue,
+        inProgressCount: accountTaskTotals.inProgress,
+        doneCount: accountTaskTotals.done,
+      };
+    }
 
-    return { pendingCount, overdueCount, inProgressCount, doneCount: displayDoneCount };
+    return { pendingCount, overdueCount, inProgressCount, doneCount };
   }, [
     baseFilteredTasks,
     baseFilteredTasksIgnoringDate,
     customStatuses,
     filterDateStart,
     filterDateEnd,
+    filterUser,
     filterActivityType,
     filterStage,
     filterLead,
     searchTerm,
-    totalDoneCount,
+    accountTaskTotals,
   ]);
 
 
