@@ -100,6 +100,11 @@ export function MarketingTasksTab() {
     );
   }, [tasks]);
 
+  const selectedAssignee = useMemo(
+    () => assigneeOptions.find((a) => a.id === assigneeFilter) || null,
+    [assigneeOptions, assigneeFilter],
+  );
+
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((t) => {
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
