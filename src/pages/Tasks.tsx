@@ -359,12 +359,10 @@ export default function Tasks() {
 
         // Busca incremental no servidor: procura em todo o histórico sem
         // precisar carregar tudo no cliente.
-        if (serverSearch) {
-          const safe = serverSearch.replace(/[,()*]/g, " ").trim();
-          if (safe) {
-            q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
-          }
+        if (searchOrFilter) {
+          q = q.or(searchOrFilter);
         }
+
         return q;
       };
 
