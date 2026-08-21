@@ -28,6 +28,8 @@ import { ClientClinicsManager } from "./ClientClinicsManager";
 import { RevenueHistoryDialog } from "./RevenueHistoryDialog";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
+import { EducationSelect } from "./EducationSelect";
+
 import { CountryStateCity, type LocationFields } from "@/components/operations/CountryStateCity";
 import { COUNTRIES, BRAZIL_STATES } from "@/lib/countries";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
