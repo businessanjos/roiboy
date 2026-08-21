@@ -112,7 +112,7 @@ export function MarketingTaskDialog({
         setDescription("");
         setSectionId(defaultSectionId || undefined);
         setColumnId(defaultColumnId || columns[0]?.id);
-        setAssigneeId(undefined);
+        setAssigneeId(defaultAssigneeId || undefined);
         setDueDate(undefined);
         setPriority("medium");
         setStatus("pending");
