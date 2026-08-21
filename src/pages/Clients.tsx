@@ -48,6 +48,7 @@ import { useClientMerge } from "@/hooks/useClientMerge";
 import { useClientsFinancialStatusBatch } from "@/hooks/useClientsFinancialStatusBatch";
 import { OverdueBadge } from "@/components/client/OverdueBadge";
 import { RevenueImportDialog } from "@/components/client/RevenueImportDialog";
+import { getCurrentClientProduct } from "@/lib/client/currentProduct";
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
