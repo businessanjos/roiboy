@@ -93,11 +93,12 @@ const strip = (v: string) =>
 
 /** Mapeia textos livres antigos (profissão, erros de digitação) para a formação padrão. */
 const ALIAS_MATCHERS: Array<{ test: RegExp; value: string }> = [
-  { test: /medic(o|a|ina)|m[ée]dic/, value: "Medicina" },
+  { test: /biomedic|biomet(i|í)|bio-?medic/, value: "Biomedicina" },
   { test: /veterinar/, value: "Medicina Veterinária" },
+  { test: /medic(o|a|ina)|m[ée]dic/, value: "Medicina" },
   { test: /enferm/, value: "Enfermagem" },
   { test: /fisi(o|io)?terap|fisiterap|fisioterp/, value: "Fisioterapia" },
-  { test: /biomedic|biomet(i|í)|bio-?medic/, value: "Biomedicina" },
+
   { test: /odonto|dentist|ondonto|oonto|osonto/, value: "Odontologia" },
   { test: /farmac|farmace/, value: "Farmácia" },
   { test: /nutri/, value: "Nutrição" },
