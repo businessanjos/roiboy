@@ -119,7 +119,7 @@ export function MarketingTaskDialog({
         setMediaAttachments([]);
       }
     }
-  }, [open, existingTask, defaultSectionId, defaultColumnId, columns]);
+  }, [open, existingTask, defaultSectionId, defaultColumnId, defaultAssigneeId, columns]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
