@@ -134,8 +134,25 @@ export function MarketingTasksTab() {
           </Button>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
+            <SelectTrigger className="w-52">
+              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Todas as pessoas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as pessoas</SelectItem>
+              {assigneeOptions.map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+              <SelectItem value="none">Sem responsável</SelectItem>
+            </SelectContent>
+          </Select>
+
           <div className="relative">
+
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar tarefas..."
