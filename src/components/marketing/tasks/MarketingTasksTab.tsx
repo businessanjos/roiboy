@@ -114,8 +114,14 @@ export function MarketingTasksTab() {
     }
 
     return filtered.sort((a, b) => {
-      const aDue = a.due_date ? startOfDay(parseISO(a.due_date)).getTime() : Infinity;
-      const bDue = b.due_date ? startOfDay(parseISO(b.due_date)).getTime() : Infinity;
+      const aNull = !a.due_date;
+      const bNull = !b.due_date;
+      if (aNull && bNull) return a.display_order - b.display_order;
+      if (aNull) return 1; // nulls last
+      if (bNull) return -1;
+
+      const aDue = startOfDay(parseISO(a.due_date!)).getTime();
+      const bDue = startOfDay(parseISO(b.due_date!)).getTime();
       if (aDue === bDue) return a.display_order - b.display_order;
       return sortFilter === "due_date_asc" ? aDue - bDue : bDue - aDue;
     });
