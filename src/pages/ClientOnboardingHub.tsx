@@ -302,7 +302,8 @@ function SmartClientList({
       if (!next) return;
       try {
         await onAdvance(clientId, next.id);
-        toast.success(`Etapa concluída — avançou para "${next.name}"`);
+        const nextName = sortedStages.find(s => s.id === next.id)?.name ?? "próxima etapa";
+        toast.success(`Etapa concluída — avançou para "${nextName}"`);
       } catch {
         toast.error("Erro ao avançar de etapa");
       }
