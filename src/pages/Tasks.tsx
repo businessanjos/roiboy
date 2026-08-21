@@ -419,9 +419,30 @@ export default function Tasks() {
         q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
       }
       if (serverSearch) {
-        const safe = serverSearch.replace(/[,()*]/g, " ").trim();
-        if (safe) q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+        const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
+        if (safe) {
+          const [clientsRes, leadsRes, dealsRes] = await Promise.all([
+            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(200),
+            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(200),
+            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(200),
+          ]);
+          const cIds = (clientsRes.data || []).map((r: any) => r.id);
+          const lIds = (leadsRes.data || []).map((r: any) => r.id);
+          const dIds = (dealsRes.data || []).map((r: any) => r.id);
+          q = q.or(
+            [
+              `title.ilike.*${safe}*`,
+              `description.ilike.*${safe}*`,
+              cIds.length ? `client_id.in.(${cIds.join(",")})` : null,
+              lIds.length ? `lead_id.in.(${lIds.join(",")})` : null,
+              dIds.length ? `deal_id.in.(${dIds.join(",")})` : null,
+            ]
+              .filter(Boolean)
+              .join(",")
+          );
+        }
       }
+
 
       const { count, error } = await q;
       if (error) throw error;
