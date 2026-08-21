@@ -35,6 +35,8 @@ import {
 import { MLS_LEVELS } from "@/lib/mls-utils";
 import { PracticeAreaSelect } from "@/components/PracticeAreaSelect";
 import { PracticeAreaMultiSelect } from "@/components/PracticeAreaMultiSelect";
+import { EducationSelect } from "./EducationSelect";
+
 
 
 export interface PixKeyData {
