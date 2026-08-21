@@ -402,6 +402,65 @@ export default function Tasks() {
     staleTime: 60000,
   });
 
+  // Total real de tarefas concluídas no histórico (mesmos filtros de servidor).
+  const completedStatusIdsServer = useMemo(
+    () => customStatuses.filter((s: any) => s.is_completed_status).map((s: any) => s.id),
+    [customStatuses]
+  );
+
+  const { data: totalDoneCount } = useQuery({
+    queryKey: [
+      "internal-tasks-done-total",
+      filterUser,
+      currentUser?.id,
+      currentSector?.id,
+      serverSearch,
+      completedStatusIdsServer.join(","),
+    ],
+    queryFn: async () => {
+      let sectorActivityTypeIds: string[] = [];
+      if (currentSector?.id) {
+        const { data: sectorTypes } = await supabase
+          .from("activity_types")
+          .select("id")
+          .eq("sector_id", currentSector.id)
+          .eq("is_active", true);
+        sectorActivityTypeIds = (sectorTypes || []).map((t: any) => t.id);
+      }
+
+      let q = supabase.from("internal_tasks").select("id", { count: "exact", head: true });
+
+      if (!isHistoricalUserFilter && sectorActivityTypeIds.length > 0) {
+        q = q.or(`activity_type_id.in.(${sectorActivityTypeIds.join(",")}),activity_type_id.is.null`);
+      }
+      if (filterUser === "mine" && currentUser?.id) {
+        q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
+      } else if (filterUser !== "all" && filterUser) {
+        q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
+      }
+      if (serverSearch) {
+        const safe = serverSearch.replace(/[,()*]/g, " ").trim();
+        if (safe) q = q.or(`title.ilike.*${safe}*,description.ilike.*${safe}*`);
+      }
+
+      // Concluída = tem completed_at OU está em um status marcado como concluído
+      if (completedStatusIdsServer.length > 0) {
+        q = q.or(
+          `completed_at.not.is.null,custom_status_id.in.(${completedStatusIdsServer.join(",")})`
+        );
+      } else {
+        q = q.not("completed_at", "is", null);
+      }
+
+      const { count, error } = await q;
+      if (error) throw error;
+      return count ?? 0;
+    },
+    staleTime: 60000,
+  });
+
+
+
 
   // Feedback visual para carregamentos longos: após 2.5s buscando,
   // exibe uma mensagem de fallback para que o usuário não ache que travou.
@@ -998,8 +1057,32 @@ export default function Tasks() {
       return dueDate < today;
     }).length;
 
-    return { pendingCount, overdueCount, inProgressCount, doneCount };
-  }, [baseFilteredTasks, baseFilteredTasksIgnoringDate, customStatuses, filterDateStart, filterDateEnd]);
+    // Sem filtros locais aplicados, o card mostra o total real do banco
+    // (o histórico carregado é paginado em blocos e subestimaria o número).
+    const hasLocalFilters =
+      hasDateFilter ||
+      filterActivityType !== "all" ||
+      filterStage !== "all" ||
+      filterLead !== "all" ||
+      searchTerm.trim() !== "";
+
+    const displayDoneCount =
+      !hasLocalFilters && typeof totalDoneCount === "number" ? totalDoneCount : doneCount;
+
+    return { pendingCount, overdueCount, inProgressCount, doneCount: displayDoneCount };
+  }, [
+    baseFilteredTasks,
+    baseFilteredTasksIgnoringDate,
+    customStatuses,
+    filterDateStart,
+    filterDateEnd,
+    filterActivityType,
+    filterStage,
+    filterLead,
+    searchTerm,
+    totalDoneCount,
+  ]);
+
 
   if (loading) {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
