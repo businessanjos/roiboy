@@ -156,6 +156,23 @@ export function MarketingTasksTab() {
         </div>
 
         <div className="flex items-center gap-2 flex-wrap">
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+            <SelectTrigger className="w-44">
+              {STATUS_OPTIONS.find((s) => s.value === statusFilter)?.icon}
+              <SelectValue placeholder="Todas as etapas" />
+            </SelectTrigger>
+            <SelectContent>
+              {STATUS_OPTIONS.map((s) => (
+                <SelectItem key={s.value} value={s.value}>
+                  <div className="flex items-center">
+                    {s.icon}
+                    {s.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={assigneeFilter} onValueChange={setAssigneeFilter}>
             <SelectTrigger className="w-52">
               <User className="h-4 w-4 mr-2 text-muted-foreground" />
@@ -173,7 +190,6 @@ export function MarketingTasksTab() {
           </Select>
 
           <div className="relative">
-
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar tarefas..."
