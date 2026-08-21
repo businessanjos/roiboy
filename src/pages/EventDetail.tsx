@@ -627,6 +627,7 @@ export default function EventDetail() {
             onUpdate={fetchStats}
             isLocked={isParticipantsLocked}
 
+
           />
         </TabsContent>
 
