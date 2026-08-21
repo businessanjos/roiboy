@@ -60,6 +60,7 @@ export function MarketingTasksTab() {
   const [editingTask, setEditingTask] = useState<string | null>(null);
   const [addingToSection, setAddingToSection] = useState<string | null>(null);
   const [defaultColumnId, setDefaultColumnId] = useState<string | undefined>(undefined);
+  const [defaultAssigneeId, setDefaultAssigneeId] = useState<string | undefined>(undefined);
 
   const { tasks, isLoading: tasksLoading, updateTask, toggleComplete, reorderTasks } = useMarketingTasks();
   const { sections, isLoading: sectionsLoading, createSection } = useMarketingTaskSections();
