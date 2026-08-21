@@ -105,6 +105,29 @@ export function MarketingTasksTab() {
     [assigneeOptions, assigneeFilter],
   );
 
+  const baseFilteredForCounts = useMemo(() => {
+    return tasks.filter((t) => {
+      const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || t.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [tasks, searchQuery, statusFilter]);
+
+  const assigneeCounts = useMemo(() => {
+    const counts: Record<string, number> = { all: baseFilteredForCounts.length, none: 0 };
+    assigneeOptions.forEach((a) => {
+      counts[a.id] = 0;
+    });
+    baseFilteredForCounts.forEach((t) => {
+      if (t.assignee_id) {
+        counts[t.assignee_id] = (counts[t.assignee_id] || 0) + 1;
+      } else {
+        counts.none += 1;
+      }
+    });
+    return counts;
+  }, [baseFilteredForCounts, assigneeOptions]);
+
   const filteredTasks = useMemo(() => {
     const filtered = tasks.filter((t) => {
       const matchesSearch = t.title.toLowerCase().includes(searchQuery.toLowerCase());
