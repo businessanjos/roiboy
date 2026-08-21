@@ -124,6 +124,13 @@ export function MarketingTasksTab() {
 
   const isSortManual = sortFilter === "manual";
 
+  const tasksBySection = sections.reduce((acc, section) => {
+    acc[section.id] = filteredTasks.filter((t) => t.section_id === section.id);
+    return acc;
+  }, {} as Record<string, typeof tasks>);
+
+  const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
+
   const handleAddTask = (sectionId?: string, columnId?: string) => {
     setAddingToSection(sectionId || null);
     setDefaultColumnId(columnId);
