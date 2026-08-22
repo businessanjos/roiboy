@@ -623,6 +623,7 @@ export default function SalesPipeline() {
     missingFields: CustomField[];
     pendingLostReason?: string;
     clientId?: string | null;
+    skipBriefing?: boolean;
   }>({
     open: false,
     dealId: "",
@@ -1678,6 +1679,7 @@ export default function SalesPipeline() {
           outcomeType: "won",
           missingFields: validation.missingFields,
           clientId: deal.client_id ?? null,
+          skipBriefing: isRenewalDeal,
         } as any);
         return;
       }
@@ -3095,6 +3097,7 @@ export default function SalesPipeline() {
         onComplete={handleOutcomeRequiredFieldsComplete}
         outcomeType={outcomeRequiredFieldsModal.outcomeType}
         clientId={outcomeRequiredFieldsModal.clientId ?? null}
+        skipBriefing={!!outcomeRequiredFieldsModal.skipBriefing}
       />
 
       {/* Meeting Schedule Dialog - opens when deal moves to "reunião agendada" */}
