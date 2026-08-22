@@ -297,6 +297,32 @@ export function DealDetailSheet({
   }, [deal?.won_at]);
 
   useEffect(() => {
+    setIsRenewalDeal(!!(deal as any)?.is_renewal);
+  }, [deal?.id, (deal as any)?.is_renewal]);
+
+  const handleToggleRenewal = async (checked: boolean) => {
+    if (!deal) return;
+    setSavingRenewal(true);
+    const prev = isRenewalDeal;
+    setIsRenewalDeal(checked);
+    const { error } = await supabase
+      .from("deals")
+      .update({ is_renewal: checked } as any)
+      .eq("id", deal.id);
+    setSavingRenewal(false);
+    if (error) {
+      setIsRenewalDeal(prev);
+      toast.error("Erro ao atualizar marcação de renovação");
+      return;
+    }
+    (deal as any).is_renewal = checked;
+    toast.success(checked ? "Marcado como renovação — briefing não será exigido" : "Renovação desmarcada");
+    onDealUpdated?.();
+  };
+
+
+
+  useEffect(() => {
     if (!open) return;
 
     const tabFromUrl = searchParams.get("tab");
