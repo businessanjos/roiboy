@@ -1639,12 +1639,33 @@ export default function SalesPipeline() {
 
       const hasMissingFields = !validation.canMoveToStage && validation.missingFields.length > 0;
 
+      // Renovação dispensa o briefing operacional (marcação manual no negócio
+      // ou produto marcado como renovação no Item da Venda)
+      let isRenewalDeal = !!(deal as any).is_renewal;
+      if (!isRenewalDeal) {
+        const { data: itemVenda } = await supabase
+          .from("deal_field_values")
+          .select("value_text")
+          .eq("deal_id", dealId)
+          .eq("field_id", DEAL_FIELD_IDS.ITEM_VENDA)
+          .maybeSingle();
+        const productId = itemVenda?.value_text;
+        if (productId && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(productId)) {
+          const { data: product } = await supabase
+            .from("products")
+            .select("is_renewal")
+            .eq("id", productId)
+            .maybeSingle();
+          isRenewalDeal = !!product?.is_renewal;
+        }
+      }
+
       const { data: briefingRow } = await supabase
         .from("deal_operation_briefings")
         .select("is_complete")
         .eq("deal_id", dealId)
         .maybeSingle();
-      const briefingMissing = !briefingRow?.is_complete;
+      const briefingMissing = !isRenewalDeal && !briefingRow?.is_complete;
 
       if (hasMissingFields || briefingMissing) {
         if (!hasMissingFields && briefingMissing) {
