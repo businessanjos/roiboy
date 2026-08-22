@@ -257,6 +257,8 @@ export function DealDetailSheet({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
+  const [isRenewalDeal, setIsRenewalDeal] = useState<boolean>(!!(deal as any)?.is_renewal);
+  const [savingRenewal, setSavingRenewal] = useState(false);
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
   
   // Pipeline/stage state for cross-pipeline moves
