@@ -1270,6 +1270,26 @@ export function DealDetailSheet({
                   </div>
                 </div>
 
+                {/* Renovação — dispensa briefing operacional */}
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <icons.RefreshCw className="h-3.5 w-3.5 text-sky-500" />
+                        <span className="text-xs font-semibold">É uma renovação</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Ao marcar, o briefing para operação não será exigido no ganho.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isRenewalDeal}
+                      disabled={savingRenewal}
+                      onCheckedChange={handleToggleRenewal}
+                    />
+                  </div>
+                </div>
+
                 {/* Valor Recebido (alimenta SPIFFs de cash collect) */}
                 <div className="rounded-lg border p-3 bg-emerald-500/5 border-emerald-500/20">
                   <div className="flex items-center justify-between mb-1">
