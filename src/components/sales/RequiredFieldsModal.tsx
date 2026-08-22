@@ -39,6 +39,8 @@ interface RequiredFieldsModalProps {
   outcomeType?: "won" | "lost";
   /** Optional client id, used to pre-load/save the operation briefing */
   clientId?: string | null;
+  /** Renovação: dispensa o briefing para operação */
+  skipBriefing?: boolean;
 }
 
 const PAYMENT_METHOD_FIELD_NAME = "Forma da Pagamento";
@@ -74,6 +76,7 @@ export function RequiredFieldsModal({
   onComplete,
   outcomeType,
   clientId,
+  skipBriefing = false,
 }: RequiredFieldsModalProps) {
   const [values, setValues] = useState<Record<string, any>>({});
   const [breakdown, setBreakdown] = useState<PaymentBreakdownItem[]>([]);
@@ -84,7 +87,7 @@ export function RequiredFieldsModal({
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
   const skipAutosaveRef = useRef(false);
 
-  const showBriefing = outcomeType === "won";
+  const showBriefing = outcomeType === "won" && !skipBriefing;
   // Dados de faturamento / emissão de NF só fazem sentido quando a venda é dada como ganha.
   // NÃO pedir em movimentos intermediários de etapa.
   const showBilling = outcomeType === "won";

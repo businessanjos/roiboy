@@ -6958,6 +6958,7 @@ export type Database = {
           expected_close_date: string | null
           has_second_seat: boolean
           id: string
+          is_renewal: boolean
           lead_id: string | null
           loss_notes: string | null
           loss_reason_id: string | null
@@ -7000,6 +7001,7 @@ export type Database = {
           expected_close_date?: string | null
           has_second_seat?: boolean
           id?: string
+          is_renewal?: boolean
           lead_id?: string | null
           loss_notes?: string | null
           loss_reason_id?: string | null
@@ -7042,6 +7044,7 @@ export type Database = {
           expected_close_date?: string | null
           has_second_seat?: boolean
           id?: string
+          is_renewal?: boolean
           lead_id?: string | null
           loss_notes?: string | null
           loss_reason_id?: string | null

@@ -257,6 +257,8 @@ export function DealDetailSheet({
   const imageInputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [localWonAt, setLocalWonAt] = useState<string | null>(deal?.won_at || null);
+  const [isRenewalDeal, setIsRenewalDeal] = useState<boolean>(!!(deal as any)?.is_renewal);
+  const [savingRenewal, setSavingRenewal] = useState(false);
   const [resolvedLeadId, setResolvedLeadId] = useState<string | null>(null);
   
   // Pipeline/stage state for cross-pipeline moves
@@ -293,6 +295,32 @@ export function DealDetailSheet({
   useEffect(() => {
     setLocalWonAt(deal?.won_at || null);
   }, [deal?.won_at]);
+
+  useEffect(() => {
+    setIsRenewalDeal(!!(deal as any)?.is_renewal);
+  }, [deal?.id, (deal as any)?.is_renewal]);
+
+  const handleToggleRenewal = async (checked: boolean) => {
+    if (!deal) return;
+    setSavingRenewal(true);
+    const prev = isRenewalDeal;
+    setIsRenewalDeal(checked);
+    const { error } = await supabase
+      .from("deals")
+      .update({ is_renewal: checked } as any)
+      .eq("id", deal.id);
+    setSavingRenewal(false);
+    if (error) {
+      setIsRenewalDeal(prev);
+      toast.error("Erro ao atualizar marcação de renovação");
+      return;
+    }
+    (deal as any).is_renewal = checked;
+    toast.success(checked ? "Marcado como renovação — briefing não será exigido" : "Renovação desmarcada");
+    onDealUpdated?.();
+  };
+
+
 
   useEffect(() => {
     if (!open) return;
@@ -1239,6 +1267,26 @@ export function DealDetailSheet({
                         </p>
                       </>
                     )}
+                  </div>
+                </div>
+
+                {/* Renovação — dispensa briefing operacional */}
+                <div className="rounded-lg border p-3 bg-muted/30">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <div className="flex items-center gap-1.5">
+                        <icons.RefreshCw className="h-3.5 w-3.5 text-sky-500" />
+                        <span className="text-xs font-semibold">É uma renovação</span>
+                      </div>
+                      <p className="text-[11px] text-muted-foreground mt-0.5">
+                        Ao marcar, o briefing para operação não será exigido no ganho.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={isRenewalDeal}
+                      disabled={savingRenewal}
+                      onCheckedChange={handleToggleRenewal}
+                    />
                   </div>
                 </div>
 

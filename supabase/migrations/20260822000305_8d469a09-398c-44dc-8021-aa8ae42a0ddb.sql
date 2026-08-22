@@ -1,0 +1,1 @@
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS is_renewal boolean NOT NULL DEFAULT false;
