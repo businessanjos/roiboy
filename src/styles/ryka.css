@@ -153,3 +153,15 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+
+  /* Border-radius scale aligned with the 1rem Ryka radius token.
+     Applied inside .ryka so cards, panels and containers use the
+     larger, softer corners while tiny primitives stay proportional. */
+  .ryka .rounded-none { border-radius: 0; }
+  .ryka .rounded-sm   { border-radius: 0.5rem; }
+  .ryka .rounded-md   { border-radius: 0.75rem; }
+  .ryka .rounded-lg   { border-radius: 1rem; }
+  .ryka .rounded-xl    { border-radius: 1.25rem; }
+  .ryka .rounded-2xl   { border-radius: 1.5rem; }
+  .ryka .rounded-3xl   { border-radius: 2rem; }
+  .ryka .rounded-full  { border-radius: 9999px; }
