@@ -178,10 +178,10 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
   const otherSuggestions = suggestions.slice(1);
 
   return (
-    <div className="bg-amber-500/10 border-b border-amber-500/30">
+    <div className="bg-warning/10 border-b border-warning/30">
       {/* Main suggestion */}
       <div className="px-4 py-2 flex items-center gap-3">
-        <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0" />
+        <Lightbulb className="h-4 w-4 text-warning flex-shrink-0" />
         
         <div className="flex items-center gap-2 flex-1 min-w-0">
           <Avatar className="h-7 w-7">
@@ -199,7 +199,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
               </span>
             </p>
             <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-amber-500/20 text-amber-700">
+              <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-warning/20 text-warning-strong">
                 {getMatchLabel(topSuggestion.match_type)}
               </Badge>
               {topSuggestion.client?.phone_e164 && (
@@ -216,7 +216,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
           <Button
             size="sm"
             variant="ghost"
-            className="h-7 px-2 text-xs hover:bg-red-500/10 hover:text-red-600"
+            className="h-7 px-2 text-xs hover:bg-danger/10 hover:text-danger"
             onClick={() => handleReject(topSuggestion)}
             disabled={accepting}
           >
@@ -224,7 +224,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
           </Button>
           <Button
             size="sm"
-            className="h-7 px-3 text-xs bg-amber-500 hover:bg-amber-600 text-white"
+            className="h-7 px-3 text-xs bg-warning hover:bg-warning text-white"
             onClick={() => handleAccept(topSuggestion)}
             disabled={accepting}
           >
@@ -244,7 +244,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
       {otherSuggestions.length > 0 && (
         <Collapsible open={showAll} onOpenChange={setShowAll}>
           <CollapsibleTrigger asChild>
-            <button className="w-full px-4 py-1.5 text-xs text-muted-foreground hover:bg-amber-500/10 flex items-center justify-center gap-1 border-t border-amber-500/20">
+            <button className="w-full px-4 py-1.5 text-xs text-muted-foreground hover:bg-warning/10 flex items-center justify-center gap-1 border-t border-warning/20">
               <span>Ver outras {otherSuggestions.length} sugestões</span>
               <ChevronDown className={cn("h-3 w-3 transition-transform", showAll && "rotate-180")} />
             </button>
@@ -276,7 +276,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 w-6 p-0 hover:bg-red-500/10 hover:text-red-600"
+                      className="h-6 w-6 p-0 hover:bg-danger/10 hover:text-danger"
                       onClick={() => handleReject(suggestion)}
                     >
                       <X className="h-3 w-3" />
@@ -284,7 +284,7 @@ export const ZappClientSuggestionBanner = memo(function ZappClientSuggestionBann
                     <Button
                       size="sm"
                       variant="ghost"
-                      className="h-6 w-6 p-0 hover:bg-green-500/10 hover:text-green-600"
+                      className="h-6 w-6 p-0 hover:bg-success/10 hover:text-success"
                       onClick={() => handleAccept(suggestion)}
                     >
                       <Check className="h-3 w-3" />

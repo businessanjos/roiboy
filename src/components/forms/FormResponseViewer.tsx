@@ -209,7 +209,7 @@ export function FormResponseViewer({
     switch (field.field_type) {
       case "boolean":
         return value ? (
-          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+          <Badge variant="outline" className="bg-success-soft text-success-strong border-success">
             <Check className="h-3 w-3 mr-1" /> Sim
           </Badge>
         ) : (
@@ -279,7 +279,7 @@ export function FormResponseViewer({
                 key={star}
                 className={cn(
                   "text-lg",
-                  star <= value ? "text-amber-400" : "text-muted-foreground/30"
+                  star <= value ? "text-warning" : "text-muted-foreground/30"
                 )}
               >
                 ★
@@ -521,7 +521,7 @@ export function FormResponseViewer({
                         </div>
                       </div>
                       {hasClient ? (
-                        <Badge variant="outline" className="shrink-0 bg-green-50 text-green-700 border-green-200">
+                        <Badge variant="outline" className="shrink-0 bg-success-soft text-success-strong border-success">
                           <Link2 className="h-3 w-3 mr-1" />
                           Vinculado
                         </Badge>

@@ -81,8 +81,8 @@ function ExternalAccessTab({ dashboardId }: { dashboardId: string }) {
   if (created) {
     return (
       <div className="space-y-4">
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 space-y-3">
-          <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400">
+        <div className="rounded-lg border border-success/30 bg-success/10 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-success dark:text-success">
             <CheckCircle className="h-5 w-5" />
             <span className="font-medium">Acesso criado!</span>
           </div>
@@ -395,14 +395,14 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
               {shareUrl}
             </div>
             <Button variant="outline" size="icon" onClick={(e) => { e.stopPropagation(); copyLink(); }} className="shrink-0">
-              {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
             </Button>
           </div>
 
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div className="flex items-center gap-2 text-sm">
               {isActive ? (
-                <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">Ativo</Badge>
+                <Badge className="bg-success/15 text-success dark:text-success border border-success/30 hover:bg-success/20">Ativo</Badge>
               ) : (
                 <Badge variant="secondary">Desativado</Badge>
               )}
@@ -512,7 +512,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10"
+                          className="h-8 w-8 text-success dark:text-success hover:bg-success/10"
                           onClick={() => handleAction(req.id, "approve")}
                           disabled={processingId === req.id}
                         >
@@ -531,7 +531,7 @@ function ShareLinkTab({ dashboardId, dashboardName }: { dashboardId: string; das
                     )}
                     {req.status === "approved" && (
                       <div className="flex items-center gap-1 shrink-0">
-                        <Badge className="bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20">Liberado</Badge>
+                        <Badge className="bg-success/15 text-success dark:text-success border border-success/30 hover:bg-success/20">Liberado</Badge>
                         <Button
                           variant="ghost"
                           size="icon"

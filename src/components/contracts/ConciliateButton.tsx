@@ -311,8 +311,8 @@ export function ConciliateButton({
                     className={cn(
                       "w-5 h-5 rounded-full flex items-center justify-center",
                       s.ok
-                        ? "bg-emerald-100 text-emerald-600"
-                        : "bg-amber-100 text-amber-600"
+                        ? "bg-success-soft text-success"
+                        : "bg-warning-soft text-warning"
                     )}
                   >
                     <s.icon className="h-3 w-3" />
@@ -339,7 +339,7 @@ export function ConciliateButton({
               openDialog();
             }
           }}
-          className={cn(!canConciliate && "border-amber-300 text-amber-700")}
+          className={cn(!canConciliate && "border-warning text-warning-strong")}
         >
           {isConciliating ? (
             <Loader2 className="h-4 w-4 mr-1 animate-spin" />
@@ -359,7 +359,7 @@ export function ConciliateButton({
         >
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <AlertCircle className="h-5 w-5 text-amber-500" />
+              <AlertCircle className="h-5 w-5 text-warning" />
               Complete os dados para conciliar
             </DialogTitle>
             <DialogDescription>
@@ -378,7 +378,7 @@ export function ConciliateButton({
               {missing.document && (
                 <section className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <User className="h-4 w-4 text-amber-500" /> CPF ou CNPJ
+                    <User className="h-4 w-4 text-warning" /> CPF ou CNPJ
                   </div>
                   <div className="grid grid-cols-2 gap-2">
                     <div>
@@ -407,7 +407,7 @@ export function ConciliateButton({
               {missing.address && (
                 <section className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <MapPin className="h-4 w-4 text-amber-500" /> Endereço
+                    <MapPin className="h-4 w-4 text-warning" /> Endereço
                   </div>
                   <div className="grid grid-cols-6 gap-2">
                     <div className="col-span-4">
@@ -463,7 +463,7 @@ export function ConciliateButton({
               {missing.product && (
                 <section className="space-y-2">
                   <div className="flex items-center gap-2 text-sm font-medium">
-                    <Package className="h-4 w-4 text-amber-500" /> Produto do
+                    <Package className="h-4 w-4 text-warning" /> Produto do
                     contrato
                   </div>
                   <Select
@@ -485,12 +485,12 @@ export function ConciliateButton({
               )}
 
               {missing.entries && (
-                <section className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm space-y-1">
-                  <div className="flex items-center gap-2 font-medium text-amber-800">
+                <section className="rounded-md border border-warning bg-warning-soft p-3 text-sm space-y-1">
+                  <div className="flex items-center gap-2 font-medium text-warning-strong">
                     <FileCheck className="h-4 w-4" /> Lançamentos financeiros
                     pendentes
                   </div>
-                  <p className="text-xs text-amber-700">
+                  <p className="text-xs text-warning-strong">
                     Este contrato ainda não gerou parcelas no financeiro. Abra o
                     contrato e ative "Gerar recebíveis" para criar as parcelas
                     antes de conciliar.
@@ -503,7 +503,7 @@ export function ConciliateButton({
                 !missing.address &&
                 !missing.product &&
                 !missing.entries && (
-                  <div className="rounded-md border border-emerald-200 bg-emerald-50 p-3 text-sm text-emerald-800 flex items-center gap-2">
+                  <div className="rounded-md border border-success bg-success-soft p-3 text-sm text-success-strong flex items-center gap-2">
                     <Check className="h-4 w-4" /> Tudo pronto! Clique em
                     "Conciliar" para finalizar.
                   </div>

@@ -142,7 +142,7 @@ export function BrandVoiceTab() {
 
         {voice?.learned_from_instagram_at && (
           <p className="text-xs text-muted-foreground flex items-center gap-1">
-            <CheckCircle2 className="h-3 w-3 text-green-600" />
+            <CheckCircle2 className="h-3 w-3 text-success" />
             Última análise: {format(new Date(voice.learned_from_instagram_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })} ({voice.posts_analyzed_count} posts)
           </p>
         )}

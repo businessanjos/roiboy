@@ -9,12 +9,12 @@ interface StatCardProps {
 }
 
 export const StatCard = memo(function StatCard({ icon: Icon, label, value, variant }: StatCardProps) {
-  const colorClass = variant === 'success' ? 'text-emerald-600' : 
-                     variant === 'warning' ? 'text-amber-600' : 
-                     variant === 'danger' ? 'text-red-600' : 'text-foreground';
-  const bgClass = variant === 'success' ? 'bg-emerald-500/10' : 
-                  variant === 'warning' ? 'bg-amber-500/10' : 
-                  variant === 'danger' ? 'bg-red-500/10' : 'bg-muted';
+  const colorClass = variant === 'success' ? 'text-success' : 
+                     variant === 'warning' ? 'text-warning' : 
+                     variant === 'danger' ? 'text-danger' : 'text-foreground';
+  const bgClass = variant === 'success' ? 'bg-success/10' : 
+                  variant === 'warning' ? 'bg-warning/10' : 
+                  variant === 'danger' ? 'bg-danger/10' : 'bg-muted';
 
   return (
     <Card className="border-0 shadow-sm hover:shadow-md transition-shadow">

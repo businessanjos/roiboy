@@ -136,7 +136,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
               disabled={whatsappConnecting}
               className={cn(
                 whatsappConnected 
-                  ? "border-red-500 text-red-500 hover:bg-red-500/10" 
+                  ? "border-danger text-danger hover:bg-danger/10" 
                   : "bg-zapp-accent hover:bg-zapp-accent-hover text-white"
               )}
             >
@@ -186,7 +186,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div className="flex items-center gap-2">
-            <Volume2 className="h-4 w-4 text-blue-500" />
+            <Volume2 className="h-4 w-4 text-info" />
             <div>
               <p className="text-zapp-text text-sm">Som de nova conversa</p>
               <p className="text-zapp-text-muted text-xs">Tocar som ao receber mensagem</p>
@@ -202,11 +202,11 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div className="flex items-center gap-2">
             {notificationPermission === "granted" ? (
-              <Bell className="h-4 w-4 text-emerald-500" />
+              <Bell className="h-4 w-4 text-success" />
             ) : notificationPermission === "denied" ? (
-              <BellOff className="h-4 w-4 text-red-500" />
+              <BellOff className="h-4 w-4 text-danger" />
             ) : (
-              <Bell className="h-4 w-4 text-amber-500" />
+              <Bell className="h-4 w-4 text-warning" />
             )}
             <div>
               <p className="text-zapp-text text-sm">Notificações do Sistema</p>
@@ -223,13 +223,13 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           </div>
           
           {notificationPermission === "granted" ? (
-            <span className="text-xs text-emerald-500 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-xs text-success font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-success" />
               Ativadas
             </span>
           ) : notificationPermission === "denied" ? (
-            <span className="text-xs text-red-500 font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-red-500" />
+            <span className="text-xs text-danger font-medium flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-danger" />
               Bloqueadas
             </span>
           ) : notificationPermission === "unsupported" ? (
@@ -249,7 +249,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         </div>
         
         {notificationPermission === "denied" && (
-          <p className="text-xs text-amber-500 px-3">
+          <p className="text-xs text-warning px-3">
             💡 Para ativar, clique no ícone de cadeado na barra de endereço do navegador e permita notificações.
           </p>
         )}
@@ -293,7 +293,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
         
         <div className="flex items-center justify-between p-3 bg-zapp-panel rounded-lg">
           <div className="flex items-center gap-2">
-            <Wand2 className="h-4 w-4 text-amber-500" />
+            <Wand2 className="h-4 w-4 text-warning" />
             <div>
               <p className="text-zapp-text text-sm">Corretor de Português</p>
               <p className="text-zapp-text-muted text-xs">Corrige ortografia e gramática</p>
@@ -397,7 +397,7 @@ export const ZappSettingsPanel = memo(function ZappSettingsPanel({
           </Button>
           
           {!whatsappConnected && (
-            <p className="text-amber-500 text-xs text-center">
+            <p className="text-warning text-xs text-center">
               Ative o recebimento nesta tela para importar conversas
             </p>
           )}

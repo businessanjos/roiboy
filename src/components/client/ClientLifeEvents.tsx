@@ -118,21 +118,21 @@ interface ClientLifeEventsProps {
 
 const EVENT_TYPES = [
   { value: "birthday", label: "Aniversário", icon: Cake, color: "text-pink-500" },
-  { value: "child_birth", label: "Nascimento de Filho", icon: Baby, color: "text-blue-500" },
+  { value: "child_birth", label: "Nascimento de Filho", icon: Baby, color: "text-info" },
   { value: "pregnancy", label: "Gravidez", icon: Baby, color: "text-purple-500" },
-  { value: "wedding", label: "Casamento", icon: Heart, color: "text-red-500" },
-  { value: "anniversary", label: "Aniversário de Casamento", icon: Heart, color: "text-rose-500" },
+  { value: "wedding", label: "Casamento", icon: Heart, color: "text-danger" },
+  { value: "anniversary", label: "Aniversário de Casamento", icon: Heart, color: "text-danger" },
   { value: "graduation", label: "Formatura", icon: GraduationCap, color: "text-indigo-500" },
-  { value: "new_job", label: "Novo Emprego", icon: Briefcase, color: "text-emerald-500" },
-  { value: "promotion", label: "Promoção", icon: TrendingUp, color: "text-green-500" },
-  { value: "retirement", label: "Aposentadoria", icon: Star, color: "text-amber-500" },
-  { value: "health", label: "Questão de Saúde", icon: HeartPulse, color: "text-orange-500" },
-  { value: "health_issue", label: "Questão de Saúde", icon: HeartPulse, color: "text-orange-500" },
-  { value: "loss", label: "Perda/Luto", icon: CloudRain, color: "text-gray-500" },
-  { value: "travel", label: "Viagem", icon: Plane, color: "text-cyan-500" },
-  { value: "achievement", label: "Conquista", icon: Trophy, color: "text-yellow-500" },
-  { value: "celebration", label: "Comemoração", icon: Star, color: "text-amber-500" },
-  { value: "moving", label: "Mudança", icon: Home, color: "text-teal-500" },
+  { value: "new_job", label: "Novo Emprego", icon: Briefcase, color: "text-success" },
+  { value: "promotion", label: "Promoção", icon: TrendingUp, color: "text-success" },
+  { value: "retirement", label: "Aposentadoria", icon: Star, color: "text-warning" },
+  { value: "health", label: "Questão de Saúde", icon: HeartPulse, color: "text-warning" },
+  { value: "health_issue", label: "Questão de Saúde", icon: HeartPulse, color: "text-warning" },
+  { value: "loss", label: "Perda/Luto", icon: CloudRain, color: "text-muted-foreground" },
+  { value: "travel", label: "Viagem", icon: Plane, color: "text-info" },
+  { value: "achievement", label: "Conquista", icon: Trophy, color: "text-warning" },
+  { value: "celebration", label: "Comemoração", icon: Star, color: "text-warning" },
+  { value: "moving", label: "Mudança", icon: Home, color: "text-success" },
   { value: "other", label: "Outro", icon: Star, color: "text-muted-foreground" },
   { value: "instagram_metrics", label: "Snapshot Instagram", icon: Instagram, color: "text-pink-500" },
 ];
@@ -698,7 +698,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-blue-500/50 text-blue-600 bg-blue-50">
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-info/50 text-info bg-info-soft">
                                 <Clock className="h-2.5 w-2.5" />
                                 Agendado
                               </Badge>
@@ -713,7 +713,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-green-500/50 text-green-600 bg-green-50">
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-success/50 text-success bg-success-soft">
                                 <CheckCircle2 className="h-2.5 w-2.5" />
                                 Enviado
                               </Badge>
@@ -728,7 +728,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
                         <TooltipProvider delayDuration={300}>
                           <Tooltip>
                             <TooltipTrigger asChild>
-                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-red-500/50 text-red-600 bg-red-50">
+                              <Badge variant="outline" className="gap-1 text-[10px] h-5 border-danger/50 text-danger bg-danger-soft">
                                 <XCircle className="h-2.5 w-2.5" />
                                 Falhou
                               </Badge>

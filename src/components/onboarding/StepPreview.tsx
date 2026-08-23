@@ -50,10 +50,10 @@ function AccountPreview({ data }: { data: any }) {
   const hasData = data.accountName;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-blue-500/20">
+    <Card className="p-4 bg-gradient-to-br from-info/5 to-info/10 border-info/20">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
-          <Building2 className="h-6 w-6 text-blue-500" />
+        <div className="w-12 h-12 rounded-xl bg-info/20 flex items-center justify-center">
+          <Building2 className="h-6 w-6 text-info" />
         </div>
         <div>
           <p className="text-xs text-muted-foreground">Sua empresa</p>
@@ -128,10 +128,10 @@ function ClientPreview({ data }: { data: any }) {
     : "??";
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-green-500/5 to-green-500/10 border-green-500/20">
+    <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
       <div className="flex items-center gap-3 mb-3">
-        <Avatar className="h-12 w-12 bg-green-500/20">
-          <AvatarFallback className="bg-green-500/20 text-green-700 dark:text-green-400 font-semibold">
+        <Avatar className="h-12 w-12 bg-success/20">
+          <AvatarFallback className="bg-success/20 text-success-strong dark:text-success font-semibold">
             {initials}
           </AvatarFallback>
         </Avatar>
@@ -144,7 +144,7 @@ function ClientPreview({ data }: { data: any }) {
           >
             {data.clientName || "Nome do Cliente"}
           </motion.p>
-          <Badge variant="outline" className="text-xs bg-green-500/10 text-green-700 dark:text-green-400 border-green-500/30">
+          <Badge variant="outline" className="text-xs bg-success/10 text-success-strong dark:text-success border-success/30">
             Ativo
           </Badge>
         </div>
@@ -176,10 +176,10 @@ function ProductPreview({ data }: { data: any }) {
   const hasData = data.productName;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-orange-500/20">
+    <Card className="p-4 bg-gradient-to-br from-warning/5 to-warning/10 border-warning/20">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl bg-orange-500/20 flex items-center justify-center">
-          <Package className="h-6 w-6 text-orange-500" />
+        <div className="w-12 h-12 rounded-xl bg-warning/20 flex items-center justify-center">
+          <Package className="h-6 w-6 text-warning" />
         </div>
         <div className="flex-1">
           <motion.p 
@@ -194,7 +194,7 @@ function ProductPreview({ data }: { data: any }) {
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="flex items-center gap-1 text-green-600 dark:text-green-400 font-medium"
+              className="flex items-center gap-1 text-success dark:text-success font-medium"
             >
               <DollarSign className="h-3.5 w-3.5" />
               <span>{data.productPrice}</span>
@@ -297,10 +297,10 @@ function TeamPreview({ data }: { data: any }) {
     : [];
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-cyan-500/5 to-cyan-500/10 border-cyan-500/20">
+    <Card className="p-4 bg-gradient-to-br from-info/5 to-info/10 border-info/20">
       <div className="flex items-center gap-3 mb-3">
-        <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
-          <Users className="h-6 w-6 text-cyan-500" />
+        <div className="w-12 h-12 rounded-xl bg-info/20 flex items-center justify-center">
+          <Users className="h-6 w-6 text-info" />
         </div>
         <div>
           <p className="font-semibold">Sua Equipe</p>
@@ -342,7 +342,7 @@ function FeatureItem({ icon, label }: { icon: string; label: string }) {
     <div className="flex items-center gap-2 text-sm">
       <span>{icon}</span>
       <span className="text-muted-foreground">{label}</span>
-      <CheckCircle className="h-3.5 w-3.5 text-green-500 ml-auto" />
+      <CheckCircle className="h-3.5 w-3.5 text-success ml-auto" />
     </div>
   );
 }
@@ -360,7 +360,7 @@ function PreviewStatus({
     <div className="flex items-center justify-between mt-4 pt-3 border-t border-border/50">
       <span className="text-xs text-muted-foreground">{label}</span>
       {filled ? (
-        <Badge className="bg-green-500/20 text-green-700 dark:text-green-400 border-green-500/30 text-xs">
+        <Badge className="bg-success/20 text-success-strong dark:text-success border-success/30 text-xs">
           <CheckCircle className="h-3 w-3 mr-1" />
           Preenchido
         </Badge>

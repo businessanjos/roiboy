@@ -238,7 +238,7 @@ export default function RHBenefits() {
                       <div className="flex items-start justify-between gap-2">
                         <div className="space-y-1">
                           <div className="flex items-center gap-1.5">
-                            {b.is_highlight && <Star className="h-3.5 w-3.5 text-amber-500 shrink-0" />}
+                            {b.is_highlight && <Star className="h-3.5 w-3.5 text-warning shrink-0" />}
                             <p className="font-medium leading-tight">{b.name}</p>
                           </div>
                           {b.provider && <p className="text-xs text-muted-foreground">{b.provider}</p>}

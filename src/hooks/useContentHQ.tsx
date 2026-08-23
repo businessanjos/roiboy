@@ -62,22 +62,22 @@ export type ContentPiece = {
 
 export const PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "bg-pink-500/15 text-pink-600 border-pink-500/30" },
-  { id: "youtube", label: "YouTube", color: "bg-red-500/15 text-red-600 border-red-500/30" },
-  { id: "tiktok", label: "TikTok", color: "bg-zinc-800/15 text-zinc-900 dark:text-zinc-100 border-zinc-500/30" },
-  { id: "threads", label: "Threads", color: "bg-zinc-700/15 text-zinc-700 dark:text-zinc-300 border-zinc-500/30" },
-  { id: "linkedin", label: "LinkedIn", color: "bg-blue-600/15 text-blue-700 border-blue-600/30" },
-  { id: "pinterest", label: "Pinterest", color: "bg-rose-600/15 text-rose-700 border-rose-600/30" },
-  { id: "spotify", label: "Spotify", color: "bg-green-600/15 text-green-700 border-green-600/30" },
+  { id: "youtube", label: "YouTube", color: "bg-danger/15 text-danger border-danger/30" },
+  { id: "tiktok", label: "TikTok", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
+  { id: "threads", label: "Threads", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
+  { id: "linkedin", label: "LinkedIn", color: "bg-info/15 text-info-strong border-info/30" },
+  { id: "pinterest", label: "Pinterest", color: "bg-danger/15 text-danger-strong border-danger/30" },
+  { id: "spotify", label: "Spotify", color: "bg-success/15 text-success-strong border-success/30" },
 ];
 
 export const PIECE_STATUSES = [
   { id: "backlog", label: "Backlog", color: "bg-muted text-muted-foreground" },
-  { id: "script", label: "Roteiro", color: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
-  { id: "shooting", label: "Gravação", color: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
+  { id: "script", label: "Roteiro", color: "bg-warning/15 text-warning-strong border-warning/30" },
+  { id: "shooting", label: "Gravação", color: "bg-info/15 text-info-strong border-info/30" },
   { id: "editing", label: "Edição", color: "bg-purple-500/15 text-purple-700 border-purple-500/30" },
-  { id: "approval", label: "Aprovação", color: "bg-orange-500/15 text-orange-700 border-orange-500/30" },
-  { id: "scheduled", label: "Agendado", color: "bg-cyan-500/15 text-cyan-700 border-cyan-500/30" },
-  { id: "published", label: "Publicado", color: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
+  { id: "approval", label: "Aprovação", color: "bg-warning/15 text-warning-strong border-warning/30" },
+  { id: "scheduled", label: "Agendado", color: "bg-info/15 text-info-strong border-info/30" },
+  { id: "published", label: "Publicado", color: "bg-success/15 text-success-strong border-success/30" },
 ];
 
 export function useTalents() {

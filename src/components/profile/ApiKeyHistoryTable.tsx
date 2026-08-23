@@ -17,21 +17,21 @@ const PAGE_SIZE = 10;
 
 const getMethodBadgeClass = (method: string | null) => {
   const classes: Record<string, string> = {
-    GET: "bg-blue-100 text-blue-700 border-blue-200",
-    POST: "bg-green-100 text-green-700 border-green-200",
-    PUT: "bg-yellow-100 text-yellow-700 border-yellow-200",
-    PATCH: "bg-orange-100 text-orange-700 border-orange-200",
-    DELETE: "bg-red-100 text-red-700 border-red-200",
+    GET: "bg-info-soft text-info-strong border-info",
+    POST: "bg-success-soft text-success-strong border-success",
+    PUT: "bg-warning-soft text-warning-strong border-warning",
+    PATCH: "bg-warning-soft text-warning-strong border-warning",
+    DELETE: "bg-danger-soft text-danger-strong border-danger",
   };
-  return classes[method || ""] || "bg-gray-100 text-gray-700 border-gray-200";
+  return classes[method || ""] || "bg-muted text-foreground border-border";
 };
 
 const getStatusBadgeClass = (status: number | null) => {
-  if (!status) return "bg-gray-100 text-gray-700";
-  if (status >= 200 && status < 300) return "bg-green-100 text-green-700 border-green-200";
-  if (status >= 400 && status < 500) return "bg-yellow-100 text-yellow-700 border-yellow-200";
-  if (status >= 500) return "bg-red-100 text-red-700 border-red-200";
-  return "bg-gray-100 text-gray-700 border-gray-200";
+  if (!status) return "bg-muted text-foreground";
+  if (status >= 200 && status < 300) return "bg-success-soft text-success-strong border-success";
+  if (status >= 400 && status < 500) return "bg-warning-soft text-warning-strong border-warning";
+  if (status >= 500) return "bg-danger-soft text-danger-strong border-danger";
+  return "bg-muted text-foreground border-border";
 };
 
 export function ApiKeyHistoryTable({ apiKeyId }: ApiKeyHistoryTableProps) {

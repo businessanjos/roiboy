@@ -169,7 +169,7 @@ function ValidationIndicator({ isValid, isEmpty }: { isValid: boolean; isEmpty: 
   if (isEmpty) return null;
   
   return (
-    <div className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-200 ${isValid ? "text-emerald-500" : "text-destructive"}`}>
+    <div className={`absolute right-3 top-1/2 -translate-y-1/2 transition-all duration-200 ${isValid ? "text-success" : "text-destructive"}`}>
       {isValid ? (
         <Check className="h-4 w-4" />
       ) : (
@@ -243,9 +243,9 @@ function PhoneField({
               : isEmpty
                 ? ""
                 : validation.isValid
-                  ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                  ? "border-success/50 ring-1 ring-success/20"
                   : validation.error === 'incomplete'
-                    ? "border-amber-500/50 ring-1 ring-amber-500/20"
+                    ? "border-warning/50 ring-1 ring-warning/20"
                     : "border-destructive ring-1 ring-destructive/30"
           }`}
         />
@@ -260,7 +260,7 @@ function PhoneField({
         </p>
       )}
       {!error && validation.error === 'incomplete' && (
-        <p className="text-[11px] text-amber-600 flex items-center gap-1">
+        <p className="text-[11px] text-warning flex items-center gap-1">
           Digitando...
         </p>
       )}
@@ -271,7 +271,7 @@ function PhoneField({
         </p>
       )}
       {!error && !isEmpty && validation.country && !validation.error && (
-        <p className="text-[11px] text-emerald-600 font-medium flex items-center gap-1">
+        <p className="text-[11px] text-success font-medium flex items-center gap-1">
           {validation.country.flag} {validation.country.name}
         </p>
       )}
@@ -325,7 +325,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
             showValidation && validation.error && validation.error !== 'incomplete'
               ? "border-destructive ring-1 ring-destructive/30" 
               : showValidation && validation.isValid
-                ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                ? "border-success/50 ring-1 ring-success/20"
                 : ""
           }`}
         />
@@ -337,7 +337,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
         )}
       </div>
       {showValidation && validation.error === 'incomplete' && (
-        <p className="text-[11px] text-amber-600">Digitando...</p>
+        <p className="text-[11px] text-warning">Digitando...</p>
       )}
       {showValidation && !validation.isValid && validation.error && validation.error !== 'incomplete' && (
         <p className="text-[11px] text-destructive flex items-center gap-1">
@@ -346,7 +346,7 @@ function BirthDateField({ value, onChange }: { value: string; onChange: (value: 
         </p>
       )}
       {validation.isValid && validation.age !== null && (
-        <p className="text-[11px] text-emerald-600 font-medium">
+        <p className="text-[11px] text-success font-medium">
           {validation.age} {validation.age === 1 ? 'ano' : 'anos'}
         </p>
       )}
@@ -572,8 +572,8 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
   const getInputClass = (val: { isEmpty: boolean; isValid: boolean; isPartial?: boolean }, hasExternalError?: boolean) => {
     if (hasExternalError) return "border-destructive ring-1 ring-destructive/30";
     if (val.isEmpty) return "";
-    if (val.isValid) return "border-emerald-500/50 ring-1 ring-emerald-500/20";
-    if (val.isPartial) return "border-amber-500/50 ring-1 ring-amber-500/20";
+    if (val.isValid) return "border-success/50 ring-1 ring-success/20";
+    if (val.isPartial) return "border-warning/50 ring-1 ring-warning/20";
     return "border-destructive ring-1 ring-destructive/30";
   };
 
@@ -902,7 +902,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   </p>
                 )}
                 {validation.cpf.isPartial && (
-                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                  <p className="text-[11px] text-warning">Digitando...</p>
                 )}
               </div>
               <div className="space-y-1.5">
@@ -953,7 +953,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   <p className="text-[11px] text-primary">Buscando endereço...</p>
                 )}
                 {!cepLoading && validation.cep.isPartial && (
-                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                  <p className="text-[11px] text-warning">Digitando...</p>
                 )}
               </div>
               <div className="space-y-1.5 sm:col-span-2">
@@ -1134,7 +1134,7 @@ export function ClientInfoForm({ data, onChange, errors = {}, showBasicFields = 
                   </p>
                 )}
                 {!cnpjLoading && validation.cnpj.isPartial && (
-                  <p className="text-[11px] text-amber-600">Digitando...</p>
+                  <p className="text-[11px] text-warning">Digitando...</p>
                 )}
               </div>
               <div className="space-y-1.5">

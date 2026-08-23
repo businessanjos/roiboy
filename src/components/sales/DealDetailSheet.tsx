@@ -182,11 +182,11 @@ const getEventConfig = (eventType: string, title?: string) => {
     case "note":
       return { icon: StickyNote, bgColor: "bg-primary", textColor: "text-primary", label: "Nota" };
     case "call":
-      return { icon: Phone, bgColor: "bg-blue-500", textColor: "text-blue-500", label: "Ligação" };
+      return { icon: Phone, bgColor: "bg-info", textColor: "text-info", label: "Ligação" };
     case "whatsapp":
-      return { icon: MessageSquare, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "WhatsApp" };
+      return { icon: MessageSquare, bgColor: "bg-success", textColor: "text-success", label: "WhatsApp" };
     case "email":
-      return { icon: Mail, bgColor: "bg-amber-500", textColor: "text-amber-500", label: "Email" };
+      return { icon: Mail, bgColor: "bg-warning", textColor: "text-warning", label: "Email" };
     case "meeting":
       return { icon: Video, bgColor: "bg-violet-500", textColor: "text-violet-500", label: "Reunião" };
     case "stage_change":
@@ -194,15 +194,15 @@ const getEventConfig = (eventType: string, title?: string) => {
     case "image":
       return { icon: Image, bgColor: "bg-pink-500", textColor: "text-pink-500", label: "Imagem anexada" };
     case "file":
-      return { icon: FileText, bgColor: "bg-orange-500", textColor: "text-orange-500", label: "Documento anexado" };
+      return { icon: FileText, bgColor: "bg-warning", textColor: "text-warning", label: "Documento anexado" };
     case "status_change":
       if (title === 'Negócio perdido') {
-        return { icon: XCircle, bgColor: "bg-red-500", textColor: "text-red-500", label: "Perdido" };
+        return { icon: XCircle, bgColor: "bg-danger", textColor: "text-danger", label: "Perdido" };
       }
       if (title === 'Negócio reaberto') {
-        return { icon: RotateCcw, bgColor: "bg-gray-500", textColor: "text-gray-500", label: "Reaberto" };
+        return { icon: RotateCcw, bgColor: "bg-muted-foreground", textColor: "text-muted-foreground", label: "Reaberto" };
       }
-      return { icon: CheckCircle, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "Ganho" };
+      return { icon: CheckCircle, bgColor: "bg-success", textColor: "text-success", label: "Ganho" };
     default:
       return { icon: StickyNote, bgColor: "bg-muted", textColor: "text-muted-foreground", label: "Evento" };
   }
@@ -1026,7 +1026,7 @@ export function DealDetailSheet({
                     <VipBadge clientId={deal.client_id} size="md" />
                   </SheetTitle>
                   {deal.status === 'won' && (
-                    <Badge className="bg-emerald-500/90 text-white text-[10px] h-5 px-1.5">
+                    <Badge className="bg-success/90 text-white text-[10px] h-5 px-1.5">
                       <Trophy className="h-3 w-3 mr-0.5" />
                       Ganha
                     </Badge>
@@ -1101,7 +1101,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 flex-1 sm:flex-none text-emerald-600 hover:text-emerald-700 hover:bg-emerald-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-success hover:text-success-strong hover:bg-success/10"
                     onClick={() => onMarkAsWon(deal.id)}
                     disabled={processingWonDealId === deal.id}
                   >
@@ -1115,7 +1115,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 flex-1 sm:flex-none text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                    className="h-8 px-2.5 flex-1 sm:flex-none text-danger hover:text-danger hover:bg-danger/10"
                     onClick={() => setLostDialogOpen(true)}
                     disabled={!!processingWonDealId}
                   >
@@ -1153,14 +1153,14 @@ export function DealDetailSheet({
                 <div className="grid grid-cols-2 gap-2">
                   <div className="rounded-lg border p-3 bg-muted/30">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-500" />
+                      <DollarSign className="h-3.5 w-3.5 text-success" />
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Valor</span>
                     </div>
                     <Popover open={valueEditOpen} onOpenChange={setValueEditOpen}>
                       <PopoverTrigger asChild>
                         <button
                           type="button"
-                          className="text-lg font-bold text-emerald-500 hover:underline text-left"
+                          className="text-lg font-bold text-success hover:underline text-left"
                           title="Editar valor"
                         >
                           {formatCurrency(deal.value)}
@@ -1194,14 +1194,14 @@ export function DealDetailSheet({
                   </div>
                   <div className="rounded-lg border p-3 bg-muted/30">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <TrendingUp className="h-3.5 w-3.5 text-blue-500" />
+                      <TrendingUp className="h-3.5 w-3.5 text-info" />
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Probabilidade</span>
                     </div>
-                    <p className="text-lg font-bold text-blue-500">{deal.probability}%</p>
+                    <p className="text-lg font-bold text-info">{deal.probability}%</p>
                   </div>
                   <div className="rounded-lg border p-3 bg-muted/30">
                     <div className="flex items-center gap-1.5 mb-1">
-                      <Clock className="h-3.5 w-3.5 text-amber-500" />
+                      <Clock className="h-3.5 w-3.5 text-warning" />
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Idade</span>
                     </div>
                     <p className="text-lg font-bold text-foreground">{daysSinceCreation} dias</p>
@@ -1210,13 +1210,13 @@ export function DealDetailSheet({
                     {deal.status === 'won' && localWonAt ? (
                       <>
                         <div className="flex items-center gap-1.5 mb-1">
-                          <Trophy className="h-3.5 w-3.5 text-emerald-500" />
+                          <Trophy className="h-3.5 w-3.5 text-success" />
                           <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Ganho em</span>
                         </div>
                         <Popover open={wonAtPopoverOpen} onOpenChange={setWonAtPopoverOpen}>
                           <PopoverTrigger asChild>
                             <button 
-                              className="flex items-center gap-1.5 text-lg font-bold text-emerald-500 hover:underline cursor-pointer group"
+                              className="flex items-center gap-1.5 text-lg font-bold text-success hover:underline cursor-pointer group"
                               disabled={updatingWonAt}
                             >
                               {format(new Date(localWonAt), "dd/MM/yy")}
@@ -1275,7 +1275,7 @@ export function DealDetailSheet({
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <div className="flex items-center gap-1.5">
-                        <icons.RefreshCw className="h-3.5 w-3.5 text-sky-500" />
+                        <icons.RefreshCw className="h-3.5 w-3.5 text-info" />
                         <span className="text-xs font-semibold">É uma renovação</span>
                       </div>
                       <p className="text-[11px] text-muted-foreground mt-0.5">
@@ -1291,14 +1291,14 @@ export function DealDetailSheet({
                 </div>
 
                 {/* Valor Recebido (alimenta SPIFFs de cash collect) */}
-                <div className="rounded-lg border p-3 bg-emerald-500/5 border-emerald-500/20">
+                <div className="rounded-lg border p-3 bg-success/5 border-success/20">
                   <div className="flex items-center justify-between mb-1">
                     <div className="flex items-center gap-1.5">
-                      <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                      <DollarSign className="h-3.5 w-3.5 text-success" />
                       <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-semibold">
                         Valor Recebido
                       </span>
-                      <span className="text-[9px] uppercase tracking-wide text-emerald-700/70 bg-emerald-500/10 px-1.5 py-0.5 rounded">
+                      <span className="text-[9px] uppercase tracking-wide text-success/70 bg-success/10 px-1.5 py-0.5 rounded">
                         Cash collect · SPIFF
                       </span>
                     </div>
@@ -1335,7 +1335,7 @@ export function DealDetailSheet({
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="text-2xl font-bold text-emerald-600 hover:underline text-left w-full"
+                        className="text-2xl font-bold text-success hover:underline text-left w-full"
                         title="Editar valor recebido"
                       >
                         {localReceivedValue != null
@@ -1524,7 +1524,7 @@ export function DealDetailSheet({
                               </Avatar>
                               <span className="text-sm truncate">{deal.responsible_user.name}</span>
                               {deal.responsible_user.is_active === false && (
-                                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">Inativo</Badge>
+                                <Badge variant="outline" className="text-[10px] border-warning text-warning">Inativo</Badge>
                               )}
                             </>
                           ) : (
@@ -1621,10 +1621,10 @@ export function DealDetailSheet({
 
                   {/* 2ª Cadeira */}
                   {(itemVendaAllowsSecondSeat || hasSecondSeat) && (
-                    <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+                    <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
-                          <User className="h-4 w-4 text-amber-600" />
+                          <User className="h-4 w-4 text-warning" />
                           <Label htmlFor="has-second-seat" className="text-xs font-medium mb-0 cursor-pointer">
                             2ª cadeira (+50%)
                           </Label>

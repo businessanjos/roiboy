@@ -134,7 +134,7 @@ export function OptionSelectWithAdd({
               onClick={handleAdd}
               disabled={!newOption.trim() || isLoading}
             >
-              <Check className="h-4 w-4 text-green-500" />
+              <Check className="h-4 w-4 text-success" />
             </Button>
             <Button
               type="button"
@@ -225,7 +225,7 @@ export function OptionSelectWithAdd({
             onClick={handleAdd}
             disabled={!newOption.trim() || isLoading}
           >
-            <Check className="h-4 w-4 text-green-500" />
+            <Check className="h-4 w-4 text-success" />
           </Button>
           <Button
             type="button"

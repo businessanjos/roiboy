@@ -86,10 +86,10 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
 }: ZappNewConversationDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-md overflow-hidden">
+      <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text max-w-md overflow-hidden">
         <DialogHeader>
           <DialogTitle>Nova Conversa</DialogTitle>
-          <DialogDescription className="text-[#8696a0]">
+          <DialogDescription className="text-zapp-text-muted">
             Busque um contato para iniciar uma conversa
           </DialogDescription>
         </DialogHeader>
@@ -98,13 +98,13 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
             placeholder="Buscar por nome ou telefone..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+            className="bg-zapp-panel border-zapp-border text-zapp-text"
           />
           <ScrollArea className="h-64">
             {searchQuery.trim() === "" ? (
-              <p className="text-center text-[#8696a0] py-8">Digite para buscar contatos</p>
+              <p className="text-center text-zapp-text-muted py-8">Digite para buscar contatos</p>
             ) : clients.length === 0 ? (
-              <p className="text-center text-[#8696a0] py-8">Nenhum contato encontrado</p>
+              <p className="text-center text-zapp-text-muted py-8">Nenhum contato encontrado</p>
             ) : (
               <div className="space-y-2 pr-3">
                 {clients.map((client) => (
@@ -112,7 +112,7 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                     key={`${client.type || 'contact'}-${client.id}`}
                     onClick={() => onSelectClient(client)}
                     disabled={creating}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-zapp-panel transition-colors text-left"
                   >
                     <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage src={client.avatar_url || undefined} />
@@ -122,32 +122,32 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                     </Avatar>
                     <div className="flex-1 min-w-0 overflow-hidden">
                       <div className="flex items-center gap-2 flex-wrap min-w-0 overflow-hidden">
-                        <span className="text-[#e9edef] font-medium truncate max-w-[180px] sm:max-w-[220px]">
+                        <span className="text-zapp-text font-medium truncate max-w-[180px] sm:max-w-[220px]">
                           {formatName(client.full_name, client.type)}
                         </span>
                         {client.type === 'client' && (
-                          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-xs whitespace-nowrap">
                             Cliente
                           </Badge>
                         )}
                         {client.type === 'lead' && (
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30 text-xs whitespace-nowrap">
                             Lead
                           </Badge>
                         )}
                         {client.type === 'conversation' && (
-                          <Badge variant="outline" className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-muted-foreground/20 text-muted-foreground border-border/30 text-xs whitespace-nowrap">
                             Contato
                           </Badge>
                         )}
                         {client.type === 'group' && (
-                          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs whitespace-nowrap flex items-center gap-1">
+                          <Badge variant="outline" className="bg-info/20 text-info border-info/30 text-xs whitespace-nowrap flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             Grupo
                           </Badge>
                         )}
                       </div>
-                      <p className="text-[#8696a0] text-sm truncate">
+                      <p className="text-zapp-text-muted text-sm truncate">
                         {client.type === 'group' ? 'Grupo do WhatsApp' : client.phone_e164}
                       </p>
                     </div>

@@ -100,14 +100,14 @@ function PlatformCard({ talent, platform, account }: { talent: Talent; platform:
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <Badge variant="outline" className={cfg.color}>{cfg.label}</Badge>
-          {account?.status === "connected" && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30" variant="outline">conectado</Badge>}
-          {account?.status === "error" && <Badge className="bg-red-500/15 text-red-700" variant="outline"><AlertCircle className="h-3 w-3 mr-1" />erro</Badge>}
+          {account?.status === "connected" && <Badge className="bg-success/15 text-success-strong border-success/30" variant="outline">conectado</Badge>}
+          {account?.status === "error" && <Badge className="bg-danger/15 text-danger-strong" variant="outline"><AlertCircle className="h-3 w-3 mr-1" />erro</Badge>}
           {!account && <Badge variant="outline">não conectado</Badge>}
         </div>
         <div className="text-xs text-muted-foreground mt-1 truncate">
           {account?.handle || "—"} {account?.last_sync_at && `· sync ${new Date(account.last_sync_at).toLocaleString("pt-BR")}`}
         </div>
-        {account?.last_sync_error && <div className="text-xs text-red-600 mt-1 truncate">{account.last_sync_error}</div>}
+        {account?.last_sync_error && <div className="text-xs text-danger mt-1 truncate">{account.last_sync_error}</div>}
       </div>
       <div className="flex items-center gap-1">
         {account && (
@@ -278,7 +278,7 @@ export function ContentHQPerformance({ talent }: { talent: Talent }) {
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-3">
         <Card className="p-4"><div className="text-xs text-muted-foreground">Planejado</div><div className="text-2xl font-bold">{planned}</div></Card>
-        <Card className="p-4"><div className="text-xs text-muted-foreground">Publicado</div><div className="text-2xl font-bold text-emerald-600">{published}</div></Card>
+        <Card className="p-4"><div className="text-xs text-muted-foreground">Publicado</div><div className="text-2xl font-bold text-success">{published}</div></Card>
         <Card className="p-4"><div className="text-xs text-muted-foreground">Taxa de execução</div><div className="text-2xl font-bold">{rate}%</div></Card>
       </div>
 

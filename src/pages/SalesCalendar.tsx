@@ -43,9 +43,9 @@ type CalEvent = {
 };
 
 const SOURCE_STYLES: Record<CalEvent["source"], { dot: string; bg: string; text: string; label: string; icon: any }> = {
-  task: { dot: "bg-blue-500", bg: "bg-blue-50 dark:bg-blue-950/40 border-blue-500/40", text: "text-blue-700 dark:text-blue-300", label: "Tarefa", icon: ClipboardList },
+  task: { dot: "bg-info", bg: "bg-info-soft dark:bg-info/40 border-info/40", text: "text-info-strong dark:text-info", label: "Tarefa", icon: ClipboardList },
   meeting: { dot: "bg-violet-500", bg: "bg-violet-50 dark:bg-violet-950/40 border-violet-500/40", text: "text-violet-700 dark:text-violet-300", label: "Reunião", icon: Video },
-  google: { dot: "bg-emerald-500", bg: "bg-emerald-50 dark:bg-emerald-950/40 border-emerald-500/40", text: "text-emerald-700 dark:text-emerald-300", label: "Google Agenda", icon: CalendarIcon },
+  google: { dot: "bg-success", bg: "bg-success-soft dark:bg-success/40 border-success/40", text: "text-success-strong dark:text-success", label: "Google Agenda", icon: CalendarIcon },
 };
 
 function combineDateTime(date: string, time: string | null): Date {
@@ -320,7 +320,7 @@ export default function SalesCalendar() {
           )}
           {googleConnected === true && (
             <>
-              <Badge variant="outline" className="gap-1.5 border-emerald-500/40 text-emerald-700 dark:text-emerald-300">
+              <Badge variant="outline" className="gap-1.5 border-success/40 text-success-strong dark:text-success">
                 <CheckCircle2 className="h-3 w-3" />
                 Google Agenda conectado
               </Badge>

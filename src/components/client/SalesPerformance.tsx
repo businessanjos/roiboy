@@ -289,11 +289,11 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-emerald-500/20">
+            <Card className="bg-gradient-to-br from-success/5 to-success/10 border-success/20">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 bg-emerald-500/10 rounded-lg">
-                    <DollarSign className="h-5 w-5 text-emerald-500" />
+                  <div className="p-2 bg-success/10 rounded-lg">
+                    <DollarSign className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Total Vendido</p>
@@ -303,19 +303,19 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
               </CardContent>
             </Card>
 
-            <Card className={`bg-gradient-to-br ${overallPercentage >= 100 ? 'from-emerald-500/5 to-emerald-500/10 border-emerald-500/20' : overallPercentage >= 70 ? 'from-amber-500/5 to-amber-500/10 border-amber-500/20' : 'from-destructive/5 to-destructive/10 border-destructive/20'}`}>
+            <Card className={`bg-gradient-to-br ${overallPercentage >= 100 ? 'from-success/5 to-success/10 border-success/20' : overallPercentage >= 70 ? 'from-warning/5 to-warning/10 border-warning/20' : 'from-destructive/5 to-destructive/10 border-destructive/20'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-lg ${overallPercentage >= 100 ? 'bg-emerald-500/10' : overallPercentage >= 70 ? 'bg-amber-500/10' : 'bg-destructive/10'}`}>
+                  <div className={`p-2 rounded-lg ${overallPercentage >= 100 ? 'bg-success/10' : overallPercentage >= 70 ? 'bg-warning/10' : 'bg-destructive/10'}`}>
                     {overallPercentage >= 100 ? (
-                      <TrendingUp className="h-5 w-5 text-emerald-500" />
+                      <TrendingUp className="h-5 w-5 text-success" />
                     ) : (
-                      <TrendingDown className={`h-5 w-5 ${overallPercentage >= 70 ? 'text-amber-500' : 'text-destructive'}`} />
+                      <TrendingDown className={`h-5 w-5 ${overallPercentage >= 70 ? 'text-warning' : 'text-destructive'}`} />
                     )}
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Desempenho</p>
-                    <p className={`text-lg font-bold ${overallPercentage >= 100 ? 'text-emerald-500' : overallPercentage >= 70 ? 'text-amber-500' : 'text-destructive'}`}>
+                    <p className={`text-lg font-bold ${overallPercentage >= 100 ? 'text-success' : overallPercentage >= 70 ? 'text-warning' : 'text-destructive'}`}>
                       {overallPercentage.toFixed(1)}%
                     </p>
                   </div>
@@ -338,7 +338,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
                         perf.isCurrentPeriod 
                           ? 'bg-primary/5 border-primary/30' 
                           : perf.isPastPeriod && perf.goalMet 
-                            ? 'bg-emerald-500/5 border-emerald-500/20' 
+                            ? 'bg-success/5 border-success/20' 
                             : perf.isPastPeriod 
                               ? 'bg-muted/30 border-border' 
                               : 'bg-card border-border'
@@ -354,7 +354,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
                             <Badge variant="default" className="text-xs">Atual</Badge>
                           )}
                           {perf.isPastPeriod && perf.goalMet && (
-                            <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                            <Badge variant="outline" className="text-xs bg-success/10 text-success border-success/30">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Atingida
                             </Badge>
@@ -378,9 +378,9 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
                           </span>
                           <span className={`font-medium ${
                             perf.actualPercentage >= 100 
-                              ? 'text-emerald-500' 
+                              ? 'text-success' 
                               : perf.actualPercentage >= 70 
-                                ? 'text-amber-500' 
+                                ? 'text-warning' 
                                 : 'text-muted-foreground'
                           }`}>
                             {perf.actualPercentage.toFixed(1)}%
@@ -390,9 +390,9 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
                           value={perf.percentage} 
                           className={`h-2 ${
                             perf.actualPercentage >= 100 
-                              ? '[&>div]:bg-emerald-500' 
+                              ? '[&>div]:bg-success' 
                               : perf.actualPercentage >= 70 
-                                ? '[&>div]:bg-amber-500' 
+                                ? '[&>div]:bg-warning' 
                                 : ''
                           }`}
                         />
@@ -415,8 +415,8 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
                     className="flex items-center justify-between p-3 rounded-lg bg-muted/30 border border-border"
                   >
                     <div className="flex items-center gap-3">
-                      <div className="p-1.5 bg-emerald-500/10 rounded">
-                        <DollarSign className="h-4 w-4 text-emerald-500" />
+                      <div className="p-1.5 bg-success/10 rounded">
+                        <DollarSign className="h-4 w-4 text-success" />
                       </div>
                       <div>
                         <p className="text-sm font-medium text-foreground">

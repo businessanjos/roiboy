@@ -309,12 +309,12 @@ export default function WhatsAppDiagnostics() {
 
   const getSectorColor = (sectorId: string) => {
     const colors: Record<string, string> = {
-      operacoes: "bg-blue-500",
-      vendas: "bg-green-500",
-      financeiro: "bg-amber-500",
+      operacoes: "bg-info",
+      vendas: "bg-success",
+      financeiro: "bg-warning",
       
     };
-    return colors[sectorId] || "bg-gray-500";
+    return colors[sectorId] || "bg-muted-foreground";
   };
 
   // Group conversations by sector
@@ -389,7 +389,7 @@ export default function WhatsAppDiagnostics() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Database className="h-8 w-8 text-blue-500" />
+                <Database className="h-8 w-8 text-info" />
                 <div>
                   <p className="text-2xl font-bold">{orphanStats.total_conversations}</p>
                   <p className="text-xs text-muted-foreground">Total de Conversas</p>
@@ -397,10 +397,10 @@ export default function WhatsAppDiagnostics() {
               </div>
             </CardContent>
           </Card>
-          <Card className={orphanStats.without_integration > 0 ? "border-amber-500" : ""}>
+          <Card className={orphanStats.without_integration > 0 ? "border-warning" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Unlink className={`h-8 w-8 ${orphanStats.without_integration > 0 ? "text-amber-500" : "text-green-500"}`} />
+                <Unlink className={`h-8 w-8 ${orphanStats.without_integration > 0 ? "text-warning" : "text-success"}`} />
                 <div>
                   <p className="text-2xl font-bold">{orphanStats.without_integration}</p>
                   <p className="text-xs text-muted-foreground">Sem Integration ID</p>
@@ -408,10 +408,10 @@ export default function WhatsAppDiagnostics() {
               </div>
             </CardContent>
           </Card>
-          <Card className={orphanStats.without_assignment > 0 ? "border-red-500" : ""}>
+          <Card className={orphanStats.without_assignment > 0 ? "border-danger" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <AlertTriangle className={`h-8 w-8 ${orphanStats.without_assignment > 0 ? "text-red-500" : "text-green-500"}`} />
+                <AlertTriangle className={`h-8 w-8 ${orphanStats.without_assignment > 0 ? "text-danger" : "text-success"}`} />
                 <div>
                   <p className="text-2xl font-bold">{orphanStats.without_assignment}</p>
                   <p className="text-xs text-muted-foreground">Sem Assignment</p>
@@ -419,10 +419,10 @@ export default function WhatsAppDiagnostics() {
               </div>
             </CardContent>
           </Card>
-          <Card className={orphanStats.groups_without_sync > 0 ? "border-amber-500" : ""}>
+          <Card className={orphanStats.groups_without_sync > 0 ? "border-warning" : ""}>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <Users className={`h-8 w-8 ${orphanStats.groups_without_sync > 0 ? "text-amber-500" : "text-green-500"}`} />
+                <Users className={`h-8 w-8 ${orphanStats.groups_without_sync > 0 ? "text-warning" : "text-success"}`} />
                 <div>
                   <p className="text-2xl font-bold">{orphanStats.groups_without_sync}</p>
                   <p className="text-xs text-muted-foreground">Grupos Órfãos</p>
@@ -521,7 +521,7 @@ export default function WhatsAppDiagnostics() {
                         </td>
                         <td className="py-3 px-3">
                           {integration.status === "connected" ? (
-                            <div className="flex items-center gap-1.5 text-green-600">
+                            <div className="flex items-center gap-1.5 text-success">
                               <Wifi className="h-4 w-4" />
                               <span>Online</span>
                             </div>
@@ -539,7 +539,7 @@ export default function WhatsAppDiagnostics() {
                           <div className="flex flex-col">
                             <span className="font-medium">{sectorConvos.length}</span>
                             {legacyCount > 0 && (
-                              <span className="text-xs text-amber-500">
+                              <span className="text-xs text-warning">
                                 ({legacyCount} legadas)
                               </span>
                             )}
@@ -658,7 +658,7 @@ export default function WhatsAppDiagnostics() {
                         {sectorConvs.length} conversa(s)
                       </span>
                       {sectorConvs.filter(c => !c.integration_id).length > 0 && (
-                        <Badge variant="outline" className="text-xs text-amber-500 border-amber-500">
+                        <Badge variant="outline" className="text-xs text-warning border-warning">
                           {sectorConvs.filter(c => !c.integration_id).length} legadas
                         </Badge>
                       )}
@@ -677,7 +677,7 @@ export default function WhatsAppDiagnostics() {
                               <Users className="h-3 w-3 text-muted-foreground" />
                             )}
                             {!conv.integration_id && (
-                              <Unlink className="h-3 w-3 text-amber-500" />
+                              <Unlink className="h-3 w-3 text-warning" />
                             )}
                           </div>
                           <span className="text-xs text-muted-foreground">
@@ -730,9 +730,9 @@ export default function WhatsAppDiagnostics() {
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Integração:</span>
                       {sectorIntegration ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : (
-                        <AlertTriangle className="h-4 w-4 text-amber-500" />
+                        <AlertTriangle className="h-4 w-4 text-warning" />
                       )}
                     </div>
                     <div className="flex justify-between">
@@ -745,13 +745,13 @@ export default function WhatsAppDiagnostics() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Legadas:</span>
-                      <span className={`font-mono ${legacyCount > 0 ? "text-amber-500" : ""}`}>
+                      <span className={`font-mono ${legacyCount > 0 ? "text-warning" : ""}`}>
                         {legacyCount}
                       </span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Status:</span>
-                      <span className={sectorIntegration?.status === "connected" ? "text-green-600" : "text-muted-foreground"}>
+                      <span className={sectorIntegration?.status === "connected" ? "text-success" : "text-muted-foreground"}>
                         {sectorIntegration?.status === "connected" ? "Online" : "Offline"}
                       </span>
                     </div>

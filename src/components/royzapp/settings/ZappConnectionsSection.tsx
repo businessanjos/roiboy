@@ -237,9 +237,9 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                 className={cn(
                   "p-3 rounded-lg border bg-zapp-panel",
                   operational
-                    ? "border-emerald-500/30"
+                    ? "border-success/30"
                     : webhookBroken
-                      ? "border-amber-500/40"
+                      ? "border-warning/40"
                       : "border-zapp-border"
                 )}
               >
@@ -247,13 +247,13 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                   <div
                     className={cn(
                       "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-                      isMeta ? "bg-blue-500/15" : "bg-emerald-500/15"
+                      isMeta ? "bg-info/15" : "bg-success/15"
                     )}
                   >
                     {isMeta ? (
-                      <Globe className="h-4 w-4 text-blue-500" />
+                      <Globe className="h-4 w-4 text-info" />
                     ) : (
-                      <Smartphone className="h-4 w-4 text-emerald-500" />
+                      <Smartphone className="h-4 w-4 text-success" />
                     )}
                   </div>
 
@@ -263,7 +263,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                         {c.display_name || c.profile_name || c.instance_name}
                       </p>
                       {c.has_pin && (
-                        <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                        <Lock className="h-3 w-3 text-warning shrink-0" />
                       )}
                     </div>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -275,7 +275,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                           title="Clique para reativar o recebimento de mensagens"
                           className={cn(
                             "inline-flex items-center gap-1 text-[10px] px-1.5 h-4 rounded-full border transition-colors",
-                            "border-amber-500/60 text-amber-600 bg-amber-500/10 hover:bg-amber-500 hover:text-white hover:border-amber-500",
+                            "border-warning/60 text-warning bg-warning/10 hover:bg-warning hover:text-white hover:border-warning",
                             "disabled:opacity-70 disabled:cursor-not-allowed"
                           )}
                         >
@@ -292,8 +292,8 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                           className={cn(
                             "text-[10px] px-1.5 py-0 h-4",
                             operational
-                              ? "border-emerald-500/40 text-emerald-500"
-                              : "border-red-500/40 text-red-500"
+                              ? "border-success/40 text-success"
+                              : "border-danger/40 text-danger"
                           )}
                         >
                           {operational ? (
@@ -321,7 +321,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                         variant="ghost"
                         onClick={() => setRemoving(c)}
                         disabled={busyId === c.id}
-                        className="h-7 px-2 text-red-500 hover:bg-red-500/10"
+                        className="h-7 px-2 text-danger hover:bg-danger/10"
                         title="Remover"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -331,9 +331,9 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                 </div>
 
                 {webhookBroken && (
-                  <div className="mt-3 rounded-md border border-amber-500/35 bg-amber-500/10 p-3">
+                  <div className="mt-3 rounded-md border border-warning/35 bg-warning/10 p-3">
                     <div className="flex items-start gap-2">
-                      <AlertTriangle className="h-4 w-4 text-amber-500 mt-0.5 shrink-0" />
+                      <AlertTriangle className="h-4 w-4 text-warning mt-0.5 shrink-0" />
                       <div className="min-w-0 flex-1">
                         <p className="text-xs font-medium text-zapp-text">
                           Instância ligada, mas mensagens recebidas não chegam no RoyZapp
@@ -348,7 +348,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
                         size="sm"
                         onClick={() => handleFixWebhook(c)}
                         disabled={fixingWebhookId === c.id}
-                        className="w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white gap-2"
+                        className="w-full mt-3 bg-warning hover:bg-warning text-white gap-2"
                       >
                         {fixingWebhookId === c.id ? (
                           <Loader2 className="h-4 w-4 animate-spin" />
@@ -414,7 +414,7 @@ export function ZappConnectionsSection({ sectorId, sectorName }: ZappConnections
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
             <AlertDialogAction
               onClick={handleRemove}
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-danger hover:bg-danger text-white"
             >
               Remover
             </AlertDialogAction>

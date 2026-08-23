@@ -336,7 +336,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                   <Badge
                     variant="secondary"
                     className={cn(
-                      "h-5 min-w-5 px-1.5 text-[10px] font-semibold bg-amber-500 text-white hover:bg-amber-500",
+                      "h-5 min-w-5 px-1.5 text-[10px] font-semibold bg-warning text-white hover:bg-warning",
                       collapsed && "absolute top-1 right-1 h-4 min-w-4 px-1"
                     )}
                   >
@@ -662,7 +662,7 @@ function FinancialGroupedNav({
               className={cn(
                 "w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-md text-[10px] uppercase tracking-wider font-semibold transition-colors",
                 "text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-                isEmBreve && "text-amber-600 dark:text-amber-500"
+                isEmBreve && "text-warning dark:text-warning"
               )}
             >
               <span>{g.name}</span>
@@ -698,7 +698,7 @@ function FinancialGroupedNav({
                     {item.comingSoon && (
                       <Badge
                         variant="outline"
-                        className="h-4 px-1.5 text-[9px] uppercase tracking-wide border-amber-500/40 text-amber-600 dark:text-amber-500"
+                        className="h-4 px-1.5 text-[9px] uppercase tracking-wide border-warning/40 text-warning dark:text-warning"
                       >
                         Em breve
                       </Badge>

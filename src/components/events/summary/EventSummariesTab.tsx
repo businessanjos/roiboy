@@ -224,7 +224,7 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
                 <CardContent className="py-4 flex items-center justify-between gap-3">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <FileText className="h-4 w-4 text-amber-600" />
+                      <FileText className="h-4 w-4 text-warning" />
                       <span className="font-semibold">DIA {r.day_number}</span>
                       {r.event_date && (
                         <span className="text-xs text-muted-foreground">

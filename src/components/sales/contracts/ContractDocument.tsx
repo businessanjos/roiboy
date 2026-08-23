@@ -387,8 +387,8 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
 
         {/* Mora */}
         <Section title="Da Mora e Inadimplência" icon={AlertTriangle} number="5">
-          <div className="rounded-md border-l-4 border-l-amber-500 bg-amber-500/5 p-4 flex gap-3">
-            <AlertTriangle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <div className="rounded-md border-l-4 border-l-amber-500 bg-warning/5 p-4 flex gap-3">
+            <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
             <p className="text-[12px]">
               Em caso de atraso no pagamento, será aplicada{" "}
               <strong>multa de {data.late_fee_percentage ?? 2}%</strong> e{" "}

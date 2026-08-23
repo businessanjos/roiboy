@@ -207,14 +207,14 @@ export default function ClientOnboardingHub() {
                   </div>
                   {/* Stacked bar */}
                   <div className="flex h-2 rounded-full overflow-hidden bg-muted">
-                    <div className="bg-emerald-500" style={{ width: `${(onTrack / totalSafe) * 100}%` }} />
-                    <div className="bg-amber-500" style={{ width: `${(atRisk / totalSafe) * 100}%` }} />
-                    <div className="bg-red-500" style={{ width: `${(overdue / totalSafe) * 100}%` }} />
+                    <div className="bg-success" style={{ width: `${(onTrack / totalSafe) * 100}%` }} />
+                    <div className="bg-warning" style={{ width: `${(atRisk / totalSafe) * 100}%` }} />
+                    <div className="bg-danger" style={{ width: `${(overdue / totalSafe) * 100}%` }} />
                   </div>
                   <div className="flex gap-4 mt-2 text-[11px] text-muted-foreground">
-                    <span><span className="text-emerald-600 font-medium">●</span> {onTrack} no prazo</span>
-                    <span><span className="text-amber-600 font-medium">●</span> {atRisk} em risco</span>
-                    <span><span className="text-red-600 font-medium">●</span> {overdue} atrasados</span>
+                    <span><span className="text-success font-medium">●</span> {onTrack} no prazo</span>
+                    <span><span className="text-warning font-medium">●</span> {atRisk} em risco</span>
+                    <span><span className="text-danger font-medium">●</span> {overdue} atrasados</span>
                   </div>
                 </CardContent>
               </Card>
@@ -249,14 +249,14 @@ function KpiCard({
   accent?: boolean;
 }) {
   const tones = {
-    amber: "bg-amber-100 dark:bg-amber-950/30 text-amber-700 dark:text-amber-400",
-    blue: "bg-blue-100 dark:bg-blue-950/30 text-blue-600 dark:text-blue-400",
-    red: "bg-red-100 dark:bg-red-950/30 text-red-600 dark:text-red-400",
-    emerald: "bg-emerald-100 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-400",
+    amber: "bg-warning-soft dark:bg-warning/30 text-warning-strong dark:text-warning",
+    blue: "bg-info-soft dark:bg-info/30 text-info dark:text-info",
+    red: "bg-danger-soft dark:bg-danger/30 text-danger dark:text-danger",
+    emerald: "bg-success-soft dark:bg-success/30 text-success-strong dark:text-success",
     muted: "bg-muted text-muted-foreground",
   };
   return (
-    <Card className={accent && tone !== "muted" ? "border-amber-400/60 bg-amber-50/40 dark:bg-amber-950/10" : ""}>
+    <Card className={accent && tone !== "muted" ? "border-warning/60 bg-warning/40 dark:bg-warning/10" : ""}>
       <CardContent className="p-4 flex items-center gap-3">
         <div className={`rounded-lg p-2 ${tones[tone]}`}>
           <Icon className="h-5 w-5" />
@@ -362,7 +362,7 @@ function SmartClientList({
                     </Badge>
                   )}
                   {notStarted && (
-                    <Badge variant="outline" className="text-[10px] border-amber-400 text-amber-700 dark:text-amber-400">
+                    <Badge variant="outline" className="text-[10px] border-warning text-warning-strong dark:text-warning">
                       Aguardando início
                     </Badge>
                   )}
@@ -371,8 +371,8 @@ function SmartClientList({
                   <span>{stage?.name || "Sem etapa"}</span>
                   <span>•</span>
                   <span className={
-                    health === "overdue" ? "text-red-600 font-medium"
-                    : health === "at_risk" ? "text-amber-600 font-medium"
+                    health === "overdue" ? "text-danger font-medium"
+                    : health === "at_risk" ? "text-warning font-medium"
                     : ""
                   }>
                     {days}d na etapa
@@ -438,7 +438,7 @@ function SmartClientList({
                 <Button
                   size="sm"
                   onClick={() => onStart(c.id, firstActiveStage.id)}
-                  className="gap-1.5 bg-amber-500 hover:bg-amber-600 text-white"
+                  className="gap-1.5 bg-warning hover:bg-warning text-white"
                 >
                   <Play className="h-3.5 w-3.5" /> Iniciar Onboarding
                 </Button>

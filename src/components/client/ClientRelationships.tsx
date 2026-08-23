@@ -108,11 +108,11 @@ interface ClientRelationshipsProps {
 
 const relationshipTypeLabels: Record<RelationshipType, { label: string; icon: React.ReactNode; color: string }> = {
   spouse: { label: "Cônjuge", icon: <Heart className="h-3 w-3" />, color: "bg-pink-500/20 text-pink-400 border-pink-500/30" },
-  partner: { label: "Parceiro(a)", icon: <Heart className="h-3 w-3" />, color: "bg-rose-500/20 text-rose-400 border-rose-500/30" },
-  dependent: { label: "Dependente", icon: <UserPlus className="h-3 w-3" />, color: "bg-blue-500/20 text-blue-400 border-blue-500/30" },
-  associate: { label: "Sócio", icon: <Briefcase className="h-3 w-3" />, color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" },
+  partner: { label: "Parceiro(a)", icon: <Heart className="h-3 w-3" />, color: "bg-danger/20 text-danger border-danger/30" },
+  dependent: { label: "Dependente", icon: <UserPlus className="h-3 w-3" />, color: "bg-info/20 text-info border-info/30" },
+  associate: { label: "Sócio", icon: <Briefcase className="h-3 w-3" />, color: "bg-success/20 text-success border-success/30" },
   referral: { label: "Indicação", icon: <Gift className="h-3 w-3" />, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  other: { label: "Outro", icon: <Link2 className="h-3 w-3" />, color: "bg-gray-500/20 text-gray-400 border-gray-500/30" },
+  other: { label: "Outro", icon: <Link2 className="h-3 w-3" />, color: "bg-muted-foreground/20 text-muted-foreground border-border/30" },
 };
 
 export function ClientRelationships({ clientId, accountId }: ClientRelationshipsProps) {

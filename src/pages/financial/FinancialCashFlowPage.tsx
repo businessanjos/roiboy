@@ -296,8 +296,8 @@ export default function FinancialCashFlowPage() {
                                 <span
                                   className={
                                     d.balance >= 0
-                                      ? "text-emerald-600 dark:text-emerald-400"
-                                      : "text-red-600 dark:text-red-400"
+                                      ? "text-success dark:text-success"
+                                      : "text-danger dark:text-danger"
                                   }
                                 >
                                   {formatBRL(d.balance)}
@@ -343,10 +343,10 @@ export default function FinancialCashFlowPage() {
                           return (
                             <div className="bg-background border rounded-lg p-3 shadow-lg space-y-0.5">
                               <p className="font-medium">{d.fullDate}</p>
-                              <p className="text-sm text-emerald-600 dark:text-emerald-400">
+                              <p className="text-sm text-success dark:text-success">
                                 Receitas: {formatBRL(d.income)}
                               </p>
-                              <p className="text-sm text-red-600 dark:text-red-400">
+                              <p className="text-sm text-danger dark:text-danger">
                                 Despesas: {formatBRL(d.expenses)}
                               </p>
                             </div>

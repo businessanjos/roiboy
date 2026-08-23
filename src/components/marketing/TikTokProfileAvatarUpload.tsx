@@ -366,12 +366,12 @@ export function TikTokProfileAvatarUpload({
                 className={cn(
                   "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
                   isDragging
-                    ? "border-cyan-500 bg-cyan-500/5"
+                    ? "border-info bg-info/5"
                     : "border-muted-foreground/25 hover:border-pink-500/50"
                 )}
               >
                 <div className="flex flex-col items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 p-[2px]">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-info to-pink-500 p-[2px]">
                     <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
                       <Camera className="h-7 w-7 text-muted-foreground" />
                     </div>

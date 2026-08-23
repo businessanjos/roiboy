@@ -13,10 +13,10 @@ interface DuplicateAlertProps {
 }
 
 const matchTypeConfig = {
-  phone: { label: "Telefone", icon: Phone, color: "text-blue-600" },
+  phone: { label: "Telefone", icon: Phone, color: "text-info" },
   cpf: { label: "CPF", icon: FileText, color: "text-purple-600" },
-  cnpj: { label: "CNPJ", icon: Building2, color: "text-amber-600" },
-  email: { label: "E-mail", icon: Mail, color: "text-emerald-600" },
+  cnpj: { label: "CNPJ", icon: Building2, color: "text-warning" },
+  email: { label: "E-mail", icon: Mail, color: "text-success" },
 };
 
 export function DuplicateAlert({ duplicates, onDismiss, onSelectClient }: DuplicateAlertProps) {
@@ -32,13 +32,13 @@ export function DuplicateAlert({ duplicates, onDismiss, onSelectClient }: Duplic
   };
 
   return (
-    <Alert variant="destructive" className="border-amber-500/50 bg-amber-50 dark:bg-amber-950/20">
-      <AlertTriangle className="h-4 w-4 text-amber-600" />
-      <AlertTitle className="text-amber-800 dark:text-amber-400">
+    <Alert variant="destructive" className="border-warning/50 bg-warning-soft dark:bg-warning/20">
+      <AlertTriangle className="h-4 w-4 text-warning" />
+      <AlertTitle className="text-warning-strong dark:text-warning">
         Possível cliente duplicado
       </AlertTitle>
       <AlertDescription className="mt-3">
-        <p className="text-sm text-amber-700 dark:text-amber-300 mb-3">
+        <p className="text-sm text-warning-strong dark:text-warning mb-3">
           Encontramos {duplicates.length === 1 ? "um cliente" : `${duplicates.length} clientes`} com dados similares.
           Verifique antes de continuar:
         </p>
@@ -51,7 +51,7 @@ export function DuplicateAlert({ duplicates, onDismiss, onSelectClient }: Duplic
             return (
               <div
                 key={match.id}
-                className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-background border border-amber-200 dark:border-amber-800"
+                className="flex items-center justify-between p-3 rounded-lg bg-white dark:bg-background border border-warning dark:border-warning"
               >
                 <div className="flex items-center gap-3">
                   <Avatar className="h-10 w-10">

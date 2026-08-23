@@ -172,7 +172,7 @@ export function EducationSelect({
         <button
           type="button"
           onClick={() => onChange(suggestion)}
-          className="text-[11px] text-amber-600 hover:underline text-left block"
+          className="text-[11px] text-warning hover:underline text-left block"
         >
           Valor fora do padrão. Converter para "{suggestion}"?
         </button>
@@ -181,7 +181,7 @@ export function EducationSelect({
           <button
             type="button"
             onClick={() => setOpen(true)}
-            className="text-[11px] text-amber-600 hover:underline text-left block"
+            className="text-[11px] text-warning hover:underline text-left block"
           >
             "{value}" está fora do padrão. Clique para escolher uma formação da lista.
           </button>

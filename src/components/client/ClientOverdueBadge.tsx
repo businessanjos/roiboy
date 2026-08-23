@@ -23,8 +23,8 @@ export function ClientOverdueBadge({ clientId, compact = false }: Props) {
 
   const cfg =
     status === "inadimplente"
-      ? { label: "Inadimplente", cls: "bg-red-600 text-white border-red-700 hover:bg-red-700" }
-      : { label: "Em atraso", cls: "bg-orange-500 text-white border-orange-600 hover:bg-orange-600" };
+      ? { label: "Inadimplente", cls: "bg-danger text-white border-danger hover:bg-danger" }
+      : { label: "Em atraso", cls: "bg-warning text-white border-warning hover:bg-warning" };
 
   return (
     <TooltipProvider>

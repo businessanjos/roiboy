@@ -112,11 +112,11 @@ export default function FinancialAgingPage() {
 
   const agingBuckets: AgingBucket[] = useMemo(() => {
     const buckets: AgingBucket[] = [
-      { label: "1-30 dias", min: 1, max: 30, color: "bg-yellow-500", entries: [], total: 0 },
-      { label: "31-60 dias", min: 31, max: 60, color: "bg-orange-500", entries: [], total: 0 },
-      { label: "61-90 dias", min: 61, max: 90, color: "bg-red-500", entries: [], total: 0 },
-      { label: "91-120 dias", min: 91, max: 120, color: "bg-red-700", entries: [], total: 0 },
-      { label: "120+ dias", min: 121, max: null, color: "bg-red-900", entries: [], total: 0 },
+      { label: "1-30 dias", min: 1, max: 30, color: "bg-warning", entries: [], total: 0 },
+      { label: "31-60 dias", min: 31, max: 60, color: "bg-warning", entries: [], total: 0 },
+      { label: "61-90 dias", min: 61, max: 90, color: "bg-danger", entries: [], total: 0 },
+      { label: "91-120 dias", min: 91, max: 120, color: "bg-danger", entries: [], total: 0 },
+      { label: "120+ dias", min: 121, max: null, color: "bg-danger", entries: [], total: 0 },
     ];
 
     overdueEntries.forEach(entry => {
@@ -346,7 +346,7 @@ export default function FinancialAgingPage() {
                       <TableRow key={entry.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
-                            <ArrowDownCircle className="h-4 w-4 text-green-600" />
+                            <ArrowDownCircle className="h-4 w-4 text-success" />
                             <span className="font-medium">{entry.description}</span>
                           </div>
                         </TableCell>
@@ -370,7 +370,7 @@ export default function FinancialAgingPage() {
                             </span>
                           </div>
                         </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
+                        <TableCell className="text-right font-medium text-success">
                           {formatCurrency(entry.amount)}
                         </TableCell>
                         <TableCell>

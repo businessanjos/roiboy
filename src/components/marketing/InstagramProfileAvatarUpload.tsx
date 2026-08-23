@@ -372,7 +372,7 @@ export function InstagramProfileAvatarUpload({
                 )}
               >
                 <div className="flex flex-col items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 p-[2px]">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-warning p-[2px]">
                     <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
                       <Camera className="h-7 w-7 text-muted-foreground" />
                     </div>

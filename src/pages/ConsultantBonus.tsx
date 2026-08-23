@@ -166,8 +166,8 @@ export default function ConsultantBonus() {
     <div className="container mx-auto p-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 rounded-lg bg-amber-500/10">
-            <Trophy className="h-6 w-6 text-amber-500" />
+          <div className="p-2 rounded-lg bg-warning/10">
+            <Trophy className="h-6 w-6 text-warning" />
           </div>
           <div>
             <h1 className="text-2xl font-bold">Premiação & Bônus</h1>
@@ -248,7 +248,7 @@ export default function ConsultantBonus() {
         <Card>
           <CardContent className="p-4">
             <div className="text-sm text-muted-foreground">Orçamento total de bônus</div>
-            <div className="text-2xl font-bold text-amber-500">{formatBRL(totalBonusBudget)}</div>
+            <div className="text-2xl font-bold text-warning">{formatBRL(totalBonusBudget)}</div>
           </CardContent>
         </Card>
       </div>
@@ -353,7 +353,7 @@ export default function ConsultantBonus() {
                                 </div>
                                 <div className="flex items-center justify-between">
                                   <span className="text-sm text-muted-foreground">Bônus / gatilho</span>
-                                  <span className="font-semibold text-amber-500">
+                                  <span className="font-semibold text-warning">
                                     {formatBRL(Number(g.bonus_amount))}
                                   </span>
                                 </div>
@@ -395,7 +395,7 @@ export default function ConsultantBonus() {
           <div className="flex justify-end">
             <Button
               onClick={() => { window.location.href = "/operations/cs-incentive-presentation"; }}
-              className="bg-gradient-to-r from-rose-500 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white gap-2"
+              className="bg-gradient-to-r from-danger to-warning hover:from-danger hover:to-warning text-white gap-2"
             >
               <Trophy className="h-4 w-4" />
               Apresentar para o time

@@ -93,7 +93,7 @@ export function SalesGoalProgressCard({ goal, sellerName, onEdit, onDelete }: Pr
             <Stat
               label="Progresso"
               value={`${pct.toFixed(0)}%`}
-              accent={pct >= 100 ? "text-green-600" : pct >= 75 ? "text-yellow-600" : "text-orange-600"}
+              accent={pct >= 100 ? "text-success" : pct >= 75 ? "text-warning" : "text-warning"}
             />
             <Stat label="Negócios ganhos" value={String(data?.count ?? 0)} />
             <Stat label="Receita ganha" value={formatBRL(data?.total ?? 0)} />

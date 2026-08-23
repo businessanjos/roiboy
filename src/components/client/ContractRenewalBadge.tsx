@@ -38,7 +38,7 @@ export function ContractRenewalBadge({ clientId, compact = false }: Props) {
     <TooltipProvider>
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge className="text-[10px] font-semibold bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 flex items-center gap-1 cursor-default">
+          <Badge className="text-[10px] font-semibold bg-success hover:bg-success text-white border-success flex items-center gap-1 cursor-default">
             <Crown className="h-3 w-3" />
             {compact ? "" : "Pronto p/ renovar"}
           </Badge>

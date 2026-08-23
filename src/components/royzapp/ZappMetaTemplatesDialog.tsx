@@ -220,7 +220,7 @@ export function ZappMetaTemplatesDialog({
       <DialogContent className="sm:max-w-2xl max-h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <BadgeCheck className="h-5 w-5 text-emerald-500" />
+            <BadgeCheck className="h-5 w-5 text-success" />
             Templates aprovados (Meta)
           </DialogTitle>
           <DialogDescription>

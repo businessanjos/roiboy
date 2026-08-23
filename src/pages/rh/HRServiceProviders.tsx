@@ -107,7 +107,7 @@ export default function HRServiceProviders() {
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-            <Handshake className="h-6 w-6 text-amber-600" />
+            <Handshake className="h-6 w-6 text-warning" />
             Prestadores de Serviço
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -170,7 +170,7 @@ export default function HRServiceProviders() {
         </div>
         <div className="bg-card border rounded-lg p-4">
           <p className="text-sm text-muted-foreground">Ativos</p>
-          <p className="text-2xl font-bold text-emerald-600">
+          <p className="text-2xl font-bold text-success">
             {providers.filter(p => p.status === "active").length}
           </p>
         </div>
@@ -213,7 +213,7 @@ export default function HRServiceProviders() {
               >
                 <Avatar className="h-12 w-12">
                   <AvatarImage src={provider.avatar_url || ""} />
-                  <AvatarFallback className="bg-amber-100 text-amber-700 font-semibold">
+                  <AvatarFallback className="bg-warning-soft text-warning-strong font-semibold">
                     {getInitials(
                       (provider as any).provider_kind === "on_demand" && provider.company_name
                         ? provider.company_name
@@ -285,13 +285,13 @@ export default function HRServiceProviders() {
                 <SelectContent>
                   <SelectItem value="director">
                     <div className="flex flex-col items-start">
-                      <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-600" /> Diretor / Cargo de confiança</span>
+                      <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-warning" /> Diretor / Cargo de confiança</span>
                       <span className="text-[11px] text-muted-foreground">Sócios e diretores PJ da Eternum (Arthur, Jonathan, Jéssica, Maikol...)</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="on_demand">
                     <div className="flex flex-col items-start">
-                      <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-amber-600" /> Prestador sob demanda</span>
+                      <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-warning" /> Prestador sob demanda</span>
                       <span className="text-[11px] text-muted-foreground">Consultorias, contábil, medicina ocupacional, etc.</span>
                     </div>
                   </SelectItem>

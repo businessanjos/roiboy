@@ -284,7 +284,7 @@ export default function PublicEventFeedback() {
             <Star
               className={`h-8 w-8 ${
                 star <= value 
-                  ? "text-yellow-500 fill-yellow-500" 
+                  ? "text-warning fill-yellow-500" 
                   : "text-muted-foreground"
               }`}
             />
@@ -318,10 +318,10 @@ export default function PublicEventFeedback() {
             className={`w-10 h-10 rounded-lg font-semibold transition-all ${
               value === score
                 ? score <= 6
-                  ? "bg-red-500 text-white"
+                  ? "bg-danger text-white"
                   : score <= 8
-                  ? "bg-yellow-500 text-white"
-                  : "bg-green-500 text-white"
+                  ? "bg-warning text-white"
+                  : "bg-success text-white"
                 : "bg-muted hover:bg-muted/80"
             }`}
           >
@@ -463,7 +463,7 @@ export default function PublicEventFeedback() {
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-background to-muted/30 p-4">
         <Card className="w-full max-w-md">
           <CardHeader className="text-center">
-            <div className="mx-auto w-16 h-16 rounded-full bg-green-100 text-green-600 flex items-center justify-center mb-4">
+            <div className="mx-auto w-16 h-16 rounded-full bg-success-soft text-success flex items-center justify-center mb-4">
               <CheckCircle className="w-8 h-8" />
             </div>
             <CardTitle>Obrigado pelo Feedback!</CardTitle>

@@ -753,7 +753,7 @@ export function ContractNegotiationTab({
                     key={g.id}
                     className={cn(
                       "rounded-md border bg-background p-3 space-y-2",
-                      isPending && "border-amber-300 bg-amber-50/40"
+                      isPending && "border-warning bg-warning/40"
                     )}
                   >
                     <div className="flex items-center gap-2 flex-wrap">
@@ -781,7 +781,7 @@ export function ContractNegotiationTab({
                         </SelectContent>
                       </Select>
                       {isPending && (
-                        <Badge variant="outline" className="border-amber-500 text-amber-700 bg-amber-100">
+                        <Badge variant="outline" className="border-warning text-warning-strong bg-warning-soft">
                           Não gera parcelas
                         </Badge>
                       )}
@@ -861,8 +861,8 @@ export function ContractNegotiationTab({
                   </div>
                   {pendingGroups.length > 0 && (
                     <div className="flex items-center justify-between">
-                      <span className="text-amber-700">Pendente (a definir):</span>
-                      <span className="font-semibold tabular-nums text-amber-700">{formatCurrency(pendingTotal)}</span>
+                      <span className="text-warning-strong">Pendente (a definir):</span>
+                      <span className="font-semibold tabular-nums text-warning-strong">{formatCurrency(pendingTotal)}</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between border-t pt-1">
@@ -1110,7 +1110,7 @@ export function ContractNegotiationTab({
               disabled={savingPayer || receivablesGenerated}
             />
             {!payerId && !receivablesGenerated && (
-              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-500">
+              <div className="flex items-center gap-2 text-xs text-warning dark:text-warning">
                 <AlertTriangle className="h-3.5 w-3.5" />
                 Selecione ou crie o pagador antes de gerar as parcelas.
               </div>
@@ -1120,7 +1120,7 @@ export function ContractNegotiationTab({
           {/* Generate / Regenerate Receivables Button */}
           {receivablesGenerated ? (
             <div className="space-y-2">
-              <div className="flex items-center gap-2 p-3 rounded-lg bg-green-50 border border-green-200 text-green-700">
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-success-soft border border-success text-success-strong">
                 <CheckCircle className="h-5 w-5" />
                 <span className="text-sm font-medium">Parcelas já geradas no financeiro</span>
               </div>

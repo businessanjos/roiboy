@@ -118,9 +118,9 @@ export function LostValueBreakdownDialog({
               <p className="text-xs text-muted-foreground font-medium">Cancelamentos / Desistências</p>
               <p className="text-xl font-bold text-danger">{fmtBRL(cancelledValue)}</p>
             </div>
-            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
               <p className="text-xs text-muted-foreground font-medium">Encerramentos Naturais</p>
-              <p className="text-xl font-bold text-amber-600">{fmtBRL(endedValue)}</p>
+              <p className="text-xl font-bold text-warning">{fmtBRL(endedValue)}</p>
             </div>
             <div className="rounded-lg border border-foreground/10 bg-muted/40 p-3">
               <p className="text-xs text-muted-foreground font-medium">Total de Contratos</p>
@@ -295,7 +295,7 @@ function ContractsPaginatedTable({
                         className={
                           isChurn
                             ? "border-danger/40 text-danger bg-danger/5"
-                            : "border-amber-500/40 text-amber-600 bg-amber-500/5"
+                            : "border-warning/40 text-warning bg-warning/5"
                         }
                       >
                         {isChurn ? <TrendingDown className="h-3 w-3 mr-1" /> : <CalendarX className="h-3 w-3 mr-1" />}

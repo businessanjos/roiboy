@@ -138,14 +138,14 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           </AvatarFallback>
         </Avatar>
         {assignment.status === "pending" && (
-          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-amber-500 border-2 border-zapp-bg" />
+          <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-warning border-2 border-zapp-bg" />
         )}
         {contact.isGroup ? (
-          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-emerald-500 border-2 border-zapp-bg flex items-center justify-center">
+          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-success border-2 border-zapp-bg flex items-center justify-center">
             <Users2 className="h-2.5 w-2.5 text-white" />
           </div>
         ) : !contact.isClient && (
-          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-blue-500 border-2 border-zapp-bg flex items-center justify-center">
+          <div className="absolute -bottom-0.5 -right-0.5 w-4 h-4 rounded-full bg-info border-2 border-zapp-bg flex items-center justify-center">
             <span className="text-[8px] text-white font-bold">?</span>
           </div>
         )}
@@ -162,7 +162,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               <BellOff className="h-3 w-3 text-zapp-text-muted flex-shrink-0" />
             )}
             {contact.isFavorite && (
-              <Heart className="h-3 w-3 text-red-400 fill-red-400 flex-shrink-0" />
+              <Heart className="h-3 w-3 text-danger fill-red-400 flex-shrink-0" />
             )}
             {contact.unreadCount > 0 && (
               <span className="flex-shrink-0 bg-zapp-accent text-white text-[10px] font-semibold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1">
@@ -253,7 +253,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                         onUpdateFlag(zappConvId, "is_favorite", !contact.isFavorite);
                       }}
                     >
-                      <Heart className={cn("h-4 w-4 mr-3", contact.isFavorite && "fill-current text-red-400")} />
+                      <Heart className={cn("h-4 w-4 mr-3", contact.isFavorite && "fill-current text-danger")} />
                       {contact.isFavorite ? "Remover dos favoritos" : "Adicionar aos favoritos"}
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-zapp-border" />
@@ -269,7 +269,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                     </DropdownMenuItem>
                     {contact.isGroup && onDismissConversation && (
                       <DropdownMenuItem 
-                        className="text-amber-500 hover:bg-amber-500/10"
+                        className="text-warning hover:bg-warning/10"
                         onClick={(e) => {
                           e.stopPropagation();
                           onDismissConversation(assignment.id);
@@ -280,7 +280,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
                       </DropdownMenuItem>
                     )}
                     <DropdownMenuItem 
-                      className="text-red-400 hover:bg-zapp-hover"
+                      className="text-danger hover:bg-zapp-hover"
                       onClick={(e) => {
                         e.stopPropagation();
                         onDeleteConversation(assignment.id);
@@ -327,7 +327,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           {assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
             <Badge 
               variant="secondary" 
-              className="bg-amber-500/15 text-amber-600 border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+              className="bg-warning/15 text-warning border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
             >
               <Clock className="h-2.5 w-2.5" />
               Aguardando {formatWaitTime(assignment.zapp_conversation.last_message_at)}
@@ -336,7 +336,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
           {assignment.status === "waiting" && (
             <Badge 
               variant="secondary" 
-              className="bg-blue-500/15 text-blue-600 border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
+              className="bg-info/15 text-info border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
             >
               <Clock className="h-2.5 w-2.5" />
               Aguard. cliente

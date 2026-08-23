@@ -269,7 +269,7 @@ export function OnboardingOrchestrated({
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger>
-                                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                                    <AlertTriangle className="h-4 w-4 text-warning" />
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p className="text-xs">Pendências em etapas anteriores</p>

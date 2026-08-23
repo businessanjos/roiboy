@@ -51,19 +51,19 @@ const getInitials = (name: string) =>
   name.split(" ").map((n) => n[0]).join("").slice(0, 2).toUpperCase();
 
 const PAYMENT_METHOD_LABELS: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
-  a_vista: { label: "À Vista", icon: <Banknote className="h-3.5 w-3.5" />, color: "text-green-600 bg-green-500/10 border-green-500/30" },
-  cartao: { label: "Cartão", icon: <CreditCard className="h-3.5 w-3.5" />, color: "text-blue-600 bg-blue-500/10 border-blue-500/30" },
+  a_vista: { label: "À Vista", icon: <Banknote className="h-3.5 w-3.5" />, color: "text-success bg-success/10 border-success/30" },
+  cartao: { label: "Cartão", icon: <CreditCard className="h-3.5 w-3.5" />, color: "text-info bg-info/10 border-info/30" },
   cheque: { label: "Cheque", icon: <FileText className="h-3.5 w-3.5" />, color: "text-purple-600 bg-purple-500/10 border-purple-500/30" },
-  pix_parcial: { label: "PIX Parcial", icon: <Smartphone className="h-3.5 w-3.5" />, color: "text-amber-600 bg-amber-500/10 border-amber-500/30" },
+  pix_parcial: { label: "PIX Parcial", icon: <Smartphone className="h-3.5 w-3.5" />, color: "text-warning bg-warning/10 border-warning/30" },
   unknown: { label: "Não definido", icon: <AlertCircle className="h-3.5 w-3.5" />, color: "text-muted-foreground bg-muted border-muted" },
   other: { label: "Outro", icon: <DollarSign className="h-3.5 w-3.5" />, color: "text-muted-foreground bg-muted border-muted" },
 };
 
 const COMMISSION_STATUS_MAP: Record<string, { label: string; color: string }> = {
   pending: { label: "Pendente", color: "bg-muted text-muted-foreground" },
-  partial: { label: "Parcial", color: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  released: { label: "Liberada", color: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
-  paid: { label: "Paga", color: "bg-green-500/10 text-green-600 border-green-500/30" },
+  partial: { label: "Parcial", color: "bg-warning/10 text-warning border-warning/30" },
+  released: { label: "Liberada", color: "bg-info/10 text-info border-info/30" },
+  paid: { label: "Paga", color: "bg-success/10 text-success border-success/30" },
 };
 
 export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid }: CommissionDealViewProps) {
@@ -152,11 +152,11 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Liberada</p>
-                    <p className="text-sm font-bold text-blue-600">{formatCurrency(summary.released)}</p>
+                    <p className="text-sm font-bold text-info">{formatCurrency(summary.released)}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">Pendente</p>
-                    <p className="text-sm font-bold text-amber-600">{formatCurrency(summary.pending)}</p>
+                    <p className="text-sm font-bold text-warning">{formatCurrency(summary.pending)}</p>
                   </div>
                 </div>
               </CardContent>
@@ -264,12 +264,12 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                         <p className="text-[10px] text-muted-foreground">{entry.commission_percent}%</p>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className="text-sm font-medium text-blue-600">
+                        <span className="text-sm font-medium text-info">
                           {formatCurrency(entry.commission_released)}
                         </span>
                       </TableCell>
                       <TableCell className="text-right">
-                        <span className={`text-sm font-medium ${entry.commission_pending > 0 ? "text-amber-600" : "text-muted-foreground"}`}>
+                        <span className={`text-sm font-medium ${entry.commission_pending > 0 ? "text-warning" : "text-muted-foreground"}`}>
                           {formatCurrency(entry.commission_pending)}
                         </span>
                       </TableCell>

@@ -155,7 +155,7 @@ export function SalesFunnelChart({ stages, isLoading, hiddenStages: externalHidd
                   {stagePct}%
                 </span>
                 <div
-                  className={`h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 ${stage.isVendaStage ? 'ring-2 ring-emerald-400 ring-offset-2' : ''}`}
+                  className={`h-10 rounded-md flex items-center justify-between px-4 transition-all flex-1 ${stage.isVendaStage ? 'ring-2 ring-success ring-offset-2' : ''}`}
                   style={{ backgroundColor: stage.color }}
                 >
                   <span className="text-sm font-medium text-white flex items-center gap-1.5">

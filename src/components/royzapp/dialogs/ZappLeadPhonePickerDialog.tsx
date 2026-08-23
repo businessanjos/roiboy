@@ -31,10 +31,10 @@ export const ZappLeadPhonePickerDialog = memo(function ZappLeadPhonePickerDialog
 }: ZappLeadPhonePickerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef] max-w-xs">
+      <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text max-w-xs">
         <DialogHeader>
           <DialogTitle className="text-base">Selecione o número</DialogTitle>
-          <DialogDescription className="text-[#8696a0] text-sm">
+          <DialogDescription className="text-zapp-text-muted text-sm">
             {leadName}
           </DialogDescription>
         </DialogHeader>
@@ -46,16 +46,16 @@ export const ZappLeadPhonePickerDialog = memo(function ZappLeadPhonePickerDialog
                 onSelectPhone(item.phone);
                 onOpenChange(false);
               }}
-              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-[#202c33] transition-colors text-left"
+              className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg hover:bg-zapp-panel transition-colors text-left"
             >
-              <Phone className="h-4 w-4 text-emerald-400 shrink-0" />
+              <Phone className="h-4 w-4 text-success shrink-0" />
               <div className="flex-1 min-w-0">
-                <span className="text-[#e9edef] text-sm">{item.phone}</span>
+                <span className="text-zapp-text text-sm">{item.phone}</span>
                 {item.isPrimary && (
-                  <span className="text-[#8696a0] text-xs ml-2">(Principal)</span>
+                  <span className="text-zapp-text-muted text-xs ml-2">(Principal)</span>
                 )}
                 {item.label && !item.isPrimary && (
-                  <span className="text-[#8696a0] text-xs ml-2">({item.label})</span>
+                  <span className="text-zapp-text-muted text-xs ml-2">({item.label})</span>
                 )}
               </div>
             </button>

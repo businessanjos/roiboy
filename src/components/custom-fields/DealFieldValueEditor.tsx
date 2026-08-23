@@ -30,14 +30,14 @@ interface TeamUser {
 
 const getColorClasses = (color: string, selected: boolean) => {
   const baseClasses: Record<string, { bg: string; hover: string; selected: string }> = {
-    green: { bg: "bg-emerald-500/10", hover: "hover:bg-emerald-500/20", selected: "bg-emerald-500 text-white" },
-    red: { bg: "bg-red-500/10", hover: "hover:bg-red-500/20", selected: "bg-red-500 text-white" },
-    yellow: { bg: "bg-amber-500/10", hover: "hover:bg-amber-500/20", selected: "bg-amber-500 text-white" },
-    blue: { bg: "bg-blue-500/10", hover: "hover:bg-blue-500/20", selected: "bg-blue-500 text-white" },
+    green: { bg: "bg-success/10", hover: "hover:bg-success/20", selected: "bg-success text-white" },
+    red: { bg: "bg-danger/10", hover: "hover:bg-danger/20", selected: "bg-danger text-white" },
+    yellow: { bg: "bg-warning/10", hover: "hover:bg-warning/20", selected: "bg-warning text-white" },
+    blue: { bg: "bg-info/10", hover: "hover:bg-info/20", selected: "bg-info text-white" },
     purple: { bg: "bg-purple-500/10", hover: "hover:bg-purple-500/20", selected: "bg-purple-500 text-white" },
     pink: { bg: "bg-pink-500/10", hover: "hover:bg-pink-500/20", selected: "bg-pink-500 text-white" },
-    orange: { bg: "bg-orange-500/10", hover: "hover:bg-orange-500/20", selected: "bg-orange-500 text-white" },
-    gray: { bg: "bg-gray-500/10", hover: "hover:bg-gray-500/20", selected: "bg-gray-500 text-white" },
+    orange: { bg: "bg-warning/10", hover: "hover:bg-warning/20", selected: "bg-warning text-white" },
+    gray: { bg: "bg-muted-foreground/10", hover: "hover:bg-muted-foreground/20", selected: "bg-muted-foreground text-white" },
   };
   const colors = baseClasses[color] || baseClasses.gray;
   return selected ? colors.selected : `${colors.bg} ${colors.hover}`;
@@ -147,7 +147,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
           <div className="flex flex-col gap-1">
             <button
               className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-                currentValue === true ? "bg-emerald-500 text-white" : "hover:bg-muted"
+                currentValue === true ? "bg-success text-white" : "hover:bg-muted"
               }`}
               onClick={() => saveValue(true)}
               disabled={saving}
@@ -157,7 +157,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
             </button>
             <button
               className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${
-                currentValue === false ? "bg-red-500 text-white" : "hover:bg-muted"
+                currentValue === false ? "bg-danger text-white" : "hover:bg-muted"
               }`}
               onClick={() => saveValue(false)}
               disabled={saving}
@@ -528,7 +528,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
                         onClick={() => updateInstagram(index)}
                         disabled={saving}
                       >
-                        <Check className="h-4 w-4 text-emerald-500" />
+                        <Check className="h-4 w-4 text-success" />
                       </Button>
                       <Button 
                         size="sm" 
@@ -571,10 +571,10 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
                             e.stopPropagation();
                             removeInstagram(index);
                           }}
-                          className="p-1 hover:bg-red-500/20 rounded transition-colors"
+                          className="p-1 hover:bg-danger/20 rounded transition-colors"
                           title="Remover"
                         >
-                          <X className="h-3.5 w-3.5 text-muted-foreground hover:text-red-500" />
+                          <X className="h-3.5 w-3.5 text-muted-foreground hover:text-danger" />
                         </button>
                       </div>
                     </div>

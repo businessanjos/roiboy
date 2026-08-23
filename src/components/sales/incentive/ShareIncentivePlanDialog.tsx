@@ -212,7 +212,7 @@ export function ShareIncentivePlanDialog({
                           Expirado
                         </Badge>
                       ) : (
-                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200 text-[10px]">
+                        <Badge className="bg-success-soft text-success-strong border-success text-[10px]">
                           <CheckCircle2 className="h-2.5 w-2.5 mr-0.5" /> Ativo
                         </Badge>
                       )}
@@ -250,7 +250,7 @@ export function ShareIncentivePlanDialog({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 text-amber-600"
+                        className="h-8 w-8 text-warning"
                         onClick={() => revoke(l.id)}
                         title="Revogar"
                       >
@@ -260,7 +260,7 @@ export function ShareIncentivePlanDialog({
                       <Button
                         variant="outline"
                         size="icon"
-                        className="h-8 w-8 text-emerald-600"
+                        className="h-8 w-8 text-success"
                         onClick={() => reactivate(l.id)}
                         title="Reativar"
                       >

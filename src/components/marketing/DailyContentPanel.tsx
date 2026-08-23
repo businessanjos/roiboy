@@ -353,14 +353,14 @@ export function DailyContentPanel() {
       <div className="grid gap-4 md:grid-cols-3">
         <ContextCard
           title="🔥 Trends em alta"
-          icon={<Flame className="h-4 w-4 text-orange-500" />}
+          icon={<Flame className="h-4 w-4 text-warning" />}
           loading={loadingTrends}
           empty="Nenhuma trend cadastrada"
           items={trends.map(t => ({ id: t.id, title: t.title, sub: `Score ${t.trend_score ?? 0} · ${t.platform ?? 'todos'}` }))}
         />
         <ContextCard
           title="📅 Próximos marcos"
-          icon={<CalendarIcon className="h-4 w-4 text-blue-500" />}
+          icon={<CalendarIcon className="h-4 w-4 text-info" />}
           loading={loadingMarcos}
           empty="Nenhum evento próximo"
           items={marcos.map(m => ({
@@ -371,7 +371,7 @@ export function DailyContentPanel() {
         />
         <ContextCard
           title="💡 Ideias recentes"
-          icon={<Lightbulb className="h-4 w-4 text-yellow-500" />}
+          icon={<Lightbulb className="h-4 w-4 text-warning" />}
           loading={loadingIdeias}
           empty="Nenhuma ideia cadastrada"
           items={ideias.map(i => ({ id: i.id, title: i.title, sub: i.status ?? '' }))}

@@ -1569,7 +1569,7 @@ export default function Events() {
                         <div className="font-medium flex items-center gap-2">
                           {event.title}
                           {(event as any).client_id && (
-                            <Badge variant="outline" className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30">
+                            <Badge variant="outline" className="text-xs bg-info/10 text-info border-info/30">
                               <Users className="h-3 w-3 mr-1" />
                               {(event as any).clients?.full_name || "Individual"}
                             </Badge>
@@ -1673,7 +1673,7 @@ export default function Events() {
                       </TableCell>
                       <TableCell>
                         {resolveEventStatus(event) === "completed" ? (
-                          <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
+                          <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/20">
                             <Check className="h-3 w-3 mr-1" />
                             Concluído
                           </Badge>

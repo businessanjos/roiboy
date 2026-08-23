@@ -214,8 +214,8 @@ export default function OffboardingDrawer({
               return (
                 <button key={s} onClick={() => save({ stage: s as OffboardingStage })}
                   className={`flex items-center gap-1.5 text-[10px] px-2 py-1 rounded-full whitespace-nowrap transition ${
-                    active ? "bg-rose-500/15 text-rose-700 font-semibold ring-1 ring-rose-500/30"
-                    : done ? "bg-emerald-500/10 text-emerald-700"
+                    active ? "bg-danger/15 text-danger-strong font-semibold ring-1 ring-danger/30"
+                    : done ? "bg-success/10 text-success-strong"
                     : "bg-muted text-muted-foreground hover:bg-muted/70"
                   }`}>
                   {done && <CheckCircle2 className="h-3 w-3" />}
@@ -227,13 +227,13 @@ export default function OffboardingDrawer({
 
           {/* ====== Alertas globais ====== */}
           {hasOverdueDeadline && (
-            <div className="mt-3 flex items-start gap-2 p-2 rounded bg-rose-500/10 border border-rose-500/30 text-xs text-rose-800">
+            <div className="mt-3 flex items-start gap-2 p-2 rounded bg-danger/10 border border-danger/30 text-xs text-danger-strong">
               <AlertCircle className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <span>Há prazos legais vencidos ou urgentes. Verifique a aba "Rescisão" / "Resumo".</span>
             </div>
           )}
           {totalPend > 0 && offboarding.stage !== "completed" && (
-            <div className="mt-2 flex items-start gap-2 p-2 rounded bg-amber-500/10 border border-amber-500/30 text-xs text-amber-800">
+            <div className="mt-2 flex items-start gap-2 p-2 rounded bg-warning/10 border border-warning/30 text-xs text-warning-strong">
               <AlertTriangle className="h-4 w-4 flex-shrink-0 mt-0.5" />
               <span><strong>{totalPend} pendências</strong> precisam ser reatribuídas antes de cortar acesso. Veja aba "Pendências".</span>
             </div>
@@ -271,10 +271,10 @@ export default function OffboardingDrawer({
                         <p className="text-[10px] text-muted-foreground">{d.description}</p>
                       </div>
                       <Badge variant="outline" className={
-                        d.severity === "overdue" ? "bg-rose-500/15 text-rose-700 border-rose-300"
-                        : d.severity === "urgent" ? "bg-orange-500/15 text-orange-700 border-orange-300"
-                        : d.severity === "warning" ? "bg-amber-500/15 text-amber-700 border-amber-300"
-                        : "bg-emerald-500/10 text-emerald-700 border-emerald-300"
+                        d.severity === "overdue" ? "bg-danger/15 text-danger-strong border-danger"
+                        : d.severity === "urgent" ? "bg-warning/15 text-warning-strong border-warning"
+                        : d.severity === "warning" ? "bg-warning/15 text-warning-strong border-warning"
+                        : "bg-success/10 text-success-strong border-success"
                       }>
                         {format(d.dueDate, "dd/MM")} · {d.daysRemaining >= 0 ? `${d.daysRemaining}d` : `${Math.abs(d.daysRemaining)}d atraso`}
                       </Badge>
@@ -375,7 +375,7 @@ export default function OffboardingDrawer({
                 {!pendencies?.userId ? (
                   <p className="text-sm text-muted-foreground">Colaborador sem usuário vinculado à plataforma — nada a reatribuir.</p>
                 ) : totalPend === 0 ? (
-                  <p className="text-sm text-emerald-700">✓ Sem pendências. Pode concluir o desligamento.</p>
+                  <p className="text-sm text-success-strong">✓ Sem pendências. Pode concluir o desligamento.</p>
                 ) : (
                   <>
                     <div className="grid grid-cols-3 gap-3 mb-4">
@@ -463,21 +463,21 @@ export default function OffboardingDrawer({
                 <div className="space-y-1">
                   {rescission.lines.map((l) => (
                     <div key={l.key} className="flex justify-between text-sm py-0.5">
-                      <span className={l.value < 0 ? "text-rose-600" : ""}>{l.label}</span>
-                      <span className={`font-mono ${l.value < 0 ? "text-rose-600" : "text-foreground"}`}>{fmtBRL(l.value)}</span>
+                      <span className={l.value < 0 ? "text-danger" : ""}>{l.label}</span>
+                      <span className={`font-mono ${l.value < 0 ? "text-danger" : "text-foreground"}`}>{fmtBRL(l.value)}</span>
                     </div>
                   ))}
                 </div>
                 <Separator />
                 <div className="grid grid-cols-2 gap-2 text-sm">
                   <div className="flex justify-between"><span>Bruto:</span><span className="font-mono">{fmtBRL(rescission.gross)}</span></div>
-                  <div className="flex justify-between"><span>Descontos:</span><span className="font-mono text-rose-600">{fmtBRL(rescission.deductions)}</span></div>
-                  <div className="flex justify-between col-span-2 text-base font-semibold border-t pt-2 mt-1"><span>Líquido a pagar:</span><span className="font-mono text-emerald-600">{fmtBRL(rescission.net)}</span></div>
+                  <div className="flex justify-between"><span>Descontos:</span><span className="font-mono text-danger">{fmtBRL(rescission.deductions)}</span></div>
+                  <div className="flex justify-between col-span-2 text-base font-semibold border-t pt-2 mt-1"><span>Líquido a pagar:</span><span className="font-mono text-success">{fmtBRL(rescission.net)}</span></div>
                   <div className="flex justify-between"><span>Depósito FGTS:</span><span className="font-mono">{fmtBRL(rescission.fgtsDeposit)}</span></div>
-                  <div className="flex justify-between"><span>Multa FGTS:</span><span className="font-mono text-amber-700">{fmtBRL(rescission.fgtsPenalty)}</span></div>
+                  <div className="flex justify-between"><span>Multa FGTS:</span><span className="font-mono text-warning-strong">{fmtBRL(rescission.fgtsPenalty)}</span></div>
                 </div>
 
-                <div className="flex items-start gap-2 p-2 rounded bg-amber-500/5 border border-amber-500/20 text-xs text-amber-800">
+                <div className="flex items-start gap-2 p-2 rounded bg-warning/5 border border-warning/20 text-xs text-warning-strong">
                   <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0" />
                   Cálculo estimado. Valores oficiais via contabilidade/eSocial.
                 </div>
@@ -544,7 +544,7 @@ export default function OffboardingDrawer({
               <CardContent className="space-y-2">
                 <p className="text-xs text-muted-foreground">Gere um link público para o ex-colaborador preencher a entrevista de saída sem viés (sem o RH no meio).</p>
                 {publicToken && offboarding.exit_interview_submitted_at && (
-                  <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-300">
+                  <Badge className="bg-success/15 text-success-strong border-success">
                     Respondida em {format(new Date(offboarding.exit_interview_submitted_at), "dd/MM/yyyy HH:mm")}
                   </Badge>
                 )}
@@ -560,7 +560,7 @@ export default function OffboardingDrawer({
             </Card>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldOff className="h-4 w-4 text-rose-600" /> Corte de Acessos da plataforma</CardTitle></CardHeader>
+              <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><ShieldOff className="h-4 w-4 text-danger" /> Corte de Acessos da plataforma</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-xs text-muted-foreground">Ao concluir o desligamento, o colaborador é <strong>inativado na plataforma</strong> (login bloqueado). Sistemas externos devem ser revogados via checklist.</p>
                 <div className="flex items-center gap-2 p-3 rounded border">
@@ -595,7 +595,7 @@ export default function OffboardingDrawer({
             ) : (
               <div className="space-y-2">
                 {timeline.map(e => (
-                  <div key={e.id} className="flex gap-3 p-2 rounded border-l-2 border-rose-500/30 bg-muted/30">
+                  <div key={e.id} className="flex gap-3 p-2 rounded border-l-2 border-danger/30 bg-muted/30">
                     <div className="flex-1">
                       <p className="text-sm">{e.description || e.event_type}</p>
                       <p className="text-[10px] text-muted-foreground">

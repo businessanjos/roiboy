@@ -740,7 +740,7 @@ function HistoryTab({ logs, loading }: { logs: SendLog[]; loading: boolean }) {
               </TableCell>
               <TableCell>
                 {l.status === "sent" ? (
-                  <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30">
+                  <Badge className="bg-success/10 text-success border-success/30">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
                     Enviado
                   </Badge>

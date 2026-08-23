@@ -15,10 +15,10 @@ import { toast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Download, Check, X, Search } from "lucide-react";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
-  pending: { label: "Em análise", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40" },
-  approved: { label: "Aprovada", cls: "bg-blue-500/15 text-blue-700 border-blue-500/40" },
-  paid: { label: "Paga", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40" },
-  rejected: { label: "Rejeitada", cls: "bg-rose-500/15 text-rose-700 border-rose-500/40" },
+  pending: { label: "Em análise", cls: "bg-warning/15 text-warning-strong border-warning/40" },
+  approved: { label: "Aprovada", cls: "bg-info/15 text-info-strong border-info/40" },
+  paid: { label: "Paga", cls: "bg-success/15 text-success-strong border-success/40" },
+  rejected: { label: "Rejeitada", cls: "bg-danger/15 text-danger-strong border-danger/40" },
 };
 
 const fmtBRL = (n?: number | null) =>
@@ -149,10 +149,10 @@ export default function FinancialProvidersPortalPage() {
                               {inv.status === "pending" && (
                                 <>
                                   <Button size="sm" variant="ghost" onClick={() => updateStatus(inv.id, { status: "approved" })}>
-                                    <Check className="h-4 w-4 text-emerald-600" />
+                                    <Check className="h-4 w-4 text-success" />
                                   </Button>
                                   <Button size="sm" variant="ghost" onClick={() => { setRejectOpen(inv.id); setRejectReason(""); }}>
-                                    <X className="h-4 w-4 text-rose-600" />
+                                    <X className="h-4 w-4 text-danger" />
                                   </Button>
                                 </>
                               )}
@@ -203,9 +203,9 @@ export default function FinancialProvidersPortalPage() {
                       <TableCell>{p.cnpj || "—"}</TableCell>
                       <TableCell>
                         {p.bank_pix_key || p.bank_account ? (
-                          <Badge variant="outline" className="bg-emerald-500/15 text-emerald-700 border-emerald-500/40">Completo</Badge>
+                          <Badge variant="outline" className="bg-success/15 text-success-strong border-success/40">Completo</Badge>
                         ) : (
-                          <Badge variant="outline" className="bg-amber-500/15 text-amber-700 border-amber-500/40">Pendente</Badge>
+                          <Badge variant="outline" className="bg-warning/15 text-warning-strong border-warning/40">Pendente</Badge>
                         )}
                       </TableCell>
                       <TableCell className="text-right">{fmtBRL(Number(p.fee_amount))}</TableCell>

@@ -46,24 +46,24 @@ const COLUMNS: ColumnConfig[] = [
   {
     key: "comercial",
     label: "Comercial",
-    headerColor: "from-blue-500 to-blue-600",
-    badgeColor: "bg-blue-500/15 text-blue-700 border-blue-300 dark:text-blue-300 dark:border-blue-700",
+    headerColor: "from-info to-info",
+    badgeColor: "bg-info/15 text-info-strong border-info dark:text-info dark:border-info",
     gestorNames: ["jonathan marcato"],
     deptMatches: ["comercial", "vendas"],
   },
   {
     key: "operacao",
     label: "Operações",
-    headerColor: "from-amber-500 to-amber-600",
-    badgeColor: "bg-amber-500/15 text-amber-700 border-amber-300 dark:text-amber-300 dark:border-amber-700",
+    headerColor: "from-warning to-warning",
+    badgeColor: "bg-warning/15 text-warning-strong border-warning dark:text-warning dark:border-warning",
     gestorNames: ["jessica marcato"],
     deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos"],
   },
   {
     key: "administrativo",
     label: "Administrativo",
-    headerColor: "from-slate-500 to-slate-600",
-    badgeColor: "bg-slate-500/15 text-slate-700 border-slate-300 dark:text-slate-300 dark:border-slate-700",
+    headerColor: "from-muted-foreground to-muted-foreground",
+    badgeColor: "bg-muted-foreground/15 text-foreground border-border dark:text-muted-foreground dark:border-border",
     gestorNames: ["arthur mudri"],
     deptMatches: ["administrativo", "financeiro", "recursos humanos", "rh", "jurídico", "juridico"],
   },
@@ -286,7 +286,7 @@ export default function OrgChart() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-success to-success flex items-center justify-center">
               <Network className="h-5 w-5 text-white" />
             </div>
             <div>

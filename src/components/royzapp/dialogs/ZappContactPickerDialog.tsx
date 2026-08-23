@@ -39,10 +39,10 @@ export const ZappContactPickerDialog = memo(function ZappContactPickerDialog({
 }: ZappContactPickerDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+      <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text">
         <DialogHeader>
           <DialogTitle>Enviar Contato</DialogTitle>
-          <DialogDescription className="text-[#8696a0]">
+          <DialogDescription className="text-zapp-text-muted">
             Busque e selecione um contato para enviar
           </DialogDescription>
         </DialogHeader>
@@ -51,13 +51,13 @@ export const ZappContactPickerDialog = memo(function ZappContactPickerDialog({
             placeholder="Buscar por nome ou telefone..."
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
-            className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+            className="bg-zapp-panel border-zapp-border text-zapp-text"
           />
           <ScrollArea className="h-64">
             {searchQuery.trim() === "" ? (
-              <p className="text-center text-[#8696a0] py-8">Digite para buscar contatos</p>
+              <p className="text-center text-zapp-text-muted py-8">Digite para buscar contatos</p>
             ) : filteredClients.length === 0 ? (
-              <p className="text-center text-[#8696a0] py-8">Nenhum contato encontrado</p>
+              <p className="text-center text-zapp-text-muted py-8">Nenhum contato encontrado</p>
             ) : (
               <div className="space-y-2">
                 {filteredClients.map((client) => (
@@ -65,7 +65,7 @@ export const ZappContactPickerDialog = memo(function ZappContactPickerDialog({
                     key={client.id}
                     onClick={() => onSelectContact(client)}
                     disabled={sending}
-                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-[#202c33] transition-colors text-left"
+                    className="w-full flex items-center gap-3 p-3 rounded-lg hover:bg-zapp-panel transition-colors text-left"
                   >
                     <Avatar className="h-10 w-10">
                       <AvatarImage src={client.avatar_url || undefined} />
@@ -74,8 +74,8 @@ export const ZappContactPickerDialog = memo(function ZappContactPickerDialog({
                       </AvatarFallback>
                     </Avatar>
                     <div className="flex-1 min-w-0">
-                      <p className="text-[#e9edef] font-medium truncate">{client.full_name}</p>
-                      <p className="text-[#8696a0] text-sm truncate">{client.phone_e164}</p>
+                      <p className="text-zapp-text font-medium truncate">{client.full_name}</p>
+                      <p className="text-zapp-text-muted text-sm truncate">{client.phone_e164}</p>
                     </div>
                     {sending && <Loader2 className="h-4 w-4 animate-spin text-zapp-accent" />}
                   </button>

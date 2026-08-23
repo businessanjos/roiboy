@@ -26,7 +26,7 @@ function DeltaBadge({ current, previous, invert }: { current: number; previous: 
   const good = invert ? delta <= 0 : delta >= 0;
   const Icon = delta >= 0 ? TrendingUp : TrendingDown;
   return (
-    <Badge variant="outline" className={good ? "text-emerald-600 border-emerald-600/40" : "text-destructive border-destructive/40"}>
+    <Badge variant="outline" className={good ? "text-success border-success/40" : "text-destructive border-destructive/40"}>
       <Icon className="h-3 w-3 mr-1" />
       {delta > 0 ? "+" : ""}
       {delta.toFixed(1)}%

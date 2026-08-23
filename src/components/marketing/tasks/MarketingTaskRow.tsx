@@ -15,15 +15,15 @@ interface MarketingTaskRowProps {
 }
 
 const priorityConfig = {
-  low: { label: "Baixa", className: "bg-slate-100 text-slate-700 hover:bg-slate-200" },
-  medium: { label: "Média", className: "bg-amber-100 text-amber-700 hover:bg-amber-200" },
-  high: { label: "Alta", className: "bg-rose-100 text-rose-700 hover:bg-rose-200" },
+  low: { label: "Baixa", className: "bg-muted text-foreground hover:bg-muted" },
+  medium: { label: "Média", className: "bg-warning-soft text-warning-strong hover:bg-warning-soft" },
+  high: { label: "Alta", className: "bg-danger-soft text-danger-strong hover:bg-danger-soft" },
 };
 
 const statusConfig = {
-  pending: { label: "Pendente", className: "bg-slate-100 text-slate-700" },
-  in_progress: { label: "Em andamento", className: "bg-blue-100 text-blue-700" },
-  done: { label: "Concluído", className: "bg-emerald-100 text-emerald-700" },
+  pending: { label: "Pendente", className: "bg-muted text-foreground" },
+  in_progress: { label: "Em andamento", className: "bg-info-soft text-info-strong" },
+  done: { label: "Concluído", className: "bg-success-soft text-success-strong" },
 };
 
 function isTaskOverdue(task: MarketingTask): boolean {
@@ -39,10 +39,10 @@ export function MarketingTaskRow({ task, onEdit, onToggleComplete }: MarketingTa
     if (!dueDate) return null;
     
     if (isToday(dueDate)) {
-      return { text: "Hoje", className: "text-amber-600" };
+      return { text: "Hoje", className: "text-warning" };
     }
     if (isTomorrow(dueDate)) {
-      return { text: "Amanhã", className: "text-blue-600" };
+      return { text: "Amanhã", className: "text-info" };
     }
     if (isPast(dueDate) && !task.is_completed) {
       return { text: format(dueDate, "d MMM", { locale: ptBR }), className: "text-destructive" };

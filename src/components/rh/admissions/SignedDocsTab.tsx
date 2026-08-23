@@ -135,11 +135,11 @@ export default function SignedDocsTab() {
                     <TableCell className="text-sm">{r.label}</TableCell>
                     <TableCell>
                       {r.signed_at ? (
-                        <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                        <Badge variant="outline" className="text-xs bg-success/10 text-success-strong border-success/30">
                           <CheckCircle2 className="h-3 w-3 mr-1" /> Assinado
                         </Badge>
                       ) : (
-                        <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-700 border-amber-500/30">
+                        <Badge variant="outline" className="text-xs bg-warning/10 text-warning-strong border-warning/30">
                           <Clock className="h-3 w-3 mr-1" /> Pendente
                         </Badge>
                       )}

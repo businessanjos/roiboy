@@ -577,12 +577,12 @@ export function ZappCRMPanel({
                 </div>
               </div>
               {conversationLeadId && (
-                <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-500">
+                <Badge variant="outline" className="text-[10px] border-warning text-warning">
                   Lead
                 </Badge>
               )}
               {conversationClientId && (
-                <Badge variant="outline" className="text-[10px] border-green-500 text-green-500">
+                <Badge variant="outline" className="text-[10px] border-success text-success">
                   Cliente
                 </Badge>
               )}
@@ -645,12 +645,12 @@ export function ZappCRMPanel({
               <Card className="p-3 bg-zapp-panel border-zapp-border">
                 <div className="flex items-center justify-between mb-3">
                   <div className="flex items-center gap-2">
-                    <CheckCircle className="h-4 w-4 text-green-500" />
+                    <CheckCircle className="h-4 w-4 text-success" />
                     <span className="text-sm font-medium text-zapp-text">Negócio Ativo</span>
                   </div>
                   <div className="flex items-center gap-1">
                     {nextTaskDate && (
-                      <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-500">
+                      <Badge variant="outline" className="text-[10px] border-warning text-warning">
                         <Calendar className="h-3 w-3 mr-1" />
                         {nextTaskDate}
                       </Badge>
@@ -707,7 +707,7 @@ export function ZappCRMPanel({
               {activityTypes.length > 0 && (
                 <Card className="p-3 bg-zapp-panel border-zapp-border">
                   <div className="flex items-center gap-2 mb-2">
-                    <Zap className="h-3.5 w-3.5 text-amber-500" />
+                    <Zap className="h-3.5 w-3.5 text-warning" />
                     <span className="text-xs font-medium text-zapp-text">Ações Rápidas</span>
                   </div>
                   <div className="flex flex-wrap gap-1.5">
@@ -894,8 +894,8 @@ export function ZappCRMPanel({
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-zapp-text truncate">{deal.title}</span>
                       <div className="flex items-center gap-2">
-                        <span className="text-xs text-green-500 font-medium">{formatCurrency(deal.value)}</span>
-                        <Badge className="text-[10px] bg-green-500/20 text-green-500">Ganho</Badge>
+                        <span className="text-xs text-success font-medium">{formatCurrency(deal.value)}</span>
+                        <Badge className="text-[10px] bg-success/20 text-success">Ganho</Badge>
                       </div>
                     </div>
                   </Card>

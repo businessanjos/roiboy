@@ -230,7 +230,7 @@ export default function PublicCampaignForm() {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-6">
         <div className="max-w-md w-full text-center space-y-4">
-          <CheckCircle2 className="w-16 h-16 mx-auto text-emerald-500" />
+          <CheckCircle2 className="w-16 h-16 mx-auto text-success" />
           <h1 className="text-2xl font-semibold">Obrigado!</h1>
           <p className="text-muted-foreground">
             {done.thanks || "Recebemos sua resposta. Em breve entraremos em contato."}

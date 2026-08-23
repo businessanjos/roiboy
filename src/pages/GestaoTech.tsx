@@ -38,9 +38,9 @@ const fmtBRL = (cents: number, currency = "BRL") =>
   });
 
 const STATUS_COLORS: Record<string, string> = {
-  active: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30",
-  paused: "bg-amber-500/15 text-amber-700 border-amber-500/30",
-  archived: "bg-zinc-500/15 text-zinc-700 border-zinc-500/30",
+  active: "bg-success/15 text-success-strong border-success/30",
+  paused: "bg-warning/15 text-warning-strong border-warning/30",
+  archived: "bg-muted-foreground/15 text-foreground border-border/30",
 };
 
 interface TechProject {
@@ -358,7 +358,7 @@ export default function GestaoTech() {
                             </a>
                           )}
                           {isOutdated && (
-                            <span title="Endpoint roy-metrics está rodando versão antiga. Faça o redeploy do template para liberar MRR/Faturamento/Mensagens IA." className="inline-flex items-center gap-1 text-amber-600 text-[10px] font-medium border border-amber-500/30 bg-amber-500/10 rounded px-1.5 py-0.5">
+                            <span title="Endpoint roy-metrics está rodando versão antiga. Faça o redeploy do template para liberar MRR/Faturamento/Mensagens IA." className="inline-flex items-center gap-1 text-warning text-[10px] font-medium border border-warning/30 bg-warning/10 rounded px-1.5 py-0.5">
                               <AlertTriangle className="h-3 w-3" /> endpoint v1
                             </span>
                           )}
@@ -374,9 +374,9 @@ export default function GestaoTech() {
                       <TableCell className="text-right tabular-nums">{snap ? fmtBRL(snap.mrr_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap ? snap.active_subscriptions : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? snap.trialing_subscriptions : "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums">{snap && snap.past_due_subscriptions > 0 ? <span className="text-amber-600 font-medium">{snap.past_due_subscriptions}</span> : (snap ? "0" : "—")}</TableCell>
-                      <TableCell className="text-right tabular-nums text-emerald-600">{snap ? `+${snap.new_subscriptions}` : "—"}</TableCell>
-                      <TableCell className="text-right tabular-nums text-red-600">{snap ? `-${snap.churned_subscriptions}` : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums">{snap && snap.past_due_subscriptions > 0 ? <span className="text-warning font-medium">{snap.past_due_subscriptions}</span> : (snap ? "0" : "—")}</TableCell>
+                      <TableCell className="text-right tabular-nums text-success">{snap ? `+${snap.new_subscriptions}` : "—"}</TableCell>
+                      <TableCell className="text-right tabular-nums text-danger">{snap ? `-${snap.churned_subscriptions}` : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums">{snap && arpu > 0 ? fmtBRL(arpu, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums font-medium">{snap ? fmtBRL(snap.revenue_last_month_cents, snap.currency) : "—"}</TableCell>
                       <TableCell className="text-right tabular-nums text-muted-foreground">{snap ? fmtBRL(snap.revenue_current_month_cents, snap.currency) : "—"}</TableCell>
@@ -436,9 +436,9 @@ function Kpi({
 }: { label: string; value: string; icon?: React.ReactNode; tone?: "default" | "success" | "warning" | "danger" }) {
   const toneClass = {
     default: "",
-    success: "text-emerald-600",
-    warning: "text-amber-600",
-    danger: "text-red-600",
+    success: "text-success",
+    warning: "text-warning",
+    danger: "text-danger",
   }[tone];
   return (
     <Card>

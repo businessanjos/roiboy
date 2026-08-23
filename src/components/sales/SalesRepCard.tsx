@@ -83,7 +83,7 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           {/* Calls */}
           <div className="bg-muted/50 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <Phone className="h-4 w-4 text-blue-500" />
+              <Phone className="h-4 w-4 text-info" />
               <span className="text-xs font-medium text-muted-foreground">Ligações</span>
             </div>
             <div className="flex items-baseline gap-1">
@@ -117,18 +117,18 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           </div>
 
           {/* Won */}
-          <div className="bg-emerald-500/10 rounded-lg p-3">
+          <div className="bg-success/10 rounded-lg p-3">
             <div className="flex items-center gap-2 mb-1">
-              <Trophy className="h-4 w-4 text-emerald-500" />
-              <span className="text-xs font-medium text-emerald-600">Ganhos</span>
+              <Trophy className="h-4 w-4 text-success" />
+              <span className="text-xs font-medium text-success">Ganhos</span>
             </div>
             <div className="flex items-baseline gap-1">
-              <span className="text-lg font-bold text-emerald-600">{rep.won_deals}</span>
+              <span className="text-lg font-bold text-success">{rep.won_deals}</span>
               <span className="text-xs text-muted-foreground">({formatCurrency(rep.won_value)})</span>
             </div>
             <div className="flex items-center gap-1 mt-1">
-              <TrendingUp className="h-3 w-3 text-emerald-500" />
-              <span className="text-xs font-medium text-emerald-600">
+              <TrendingUp className="h-3 w-3 text-success" />
+              <span className="text-xs font-medium text-success">
                 {rep.conversion_rate.toFixed(0)}% conversão
               </span>
             </div>
@@ -137,7 +137,7 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
           {/* Tasks */}
           <div className="bg-muted/50 rounded-lg p-3 overflow-hidden">
             <div className="flex items-center gap-2 mb-1">
-              <CheckCircle2 className="h-4 w-4 text-amber-500 flex-shrink-0" />
+              <CheckCircle2 className="h-4 w-4 text-warning flex-shrink-0" />
               <span className="text-xs font-medium text-muted-foreground">Atividades</span>
             </div>
             <div className="flex items-baseline gap-1">
@@ -145,7 +145,7 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
               <span className="text-xs text-muted-foreground">/ {rep.total_tasks}</span>
             </div>
             {rep.pending_tasks > 0 && (
-              <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600 whitespace-nowrap">
+              <Badge variant="outline" className="mt-1 text-[10px] px-1.5 py-0 h-4 border-warning text-warning whitespace-nowrap">
                 {rep.pending_tasks} pendentes
               </Badge>
             )}
@@ -162,13 +162,13 @@ export const SalesRepCard = memo(forwardRef<HTMLDivElement, SalesRepCardProps>(
               </div>
               <span className="text-lg font-bold">{rep.scheduled_calls}</span>
             </div>
-            <div className={`rounded-lg p-3 ${rep.noshow_calls > 0 ? 'bg-red-500/10' : 'bg-muted/50'}`}>
+            <div className={`rounded-lg p-3 ${rep.noshow_calls > 0 ? 'bg-danger/10' : 'bg-muted/50'}`}>
               <div className="flex items-center gap-2 mb-1">
-                <UserX className={`h-4 w-4 ${rep.noshow_calls > 0 ? 'text-red-500' : 'text-muted-foreground'}`} />
+                <UserX className={`h-4 w-4 ${rep.noshow_calls > 0 ? 'text-danger' : 'text-muted-foreground'}`} />
                 <span className="text-xs font-medium text-muted-foreground">No-Show</span>
               </div>
               <div className="flex items-baseline gap-1">
-                <span className={`text-lg font-bold ${rep.noshow_calls > 0 ? 'text-red-600' : ''}`}>{rep.noshow_calls}</span>
+                <span className={`text-lg font-bold ${rep.noshow_calls > 0 ? 'text-danger' : ''}`}>{rep.noshow_calls}</span>
                 {rep.scheduled_calls > 0 && (
                   <span className="text-xs text-muted-foreground">
                     ({Math.round((rep.noshow_calls / rep.scheduled_calls) * 100)}%)

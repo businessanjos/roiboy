@@ -148,7 +148,7 @@ export default function EventsKpis() {
             <Card>
               <CardContent className="py-4">
                 <div className="text-xs text-muted-foreground">Realizados</div>
-                <div className="text-2xl font-bold text-green-600">{kpis.realized}</div>
+                <div className="text-2xl font-bold text-success">{kpis.realized}</div>
                 <div className="text-xs text-muted-foreground mt-1">
                   {kpis.total > 0 ? Math.round((kpis.realized / kpis.total) * 100) : 0}% conclusão
                 </div>
@@ -176,7 +176,7 @@ export default function EventsKpis() {
               <CardContent className="py-4">
                 <div className="text-xs text-muted-foreground">Custo real</div>
                 <div className="text-lg font-bold">{fmtBRL(kpis.actual)}</div>
-                <div className={`text-xs mt-1 ${kpis.actual > kpis.budget ? "text-red-600" : "text-green-600"}`}>
+                <div className={`text-xs mt-1 ${kpis.actual > kpis.budget ? "text-danger" : "text-success"}`}>
                   {kpis.budget > 0 ? `${Math.round((kpis.actual / kpis.budget) * 100)}% do plano` : "—"}
                 </div>
               </CardContent>

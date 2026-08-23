@@ -6,12 +6,12 @@ import { Card } from "@/components/ui/card";
 import { toast } from "sonner";
 
 const COLOR_MAP: Record<string, { bg: string; border: string; text: string }> = {
-  blue: { bg: "bg-blue-500/5", border: "border-blue-500/20", text: "text-blue-500" },
-  emerald: { bg: "bg-emerald-500/5", border: "border-emerald-500/20", text: "text-emerald-500" },
-  amber: { bg: "bg-amber-500/5", border: "border-amber-500/20", text: "text-amber-500" },
+  blue: { bg: "bg-info/5", border: "border-info/20", text: "text-info" },
+  emerald: { bg: "bg-success/5", border: "border-success/20", text: "text-success" },
+  amber: { bg: "bg-warning/5", border: "border-warning/20", text: "text-warning" },
   purple: { bg: "bg-purple-500/5", border: "border-purple-500/20", text: "text-purple-500" },
-  rose: { bg: "bg-rose-500/5", border: "border-rose-500/20", text: "text-rose-500" },
-  cyan: { bg: "bg-cyan-500/5", border: "border-cyan-500/20", text: "text-cyan-500" },
+  rose: { bg: "bg-danger/5", border: "border-danger/20", text: "text-danger" },
+  cyan: { bg: "bg-info/5", border: "border-info/20", text: "text-info" },
 };
 
 export function PinnedKpisStrip() {

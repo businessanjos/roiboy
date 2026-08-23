@@ -250,7 +250,7 @@ export default function HRCollaboratorProfile() {
           )}
           {!saving && lastSaved && (
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+              <CheckCircle2 className="h-3.5 w-3.5 text-success" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
             </span>
           )}
           <Button onClick={handleSave} disabled={saving} size="sm">

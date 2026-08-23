@@ -191,12 +191,12 @@ export function RouletteApprovalsQueue() {
 
   return (
     <>
-      <Card className="border-amber-300 bg-amber-50/40 dark:bg-amber-950/10">
+      <Card className="border-warning bg-warning/40 dark:bg-warning/10">
         <CardHeader className="py-4">
           <CardTitle className="text-sm flex items-center gap-2">
-            <ShieldCheck className="h-4 w-4 text-amber-600" />
+            <ShieldCheck className="h-4 w-4 text-warning" />
             Fila de Aprovação de Roletas
-            <Badge className="bg-amber-500 text-white">{pending.length}</Badge>
+            <Badge className="bg-warning text-white">{pending.length}</Badge>
           </CardTitle>
           <CardDescription className="text-xs">
             Solicitações de giro aguardando sua aprovação.
@@ -231,7 +231,7 @@ export function RouletteApprovalsQueue() {
                 <Button
                   size="sm"
                   variant="outline"
-                  className="h-8 gap-1 border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+                  className="h-8 gap-1 border-danger text-danger hover:bg-danger-soft hover:text-danger-strong"
                   onClick={() => openReject(r.id)}
                   disabled={busyId === r.id}
                 >
@@ -240,7 +240,7 @@ export function RouletteApprovalsQueue() {
                 </Button>
                 <Button
                   size="sm"
-                  className="h-8 gap-1 bg-green-600 hover:bg-green-700 text-white"
+                  className="h-8 gap-1 bg-success hover:bg-success text-white"
                   onClick={() => approve(r.id)}
                   disabled={busyId === r.id}
                 >
@@ -279,7 +279,7 @@ export function RouletteApprovalsQueue() {
             </Button>
             <Button
               onClick={confirmReject}
-              className="bg-red-600 hover:bg-red-700 text-white"
+              className="bg-danger hover:bg-danger text-white"
             >
               Rejeitar
             </Button>

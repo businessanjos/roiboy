@@ -56,9 +56,9 @@ function TrendBadge({ value, pct }: { value: number; pct: number | null }) {
   const Icon = value > 0 ? TrendingUp : value < 0 ? TrendingDown : Minus;
   const cls =
     value > 0
-      ? "text-emerald-600 bg-emerald-500/10 border-emerald-500/20"
+      ? "text-success bg-success/10 border-success/20"
       : value < 0
-      ? "text-rose-600 bg-rose-500/10 border-rose-500/20"
+      ? "text-danger bg-danger/10 border-danger/20"
       : "text-muted-foreground bg-muted border-border";
   return (
     <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-medium ${cls}`}>
@@ -116,8 +116,8 @@ function Sparkline({ data, metric }: { data: Series[]; metric: MetricKey }) {
 
 const metricMeta: Record<MetricKey, { label: string; Icon: typeof Users2; tone: string }> = {
   followers: { label: "Seguidores", Icon: Users2, tone: "text-fuchsia-500" },
-  likes: { label: "Curtidas", Icon: Heart, tone: "text-rose-500" },
-  comments: { label: "Comentários", Icon: MessageCircle, tone: "text-sky-500" },
+  likes: { label: "Curtidas", Icon: Heart, tone: "text-danger" },
+  comments: { label: "Comentários", Icon: MessageCircle, tone: "text-info" },
 };
 
 export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?: Set<string> }) {
@@ -256,7 +256,7 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
               <div className="flex-1 min-w-0">
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="font-medium truncate text-sm">{e.fullName || e.username}</span>
-                  {e.verified && <BadgeCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />}
+                  {e.verified && <BadgeCheck className="h-3.5 w-3.5 text-info shrink-0" />}
                 </div>
                 <div className="text-[11px] text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
                   <span className={`inline-flex items-center gap-1 ${M.tone}`}>
@@ -290,7 +290,7 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-fuchsia-500/5 via-rose-500/5 to-sky-500/5 border-b">
+      <CardHeader className="pb-3 bg-gradient-to-r from-fuchsia-500/5 via-danger/5 to-info/5 border-b">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-base flex items-center gap-2">

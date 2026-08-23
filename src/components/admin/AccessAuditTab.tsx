@@ -271,7 +271,7 @@ export function AccessAuditTab() {
                         </Badge>
                       )}
                       {u.is_also_admin && (
-                        <Badge className="text-[10px] px-1 py-0 bg-amber-500/20 text-amber-700 hover:bg-amber-500/20">
+                        <Badge className="text-[10px] px-1 py-0 bg-warning/20 text-warning-strong hover:bg-warning/20">
                           also_admin
                         </Badge>
                       )}
@@ -337,8 +337,8 @@ export function AccessAuditTab() {
                     </div>
                   </div>
                   {audit.isAdmin && (
-                    <div className="flex items-center gap-2 mt-2 p-2 rounded bg-amber-500/10 border border-amber-500/30">
-                      <AlertCircle className="h-4 w-4 text-amber-600" />
+                    <div className="flex items-center gap-2 mt-2 p-2 rounded bg-warning/10 border border-warning/30">
+                      <AlertCircle className="h-4 w-4 text-warning" />
                       <span className="text-xs">
                         Este usuário tem <strong>bypass total</strong> de permissões (admin) — qualquer
                         rota é liberada independente das configurações de setor.
@@ -369,12 +369,12 @@ export function AccessAuditTab() {
                           className={cn(
                             "flex items-center gap-2 p-2 rounded border text-sm",
                             active
-                              ? "border-emerald-500/40 bg-emerald-500/5"
+                              ? "border-success/40 bg-success/5"
                               : "border-border bg-muted/30 opacity-70"
                           )}
                         >
                           {active ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-600 flex-shrink-0" />
+                            <CheckCircle2 className="h-4 w-4 text-success flex-shrink-0" />
                           ) : (
                             <XCircle className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                           )}
@@ -458,7 +458,7 @@ export function AccessAuditTab() {
                         <TableRow key={`${v.sectorId}-${v.to}-${idx}`}>
                           <TableCell>
                             {v.allowed ? (
-                              <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/15 border-emerald-500/30">
+                              <Badge className="bg-success/15 text-success-strong hover:bg-success/15 border-success/30">
                                 <CheckCircle2 className="h-3 w-3 mr-1" />
                                 LIBERADO
                               </Badge>
@@ -476,7 +476,7 @@ export function AccessAuditTab() {
                           <TableCell className="text-xs">
                             {v.sectorName}
                             {v.sectorActive ? (
-                              <Badge variant="outline" className="ml-1 text-[10px] border-emerald-500/40">
+                              <Badge variant="outline" className="ml-1 text-[10px] border-success/40">
                                 ativo
                               </Badge>
                             ) : (

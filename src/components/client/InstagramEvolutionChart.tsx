@@ -76,7 +76,7 @@ export function InstagramEvolutionChart({
   const Trend = ({ value }: { value: number }) => {
     const Icon = value > 0 ? TrendingUp : value < 0 ? TrendingDown : Minus;
     const cls =
-      value > 0 ? "text-emerald-500" : value < 0 ? "text-destructive" : "text-muted-foreground";
+      value > 0 ? "text-success" : value < 0 ? "text-destructive" : "text-muted-foreground";
     return (
       <span className={`inline-flex items-center gap-1 text-xs font-medium ${cls}`}>
         <Icon className="h-3.5 w-3.5" />

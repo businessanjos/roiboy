@@ -430,7 +430,7 @@ export default function RHOfferWizard() {
           <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2 flex-wrap">
             {isEdit || recordId ? "Editar Offer" : "Nova Offer"}
             {form.is_template && (
-              <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-700 border border-amber-300">
+              <span className="inline-flex items-center gap-1 text-[11px] font-medium uppercase tracking-wider px-2 py-0.5 rounded-full bg-warning/15 text-warning-strong border border-warning">
                 <LayoutTemplate className="h-3 w-3" /> Modelo
               </span>
             )}
@@ -443,7 +443,7 @@ export default function RHOfferWizard() {
           <p className="text-sm text-muted-foreground">
             Wizard para gerar uma carta-proposta linda
             {autoSaving && <span className="ml-2 inline-flex items-center gap-1 text-xs"><Loader2 className="h-3 w-3 animate-spin" /> salvando…</span>}
-            {!autoSaving && lastSavedAt && <span className="ml-2 text-xs text-emerald-600">✓ salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
+            {!autoSaving && lastSavedAt && <span className="ml-2 text-xs text-success">✓ salvo {lastSavedAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</span>}
           </p>
         </div>
         <Sparkles className="h-6 w-6 text-indigo-500" />
@@ -691,7 +691,7 @@ export default function RHOfferWizard() {
                 <OfferRichTextarea rows={6} value={form.role_pitch} onChange={(v) => set("role_pitch", v)} placeholder="Por que esse papel é estratégico, o que a pessoa vai fazer, com quem vai trabalhar, como o sucesso será medido..." />
               </div>
 
-              <div className="space-y-3 p-4 rounded-lg border border-dashed border-amber-300 bg-amber-50/40 dark:bg-amber-950/10">
+              <div className="space-y-3 p-4 rounded-lg border border-dashed border-warning bg-warning/40 dark:bg-warning/10">
                 <div className="flex items-center justify-between gap-3">
                   <div>
                     <Label className="text-base">Como o sucesso será medido</Label>
@@ -717,7 +717,7 @@ export default function RHOfferWizard() {
                         <div key={p.pack} className="rounded-md border bg-background/60 p-3">
                           <div className="flex items-center justify-between gap-2 mb-2">
                             <div className="flex items-center gap-2">
-                              <Sparkles className="h-3.5 w-3.5 text-amber-500" />
+                              <Sparkles className="h-3.5 w-3.5 text-warning" />
                               <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                                 Sugestões · {p.pack}
                               </span>
@@ -746,8 +746,8 @@ export default function RHOfferWizard() {
                                   className={cn(
                                     "group text-left rounded-full border px-3 py-1.5 text-xs transition-all",
                                     already
-                                      ? "border-emerald-300 bg-emerald-50 text-emerald-700 cursor-default dark:bg-emerald-950/20"
-                                      : "border-amber-300/60 hover:border-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/20"
+                                      ? "border-success bg-success-soft text-success-strong cursor-default dark:bg-success/20"
+                                      : "border-warning/60 hover:border-warning hover:bg-warning-soft dark:hover:bg-warning/20"
                                   )}
                                   title={`${m.target} · ${m.horizon}`}
                                 >
@@ -786,7 +786,7 @@ export default function RHOfferWizard() {
                       value={m.horizon}
                       onChange={(e) => updateMetric(i, "horizon", e.target.value)}
                     />
-                    <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-rose-600">
+                    <Button type="button" size="icon" variant="ghost" onClick={() => removeMetric(i)} className="text-danger">
                       <X className="h-4 w-4" />
                     </Button>
                   </div>
@@ -841,20 +841,20 @@ export default function RHOfferWizard() {
               </div>
 
               {/* Foto personalizada do candidato */}
-              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10">
+              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
-                      <Sparkles className="h-4 w-4 text-amber-600" />
+                      <Sparkles className="h-4 w-4 text-warning" />
                       <Label className="text-base font-semibold">Foto do candidato com o uniforme</Label>
-                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700">Opcional</span>
+                      <span className="text-[10px] uppercase tracking-wider px-1.5 py-0.5 rounded bg-warning/15 text-warning-strong">Opcional</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
                       Quando o candidato abrir o link, vai se ver vestindo a Eternum. Impacto instantâneo.
                     </p>
                   </div>
                   {form.candidate_photo_url && (
-                    <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-rose-600 gap-1">
+                    <Button type="button" variant="ghost" size="sm" onClick={() => set("candidate_photo_url", "")} className="text-danger gap-1">
                       <Trash2 className="h-3.5 w-3.5" /> Remover
                     </Button>
                   )}
@@ -863,7 +863,7 @@ export default function RHOfferWizard() {
                 <div className="flex items-center gap-4">
                   {form.candidate_photo_url ? (
                     <div
-                      className="relative w-28 h-36 rounded-lg overflow-hidden ring-2 ring-amber-500/40 shadow-lg shrink-0"
+                      className="relative w-28 h-36 rounded-lg overflow-hidden ring-2 ring-warning/40 shadow-lg shrink-0"
                       style={{ backgroundImage: `url(${form.candidate_photo_url})`, backgroundSize: "cover", backgroundPosition: "center top" }}
                     />
                   ) : (
@@ -874,7 +874,7 @@ export default function RHOfferWizard() {
                   <div className="flex-1 space-y-2">
                     <label className={cn(
                       "flex items-center justify-center gap-2 px-4 py-3 rounded-lg border-2 border-dashed cursor-pointer transition-all",
-                      "hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20",
+                      "hover:border-warning hover:bg-warning/50 dark:hover:bg-warning/20",
                       uploadingPhoto && "opacity-60 pointer-events-none"
                     )}>
                       {uploadingPhoto ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
@@ -941,7 +941,7 @@ export default function RHOfferWizard() {
               </div>
 
               {/* Salvar como modelo */}
-              <div className="rounded-xl border-2 border-dashed border-amber-300/60 p-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
+              <div className="rounded-xl border-2 border-dashed border-warning/60 p-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10 space-y-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
                     checked={form.is_template}
@@ -950,7 +950,7 @@ export default function RHOfferWizard() {
                   />
                   <div className="flex-1">
                     <div className="flex items-center gap-2">
-                      <LayoutTemplate className="h-4 w-4 text-amber-600" />
+                      <LayoutTemplate className="h-4 w-4 text-warning" />
                       <span className="text-sm font-semibold">Salvar esta offer como modelo</span>
                     </div>
                     <p className="text-xs text-muted-foreground mt-1">
@@ -972,8 +972,8 @@ export default function RHOfferWizard() {
               </div>
 
               {savedToken && (
-                <div className="p-4 rounded-lg border bg-emerald-50 dark:bg-emerald-950/30 space-y-2">
-                  <p className="text-sm font-medium text-emerald-800 dark:text-emerald-200">
+                <div className="p-4 rounded-lg border bg-success-soft dark:bg-success/30 space-y-2">
+                  <p className="text-sm font-medium text-success-strong dark:text-success">
                     ✨ Link público da offer:
                   </p>
                   <div className="flex gap-2">

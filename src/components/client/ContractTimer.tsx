@@ -83,8 +83,8 @@ export function ContractTimer({ startDate, endDate, className, variant = "compac
               className={cn(
                 "flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium cursor-default transition-colors",
                 isExpired && "bg-destructive/10 text-destructive",
-                isNearEnd && !isExpired && "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400",
-                isActive && !isNearEnd && "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400",
+                isNearEnd && !isExpired && "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning",
+                isActive && !isNearEnd && "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success",
                 className
               )}
             >
@@ -118,16 +118,16 @@ export function ContractTimer({ startDate, endDate, className, variant = "compac
                   className={cn(
                     "h-1.5",
                     isExpired && "[&>div]:bg-destructive",
-                    isNearEnd && !isExpired && "[&>div]:bg-amber-500",
-                    isActive && !isNearEnd && "[&>div]:bg-green-500"
+                    isNearEnd && !isExpired && "[&>div]:bg-warning",
+                    isActive && !isNearEnd && "[&>div]:bg-success"
                   )}
                 />
               </div>
               <div className={cn(
                 "text-xs font-medium text-center pt-1 border-t",
                 isExpired && "text-destructive",
-                isNearEnd && !isExpired && "text-amber-600 dark:text-amber-400",
-                isActive && !isNearEnd && "text-green-600 dark:text-green-400"
+                isNearEnd && !isExpired && "text-warning dark:text-warning",
+                isActive && !isNearEnd && "text-success dark:text-success"
               )}>
                 {isExpired ? "Contrato expirado" : isNearEnd ? "Próximo do vencimento" : "Contrato ativo"}
               </div>
@@ -155,8 +155,8 @@ export function ContractTimer({ startDate, endDate, className, variant = "compac
         className={cn(
           "h-2",
           isExpired && "[&>div]:bg-destructive",
-          isNearEnd && !isExpired && "[&>div]:bg-amber-500",
-          isActive && !isNearEnd && "[&>div]:bg-green-500"
+          isNearEnd && !isExpired && "[&>div]:bg-warning",
+          isActive && !isNearEnd && "[&>div]:bg-success"
         )}
       />
       
@@ -168,8 +168,8 @@ export function ContractTimer({ startDate, endDate, className, variant = "compac
           className={cn(
             "font-medium",
             isExpired && "text-destructive",
-            isNearEnd && !isExpired && "text-amber-600 dark:text-amber-400",
-            isActive && !isNearEnd && "text-green-600 dark:text-green-400"
+            isNearEnd && !isExpired && "text-warning dark:text-warning",
+            isActive && !isNearEnd && "text-success dark:text-success"
           )}
         >
           {isExpired ? (

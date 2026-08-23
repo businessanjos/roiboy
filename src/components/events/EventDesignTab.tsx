@@ -63,23 +63,23 @@ interface DesignFile {
 }
 
 const CATEGORIES = [
-  { value: "cracha", label: "Crachás", color: "bg-blue-500" },
-  { value: "plaquinha", label: "Plaquinhas", color: "bg-amber-500" },
+  { value: "cracha", label: "Crachás", color: "bg-info" },
+  { value: "plaquinha", label: "Plaquinhas", color: "bg-warning" },
   { value: "slide", label: "Slides / Apresentações", color: "bg-purple-500" },
   { value: "banner", label: "Banners / Backdrops", color: "bg-pink-500" },
   { value: "identidade", label: "Identidade Visual", color: "bg-indigo-500" },
-  { value: "convite", label: "Convites / Save the Date", color: "bg-emerald-500" },
-  { value: "social", label: "Redes Sociais", color: "bg-sky-500" },
-  { value: "impresso", label: "Impressos", color: "bg-orange-500" },
-  { value: "video", label: "Vídeo / Motion", color: "bg-rose-500" },
-  { value: "outros", label: "Outros", color: "bg-slate-500" },
+  { value: "convite", label: "Convites / Save the Date", color: "bg-success" },
+  { value: "social", label: "Redes Sociais", color: "bg-info" },
+  { value: "impresso", label: "Impressos", color: "bg-warning" },
+  { value: "video", label: "Vídeo / Motion", color: "bg-danger" },
+  { value: "outros", label: "Outros", color: "bg-muted-foreground" },
 ];
 
 const STATUSES = [
-  { value: "wip", label: "Em produção", color: "bg-slate-500" },
-  { value: "review", label: "Em aprovação", color: "bg-amber-500" },
-  { value: "approved", label: "Aprovado", color: "bg-emerald-500" },
-  { value: "rejected", label: "Rejeitado", color: "bg-red-500" },
+  { value: "wip", label: "Em produção", color: "bg-muted-foreground" },
+  { value: "review", label: "Em aprovação", color: "bg-warning" },
+  { value: "approved", label: "Aprovado", color: "bg-success" },
+  { value: "rejected", label: "Rejeitado", color: "bg-danger" },
 ];
 
 const EMPTY: Partial<DesignFile> = {

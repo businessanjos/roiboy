@@ -249,14 +249,14 @@ export function TikTokDashboard() {
 
     if (growth > 0) {
       return (
-        <span className="flex items-center gap-0.5 text-green-600 text-xs">
+        <span className="flex items-center gap-0.5 text-success text-xs">
           <TrendingUp className="h-3 w-3" />
           {Math.round(growth)}%
         </span>
       );
     } else if (growth < 0) {
       return (
-        <span className="flex items-center gap-0.5 text-red-600 text-xs">
+        <span className="flex items-center gap-0.5 text-danger text-xs">
           <TrendingDown className="h-3 w-3" />
           {Math.abs(Math.round(growth))}%
         </span>
@@ -371,8 +371,8 @@ export function TikTokDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Percent className="h-5 w-5 text-green-600" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <Percent className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Engaj. Médio</p>
@@ -385,8 +385,8 @@ export function TikTokDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-cyan-500/10">
-                <Clock className="h-5 w-5 text-cyan-600" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <Clock className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Taxa Conclusão</p>
@@ -399,8 +399,8 @@ export function TikTokDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Eye className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <Eye className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Vídeos</p>
@@ -461,9 +461,9 @@ export function TikTokDashboard() {
                   <TableRow key={profile.id} className="group">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-gray-200">
+                        <Avatar className="h-10 w-10 border-2 border-border">
                           <AvatarImage src={profile.profile_picture_url || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-gray-700 to-black text-white text-sm">
+                          <AvatarFallback className="bg-gradient-to-br from-muted-foreground to-black text-white text-sm">
                             {profile.username.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -488,9 +488,9 @@ export function TikTokDashboard() {
                         className={cn(
                           'font-medium',
                           profile.avg_engagement >= 10
-                            ? 'text-green-600'
+                            ? 'text-success'
                             : profile.avg_engagement >= 5
-                            ? 'text-amber-600'
+                            ? 'text-warning'
                             : 'text-muted-foreground'
                         )}
                       >
@@ -502,9 +502,9 @@ export function TikTokDashboard() {
                         className={cn(
                           'font-medium',
                           profile.avg_completion_rate >= 70
-                            ? 'text-green-600'
+                            ? 'text-success'
                             : profile.avg_completion_rate >= 50
-                            ? 'text-amber-600'
+                            ? 'text-warning'
                             : 'text-muted-foreground'
                         )}
                       >
@@ -594,8 +594,8 @@ export function TikTokDashboard() {
               <Card>
                 <CardContent className="p-8">
                   <div className="flex items-center gap-5">
-                    <div className="p-4 rounded-xl bg-green-500/10">
-                      <Percent className="h-8 w-8 text-green-600" />
+                    <div className="p-4 rounded-xl bg-success/10">
+                      <Percent className="h-8 w-8 text-success" />
                     </div>
                     <div>
                       <p className="text-base text-muted-foreground">Engaj. Médio</p>
@@ -608,8 +608,8 @@ export function TikTokDashboard() {
               <Card>
                 <CardContent className="p-8">
                   <div className="flex items-center gap-5">
-                    <div className="p-4 rounded-xl bg-cyan-500/10">
-                      <Clock className="h-8 w-8 text-cyan-600" />
+                    <div className="p-4 rounded-xl bg-info/10">
+                      <Clock className="h-8 w-8 text-info" />
                     </div>
                     <div>
                       <p className="text-base text-muted-foreground">Taxa Conclusão</p>
@@ -622,8 +622,8 @@ export function TikTokDashboard() {
               <Card>
                 <CardContent className="p-8">
                   <div className="flex items-center gap-5">
-                    <div className="p-4 rounded-xl bg-blue-500/10">
-                      <Eye className="h-8 w-8 text-blue-600" />
+                    <div className="p-4 rounded-xl bg-info/10">
+                      <Eye className="h-8 w-8 text-info" />
                     </div>
                     <div>
                       <p className="text-base text-muted-foreground">Total Vídeos</p>
@@ -673,9 +673,9 @@ export function TikTokDashboard() {
                         <TableRow key={profile.id}>
                           <TableCell>
                             <div className="flex items-center gap-3">
-                              <Avatar className="h-10 w-10 border-2 border-gray-200">
+                              <Avatar className="h-10 w-10 border-2 border-border">
                                 <AvatarImage src={profile.profile_picture_url || undefined} />
-                                <AvatarFallback className="bg-gradient-to-br from-gray-700 to-black text-white text-sm">
+                                <AvatarFallback className="bg-gradient-to-br from-muted-foreground to-black text-white text-sm">
                                   {profile.username.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>
@@ -700,9 +700,9 @@ export function TikTokDashboard() {
                               className={cn(
                                 'font-medium',
                                 profile.avg_engagement >= 10
-                                  ? 'text-green-600'
+                                  ? 'text-success'
                                   : profile.avg_engagement >= 5
-                                  ? 'text-amber-600'
+                                  ? 'text-warning'
                                   : 'text-muted-foreground'
                               )}
                             >
@@ -714,9 +714,9 @@ export function TikTokDashboard() {
                               className={cn(
                                 'font-medium',
                                 profile.avg_completion_rate >= 70
-                                  ? 'text-green-600'
+                                  ? 'text-success'
                                   : profile.avg_completion_rate >= 50
-                                  ? 'text-amber-600'
+                                  ? 'text-warning'
                                   : 'text-muted-foreground'
                               )}
                             >

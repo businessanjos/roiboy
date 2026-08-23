@@ -33,11 +33,11 @@ export type WebhookFormData = {
 };
 
 export const WEBHOOK_METHODS = [
-  { value: "GET", label: "GET", color: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  { value: "POST", label: "POST", color: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-  { value: "PUT", label: "PUT", color: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400" },
-  { value: "PATCH", label: "PATCH", color: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
-  { value: "DELETE", label: "DELETE", color: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
+  { value: "GET", label: "GET", color: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
+  { value: "POST", label: "POST", color: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
+  { value: "PUT", label: "PUT", color: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+  { value: "PATCH", label: "PATCH", color: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+  { value: "DELETE", label: "DELETE", color: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
 ];
 
 export const WEBHOOK_EVENTS = [

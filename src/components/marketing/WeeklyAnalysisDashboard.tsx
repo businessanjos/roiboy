@@ -101,8 +101,8 @@ function KPICard({
             {previousValue > 0 && (
               <div className={cn(
                 "flex items-center gap-1 text-xs",
-                isPositive && "text-emerald-600",
-                isNegative && "text-red-600",
+                isPositive && "text-success",
+                isNegative && "text-danger",
                 !isPositive && !isNegative && "text-muted-foreground"
               )}>
                 {isPositive && <TrendingUp className="h-3 w-3" />}

@@ -839,18 +839,18 @@ export default function FinancialActiveClientsPage() {
                   <div className="text-lg font-bold tabular-nums mt-1">{formatBRLPrecise(totalValue)}</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-emerald-700">Recebido</div>
-                  <div className="text-lg font-bold tabular-nums text-emerald-700 mt-1">{formatBRLPrecise(totalReceived)}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-success-strong">Recebido</div>
+                  <div className="text-lg font-bold tabular-nums text-success-strong mt-1">{formatBRLPrecise(totalReceived)}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">entradas + parcelas pagas · {pct}% do contratado</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-amber-700">A receber</div>
-                  <div className="text-lg font-bold tabular-nums text-amber-700 mt-1">{formatBRLPrecise(totalPendingInstallments)}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-warning-strong">A receber</div>
+                  <div className="text-lg font-bold tabular-nums text-warning-strong mt-1">{formatBRLPrecise(totalPendingInstallments)}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">parcelas emitidas em aberto</div>
                 </div>
                 <div>
-                  <div className="text-[10px] uppercase tracking-wide text-sky-700">A definir</div>
-                  <div className="text-lg font-bold tabular-nums text-sky-700 mt-1">{formatBRLPrecise(totalUndefined)}</div>
+                  <div className="text-[10px] uppercase tracking-wide text-info-strong">A definir</div>
+                  <div className="text-lg font-bold tabular-nums text-info-strong mt-1">{formatBRLPrecise(totalUndefined)}</div>
                   <div className="text-[10px] text-muted-foreground mt-0.5">grupos de pagamento pendentes</div>
                 </div>
               </div>
@@ -974,7 +974,7 @@ export default function FinancialActiveClientsPage() {
                         {r.installments_count ?? "—"}
                       </TableCell>
                       <TableCell className="text-center tabular-nums">
-                        <span className={r.installments_count && r.installments_paid >= r.installments_count ? "text-emerald-600 font-medium" : ""}>
+                        <span className={r.installments_count && r.installments_paid >= r.installments_count ? "text-success font-medium" : ""}>
                           {r.installments_paid}
                           {r.installments_count ? `/${r.installments_count}` : ""}
                         </span>
@@ -982,7 +982,7 @@ export default function FinancialActiveClientsPage() {
                       <TableCell className="text-right tabular-nums">
                         {r.installment_value != null ? formatBRLPrecise(r.installment_value) : "—"}
                       </TableCell>
-                      <TableCell className="text-right tabular-nums text-emerald-700">
+                      <TableCell className="text-right tabular-nums text-success-strong">
                         {(() => {
                           // Entrada registrada também é dinheiro recebido. Usamos o maior
                           // valor entre entrada e parcelas pagas para não duplicar cartão parcelado.
@@ -996,7 +996,7 @@ export default function FinancialActiveClientsPage() {
                             <div>
                               <div>{formatBRLPrecise(received)}</div>
                               {isFullyPaid && (
-                                <div className="text-[10px] text-emerald-600 font-normal">✓ pago integralmente</div>
+                                <div className="text-[10px] text-success font-normal">✓ pago integralmente</div>
                               )}
                             </div>
                           );
@@ -1010,7 +1010,7 @@ export default function FinancialActiveClientsPage() {
                           if (total <= 0) return <span className="text-muted-foreground">—</span>;
                           return (
                             <div>
-                              <div className={pending > 0 ? "text-amber-700" : "text-sky-700"}>
+                              <div className={pending > 0 ? "text-warning-strong" : "text-info-strong"}>
                                 {formatBRLPrecise(total)}
                               </div>
                               {undef > 0 && (
@@ -1063,7 +1063,7 @@ export default function FinancialActiveClientsPage() {
                             size="icon"
                             onClick={() => setCancelRow(r)}
                             title="Cancelar por inadimplência / Renegociar"
-                            className="text-red-600 hover:text-red-700 hover:bg-red-50 dark:hover:bg-red-950/30"
+                            className="text-danger hover:text-danger-strong hover:bg-danger-soft dark:hover:bg-danger/30"
                           >
                             <Ban className="h-4 w-4" />
                           </Button>

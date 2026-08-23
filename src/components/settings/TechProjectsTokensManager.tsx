@@ -212,7 +212,7 @@ export function TechProjectsTokensManager() {
                     )}
                     {validation[p.id] && (
                       validation[p.id].ok ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30 gap-1">
+                        <Badge className="bg-success/15 text-success-strong dark:text-success border border-success/30 gap-1">
                           <CheckCircle2 className="h-3 w-3" /> token válido
                         </Badge>
                       ) : (

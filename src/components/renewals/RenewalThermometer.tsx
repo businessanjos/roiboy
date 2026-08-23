@@ -149,18 +149,18 @@ export function RenewalThermometer({ clientId, accountId, onScoreCalculated }: R
 
   if (total >= 70) {
     label = "Alta";
-    colorClass = "text-emerald-600 dark:text-emerald-400";
-    bgClass = "bg-emerald-500";
+    colorClass = "text-success dark:text-success";
+    bgClass = "bg-success";
     Icon = Flame;
   } else if (total >= 40) {
     label = "Média";
-    colorClass = "text-amber-600 dark:text-amber-400";
-    bgClass = "bg-amber-500";
+    colorClass = "text-warning dark:text-warning";
+    bgClass = "bg-warning";
     Icon = Thermometer;
   } else {
     label = "Baixa";
-    colorClass = "text-red-600 dark:text-red-400";
-    bgClass = "bg-red-500";
+    colorClass = "text-danger dark:text-danger";
+    bgClass = "bg-danger";
     Icon = Snowflake;
   }
 

@@ -101,7 +101,7 @@ export function EditCompositionOptionsDialog({
                         type="button"
                         variant="ghost"
                         size="icon"
-                        className="h-7 w-7 text-green-600 hover:text-green-700"
+                        className="h-7 w-7 text-success hover:text-success-strong"
                         onClick={handleConfirmEdit}
                         disabled={!editValue.trim() || isLoading}
                       >

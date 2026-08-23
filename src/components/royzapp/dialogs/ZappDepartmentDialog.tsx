@@ -69,39 +69,39 @@ export const ZappDepartmentDialog = memo(function ZappDepartmentDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text">
           <DialogHeader>
             <DialogTitle>
               {editingDepartment ? "Editar Departamento" : "Novo Departamento"}
             </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogDescription className="text-zapp-text-muted">
               Departamentos organizam as conversas por área
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="dept-name" className="text-[#8696a0]">Nome</Label>
+              <Label htmlFor="dept-name" className="text-zapp-text-muted">Nome</Label>
               <Input
                 id="dept-name"
                 value={form.name}
                 onChange={(e) => onFormChange({ ...form, name: e.target.value })}
                 placeholder="Ex: Vendas, Suporte"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                className="bg-zapp-panel border-zapp-border text-zapp-text"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dept-description" className="text-[#8696a0]">Descrição</Label>
+              <Label htmlFor="dept-description" className="text-zapp-text-muted">Descrição</Label>
               <Textarea
                 id="dept-description"
                 value={form.description}
                 onChange={(e) => onFormChange({ ...form, description: e.target.value })}
                 placeholder="Descreva a função"
                 rows={2}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                className="bg-zapp-panel border-zapp-border text-zapp-text"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Cor</Label>
+              <Label className="text-zapp-text-muted">Cor</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -112,25 +112,25 @@ export const ZappDepartmentDialog = memo(function ZappDepartmentDialog({
                 <Input
                   value={form.color}
                   onChange={(e) => onFormChange({ ...form, color: e.target.value })}
-                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                  className="flex-1 bg-zapp-panel border-zapp-border text-zapp-text"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Setor Vinculado</Label>
+              <Label className="text-zapp-text-muted">Setor Vinculado</Label>
               <Select
                 value={form.sector_id}
                 onValueChange={(value) => onFormChange({ ...form, sector_id: value === "none" ? "" : value })}
               >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                <SelectTrigger className="bg-zapp-panel border-zapp-border text-zapp-text">
                   <SelectValue placeholder="Selecione um setor (opcional)" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#2a3942] border-[#3b4a54]">
-                  <SelectItem value="none" className="text-[#8696a0]">Nenhum setor</SelectItem>
+                <SelectContent className="bg-zapp-input border-zapp-border">
+                  <SelectItem value="none" className="text-zapp-text-muted">Nenhum setor</SelectItem>
                   {sectors.filter(s => !s.comingSoon).map((sector) => {
                     const Icon = sector.icon;
                     return (
-                      <SelectItem key={sector.id} value={sector.id} className="text-[#e9edef]">
+                      <SelectItem key={sector.id} value={sector.id} className="text-zapp-text">
                         <div className="flex items-center gap-2">
                           <Icon className={`h-4 w-4 ${sector.color}`} />
                           {sector.name}
@@ -140,25 +140,25 @@ export const ZappDepartmentDialog = memo(function ZappDepartmentDialog({
                   })}
                 </SelectContent>
               </Select>
-              <p className="text-xs text-[#8696a0]">Vincule este departamento a um setor do sistema</p>
+              <p className="text-xs text-zapp-text-muted">Vincule este departamento a um setor do sistema</p>
             </div>
             <div className="flex items-center justify-between">
               <div>
-                <Label className="text-[#e9edef]">Distribuição Automática</Label>
-                <p className="text-xs text-[#8696a0]">Atribuir conversas automaticamente</p>
+                <Label className="text-zapp-text">Distribuição Automática</Label>
+                <p className="text-xs text-zapp-text-muted">Atribuir conversas automaticamente</p>
               </div>
               <Switch
                 checked={form.auto_distribution}
                 onCheckedChange={(checked) => onFormChange({ ...form, auto_distribution: checked })}
-                className="data-[state=checked]:bg-[#00a884]"
+                className="data-[state=checked]:bg-zapp-accent"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zapp-border text-zapp-text-muted">
               Cancelar
             </Button>
-            <Button onClick={onSave} disabled={saving} className="bg-[#00a884] hover:bg-[#00a884]/90">
+            <Button onClick={onSave} disabled={saving} className="bg-zapp-accent hover:bg-zapp-accent/90">
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -166,17 +166,17 @@ export const ZappDepartmentDialog = memo(function ZappDepartmentDialog({
       </Dialog>
 
       <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && onDeleteCancel()}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
+        <AlertDialogContent className="bg-zapp-input border-zapp-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Excluir departamento?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
+            <AlertDialogTitle className="text-zapp-text">Excluir departamento?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-zapp-border text-zapp-text-muted">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-danger hover:bg-danger"
               onClick={() => deletingId && onDeleteConfirm(deletingId)}
             >
               Excluir

@@ -241,7 +241,7 @@ export default function FinancialInvoicesPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'paid':
-        return <Badge variant="default" className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" /> Pago</Badge>;
+        return <Badge variant="default" className="bg-success"><CheckCircle2 className="h-3 w-3 mr-1" /> Pago</Badge>;
       case 'pending':
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" /> Pendente</Badge>;
       case 'overdue':
@@ -398,7 +398,7 @@ export default function FinancialInvoicesPage() {
                         <span className="text-muted-foreground">-</span>
                       )}
                     </TableCell>
-                    <TableCell className="font-medium text-red-600">
+                    <TableCell className="font-medium text-danger">
                       {formatCurrency(entry.amount)}
                     </TableCell>
                     <TableCell>
@@ -413,7 +413,7 @@ export default function FinancialInvoicesPage() {
                             onClick={() => markAsPaidMutation.mutate(entry.id)}
                             title="Marcar como pago"
                           >
-                            <CheckCircle2 className="h-4 w-4 text-green-600" />
+                            <CheckCircle2 className="h-4 w-4 text-success" />
                           </Button>
                         )}
                         <Button 
@@ -475,7 +475,7 @@ export default function FinancialInvoicesPage() {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Valor</p>
-                  <p className="font-medium text-red-600">{formatCurrency(selectedEntry.amount)}</p>
+                  <p className="font-medium text-danger">{formatCurrency(selectedEntry.amount)}</p>
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">Vencimento</p>

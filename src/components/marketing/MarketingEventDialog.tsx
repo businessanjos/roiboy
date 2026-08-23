@@ -348,8 +348,8 @@ export function MarketingEventDialog({
 
           {/* TRAVEL FIELDS — Viagem é ação de marketing de posicionamento */}
           {isTravel && (
-            <div className="rounded-lg border border-cyan-500/30 bg-cyan-500/5 p-4 space-y-3">
-              <div className="flex items-center gap-2 text-sm font-semibold text-cyan-700 dark:text-cyan-300">
+            <div className="rounded-lg border border-info/30 bg-info/5 p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm font-semibold text-info-strong dark:text-info">
                 <Plane className="h-4 w-4" />
                 Detalhes da Viagem
                 <span className="text-[10px] font-normal text-muted-foreground">
@@ -613,7 +613,7 @@ export function MarketingEventDialog({
             <div className="rounded-lg border bg-muted/30 p-4">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-start gap-2">
-                  <Sparkles className="h-4 w-4 mt-0.5 text-cyan-500" />
+                  <Sparkles className="h-4 w-4 mt-0.5 text-info" />
                   <div>
                     <Label htmlFor="auto_generate_content" className="cursor-pointer">
                       Gerar checklist de conteúdo automático

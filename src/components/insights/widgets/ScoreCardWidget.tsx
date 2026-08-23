@@ -38,15 +38,15 @@ export function ScoreCardWidget({
 
   const getTrendIcon = () => {
     if (trend === undefined) return null;
-    if (trend > 0) return <TrendingUp className="h-4 w-4 text-green-500" />;
-    if (trend < 0) return <TrendingDown className="h-4 w-4 text-red-500" />;
+    if (trend > 0) return <TrendingUp className="h-4 w-4 text-success" />;
+    if (trend < 0) return <TrendingDown className="h-4 w-4 text-danger" />;
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
   const getTrendColor = () => {
     if (trend === undefined) return "";
-    if (trend > 0) return "text-green-500";
-    if (trend < 0) return "text-red-500";
+    if (trend > 0) return "text-success";
+    if (trend < 0) return "text-danger";
     return "text-muted-foreground";
   };
 

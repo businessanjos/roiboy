@@ -58,7 +58,7 @@ export function FailedZappSendsAlert() {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-9 w-9 relative text-amber-600 hover:text-amber-700 hover:bg-amber-500/10"
+                className="h-9 w-9 relative text-warning hover:text-warning-strong hover:bg-warning/10"
               >
                 <AlertTriangle className="h-4 w-4" />
                 <span className="absolute top-1 right-1 h-4 min-w-4 px-1 rounded-full text-[10px] font-medium flex items-center justify-center bg-destructive text-destructive-foreground">
@@ -77,7 +77,7 @@ export function FailedZappSendsAlert() {
         <div className="p-3 border-b border-border flex items-start justify-between gap-2">
           <div>
             <h4 className="text-sm font-semibold flex items-center gap-1.5">
-              <AlertTriangle className="h-4 w-4 text-amber-600" />
+              <AlertTriangle className="h-4 w-4 text-warning" />
               Envios sem confirmação
             </h4>
             <p className="text-xs text-muted-foreground mt-0.5">
@@ -127,7 +127,7 @@ export function FailedZappSendsAlert() {
                   )}
                   onClick={() => goToConversation(item)}
                 >
-                  <div className="mt-0.5 h-7 w-7 rounded-full bg-amber-500/10 flex items-center justify-center text-amber-700 shrink-0">
+                  <div className="mt-0.5 h-7 w-7 rounded-full bg-warning/10 flex items-center justify-center text-warning-strong shrink-0">
                     <Icon className="h-3.5 w-3.5" />
                   </div>
                   <div className="flex-1 min-w-0">

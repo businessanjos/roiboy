@@ -90,9 +90,9 @@ export function SortableFolderItem({
         </button>
 
         {folder.is_expanded ? (
-          <FolderOpen className="h-4 w-4 text-amber-500" />
+          <FolderOpen className="h-4 w-4 text-warning" />
         ) : (
-          <Folder className="h-4 w-4 text-amber-500" />
+          <Folder className="h-4 w-4 text-warning" />
         )}
 
         {isEditing ? (

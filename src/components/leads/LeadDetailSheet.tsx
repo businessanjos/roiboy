@@ -62,10 +62,10 @@ const LEAD_SOURCES = [
 ];
 
 const LEAD_STATUS = [
-  { value: "new", label: "Novo", color: "bg-blue-500" },
-  { value: "contacted", label: "Contatado", color: "bg-amber-500" },
-  { value: "qualified", label: "Qualificado", color: "bg-emerald-500" },
-  { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
+  { value: "new", label: "Novo", color: "bg-info" },
+  { value: "contacted", label: "Contatado", color: "bg-warning" },
+  { value: "qualified", label: "Qualificado", color: "bg-success" },
+  { value: "unqualified", label: "Não Qualificado", color: "bg-muted-foreground" },
   { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
 

@@ -271,7 +271,7 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpc
               {hasContent && !loading && (
                 <div className="animate-in fade-in slide-in-from-bottom-2 duration-500">
                   {usedFallback && (
-                    <div className="mb-3 text-[11px] text-amber-700 dark:text-amber-400 bg-amber-500/10 border border-amber-500/30 rounded-md px-3 py-2 flex items-center gap-2">
+                    <div className="mb-3 text-[11px] text-warning-strong dark:text-warning bg-warning/10 border border-warning/30 rounded-md px-3 py-2 flex items-center gap-2">
                       <AlertTriangle className="h-3 w-3" />
                       Síntese unificada indisponível — exibindo o melhor draft disponível.
                     </div>
@@ -294,7 +294,7 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpc
               {content && (
                 <Button size="sm" variant="ghost" onClick={handleCopy}>
                   {copied ? (
-                    <><Check className="h-3.5 w-3.5 mr-1.5 text-emerald-500" /> Copiado</>
+                    <><Check className="h-3.5 w-3.5 mr-1.5 text-success" /> Copiado</>
                   ) : (
                     <><Copy className="h-3.5 w-3.5 mr-1.5" /> Copiar</>
                   )}
@@ -313,11 +313,11 @@ export function OpsWorkloadAiDialog({ open, onOpenChange, rows, periodLabel, rpc
 
 function ModelErrorBlock({ error, model }: { error: string | null; model: string }) {
   return (
-    <div className="rounded-xl border border-amber-500/30 bg-amber-500/5 p-5">
+    <div className="rounded-xl border border-warning/30 bg-warning/5 p-5">
       <div className="flex items-start gap-3">
-        <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 shrink-0 mt-0.5" />
+        <AlertTriangle className="h-4 w-4 text-warning dark:text-warning shrink-0 mt-0.5" />
         <div className="text-sm">
-          <div className="font-medium text-amber-700 dark:text-amber-300">
+          <div className="font-medium text-warning-strong dark:text-warning">
             {model} não retornou conteúdo
           </div>
           <div className="text-xs text-muted-foreground mt-1">{error || "Sem detalhes"}</div>
@@ -374,12 +374,12 @@ function HistoryList({
                     <span>{r.rows_count} consultoras</span>
                     {r.gemini_content && (
                       <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-blue-500" /> Gemini
+                        <span className="h-1.5 w-1.5 rounded-full bg-info" /> Gemini
                       </Badge>
                     )}
                     {r.gpt_content && (
                       <Badge variant="outline" className="h-4 px-1.5 text-[9px] gap-1">
-                        <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> GPT
+                        <span className="h-1.5 w-1.5 rounded-full bg-success" /> GPT
                       </Badge>
                     )}
                   </div>
@@ -430,7 +430,7 @@ function LoadingState({ elapsed }: { elapsed: number }) {
           return (
             <div key={i} className={`flex items-center gap-3 text-sm transition-opacity ${done || current ? "opacity-100" : "opacity-40"}`}>
               <div className={`h-5 w-5 rounded-full flex items-center justify-center shrink-0 transition-colors ${
-                done ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400"
+                done ? "bg-success/15 text-success dark:text-success"
                   : current ? "bg-primary/15 text-primary"
                   : "bg-muted text-muted-foreground"
               }`}>

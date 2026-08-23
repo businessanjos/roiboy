@@ -290,10 +290,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const renderIdleOrAwaiting = () => {
     if (phase === "awaiting_approval") {
       return (
-        <div className="rounded-2xl border-2 border-dashed border-amber-300 bg-amber-500/5 p-8 text-center min-h-[240px] flex flex-col items-center justify-center">
+        <div className="rounded-2xl border-2 border-dashed border-warning bg-warning/5 p-8 text-center min-h-[240px] flex flex-col items-center justify-center">
           <div className="relative">
-            <Clock className="h-16 w-16 text-amber-500 mb-3" />
-            <Loader2 className="absolute -top-1 -right-1 h-5 w-5 animate-spin text-amber-600" />
+            <Clock className="h-16 w-16 text-warning mb-3" />
+            <Loader2 className="absolute -top-1 -right-1 h-5 w-5 animate-spin text-warning" />
           </div>
           <p className="text-base font-medium text-foreground">Aguardando aprovação do gestor</p>
           <p className="text-xs text-muted-foreground mt-1">
@@ -317,7 +317,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
               : spiff.custom_prize_description?.trim() || "Prêmio a combinar"}
         </Badge>
         <p className="text-[11px] text-muted-foreground mt-3 flex items-center gap-1">
-          <ShieldCheck className="h-3 w-3 text-amber-500" />
+          <ShieldCheck className="h-3 w-3 text-warning" />
           Requer aprovação do gestor
         </p>
       </div>
@@ -358,7 +358,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
             />
           ) : phase === "awaiting_approval" ? (
             <div className="text-center">
-              <Loader2 className="h-20 w-20 animate-spin text-amber-500 mx-auto mb-4" />
+              <Loader2 className="h-20 w-20 animate-spin text-warning mx-auto mb-4" />
               <p className="text-3xl font-semibold">Aguardando aprovação do gestor...</p>
               <Button variant="ghost" className="mt-6" onClick={cancelRequest}>
                 Cancelar solicitação
@@ -368,7 +368,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
             <Button
               onClick={requestApproval}
               size="lg"
-              className="h-24 px-12 text-3xl gap-3 bg-amber-500 hover:bg-amber-600 text-white"
+              className="h-24 px-12 text-3xl gap-3 bg-warning hover:bg-warning text-white"
               disabled={pendingSpins <= 0 || requesting || (usingPool && prizesQuery.isLoading)}
             >
               <ShieldCheck className="h-10 w-10" />
@@ -396,7 +396,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         <DialogHeader>
           <div className="flex items-center justify-between gap-2">
             <DialogTitle className="flex items-center gap-2">
-              <Dice5 className="h-5 w-5 text-amber-500" />
+              <Dice5 className="h-5 w-5 text-warning" />
               Roleta da Sorte — {spiff.name}
             </DialogTitle>
             <div className="flex gap-1">
@@ -447,7 +447,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
               <Button
                 onClick={requestApproval}
                 size="lg"
-                className="w-full gap-2 bg-amber-500 hover:bg-amber-600 text-white"
+                className="w-full gap-2 bg-warning hover:bg-warning text-white"
                 disabled={pendingSpins <= 0 || requesting || (usingPool && prizesQuery.isLoading)}
               >
                 <ShieldCheck className="h-5 w-5" />

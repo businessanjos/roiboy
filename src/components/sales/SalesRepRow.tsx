@@ -79,12 +79,12 @@ export const SalesRepRow = memo(function SalesRepRow({ rep, onViewDetails }: Sal
       {/* Won */}
       <TableCell className="text-center py-3">
         <div className="flex items-center justify-center gap-1">
-          <span className="font-semibold text-sm text-emerald-600">{rep.won_deals}</span>
+          <span className="font-semibold text-sm text-success">{rep.won_deals}</span>
           <span className="text-[10px] text-muted-foreground">({formatCurrency(rep.won_value)})</span>
         </div>
         <div className="flex items-center justify-center gap-0.5">
-          <TrendingUp className="h-3 w-3 text-emerald-500" />
-          <span className="text-[10px] text-emerald-600 font-medium">{rep.conversion_rate.toFixed(0)}%</span>
+          <TrendingUp className="h-3 w-3 text-success" />
+          <span className="text-[10px] text-success font-medium">{rep.conversion_rate.toFixed(0)}%</span>
         </div>
       </TableCell>
 
@@ -94,7 +94,7 @@ export const SalesRepRow = memo(function SalesRepRow({ rep, onViewDetails }: Sal
         <span className="text-xs text-muted-foreground"> / {rep.total_tasks}</span>
         {rep.pending_tasks > 0 && (
           <div>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-amber-500 text-amber-600">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-warning text-warning">
               {rep.pending_tasks} pend.
             </Badge>
           </div>
@@ -112,7 +112,7 @@ export const SalesRepRow = memo(function SalesRepRow({ rep, onViewDetails }: Sal
         )}
         {rep.noshow_calls > 0 && (
           <div>
-            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-red-500 text-red-600">
+            <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 border-danger text-danger">
               {rep.noshow_calls} no-show
               {rep.noshow_calls_raw !== rep.noshow_calls ? ` (real ${rep.noshow_calls_raw})` : ""}
             </Badge>

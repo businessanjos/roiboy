@@ -37,17 +37,17 @@ interface Props {
 
 const APPROVAL_BADGE: Record<string, { label: string; className: string; icon: any }> = {
   not_requested: { label: "Sem solicitação", className: "bg-muted text-muted-foreground", icon: CircleDashed },
-  pending_approval: { label: "Aguardando aprovação", className: "bg-amber-500/10 text-amber-600 border-amber-500/30", icon: Clock },
-  approved: { label: "Aprovada", className: "bg-green-500/10 text-green-600 border-green-500/30", icon: ShieldCheck },
-  rejected: { label: "Rejeitada", className: "bg-red-500/10 text-red-600 border-red-500/30", icon: ShieldX },
+  pending_approval: { label: "Aguardando aprovação", className: "bg-warning/10 text-warning border-warning/30", icon: Clock },
+  approved: { label: "Aprovada", className: "bg-success/10 text-success border-success/30", icon: ShieldCheck },
+  rejected: { label: "Rejeitada", className: "bg-danger/10 text-danger border-danger/30", icon: ShieldX },
 };
 
 const ACTION_LABEL: Record<ApprovalAction, { label: string; icon: any; tone: string }> = {
-  requested: { label: "Solicitação enviada", icon: Send, tone: "text-amber-600" },
-  approved: { label: "Aprovada", icon: ShieldCheck, tone: "text-green-600" },
-  rejected: { label: "Rejeitada", icon: ShieldX, tone: "text-red-600" },
-  marked_paid: { label: "Marcada como paga", icon: CheckCircle2, tone: "text-green-700" },
-  reverted: { label: "Pagamento revertido", icon: Undo2, tone: "text-blue-600" },
+  requested: { label: "Solicitação enviada", icon: Send, tone: "text-warning" },
+  approved: { label: "Aprovada", icon: ShieldCheck, tone: "text-success" },
+  rejected: { label: "Rejeitada", icon: ShieldX, tone: "text-danger" },
+  marked_paid: { label: "Marcada como paga", icon: CheckCircle2, tone: "text-success-strong" },
+  reverted: { label: "Pagamento revertido", icon: Undo2, tone: "text-info" },
   note: { label: "Anotação", icon: StickyNote, tone: "text-muted-foreground" },
 };
 

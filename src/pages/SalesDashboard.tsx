@@ -870,7 +870,7 @@ export default function SalesDashboard() {
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <ShieldAlert className="w-6 h-6 text-amber-500" />
+              <ShieldAlert className="w-6 h-6 text-warning" />
               <CardTitle>Acesso restrito</CardTitle>
             </div>
             <CardDescription>
@@ -1049,7 +1049,7 @@ export default function SalesDashboard() {
                       : "Filtre por 'Este mês' para ver progresso real"}
                   </span>
                   {period === "this_month" && monthlyGap > 0 && (
-                    <span className="text-amber-600 dark:text-amber-400">
+                    <span className="text-warning dark:text-warning">
                       Gap: {fmtBRL(monthlyGap)}
                     </span>
                   )}
@@ -1333,7 +1333,7 @@ export default function SalesDashboard() {
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
-                <TrendingDown className="w-5 h-5 text-red-500" />
+                <TrendingDown className="w-5 h-5 text-danger" />
                 Churn por vendedor
               </CardTitle>
               <CardDescription>
@@ -1469,7 +1469,7 @@ export default function SalesDashboard() {
                           <td className="py-2 px-2 text-right text-muted-foreground">
                             {m.scheduled_calls}
                             {m.noshow_calls > 0 && (
-                              <span className="text-red-500 ml-1">
+                              <span className="text-danger ml-1">
                                 ({m.noshow_calls} no-show)
                               </span>
                             )}
@@ -1532,7 +1532,7 @@ export default function SalesDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <AlertTriangle className="w-5 h-5 text-red-500" />
+                  <AlertTriangle className="w-5 h-5 text-danger" />
                   Top motivos de perda
                 </CardTitle>
                 <CardDescription>
@@ -1685,7 +1685,7 @@ function KpiCard({
           <span
             className={cn(
               "p-2 rounded-md bg-primary/10 text-primary",
-              warn && "bg-amber-500/10 text-amber-600 dark:text-amber-400"
+              warn && "bg-warning/10 text-warning dark:text-warning"
             )}
           >
             {icon}
@@ -1768,7 +1768,7 @@ function YearlyGoalCard({
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>{pct.toFixed(0)}% atingido</span>
         {gap > 0 && (
-          <span className="text-amber-600 dark:text-amber-400">
+          <span className="text-warning dark:text-warning">
             Faltam {fmtBRL(gap)}
           </span>
         )}
@@ -1851,7 +1851,7 @@ function QuarterlyGoalCard({
       <div className="flex justify-between text-xs text-muted-foreground">
         <span>{pct.toFixed(0)}% atingido</span>
         {gap > 0 && (
-          <span className="text-amber-600 dark:text-amber-400">
+          <span className="text-warning dark:text-warning">
             Faltam {fmtBRL(gap)}
           </span>
         )}

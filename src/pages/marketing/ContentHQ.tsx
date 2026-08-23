@@ -145,8 +145,8 @@ export default function ContentHQ() {
         {/* Page header */}
         <div className="flex items-start justify-between gap-4 flex-wrap mb-5">
           <div className="flex items-center gap-3">
-            <div className="h-12 w-12 rounded-lg bg-amber-500/10 flex items-center justify-center">
-              <Crown className="h-6 w-6 text-amber-500" />
+            <div className="h-12 w-12 rounded-lg bg-warning/10 flex items-center justify-center">
+              <Crown className="h-6 w-6 text-warning" />
             </div>
             <div>
               <h1 className="text-2xl font-bold tracking-tight">Conteúdo</h1>
@@ -197,7 +197,7 @@ export default function ContentHQ() {
           {/* Content area */}
           <div className="space-y-5 min-w-0">
             {showHqHeader && (
-              <div className="rounded-xl border bg-gradient-to-br from-amber-500/5 via-background to-primary/5 p-4">
+              <div className="rounded-xl border bg-gradient-to-br from-warning/5 via-background to-primary/5 p-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   <KpiPill label="Publicados (mês)" value={publishedThisMonth} tone="emerald" />
                   <KpiPill label="Agendados (mês)" value={scheduledThisMonth} tone="cyan" />
@@ -307,10 +307,10 @@ export default function ContentHQ() {
 
 function KpiPill({ label, value, tone }: { label: string; value: number; tone: "emerald" | "cyan" | "purple" | "amber" }) {
   const toneMap = {
-    emerald: "text-emerald-700 bg-emerald-500/10 border-emerald-500/20",
-    cyan: "text-cyan-700 bg-cyan-500/10 border-cyan-500/20",
+    emerald: "text-success-strong bg-success/10 border-success/20",
+    cyan: "text-info-strong bg-info/10 border-info/20",
     purple: "text-purple-700 bg-purple-500/10 border-purple-500/20",
-    amber: "text-amber-700 bg-amber-500/10 border-amber-500/20",
+    amber: "text-warning-strong bg-warning/10 border-warning/20",
   };
   return (
     <div className={cn("rounded-lg border px-3 py-2", toneMap[tone])}>

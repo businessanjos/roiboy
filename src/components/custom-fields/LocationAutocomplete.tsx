@@ -221,7 +221,7 @@ export function LocationAutocomplete({
                 "flex items-start gap-2 border-b last:border-b-0"
               )}
             >
-              <MapPin className="h-4 w-4 mt-0.5 text-cyan-500 flex-shrink-0" />
+              <MapPin className="h-4 w-4 mt-0.5 text-info flex-shrink-0" />
               <span className="line-clamp-2">{formatSimpleAddress(suggestion)}</span>
             </button>
           ))}

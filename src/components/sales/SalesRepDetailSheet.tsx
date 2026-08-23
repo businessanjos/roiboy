@@ -179,10 +179,10 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
 
         {/* Summary Cards */}
         <div className="grid grid-cols-4 gap-2 py-4">
-          <Card className="bg-blue-500/10 border-blue-500/20">
+          <Card className="bg-info/10 border-info/20">
             <CardContent className="p-3 text-center">
-              <Phone className="h-4 w-4 text-blue-500 mx-auto mb-1" />
-              <p className="text-lg font-bold text-blue-600">{rep.total_calls}</p>
+              <Phone className="h-4 w-4 text-info mx-auto mb-1" />
+              <p className="text-lg font-bold text-info">{rep.total_calls}</p>
               <p className="text-[10px] text-muted-foreground">Ligações</p>
             </CardContent>
           </Card>
@@ -193,17 +193,17 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
               <p className="text-[10px] text-muted-foreground">Negócios</p>
             </CardContent>
           </Card>
-          <Card className="bg-emerald-500/10 border-emerald-500/20">
+          <Card className="bg-success/10 border-success/20">
             <CardContent className="p-3 text-center">
-              <Trophy className="h-4 w-4 text-emerald-500 mx-auto mb-1" />
-              <p className="text-lg font-bold text-emerald-600">{rep.won_deals}</p>
+              <Trophy className="h-4 w-4 text-success mx-auto mb-1" />
+              <p className="text-lg font-bold text-success">{rep.won_deals}</p>
               <p className="text-[10px] text-muted-foreground">Ganhos</p>
             </CardContent>
           </Card>
-          <Card className="bg-amber-500/10 border-amber-500/20">
+          <Card className="bg-warning/10 border-warning/20">
             <CardContent className="p-3 text-center">
-              <CheckCircle2 className="h-4 w-4 text-amber-500 mx-auto mb-1" />
-              <p className="text-lg font-bold text-amber-600">{rep.completed_tasks}</p>
+              <CheckCircle2 className="h-4 w-4 text-warning mx-auto mb-1" />
+              <p className="text-lg font-bold text-warning">{rep.completed_tasks}</p>
               <p className="text-[10px] text-muted-foreground">Atividades</p>
             </CardContent>
           </Card>
@@ -249,13 +249,13 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
                             <div className="flex items-start gap-3">
                               <div className={`p-2 rounded-full ${
                                 call.direction === "outbound" 
-                                  ? "bg-blue-500/10" 
-                                  : "bg-emerald-500/10"
+                                  ? "bg-info/10" 
+                                  : "bg-success/10"
                               }`}>
                                 <Phone className={`h-4 w-4 ${
                                   call.direction === "outbound" 
-                                    ? "text-blue-500" 
-                                    : "text-emerald-500"
+                                    ? "text-info" 
+                                    : "text-success"
                                 }`} />
                               </div>
                               <div>
@@ -362,12 +362,12 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
                         <CardContent className="p-3">
                           <div className="flex items-start gap-3">
                             <div className={`p-2 rounded-full ${
-                              task.completed_at ? "bg-emerald-500/10" : "bg-amber-500/10"
+                              task.completed_at ? "bg-success/10" : "bg-warning/10"
                             }`}>
                               {task.completed_at ? (
-                                <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                <CheckCircle2 className="h-4 w-4 text-success" />
                               ) : (
-                                <Clock className="h-4 w-4 text-amber-500" />
+                                <Clock className="h-4 w-4 text-warning" />
                               )}
                             </div>
                             <div className="flex-1 min-w-0">
@@ -394,7 +394,7 @@ export const SalesRepDetailSheet = forwardRef<HTMLDivElement, SalesRepDetailShee
                               </div>
                             </div>
                             {task.completed_at && (
-                              <Badge variant="secondary" className="text-[10px] bg-emerald-500/10 text-emerald-600">
+                              <Badge variant="secondary" className="text-[10px] bg-success/10 text-success">
                                 Concluída
                               </Badge>
                             )}

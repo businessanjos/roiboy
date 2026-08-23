@@ -334,7 +334,7 @@ export function CopyStudioTab() {
                   </div>
                   <div className="flex items-center gap-1">
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => toggleFavorite.mutate({ id: h.id, is_favorite: !h.is_favorite })}>
-                      <Star className={`h-3 w-3 ${h.is_favorite ? "fill-yellow-400 text-yellow-400" : ""}`} />
+                      <Star className={`h-3 w-3 ${h.is_favorite ? "fill-yellow-400 text-warning" : ""}`} />
                     </Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => copyToClipboard(h.output)}><CopyIcon className="h-3 w-3" /></Button>
                     <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => deleteCopy.mutate(h.id)}><Trash2 className="h-3 w-3" /></Button>

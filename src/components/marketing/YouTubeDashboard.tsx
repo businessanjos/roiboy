@@ -116,8 +116,8 @@ export function YouTubeDashboard() {
   const growth = (cur: number, prev: number) => {
     if (prev === 0) return null;
     const g = ((cur - prev) / prev) * 100;
-    if (g > 0) return <span className="flex items-center gap-0.5 text-green-600 text-xs"><TrendingUp className="h-3 w-3" />{Math.round(g)}%</span>;
-    if (g < 0) return <span className="flex items-center gap-0.5 text-red-600 text-xs"><TrendingDown className="h-3 w-3" />{Math.abs(Math.round(g))}%</span>;
+    if (g > 0) return <span className="flex items-center gap-0.5 text-success text-xs"><TrendingUp className="h-3 w-3" />{Math.round(g)}%</span>;
+    if (g < 0) return <span className="flex items-center gap-0.5 text-danger text-xs"><TrendingDown className="h-3 w-3" />{Math.abs(Math.round(g))}%</span>;
     return <span className="flex items-center gap-0.5 text-muted-foreground text-xs"><Minus className="h-3 w-3" /></span>;
   };
 
@@ -129,7 +129,7 @@ export function YouTubeDashboard() {
 
   if (isLoading) return <div className="space-y-6"><div className="grid grid-cols-1 md:grid-cols-5 gap-4">{[...Array(5)].map((_, i) => <Skeleton key={i} className="h-28" />)}</div><Skeleton className="h-96" /></div>;
 
-  if (!channelsWithMetrics.length) return <Card className="p-12"><div className="text-center space-y-4"><Youtube className="h-12 w-12 mx-auto text-red-600" /><div><h3 className="text-lg font-semibold">Nenhum canal encontrado</h3><p className="text-muted-foreground">Adicione canais do YouTube na aba "Perfis" para visualizar o dashboard.</p></div></div></Card>;
+  if (!channelsWithMetrics.length) return <Card className="p-12"><div className="text-center space-y-4"><Youtube className="h-12 w-12 mx-auto text-danger" /><div><h3 className="text-lg font-semibold">Nenhum canal encontrado</h3><p className="text-muted-foreground">Adicione canais do YouTube na aba "Perfis" para visualizar o dashboard.</p></div></div></Card>;
 
   return (
     <div className="space-y-6">
@@ -142,10 +142,10 @@ export function YouTubeDashboard() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-red-500/10"><Users className="h-5 w-5 text-red-600" /></div><div><p className="text-sm text-muted-foreground">Total Inscritos</p><p className="text-2xl font-bold">{fmt(totals.totalSubs)}</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-green-500/10"><Percent className="h-5 w-5 text-green-600" /></div><div><p className="text-sm text-muted-foreground">Engaj. Médio</p><p className="text-2xl font-bold">{totals.avgEng}%</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-cyan-500/10"><Eye className="h-5 w-5 text-cyan-600" /></div><div><p className="text-sm text-muted-foreground">Retenção Média</p><p className="text-2xl font-bold">{totals.avgComp}%</p></div></div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-blue-500/10"><Eye className="h-5 w-5 text-blue-600" /></div><div><p className="text-sm text-muted-foreground">Total Vídeos</p><p className="text-2xl font-bold">{fmt(totals.totalVids)}</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-danger/10"><Users className="h-5 w-5 text-danger" /></div><div><p className="text-sm text-muted-foreground">Total Inscritos</p><p className="text-2xl font-bold">{fmt(totals.totalSubs)}</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-success/10"><Percent className="h-5 w-5 text-success" /></div><div><p className="text-sm text-muted-foreground">Engaj. Médio</p><p className="text-2xl font-bold">{totals.avgEng}%</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-info/10"><Eye className="h-5 w-5 text-info" /></div><div><p className="text-sm text-muted-foreground">Retenção Média</p><p className="text-2xl font-bold">{totals.avgComp}%</p></div></div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-info/10"><Eye className="h-5 w-5 text-info" /></div><div><p className="text-sm text-muted-foreground">Total Vídeos</p><p className="text-2xl font-bold">{fmt(totals.totalVids)}</p></div></div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="flex items-center gap-3"><div className="p-2 rounded-lg bg-purple-500/10"><BarChart3 className="h-5 w-5 text-purple-600" /></div><div><p className="text-sm text-muted-foreground">Canais Ativos</p><p className="text-2xl font-bold">{totals.channelCount}</p></div></div></CardContent></Card>
       </div>
 
@@ -172,7 +172,7 @@ export function YouTubeDashboard() {
                   <TableRow key={ch.id} className="group">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-red-200"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="bg-gradient-to-br from-red-600 to-red-800 text-white text-sm">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+                        <Avatar className="h-10 w-10 border-2 border-danger"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="bg-gradient-to-br from-danger to-danger text-white text-sm">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
                         <div><p className="font-medium">@{ch.username}</p>{ch.display_name && <p className="text-xs text-muted-foreground">{ch.display_name}</p>}</div>
                       </div>
                     </TableCell>
@@ -187,7 +187,7 @@ export function YouTubeDashboard() {
                       </div>
                     </TableCell>
                     <TableCell className="text-right">{fmt(ch.avg_views)}</TableCell>
-                    <TableCell className="text-right"><span className={cn('font-medium', ch.avg_engagement > 5 ? 'text-green-600' : ch.avg_engagement > 2 ? 'text-amber-600' : 'text-red-600')}>{ch.avg_engagement}%</span></TableCell>
+                    <TableCell className="text-right"><span className={cn('font-medium', ch.avg_engagement > 5 ? 'text-success' : ch.avg_engagement > 2 ? 'text-warning' : 'text-danger')}>{ch.avg_engagement}%</span></TableCell>
                     <TableCell className="text-right">{ch.avg_completion_rate}%</TableCell>
                     <TableCell className="text-right">{fmt(ch.avg_likes)}</TableCell>
                     <TableCell className="text-right">{fmt(ch.avg_comments)}</TableCell>

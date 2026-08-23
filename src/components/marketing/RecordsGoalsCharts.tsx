@@ -180,7 +180,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
             ) : (
               <Badge
                 variant="outline"
-                className={`mt-1 gap-1 text-base ${growth >= 0 ? 'text-emerald-600 border-emerald-600/40' : 'text-destructive border-destructive/40'}`}
+                className={`mt-1 gap-1 text-base ${growth >= 0 ? 'text-success border-success/40' : 'text-destructive border-destructive/40'}`}
               >
                 {growth >= 0 ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
                 {growth >= 0 ? '+' : ''}

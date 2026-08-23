@@ -290,11 +290,11 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
         </div>
         <div>
           <span className="text-muted-foreground">Realizado: </span>
-          <span className="font-semibold text-emerald-400">{fmt(totalRealizado, currency)}</span>
+          <span className="font-semibold text-success">{fmt(totalRealizado, currency)}</span>
         </div>
         <div>
           <span className="text-muted-foreground">Diferença: </span>
-          <span className={cn("font-semibold", diff >= 0 ? "text-emerald-400" : "text-red-400")}>
+          <span className={cn("font-semibold", diff >= 0 ? "text-success" : "text-danger")}>
             {diff >= 0 ? "+" : "-"}
             {fmt(Math.abs(diff), currency)}
           </span>
@@ -304,7 +304,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
           <span
             className={cn(
               "font-semibold",
-              pct >= 100 ? "text-emerald-400" : pct >= 60 ? "text-amber-400" : "text-red-400",
+              pct >= 100 ? "text-success" : pct >= 60 ? "text-warning" : "text-danger",
             )}
           >
             {pct.toFixed(0)}%
@@ -390,7 +390,7 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
                     </div>
                     <div className="mt-2 flex items-center justify-between gap-6 border-t border-border pt-2 text-sm">
                       <span className="font-semibold">Diferença</span>
-                      <span className={cn("font-semibold", dif >= 0 ? "text-emerald-500" : "text-red-500")}>
+                      <span className={cn("font-semibold", dif >= 0 ? "text-success" : "text-danger")}>
                         {dif >= 0 ? "+" : "-"}
                         {fmt(Math.abs(dif), currency)}
                       </span>

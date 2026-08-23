@@ -877,7 +877,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     {deals.map((deal) => (
                       <SelectItem key={`deal:${deal.id}`} value={`deal:${deal.id}`}>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          <span className="w-2 h-2 rounded-full bg-warning" />
                           {deal.title}
                         </div>
                       </SelectItem>
@@ -891,7 +891,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     {leads.map((lead) => (
                       <SelectItem key={`lead:${lead.id}`} value={`lead:${lead.id}`}>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-blue-500" />
+                          <span className="w-2 h-2 rounded-full bg-info" />
                           {lead.full_name}
                         </div>
                       </SelectItem>
@@ -905,7 +905,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     {clients.map((client) => (
                       <SelectItem key={`client:${client.id}`} value={`client:${client.id}`}>
                         <div className="flex items-center gap-2">
-                          <span className="w-2 h-2 rounded-full bg-green-500" />
+                          <span className="w-2 h-2 rounded-full bg-success" />
                           {client.full_name}
                         </div>
                       </SelectItem>
@@ -1018,7 +1018,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                       title="Copiar link"
                     >
                       {copied ? (
-                        <Check className="h-4 w-4 text-green-500" />
+                        <Check className="h-4 w-4 text-success" />
                       ) : (
                         <Copy className="h-4 w-4" />
                       )}

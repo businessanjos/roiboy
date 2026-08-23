@@ -193,7 +193,7 @@ export function AIUsageStats() {
             </div>
           </div>
           <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
-            <Coins className="h-4 w-4 text-amber-500" />
+            <Coins className="h-4 w-4 text-warning" />
             <div>
               <p className="text-lg font-bold">${estimatedCost.toFixed(2)}</p>
               <p className="text-xs text-muted-foreground">Custo est.</p>
@@ -218,12 +218,12 @@ export function AIUsageStats() {
           <p className="text-xs font-medium mb-2">Eventos Criados</p>
           <div className="grid grid-cols-3 gap-2 text-xs">
             <div className="flex items-center gap-1.5">
-              <Sparkles className="h-3 w-3 text-emerald-500" />
+              <Sparkles className="h-3 w-3 text-success" />
               <span className="text-muted-foreground">ROI:</span>
               <span className="font-medium">{data.roiEventsCreated}</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-3 w-3 text-amber-500" />
+              <AlertTriangle className="h-3 w-3 text-warning" />
               <span className="text-muted-foreground">Riscos:</span>
               <span className="font-medium">{data.riskEventsCreated}</span>
             </div>

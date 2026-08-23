@@ -12,11 +12,11 @@ interface Props {
 
 export function AgencyKpiGrid({ metrics, compact = false }: Props) {
   const items = [
-    { label: "Investimento", value: fmtBRL(metrics.spend), icon: DollarSign, accent: "text-amber-600" },
-    { label: "Leads", value: fmtNum(metrics.leads), icon: Users, accent: "text-blue-600" },
+    { label: "Investimento", value: fmtBRL(metrics.spend), icon: DollarSign, accent: "text-warning" },
+    { label: "Leads", value: fmtNum(metrics.leads), icon: Users, accent: "text-info" },
     { label: "MQL", value: fmtNum(metrics.mql), icon: Target, accent: "text-purple-600" },
-    { label: "Vendas", value: fmtNum(metrics.vendas), icon: Trophy, accent: "text-emerald-600" },
-    { label: "CAC", value: metrics.cac > 0 ? fmtBRL(metrics.cac) : "—", icon: TrendingUp, accent: "text-rose-600" },
+    { label: "Vendas", value: fmtNum(metrics.vendas), icon: Trophy, accent: "text-success" },
+    { label: "CAC", value: metrics.cac > 0 ? fmtBRL(metrics.cac) : "—", icon: TrendingUp, accent: "text-danger" },
     { label: "ROAS", value: metrics.roas > 0 ? `${metrics.roas.toFixed(2)}x` : "—", icon: Activity, accent: "text-indigo-600" },
   ];
   return (

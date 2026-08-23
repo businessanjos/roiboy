@@ -38,14 +38,14 @@ const iconMap = {
 } as const;
 
 const accentMap = {
-  universe: { bg: "bg-slate-500/10", text: "text-slate-600", border: "border-slate-500/20" },
+  universe: { bg: "bg-muted-foreground/10", text: "text-muted-foreground", border: "border-border/20" },
   clinics: { bg: "bg-purple-500/10", text: "text-purple-600", border: "border-purple-500/20" },
   core: { bg: "bg-fuchsia-500/10", text: "text-fuchsia-600", border: "border-fuchsia-500/20" },
-  franchise: { bg: "bg-blue-500/10", text: "text-blue-600", border: "border-blue-500/20" },
-  units: { bg: "bg-cyan-500/10", text: "text-cyan-600", border: "border-cyan-500/20" },
-  solo: { bg: "bg-emerald-500/10", text: "text-emerald-600", border: "border-emerald-500/20" },
-  derm: { bg: "bg-amber-500/10", text: "text-amber-600", border: "border-amber-500/20" },
-  hof: { bg: "bg-rose-500/10", text: "text-rose-600", border: "border-rose-500/20" },
+  franchise: { bg: "bg-info/10", text: "text-info", border: "border-info/20" },
+  units: { bg: "bg-info/10", text: "text-info", border: "border-info/20" },
+  solo: { bg: "bg-success/10", text: "text-success", border: "border-success/20" },
+  derm: { bg: "bg-warning/10", text: "text-warning", border: "border-warning/20" },
+  hof: { bg: "bg-danger/10", text: "text-danger", border: "border-danger/20" },
 } as const;
 
 const toneMap: Record<BenchmarkQuery["icon"], MiAnalysisTone> = {

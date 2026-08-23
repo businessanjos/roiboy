@@ -164,14 +164,14 @@ const PAYMENT_METHOD_OPTIONS = [
 ];
 
 const COLOR_OPTIONS = [
-  { value: "#10b981", label: "Verde", class: "bg-emerald-500" },
-  { value: "#3b82f6", label: "Azul", class: "bg-blue-500" },
+  { value: "#10b981", label: "Verde", class: "bg-success" },
+  { value: "#3b82f6", label: "Azul", class: "bg-info" },
   { value: "#8b5cf6", label: "Roxo", class: "bg-violet-500" },
-  { value: "#f59e0b", label: "Laranja", class: "bg-amber-500" },
-  { value: "#ef4444", label: "Vermelho", class: "bg-red-500" },
+  { value: "#f59e0b", label: "Laranja", class: "bg-warning" },
+  { value: "#ef4444", label: "Vermelho", class: "bg-danger" },
   { value: "#ec4899", label: "Rosa", class: "bg-pink-500" },
-  { value: "#06b6d4", label: "Ciano", class: "bg-cyan-500" },
-  { value: "#6b7280", label: "Cinza", class: "bg-gray-500" },
+  { value: "#06b6d4", label: "Ciano", class: "bg-info" },
+  { value: "#6b7280", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 // Using shared MLS_LEVELS from mls-utils
@@ -1189,7 +1189,7 @@ export default function Products() {
                     {billingPeriodLabels[product.billing_period]}
                   </Badge>
                   {product.is_renewal && (
-                    <Badge variant="outline" className="gap-1 text-amber-600 border-amber-300">
+                    <Badge variant="outline" className="gap-1 text-warning border-warning">
                       🔄 Renovação
                     </Badge>
                   )}
@@ -1203,7 +1203,7 @@ export default function Products() {
                     <Badge variant="destructive">Inativo</Badge>
                   )}
                   {product.mql_criteria && product.mql_criteria.revenue_ranges?.length > 0 && (
-                    <Badge variant="outline" className="gap-1 text-emerald-600 border-emerald-300">
+                    <Badge variant="outline" className="gap-1 text-success border-success">
                       MQL Configurado
                     </Badge>
                   )}

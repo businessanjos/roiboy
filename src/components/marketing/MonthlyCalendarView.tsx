@@ -28,10 +28,10 @@ const WEEKDAYS = ['DOM', 'SEG', 'TER', 'QUA', 'QUI', 'SEX', 'SÁB'];
 
 // Map category to badge label
 const categoryBadges: Record<string, { label: string; color: string }> = {
-  operation: { label: 'OP', color: 'bg-orange-500' },
+  operation: { label: 'OP', color: 'bg-warning' },
   marketing: { label: 'MK', color: 'bg-purple-500' },
-  finance: { label: 'FI', color: 'bg-green-500' },
-  sales: { label: 'VE', color: 'bg-blue-500' },
+  finance: { label: 'FI', color: 'bg-success' },
+  sales: { label: 'VE', color: 'bg-info' },
 };
 
 import { CalendarLayerItem } from '@/hooks/useMarketingCalendarLayers';

@@ -293,10 +293,10 @@ export function DashboardMapTab() {
   return (
     <div className="space-y-6">
       {/* Coverage banner */}
-      <Card className={coveragePct < 60 ? "border-amber-500/40 bg-amber-500/5" : ""}>
+      <Card className={coveragePct < 60 ? "border-warning/40 bg-warning/5" : ""}>
         <CardContent className="p-4 flex flex-wrap items-center gap-4">
           <div className="flex items-center gap-2">
-            <MapPin className={`h-4 w-4 ${coveragePct < 60 ? "text-amber-600" : "text-primary"}`} />
+            <MapPin className={`h-4 w-4 ${coveragePct < 60 ? "text-warning" : "text-primary"}`} />
             <span className="text-sm font-medium">Cobertura de localização</span>
           </div>
           <div className="text-sm">
@@ -397,7 +397,7 @@ export function DashboardMapTab() {
                 <Users className="h-3 w-3" /> {totalOnMap} ativo(s)
               </Badge>
               {untracked > 0 && (
-                <span className="text-amber-600 dark:text-amber-400">
+                <span className="text-warning dark:text-warning">
                   {untracked} sem localização
                 </span>
               )}

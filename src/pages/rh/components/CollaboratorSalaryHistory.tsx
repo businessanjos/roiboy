@@ -16,10 +16,10 @@ import { toast } from "sonner";
 import { format } from "date-fns";
 
 const CHANGE_TYPES: Record<string, { label: string; color: string }> = {
-  promotion: { label: "Promoção", color: "text-green-600" },
-  adjustment: { label: "Reajuste", color: "text-blue-600" },
+  promotion: { label: "Promoção", color: "text-success" },
+  adjustment: { label: "Reajuste", color: "text-info" },
   transfer: { label: "Transferência", color: "text-purple-600" },
-  demotion: { label: "Rebaixamento", color: "text-orange-600" },
+  demotion: { label: "Rebaixamento", color: "text-warning" },
   initial: { label: "Admissão", color: "text-muted-foreground" },
 };
 
@@ -128,7 +128,7 @@ export default function CollaboratorSalaryHistory({ collaboratorId, accountId, c
                       <ArrowRight className="h-3 w-3" />
                       <span className="font-medium">{fmtCurrency(entry.new_salary)}</span>
                       {salaryDiff != null && salaryDiff > 0 && (
-                        <span className="text-xs text-green-600 flex items-center"><ArrowUpRight className="h-3 w-3" />+{((salaryDiff / (entry.previous_salary || 1)) * 100).toFixed(1)}%</span>
+                        <span className="text-xs text-success flex items-center"><ArrowUpRight className="h-3 w-3" />+{((salaryDiff / (entry.previous_salary || 1)) * 100).toFixed(1)}%</span>
                       )}
                     </div>
                   )}

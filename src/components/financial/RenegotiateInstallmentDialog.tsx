@@ -250,7 +250,7 @@ export function RenegotiateInstallmentDialog({
             </span>
           </div>
           {original && Math.abs(total - Number(original.amount)) > 0.01 && (
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-warning">
               Atenção: total difere da parcela original (
               {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
                 Number(original.amount)

@@ -34,19 +34,19 @@ import { CallLinks } from '@/components/sales/calls/CallLinks';
 import { clearGoogleDriveOAuthPending, getGoogleDriveCallbackMessage, getGoogleDriveOAuthErrorMessage, getGoogleDriveOAuthPending, startGoogleDriveOAuth } from '@/lib/googleDriveOAuth';
 
 const OBJECTION_TYPES = [
-  { value: 'price', label: 'Preço', icon: DollarSign, color: 'text-red-500', bgColor: 'bg-red-500/10' },
-  { value: 'time', label: 'Tempo', icon: Clock, color: 'text-amber-500', bgColor: 'bg-amber-500/10' },
-  { value: 'competition', label: 'Concorrência', icon: Users, color: 'text-blue-500', bgColor: 'bg-blue-500/10' },
+  { value: 'price', label: 'Preço', icon: DollarSign, color: 'text-danger', bgColor: 'bg-danger/10' },
+  { value: 'time', label: 'Tempo', icon: Clock, color: 'text-warning', bgColor: 'bg-warning/10' },
+  { value: 'competition', label: 'Concorrência', icon: Users, color: 'text-info', bgColor: 'bg-info/10' },
   { value: 'need', label: 'Necessidade', icon: ShieldQuestion, color: 'text-purple-500', bgColor: 'bg-purple-500/10' },
   { value: 'trust', label: 'Confiança', icon: Heart, color: 'text-pink-500', bgColor: 'bg-pink-500/10' },
   { value: 'other', label: 'Outros', icon: HelpCircle, color: 'text-muted-foreground', bgColor: 'bg-muted' },
 ];
 
 const FUNNEL_STAGES = [
-  { value: 'prospecting', label: 'Prospecção', icon: Target, color: 'text-cyan-500', bgColor: 'bg-cyan-500/10' },
+  { value: 'prospecting', label: 'Prospecção', icon: Target, color: 'text-info', bgColor: 'bg-info/10' },
   { value: 'qualification', label: 'Qualificação', icon: ArrowRight, color: 'text-indigo-500', bgColor: 'bg-indigo-500/10' },
-  { value: 'negotiation', label: 'Negociação', icon: Handshake, color: 'text-orange-500', bgColor: 'bg-orange-500/10' },
-  { value: 'closing', label: 'Fechamento', icon: Trophy, color: 'text-green-500', bgColor: 'bg-green-500/10' },
+  { value: 'negotiation', label: 'Negociação', icon: Handshake, color: 'text-warning', bgColor: 'bg-warning/10' },
+  { value: 'closing', label: 'Fechamento', icon: Trophy, color: 'text-success', bgColor: 'bg-success/10' },
 ];
 
 const MATERIAL_TYPES = [
@@ -59,9 +59,9 @@ const MATERIAL_TYPES = [
 ];
 
 const CALL_OUTCOMES = [
-  { value: 'success', label: 'Call Campeã ✅', icon: Crown, color: 'text-green-600', bgColor: 'bg-green-500/10', borderColor: 'border-green-500/30', description: 'Venda fechada ou reunião agendada' },
-  { value: 'partial', label: 'Parcial', icon: CalendarClock, color: 'text-amber-500', bgColor: 'bg-amber-500/10', borderColor: 'border-amber-500/30', description: 'Houve avanço mas sem fechamento' },
-  { value: 'failure', label: 'Sem sucesso', icon: ThumbsDown, color: 'text-red-500', bgColor: 'bg-red-500/10', borderColor: 'border-red-500/30', description: 'Não houve avanço' },
+  { value: 'success', label: 'Call Campeã ✅', icon: Crown, color: 'text-success', bgColor: 'bg-success/10', borderColor: 'border-success/30', description: 'Venda fechada ou reunião agendada' },
+  { value: 'partial', label: 'Parcial', icon: CalendarClock, color: 'text-warning', bgColor: 'bg-warning/10', borderColor: 'border-warning/30', description: 'Houve avanço mas sem fechamento' },
+  { value: 'failure', label: 'Sem sucesso', icon: ThumbsDown, color: 'text-danger', bgColor: 'bg-danger/10', borderColor: 'border-danger/30', description: 'Não houve avanço' },
   { value: 'no_answer', label: 'Sem resposta', icon: PhoneOff, color: 'text-muted-foreground', bgColor: 'bg-muted', borderColor: 'border-muted', description: 'Lead não atendeu' },
 ];
 

@@ -24,10 +24,10 @@ interface Props {
 
 const TONE_BG: Record<KpiTone, string> = {
   default: "bg-muted text-muted-foreground",
-  success: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400",
-  warning: "bg-amber-500/10 text-amber-600 dark:text-amber-400",
-  danger: "bg-red-500/10 text-red-600 dark:text-red-400",
-  info: "bg-blue-500/10 text-blue-600 dark:text-blue-400",
+  success: "bg-success/10 text-success dark:text-success",
+  warning: "bg-warning/10 text-warning dark:text-warning",
+  danger: "bg-danger/10 text-danger dark:text-danger",
+  info: "bg-info/10 text-info dark:text-info",
 };
 
 /**
@@ -86,8 +86,8 @@ export function FinancialKpiCard({
                     className={cn(
                       "inline-flex items-center gap-0.5 font-medium",
                       delta.positive
-                        ? "text-emerald-600 dark:text-emerald-400"
-                        : "text-red-600 dark:text-red-400",
+                        ? "text-success dark:text-success"
+                        : "text-danger dark:text-danger",
                     )}
                   >
                     {delta.positive ? (

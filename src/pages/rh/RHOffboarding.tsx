@@ -86,8 +86,8 @@ export default function RHOffboarding() {
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-2.5 rounded-xl bg-rose-500/10">
-            <UserMinus className="h-7 w-7 text-rose-600" strokeWidth={1.5} />
+          <div className="p-2.5 rounded-xl bg-danger/10">
+            <UserMinus className="h-7 w-7 text-danger" strokeWidth={1.5} />
           </div>
           <div>
             <h1 className="text-2xl font-semibold tracking-tight">Desligamentos</h1>
@@ -100,11 +100,11 @@ export default function RHOffboarding() {
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-6 gap-3">
         <StatCard label="Total" value={stats.total} />
-        <StatCard label="Em andamento" value={stats.ativos} color="text-amber-600" />
-        <StatCard label="Este mês" value={stats.mes} color="text-blue-600" />
+        <StatCard label="Em andamento" value={stats.ativos} color="text-warning" />
+        <StatCard label="Este mês" value={stats.mes} color="text-info" />
         <StatCard label="Vagas a repor" value={stats.repor} color="text-violet-600" />
-        <StatCard label="Custo do mês" value={fmtBRL(stats.totalCostMonth)} color="text-rose-600" icon={<DollarSign className="h-3 w-3" />} small />
-        <StatCard label="Tempo médio" value={stats.avgDays ? `${stats.avgDays}d` : "—"} color="text-emerald-600" icon={<Clock className="h-3 w-3" />} small />
+        <StatCard label="Custo do mês" value={fmtBRL(stats.totalCostMonth)} color="text-danger" icon={<DollarSign className="h-3 w-3" />} small />
+        <StatCard label="Tempo médio" value={stats.avgDays ? `${stats.avgDays}d` : "—"} color="text-success" icon={<Clock className="h-3 w-3" />} small />
       </div>
 
       {/* Filters */}
@@ -224,7 +224,7 @@ function OffboardingRow({ o, onClick }: { o: HROffboarding; onClick: () => void 
               </Badge>
             )}
             {o.exit_interview_submitted_at && (
-              <Badge variant="outline" className="text-[10px] bg-emerald-500/10 text-emerald-700 border-emerald-200">
+              <Badge variant="outline" className="text-[10px] bg-success/10 text-success-strong border-success">
                 Entrevista respondida
               </Badge>
             )}

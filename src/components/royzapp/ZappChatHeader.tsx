@@ -210,7 +210,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               variant="outline"
-              className="border-amber-500 text-amber-500 hover:bg-amber-500/10 text-xs h-7 sm:h-8 px-2 sm:px-3"
+              className="border-warning text-warning hover:bg-warning/10 text-xs h-7 sm:h-8 px-2 sm:px-3"
               onClick={() => onReleaseToQueue(assignment.id)}
             >
               <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -248,7 +248,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 className={cn("text-zapp-text flex items-center gap-2", assignment.status === "active" && "bg-zapp-bg-dark")}
                 onClick={() => onUpdateStatus(assignment.id, "active")}
               >
-                <div className="w-2 h-2 rounded-full bg-emerald-500" />
+                <div className="w-2 h-2 rounded-full bg-success" />
                 Em atendimento
               </DropdownMenuItem>
               <DropdownMenuItem 
@@ -266,7 +266,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               variant="outline"
-              className="hidden xs:flex h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs border-emerald-500 text-emerald-500 hover:bg-emerald-500/10"
+              className="hidden xs:flex h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs border-success text-success hover:bg-success/10"
               onClick={onOpenCloseTicket}
             >
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
@@ -355,7 +355,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   )}
                   {assignment.status !== "closed" && onOpenCloseTicket && (
                     <DropdownMenuItem 
-                      className="text-emerald-500 hover:bg-zapp-hover"
+                      className="text-success hover:bg-zapp-hover"
                       onClick={onOpenCloseTicket}
                     >
                       <CheckCircle className="h-4 w-4 mr-2" />
@@ -385,7 +385,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                       className="text-zapp-text hover:bg-zapp-hover"
                       onClick={onOpenRiskDialog}
                     >
-                      <AlertTriangle className="h-4 w-4 mr-2 text-amber-500" />
+                      <AlertTriangle className="h-4 w-4 mr-2 text-warning" />
                       Adicionar Risco
                     </DropdownMenuItem>
                     <DropdownMenuSeparator className="bg-zapp-border" />
@@ -431,7 +431,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 )}
                 {isGroup && onDismissConversation && (
                   <DropdownMenuItem 
-                    className="text-amber-500 hover:bg-amber-500/10"
+                    className="text-warning hover:bg-warning/10"
                     onClick={onDismissConversation}
                   >
                     <X className="h-4 w-4 mr-2" />
@@ -439,7 +439,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   </DropdownMenuItem>
                 )}
                 <DropdownMenuItem 
-                  className="text-red-500 hover:bg-red-500/10"
+                  className="text-danger hover:bg-danger/10"
                   onClick={onDeleteConversation}
                 >
                   <Trash2 className="h-4 w-4 mr-2" />

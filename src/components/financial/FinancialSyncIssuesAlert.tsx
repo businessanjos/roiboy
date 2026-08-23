@@ -78,10 +78,10 @@ export function FinancialSyncIssuesAlert() {
 
   return (
     <>
-      <Card className="border-amber-500/40 bg-amber-500/5">
+      <Card className="border-warning/40 bg-warning/5">
         <CardContent className="p-4 flex items-center gap-4">
-          <div className="rounded-full bg-amber-500/15 p-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+          <div className="rounded-full bg-warning/15 p-2">
+            <AlertTriangle className="h-5 w-5 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 flex-wrap">
@@ -97,8 +97,8 @@ export function FinancialSyncIssuesAlert() {
                     variant="outline"
                     className={
                       ISSUE_LABELS[type]?.tone === "danger"
-                        ? "border-red-500/40 text-red-700 dark:text-red-400"
-                        : "border-amber-500/40 text-amber-700 dark:text-amber-400"
+                        ? "border-danger/40 text-danger-strong dark:text-danger"
+                        : "border-warning/40 text-warning-strong dark:text-warning"
                     }
                   >
                     {count} · {ISSUE_LABELS[type]?.label ?? type}
@@ -172,7 +172,7 @@ export function FinancialSyncIssuesAlert() {
                         {r.entry_status ? (
                           <Badge variant="outline">{r.entry_status}</Badge>
                         ) : (
-                          <Badge variant="outline" className="border-red-500/40 text-red-700">
+                          <Badge variant="outline" className="border-danger/40 text-danger-strong">
                             ausente
                           </Badge>
                         )}
@@ -189,8 +189,8 @@ export function FinancialSyncIssuesAlert() {
                           variant="outline"
                           className={
                             meta?.tone === "danger"
-                              ? "border-red-500/40 text-red-700 dark:text-red-400"
-                              : "border-amber-500/40 text-amber-700 dark:text-amber-400"
+                              ? "border-danger/40 text-danger-strong dark:text-danger"
+                              : "border-warning/40 text-warning-strong dark:text-warning"
                           }
                         >
                           {meta?.label ?? r.issue_type}

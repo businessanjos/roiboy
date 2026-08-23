@@ -88,9 +88,9 @@ export function IntegrationAccessAlert({ platform, visibleCount, onReload }: Pro
   const hidden = total - visibleCount;
 
   return (
-    <Alert variant="default" className="border-amber-500/40 bg-amber-500/5">
-      <ShieldAlert className="h-4 w-4 text-amber-600" />
-      <AlertTitle className="text-amber-800 dark:text-amber-300">
+    <Alert variant="default" className="border-warning/40 bg-warning/5">
+      <ShieldAlert className="h-4 w-4 text-warning" />
+      <AlertTitle className="text-warning-strong dark:text-warning">
         Você não está vendo todas as conexões de {LABELS[platform]}
       </AlertTitle>
       <AlertDescription className="space-y-3">
@@ -115,7 +115,7 @@ export function IntegrationAccessAlert({ platform, visibleCount, onReload }: Pro
             size="sm"
             onClick={handleRequest}
             disabled={requesting || requested}
-            className="bg-amber-600 hover:bg-amber-700 text-white"
+            className="bg-warning hover:bg-warning text-white"
           >
             {requesting ? (
               <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />

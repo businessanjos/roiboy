@@ -104,13 +104,13 @@ const contentTypeLabels: Record<PlaybookContentType, string> = {
 };
 
 const contentTypeColors: Record<PlaybookContentType, string> = {
-  text: 'bg-blue-500/10 text-blue-500',
+  text: 'bg-info/10 text-info',
   audio: 'bg-purple-500/10 text-purple-500',
-  image: 'bg-green-500/10 text-green-500',
-  video: 'bg-red-500/10 text-red-500',
-  document: 'bg-orange-500/10 text-orange-500',
-  sticker: 'bg-yellow-500/10 text-yellow-500',
-  list: 'bg-cyan-500/10 text-cyan-500',
+  image: 'bg-success/10 text-success',
+  video: 'bg-danger/10 text-danger',
+  document: 'bg-warning/10 text-warning',
+  sticker: 'bg-warning/10 text-warning',
+  list: 'bg-info/10 text-info',
   link: 'bg-indigo-500/10 text-indigo-500',
   template: 'bg-pink-500/10 text-pink-500',
 };
@@ -347,7 +347,7 @@ export function PlaybookDialog({
           <div className="flex items-center gap-2">
             <span className="font-medium truncate">{item.name}</span>
             {item.is_favorite && (
-              <Star className="h-3.5 w-3.5 text-yellow-500 fill-yellow-500 shrink-0" />
+              <Star className="h-3.5 w-3.5 text-warning fill-yellow-500 shrink-0" />
             )}
             {item.visibility === 'personal' && (
               <span className="text-xs text-muted-foreground" title="Apenas você pode ver">🔒</span>
@@ -695,11 +695,11 @@ export function PlaybookDialog({
                   {favoriteItems.length > 0 && (
                     <div className="space-y-1">
                       <div
-                        className="flex items-center gap-3 p-3 rounded-lg border bg-yellow-500/10 border-yellow-500/30 cursor-pointer hover:bg-yellow-500/20 transition-colors"
+                        className="flex items-center gap-3 p-3 rounded-lg border bg-warning/10 border-warning/30 cursor-pointer hover:bg-warning/20 transition-colors"
                         onClick={() => toggleFolder('__favorites__')}
                       >
-                        <div className="p-2 rounded-lg bg-yellow-500/20">
-                          <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                        <div className="p-2 rounded-lg bg-warning/20">
+                          <Star className="h-4 w-4 text-warning fill-yellow-500" />
                         </div>
                         <div className="flex-1 min-w-0 flex items-center gap-2">
                           {expandedFolders.has('__favorites__') ? (

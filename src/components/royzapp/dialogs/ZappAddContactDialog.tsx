@@ -524,7 +524,7 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
               </TabsTrigger>
               <TabsTrigger 
                 value="lead" 
-                className="text-zapp-text data-[state=active]:bg-blue-500 data-[state=active]:text-white"
+                className="text-zapp-text data-[state=active]:bg-info data-[state=active]:text-white"
               >
                 <TrendingUp className="h-4 w-4 mr-1.5" />
                 Lead
@@ -568,15 +568,15 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
             <TabsContent value="lead" className="mt-4">
               <Tabs value={leadSection} onValueChange={(v) => setLeadSection(v as "basic" | "address" | "bank")}>
                 <TabsList className="w-full grid grid-cols-3 bg-zapp-bg-dark mb-4">
-                  <TabsTrigger value="basic" className="text-zapp-text text-xs data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  <TabsTrigger value="basic" className="text-zapp-text text-xs data-[state=active]:bg-info data-[state=active]:text-white">
                     <User className="h-3 w-3 mr-1" />
                     Básico
                   </TabsTrigger>
-                  <TabsTrigger value="address" className="text-zapp-text text-xs data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  <TabsTrigger value="address" className="text-zapp-text text-xs data-[state=active]:bg-info data-[state=active]:text-white">
                     <Home className="h-3 w-3 mr-1" />
                     Endereço
                   </TabsTrigger>
-                  <TabsTrigger value="bank" className="text-zapp-text text-xs data-[state=active]:bg-blue-500 data-[state=active]:text-white">
+                  <TabsTrigger value="bank" className="text-zapp-text text-xs data-[state=active]:bg-info data-[state=active]:text-white">
                     <Landmark className="h-3 w-3 mr-1" />
                     Bancário
                   </TabsTrigger>
@@ -1066,8 +1066,8 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
                                       result.type === "client" 
                                         ? "border-zapp-accent text-zapp-accent" 
                                         : result.type === "lead"
-                                        ? "border-blue-500 text-blue-500"
-                                        : "border-amber-500 text-amber-500"
+                                        ? "border-info text-info"
+                                        : "border-warning text-warning"
                                     }`}
                                   >
                                     {result.type === "client" ? "Cliente" : result.type === "lead" ? "Lead" : "Negócio"}
@@ -1181,7 +1181,7 @@ export const ZappAddContactDialog = memo(function ZappAddContactDialog({
             <Button
               onClick={handleSaveLead}
               disabled={saving || !leadForm.full_name.trim()}
-              className="bg-blue-500 hover:bg-blue-600 text-white"
+              className="bg-info hover:bg-info text-white"
             >
               {savingLead ? (
                 <>

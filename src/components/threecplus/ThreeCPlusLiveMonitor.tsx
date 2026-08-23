@@ -33,15 +33,15 @@ interface AgentLiveStatus {
 function getStatusConfig(status: string) {
   switch (status) {
     case "idle":
-      return { label: "Ocioso", color: "bg-green-500", textColor: "text-green-700", icon: Headphones };
+      return { label: "Ocioso", color: "bg-success", textColor: "text-success-strong", icon: Headphones };
     case "on_call":
-      return { label: "Em chamada", color: "bg-red-500", textColor: "text-red-700", icon: PhoneCall };
+      return { label: "Em chamada", color: "bg-danger", textColor: "text-danger-strong", icon: PhoneCall };
     case "manual_mode":
-      return { label: "Modo manual", color: "bg-blue-500", textColor: "text-blue-700", icon: Phone };
+      return { label: "Modo manual", color: "bg-info", textColor: "text-info-strong", icon: Phone };
     case "acw":
-      return { label: "TPA", color: "bg-yellow-500", textColor: "text-yellow-700", icon: Clock };
+      return { label: "TPA", color: "bg-warning", textColor: "text-warning-strong", icon: Clock };
     case "on_break":
-      return { label: "Intervalo", color: "bg-orange-500", textColor: "text-orange-700", icon: Coffee };
+      return { label: "Intervalo", color: "bg-warning", textColor: "text-warning-strong", icon: Coffee };
     default:
       return { label: "Offline", color: "bg-muted", textColor: "text-muted-foreground", icon: WifiOff };
   }
@@ -186,11 +186,11 @@ export function ThreeCPlusLiveMonitor() {
             <Users className="h-3.5 w-3.5" />
             {onlineCount} online
           </Badge>
-          <Badge variant="outline" className="gap-1.5 px-3 py-1 border-red-500/30 text-red-600">
+          <Badge variant="outline" className="gap-1.5 px-3 py-1 border-danger/30 text-danger">
             <PhoneCall className="h-3.5 w-3.5" />
             {inCallCount} em chamada
           </Badge>
-          <Badge variant="outline" className="gap-1.5 px-3 py-1 border-orange-500/30 text-orange-600">
+          <Badge variant="outline" className="gap-1.5 px-3 py-1 border-warning/30 text-warning">
             <Coffee className="h-3.5 w-3.5" />
             {onBreakCount} em pausa
           </Badge>
@@ -220,8 +220,8 @@ export function ThreeCPlusLiveMonitor() {
                 key={agent.userId}
                 className={cn(
                   "transition-all",
-                  agent.status === "on_call" && "border-red-500/30 shadow-red-500/5 shadow-md",
-                  agent.status === "on_break" && "border-orange-500/20"
+                  agent.status === "on_call" && "border-danger/30 shadow-danger/5 shadow-md",
+                  agent.status === "on_break" && "border-warning/20"
                 )}
               >
                 <CardContent className="pt-4 pb-3 space-y-3">
@@ -230,9 +230,9 @@ export function ThreeCPlusLiveMonitor() {
                       <div
                         className={cn(
                           "h-8 w-8 rounded-full flex items-center justify-center",
-                          agent.status === "on_call" ? "bg-red-500/10" :
-                          agent.status === "idle" ? "bg-green-500/10" :
-                          agent.status === "on_break" ? "bg-orange-500/10" :
+                          agent.status === "on_call" ? "bg-danger/10" :
+                          agent.status === "idle" ? "bg-success/10" :
+                          agent.status === "on_break" ? "bg-warning/10" :
                           "bg-muted"
                         )}
                       >
@@ -264,7 +264,7 @@ export function ThreeCPlusLiveMonitor() {
 
                   {/* In call details */}
                   {agent.status === "on_call" && (
-                    <div className="bg-red-500/5 rounded-md px-3 py-2 border border-red-500/10">
+                    <div className="bg-danger/5 rounded-md px-3 py-2 border border-danger/10">
                       <p className="text-xs font-medium">
                         {agent.currentContactName || agent.currentPhone || "Chamada ativa"}
                       </p>
@@ -276,7 +276,7 @@ export function ThreeCPlusLiveMonitor() {
 
                   {/* On break details */}
                   {agent.status === "on_break" && agent.pauseName && (
-                    <div className="bg-orange-500/5 rounded-md px-3 py-2 border border-orange-500/10">
+                    <div className="bg-warning/5 rounded-md px-3 py-2 border border-warning/10">
                       <p className="text-xs">{agent.pauseName}</p>
                     </div>
                   )}

@@ -64,14 +64,14 @@ function formatCompactCurrency(value: number): string {
 
 const MEDAL_EMOJI: Record<number, string> = { 0: "🥇", 1: "🥈", 2: "🥉" };
 const PODIUM_GRADIENTS: Record<number, string> = {
-  0: "from-amber-400 to-yellow-500",
-  1: "from-gray-300 to-slate-400",
-  2: "from-orange-600 to-amber-700",
+  0: "from-warning to-warning",
+  1: "from-muted to-muted-foreground",
+  2: "from-warning to-warning",
 };
 const PODIUM_BORDER: Record<number, string> = {
-  0: "border-amber-400",
-  1: "border-gray-300",
-  2: "border-orange-600",
+  0: "border-warning",
+  1: "border-border",
+  2: "border-warning",
 };
 const PODIUM_HEIGHTS: Record<number, number> = { 0: 260, 1: 190, 2: 140 };
 

@@ -168,15 +168,15 @@ export function TeamConversationAnalysisTab() {
   const selectedMemberName = members.find((m) => m.id === selectedMember)?.name || "";
 
   const getResponseTimeColor = (minutes: number) => {
-    if (minutes <= 5) return "text-emerald-600";
-    if (minutes <= 15) return "text-amber-600";
-    return "text-red-600";
+    if (minutes <= 5) return "text-success";
+    if (minutes <= 15) return "text-warning";
+    return "text-danger";
   };
 
   const getResponseTimeIcon = (minutes: number) => {
-    if (minutes <= 5) return <Zap className="h-5 w-5 text-emerald-500" />;
-    if (minutes <= 15) return <Clock className="h-5 w-5 text-amber-500" />;
-    return <AlertTriangle className="h-5 w-5 text-red-500" />;
+    if (minutes <= 5) return <Zap className="h-5 w-5 text-success" />;
+    if (minutes <= 15) return <Clock className="h-5 w-5 text-warning" />;
+    return <AlertTriangle className="h-5 w-5 text-danger" />;
   };
 
   return (
@@ -257,11 +257,11 @@ export function TeamConversationAnalysisTab() {
                 <p className="text-2xl font-bold mt-1">{metrics.total}</p>
                 <div className="flex gap-2 mt-1">
                   <Badge variant="outline" className="text-[10px] gap-1">
-                    <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                    <CheckCircle2 className="h-3 w-3 text-success" />
                     {metrics.closed_count} fechadas
                   </Badge>
                   <Badge variant="outline" className="text-[10px] gap-1">
-                    <Clock className="h-3 w-3 text-amber-500" />
+                    <Clock className="h-3 w-3 text-warning" />
                     {metrics.open_count} abertas
                   </Badge>
                 </div>
@@ -313,11 +313,11 @@ export function TeamConversationAnalysisTab() {
                 </div>
                 <div className="flex items-baseline gap-3 mt-1">
                   <div className="text-center">
-                    <p className="text-xl font-bold text-emerald-600">{metrics.fast_responses_pct}%</p>
+                    <p className="text-xl font-bold text-success">{metrics.fast_responses_pct}%</p>
                     <p className="text-[9px] text-muted-foreground">≤5 min</p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xl font-bold text-red-600">{metrics.slow_responses_pct}%</p>
+                    <p className="text-xl font-bold text-danger">{metrics.slow_responses_pct}%</p>
                     <p className="text-[9px] text-muted-foreground">&gt;30 min</p>
                   </div>
                 </div>

@@ -530,7 +530,7 @@ export default function FinancialBankAccountsPage() {
                         )}
                       </div>
                     </TableCell>
-                    <TableCell className={`text-right font-medium ${account.current_balance >= 0 ? "text-green-600" : "text-red-600"}`}>
+                    <TableCell className={`text-right font-medium ${account.current_balance >= 0 ? "text-success" : "text-danger"}`}>
                       {formatCurrency(account.current_balance)}
                     </TableCell>
                     <TableCell>
@@ -539,7 +539,7 @@ export default function FinancialBankAccountsPage() {
                           {account.is_active ? "Ativa" : "Inativa"}
                         </Badge>
                         {account.openfinance_account_id && (
-                          <Badge variant="outline" className="text-xs border-emerald-500/50 text-emerald-600">
+                          <Badge variant="outline" className="text-xs border-success/50 text-success">
                             Pluggy
                           </Badge>
                         )}

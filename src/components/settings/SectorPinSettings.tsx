@@ -151,7 +151,7 @@ export function SectorPinSettings() {
                   <Icon className="h-4 w-4" />
                   {sector.name}
                   {hasPin && (
-                    <Lock className="h-3 w-3 text-amber-500" />
+                    <Lock className="h-3 w-3 text-warning" />
                   )}
                 </Button>
               );
@@ -163,14 +163,14 @@ export function SectorPinSettings() {
         <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
           {hasPinConfigured ? (
             <>
-              <Lock className="h-5 w-5 text-amber-500" />
+              <Lock className="h-5 w-5 text-warning" />
               <div className="flex-1">
                 <p className="text-sm font-medium">PIN configurado</p>
                 <p className="text-xs text-muted-foreground">
                   O setor {sectorInfo?.name} está protegido por PIN
                 </p>
               </div>
-              <Badge variant="outline" className="text-amber-600 border-amber-300">
+              <Badge variant="outline" className="text-warning border-warning">
                 Protegido
               </Badge>
             </>

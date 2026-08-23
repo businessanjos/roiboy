@@ -163,11 +163,11 @@ export function CommissionDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                  <Trophy className="h-5 w-5 text-emerald-500" />
+                <div className="p-2.5 rounded-lg bg-success/10">
+                  <Trophy className="h-5 w-5 text-success" />
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-emerald-600">{formatCurrency(closerTotals.wonValue)}</p>
+                  <p className="text-2xl font-bold text-success">{formatCurrency(closerTotals.wonValue)}</p>
                   <p className="text-xs text-muted-foreground">Total vendido (Closers)</p>
                 </div>
               </div>
@@ -176,8 +176,8 @@ export function CommissionDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-blue-500/10">
-                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                <div className="p-2.5 rounded-lg bg-info/10">
+                  <TrendingUp className="h-5 w-5 text-info" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{formatCurrency(closerTotals.totalCommission)}</p>
@@ -189,8 +189,8 @@ export function CommissionDashboard({
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-lg bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                <div className="p-2.5 rounded-lg bg-success/10">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{closerTotals.qualifiedCount}/{closerTotals.totalCount}</p>
@@ -280,9 +280,9 @@ export function CommissionDashboard({
                               <span className="text-sm">{period.total_calls}</span>
                               {period.triggers_met?.min_calls !== undefined && (
                                 period.triggers_met.min_calls ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                  <CheckCircle2 className="h-3 w-3 text-success" />
                                 ) : (
-                                  <XCircle className="h-3 w-3 text-red-500" />
+                                  <XCircle className="h-3 w-3 text-danger" />
                                 )
                               )}
                             </div>
@@ -292,9 +292,9 @@ export function CommissionDashboard({
                               <span className="text-sm">{period.conversion_rate.toFixed(0)}%</span>
                               {period.triggers_met?.min_conversion_rate !== undefined && (
                                 period.triggers_met.min_conversion_rate ? (
-                                  <CheckCircle2 className="h-3 w-3 text-green-500" />
+                                  <CheckCircle2 className="h-3 w-3 text-success" />
                                 ) : (
-                                  <XCircle className="h-3 w-3 text-red-500" />
+                                  <XCircle className="h-3 w-3 text-danger" />
                                 )
                               )}
                             </div>
@@ -305,9 +305,9 @@ export function CommissionDashboard({
                             </span>
                             {period.triggers_met?.tasks_completed !== undefined && (
                               period.triggers_met.tasks_completed ? (
-                                <CheckCircle2 className="h-3 w-3 text-green-500 inline ml-1" />
+                                <CheckCircle2 className="h-3 w-3 text-success inline ml-1" />
                               ) : (
-                                <XCircle className="h-3 w-3 text-red-500 inline ml-1" />
+                                <XCircle className="h-3 w-3 text-danger inline ml-1" />
                               )
                             )}
                           </TableCell>
@@ -317,22 +317,22 @@ export function CommissionDashboard({
                                 — Sem gatilhos
                               </Badge>
                             ) : period.all_triggers_met ? (
-                              <Badge className="bg-green-500/10 text-green-600 border-green-500/30 text-[10px]">
+                              <Badge className="bg-success/10 text-success border-success/30 text-[10px]">
                                 ✅ OK
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="text-red-500 border-red-500/30 text-[10px]">
+                              <Badge variant="outline" className="text-danger border-danger/30 text-[10px]">
                                 ❌ Pendente
                               </Badge>
                             )}
                           </TableCell>
                           <TableCell className="text-right">
                             <div>
-                              <span className={`font-bold ${period.all_triggers_met ? "text-emerald-600" : "text-muted-foreground line-through"}`}>
+                              <span className={`font-bold ${period.all_triggers_met ? "text-success" : "text-muted-foreground line-through"}`}>
                                 {formatCurrency(period.total_commission)}
                               </span>
                               {period.bonus_value > 0 && (
-                                <p className="text-[10px] text-amber-600">
+                                <p className="text-[10px] text-warning">
                                   +{formatCurrency(period.bonus_value)} bônus
                                 </p>
                               )}
@@ -343,9 +343,9 @@ export function CommissionDashboard({
                               variant="outline"
                               className={`text-[10px] ${
                                 period.status === "paid"
-                                  ? "bg-green-500/10 text-green-600 border-green-500/30"
+                                  ? "bg-success/10 text-success border-success/30"
                                   : period.status === "approved"
-                                  ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                  ? "bg-info/10 text-info border-info/30"
                                   : "bg-muted text-muted-foreground"
                               }`}
                             >
@@ -420,7 +420,7 @@ export function CommissionDashboard({
                             </TableCell>
                             <TableCell className="text-center">
                               <div className="flex items-center justify-center gap-1.5">
-                                <CalendarCheck className="h-3.5 w-3.5 text-emerald-500" />
+                                <CalendarCheck className="h-3.5 w-3.5 text-success" />
                                 <span className="text-sm font-semibold">{originatedSales}</span>
                               </div>
                             </TableCell>
@@ -431,7 +431,7 @@ export function CommissionDashboard({
                               </span>
                             </TableCell>
                             <TableCell className="text-right">
-                              <span className="font-bold text-emerald-600">
+                              <span className="font-bold text-success">
                                 {formatCurrency(period.total_commission)}
                               </span>
                             </TableCell>
@@ -440,9 +440,9 @@ export function CommissionDashboard({
                                 variant="outline"
                                 className={`text-[10px] ${
                                   period.status === "paid"
-                                    ? "bg-green-500/10 text-green-600 border-green-500/30"
+                                    ? "bg-success/10 text-success border-success/30"
                                     : period.status === "approved"
-                                    ? "bg-blue-500/10 text-blue-600 border-blue-500/30"
+                                    ? "bg-info/10 text-info border-info/30"
                                     : "bg-muted text-muted-foreground"
                                 }`}
                               >

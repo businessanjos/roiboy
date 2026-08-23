@@ -24,8 +24,8 @@ import { cn } from "@/lib/utils";
 
 // Produtos elegíveis para a mentoria ao vivo (Eternum Club + Rykas Mentoring)
 const MENTORING_PRODUCTS: { id: string; label: string; program: "EC" | "RM"; className: string }[] = [
-  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
-  { id: "6f74bb43-a1be-410f-a708-6abab066bb38", label: "Eternum Club", program: "EC", className: "bg-amber-500/15 text-amber-700 border-amber-500/30 dark:text-amber-300" },
+  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", label: "Eternum Club", program: "EC", className: "bg-warning/15 text-warning-strong border-warning/30 dark:text-warning" },
+  { id: "6f74bb43-a1be-410f-a708-6abab066bb38", label: "Eternum Club", program: "EC", className: "bg-warning/15 text-warning-strong border-warning/30 dark:text-warning" },
   { id: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
   { id: "eae406e9-6076-41eb-96ed-df0ab187a11c", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
 ];
@@ -63,12 +63,12 @@ interface EcMember {
 }
 
 const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; className: string }[] = [
-  { value: "novata", label: "Novata", className: "bg-blue-500/10 text-blue-700 border-blue-500/30 dark:text-blue-300" },
+  { value: "novata", label: "Novata", className: "bg-info/10 text-info-strong border-info/30 dark:text-info" },
   { value: "agendado", label: "Agendado", className: "bg-violet-500/10 text-violet-700 border-violet-500/30 dark:text-violet-300" },
-  { value: "realizada_agendar_proxima", label: "Realizada – Agendar a próxima", className: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-300" },
-  { value: "remarcar", label: "Remarcar", className: "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-300" },
-  { value: "nao_quer_agendar", label: "Não quer agendar", className: "bg-red-500/10 text-red-700 border-red-500/30 dark:text-red-300" },
-  { value: "nao_respondeu", label: "Não respondeu", className: "bg-gray-500/10 text-gray-700 border-gray-500/30 dark:text-gray-300" },
+  { value: "realizada_agendar_proxima", label: "Realizada – Agendar a próxima", className: "bg-success/10 text-success-strong border-success/30 dark:text-success" },
+  { value: "remarcar", label: "Remarcar", className: "bg-warning/10 text-warning-strong border-warning/30 dark:text-warning" },
+  { value: "nao_quer_agendar", label: "Não quer agendar", className: "bg-danger/10 text-danger-strong border-danger/30 dark:text-danger" },
+  { value: "nao_respondeu", label: "Não respondeu", className: "bg-muted-foreground/10 text-foreground border-border/30 dark:text-muted-foreground" },
 ];
 
 const STATUS_MAP = new Map(MENTORSHIP_STATUS_OPTIONS.map((o) => [o.value, o]));
@@ -383,7 +383,7 @@ export default function MentoriaEC() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <div className="flex items-center gap-2">
-            <GraduationCap className="h-6 w-6 text-amber-600" />
+            <GraduationCap className="h-6 w-6 text-warning" />
             <h1 className="text-2xl font-semibold">Mentoria Ao Vivo</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
@@ -399,7 +399,7 @@ export default function MentoriaEC() {
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Sem mentoria marcada</div>
-          <div className="text-2xl font-semibold mt-1 text-red-600">{totals.pending}</div>
+          <div className="text-2xl font-semibold mt-1 text-danger">{totals.pending}</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Agendadas (futuras)</div>
@@ -407,7 +407,7 @@ export default function MentoriaEC() {
         </Card>
         <Card className="p-4">
           <div className="text-xs text-muted-foreground uppercase">Realizadas</div>
-          <div className="text-2xl font-semibold mt-1 text-emerald-600">{totals.done}</div>
+          <div className="text-2xl font-semibold mt-1 text-success">{totals.done}</div>
         </Card>
       </div>
 
@@ -599,7 +599,7 @@ export default function MentoriaEC() {
                     </TableCell>
                     <TableCell>
                       {tab === "realizadas" ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 dark:text-emerald-300 gap-1">
+                        <Badge className="bg-success/15 text-success-strong border-success/30 dark:text-success gap-1">
                           <CheckCircle2 className="h-3 w-3" /> Realizada
                         </Badge>
                       ) : m.nextScheduled ? (
@@ -607,7 +607,7 @@ export default function MentoriaEC() {
                           <CalendarClock className="h-3 w-3" /> Agendada
                         </Badge>
                       ) : (
-                        <Badge className="bg-red-500/15 text-red-700 border-red-500/30 dark:text-red-300 gap-1">
+                        <Badge className="bg-danger/15 text-danger-strong border-danger/30 dark:text-danger gap-1">
                           <Clock className="h-3 w-3" /> Em aberto
                         </Badge>
                       )}

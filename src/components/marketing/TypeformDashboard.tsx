@@ -240,18 +240,18 @@ export function TypeformDashboard() {
           <div className="flex items-center justify-between flex-wrap gap-3">
             <div>
               <CardTitle className="flex items-center gap-2">
-                <FileText className="w-5 h-5 text-emerald-500" />Funil Typeform
+                <FileText className="w-5 h-5 text-success" />Funil Typeform
               </CardTitle>
               <CardDescription className="space-y-1">
                 <span className="block">
                   {isLifetime ? (
                     <>
-                      <Badge variant="outline" className="mr-1.5 border-sky-500/40 text-sky-500 bg-sky-500/5">Histórico total</Badge>
+                      <Badge variant="outline" className="mr-1.5 border-info/40 text-info bg-info/5">Histórico total</Badge>
                       Mostrando todos os dados desde a criação dos formulários.
                     </>
                   ) : (
                     <>
-                      <Badge variant="outline" className="mr-1.5 border-emerald-500/40 text-emerald-500 bg-emerald-500/5">Período · {periodLabel}</Badge>
+                      <Badge variant="outline" className="mr-1.5 border-success/40 text-success bg-success/5">Período · {periodLabel}</Badge>
                       Todos os cards consideram apenas o intervalo selecionado.
                     </>
                   )}
@@ -259,11 +259,11 @@ export function TypeformDashboard() {
                 {consistency && (
                   <span className="block pt-1">
                     {consistency.ok || (consistency.out_of_scope_responses ?? 0) === 0 ? (
-                      <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5" title={`${consistency.responses_in_scope} resposta(s) validada(s) em ${consistency.scope_form_ids?.length || 0} funil(is)`}>
+                      <Badge variant="outline" className="border-success/40 text-success bg-success/5" title={`${consistency.responses_in_scope} resposta(s) validada(s) em ${consistency.scope_form_ids?.length || 0} funil(is)`}>
                         ✓ Dados consistentes ({consistency.responses_in_scope} resp.)
                       </Badge>
                     ) : (
-                      <Badge variant="outline" className="border-amber-500/40 text-amber-500 bg-amber-500/5" title="Foram encontradas respostas fora do escopo do funil selecionado. Os números exibidos descartaram esses registros.">
+                      <Badge variant="outline" className="border-warning/40 text-warning bg-warning/5" title="Foram encontradas respostas fora do escopo do funil selecionado. Os números exibidos descartaram esses registros.">
                         ⚠ {consistency.out_of_scope_responses} resposta(s) fora do escopo descartadas
                       </Badge>
                     )}
@@ -330,7 +330,7 @@ export function TypeformDashboard() {
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-2">
                   <span className="text-sm font-semibold">Big picture</span>
-                  <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5 text-[10px]">Typeform · {periodLabel}</Badge>
+                  <Badge variant="outline" className="border-info/40 text-info bg-info/5 text-[10px]">Typeform · {periodLabel}</Badge>
                 </div>
                 {loadingBigPicture && <RefreshCw className="w-3.5 h-3.5 animate-spin text-muted-foreground" />}
               </div>
@@ -377,14 +377,14 @@ export function TypeformDashboard() {
                 }
                 if (!issues.length) return null;
                 return (
-                  <Alert className="mb-4 border-amber-500/40 bg-amber-500/5 text-amber-700 dark:text-amber-400">
-                    <AlertTriangle className="h-4 w-4 !text-amber-500" />
+                  <Alert className="mb-4 border-warning/40 bg-warning/5 text-warning-strong dark:text-warning">
+                    <AlertTriangle className="h-4 w-4 !text-warning" />
                     <AlertTitle className="flex items-center justify-between gap-3">
                       <span>Discrepância entre Insights (Typeform) e DB (Roy)</span>
                       <Button
                         variant="outline"
                         size="sm"
-                        className="h-7 border-amber-500/40 text-amber-600 hover:bg-amber-500/10"
+                        className="h-7 border-warning/40 text-warning hover:bg-warning/10"
                         onClick={refresh}
                         disabled={loadingFunnel}
                       >
@@ -406,7 +406,7 @@ export function TypeformDashboard() {
               <div className="space-y-4">
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-sky-500/40 text-sky-500 bg-sky-500/5">
+                    <Badge variant="outline" className="border-info/40 text-info bg-info/5">
                       {isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}
                     </Badge>
                     <span className="text-xs text-muted-foreground">
@@ -478,7 +478,7 @@ export function TypeformDashboard() {
                 </div>
                 <div>
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
+                    <Badge variant="outline" className="border-success/40 text-success bg-success/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
                     <span className="text-xs text-muted-foreground">{isLifetime ? 'todas as respostas recebidas' : 'filtrado pelo intervalo selecionado'}</span>
                   </div>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -581,7 +581,7 @@ export function TypeformDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between gap-3 flex-wrap">
               <CardTitle className="text-base">Formulários rastreados</CardTitle>
-              <Badge variant="outline" className="border-emerald-500/40 text-emerald-500 bg-emerald-500/5">
+              <Badge variant="outline" className="border-success/40 text-success bg-success/5">
                 Métricas · {periodLabel}
               </Badge>
             </div>
@@ -600,7 +600,7 @@ export function TypeformDashboard() {
                       </div>
                       {f.campaign_tag && <Badge variant="secondary">{f.campaign_tag}</Badge>}
                       {f.webhook_installed ? (
-                        <Badge className="bg-emerald-500/15 text-emerald-500 border-emerald-500/30">Webhook ativo</Badge>
+                        <Badge className="bg-success/15 text-success border-success/30">Webhook ativo</Badge>
                       ) : (
                         <Badge variant="outline">Sem webhook</Badge>
                       )}
@@ -610,10 +610,10 @@ export function TypeformDashboard() {
                         <Skeleton className="h-8 w-64" />
                       ) : m ? (
                         <>
-                          <MiniMetric icon={CheckCircle2} label="Submissões" value={m.submissions.toLocaleString('pt-BR')} color="text-sky-500" />
-                          <MiniMetric icon={CheckCircle2} label="Completos" value={m.completed.toLocaleString('pt-BR')} color="text-emerald-500" />
+                          <MiniMetric icon={CheckCircle2} label="Submissões" value={m.submissions.toLocaleString('pt-BR')} color="text-info" />
+                          <MiniMetric icon={CheckCircle2} label="Completos" value={m.completed.toLocaleString('pt-BR')} color="text-success" />
                           <MiniMetric icon={Users} label="Lead Roy" value={m.matched.toLocaleString('pt-BR')} color="text-violet-500" />
-                          <MiniMetric icon={Trophy} label="Ganhos" value={`${m.won}${m.won_value ? ` · ${fmtBRL(m.won_value)}` : ''}`} color="text-amber-500" />
+                          <MiniMetric icon={Trophy} label="Ganhos" value={`${m.won}${m.won_value ? ` · ${fmtBRL(m.won_value)}` : ''}`} color="text-warning" />
                         </>
                       ) : (
                         <span className="text-xs text-muted-foreground">sem dados</span>
@@ -712,7 +712,7 @@ export function TypeformDashboard() {
         <DialogContent className="max-w-3xl max-h-[85vh] flex flex-col gap-0 p-0">
           <DialogHeader className="p-6 pb-4 border-b border-border/40">
             <DialogTitle className="flex items-center gap-2">
-              <Trophy className="w-4 h-4 text-emerald-500" />
+              <Trophy className="w-4 h-4 text-success" />
               Ganhos cruzados com o Typeform
             </DialogTitle>
             <DialogDescription>
@@ -742,7 +742,7 @@ export function TypeformDashboard() {
                     </div>
                   </div>
                   <div className="text-right shrink-0">
-                    <p className="font-bold text-emerald-500">{fmtBRL(d.value || 0)}</p>
+                    <p className="font-bold text-success">{fmtBRL(d.value || 0)}</p>
                     <Button variant="ghost" size="sm" asChild className="h-7 mt-1">
                       <a href={`/sales?deal=${d.id}`} target="_blank" rel="noreferrer">
                         Abrir <ExternalLink className="w-3 h-3 ml-1" />
@@ -763,7 +763,7 @@ export function TypeformDashboard() {
         <DialogContent className="max-w-2xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Info className="w-5 h-5 text-sky-500" />
+              <Info className="w-5 h-5 text-info" />
               Como calculamos: {detailsCard?.label}
             </DialogTitle>
             <DialogDescription>
@@ -822,14 +822,14 @@ export function TypeformDashboard() {
 
 function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, source, onClick, onDetails }: any) {
   const scopeStyles = scope === 'lifetime'
-    ? 'border-sky-500/30 bg-sky-500/5'
+    ? 'border-info/30 bg-info/5'
     : scope === 'period'
-      ? 'border-emerald-500/30 bg-emerald-500/5'
+      ? 'border-success/30 bg-success/5'
       : 'border-border/30 bg-muted/20';
   const clickable = typeof onClick === 'function';
   return (
     <div
-      className={`p-3 rounded-lg border ${highlight ? 'border-emerald-500/40 bg-emerald-500/10' : scopeStyles} ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-emerald-500/40 transition' : ''}`}
+      className={`p-3 rounded-lg border ${highlight ? 'border-success/40 bg-success/10' : scopeStyles} ${clickable ? 'cursor-pointer hover:ring-2 hover:ring-success/40 transition' : ''}`}
       onClick={clickable ? onClick : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}

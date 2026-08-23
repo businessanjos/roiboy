@@ -478,7 +478,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 onClick={onOpenTemplates}
                 className="flex items-center gap-1.5 whitespace-nowrap rounded-full bg-zapp-hover px-3 py-1.5 text-xs font-medium text-zapp-text active:scale-95 transition-transform"
               >
-                <BadgeCheck className="h-3.5 w-3.5 text-emerald-500" />
+                <BadgeCheck className="h-3.5 w-3.5 text-success" />
                 Template
               </button>
             )}
@@ -631,7 +631,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               <Button
                 variant="ghost"
                 size="icon"
-                className="flex text-emerald-500 hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+                className="flex text-success hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
                 onClick={onOpenTemplates}
               >
                 <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5" />

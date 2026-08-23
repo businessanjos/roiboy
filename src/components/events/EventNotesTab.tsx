@@ -197,10 +197,10 @@ export default function EventNotesTab({ eventId, accountId }: Props) {
 
   const getNoteTypeBadge = (type: string | null) => {
     const config: Record<string, { className: string }> = {
-      general: { className: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300" },
-      experience: { className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300" },
-      feedback: { className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-300" },
-      improvement: { className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300" },
+      general: { className: "bg-muted text-foreground dark:bg-muted-foreground dark:text-muted-foreground" },
+      experience: { className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
+      feedback: { className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+      improvement: { className: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
     };
     const { className } = config[type || "general"] || config.general;
     return (

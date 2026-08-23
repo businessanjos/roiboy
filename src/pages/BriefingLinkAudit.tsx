@@ -30,17 +30,17 @@ interface Row {
 const STATUS_META: Record<Status, { label: string; className: string; hint: string }> = {
   ok: {
     label: "Vinculado na origem",
-    className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
+    className: "bg-success/10 text-success border-success/30",
     hint: "Briefing criado já com o cliente vinculado.",
   },
   auto: {
     label: "Corrigido automaticamente",
-    className: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+    className: "bg-info/10 text-info border-info/30",
     hint: "Vínculo negócio → cliente aplicado depois da criação (trigger/backfill).",
   },
   sem_cliente: {
     label: "Sem cliente vinculado",
-    className: "bg-amber-500/10 text-amber-600 border-amber-500/30",
+    className: "bg-warning/10 text-warning border-warning/30",
     hint: "Negócio ainda não convertido em cliente — o briefing não aparece na ficha do CS.",
   },
   sem_negocio: {
@@ -50,7 +50,7 @@ const STATUS_META: Record<Status, { label: string; className: string; hint: stri
   },
   incompleto: {
     label: "Dados incompletos",
-    className: "bg-orange-500/10 text-orange-600 border-orange-500/30",
+    className: "bg-warning/10 text-warning border-warning/30",
     hint: "Briefing vinculado, porém não finalizado pelo Comercial.",
   },
 };
@@ -272,7 +272,7 @@ export default function BriefingLinkAudit() {
                               {r.clientName ?? "Cliente"}
                             </Link>
                           ) : r.dealClientId ? (
-                            <span className="text-amber-600 text-sm">Cliente existe no negócio, falta vincular</span>
+                            <span className="text-warning text-sm">Cliente existe no negócio, falta vincular</span>
                           ) : (
                             <span className="text-muted-foreground text-sm">— não convertido —</span>
                           )}

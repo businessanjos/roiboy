@@ -326,7 +326,7 @@ export function ThreeCPlusMetrics() {
                 <p className="text-xs text-muted-foreground">Conectadas</p>
                 <p className="text-2xl font-bold">{metrics.connected}</p>
               </div>
-              <PhoneCall className="h-8 w-8 text-green-500/20" />
+              <PhoneCall className="h-8 w-8 text-success/20" />
             </div>
             <div className="flex gap-2 mt-2">
               <Badge variant="outline" className="text-[10px]">
@@ -346,7 +346,7 @@ export function ThreeCPlusMetrics() {
                 <p className="text-xs text-muted-foreground">Duração Média</p>
                 <p className="text-2xl font-bold">{formatDuration(metrics.avgDuration)}</p>
               </div>
-              <Clock className="h-8 w-8 text-blue-500/20" />
+              <Clock className="h-8 w-8 text-info/20" />
             </div>
             <div className="flex gap-2 mt-2">
               <Badge variant="outline" className="text-[10px]">
@@ -363,7 +363,7 @@ export function ThreeCPlusMetrics() {
                 <p className="text-xs text-muted-foreground">TPA Médio</p>
                 <p className="text-2xl font-bold">{formatDuration(metrics.avgAcw)}</p>
               </div>
-              <Timer className="h-8 w-8 text-yellow-500/20" />
+              <Timer className="h-8 w-8 text-warning/20" />
             </div>
             <div className="flex gap-2 mt-2">
               <Badge variant="outline" className="text-[10px]">
@@ -397,7 +397,7 @@ export function ThreeCPlusMetrics() {
         <Card>
           <CardContent className="pt-4 pb-3">
             <div className="flex items-center gap-2 mb-1">
-              <Timer className="h-4 w-4 text-orange-500" />
+              <Timer className="h-4 w-4 text-warning" />
               <p className="text-xs font-medium text-muted-foreground">Tempo em Pausas</p>
             </div>
             <p className="text-xl font-bold">{formatDuration(metrics.totalPauseTime)}</p>

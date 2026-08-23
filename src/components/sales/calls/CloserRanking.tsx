@@ -118,16 +118,16 @@ export function CloserRanking() {
   const maxCalls = Math.max(...ranking.map(r => r.totalCalls), 1);
 
   const getRankIcon = (index: number) => {
-    if (index === 0) return <Crown className="w-6 h-6 text-yellow-500" />;
-    if (index === 1) return <Medal className="w-6 h-6 text-gray-400" />;
-    if (index === 2) return <Award className="w-6 h-6 text-amber-600" />;
+    if (index === 0) return <Crown className="w-6 h-6 text-warning" />;
+    if (index === 1) return <Medal className="w-6 h-6 text-muted-foreground" />;
+    if (index === 2) return <Award className="w-6 h-6 text-warning" />;
     return <span className="w-6 h-6 flex items-center justify-center text-sm font-bold text-muted-foreground">{index + 1}º</span>;
   };
 
   const getRankBg = (index: number) => {
-    if (index === 0) return 'border-yellow-500/30 bg-yellow-500/5';
-    if (index === 1) return 'border-gray-400/30 bg-gray-400/5';
-    if (index === 2) return 'border-amber-600/30 bg-amber-600/5';
+    if (index === 0) return 'border-warning/30 bg-warning/5';
+    if (index === 1) return 'border-border/30 bg-muted/5';
+    if (index === 2) return 'border-warning/30 bg-warning/5';
     return '';
   };
 
@@ -142,7 +142,7 @@ export function CloserRanking() {
                 <div className="flex justify-center mb-2">{getRankIcon(i)}</div>
                 <h3 className="font-semibold text-base mb-1">{seller.userName}</h3>
                 <div className="flex items-center justify-center gap-2 mb-3">
-                  <Badge variant="secondary" className="bg-green-500/10 text-green-600 text-xs">
+                  <Badge variant="secondary" className="bg-success/10 text-success text-xs">
                     {seller.successCalls} campeãs
                   </Badge>
                 </div>
@@ -174,9 +174,9 @@ export function CloserRanking() {
                 <p className="font-medium text-sm truncate">{seller.userName}</p>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
                   <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{seller.totalCalls} calls</span>
-                  <span className="text-green-600">{seller.successCalls} ✓</span>
-                  <span className="text-red-500">{seller.failureCalls} ✗</span>
-                  <span className="text-amber-500">{seller.partialCalls} ~</span>
+                  <span className="text-success">{seller.successCalls} ✓</span>
+                  <span className="text-danger">{seller.failureCalls} ✗</span>
+                  <span className="text-warning">{seller.partialCalls} ~</span>
                 </div>
               </div>
               <div className="text-right shrink-0">

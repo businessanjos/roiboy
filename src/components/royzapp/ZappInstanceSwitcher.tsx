@@ -139,7 +139,7 @@ export function ZappInstanceSwitcher({
                       s.tone === "success"
                         ? "bg-success"
                         : s.tone === "warning"
-                          ? "bg-amber-500"
+                          ? "bg-warning"
                           : "bg-destructive"
                     )}
                     title={s.label}

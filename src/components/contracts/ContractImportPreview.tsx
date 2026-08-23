@@ -207,29 +207,29 @@ export function ContractImportPreview({
             className={cn(
               "rounded-lg p-2 text-center cursor-pointer transition-all border",
               showOnlyNew
-                ? "bg-green-100 dark:bg-green-900/50 border-green-400 dark:border-green-600 ring-2 ring-green-400"
-                : "bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800 hover:border-green-400"
+                ? "bg-success-soft dark:bg-success/50 border-success dark:border-success ring-2 ring-success"
+                : "bg-success-soft dark:bg-success/30 border-success dark:border-success hover:border-success"
             )}
             onClick={() => handleFilterClick("new")}
           >
-            <div className="text-xl font-bold text-green-600">{stats.newCount}</div>
-            <div className="text-xs text-green-600">Novos {showOnlyNew && "✓"}</div>
+            <div className="text-xl font-bold text-success">{stats.newCount}</div>
+            <div className="text-xs text-success">Novos {showOnlyNew && "✓"}</div>
           </div>
           <div 
             className={cn(
               "rounded-lg p-2 text-center cursor-pointer transition-all border",
               showOnlyDuplicates
-                ? "bg-amber-100 dark:bg-amber-900/50 border-amber-400 dark:border-amber-600 ring-2 ring-amber-400"
+                ? "bg-warning-soft dark:bg-warning/50 border-warning dark:border-warning ring-2 ring-warning"
                 : stats.duplicatesCount > 0 
-                  ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 hover:border-amber-400" 
+                  ? "bg-warning-soft dark:bg-warning/30 border-warning dark:border-warning hover:border-warning" 
                   : "bg-muted/50 border-transparent"
             )}
             onClick={() => handleFilterClick("duplicates")}
           >
-            <div className={cn("text-xl font-bold", stats.duplicatesCount > 0 ? "text-amber-600" : "text-muted-foreground")}>
+            <div className={cn("text-xl font-bold", stats.duplicatesCount > 0 ? "text-warning" : "text-muted-foreground")}>
               {stats.duplicatesCount}
             </div>
-            <div className={cn("text-xs", stats.duplicatesCount > 0 ? "text-amber-600" : "text-muted-foreground")}>
+            <div className={cn("text-xs", stats.duplicatesCount > 0 ? "text-warning" : "text-muted-foreground")}>
               Duplicatas {showOnlyDuplicates && "✓"}
             </div>
           </div>
@@ -237,17 +237,17 @@ export function ContractImportPreview({
             className={cn(
               "rounded-lg p-2 text-center cursor-pointer transition-all border",
               showOnlyErrors
-                ? "bg-red-100 dark:bg-red-900/50 border-red-400 dark:border-red-600 ring-2 ring-red-400"
+                ? "bg-danger-soft dark:bg-danger/50 border-danger dark:border-danger ring-2 ring-danger"
                 : stats.errorsCount > 0 
-                  ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 hover:border-red-400" 
+                  ? "bg-danger-soft dark:bg-danger/30 border-danger dark:border-danger hover:border-danger" 
                   : "bg-muted/50 border-transparent"
             )}
             onClick={() => handleFilterClick("errors")}
           >
-            <div className={cn("text-xl font-bold", stats.errorsCount > 0 ? "text-red-600" : "text-muted-foreground")}>
+            <div className={cn("text-xl font-bold", stats.errorsCount > 0 ? "text-danger" : "text-muted-foreground")}>
               {stats.errorsCount}
             </div>
-            <div className={cn("text-xs", stats.errorsCount > 0 ? "text-red-600" : "text-muted-foreground")}>
+            <div className={cn("text-xs", stats.errorsCount > 0 ? "text-danger" : "text-muted-foreground")}>
               Erros {showOnlyErrors && "✓"}
             </div>
           </div>
@@ -354,9 +354,9 @@ export function ContractImportPreview({
                       key={row.lineNumber}
                       className={cn(
                         "cursor-pointer",
-                        row.hasError && "bg-red-50/50 dark:bg-red-950/20",
-                        hasDuplicates && !row.hasError && "bg-amber-50/50 dark:bg-amber-950/20",
-                        isSelected && !row.hasError && !hasDuplicates && "bg-green-50/30 dark:bg-green-950/10"
+                        row.hasError && "bg-danger/50 dark:bg-danger/20",
+                        hasDuplicates && !row.hasError && "bg-warning/50 dark:bg-warning/20",
+                        isSelected && !row.hasError && !hasDuplicates && "bg-success/30 dark:bg-success/10"
                       )}
                       onClick={() => toggleRow(row.lineNumber)}
                     >
@@ -407,7 +407,7 @@ export function ContractImportPreview({
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger asChild>
-                                <Badge variant="outline" className="gap-1 border-amber-500 text-amber-600 bg-amber-50 cursor-help">
+                                <Badge variant="outline" className="gap-1 border-warning text-warning bg-warning-soft cursor-help">
                                   <Users className="h-3 w-3" />
                                   Duplicata
                                 </Badge>
@@ -425,7 +425,7 @@ export function ContractImportPreview({
                                         {dup.hasActiveContract !== undefined && (
                                           <span className={cn(
                                             "flex items-center gap-1 text-xs",
-                                            dup.hasActiveContract ? "text-green-600" : "text-muted-foreground"
+                                            dup.hasActiveContract ? "text-success" : "text-muted-foreground"
                                           )}>
                                             {dup.hasActiveContract ? (
                                               <>
@@ -451,7 +451,7 @@ export function ContractImportPreview({
                             </Tooltip>
                           </TooltipProvider>
                         ) : (
-                          <Badge variant="outline" className="gap-1 border-green-500 text-green-600 bg-green-50">
+                          <Badge variant="outline" className="gap-1 border-success text-success bg-success-soft">
                             <Check className="h-3 w-3" />
                             Novo
                           </Badge>

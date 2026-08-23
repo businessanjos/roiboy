@@ -443,7 +443,7 @@ function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-6 w-6 text-muted-foreground hover:text-red-600"
+                className="h-6 w-6 text-muted-foreground hover:text-danger"
                 onClick={onDelete}
                 title="Remover evento"
               >
@@ -460,7 +460,7 @@ function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
               ev.scale === "Grande"
                 ? "bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30 text-[10px]"
                 : ev.scale === "Médio"
-                ? "bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30 text-[10px]"
+                ? "bg-info/10 text-info-strong dark:text-info border-info/30 text-[10px]"
                 : "bg-muted text-muted-foreground border-border text-[10px]"
             }
           >
@@ -796,7 +796,7 @@ export default function EventsTab() {
             </Button>
           </div>
           {aiMutation.error && (
-            <p className="text-xs text-red-600">Erro: {(aiMutation.error as Error).message}</p>
+            <p className="text-xs text-danger">Erro: {(aiMutation.error as Error).message}</p>
           )}
           {aiAnswer && (
             <div className="rounded-lg border bg-card p-4 space-y-3">
@@ -873,7 +873,7 @@ export default function EventsTab() {
           )}
 
           {addMutation.error && (
-            <p className="text-sm text-red-600">Erro: {(addMutation.error as Error).message}</p>
+            <p className="text-sm text-danger">Erro: {(addMutation.error as Error).message}</p>
           )}
 
           {discovered.length > 0 && (

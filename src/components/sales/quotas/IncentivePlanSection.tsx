@@ -332,9 +332,9 @@ export function IncentivePlanSection() {
   };
 
   const getTierIcon = (min: number) => {
-    if (min >= 100) return <TrendingUp className="h-3.5 w-3.5 text-green-600" />;
-    if (min >= 80) return <DollarSign className="h-3.5 w-3.5 text-yellow-600" />;
-    return <TrendingDown className="h-3.5 w-3.5 text-red-500" />;
+    if (min >= 100) return <TrendingUp className="h-3.5 w-3.5 text-success" />;
+    if (min >= 80) return <DollarSign className="h-3.5 w-3.5 text-warning" />;
+    return <TrendingDown className="h-3.5 w-3.5 text-danger" />;
   };
 
   const getTierBadge = (min: number) => {
@@ -388,7 +388,7 @@ export function IncentivePlanSection() {
             </span>
           )}
           {autoSaveStatus === "saved" && (
-            <span className="flex items-center gap-1.5 text-xs text-green-600">
+            <span className="flex items-center gap-1.5 text-xs text-success">
               <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
             </span>
           )}
@@ -463,7 +463,7 @@ export function IncentivePlanSection() {
                     </span>
                   )}
                   {autoSaveStatus === "saved" && (
-                    <span className="flex items-center gap-1.5 text-xs text-green-600">
+                    <span className="flex items-center gap-1.5 text-xs text-success">
                       <CheckCircle2 className="h-3.5 w-3.5" /> Salvo
                     </span>
                   )}
@@ -517,7 +517,7 @@ export function IncentivePlanSection() {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5 text-xs">
-                      <Trophy className="h-3.5 w-3.5 text-amber-600" />
+                      <Trophy className="h-3.5 w-3.5 text-warning" />
                       Meta (R$) — 100%
                     </Label>
                     <div className="relative">
@@ -538,7 +538,7 @@ export function IncentivePlanSection() {
                   </div>
                   <div className="space-y-2">
                     <Label className="flex items-center gap-1.5 text-xs">
-                      <Zap className="h-3.5 w-3.5 text-green-600" />
+                      <Zap className="h-3.5 w-3.5 text-success" />
                       Super Meta (R$) — Acelerador
                     </Label>
                     <div className="relative">
@@ -603,7 +603,7 @@ export function IncentivePlanSection() {
               <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Zap className="h-4 w-4 text-amber-500" />
+                    <Zap className="h-4 w-4 text-warning" />
                     <div>
                       <p className="text-sm font-medium">Bônus Trimestral</p>
                       <p className="text-xs text-muted-foreground">Bônus adicional pago ao fim de cada trimestre. Acumula com o mensal.</p>
@@ -661,7 +661,7 @@ export function IncentivePlanSection() {
               <div className="rounded-lg border bg-muted/30 p-3 space-y-3">
                 <div className="flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
-                    <Trophy className="h-4 w-4 text-amber-600" />
+                    <Trophy className="h-4 w-4 text-warning" />
                     <div>
                       <p className="text-sm font-medium">Bônus Anual</p>
                       <p className="text-xs text-muted-foreground">Bônus adicional pago no fechamento do ano. Acumula com o mensal e trimestral.</p>
@@ -872,7 +872,7 @@ export function IncentivePlanSection() {
               <div className="flex items-center justify-between gap-3">
                 <div>
                   <CardTitle className="text-base flex items-center gap-2">
-                    <Zap className="h-4 w-4 text-amber-600" />
+                    <Zap className="h-4 w-4 text-warning" />
                     Bônus Adicional por Venda (sem teto)
                   </CardTitle>
                   <CardDescription>

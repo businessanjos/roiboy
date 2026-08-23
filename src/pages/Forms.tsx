@@ -1326,13 +1326,13 @@ export default function Forms() {
 
               // Generate a consistent color based on form index
               const colors = [
-                "bg-slate-700",
-                "bg-blue-600",
-                "bg-emerald-600",
-                "bg-amber-600",
+                "bg-muted-foreground",
+                "bg-info",
+                "bg-success",
+                "bg-warning",
                 "bg-purple-600",
-                "bg-rose-600",
-                "bg-cyan-600",
+                "bg-danger",
+                "bg-info",
                 "bg-indigo-600",
               ];
               const colorClass = colors[index % colors.length];

@@ -20,7 +20,7 @@ interface YearlyCalendarViewProps {
 
 const categoryBadges: Record<string, { label: string; color: string }> = {
   marketing: { label: 'MK', color: 'bg-purple-500' },
-  operation: { label: 'OP', color: 'bg-blue-500' },
+  operation: { label: 'OP', color: 'bg-info' },
 };
 
 export function YearlyCalendarView({

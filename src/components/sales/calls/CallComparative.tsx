@@ -82,20 +82,20 @@ Formate em markdown com emojis. Seja extremamente específico e prático.`
     <div className="space-y-4">
       {/* Stats overview */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        <Card className="border-green-500/30 bg-green-500/5">
+        <Card className="border-success/30 bg-success/5">
           <CardContent className="p-4 flex items-center gap-3">
-            <Crown className="w-8 h-8 text-green-500" />
+            <Crown className="w-8 h-8 text-success" />
             <div>
-              <p className="text-2xl font-bold text-green-600">{successCount}</p>
+              <p className="text-2xl font-bold text-success">{successCount}</p>
               <p className="text-xs text-muted-foreground">Calls Campeãs</p>
             </div>
           </CardContent>
         </Card>
-        <Card className="border-red-500/30 bg-red-500/5">
+        <Card className="border-danger/30 bg-danger/5">
           <CardContent className="p-4 flex items-center gap-3">
-            <ThumbsDown className="w-8 h-8 text-red-500" />
+            <ThumbsDown className="w-8 h-8 text-danger" />
             <div>
-              <p className="text-2xl font-bold text-red-600">{failureCount}</p>
+              <p className="text-2xl font-bold text-danger">{failureCount}</p>
               <p className="text-xs text-muted-foreground">Calls Fracassadas</p>
             </div>
           </CardContent>
@@ -123,9 +123,9 @@ Formate em markdown com emojis. Seja extremamente específico e prático.`
           ) : (
             <>
               <div className="flex items-center justify-center gap-3 mb-4">
-                <div className="flex items-center gap-1 text-green-600"><TrendingUp className="w-5 h-5" /><span className="font-medium">{successCount} Campeãs</span></div>
+                <div className="flex items-center gap-1 text-success"><TrendingUp className="w-5 h-5" /><span className="font-medium">{successCount} Campeãs</span></div>
                 <ArrowRight className="w-4 h-4 text-muted-foreground" />
-                <div className="flex items-center gap-1 text-red-500"><TrendingDown className="w-5 h-5" /><span className="font-medium">{failureCount} Fracassadas</span></div>
+                <div className="flex items-center gap-1 text-danger"><TrendingDown className="w-5 h-5" /><span className="font-medium">{failureCount} Fracassadas</span></div>
               </div>
               <Button
                 size="lg"

@@ -80,16 +80,16 @@ const MILESTONE_META: Record<
   first_million: {
     label: "Primeiro milhão",
     icon: Trophy,
-    gradient: "from-amber-500/20 via-amber-400/10 to-yellow-300/5",
-    ring: "ring-amber-500/40",
-    accent: "text-amber-500",
+    gradient: "from-warning/20 via-warning/10 to-warning/5",
+    ring: "ring-warning/40",
+    accent: "text-warning",
   },
   record_month: {
     label: "Mês recorde",
     icon: TrendingUp,
-    gradient: "from-emerald-500/20 via-emerald-400/10 to-teal-300/5",
-    ring: "ring-emerald-500/40",
-    accent: "text-emerald-500",
+    gradient: "from-success/20 via-success/10 to-success/5",
+    ring: "ring-success/40",
+    accent: "text-success",
   },
   expansion: {
     label: "Expansão",
@@ -101,16 +101,16 @@ const MILESTONE_META: Record<
   hundred_patients_month: {
     label: "100 pacientes/mês",
     icon: Users,
-    gradient: "from-sky-500/20 via-blue-400/10 to-cyan-300/5",
-    ring: "ring-sky-500/40",
-    accent: "text-sky-500",
+    gradient: "from-info/20 via-info/10 to-info/5",
+    ring: "ring-info/40",
+    accent: "text-info",
   },
   two_years: {
     label: "Permanência",
     icon: Calendar,
-    gradient: "from-rose-500/20 via-pink-400/10 to-orange-300/5",
-    ring: "ring-rose-500/40",
-    accent: "text-rose-500",
+    gradient: "from-danger/20 via-pink-400/10 to-warning/5",
+    ring: "ring-danger/40",
+    accent: "text-danger",
   },
   custom: {
     label: "Conquista",
@@ -210,7 +210,7 @@ export function ClientMilestones({ clientId }: Props) {
       {/* Header com stats */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
         <div className="flex items-center gap-3">
-          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
+          <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-warning to-danger flex items-center justify-center shadow-lg shadow-warning/20">
             <Trophy className="h-5 w-5 text-white" />
           </div>
           <div>

@@ -408,7 +408,7 @@ export default function Onboarding() {
                   {achievements.filter(a => a.unlocked).map(a => (
                     <div 
                       key={a.id}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white"
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-warning to-warning flex items-center justify-center text-white"
                     >
                       <a.icon className="h-4 w-4" />
                     </div>
@@ -609,8 +609,8 @@ function StepAccount({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-blue-500/10 mb-3">
-          <Building2 className="h-6 w-6 text-blue-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-info/10 mb-3">
+          <Building2 className="h-6 w-6 text-info" />
         </div>
         <h2 className="text-xl font-semibold">Informações da Conta</h2>
         <p className="text-sm text-muted-foreground mt-1">
@@ -687,7 +687,7 @@ function StepAI({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-blue-500/5"
+          className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-info/5"
         >
           <div className="flex items-start gap-3">
             <Sparkles className="h-5 w-5 text-purple-500 mt-0.5" />
@@ -695,19 +695,19 @@ function StepAI({
               <p className="font-medium text-sm">Recursos de IA incluem:</p>
               <ul className="text-sm text-muted-foreground mt-2 space-y-1">
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                   Detecção automática de percepção de ROI
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                   Alertas de risco de churn
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                   Identificação de eventos de vida importantes
                 </li>
                 <li className="flex items-center gap-2">
-                  <CheckCircle className="h-3 w-3 text-green-500" />
+                  <CheckCircle className="h-3 w-3 text-success" />
                   Recomendações de ação personalizadas
                 </li>
               </ul>
@@ -738,8 +738,8 @@ function StepClient({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 mb-3">
-          <User className="h-6 w-6 text-green-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-success/10 mb-3">
+          <User className="h-6 w-6 text-success" />
         </div>
         <h2 className="text-xl font-semibold">Seu Primeiro Cliente</h2>
         <p className="text-sm text-muted-foreground mt-1">
@@ -835,8 +835,8 @@ function StepProduct({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-orange-500/10 mb-3">
-          <Package className="h-6 w-6 text-orange-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-warning/10 mb-3">
+          <Package className="h-6 w-6 text-warning" />
         </div>
         <h2 className="text-xl font-semibold">Seu Primeiro Produto</h2>
         <p className="text-sm text-muted-foreground mt-1">
@@ -1064,8 +1064,8 @@ function StepTeam({
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-cyan-500/10 mb-3">
-          <UserPlus className="h-6 w-6 text-cyan-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-info/10 mb-3">
+          <UserPlus className="h-6 w-6 text-info" />
         </div>
         <h2 className="text-xl font-semibold">Convide sua Equipe</h2>
         <p className="text-sm text-muted-foreground mt-1">

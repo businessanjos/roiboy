@@ -31,8 +31,8 @@ export class ZappErrorBoundary extends Component<Props, State> {
       return (
         <div className="flex items-center justify-center h-full bg-zapp-bg">
           <div className="text-center space-y-4 max-w-md px-4">
-            <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-              <MessageSquare className="h-10 w-10 text-amber-500" />
+            <div className="w-20 h-20 mx-auto rounded-full bg-warning/10 flex items-center justify-center">
+              <MessageSquare className="h-10 w-10 text-warning" />
             </div>
             <h2 className="text-zapp-text text-xl font-semibold">Erro temporário</h2>
             <p className="text-zapp-text-muted text-sm">

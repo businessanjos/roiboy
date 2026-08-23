@@ -136,12 +136,12 @@ export function InstagramConnectDialog({
             {profileInput && (
               <div className="text-xs">
                 {extractedUsername ? (
-                  <span className="text-green-600 flex items-center gap-1">
+                  <span className="text-success flex items-center gap-1">
                     <Instagram className="h-3 w-3" />
                     Perfil detectado: <strong>@{extractedUsername}</strong>
                   </span>
                 ) : (
-                  <span className="text-amber-600">
+                  <span className="text-warning">
                     Digite um link ou nome de usuário válido
                   </span>
                 )}

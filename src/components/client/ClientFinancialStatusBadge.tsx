@@ -18,19 +18,19 @@ const statusConfig: Record<ClientFinancialStatus, {
   em_dia: {
     label: "Em Dia",
     icon: CheckCircle2,
-    className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/20",
+    className: "bg-success/10 text-success border-success/30 hover:bg-success/20",
     description: "Cliente sem pendências financeiras",
   },
   atrasado: {
     label: "Atrasado",
     icon: AlertTriangle,
-    className: "bg-orange-500/10 text-orange-600 border-orange-500/30 hover:bg-orange-500/20",
+    className: "bg-warning/10 text-warning border-warning/30 hover:bg-warning/20",
     description: "Cliente com pagamentos em atraso (1-30 dias)",
   },
   inadimplente: {
     label: "Inadimplente",
     icon: XCircle,
-    className: "bg-red-500/10 text-red-600 border-red-500/30 hover:bg-red-500/20",
+    className: "bg-danger/10 text-danger border-danger/30 hover:bg-danger/20",
     description: "Cliente com pagamentos em atraso há mais de 30 dias",
   },
   sem_dados: {

@@ -113,18 +113,18 @@ const normalize = (value: string) =>
     .trim();
 
 const STATUS_META: Record<FaqArticle["status"], { label: string; className: string }> = {
-  available: { label: "Disponível", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  available: { label: "Disponível", className: "bg-success/10 text-success border-success/20" },
   not_implemented: { label: "Não implementado", className: "bg-destructive/10 text-destructive border-destructive/20" },
-  planned: { label: "Planejado", className: "bg-amber-500/10 text-amber-600 border-amber-500/20" },
+  planned: { label: "Planejado", className: "bg-warning/10 text-warning border-warning/20" },
 };
 
 const REVIEW_META: Record<ReviewStatus, { label: string; className: string }> = {
   draft: { label: "Rascunho", className: "bg-muted text-muted-foreground border-border" },
-  in_review: { label: "Em revisão", className: "bg-blue-500/10 text-blue-600 border-blue-500/20" },
-  published: { label: "Publicado", className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/20" },
+  in_review: { label: "Em revisão", className: "bg-info/10 text-info border-info/20" },
+  published: { label: "Publicado", className: "bg-success/10 text-success border-success/20" },
   changes_requested: {
     label: "Ajustes solicitados",
-    className: "bg-amber-500/10 text-amber-600 border-amber-500/20",
+    className: "bg-warning/10 text-warning border-warning/20",
   },
 };
 
@@ -620,15 +620,15 @@ export default function FinancialFaqPage() {
           <div
             className={cn(
               "h-1 w-full",
-              answer.status === "answered" ? "bg-emerald-500" : "bg-amber-500",
+              answer.status === "answered" ? "bg-success" : "bg-warning",
             )}
           />
           <CardContent className="pt-5">
             <div className="flex items-start gap-3">
               {answer.status === "answered" ? (
-                <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-emerald-600" />
+                <CircleCheck className="mt-0.5 h-5 w-5 shrink-0 text-success" />
               ) : (
-                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                <TriangleAlert className="mt-0.5 h-5 w-5 shrink-0 text-warning" />
               )}
               <div className="min-w-0 flex-1 space-y-4">
                 <div>

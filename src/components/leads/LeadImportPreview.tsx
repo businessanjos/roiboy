@@ -136,11 +136,11 @@ const DUPLICATE_ACTION_OPTIONS: { value: DuplicateAction; label: string; icon: R
 ];
 
 const MATCH_TYPE_BADGES: Record<DuplicateMatchType, { label: string; className: string }> = {
-  external_id: { label: "ID", className: "bg-blue-100 text-blue-700 border-blue-300" },
-  phone: { label: "Tel", className: "bg-amber-100 text-amber-700 border-amber-300" },
-  email: { label: "Email", className: "bg-orange-100 text-orange-700 border-orange-300" },
+  external_id: { label: "ID", className: "bg-info-soft text-info-strong border-info" },
+  phone: { label: "Tel", className: "bg-warning-soft text-warning-strong border-warning" },
+  email: { label: "Email", className: "bg-warning-soft text-warning-strong border-warning" },
   cpf: { label: "CPF", className: "bg-purple-100 text-purple-700 border-purple-300" },
-  name: { label: "Nome", className: "bg-gray-100 text-gray-700 border-gray-300" },
+  name: { label: "Nome", className: "bg-muted text-foreground border-border" },
 };
 
 export function LeadImportPreview({
@@ -271,10 +271,10 @@ export function LeadImportPreview({
           <button
             onClick={() => setFilterMode(filterMode === "new" ? "all" : "new")}
             className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
-              filterMode === "new" ? "bg-green-50 border-green-300 dark:bg-green-950/30" : "hover:bg-muted/50"
+              filterMode === "new" ? "bg-success-soft border-success dark:bg-success/30" : "hover:bg-muted/50"
             }`}
           >
-            <div className="flex items-center gap-1 text-green-600">
+            <div className="flex items-center gap-1 text-success">
               <Plus className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.newCount}</span>
             </div>
@@ -283,10 +283,10 @@ export function LeadImportPreview({
           <button
             onClick={() => setFilterMode(filterMode === "update" ? "all" : "update")}
             className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
-              filterMode === "update" ? "bg-blue-50 border-blue-300 dark:bg-blue-950/30" : "hover:bg-muted/50"
+              filterMode === "update" ? "bg-info-soft border-info dark:bg-info/30" : "hover:bg-muted/50"
             }`}
           >
-            <div className="flex items-center gap-1 text-blue-600">
+            <div className="flex items-center gap-1 text-info">
               <RefreshCw className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.updateCount}</span>
             </div>
@@ -295,10 +295,10 @@ export function LeadImportPreview({
           <button
             onClick={() => setFilterMode(filterMode === "duplicates" ? "all" : "duplicates")}
             className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
-              filterMode === "duplicates" ? "bg-amber-50 border-amber-300 dark:bg-amber-950/30" : "hover:bg-muted/50"
+              filterMode === "duplicates" ? "bg-warning-soft border-warning dark:bg-warning/30" : "hover:bg-muted/50"
             }`}
           >
-            <div className="flex items-center gap-1 text-amber-600">
+            <div className="flex items-center gap-1 text-warning">
               <AlertTriangle className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.duplicateCount}</span>
             </div>
@@ -307,10 +307,10 @@ export function LeadImportPreview({
           <button
             onClick={() => setFilterMode(filterMode === "clients" ? "all" : "clients")}
             className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
-              filterMode === "clients" ? "bg-cyan-50 border-cyan-300 dark:bg-cyan-950/30" : "hover:bg-muted/50"
+              filterMode === "clients" ? "bg-info-soft border-info dark:bg-info/30" : "hover:bg-muted/50"
             }`}
           >
-            <div className="flex items-center gap-1 text-cyan-600">
+            <div className="flex items-center gap-1 text-info">
               <UserCheck className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.clientCount}</span>
             </div>
@@ -319,10 +319,10 @@ export function LeadImportPreview({
           <button
             onClick={() => setFilterMode(filterMode === "errors" ? "all" : "errors")}
             className={`flex flex-col items-center p-2 rounded-lg border transition-colors ${
-              filterMode === "errors" ? "bg-red-50 border-red-300 dark:bg-red-950/30" : "hover:bg-muted/50"
+              filterMode === "errors" ? "bg-danger-soft border-danger dark:bg-danger/30" : "hover:bg-muted/50"
             }`}
           >
-            <div className="flex items-center gap-1 text-red-600">
+            <div className="flex items-center gap-1 text-danger">
               <X className="h-4 w-4" />
               <span className="text-lg font-bold">{stats.errorCount}</span>
             </div>
@@ -346,7 +346,7 @@ export function LeadImportPreview({
               variant="outline"
               size="sm"
               onClick={() => setSelectedRows(new Set(rows.filter(r => !r.hasError && !r.isDuplicate && !r.isClientMatch).map(r => r.lineNumber)))}
-              className="h-7 text-xs text-green-600 border-green-300 hover:bg-green-50 dark:hover:bg-green-950/30"
+              className="h-7 text-xs text-success border-success hover:bg-success-soft dark:hover:bg-success/30"
             >
               <Plus className="h-3 w-3 mr-1" />
               Novos ({stats.newCount})
@@ -357,7 +357,7 @@ export function LeadImportPreview({
               variant="outline"
               size="sm"
               onClick={() => setSelectedRows(new Set(rows.filter(r => r.isDuplicate && r.duplicateInfo?.type === "external_id").map(r => r.lineNumber)))}
-              className="h-7 text-xs text-blue-600 border-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/30"
+              className="h-7 text-xs text-info border-info hover:bg-info-soft dark:hover:bg-info/30"
             >
               <RefreshCw className="h-3 w-3 mr-1" />
               Atualizar ({stats.updateCount})
@@ -368,7 +368,7 @@ export function LeadImportPreview({
               variant="outline"
               size="sm"
               onClick={() => setSelectedRows(new Set(rows.filter(r => r.isDuplicate && r.duplicateInfo?.type !== "external_id").map(r => r.lineNumber)))}
-              className="h-7 text-xs text-amber-600 border-amber-300 hover:bg-amber-50 dark:hover:bg-amber-950/30"
+              className="h-7 text-xs text-warning border-warning hover:bg-warning-soft dark:hover:bg-warning/30"
             >
               <AlertTriangle className="h-3 w-3 mr-1" />
               Duplicados ({stats.duplicateCount})
@@ -379,7 +379,7 @@ export function LeadImportPreview({
               variant="outline"
               size="sm"
               onClick={() => setSelectedRows(new Set(rows.filter(r => r.isClientMatch).map(r => r.lineNumber)))}
-              className="h-7 text-xs text-cyan-600 border-cyan-300 hover:bg-cyan-50 dark:hover:bg-cyan-950/30"
+              className="h-7 text-xs text-info border-info hover:bg-info-soft dark:hover:bg-info/30"
             >
               <UserCheck className="h-3 w-3 mr-1" />
               Clientes ({stats.clientCount})
@@ -487,11 +487,11 @@ export function LeadImportPreview({
                       key={row.lineNumber}
                       className={
                         status === "error"
-                          ? "bg-red-50 dark:bg-red-950/30"
+                          ? "bg-danger-soft dark:bg-danger/30"
                           : status === "update"
-                          ? "bg-blue-50 dark:bg-blue-950/30"
+                          ? "bg-info-soft dark:bg-info/30"
                           : status === "duplicate"
-                          ? "bg-amber-50 dark:bg-amber-950/30"
+                          ? "bg-warning-soft dark:bg-warning/30"
                           : ""
                       }
                     >
@@ -551,7 +551,7 @@ export function LeadImportPreview({
                               <TooltipTrigger asChild>
                                 <Badge 
                                   variant="outline" 
-                                  className="text-xs bg-cyan-100 text-cyan-700 border-cyan-300"
+                                  className="text-xs bg-info-soft text-info-strong border-info"
                                 >
                                   <UserCheck className="h-3 w-3 mr-1" />
                                   Cliente ativo
@@ -580,7 +580,7 @@ export function LeadImportPreview({
                             {MATCH_TYPE_BADGES[row.duplicateInfo.type].label}
                           </Badge>
                         ) : (
-                          <Badge variant="outline" className="text-xs text-green-600 border-green-300">
+                          <Badge variant="outline" className="text-xs text-success border-success">
                             <Check className="h-3 w-3 mr-1" />
                             Novo
                           </Badge>
@@ -590,7 +590,7 @@ export function LeadImportPreview({
                         {row.hasError ? (
                           <span className="text-xs text-muted-foreground">-</span>
                         ) : row.isClientMatch ? (
-                          <Badge variant="outline" className="text-xs text-cyan-600">
+                          <Badge variant="outline" className="text-xs text-info">
                             <SkipForward className="h-3 w-3 mr-1" />
                             Pular
                           </Badge>

@@ -57,14 +57,14 @@ const FIELD_TYPES = [
 ];
 
 const COLOR_OPTIONS = [
-  { value: "green", label: "Verde", class: "bg-emerald-500" },
-  { value: "red", label: "Vermelho", class: "bg-red-500" },
-  { value: "yellow", label: "Amarelo", class: "bg-amber-500" },
-  { value: "blue", label: "Azul", class: "bg-blue-500" },
+  { value: "green", label: "Verde", class: "bg-success" },
+  { value: "red", label: "Vermelho", class: "bg-danger" },
+  { value: "yellow", label: "Amarelo", class: "bg-warning" },
+  { value: "blue", label: "Azul", class: "bg-info" },
   { value: "purple", label: "Roxo", class: "bg-purple-500" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
-  { value: "orange", label: "Laranja", class: "bg-orange-500" },
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
+  { value: "orange", label: "Laranja", class: "bg-warning" },
+  { value: "gray", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 // Sortable option item component for reordering options within a field
@@ -111,7 +111,7 @@ function SortableOptionItem({
         onValueChange={(color) => onUpdate(index, { color })}
       >
         <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
-          <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
+          <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-muted-foreground"}`} />
         </SelectTrigger>
         <SelectContent>
           {COLOR_OPTIONS.map((color) => (
@@ -203,14 +203,14 @@ function SortableFieldItem({
               <span
                 key={opt.value}
                 className={`inline-flex items-center gap-1 text-xs px-1.5 py-0.5 rounded ${
-                  opt.color === "green" ? "bg-emerald-500/20 text-emerald-700" :
-                  opt.color === "red" ? "bg-red-500/20 text-red-700" :
-                  opt.color === "yellow" ? "bg-amber-500/20 text-amber-700" :
-                  opt.color === "blue" ? "bg-blue-500/20 text-blue-700" :
+                  opt.color === "green" ? "bg-success/20 text-success-strong" :
+                  opt.color === "red" ? "bg-danger/20 text-danger-strong" :
+                  opt.color === "yellow" ? "bg-warning/20 text-warning-strong" :
+                  opt.color === "blue" ? "bg-info/20 text-info-strong" :
                   opt.color === "purple" ? "bg-purple-500/20 text-purple-700" :
                   opt.color === "pink" ? "bg-pink-500/20 text-pink-700" :
-                  opt.color === "orange" ? "bg-orange-500/20 text-orange-700" :
-                  "bg-gray-500/20 text-gray-700"
+                  opt.color === "orange" ? "bg-warning/20 text-warning-strong" :
+                  "bg-muted-foreground/20 text-foreground"
                 }`}
               >
                 {opt.label}

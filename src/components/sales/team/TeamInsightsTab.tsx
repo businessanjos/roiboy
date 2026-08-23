@@ -27,16 +27,16 @@ interface InsightHistory {
 }
 
 const categoryConfig = {
-  performance: { icon: TrendingUp, label: "Performance", color: "bg-blue-500/10 text-blue-600 border-blue-200" },
+  performance: { icon: TrendingUp, label: "Performance", color: "bg-info/10 text-info border-info" },
   comportamento: { icon: Activity, label: "Comportamento", color: "bg-purple-500/10 text-purple-600 border-purple-200" },
-  oportunidade: { icon: Lightbulb, label: "Oportunidade", color: "bg-emerald-500/10 text-emerald-600 border-emerald-200" },
-  alerta: { icon: AlertTriangle, label: "Alerta", color: "bg-amber-500/10 text-amber-600 border-amber-200" },
+  oportunidade: { icon: Lightbulb, label: "Oportunidade", color: "bg-success/10 text-success border-success" },
+  alerta: { icon: AlertTriangle, label: "Alerta", color: "bg-warning/10 text-warning border-warning" },
 };
 
 const priorityConfig = {
-  alta: "bg-red-100 text-red-700 border-red-200",
-  média: "bg-yellow-100 text-yellow-700 border-yellow-200",
-  baixa: "bg-green-100 text-green-700 border-green-200",
+  alta: "bg-danger-soft text-danger-strong border-danger",
+  média: "bg-warning-soft text-warning-strong border-warning",
+  baixa: "bg-success-soft text-success-strong border-success",
 };
 
 const TABS = [
@@ -154,7 +154,7 @@ export function TeamInsightsTab() {
               <Icon className="h-4 w-4" />
               {tab.label}
               {hasData && (
-                <span className="ml-1 w-2 h-2 rounded-full bg-emerald-400 inline-block" />
+                <span className="ml-1 w-2 h-2 rounded-full bg-success inline-block" />
               )}
             </Button>
           );

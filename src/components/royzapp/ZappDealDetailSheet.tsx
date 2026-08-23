@@ -416,9 +416,9 @@ export function ZappDealDetailSheet({
                 <Badge 
                   className={cn(
                     "text-xs",
-                    deal.status === "won" && "bg-green-500/20 text-green-500",
-                    deal.status === "lost" && "bg-red-500/20 text-red-500",
-                    deal.status === "open" && "bg-amber-500/20 text-amber-500"
+                    deal.status === "won" && "bg-success/20 text-success",
+                    deal.status === "lost" && "bg-danger/20 text-danger",
+                    deal.status === "open" && "bg-warning/20 text-warning"
                   )}
                 >
                   {deal.status === "won" ? "Ganho" : deal.status === "lost" ? "Perdido" : "Aberto"}
@@ -432,7 +432,7 @@ export function ZappDealDetailSheet({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1 h-8 text-xs border-green-500 text-green-500 hover:bg-green-500/10"
+                      className="flex-1 h-8 text-xs border-success text-success hover:bg-success/10"
                       onClick={async () => {
                         if (currentUser?.account_id && deal) {
                           const result = await validateDealOutcome(dealId, "won", currentUser.account_id);
@@ -464,7 +464,7 @@ export function ZappDealDetailSheet({
                     <Button
                       size="sm"
                       variant="outline"
-                      className="flex-1 h-8 text-xs border-red-500 text-red-500 hover:bg-red-500/10"
+                      className="flex-1 h-8 text-xs border-danger text-danger hover:bg-danger/10"
                       onClick={async () => {
                         if (currentUser?.account_id && deal) {
                           const result = await validateDealOutcome(dealId, "lost", currentUser.account_id);
@@ -782,8 +782,8 @@ export function ZappDealDetailSheet({
                                         className={cn(
                                           "text-[10px] h-4",
                                           item.status === "done" || item.status === "completed"
-                                            ? "border-green-500 text-green-500"
-                                            : "border-amber-500 text-amber-500"
+                                            ? "border-success text-success"
+                                            : "border-warning text-warning"
                                         )}
                                       >
                                         {item.status === "done" || item.status === "completed" ? "Concluído" : "Pendente"}
@@ -826,9 +826,9 @@ export function ZappDealDetailSheet({
                                       }}
                                     >
                                       {item.meetingPlatform === "zoom" ? (
-                                        <span className="text-blue-500">🔵</span>
+                                        <span className="text-info">🔵</span>
                                       ) : (
-                                        <span className="text-green-500">🟢</span>
+                                        <span className="text-success">🟢</span>
                                       )}
                                       Entrar na Reunião
                                       <ExternalLink className="h-3 w-3" />

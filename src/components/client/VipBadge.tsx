@@ -30,7 +30,7 @@ export function VipBadge({ clientId, size = "sm", className }: VipBadgeProps) {
         <TooltipTrigger asChild>
           <span
             className={cn(
-              "inline-flex items-center justify-center text-amber-500 shrink-0",
+              "inline-flex items-center justify-center text-warning shrink-0",
               className
             )}
             aria-label="Cliente VIP"

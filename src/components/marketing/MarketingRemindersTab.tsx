@@ -303,7 +303,7 @@ export default function MarketingRemindersTab() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "sent":
-        return <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" />Enviado</Badge>;
+        return <Badge className="bg-success"><CheckCircle2 className="h-3 w-3 mr-1" />Enviado</Badge>;
       case "pending":
         return <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Pendente</Badge>;
       case "failed":
@@ -313,7 +313,7 @@ export default function MarketingRemindersTab() {
       case "scheduled":
         return <Badge variant="outline"><Calendar className="h-3 w-3 mr-1" />Agendado</Badge>;
       case "completed":
-        return <Badge className="bg-green-500"><CheckCircle2 className="h-3 w-3 mr-1" />Concluído</Badge>;
+        return <Badge className="bg-success"><CheckCircle2 className="h-3 w-3 mr-1" />Concluído</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }

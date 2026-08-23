@@ -17,10 +17,10 @@ import { toast } from "sonner";
 
 const COLUMNS: { status: IdeaStatus; label: string; color: string }[] = [
   { status: "draft", label: "Rascunho", color: "bg-muted-foreground" },
-  { status: "approved", label: "Aprovado", color: "bg-blue-500" },
-  { status: "in_production", label: "Em produção", color: "bg-amber-500" },
+  { status: "approved", label: "Aprovado", color: "bg-info" },
+  { status: "in_production", label: "Em produção", color: "bg-warning" },
   { status: "scheduled", label: "Agendado", color: "bg-purple-500" },
-  { status: "posted", label: "Postado", color: "bg-green-500" },
+  { status: "posted", label: "Postado", color: "bg-success" },
 ];
 
 type ViewMode = "kanban" | "list";

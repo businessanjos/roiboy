@@ -214,11 +214,11 @@ export function PendingClassifications() {
 
   const getConfidenceBadge = (confidence: number) => {
     if (confidence >= 0.8) {
-      return <Badge className="bg-green-100 text-green-800">Alta confiança</Badge>;
+      return <Badge className="bg-success-soft text-success-strong">Alta confiança</Badge>;
     } else if (confidence >= 0.5) {
-      return <Badge className="bg-yellow-100 text-yellow-800">Média confiança</Badge>;
+      return <Badge className="bg-warning-soft text-warning-strong">Média confiança</Badge>;
     }
-    return <Badge className="bg-red-100 text-red-800">Baixa confiança</Badge>;
+    return <Badge className="bg-danger-soft text-danger-strong">Baixa confiança</Badge>;
   };
 
   const handleSelectAll = () => {
@@ -261,7 +261,7 @@ export function PendingClassifications() {
     return (
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <CheckCheck className="h-12 w-12 text-green-500 mb-4" />
+          <CheckCheck className="h-12 w-12 text-success mb-4" />
           <h3 className="font-semibold text-lg">Nenhuma transação pendente</h3>
           <p className="text-muted-foreground text-center mt-2">
             Todas as transações foram classificadas. Importe um novo arquivo OFX para continuar.
@@ -334,8 +334,8 @@ export function PendingClassifications() {
 
                   <div className={`p-2 rounded-full ${
                     item.transaction_type === 'credit' 
-                      ? 'bg-green-100 text-green-600' 
-                      : 'bg-red-100 text-red-600'
+                      ? 'bg-success-soft text-success' 
+                      : 'bg-danger-soft text-danger'
                   }`}>
                     {item.transaction_type === 'credit' 
                       ? <ArrowUpCircle className="h-5 w-5" />
@@ -426,7 +426,7 @@ export function PendingClassifications() {
 
                   <div className="text-right">
                     <p className={`font-bold ${
-                      item.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'
+                      item.transaction_type === 'credit' ? 'text-success' : 'text-danger'
                     }`}>
                       {item.transaction_type === 'credit' ? '+' : '-'}{formatCurrency(item.amount)}
                     </p>
@@ -444,7 +444,7 @@ export function PendingClassifications() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                      className="text-success hover:text-success-strong hover:bg-success-soft"
                       onClick={() => confirmMutation.mutate([item.id])}
                       disabled={confirmMutation.isPending}
                     >
@@ -453,7 +453,7 @@ export function PendingClassifications() {
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                      className="text-danger hover:text-danger-strong hover:bg-danger-soft"
                       onClick={() => rejectMutation.mutate([item.id])}
                       disabled={rejectMutation.isPending}
                     >

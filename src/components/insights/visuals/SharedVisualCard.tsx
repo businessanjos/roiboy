@@ -48,7 +48,7 @@ class CardErrorBoundary extends React.Component<
             <CardTitle className="text-base truncate">{this.props.title}</CardTitle>
           </CardHeader>
           <CardContent className="flex-1 flex flex-col items-center justify-center text-muted-foreground">
-            <AlertTriangle className="h-10 w-10 mb-2 opacity-40 text-yellow-500" />
+            <AlertTriangle className="h-10 w-10 mb-2 opacity-40 text-warning" />
             <p className="text-sm">Não foi possível exibir este visual</p>
           </CardContent>
         </Card>

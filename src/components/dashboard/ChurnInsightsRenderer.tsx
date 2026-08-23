@@ -78,14 +78,14 @@ const VARIANT_STYLES: Record<Section["variant"], {
   titleColor: string; statBg: string; statText: string; accentBar: string;
 }> = {
   ranking: {
-    border: "border-yellow-500/30",
-    bg: "bg-gradient-to-br from-yellow-500/8 via-amber-500/4 to-transparent",
-    iconBg: "bg-yellow-500/12",
-    iconColor: "text-yellow-600 dark:text-yellow-400",
-    titleColor: "text-yellow-700 dark:text-yellow-400",
-    statBg: "bg-yellow-500/8 border border-yellow-500/20",
-    statText: "text-yellow-700 dark:text-yellow-300",
-    accentBar: "bg-yellow-500",
+    border: "border-warning/30",
+    bg: "bg-gradient-to-br from-warning/8 via-warning/4 to-transparent",
+    iconBg: "bg-warning/12",
+    iconColor: "text-warning dark:text-warning",
+    titleColor: "text-warning-strong dark:text-warning",
+    statBg: "bg-warning/8 border border-warning/20",
+    statText: "text-warning-strong dark:text-warning",
+    accentBar: "bg-warning",
   },
   profile: {
     border: "border-violet-500/30",
@@ -108,34 +108,34 @@ const VARIANT_STYLES: Record<Section["variant"], {
     accentBar: "bg-destructive",
   },
   warning: {
-    border: "border-amber-500/25",
-    bg: "bg-gradient-to-br from-amber-500/6 via-amber-500/2 to-transparent",
-    iconBg: "bg-amber-500/10",
-    iconColor: "text-amber-600 dark:text-amber-400",
-    titleColor: "text-amber-700 dark:text-amber-400",
-    statBg: "bg-amber-500/8 border border-amber-500/20",
-    statText: "text-amber-700 dark:text-amber-300",
-    accentBar: "bg-amber-500",
+    border: "border-warning/25",
+    bg: "bg-gradient-to-br from-warning/6 via-warning/2 to-transparent",
+    iconBg: "bg-warning/10",
+    iconColor: "text-warning dark:text-warning",
+    titleColor: "text-warning-strong dark:text-warning",
+    statBg: "bg-warning/8 border border-warning/20",
+    statText: "text-warning-strong dark:text-warning",
+    accentBar: "bg-warning",
   },
   info: {
-    border: "border-blue-500/25",
-    bg: "bg-gradient-to-br from-blue-500/6 via-blue-500/2 to-transparent",
-    iconBg: "bg-blue-500/10",
-    iconColor: "text-blue-600 dark:text-blue-400",
-    titleColor: "text-blue-700 dark:text-blue-400",
-    statBg: "bg-blue-500/8 border border-blue-500/20",
-    statText: "text-blue-700 dark:text-blue-300",
-    accentBar: "bg-blue-500",
+    border: "border-info/25",
+    bg: "bg-gradient-to-br from-info/6 via-info/2 to-transparent",
+    iconBg: "bg-info/10",
+    iconColor: "text-info dark:text-info",
+    titleColor: "text-info-strong dark:text-info",
+    statBg: "bg-info/8 border border-info/20",
+    statText: "text-info-strong dark:text-info",
+    accentBar: "bg-info",
   },
   success: {
-    border: "border-emerald-500/25",
-    bg: "bg-gradient-to-br from-emerald-500/6 via-emerald-500/2 to-transparent",
-    iconBg: "bg-emerald-500/10",
-    iconColor: "text-emerald-600 dark:text-emerald-400",
-    titleColor: "text-emerald-700 dark:text-emerald-400",
-    statBg: "bg-emerald-500/8 border border-emerald-500/20",
-    statText: "text-emerald-700 dark:text-emerald-300",
-    accentBar: "bg-emerald-500",
+    border: "border-success/25",
+    bg: "bg-gradient-to-br from-success/6 via-success/2 to-transparent",
+    iconBg: "bg-success/10",
+    iconColor: "text-success dark:text-success",
+    titleColor: "text-success-strong dark:text-success",
+    statBg: "bg-success/8 border border-success/20",
+    statText: "text-success-strong dark:text-success",
+    accentBar: "bg-success",
   },
   accent: {
     border: "border-purple-500/25",
@@ -298,9 +298,9 @@ function ContentLine({ text }: { text: string }) {
 }
 
 function ScoreGauge({ score }: { score: number }) {
-  const color = score >= 70 ? "text-destructive" : score >= 40 ? "text-amber-500" : "text-emerald-500";
-  const bgColor = score >= 70 ? "bg-destructive" : score >= 40 ? "bg-amber-500" : "bg-emerald-500";
-  const trackColor = score >= 70 ? "text-destructive/15" : score >= 40 ? "text-amber-500/15" : "text-emerald-500/15";
+  const color = score >= 70 ? "text-destructive" : score >= 40 ? "text-warning" : "text-success";
+  const bgColor = score >= 70 ? "bg-destructive" : score >= 40 ? "bg-warning" : "bg-success";
+  const trackColor = score >= 70 ? "text-destructive/15" : score >= 40 ? "text-warning/15" : "text-success/15";
   const label = score >= 70 ? "Alto potencial de prevenção" : score >= 40 ? "Moderado" : "Baixo";
 
   return (

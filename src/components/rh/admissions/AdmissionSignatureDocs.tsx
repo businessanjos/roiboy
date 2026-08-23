@@ -94,11 +94,11 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
                 )}
               </div>
               {doc.signed_at ? (
-                <Badge variant="outline" className="text-xs bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                <Badge variant="outline" className="text-xs bg-success/10 text-success-strong border-success/30">
                   <CheckCircle2 className="h-3 w-3 mr-1" /> Assinado
                 </Badge>
               ) : (
-                <Badge variant="outline" className="text-xs bg-amber-500/10 text-amber-700 border-amber-500/30">
+                <Badge variant="outline" className="text-xs bg-warning/10 text-warning-strong border-warning/30">
                   <Clock className="h-3 w-3 mr-1" /> Pendente
                 </Badge>
               )}
@@ -134,7 +134,7 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
           </div>
           <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden mb-3">
             <div
-              className="h-full bg-emerald-500 transition-all"
+              className="h-full bg-success transition-all"
               style={{ width: `${signDocs.length ? (signedCount / signDocs.length) * 100 : 0}%` }}
             />
           </div>
@@ -147,7 +147,7 @@ export default function AdmissionSignatureDocs({ admissionId, docs }: Props) {
                 .sort((a, b) => (a.signed_at! < b.signed_at! ? 1 : -1))
                 .map((d) => (
                   <li key={d.id} className="text-xs flex flex-wrap items-center gap-x-2 gap-y-0.5">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600 shrink-0" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                     <span className="font-medium">{d.label}</span>
                     <span className="text-muted-foreground">
                       · {d.signer_name || "—"}

@@ -185,7 +185,7 @@ export function TaskStatusManager({ open, onOpenChange }: TaskStatusManagerProps
                       <IconComponent className="h-4 w-4 shrink-0" style={{ color: status.color }} />
                       <span className="flex-1 font-medium text-sm truncate">{status.name}</span>
                       {status.is_completed_status && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400">
+                        <span className="text-[10px] px-1.5 py-0.5 rounded bg-success-soft text-success-strong dark:bg-success/30 dark:text-success">
                           Final
                         </span>
                       )}

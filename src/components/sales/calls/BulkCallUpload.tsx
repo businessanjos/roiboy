@@ -206,20 +206,20 @@ export function BulkCallUpload() {
             <p className="text-2xl font-bold">{summary.total}</p>
             <p className="text-xs text-muted-foreground">Total</p>
           </Card>
-          <Card className="p-3 text-center border-green-500/30 bg-green-500/5">
-            <p className="text-2xl font-bold text-green-600">{summary.processed}</p>
+          <Card className="p-3 text-center border-success/30 bg-success/5">
+            <p className="text-2xl font-bold text-success">{summary.processed}</p>
             <p className="text-xs text-muted-foreground">Novas</p>
           </Card>
           <Card className="p-3 text-center">
             <p className="text-2xl font-bold text-muted-foreground">{summary.duplicates}</p>
             <p className="text-xs text-muted-foreground">Duplicadas</p>
           </Card>
-          <Card className="p-3 text-center border-red-500/30 bg-red-500/5">
-            <p className="text-2xl font-bold text-red-600">{summary.errors}</p>
+          <Card className="p-3 text-center border-danger/30 bg-danger/5">
+            <p className="text-2xl font-bold text-danger">{summary.errors}</p>
             <p className="text-xs text-muted-foreground">Erros</p>
           </Card>
-          <Card className="p-3 text-center border-amber-500/30 bg-amber-500/5">
-            <p className="text-2xl font-bold text-amber-600 flex items-center justify-center gap-1">
+          <Card className="p-3 text-center border-warning/30 bg-warning/5">
+            <p className="text-2xl font-bold text-warning flex items-center justify-center gap-1">
               <Crown className="w-5 h-5" />{summary.champions}
             </p>
             <p className="text-xs text-muted-foreground">Campeãs</p>
@@ -235,20 +235,20 @@ export function BulkCallUpload() {
               {results.map((r, idx) => (
                 <li key={idx} className="text-xs border rounded p-2 flex items-start gap-2">
                   {r.status === 'processed' && r.is_champion ? (
-                    <Crown className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <Crown className="w-4 h-4 text-warning shrink-0 mt-0.5" />
                   ) : r.status === 'processed' ? (
-                    <CheckCircle2 className="w-4 h-4 text-green-500 shrink-0 mt-0.5" />
+                    <CheckCircle2 className="w-4 h-4 text-success shrink-0 mt-0.5" />
                   ) : r.status === 'duplicate' ? (
                     <Copy className="w-4 h-4 text-muted-foreground shrink-0 mt-0.5" />
                   ) : (
-                    <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                    <AlertCircle className="w-4 h-4 text-danger shrink-0 mt-0.5" />
                   )}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium truncate">{r.filename}</span>
                       {r.status === 'duplicate' && <Badge variant="secondary" className="text-[10px]">Duplicada</Badge>}
                       {r.status === 'error' && <Badge variant="destructive" className="text-[10px]">Erro</Badge>}
-                      {r.is_champion && <Badge className="text-[10px] bg-amber-500 hover:bg-amber-500">Campeã</Badge>}
+                      {r.is_champion && <Badge className="text-[10px] bg-warning hover:bg-warning">Campeã</Badge>}
                       {typeof r.ai_score === 'number' && <Badge variant="outline" className="text-[10px]">Nota {r.ai_score}/10</Badge>}
                     </div>
                     {r.extracted && (r.extracted.seller_name || r.extracted.lead_name || r.extracted.call_date) && (
@@ -259,12 +259,12 @@ export function BulkCallUpload() {
                       </p>
                     )}
                     {r.matched_deal_id && (
-                      <p className="text-green-600 mt-0.5">✓ Match com negócio ganho</p>
+                      <p className="text-success mt-0.5">✓ Match com negócio ganho</p>
                     )}
                     {r.status === 'processed' && !r.matched_deal_id && (
-                      <p className="text-amber-600 mt-0.5">Sem match automático — revise manualmente</p>
+                      <p className="text-warning mt-0.5">Sem match automático — revise manualmente</p>
                     )}
-                    {r.error && <p className="text-red-600 mt-0.5">{r.error}</p>}
+                    {r.error && <p className="text-danger mt-0.5">{r.error}</p>}
                   </div>
                 </li>
               ))}

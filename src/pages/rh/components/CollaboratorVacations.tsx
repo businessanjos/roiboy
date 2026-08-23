@@ -137,7 +137,7 @@ export default function CollaboratorVacations({ collaboratorId, accountId }: Pro
                 {req.status === "pending" && (
                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(req.id, "approved")}>
-                      <Check className="h-4 w-4 text-green-600" />
+                      <Check className="h-4 w-4 text-success" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => updateStatus(req.id, "rejected")}>
                       <X className="h-4 w-4 text-destructive" />

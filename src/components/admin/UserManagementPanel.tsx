@@ -173,7 +173,7 @@ export function UserManagementPanel({
                 onCheckedChange={(v) => activeMut.mutate(v)}
               />
               <span className="text-sm flex items-center gap-1.5">
-                {isActive ? <><ShieldCheck className="h-4 w-4 text-emerald-500" /> Ativo</>
+                {isActive ? <><ShieldCheck className="h-4 w-4 text-success" /> Ativo</>
                           : <><ShieldOff className="h-4 w-4 text-destructive" /> Inativo</>}
               </span>
             </div>

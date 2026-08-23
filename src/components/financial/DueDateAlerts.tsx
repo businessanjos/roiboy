@@ -228,7 +228,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
         <div className="grid grid-cols-4 gap-4 py-4">
           <Card>
             <CardContent className="pt-4">
-              <div className="flex items-center gap-2 text-yellow-600 text-sm">
+              <div className="flex items-center gap-2 text-warning text-sm">
                 <Clock className="h-4 w-4" />
                 Próximos
               </div>
@@ -248,22 +248,22 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <div className="flex items-center gap-2 text-green-600 text-sm">
+              <div className="flex items-center gap-2 text-success text-sm">
                 <ArrowDownCircle className="h-4 w-4" />
                 A Receber
               </div>
-              <div className="text-2xl font-bold text-green-600">
+              <div className="text-2xl font-bold text-success">
                 {formatCurrency(upcomingEntries.filter(e => e.entry_type === "receivable").reduce((s, e) => s + e.amount, 0))}
               </div>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-4">
-              <div className="flex items-center gap-2 text-red-600 text-sm">
+              <div className="flex items-center gap-2 text-danger text-sm">
                 <ArrowUpCircle className="h-4 w-4" />
                 A Pagar
               </div>
-              <div className="text-2xl font-bold text-red-600">
+              <div className="text-2xl font-bold text-danger">
                 {formatCurrency(upcomingEntries.filter(e => e.entry_type === "payable").reduce((s, e) => s + e.amount, 0))}
               </div>
             </CardContent>
@@ -330,12 +330,12 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                           <TableCell>{entry.client?.full_name || "-"}</TableCell>
                           <TableCell>
                             {entry.entry_type === "receivable" ? (
-                              <Badge variant="outline" className="border-green-500 text-green-600">
+                              <Badge variant="outline" className="border-success text-success">
                                 <ArrowDownCircle className="h-3 w-3 mr-1" />
                                 Receita
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="border-red-500 text-red-600">
+                              <Badge variant="outline" className="border-danger text-danger">
                                 <ArrowUpCircle className="h-3 w-3 mr-1" />
                                 Despesa
                               </Badge>
@@ -347,7 +347,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                               {format(parseISO(entry.due_date), "dd/MM/yyyy")}
                             </div>
                           </TableCell>
-                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-green-600" : "text-red-600"}`}>
+                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-success" : "text-danger"}`}>
                             {formatCurrency(entry.amount)}
                           </TableCell>
                           <TableCell>
@@ -371,7 +371,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                 </div>
               ) : upcomingEntries.length === 0 && overdueEntries.length === 0 ? (
                 <div className="p-12 text-center text-muted-foreground">
-                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                  <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-success" />
                   <p className="font-medium">Tudo em dia!</p>
                   <p className="text-sm mt-2">
                     Não há vencimentos nos próximos {filterDays} dias.
@@ -401,12 +401,12 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                           <TableCell>{entry.client?.full_name || "-"}</TableCell>
                           <TableCell>
                             {entry.entry_type === "receivable" ? (
-                              <Badge variant="outline" className="border-green-500 text-green-600">
+                              <Badge variant="outline" className="border-success text-success">
                                 <ArrowDownCircle className="h-3 w-3 mr-1" />
                                 Receita
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="border-red-500 text-red-600">
+                              <Badge variant="outline" className="border-danger text-danger">
                                 <ArrowUpCircle className="h-3 w-3 mr-1" />
                                 Despesa
                               </Badge>
@@ -418,7 +418,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                               {format(parseISO(entry.due_date), "dd/MM/yyyy")}
                             </div>
                           </TableCell>
-                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-green-600" : "text-red-600"}`}>
+                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-success" : "text-danger"}`}>
                             {formatCurrency(entry.amount)}
                           </TableCell>
                           <TableCell>
@@ -487,7 +487,7 @@ export function DueDateAlerts({ open, onOpenChange }: DueDateAlertsProps) {
                       </TableCell>
                       <TableCell>
                         {alert.sent_at ? (
-                          <Badge variant="default" className="bg-green-100 text-green-800">
+                          <Badge variant="default" className="bg-success-soft text-success-strong">
                             <CheckCircle2 className="h-3 w-3 mr-1" />
                             Enviado
                           </Badge>

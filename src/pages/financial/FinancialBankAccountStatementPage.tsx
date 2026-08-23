@@ -160,18 +160,18 @@ export default function FinancialBankAccountStatementPage() {
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Saldo Atual</CardTitle></CardHeader>
           <CardContent>
-            <div className={`text-2xl font-bold ${(bankAccount?.current_balance ?? 0) >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <div className={`text-2xl font-bold ${(bankAccount?.current_balance ?? 0) >= 0 ? "text-success" : "text-danger"}`}>
               {fmt(Number(bankAccount?.current_balance ?? 0))}
             </div>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Entradas</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-green-600">{fmt(totals.credit)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-success">{fmt(totals.credit)}</div></CardContent>
         </Card>
         <Card>
           <CardHeader className="pb-2"><CardTitle className="text-sm text-muted-foreground">Saídas</CardTitle></CardHeader>
-          <CardContent><div className="text-2xl font-bold text-red-600">{fmt(totals.debit)}</div></CardContent>
+          <CardContent><div className="text-2xl font-bold text-danger">{fmt(totals.debit)}</div></CardContent>
         </Card>
       </div>
 
@@ -213,7 +213,7 @@ export default function FinancialBankAccountStatementPage() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-2">
-                          {isCredit ? <ArrowDownRight className="h-4 w-4 text-green-600" /> : <ArrowUpRight className="h-4 w-4 text-red-600" />}
+                          {isCredit ? <ArrowDownRight className="h-4 w-4 text-success" /> : <ArrowUpRight className="h-4 w-4 text-danger" />}
                           <span className="truncate max-w-md">{e.description}</span>
                         </div>
                       </TableCell>
@@ -222,7 +222,7 @@ export default function FinancialBankAccountStatementPage() {
                           {e.source === "openfinance" ? "Open Finance" : e.source}
                         </Badge>
                       </TableCell>
-                      <TableCell className={`text-right font-medium ${isCredit ? "text-green-600" : "text-red-600"}`}>
+                      <TableCell className={`text-right font-medium ${isCredit ? "text-success" : "text-danger"}`}>
                         {isCredit ? "+" : "−"} {fmt(Number(e.amount))}
                       </TableCell>
                     </TableRow>

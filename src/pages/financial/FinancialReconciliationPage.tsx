@@ -553,7 +553,7 @@ export default function FinancialReconciliationPage() {
                   </div>
                 ) : filteredEntries.length === 0 ? (
                   <div className="p-12 text-center text-muted-foreground">
-                    <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-green-500" />
+                    <CheckCircle2 className="h-12 w-12 mx-auto mb-4 text-success" />
                     <p className="font-medium">Tudo conciliado!</p>
                     <p className="text-sm mt-2">
                       Não há lançamentos pagos pendentes de conciliação.
@@ -590,12 +590,12 @@ export default function FinancialReconciliationPage() {
                           </TableCell>
                           <TableCell>
                             {entry.entry_type === "receivable" ? (
-                              <Badge variant="outline" className="border-green-500 text-green-600">
+                              <Badge variant="outline" className="border-success text-success">
                                 <ArrowDownCircle className="h-3 w-3 mr-1" />
                                 Receita
                               </Badge>
                             ) : (
-                              <Badge variant="outline" className="border-red-500 text-red-600">
+                              <Badge variant="outline" className="border-danger text-danger">
                                 <ArrowUpCircle className="h-3 w-3 mr-1" />
                                 Despesa
                               </Badge>
@@ -609,7 +609,7 @@ export default function FinancialReconciliationPage() {
                               </div>
                             )}
                           </TableCell>
-                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-green-600" : "text-red-600"}`}>
+                          <TableCell className={`text-right font-medium ${entry.entry_type === "receivable" ? "text-success" : "text-danger"}`}>
                             {formatCurrency(entry.amount)}
                           </TableCell>
                           <TableCell>
@@ -618,7 +618,7 @@ export default function FinancialReconciliationPage() {
                               size="sm"
                               onClick={() => reconcileMutation.mutate(entry.id)}
                               disabled={reconcileMutation.isPending}
-                              className="text-green-600 hover:text-green-700 hover:bg-green-50"
+                              className="text-success hover:text-success-strong hover:bg-success-soft"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-1" />
                               Conciliar
@@ -711,22 +711,22 @@ export default function FinancialReconciliationPage() {
                     </Card>
                     <Card>
                       <CardContent className="pt-4">
-                        <div className="flex items-center gap-2 text-green-600 text-sm">
+                        <div className="flex items-center gap-2 text-success text-sm">
                           <ArrowDownCircle className="h-4 w-4" />
                           Créditos
                         </div>
-                        <div className="text-2xl font-bold text-green-600">
+                        <div className="text-2xl font-bold text-success">
                           {formatCurrency(parsedSummary.credits)}
                         </div>
                       </CardContent>
                     </Card>
                     <Card>
                       <CardContent className="pt-4">
-                        <div className="flex items-center gap-2 text-red-600 text-sm">
+                        <div className="flex items-center gap-2 text-danger text-sm">
                           <ArrowUpCircle className="h-4 w-4" />
                           Débitos
                         </div>
-                        <div className="text-2xl font-bold text-red-600">
+                        <div className="text-2xl font-bold text-danger">
                           {formatCurrency(parsedSummary.debits)}
                         </div>
                       </CardContent>
@@ -776,18 +776,18 @@ export default function FinancialReconciliationPage() {
                             </TableCell>
                             <TableCell>
                               {tx.type === "credit" ? (
-                                <Badge variant="outline" className="border-green-500 text-green-600">
+                                <Badge variant="outline" className="border-success text-success">
                                   <ArrowDownCircle className="h-3 w-3 mr-1" />
                                   Crédito
                                 </Badge>
                               ) : (
-                                <Badge variant="outline" className="border-red-500 text-red-600">
+                                <Badge variant="outline" className="border-danger text-danger">
                                   <ArrowUpCircle className="h-3 w-3 mr-1" />
                                   Débito
                                 </Badge>
                               )}
                             </TableCell>
-                            <TableCell className={`text-right font-medium ${tx.type === "credit" ? "text-green-600" : "text-red-600"}`}>
+                            <TableCell className={`text-right font-medium ${tx.type === "credit" ? "text-success" : "text-danger"}`}>
                               {formatCurrency(tx.amount)}
                             </TableCell>
                           </TableRow>

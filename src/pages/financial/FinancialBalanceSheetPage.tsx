@@ -271,14 +271,14 @@ export default function FinancialBalanceSheetPage() {
       {/* Balance Check Card */}
       <Card className={cn(
         "border-2",
-        data?.isBalanced ? "border-green-500/50 bg-green-500/5" : "border-destructive/50 bg-destructive/5"
+        data?.isBalanced ? "border-success/50 bg-success/5" : "border-destructive/50 bg-destructive/5"
       )}>
         <CardContent className="py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Scale className={cn(
                 "h-8 w-8",
-                data?.isBalanced ? "text-green-500" : "text-destructive"
+                data?.isBalanced ? "text-success" : "text-destructive"
               )} />
               <div>
                 <p className="font-semibold">
@@ -302,8 +302,8 @@ export default function FinancialBalanceSheetPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-blue-500/10">
-                <TrendingUp className="h-6 w-6 text-blue-500" />
+              <div className="p-3 rounded-lg bg-info/10">
+                <TrendingUp className="h-6 w-6 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Ativo Total</p>
@@ -316,8 +316,8 @@ export default function FinancialBalanceSheetPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-red-500/10">
-                <TrendingDown className="h-6 w-6 text-red-500" />
+              <div className="p-3 rounded-lg bg-danger/10">
+                <TrendingDown className="h-6 w-6 text-danger" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Passivo Total</p>
@@ -330,8 +330,8 @@ export default function FinancialBalanceSheetPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-3 rounded-lg bg-green-500/10">
-                <Landmark className="h-6 w-6 text-green-500" />
+              <div className="p-3 rounded-lg bg-success/10">
+                <Landmark className="h-6 w-6 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Patrimônio Líquido</p>
@@ -353,7 +353,7 @@ export default function FinancialBalanceSheetPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Building2 className="h-5 w-5 text-blue-500" />
+              <Building2 className="h-5 w-5 text-info" />
               ATIVO
             </CardTitle>
           </CardHeader>
@@ -385,7 +385,7 @@ export default function FinancialBalanceSheetPage() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="flex items-center gap-2">
-              <Wallet className="h-5 w-5 text-red-500" />
+              <Wallet className="h-5 w-5 text-danger" />
               PASSIVO E PATRIMÔNIO LÍQUIDO
             </CardTitle>
           </CardHeader>

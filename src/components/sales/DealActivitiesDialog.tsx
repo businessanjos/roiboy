@@ -287,7 +287,7 @@ export function DealActivitiesDialog({
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-7 w-7 hover:bg-emerald-500/20 hover:text-emerald-600"
+                className="h-7 w-7 hover:bg-success/20 hover:text-success"
                 onClick={(e) => handleCompleteTask(activity.id, e)}
                 title="Concluir"
               >
@@ -384,12 +384,12 @@ export function DealActivitiesDialog({
                     <CollapsibleTrigger asChild>
                       <button className="flex items-center gap-2 w-full text-left hover:bg-muted/50 rounded-md p-1 -ml-1">
                         {doneExpanded ? (
-                          <ChevronDown className="h-4 w-4 text-emerald-600" />
+                          <ChevronDown className="h-4 w-4 text-success" />
                         ) : (
-                          <ChevronRight className="h-4 w-4 text-emerald-600" />
+                          <ChevronRight className="h-4 w-4 text-success" />
                         )}
-                        <CheckCircle className="h-4 w-4 text-emerald-600" />
-                        <h3 className="text-sm font-semibold text-emerald-600">
+                        <CheckCircle className="h-4 w-4 text-success" />
+                        <h3 className="text-sm font-semibold text-success">
                           Feito ({done.length})
                         </h3>
                       </button>

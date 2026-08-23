@@ -164,9 +164,9 @@ function Kpi({
     tone === "danger"
       ? "text-destructive"
       : tone === "warning"
-        ? "text-amber-500"
+        ? "text-warning"
         : tone === "success"
-          ? "text-emerald-500"
+          ? "text-success"
           : "text-zapp-text";
   return (
     <Card className="bg-zapp-panel border-zapp-border">
@@ -239,7 +239,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   if (!allowed) {
     return (
       <div className="p-8 text-center text-zapp-text-muted">
-        <AlertTriangle className="h-8 w-8 mx-auto mb-3 text-amber-500" />
+        <AlertTriangle className="h-8 w-8 mx-auto mb-3 text-warning" />
         <p className="font-medium text-zapp-text">Área restrita</p>
         <p className="text-sm">O dashboard de produtividade é exclusivo para admins e heads.</p>
       </div>
@@ -611,7 +611,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             <Card className="bg-zapp-panel border-zapp-border">
               <CardHeader className="pb-2 flex-row items-center justify-between space-y-0">
                 <CardTitle className="text-sm text-zapp-text flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  <AlertTriangle className="h-4 w-4 text-warning" />
                   Menções de risco
                   <Badge variant="secondary">{data.risk_mentions}</Badge>
                 </CardTitle>

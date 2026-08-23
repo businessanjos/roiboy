@@ -303,7 +303,7 @@ export default function MarketResearchTab() {
                     size="sm"
                     onClick={() => deleteMutation.mutate(r.id)}
                     disabled={deleteMutation.isPending}
-                    className="h-8 w-8 p-0 text-muted-foreground hover:text-red-600"
+                    className="h-8 w-8 p-0 text-muted-foreground hover:text-danger"
                   >
                     <Trash2 className="h-3.5 w-3.5" />
                   </Button>
@@ -323,7 +323,7 @@ export default function MarketResearchTab() {
                               href={c.url}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="text-blue-600 hover:underline break-all inline-flex items-start gap-1"
+                              className="text-info hover:underline break-all inline-flex items-start gap-1"
                             >
                               <span>{c.title || c.url}</span>
                               <ExternalLink className="h-3 w-3 shrink-0 mt-0.5" />

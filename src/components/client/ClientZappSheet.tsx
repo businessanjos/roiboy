@@ -671,7 +671,7 @@ export function ClientZappSheet({
                           className={cn(
                             "h-8 text-white text-sm",
                             isDirty 
-                              ? "bg-amber-600 hover:bg-amber-700" 
+                              ? "bg-warning hover:bg-warning" 
                               : "bg-zapp-accent hover:bg-zapp-accent-hover"
                           )}
                         >
@@ -702,7 +702,7 @@ export function ClientZappSheet({
                         </div>
                         <div className="text-right">
                           <p className="text-xs text-zapp-text-muted uppercase tracking-wide">Valor Total</p>
-                          <p className="text-lg font-semibold text-emerald-500">{formatCurrency(totalValue)}</p>
+                          <p className="text-lg font-semibold text-success">{formatCurrency(totalValue)}</p>
                         </div>
                       </div>
                     </div>
@@ -832,7 +832,7 @@ export function ClientZappSheet({
                                 </div>
                               </div>
                               <div className="text-right flex-shrink-0">
-                                <p className="text-sm font-semibold text-emerald-500">
+                                <p className="text-sm font-semibold text-success">
                                   {formatCurrency(deal.value)}
                                 </p>
                               </div>
@@ -864,9 +864,9 @@ export function ClientZappSheet({
                                     {deal.title}
                                   </p>
                                   {deal.status === "won" ? (
-                                    <Trophy className="h-3.5 w-3.5 text-emerald-500 flex-shrink-0" />
+                                    <Trophy className="h-3.5 w-3.5 text-success flex-shrink-0" />
                                   ) : (
-                                    <XCircle className="h-3.5 w-3.5 text-red-500 flex-shrink-0" />
+                                    <XCircle className="h-3.5 w-3.5 text-danger flex-shrink-0" />
                                   )}
                                 </div>
                                 <p className="text-[10px] text-zapp-text-muted mt-0.5">
@@ -875,7 +875,7 @@ export function ClientZappSheet({
                               </div>
                               <p className={cn(
                                 "text-sm font-semibold flex-shrink-0",
-                                deal.status === "won" ? "text-emerald-500" : "text-zapp-text-muted"
+                                deal.status === "won" ? "text-success" : "text-zapp-text-muted"
                               )}>
                                 {formatCurrency(deal.value)}
                               </p>

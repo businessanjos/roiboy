@@ -199,11 +199,11 @@ export default function PayrollValidations({ form, setField }: Props) {
           </CardTitle>
           <div className="flex items-center gap-2">
             {divergences.length === 0 ? (
-              <Badge variant="outline" className="border-emerald-500 text-emerald-600 gap-1">
+              <Badge variant="outline" className="border-success text-success gap-1">
                 <CheckCircle2 className="h-3 w-3" /> Tudo confere
               </Badge>
             ) : (
-              <Badge variant="outline" className="border-amber-500 text-amber-600 gap-1">
+              <Badge variant="outline" className="border-warning text-warning gap-1">
                 <AlertTriangle className="h-3 w-3" /> {divergences.length} divergência(s)
               </Badge>
             )}
@@ -226,7 +226,7 @@ export default function PayrollValidations({ form, setField }: Props) {
               <div
                 key={r.key}
                 className={`grid grid-cols-12 items-center px-2 py-2 text-sm rounded ${
-                  ok ? "" : "bg-amber-500/5"
+                  ok ? "" : "bg-warning/5"
                 }`}
               >
                 <div className="col-span-4 flex items-center gap-1.5">
@@ -248,14 +248,14 @@ export default function PayrollValidations({ form, setField }: Props) {
                 </div>
                 <div className="col-span-2 text-right">
                   {ok ? (
-                    <span className="text-xs text-emerald-600 inline-flex items-center gap-1">
+                    <span className="text-xs text-success inline-flex items-center gap-1">
                       <CheckCircle2 className="h-3 w-3" /> OK
                     </span>
                   ) : (
                     <button
                       type="button"
                       onClick={() => setField(r.key, Number(r.expected.toFixed(2)))}
-                      className="text-xs text-amber-600 hover:underline inline-flex items-center gap-1"
+                      className="text-xs text-warning hover:underline inline-flex items-center gap-1"
                       title="Clique para aplicar valor calculado"
                     >
                       <AlertTriangle className="h-3 w-3" />

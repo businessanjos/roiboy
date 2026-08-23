@@ -151,7 +151,7 @@ export function CampaignFormsTab() {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="font-semibold truncate">{f.title}</h3>
-                    {f.is_active ? <Badge variant="outline" className="text-emerald-500 border-emerald-500/40">Ativo</Badge> : <Badge variant="outline">Inativo</Badge>}
+                    {f.is_active ? <Badge variant="outline" className="text-success border-success/40">Ativo</Badge> : <Badge variant="outline">Inativo</Badge>}
                     <Badge variant="secondary">{f.fields.length} campos</Badge>
                     <Badge variant="secondary">{f.responses_count} resp/30d</Badge>
                   </div>
@@ -166,7 +166,7 @@ export function CampaignFormsTab() {
                       </Button>
                     </div>
                   ) : (
-                    <p className="text-xs text-amber-500 mt-1">Sem slug — defina um para publicar</p>
+                    <p className="text-xs text-warning mt-1">Sem slug — defina um para publicar</p>
                   )}
                 </div>
                 <Button size="sm" variant="ghost" onClick={() => setAnalyticsFor(f)} className="gap-1"><BarChart3 className="w-4 h-4" />Analytics</Button>

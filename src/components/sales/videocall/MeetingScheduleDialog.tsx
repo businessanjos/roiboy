@@ -171,7 +171,7 @@ export function MeetingScheduleDialog({
           <div className="space-y-4">
             <div className="rounded-lg bg-primary/5 border border-primary/20 p-4 space-y-3">
               <div className="flex items-center gap-2 text-sm">
-                <Check className="h-4 w-4 text-green-500" />
+                <Check className="h-4 w-4 text-success" />
                 <span className="font-medium">Sala criada com sucesso!</span>
               </div>
 
@@ -201,7 +201,7 @@ export function MeetingScheduleDialog({
               {whatsappLink && (
                 <Button
                   variant="default"
-                  className="gap-2 bg-green-600 hover:bg-green-700"
+                  className="gap-2 bg-success hover:bg-success"
                   onClick={() => window.open(whatsappLink, "_blank")}
                 >
                   <Send className="h-4 w-4" />

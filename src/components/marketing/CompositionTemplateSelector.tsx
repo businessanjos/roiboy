@@ -53,15 +53,15 @@ const iconMap: Record<string, React.ReactNode> = {
 };
 
 const objectiveColors: Record<string, string> = {
-  growth: 'bg-green-500/10 text-green-600 border-green-500/20',
-  connection: 'bg-blue-500/10 text-blue-600 border-blue-500/20',
-  authority: 'bg-amber-500/10 text-amber-600 border-amber-500/20',
-  sales: 'bg-emerald-500/10 text-emerald-600 border-emerald-500/20',
+  growth: 'bg-success/10 text-success border-success/20',
+  connection: 'bg-info/10 text-info border-info/20',
+  authority: 'bg-warning/10 text-warning border-warning/20',
+  sales: 'bg-success/10 text-success border-success/20',
 };
 
 const formatColors: Record<string, string> = {
   reels: 'bg-pink-500/10 text-pink-600',
-  carousel: 'bg-blue-500/10 text-blue-600',
+  carousel: 'bg-info/10 text-info',
   static: 'bg-purple-500/10 text-purple-600',
 };
 

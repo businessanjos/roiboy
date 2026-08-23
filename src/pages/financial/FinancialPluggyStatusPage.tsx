@@ -107,12 +107,12 @@ const HealthPill = ({
     ok: {
       label: "Funcionando",
       icon: CheckCircle2,
-      cls: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30",
+      cls: "bg-success/15 text-success-strong dark:text-success border-success/30",
     },
     warn: {
       label: "Atenção",
       icon: Clock,
-      cls: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30",
+      cls: "bg-warning/15 text-warning-strong dark:text-warning border-warning/30",
     },
     error: {
       label: "Com problema",
@@ -320,13 +320,13 @@ export default function FinancialPluggyStatusPage() {
                   className={`h-10 w-10 rounded-full flex items-center justify-center ${
                     totals.withProblem > 0
                       ? "bg-destructive/10"
-                      : "bg-emerald-500/10"
+                      : "bg-success/10"
                   }`}
                 >
                   {totals.withProblem > 0 ? (
                     <AlertCircle className="h-5 w-5 text-destructive" />
                   ) : (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                   )}
                 </div>
                 <div>
@@ -341,8 +341,8 @@ export default function FinancialPluggyStatusPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-3">
-                <div className="h-10 w-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                  <ArrowDownToLine className="h-5 w-5 text-blue-600" />
+                <div className="h-10 w-10 rounded-full bg-info/10 flex items-center justify-center">
+                  <ArrowDownToLine className="h-5 w-5 text-info" />
                 </div>
                 <div>
                   <div className="text-xs text-muted-foreground">
@@ -541,7 +541,7 @@ export default function FinancialPluggyStatusPage() {
                                   <span
                                     className={`absolute -left-1.5 h-3 w-3 rounded-full border-2 border-background ${
                                       ok
-                                        ? "bg-emerald-500"
+                                        ? "bg-success"
                                         : err
                                         ? "bg-destructive"
                                         : "bg-muted-foreground"
@@ -557,7 +557,7 @@ export default function FinancialPluggyStatusPage() {
                                     {ok && l.transactions_imported > 0 && (
                                       <Badge
                                         variant="outline"
-                                        className="bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
+                                        className="bg-success/10 text-success-strong dark:text-success border-success/30"
                                       >
                                         {l.transactions_imported} novas
                                       </Badge>

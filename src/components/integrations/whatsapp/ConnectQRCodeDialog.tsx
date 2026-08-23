@@ -345,8 +345,8 @@ export function ConnectQRCodeDialog({
         <div className="flex flex-col items-center gap-4 py-4">
           {connected ? (
             <div className="flex flex-col items-center gap-3 py-8">
-              <CheckCircle2 className="h-16 w-16 text-green-500" />
-              <p className="text-lg font-medium text-green-600">Conectado!</p>
+              <CheckCircle2 className="h-16 w-16 text-success" />
+              <p className="text-lg font-medium text-success">Conectado!</p>
               <p className="text-sm text-muted-foreground text-center">
                 O WhatsApp foi conectado com sucesso. Você já pode usar esta instância.
               </p>
@@ -485,7 +485,7 @@ export function ConnectQRCodeDialog({
                     </Alert>
                   )}
                   {tokenConflict && !tokenConflict.conflict && !checkingConflict && (
-                    <p className="text-[11px] text-emerald-600 dark:text-emerald-400">
+                    <p className="text-[11px] text-success dark:text-success">
                       ✓ Token disponível para vincular a este setor.
                     </p>
                   )}

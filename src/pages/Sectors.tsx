@@ -25,25 +25,25 @@ const SECTOR_IDENTITY: Record<string, {
 }> = {
   operacoes: {
     accent: "border-l-yellow-800",
-    hoverBorder: "hover:border-yellow-800/30",
-    hoverIconBg: "group-hover:bg-yellow-800/10",
-    hoverIconColor: "group-hover:text-yellow-800",
+    hoverBorder: "hover:border-warning/30",
+    hoverIconBg: "group-hover:bg-warning/10",
+    hoverIconColor: "group-hover:text-warning-strong",
     patternClass: "sector-pattern-ops",
     overrideIcon: BarChart3,
   },
   financeiro: {
     accent: "border-l-emerald-500",
-    hoverBorder: "hover:border-emerald-500/30",
-    hoverIconBg: "group-hover:bg-emerald-500/10",
-    hoverIconColor: "group-hover:text-emerald-600",
+    hoverBorder: "hover:border-success/30",
+    hoverIconBg: "group-hover:bg-success/10",
+    hoverIconColor: "group-hover:text-success",
     patternClass: "sector-pattern-fin",
     overrideIcon: Wallet,
   },
   vendas: {
     accent: "border-l-blue-500",
-    hoverBorder: "hover:border-blue-500/30",
-    hoverIconBg: "group-hover:bg-blue-500/10",
-    hoverIconColor: "group-hover:text-blue-600",
+    hoverBorder: "hover:border-info/30",
+    hoverIconBg: "group-hover:bg-info/10",
+    hoverIconColor: "group-hover:text-info",
     patternClass: "sector-pattern-sales",
     overrideIcon: Target,
   },
@@ -57,9 +57,9 @@ const SECTOR_IDENTITY: Record<string, {
   },
   royzapp: {
     accent: "border-l-yellow-500",
-    hoverBorder: "hover:border-yellow-500/30",
-    hoverIconBg: "group-hover:bg-yellow-500/10",
-    hoverIconColor: "group-hover:text-yellow-600",
+    hoverBorder: "hover:border-warning/30",
+    hoverIconBg: "group-hover:bg-warning/10",
+    hoverIconColor: "group-hover:text-warning",
     patternClass: "sector-pattern-zapp",
     overrideIcon: Zap,
   },
@@ -81,9 +81,9 @@ const SECTOR_IDENTITY: Record<string, {
   },
   rh: {
     accent: "border-l-rose-500",
-    hoverBorder: "hover:border-rose-500/30",
-    hoverIconBg: "group-hover:bg-rose-500/10",
-    hoverIconColor: "group-hover:text-rose-600",
+    hoverBorder: "hover:border-danger/30",
+    hoverIconBg: "group-hover:bg-danger/10",
+    hoverIconColor: "group-hover:text-danger",
     patternClass: "sector-pattern-rh",
     overrideIcon: Briefcase,
   },
@@ -412,18 +412,18 @@ export default function Sectors() {
           <div className="mt-6">
             <div
               onClick={() => navigate("/reuniao-lideres")}
-              className="group relative p-5 rounded-xl border border-l-[3px] border-l-amber-500 bg-card overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 hover:border-amber-500/30"
+              className="group relative p-5 rounded-xl border border-l-[3px] border-l-amber-500 bg-card overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 hover:border-warning/30"
             >
               <div className="relative z-10 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300 group-hover:bg-amber-500/10">
-                  <Users className="h-6 w-6 text-foreground/70 transition-colors duration-300 group-hover:text-amber-600" strokeWidth={1.5} />
+                <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300 group-hover:bg-warning/10">
+                  <Users className="h-6 w-6 text-foreground/70 transition-colors duration-300 group-hover:text-warning" strokeWidth={1.5} />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2">
                     <h3 className="text-lg font-semibold text-foreground tracking-tight">
                       Reunião de Líderes
                     </h3>
-                    <span className="text-[10px] text-amber-700 bg-amber-500/10 px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
+                    <span className="text-[10px] text-warning-strong bg-warning/10 px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
                       Gestão
                     </span>
                   </div>

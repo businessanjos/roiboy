@@ -276,7 +276,7 @@ export function ZappMarketingList({ sectorId }: ZappMarketingListProps) {
       return <Badge variant="destructive" className="text-[10px]">Esgotado</Badge>;
     }
     if (isToday(eventDate)) {
-      return <Badge className="bg-green-500 text-white text-[10px]">Hoje</Badge>;
+      return <Badge className="bg-success text-white text-[10px]">Hoje</Badge>;
     }
     if (isPast(eventDate)) {
       return <Badge variant="secondary" className="text-[10px]">Encerrado</Badge>;

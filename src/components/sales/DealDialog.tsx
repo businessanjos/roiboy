@@ -491,7 +491,7 @@ export function DealDialog({
             <DialogTitle className="flex items-center gap-2">
               {isEditing ? "Editar Negociação" : "Nova Negociação"}
               {deal?.status === 'won' && (
-                <Badge className="bg-emerald-500">Ganha</Badge>
+                <Badge className="bg-success">Ganha</Badge>
               )}
               {deal?.status === 'lost' && (
                 <Badge variant="destructive">Perdida</Badge>
@@ -1045,11 +1045,11 @@ export function DealDialog({
 
                   {/* Lost Reason (if lost) */}
                   {deal?.status === 'lost' && deal.lost_reason && (
-                    <div className="p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
-                      <p className="text-sm font-medium text-red-700 dark:text-red-400">
+                    <div className="p-3 bg-danger-soft dark:bg-danger/20 rounded-lg">
+                      <p className="text-sm font-medium text-danger-strong dark:text-danger">
                         Motivo da Perda
                       </p>
-                      <p className="text-sm text-red-600 dark:text-red-300">
+                      <p className="text-sm text-danger dark:text-danger">
                         {deal.lost_reason}
                       </p>
                     </div>
@@ -1060,12 +1060,12 @@ export function DealDialog({
                     <div className="text-xs text-muted-foreground space-y-1">
                       <p>Criado em: {format(new Date(deal.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</p>
                       {deal.won_at && (
-                        <p className="text-emerald-600">
+                        <p className="text-success">
                           Ganho em: {format(new Date(deal.won_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </p>
                       )}
                       {deal.lost_at && (
-                        <p className="text-red-600">
+                        <p className="text-danger">
                           Perdido em: {format(new Date(deal.lost_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
                         </p>
                       )}
@@ -1095,7 +1095,7 @@ export function DealDialog({
                         variant="outline"
                         size="sm"
                         onClick={handleMarkAsWon}
-                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50"
+                        className="text-success hover:text-success-strong hover:bg-success-soft"
                       >
                         <Trophy className="h-4 w-4 mr-1" />
                         Ganhar
@@ -1105,7 +1105,7 @@ export function DealDialog({
                         variant="outline"
                         size="sm"
                         onClick={() => setLostDialogOpen(true)}
-                        className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        className="text-danger hover:text-danger-strong hover:bg-danger-soft"
                       >
                         <XCircle className="h-4 w-4 mr-1" />
                         Perder

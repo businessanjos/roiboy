@@ -88,7 +88,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
   const getTypeBadge = (type: string) => {
     switch (type) {
       case 'short': return <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">Short</Badge>;
-      case 'live': return <Badge variant="outline" className="text-xs bg-red-50 text-red-700 border-red-200">Live</Badge>;
+      case 'live': return <Badge variant="outline" className="text-xs bg-danger-soft text-danger-strong border-danger">Live</Badge>;
       default: return <Badge variant="outline" className="text-xs">Vídeo</Badge>;
     }
   };
@@ -113,7 +113,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
         <div className="flex items-center gap-3">
           <Select value={selectedChannelId || currentChannel?.id || ''} onValueChange={setSelectedChannelId}>
             <SelectTrigger className="w-[240px] bg-card">
-              <div className="flex items-center gap-2"><Youtube className="h-4 w-4 text-red-600" /><SelectValue placeholder="Selecione um canal" /></div>
+              <div className="flex items-center gap-2"><Youtube className="h-4 w-4 text-danger" /><SelectValue placeholder="Selecione um canal" /></div>
             </SelectTrigger>
             <SelectContent>
               {channels.map((ch) => (
@@ -155,7 +155,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
               <Trash2 className="h-4 w-4" />
             </Button>
           )}
-          {useMockData && <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">Dados de exemplo</Badge>}
+          {useMockData && <Badge variant="outline" className="text-xs bg-warning-soft text-warning-strong border-warning">Dados de exemplo</Badge>}
         </div>
         <Button size="sm" className="gap-1.5 bg-primary hover:bg-primary/90" onClick={() => setConnectDialogOpen(true)}>
           <Plus className="h-4 w-4" />Conectar Novo Canal

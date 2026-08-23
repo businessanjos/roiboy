@@ -48,13 +48,13 @@ const contentTypeIcons: Record<PlaybookContentType, React.ReactNode> = {
 };
 
 const contentTypeColors: Record<PlaybookContentType, string> = {
-  text: "text-blue-400",
+  text: "text-info",
   audio: "text-purple-400",
-  image: "text-green-400",
-  video: "text-red-400",
-  document: "text-orange-400",
-  sticker: "text-yellow-400",
-  list: "text-cyan-400",
+  image: "text-success",
+  video: "text-danger",
+  document: "text-warning",
+  sticker: "text-warning",
+  list: "text-info",
   link: "text-indigo-400",
   template: "text-pink-400",
 };
@@ -138,7 +138,7 @@ export const ZappPlaybookList = memo(function ZappPlaybookList({ sectorId }: Zap
         <div className="flex items-center gap-1.5">
           <span className="text-zapp-text text-sm truncate">{item.name}</span>
           {item.is_favorite && (
-            <Star className="h-3 w-3 text-yellow-500 fill-yellow-500 flex-shrink-0" />
+            <Star className="h-3 w-3 text-warning fill-yellow-500 flex-shrink-0" />
           )}
           {item.visibility === 'personal' && (
             <span className="text-[10px] text-zapp-text-muted" title="Apenas você pode ver">🔒</span>
@@ -160,7 +160,7 @@ export const ZappPlaybookList = memo(function ZappPlaybookList({ sectorId }: Zap
             toggleFavorite(item);
           }}
         >
-          <Star className={cn("h-3.5 w-3.5", item.is_favorite && "fill-yellow-500 text-yellow-500")} />
+          <Star className={cn("h-3.5 w-3.5", item.is_favorite && "fill-yellow-500 text-warning")} />
         </Button>
         <Button
           variant="ghost"

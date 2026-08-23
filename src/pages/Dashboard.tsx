@@ -1138,7 +1138,7 @@ export default function Dashboard() {
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <Star className="h-4 w-4 text-warning fill-amber-500" />
                         <p className="text-sm font-medium text-muted-foreground">Churn (período)</p>
                       </div>
                       <div className={`h-12 w-12 rounded-full ${churnBg} flex items-center justify-center`}>
@@ -1189,7 +1189,7 @@ export default function Dashboard() {
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <Star className="h-4 w-4 text-warning fill-amber-500" />
                         <p className="text-sm font-medium text-muted-foreground">Taxa de Renovação</p>
                       </div>
                       <div className={`h-12 w-12 rounded-full ${renewalBg} flex items-center justify-center`}>
@@ -1252,7 +1252,7 @@ export default function Dashboard() {
                   <CardContent className="p-5">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <Star className="h-4 w-4 text-amber-500 fill-amber-500" />
+                        <Star className="h-4 w-4 text-warning fill-amber-500" />
                         <p className="text-sm font-medium text-muted-foreground">NPS</p>
                       </div>
                       <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
@@ -1392,9 +1392,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Suspensos</p>
-                    <p className="text-2xl font-bold text-amber-600">{periodExitTotals.suspensos}</p>
+                    <p className="text-2xl font-bold text-warning">{periodExitTotals.suspensos}</p>
                   </div>
-                  <Minus className="h-5 w-5 text-amber-500" />
+                  <Minus className="h-5 w-5 text-warning" />
                 </div>
               </CardContent>
             </Card>
@@ -1407,9 +1407,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Pausados</p>
-                    <p className="text-2xl font-bold text-sky-600">{periodExitTotals.pausados}</p>
+                    <p className="text-2xl font-bold text-info">{periodExitTotals.pausados}</p>
                   </div>
-                  <Minus className="h-5 w-5 text-sky-500" />
+                  <Minus className="h-5 w-5 text-info" />
                 </div>
               </CardContent>
             </Card>
@@ -1421,9 +1421,9 @@ export default function Dashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-xs font-medium text-muted-foreground">Vencidos</p>
-                    <p className="text-2xl font-bold text-orange-600">{contractStats?.expired ?? 0}</p>
+                    <p className="text-2xl font-bold text-warning">{contractStats?.expired ?? 0}</p>
                   </div>
-                  <Clock className="h-5 w-5 text-orange-500" />
+                  <Clock className="h-5 w-5 text-warning" />
                 </div>
               </CardContent>
             </Card>
@@ -1772,9 +1772,9 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Suspensos</p>
-                      <p className="text-4xl font-bold text-amber-600">{periodExitTotals.suspensos}</p>
+                      <p className="text-4xl font-bold text-warning">{periodExitTotals.suspensos}</p>
                     </div>
-                    <Minus className="h-8 w-8 text-amber-500" />
+                    <Minus className="h-8 w-8 text-warning" />
                   </div>
                 </CardContent>
               </Card>
@@ -1786,9 +1786,9 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Pausados</p>
-                      <p className="text-4xl font-bold text-sky-600">{periodExitTotals.pausados}</p>
+                      <p className="text-4xl font-bold text-info">{periodExitTotals.pausados}</p>
                     </div>
-                    <Minus className="h-8 w-8 text-sky-500" />
+                    <Minus className="h-8 w-8 text-info" />
                   </div>
                 </CardContent>
               </Card>
@@ -1799,9 +1799,9 @@ export default function Dashboard() {
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-sm font-medium text-muted-foreground">Vencidos</p>
-                      <p className="text-4xl font-bold text-orange-600">{contractStats?.expired ?? 0}</p>
+                      <p className="text-4xl font-bold text-warning">{contractStats?.expired ?? 0}</p>
                     </div>
-                    <Clock className="h-8 w-8 text-orange-500" />
+                    <Clock className="h-8 w-8 text-warning" />
                   </div>
                 </CardContent>
               </Card>

@@ -35,9 +35,9 @@ const initials = (n: string) =>
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   pending: { label: "Pendente", className: "bg-muted text-muted-foreground" },
-  partial: { label: "Parcial", className: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  released: { label: "Liberada", className: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
-  paid: { label: "Paga", className: "bg-green-500/10 text-green-600 border-green-500/30" },
+  partial: { label: "Parcial", className: "bg-warning/10 text-warning border-warning/30" },
+  released: { label: "Liberada", className: "bg-info/10 text-info border-info/30" },
+  paid: { label: "Paga", className: "bg-success/10 text-success border-success/30" },
 };
 
 interface ConsultantGroup {
@@ -162,7 +162,7 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                 </div>
                 <div>
                   <p className="text-[10px] text-muted-foreground">Pendente</p>
-                  <p className="text-sm font-semibold text-amber-600">
+                  <p className="text-sm font-semibold text-warning">
                     {fmtBRL(group.pendingCommission)}
                   </p>
                 </div>

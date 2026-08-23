@@ -64,9 +64,9 @@ export function ContentHQPlatformBoard({
             </div>
 
             <div className="grid grid-cols-3 gap-1 px-3 py-2 border-b text-center text-[11px]">
-              <div><div className="font-bold text-cyan-700">{scheduled}</div><div className="text-muted-foreground">Agendados</div></div>
+              <div><div className="font-bold text-info-strong">{scheduled}</div><div className="text-muted-foreground">Agendados</div></div>
               <div><div className="font-bold text-purple-700">{inProd}</div><div className="text-muted-foreground">Produção</div></div>
-              <div><div className="font-bold text-emerald-700">{published}</div><div className="text-muted-foreground">Publicados</div></div>
+              <div><div className="font-bold text-success-strong">{published}</div><div className="text-muted-foreground">Publicados</div></div>
             </div>
 
             <div className="flex-1 p-3 space-y-2 min-h-[200px]">

@@ -26,7 +26,7 @@ const TYPE_LABELS: Record<string, string> = {
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: "bg-pink-500/10 text-pink-600 border-pink-500/20",
   tiktok: "bg-violet-500/10 text-violet-600 border-violet-500/20",
-  youtube: "bg-red-500/10 text-red-600 border-red-500/20",
+  youtube: "bg-danger/10 text-danger border-danger/20",
   combined: "bg-primary/10 text-primary border-primary/20",
 };
 

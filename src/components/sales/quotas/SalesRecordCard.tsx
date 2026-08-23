@@ -16,7 +16,7 @@ export function SalesRecordCard({ record, monthLabel, current, loading }: SalesR
     <Card className="overflow-hidden relative">
       <CardHeader className="pb-2">
         <CardTitle className="text-base flex items-center gap-2">
-          <Crown className="h-4 w-4 text-amber-500" />
+          <Crown className="h-4 w-4 text-warning" />
           Recorde Pessoal
         </CardTitle>
         <CardDescription>Maior número de vendas em um único mês</CardDescription>
@@ -27,7 +27,7 @@ export function SalesRecordCard({ record, monthLabel, current, loading }: SalesR
             <div className="h-16 w-24 bg-muted animate-pulse rounded" />
           ) : (
             <>
-              <div className="text-6xl font-bold tabular-nums bg-gradient-to-br from-amber-400 to-orange-600 bg-clip-text text-transparent">
+              <div className="text-6xl font-bold tabular-nums bg-gradient-to-br from-warning to-warning bg-clip-text text-transparent">
                 {record}
               </div>
               <p className="text-xs text-muted-foreground mt-1">
@@ -37,7 +37,7 @@ export function SalesRecordCard({ record, monthLabel, current, loading }: SalesR
 
               <div className="mt-5 text-center">
                 {isNewRecord ? (
-                  <p className="text-sm font-semibold text-emerald-600 dark:text-emerald-400 animate-pulse">
+                  <p className="text-sm font-semibold text-success dark:text-success animate-pulse">
                     🏆 NOVO RECORDE este mês!
                   </p>
                 ) : record === 0 ? (

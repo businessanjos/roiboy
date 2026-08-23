@@ -59,7 +59,7 @@ function MetricRow({ icon, label, valueA, valueB, suffix = '', higherIsBetter = 
     <div className="grid grid-cols-[1fr_auto_1fr] gap-4 items-center py-2">
       <div className={cn(
         "text-right font-medium flex items-center justify-end gap-2",
-        aWins && !isTie && "text-emerald-600"
+        aWins && !isTie && "text-success"
       )}>
         {aWins && !isTie && <Trophy className="h-4 w-4" />}
         {formatNumber(valueA)}{suffix}
@@ -70,7 +70,7 @@ function MetricRow({ icon, label, valueA, valueB, suffix = '', higherIsBetter = 
       </div>
       <div className={cn(
         "text-left font-medium flex items-center gap-2",
-        bWins && !isTie && "text-emerald-600"
+        bWins && !isTie && "text-success"
       )}>
         {formatNumber(valueB)}{suffix}
         {bWins && !isTie && <Trophy className="h-4 w-4" />}
@@ -245,7 +245,7 @@ export function PostComparisonDialog({
               <h4 className="font-semibold mb-3 text-center">Resumo</h4>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-2xl font-bold text-emerald-600">{winsA}</p>
+                  <p className="text-2xl font-bold text-success">{winsA}</p>
                   <p className="text-sm text-muted-foreground">Vitórias Post A</p>
                 </div>
                 <div>
@@ -255,7 +255,7 @@ export function PostComparisonDialog({
                   <p className="text-sm text-muted-foreground">Empates</p>
                 </div>
                 <div>
-                  <p className="text-2xl font-bold text-emerald-600">{winsB}</p>
+                  <p className="text-2xl font-bold text-success">{winsB}</p>
                   <p className="text-sm text-muted-foreground">Vitórias Post B</p>
                 </div>
               </div>

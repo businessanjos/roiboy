@@ -43,10 +43,10 @@ type Invoice = {
 };
 
 const STATUS_LABEL: Record<Invoice["status"], { label: string; cls: string }> = {
-  pending: { label: "Em análise", cls: "bg-amber-500/15 text-amber-700 border-amber-500/40" },
-  approved: { label: "Aprovada", cls: "bg-blue-500/15 text-blue-700 border-blue-500/40" },
-  paid: { label: "Paga", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-500/40" },
-  rejected: { label: "Rejeitada", cls: "bg-rose-500/15 text-rose-700 border-rose-500/40" },
+  pending: { label: "Em análise", cls: "bg-warning/15 text-warning-strong border-warning/40" },
+  approved: { label: "Aprovada", cls: "bg-info/15 text-info-strong border-info/40" },
+  paid: { label: "Paga", cls: "bg-success/15 text-success-strong border-success/40" },
+  rejected: { label: "Rejeitada", cls: "bg-danger/15 text-danger-strong border-danger/40" },
 };
 
 const fmtBRL = (n?: number | null) =>
@@ -189,7 +189,7 @@ export default function PublicProviderPortal() {
     return (
       <div className="min-h-screen flex items-center justify-center p-6">
         <Card className="max-w-md w-full">
-          <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-rose-500" />Não foi possível abrir o portal</CardTitle></CardHeader>
+          <CardHeader><CardTitle className="flex items-center gap-2"><AlertCircle className="h-5 w-5 text-danger" />Não foi possível abrir o portal</CardTitle></CardHeader>
           <CardContent><p className="text-sm text-muted-foreground">{error}</p></CardContent>
         </Card>
       </div>
@@ -207,9 +207,9 @@ export default function PublicProviderPortal() {
         </div>
 
         {firstAccess && (
-          <Card className="border-amber-500/40 bg-amber-500/5">
+          <Card className="border-warning/40 bg-warning/5">
             <CardContent className="py-4 text-sm flex gap-2 items-start">
-              <AlertCircle className="h-4 w-4 text-amber-600 mt-0.5" />
+              <AlertCircle className="h-4 w-4 text-warning mt-0.5" />
               <div>Este é seu <strong>primeiro acesso</strong>. Preencha os dados de pagamento abaixo antes de enviar a primeira NF.</div>
             </CardContent>
           </Card>
@@ -279,7 +279,7 @@ export default function PublicProviderPortal() {
                           {inv.paid_at && <> • Pago em {new Date(inv.paid_at).toLocaleDateString("pt-BR")}</>}
                         </div>
                         {inv.status === "rejected" && inv.rejection_reason && (
-                          <div className="text-xs text-rose-600 mt-1">Motivo: {inv.rejection_reason}</div>
+                          <div className="text-xs text-danger mt-1">Motivo: {inv.rejection_reason}</div>
                         )}
                       </div>
                       <Badge variant="outline" className={st.cls}>

@@ -239,8 +239,8 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-500/10">
-              <TrendingUp className="h-4 w-4 text-blue-500" />
+            <div className="p-2 rounded-lg bg-info/10">
+              <TrendingUp className="h-4 w-4 text-info" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Estimado</p>
@@ -253,8 +253,8 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
         
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-orange-500/10">
-              <DollarSign className="h-4 w-4 text-orange-500" />
+            <div className="p-2 rounded-lg bg-warning/10">
+              <DollarSign className="h-4 w-4 text-warning" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Custo Real</p>
@@ -267,8 +267,8 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
         
         <Card className="p-4">
           <div className="flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-green-500/10">
-              <TrendingDown className="h-4 w-4 text-green-500" />
+            <div className="p-2 rounded-lg bg-success/10">
+              <TrendingDown className="h-4 w-4 text-success" />
             </div>
             <div>
               <p className="text-sm text-muted-foreground">Pago</p>

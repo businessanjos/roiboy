@@ -61,17 +61,17 @@ const getEventConfig = (eventType: string) => {
     case "note":
       return { icon: StickyNote, bgColor: "bg-primary", textColor: "text-primary", label: "Nota" };
     case "call":
-      return { icon: Phone, bgColor: "bg-blue-500", textColor: "text-blue-500", label: "Ligação" };
+      return { icon: Phone, bgColor: "bg-info", textColor: "text-info", label: "Ligação" };
     case "whatsapp":
-      return { icon: MessageSquare, bgColor: "bg-emerald-500", textColor: "text-emerald-500", label: "WhatsApp" };
+      return { icon: MessageSquare, bgColor: "bg-success", textColor: "text-success", label: "WhatsApp" };
     case "email":
-      return { icon: Mail, bgColor: "bg-amber-500", textColor: "text-amber-500", label: "Email" };
+      return { icon: Mail, bgColor: "bg-warning", textColor: "text-warning", label: "Email" };
     case "meeting":
       return { icon: Video, bgColor: "bg-violet-500", textColor: "text-violet-500", label: "Reunião" };
     case "contact":
-      return { icon: UserCheck, bgColor: "bg-cyan-500", textColor: "text-cyan-500", label: "Contato" };
+      return { icon: UserCheck, bgColor: "bg-info", textColor: "text-info", label: "Contato" };
     case "status_change":
-      return { icon: Clock, bgColor: "bg-slate-500", textColor: "text-slate-500", label: "Status" };
+      return { icon: Clock, bgColor: "bg-muted-foreground", textColor: "text-muted-foreground", label: "Status" };
     default:
       return { icon: StickyNote, bgColor: "bg-muted", textColor: "text-muted-foreground", label: "Evento" };
   }

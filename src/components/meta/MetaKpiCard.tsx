@@ -5,9 +5,9 @@ import type { MetaKpi } from '@/hooks/useMetaKpiPreferences';
 const iconMap: Record<string, LucideIcon> = { Eye, Users, Repeat, MousePointer, TrendingUp, Heart, MessageCircle, Play, PlayCircle, DollarSign, Wallet, Receipt, CreditCard, Calculator, CheckCircle, UserPlus, ShoppingCart, Banknote, Layout };
 
 const colorClasses: Record<string, { bg: string; border: string; text: string }> = {
-  blue: { bg: 'bg-blue-500/5', border: 'border-blue-500/20', text: 'text-blue-500' },
-  emerald: { bg: 'bg-emerald-500/5', border: 'border-emerald-500/20', text: 'text-emerald-500' },
-  amber: { bg: 'bg-amber-500/5', border: 'border-amber-500/20', text: 'text-amber-500' },
+  blue: { bg: 'bg-info/5', border: 'border-info/20', text: 'text-info' },
+  emerald: { bg: 'bg-success/5', border: 'border-success/20', text: 'text-success' },
+  amber: { bg: 'bg-warning/5', border: 'border-warning/20', text: 'text-warning' },
   purple: { bg: 'bg-purple-500/5', border: 'border-purple-500/20', text: 'text-purple-500' },
 };
 

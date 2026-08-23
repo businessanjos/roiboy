@@ -246,14 +246,14 @@ export function SocialMediaDashboard() {
 
     if (growth > 0) {
       return (
-        <span className="flex items-center gap-0.5 text-green-600 text-xs">
+        <span className="flex items-center gap-0.5 text-success text-xs">
           <TrendingUp className="h-3 w-3" />
           {Math.round(growth)}%
         </span>
       );
     } else if (growth < 0) {
       return (
-        <span className="flex items-center gap-0.5 text-red-600 text-xs">
+        <span className="flex items-center gap-0.5 text-danger text-xs">
           <TrendingDown className="h-3 w-3" />
           {Math.abs(Math.round(growth))}%
         </span>
@@ -367,8 +367,8 @@ export function SocialMediaDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-green-500/10">
-                <Percent className="h-5 w-5 text-green-600" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <Percent className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Engaj. Médio</p>
@@ -381,8 +381,8 @@ export function SocialMediaDashboard() {
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <FileText className="h-5 w-5 text-blue-600" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <FileText className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Total Posts</p>
@@ -470,9 +470,9 @@ export function SocialMediaDashboard() {
                         className={cn(
                           'font-medium',
                           profile.avg_engagement >= 5
-                            ? 'text-green-600'
+                            ? 'text-success'
                             : profile.avg_engagement >= 2
-                            ? 'text-amber-600'
+                            ? 'text-warning'
                             : 'text-muted-foreground'
                         )}
                       >
@@ -563,8 +563,8 @@ export function SocialMediaDashboard() {
               <Card>
                 <CardContent className="p-8">
                   <div className="flex items-center gap-5">
-                    <div className="p-4 rounded-xl bg-green-500/10">
-                      <Percent className="h-8 w-8 text-green-600" />
+                    <div className="p-4 rounded-xl bg-success/10">
+                      <Percent className="h-8 w-8 text-success" />
                     </div>
                     <div>
                       <p className="text-base text-muted-foreground">Engaj. Médio</p>
@@ -577,8 +577,8 @@ export function SocialMediaDashboard() {
               <Card>
                 <CardContent className="p-8">
                   <div className="flex items-center gap-5">
-                    <div className="p-4 rounded-xl bg-blue-500/10">
-                      <FileText className="h-8 w-8 text-blue-600" />
+                    <div className="p-4 rounded-xl bg-info/10">
+                      <FileText className="h-8 w-8 text-info" />
                     </div>
                     <div>
                       <p className="text-base text-muted-foreground">Total Posts</p>
@@ -655,9 +655,9 @@ export function SocialMediaDashboard() {
                               className={cn(
                                 'font-medium',
                                 profile.avg_engagement >= 5
-                                  ? 'text-green-600'
+                                  ? 'text-success'
                                   : profile.avg_engagement >= 2
-                                  ? 'text-amber-600'
+                                  ? 'text-warning'
                                   : 'text-muted-foreground'
                               )}
                             >

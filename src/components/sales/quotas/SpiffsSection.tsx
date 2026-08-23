@@ -207,7 +207,7 @@ export function SpiffsSection() {
           <div className="flex items-center justify-between">
             <div>
               <CardTitle className="text-base flex items-center gap-2">
-                <Zap className="h-4 w-4 text-amber-500" />
+                <Zap className="h-4 w-4 text-warning" />
                 SPIFFs — Incentivos Temporários
               </CardTitle>
               <CardDescription>Campanhas de curto prazo: bônus fixo por meta ou roleta da sorte por valor captado</CardDescription>
@@ -255,7 +255,7 @@ export function SpiffsSection() {
                             : "border-border hover:border-primary/50"
                         }`}
                       >
-                        <Dice5 className="h-4 w-4 text-amber-500 shrink-0" />
+                        <Dice5 className="h-4 w-4 text-warning shrink-0" />
                         <p className="text-sm font-medium leading-tight">Roleta $</p>
                         <p className="text-[10px] text-muted-foreground leading-tight">Giro a cada R$ captado</p>
                       </button>
@@ -350,9 +350,9 @@ export function SpiffsSection() {
                   )}
 
                   {prizeType === "roulette" && (
-                    <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-3 space-y-3">
+                    <div className="rounded-lg border-2 border-warning/30 bg-warning/5 p-3 space-y-3">
                       <div className="flex items-center gap-2">
-                        <Dice5 className="h-4 w-4 text-amber-600" />
+                        <Dice5 className="h-4 w-4 text-warning" />
                         <p className="text-xs font-medium">Configuração da Roleta</p>
                       </div>
                       <div className="space-y-1.5">
@@ -675,7 +675,7 @@ export function SpiffsSection() {
                     <TableRow key={spiff.id} className={expired ? "opacity-50" : ""}>
                       <TableCell className="font-medium">
                         <div className="flex items-center gap-1.5">
-                          {isRoulette && <Dice5 className="h-3.5 w-3.5 text-amber-500" />}
+                          {isRoulette && <Dice5 className="h-3.5 w-3.5 text-warning" />}
                           {isCustom && <Gift className="h-3.5 w-3.5 text-pink-500" />}
                           {isPayment && <CreditCard className="h-3.5 w-3.5 text-purple-500" />}
                           {spiff.name}
@@ -685,7 +685,7 @@ export function SpiffsSection() {
                       <TableCell className="text-center text-xs">
                         {isRoulette && (
                           <div className="space-y-0.5">
-                            <Badge variant="outline" className="text-[10px] border-amber-500/40 text-amber-700 dark:text-amber-400">
+                            <Badge variant="outline" className="text-[10px] border-warning/40 text-warning-strong dark:text-warning">
                               Roleta $
                             </Badge>
                             <p className="text-muted-foreground">
@@ -906,9 +906,9 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
   if (triggerPerValue <= 0) return null;
 
   return (
-    <div className="rounded-lg border-2 border-amber-500/30 bg-amber-500/5 p-3 space-y-2">
+    <div className="rounded-lg border-2 border-warning/30 bg-warning/5 p-3 space-y-2">
       <div className="flex items-center gap-2">
-        <Dice5 className="h-4 w-4 text-amber-600" />
+        <Dice5 className="h-4 w-4 text-warning" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
         <Tooltip>
           <TooltipTrigger>
@@ -947,7 +947,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                 </TableCell>
                 <TableCell className="text-center text-xs tabular-nums">
                   {s.consumedCount > 0 ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">
+                    <span className="text-success dark:text-success font-medium">
                       {s.consumedCount}× • R$ {formatBRL(Math.round(s.consumedTotal))}
                     </span>
                   ) : (
@@ -1220,7 +1220,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                 </TableCell>
                 <TableCell className="text-center text-xs tabular-nums">
                   {s.consumedCount > 0 ? (
-                    <span className="text-emerald-600 dark:text-emerald-400 font-medium">{s.consumedCount}×</span>
+                    <span className="text-success dark:text-success font-medium">{s.consumedCount}×</span>
                   ) : (
                     <span className="text-muted-foreground">—</span>
                   )}

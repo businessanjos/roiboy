@@ -27,12 +27,12 @@ const formatBadgeConfig: Record<PostFormat, { label: string; Icon: typeof Video;
   carousel: {
     label: "Carrossel",
     Icon: Images,
-    className: "bg-blue-500/90 text-white border-transparent",
+    className: "bg-info/90 text-white border-transparent",
   },
   static: {
     label: "Foto",
     Icon: ImageIcon,
-    className: "bg-zinc-800/80 text-white border-transparent",
+    className: "bg-muted-foreground/80 text-white border-transparent",
   },
 };
 
@@ -194,7 +194,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
           <>
             {/* Profile header */}
             <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 p-[3px]">
+              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-warning p-[3px]">
                 <Avatar className="h-full w-full border-2 border-card">
                   <AvatarImage src={snapshot.profile_pic_url || undefined} alt={snapshot.username} />
                   <AvatarFallback>{snapshot.username.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -203,7 +203,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
               <div className="flex-1 text-center sm:text-left space-y-3">
                 <div className="flex items-center gap-2 flex-wrap justify-center sm:justify-start">
                   <h3 className="text-lg font-semibold">@{snapshot.username}</h3>
-                  {snapshot.is_verified && <BadgeCheck className="h-4 w-4 text-blue-500" />}
+                  {snapshot.is_verified && <BadgeCheck className="h-4 w-4 text-info" />}
                   {snapshot.is_private && <Badge variant="secondary" className="gap-1"><Lock className="h-3 w-3" />Privado</Badge>}
                   {snapshot.is_business && <Badge variant="secondary">Business</Badge>}
                   {snapshot.category && <Badge variant="outline">{snapshot.category}</Badge>}
@@ -271,13 +271,13 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
               const stats: Array<{ label: string; value: string; sub?: string; trend?: number | null; Icon: typeof Heart; color: string }> = [
                 { label: `Engajamento (${posts.length} posts)`, value: fmt(totalLikes + totalComments), Icon: Heart, color: "text-pink-500" },
                 { label: "Curtidas (média)", value: fmt(avgLikes), sub: `Total ${fmt(totalLikes)}`, trend: likesTrend, Icon: Heart, color: "text-pink-500" },
-                { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, trend: commentsTrend, Icon: MessageCircle, color: "text-blue-500" },
+                { label: "Comentários (média)", value: fmt(avgComments), sub: `Total ${fmt(totalComments)}`, trend: commentsTrend, Icon: MessageCircle, color: "text-info" },
                 {
                   label: "Taxa de comentários",
                   value: commentRate == null ? "—" : `${commentRate.toFixed(2)}%`,
                   sub: "Comentários / Curtidas",
                   Icon: MessageCircle,
-                  color: "text-emerald-500",
+                  color: "text-success",
                 },
                 ...(totalViews > 0
                   ? [{ label: "Views (Reels)", value: fmt(totalViews), Icon: Eye, color: "text-purple-500" }]
@@ -292,7 +292,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
                         trend == null
                           ? "text-muted-foreground"
                           : trend > 0
-                            ? "text-emerald-500"
+                            ? "text-success"
                             : trend < 0
                               ? "text-destructive"
                               : "text-muted-foreground";

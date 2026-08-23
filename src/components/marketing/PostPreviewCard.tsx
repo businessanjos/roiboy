@@ -14,15 +14,15 @@ interface PostPreviewCardProps {
 
 const formatLabels: Record<string, { label: string; icon: React.ReactNode; color: string }> = {
   reels: { label: 'Reels', icon: <Film className="h-4 w-4" />, color: 'bg-pink-500/10 text-pink-600' },
-  carousel: { label: 'Carrossel', icon: <Images className="h-4 w-4" />, color: 'bg-blue-500/10 text-blue-600' },
+  carousel: { label: 'Carrossel', icon: <Images className="h-4 w-4" />, color: 'bg-info/10 text-info' },
   static: { label: 'Estático', icon: <Image className="h-4 w-4" />, color: 'bg-purple-500/10 text-purple-600' },
 };
 
 const objectiveLabels: Record<string, { label: string; color: string }> = {
-  growth: { label: 'Crescimento', color: 'bg-green-500/10 text-green-600' },
-  connection: { label: 'Conexão', color: 'bg-blue-500/10 text-blue-600' },
-  authority: { label: 'Autoridade', color: 'bg-amber-500/10 text-amber-600' },
-  sales: { label: 'Vendas', color: 'bg-emerald-500/10 text-emerald-600' },
+  growth: { label: 'Crescimento', color: 'bg-success/10 text-success' },
+  connection: { label: 'Conexão', color: 'bg-info/10 text-info' },
+  authority: { label: 'Autoridade', color: 'bg-warning/10 text-warning' },
+  sales: { label: 'Vendas', color: 'bg-success/10 text-success' },
 };
 
 const themeLabels: Record<string, string> = {

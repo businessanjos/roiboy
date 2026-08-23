@@ -35,7 +35,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
     return (
       <div className="bg-card rounded-xl border p-6">
         <div className="flex items-center gap-4 text-muted-foreground">
-          <Youtube className="h-12 w-12 text-red-600" />
+          <Youtube className="h-12 w-12 text-danger" />
           <div>
             <p className="font-medium">Nenhum canal selecionado</p>
             <p className="text-sm">Conecte um canal do YouTube para começar</p>
@@ -48,7 +48,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
   return (
     <div className="bg-card rounded-xl border p-6">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-red-500 to-red-700 p-[3px]">
+        <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-danger to-danger p-[3px]">
           <Avatar className="h-full w-full border-2 border-card">
             <AvatarImage src={channel.profile_picture_url || undefined} alt={channel.username} className="object-cover" />
             <AvatarFallback className="text-2xl font-semibold bg-muted">{channel.username.slice(0, 2).toUpperCase()}</AvatarFallback>
@@ -57,7 +57,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
         <div className="flex-1 text-center sm:text-left space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center justify-center sm:justify-start gap-2">
-              <Youtube className="h-5 w-5 text-red-600" />
+              <Youtube className="h-5 w-5 text-danger" />
               <h2 className="text-xl font-bold">@{channel.username}</h2>
             </div>
             {channel.display_name && <span className="text-muted-foreground">({channel.display_name})</span>}

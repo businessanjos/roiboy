@@ -185,7 +185,7 @@ export default function GenerateCandidateDocDialog({ open, onOpenChange, initial
               ))}
             </div>
             {missing.length > 0 && (
-              <p className="text-xs text-amber-600 flex items-start gap-1.5">
+              <p className="text-xs text-warning flex items-start gap-1.5">
                 <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
                 Faltam dados: {missing.map(signerFieldLabel).join(", ")}. O candidato completa no portal antes de assinar.
               </p>

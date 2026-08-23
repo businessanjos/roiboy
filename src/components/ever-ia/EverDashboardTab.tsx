@@ -62,9 +62,9 @@ function MetricCard({
 }) {
   const colorMap: Record<string, string> = {
     violet: "bg-violet-500/10 text-violet-500",
-    green: "bg-emerald-500/10 text-emerald-500",
-    blue: "bg-blue-500/10 text-blue-500",
-    amber: "bg-amber-500/10 text-amber-500",
+    green: "bg-success/10 text-success",
+    blue: "bg-info/10 text-info",
+    amber: "bg-warning/10 text-warning",
   };
 
   return (

@@ -192,9 +192,9 @@ export function SectorInstanceCard({
                   <div className={`w-2.5 h-2.5 rounded-full ${
                     isConnected 
                       ? showWebhookWarning 
-                        ? "bg-amber-500" 
-                        : "bg-green-500" 
-                      : "bg-red-500"
+                        ? "bg-warning" 
+                        : "bg-success" 
+                      : "bg-danger"
                   }`} />
                 </TooltipTrigger>
                 <TooltipContent>
@@ -213,13 +213,13 @@ export function SectorInstanceCard({
               <div className="flex items-center gap-2">
                 <span className="font-medium text-sm">{displayName}</span>
                 {instance.has_pin && (
-                  <Lock className="h-3.5 w-3.5 text-amber-500" />
+                  <Lock className="h-3.5 w-3.5 text-warning" />
                 )}
                 {showWebhookWarning && (
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+                        <AlertTriangle className="h-3.5 w-3.5 text-warning" />
                       </TooltipTrigger>
                       <TooltipContent>
                         Webhook não configurado

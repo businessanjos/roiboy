@@ -80,9 +80,9 @@ import { useZappConnectionAlerts } from "@/hooks/useZappConnectionAlerts";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
-  pending: { label: "Aguardando", color: "text-amber-600", bgColor: "bg-amber-500" },
-  active: { label: "Em atendimento", color: "text-emerald-600", bgColor: "bg-emerald-500" },
-  waiting: { label: "Aguardando cliente", color: "text-blue-600", bgColor: "bg-blue-500" },
+  pending: { label: "Aguardando", color: "text-warning", bgColor: "bg-warning" },
+  active: { label: "Em atendimento", color: "text-success", bgColor: "bg-success" },
+  waiting: { label: "Aguardando cliente", color: "text-info", bgColor: "bg-info" },
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
@@ -1517,8 +1517,8 @@ export default function RoyZapp() {
     return (
       <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4 max-w-md px-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-red-500/10 flex items-center justify-center">
-            <X className="h-10 w-10 text-red-500" />
+          <div className="w-20 h-20 mx-auto rounded-full bg-danger/10 flex items-center justify-center">
+            <X className="h-10 w-10 text-danger" />
           </div>
           <h2 className="text-zapp-text text-xl font-semibold">Acesso Restrito</h2>
           <p className="text-zapp-text-muted">
@@ -1567,8 +1567,8 @@ export default function RoyZapp() {
     return (
       <div className="flex items-center justify-center h-full bg-zapp-bg">
         <div className="text-center space-y-4 max-w-md px-4">
-          <div className="w-20 h-20 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center">
-            <Building2 className="h-10 w-10 text-amber-500" />
+          <div className="w-20 h-20 mx-auto rounded-full bg-warning/10 flex items-center justify-center">
+            <Building2 className="h-10 w-10 text-warning" />
           </div>
           <h2 className="text-zapp-text text-xl font-semibold">Nenhum setor liberado</h2>
           <p className="text-zapp-text-muted">
@@ -2234,7 +2234,7 @@ export default function RoyZapp() {
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction 
-              className="bg-red-500 hover:bg-red-600 text-white"
+              className="bg-danger hover:bg-danger text-white"
               onClick={convActions.permanentlyDeleteConversation}
             >
               Excluir

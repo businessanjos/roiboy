@@ -355,7 +355,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                       {phone}
                                       <button
                                         onClick={() => handleFieldChange("additional_phones", (formData.additional_phones || []).filter((_, i) => i !== idx))}
-                                        className="hover:text-red-500"
+                                        className="hover:text-danger"
                                       >
                                         <X className="h-3 w-3" />
                                       </button>
@@ -386,7 +386,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                       {email}
                                       <button
                                         onClick={() => handleFieldChange("emails", (formData.emails || []).filter((_, i) => i !== idx))}
-                                        className="hover:text-red-500"
+                                        className="hover:text-danger"
                                       >
                                         <X className="h-3 w-3" />
                                       </button>
@@ -421,7 +421,7 @@ export function ZappLeadDataEditor({ leadId, onLeadUpdated }: ZappLeadDataEditor
                                       @{ig.replace(/^@/, '')}
                                       <button
                                         onClick={() => handleFieldChange("instagrams", (formData.instagrams || []).filter((_, i) => i !== idx))}
-                                        className="hover:text-red-500"
+                                        className="hover:text-danger"
                                       >
                                         <X className="h-3 w-3" />
                                       </button>

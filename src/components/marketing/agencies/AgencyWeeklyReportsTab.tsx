@@ -29,7 +29,7 @@ function Delta({ current, previous, invert }: { current?: number | null; previou
   const diff = ((current - previous) / previous) * 100;
   const good = invert ? diff < 0 : diff > 0;
   const Icon = Math.abs(diff) < 0.01 ? Minus : diff > 0 ? TrendingUp : TrendingDown;
-  const color = Math.abs(diff) < 0.01 ? "text-muted-foreground" : good ? "text-emerald-600" : "text-rose-500";
+  const color = Math.abs(diff) < 0.01 ? "text-muted-foreground" : good ? "text-success" : "text-danger";
   return (
     <span className={`inline-flex items-center gap-0.5 text-xs font-medium ${color}`}>
       <Icon className="h-3 w-3" />
@@ -233,9 +233,9 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
                         <Metric label="CPM" value={fmtBRL(r.cpm)} />
                       </div>
                       {r.best_creative_name && (
-                        <div className="rounded-lg border bg-amber-50 p-3 dark:bg-amber-950/20">
+                        <div className="rounded-lg border bg-warning-soft p-3 dark:bg-warning/20">
                           <p className="flex items-center gap-1.5 text-xs font-semibold">
-                            <Trophy className="h-3.5 w-3.5 text-amber-500" /> Melhor criativo
+                            <Trophy className="h-3.5 w-3.5 text-warning" /> Melhor criativo
                           </p>
                           <p className="mt-1 text-sm font-medium">{r.best_creative_name}</p>
                           <p className="text-xs text-muted-foreground">

@@ -134,12 +134,12 @@ interface Client {
 }
 
 const statusConfig = {
-  pending: { label: "Pendente", color: "bg-yellow-100 text-yellow-800", icon: Clock },
-  paid: { label: "Pago", color: "bg-green-100 text-green-800", icon: CheckCircle2 },
-  overdue: { label: "Atrasado", color: "bg-red-100 text-red-800", icon: AlertCircle },
-  cancelled: { label: "Cancelado", color: "bg-gray-100 text-gray-800", icon: XCircle },
-  partially_paid: { label: "Parcial", color: "bg-blue-100 text-blue-800", icon: DollarSign },
-  renegotiated: { label: "Renegociado", color: "bg-orange-100 text-orange-800", icon: RefreshCw },
+  pending: { label: "Pendente", color: "bg-warning-soft text-warning-strong", icon: Clock },
+  paid: { label: "Pago", color: "bg-success-soft text-success-strong", icon: CheckCircle2 },
+  overdue: { label: "Atrasado", color: "bg-danger-soft text-danger-strong", icon: AlertCircle },
+  cancelled: { label: "Cancelado", color: "bg-muted text-foreground", icon: XCircle },
+  partially_paid: { label: "Parcial", color: "bg-info-soft text-info-strong", icon: DollarSign },
+  renegotiated: { label: "Renegociado", color: "bg-warning-soft text-warning-strong", icon: RefreshCw },
 };
 
 const recurrenceLabels: Record<string, string> = {
@@ -646,11 +646,11 @@ export default function FinancialEntriesPage() {
       <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as "payable" | "receivable")}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="receivable" className="flex items-center gap-2">
-            <ArrowDownCircle className="h-4 w-4 text-green-600" />
+            <ArrowDownCircle className="h-4 w-4 text-success" />
             A Receber
           </TabsTrigger>
           <TabsTrigger value="payable" className="flex items-center gap-2">
-            <ArrowUpCircle className="h-4 w-4 text-red-600" />
+            <ArrowUpCircle className="h-4 w-4 text-danger" />
             A Pagar
           </TabsTrigger>
         </TabsList>
@@ -820,9 +820,9 @@ export default function FinancialEntriesPage() {
                             {(() => {
                               const src = (entry as any).source || 'manual';
                               const map: Record<string, { label: string; cls: string }> = {
-                                manual: { label: 'Manual', cls: 'bg-slate-100 text-slate-700 border-slate-200' },
+                                manual: { label: 'Manual', cls: 'bg-muted text-foreground border-border' },
                                 
-                                contract: { label: 'Contrato', cls: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+                                contract: { label: 'Contrato', cls: 'bg-success-soft text-success-strong border-success' },
                                 deal: { label: 'Venda', cls: 'bg-purple-100 text-purple-700 border-purple-200' },
                               };
                               const cfg = map[src] || map.manual;

@@ -79,7 +79,7 @@ export function ZappInstanceSelectorDialog({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5 text-green-600" />
+              <MessageSquare className="h-5 w-5 text-success" />
               Selecione a Instância
             </DialogTitle>
             <DialogDescription>
@@ -102,8 +102,8 @@ export function ZappInstanceSelectorDialog({
                   "text-left w-full"
                 )}
               >
-                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center">
-                  <MessageSquare className="h-5 w-5 text-green-600 dark:text-green-400" />
+                <div className="flex-shrink-0 w-10 h-10 rounded-full bg-success-soft dark:bg-success/30 flex items-center justify-center">
+                  <MessageSquare className="h-5 w-5 text-success dark:text-success" />
                 </div>
                 
                 <div className="flex-1 min-w-0">
@@ -121,7 +121,7 @@ export function ZappInstanceSelectorDialog({
                 {instance.hasPinHash ? (
                   <Lock className="h-4 w-4 text-muted-foreground flex-shrink-0" />
                 ) : (
-                  <Check className="h-4 w-4 text-green-600 flex-shrink-0 opacity-0 group-hover:opacity-100" />
+                  <Check className="h-4 w-4 text-success flex-shrink-0 opacity-0 group-hover:opacity-100" />
                 )}
               </button>
             ))}

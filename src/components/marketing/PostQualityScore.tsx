@@ -89,16 +89,16 @@ export function PostQualityScore({
 
     if (totalScore >= 86) {
       classification = 'Excelente';
-      color = 'text-green-500';
+      color = 'text-success';
     } else if (totalScore >= 61) {
       classification = 'Ótimo';
-      color = 'text-emerald-400';
+      color = 'text-success';
     } else if (totalScore >= 31) {
       classification = 'Bom';
-      color = 'text-yellow-500';
+      color = 'text-warning';
     } else {
       classification = 'Básico';
-      color = 'text-red-500';
+      color = 'text-danger';
     }
 
     return {
@@ -146,7 +146,7 @@ export function PostQualityScore({
               {passedCriteria.map((c) => (
                 <div
                   key={c.name}
-                  className="flex items-center gap-2 text-sm text-green-600 dark:text-green-400"
+                  className="flex items-center gap-2 text-sm text-success dark:text-success"
                 >
                   <Check className="h-3.5 w-3.5" />
                   <span>{c.name}</span>

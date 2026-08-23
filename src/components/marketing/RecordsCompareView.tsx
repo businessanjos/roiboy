@@ -238,10 +238,10 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
                             pct === null
                               ? 'text-muted-foreground'
                               : pct >= 100
-                                ? 'text-emerald-600'
+                                ? 'text-success'
                                 : pct < 80
                                   ? 'text-destructive'
-                                  : 'text-amber-600'
+                                  : 'text-warning'
                           }`}
                         >
                           {pct === null ? 'sem meta' : `${pct}% da meta`}

@@ -558,7 +558,7 @@ export default function Renewals() {
   const getUrgencyBadge = (days: number) => {
     if (days < 0) {
       return (
-        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 gap-1">
+        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger gap-1">
           <CalendarX className="h-3 w-3" />
           Vencido há {Math.abs(days)} dias
         </Badge>
@@ -566,7 +566,7 @@ export default function Renewals() {
     }
     if (days <= 30) {
       return (
-        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 gap-1">
+        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger gap-1">
           <AlertTriangle className="h-3 w-3" />
           {days} dias
         </Badge>
@@ -574,14 +574,14 @@ export default function Renewals() {
     }
     if (days <= 60) {
       return (
-        <Badge className="bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400 gap-1">
+        <Badge className="bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning gap-1">
           <Clock className="h-3 w-3" />
           {days} dias
         </Badge>
       );
     }
     return (
-      <Badge className="bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 gap-1">
+      <Badge className="bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning gap-1">
         <CalendarDays className="h-3 w-3" />
         {days} dias
       </Badge>
@@ -685,8 +685,8 @@ export default function Renewals() {
                             className={cn(
                               "mt-1 ml-11 text-[10px] font-medium cursor-help",
                               contract.list_name === "Vencido"
-                                ? "border-red-500/50 text-red-600 dark:text-red-400"
-                                : "border-amber-500/50 text-amber-600 dark:text-amber-400"
+                                ? "border-danger/50 text-danger dark:text-danger"
+                                : "border-warning/50 text-warning dark:text-warning"
                             )}
                           >
                             Lista: {contract.list_name}
@@ -738,9 +738,9 @@ export default function Renewals() {
                     >
                       <SelectTrigger className={cn(
                         "h-8 w-[116px] lg:w-[128px] text-xs mx-auto",
-                        outcomeMap[contract.id]?.outcome === "renewed" && "border-emerald-500 text-emerald-700 dark:text-emerald-400",
-                        outcomeMap[contract.id]?.outcome === "negotiating" && "border-blue-500 text-blue-700 dark:text-blue-400",
-                        outcomeMap[contract.id]?.outcome === "lost" && "border-red-500 text-red-700 dark:text-red-400",
+                        outcomeMap[contract.id]?.outcome === "renewed" && "border-success text-success-strong dark:text-success",
+                        outcomeMap[contract.id]?.outcome === "negotiating" && "border-info text-info-strong dark:text-info",
+                        outcomeMap[contract.id]?.outcome === "lost" && "border-danger text-danger-strong dark:text-danger",
                       )}>
                         <SelectValue />
                       </SelectTrigger>
@@ -850,8 +850,8 @@ export default function Renewals() {
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                  <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-2 rounded-lg bg-success-soft dark:bg-success/30">
+                  <DollarSign className="h-5 w-5 text-success dark:text-success" />
                 </div>
                 <div className="min-w-0">
                   <p className="text-2xl font-bold truncate">{formatCurrency(totalRenewalValue, "BRL")}</p>
@@ -861,8 +861,8 @@ export default function Renewals() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <AlertTriangle className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <div className="p-2 rounded-lg bg-danger-soft dark:bg-danger/30">
+                  <AlertTriangle className="h-5 w-5 text-danger dark:text-danger" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{urgentCount}</p>
@@ -872,8 +872,8 @@ export default function Renewals() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-orange-100 dark:bg-orange-900/30">
-                  <Clock className="h-5 w-5 text-orange-600 dark:text-orange-400" />
+                <div className="p-2 rounded-lg bg-warning-soft dark:bg-warning/30">
+                  <Clock className="h-5 w-5 text-warning dark:text-warning" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{warningCount}</p>
@@ -883,8 +883,8 @@ export default function Renewals() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-                  <CalendarDays className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+                <div className="p-2 rounded-lg bg-warning-soft dark:bg-warning/30">
+                  <CalendarDays className="h-5 w-5 text-warning dark:text-warning" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{okCount}</p>
@@ -1073,8 +1073,8 @@ export default function Renewals() {
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-                  <CalendarX className="h-5 w-5 text-red-600 dark:text-red-400" />
+                <div className="p-2 rounded-lg bg-danger-soft dark:bg-danger/30">
+                  <CalendarX className="h-5 w-5 text-danger dark:text-danger" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{filteredExpired.length}</p>
@@ -1084,8 +1084,8 @@ export default function Renewals() {
             </Card>
             <Card>
               <CardContent className="p-4 flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-                  <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+                <div className="p-2 rounded-lg bg-success-soft dark:bg-success/30">
+                  <DollarSign className="h-5 w-5 text-success dark:text-success" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{formatCurrency(totalExpiredValue, "BRL")}</p>

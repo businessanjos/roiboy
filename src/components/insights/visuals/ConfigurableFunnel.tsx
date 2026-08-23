@@ -127,7 +127,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
                 {ganhosStagePct}%
               </span>
               <div
-                className={`rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-emerald-400 ring-offset-2 flex-1 min-w-0 overflow-hidden ${onDrilldown ? 'cursor-pointer hover:opacity-90' : ''}`}
+                className={`rounded-md flex items-center justify-between px-4 transition-all ring-2 ring-success ring-offset-2 flex-1 min-w-0 overflow-hidden ${onDrilldown ? 'cursor-pointer hover:opacity-90' : ''}`}
                 style={{ backgroundColor: '#10b981', height: barHeight }}
                 onClick={onDrilldown ? () => onDrilldown('Ganhos', 'won') : undefined}
               >

@@ -42,13 +42,13 @@ const SENIORITY_RANK: Record<string, number> = {
 const SENIORITY_COLORS: Record<string, string> = {
   "C-Level": "bg-purple-500/10 text-purple-700 border-purple-200 dark:text-purple-300 dark:border-purple-800",
   "Diretor": "bg-indigo-500/10 text-indigo-700 border-indigo-200 dark:text-indigo-300 dark:border-indigo-800",
-  "Gerente": "bg-blue-500/10 text-blue-700 border-blue-200 dark:text-blue-300 dark:border-blue-800",
-  "Coordenador": "bg-cyan-500/10 text-cyan-700 border-cyan-200 dark:text-cyan-300 dark:border-cyan-800",
-  "Especialista": "bg-teal-500/10 text-teal-700 border-teal-200 dark:text-teal-300 dark:border-teal-800",
-  "Sênior": "bg-emerald-500/10 text-emerald-700 border-emerald-200 dark:text-emerald-300 dark:border-emerald-800",
-  "Pleno": "bg-amber-500/10 text-amber-700 border-amber-200 dark:text-amber-300 dark:border-amber-800",
-  "Júnior": "bg-orange-500/10 text-orange-700 border-orange-200 dark:text-orange-300 dark:border-orange-800",
-  "Estagiário": "bg-slate-500/10 text-slate-700 border-slate-200 dark:text-slate-300 dark:border-slate-800",
+  "Gerente": "bg-info/10 text-info-strong border-info dark:text-info dark:border-info",
+  "Coordenador": "bg-info/10 text-info-strong border-info dark:text-info dark:border-info",
+  "Especialista": "bg-success/10 text-success-strong border-success dark:text-success dark:border-success",
+  "Sênior": "bg-success/10 text-success-strong border-success dark:text-success dark:border-success",
+  "Pleno": "bg-warning/10 text-warning-strong border-warning dark:text-warning dark:border-warning",
+  "Júnior": "bg-warning/10 text-warning-strong border-warning dark:text-warning dark:border-warning",
+  "Estagiário": "bg-muted-foreground/10 text-foreground border-border dark:text-muted-foreground dark:border-border",
 };
 
 const EMPTY_FORM = {
@@ -206,8 +206,8 @@ export default function RHPositions() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="p-2 rounded-xl bg-cyan-500/10">
-          <FileText className="h-6 w-6 text-cyan-600" strokeWidth={1.5} />
+        <div className="p-2 rounded-xl bg-info/10">
+          <FileText className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">Cargos</h1>

@@ -336,7 +336,7 @@ export function ClientClinicsManager({
                         onClick={() => togglePrimary(c)}
                       >
                         {c.is_primary ? (
-                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500" />
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-warning" />
                         ) : (
                           <StarOff className="h-3.5 w-3.5" />
                         )}
@@ -404,9 +404,9 @@ export function ClientClinicsManager({
                           className={
                             "h-full " +
                             (pct >= 100
-                              ? "bg-emerald-500"
+                              ? "bg-success"
                               : pct >= 70
-                              ? "bg-amber-500"
+                              ? "bg-warning"
                               : "bg-primary")
                           }
                           style={{ width: `${Math.min(pct, 100)}%` }}

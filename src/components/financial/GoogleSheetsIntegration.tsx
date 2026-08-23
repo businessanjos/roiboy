@@ -150,7 +150,7 @@ function processAllPendingTransactions() {
       <DialogContent className="max-w-3xl max-h-[90vh]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sheet className="h-5 w-5 text-green-600" />
+            <Sheet className="h-5 w-5 text-success" />
             Integração Google Sheets
           </DialogTitle>
         </DialogHeader>

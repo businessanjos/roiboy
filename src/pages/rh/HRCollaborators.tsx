@@ -358,8 +358,8 @@ export default function HRCollaborators() {
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="shrink-0">
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="p-2.5 rounded-xl bg-blue-500/10">
-          <UsersRound className="h-6 w-6 text-blue-600" strokeWidth={1.5} />
+        <div className="p-2.5 rounded-xl bg-info/10">
+          <UsersRound className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
         <div className="flex-1">
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
@@ -511,7 +511,7 @@ export default function HRCollaborators() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-9 w-9">
                           <AvatarImage src={c.avatar_url || undefined} />
-                          <AvatarFallback className="bg-blue-500/10 text-blue-600 text-xs font-medium">
+                          <AvatarFallback className="bg-info/10 text-info text-xs font-medium">
                             {getInitials(c.full_name)}
                           </AvatarFallback>
                         </Avatar>
@@ -660,7 +660,7 @@ export default function HRCollaborators() {
                     />
                     <Avatar className="h-8 w-8">
                       <AvatarImage src={m.avatar_url || undefined} />
-                      <AvatarFallback className="bg-blue-500/10 text-blue-600 text-xs">
+                      <AvatarFallback className="bg-info/10 text-info text-xs">
                         {getInitials(m.name || m.email)}
                       </AvatarFallback>
                     </Avatar>

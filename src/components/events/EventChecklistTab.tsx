@@ -217,10 +217,10 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
 
   const getPriorityBadge = (priority: string | null) => {
     const config: Record<string, { label: string; className: string }> = {
-      low: { label: "Baixa", className: "bg-gray-100 text-gray-700" },
-      medium: { label: "Média", className: "bg-yellow-100 text-yellow-700" },
-      high: { label: "Alta", className: "bg-orange-100 text-orange-700" },
-      urgent: { label: "Urgente", className: "bg-red-100 text-red-700" },
+      low: { label: "Baixa", className: "bg-muted text-foreground" },
+      medium: { label: "Média", className: "bg-warning-soft text-warning-strong" },
+      high: { label: "Alta", className: "bg-warning-soft text-warning-strong" },
+      urgent: { label: "Urgente", className: "bg-danger-soft text-danger-strong" },
     };
     const { label, className } = config[priority || "medium"] || config.medium;
     return <span className={`px-2 py-0.5 rounded text-xs font-medium ${className}`}>{label}</span>;

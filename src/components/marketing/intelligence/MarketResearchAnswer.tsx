@@ -37,11 +37,11 @@ const iconMap = {
 };
 
 const iconColor = {
-  insight: "text-amber-600",
-  risk: "text-red-600",
-  trend: "text-emerald-600",
+  insight: "text-warning",
+  risk: "text-danger",
+  trend: "text-success",
   target: "text-purple-600",
-  data: "text-blue-600",
+  data: "text-info",
 };
 
 function parseAnswer(raw: string): { tldr: string | null; stats: KeyStat[]; sections: Section[]; rest: string } {
@@ -165,7 +165,7 @@ export function MarketResearchAnswer({ answer }: { answer: string }) {
                   <div className="mt-1 text-[11px] text-muted-foreground line-clamp-2">{s.detail}</div>
                 )}
               </CardContent>
-              <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-r from-purple-400/40 via-blue-400/40 to-emerald-400/40" />
+              <div className="absolute top-0 right-0 h-1 w-full bg-gradient-to-r from-purple-400/40 via-info/40 to-success/40" />
             </Card>
           ))}
         </div>

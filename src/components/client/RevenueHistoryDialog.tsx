@@ -98,11 +98,11 @@ function Kpi({
 }) {
   const toneCls =
     tone === "positive"
-      ? "text-emerald-600"
+      ? "text-success"
       : tone === "negative"
-      ? "text-red-600"
+      ? "text-danger"
       : tone === "gold"
-      ? "text-amber-600"
+      ? "text-warning"
       : "text-foreground";
   return (
     <div className="rounded-lg border bg-card p-3">
@@ -381,9 +381,9 @@ export function RevenueHistoryDialog({
                               <span
                                 className={`inline-flex items-center gap-1 ${
                                   r.deltaPct > 0
-                                    ? "text-emerald-600"
+                                    ? "text-success"
                                     : r.deltaPct < 0
-                                    ? "text-red-600"
+                                    ? "text-danger"
                                     : "text-muted-foreground"
                                 }`}
                               >
@@ -405,7 +405,7 @@ export function RevenueHistoryDialog({
                             ) : (
                               <span
                                 className={
-                                  r.vsInitial >= 0 ? "text-emerald-600" : "text-red-600"
+                                  r.vsInitial >= 0 ? "text-success" : "text-danger"
                                 }
                               >
                                 {r.vsInitial >= 0 ? "+" : ""}
@@ -417,7 +417,7 @@ export function RevenueHistoryDialog({
                             {r.month === stats!.best.month && (
                               <Badge
                                 variant="outline"
-                                className="text-amber-600 border-amber-300 gap-1"
+                                className="text-warning border-warning gap-1"
                               >
                                 <Trophy className="h-3 w-3" /> Recorde
                               </Badge>

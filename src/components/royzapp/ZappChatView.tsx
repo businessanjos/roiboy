@@ -304,7 +304,7 @@ export function ZappChatView({
             <span className="text-zapp-text-muted">{onlineAgents} atendentes online</span>
           </div>
           <div className="flex items-center gap-2">
-            <Clock className="h-4 w-4 text-amber-500" />
+            <Clock className="h-4 w-4 text-warning" />
             <span className="text-zapp-text-muted">{totalQueueConversations} na fila</span>
           </div>
           <div className="flex items-center gap-2">

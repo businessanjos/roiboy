@@ -247,12 +247,12 @@ export function WhatsAppIntegrationCard({
                 animate={{ scale: [1, 1.2, 1] }}
                 transition={{ repeat: 3, duration: 0.5 }}
               >
-                <CheckCircle2 className="h-16 w-16 text-green-500" />
+                <CheckCircle2 className="h-16 w-16 text-success" />
               </motion.div>
               <h3 className="text-xl font-bold">WhatsApp Conectado!</h3>
               <p className="text-muted-foreground">Conexão estabelecida com sucesso</p>
               <motion.div
-                className="h-1 bg-green-500 rounded-full"
+                className="h-1 bg-success rounded-full"
                 initial={{ width: 0 }}
                 animate={{ width: 200 }}
                 transition={{ duration: 3 }}
@@ -281,7 +281,7 @@ export function WhatsAppIntegrationCard({
             <Badge variant={isConnected ? "default" : "outline"} className="gap-1">
               {isConnected ? (
                 <>
-                  <span className="h-2 w-2 rounded-full bg-green-400 animate-pulse" />
+                  <span className="h-2 w-2 rounded-full bg-success animate-pulse" />
                   Operacional
                 </>
               ) : isInstanceOnlineWithoutWebhook ? (
@@ -314,16 +314,16 @@ export function WhatsAppIntegrationCard({
             <div className={cn(
               "rounded-lg border p-4 space-y-3",
               isConnected
-                ? "border-green-200 bg-green-50 dark:bg-green-950/20 dark:border-green-900"
-                : "border-amber-200 bg-amber-50 dark:bg-amber-950/20 dark:border-amber-900"
+                ? "border-success bg-success-soft dark:bg-success/20 dark:border-success"
+                : "border-warning bg-warning-soft dark:bg-warning/20 dark:border-warning"
             )}>
               <div className="flex items-center gap-2">
                 {isConnected ? (
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 ) : (
-                  <WifiOff className="h-5 w-5 text-amber-600" />
+                  <WifiOff className="h-5 w-5 text-warning" />
                 )}
-                <h4 className={cn("font-medium", isConnected ? "text-green-800 dark:text-green-400" : "text-amber-800 dark:text-amber-400")}>
+                <h4 className={cn("font-medium", isConnected ? "text-success-strong dark:text-success" : "text-warning-strong dark:text-warning")}>
                   {isConnected ? "WhatsApp operacional" : "WhatsApp ligado, mas sem recebimento"}
                 </h4>
               </div>
@@ -372,15 +372,15 @@ export function WhatsAppIntegrationCard({
                     <div className={cn(
                       "p-2 rounded-full",
                       isIntegrationConnected
-                        ? "bg-green-100 dark:bg-green-900/30"
+                        ? "bg-success-soft dark:bg-success/30"
                         : integrationWebhookBroken
-                          ? "bg-amber-100 dark:bg-amber-900/30"
+                          ? "bg-warning-soft dark:bg-warning/30"
                           : "bg-muted"
                     )}>
                       {isIntegrationConnected ? (
-                        <Wifi className="h-4 w-4 text-green-600 dark:text-green-400" />
+                        <Wifi className="h-4 w-4 text-success dark:text-success" />
                       ) : integrationWebhookBroken ? (
-                        <WifiOff className="h-4 w-4 text-amber-600 dark:text-amber-400" />
+                        <WifiOff className="h-4 w-4 text-warning dark:text-warning" />
                       ) : (
                         <WifiOff className="h-4 w-4 text-muted-foreground" />
                       )}
@@ -405,8 +405,8 @@ export function WhatsAppIntegrationCard({
                         title="Clique para reativar o recebimento de mensagens"
                         className={cn(
                           "inline-flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-xs font-medium transition-colors cursor-pointer",
-                          "border-amber-500 text-amber-700 bg-amber-50 hover:bg-amber-500 hover:text-white",
-                          "dark:text-amber-400 dark:bg-amber-950/30 dark:hover:bg-amber-500 dark:hover:text-white",
+                          "border-warning text-warning-strong bg-warning-soft hover:bg-warning hover:text-white",
+                          "dark:text-warning dark:bg-warning/30 dark:hover:bg-warning dark:hover:text-white",
                           "disabled:opacity-70 disabled:cursor-not-allowed"
                         )}
                       >
@@ -421,8 +421,8 @@ export function WhatsAppIntegrationCard({
                       <Badge
                         variant={isIntegrationConnected ? "default" : "outline"}
                         className={cn(
-                          isIntegrationConnected && "bg-green-600",
-                          integrationWebhookBroken && "border-amber-500 text-amber-600"
+                          isIntegrationConnected && "bg-success",
+                          integrationWebhookBroken && "border-warning text-warning"
                         )}
                       >
                         {integrationStatusLabel}

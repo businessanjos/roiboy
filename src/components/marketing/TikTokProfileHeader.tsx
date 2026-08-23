@@ -83,7 +83,7 @@ export function TikTokProfileHeader({
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
         {/* Profile Picture with TikTok Gradient Border */}
         <div className="relative group">
-          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 p-[3px]">
+          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-info to-pink-500 p-[3px]">
             <Avatar className="h-full w-full border-2 border-card">
               <AvatarImage 
                 src={profile.profile_picture_url || undefined} 

@@ -63,9 +63,9 @@ interface ChurnContract {
 }
 
 const STATUS_CONFIG = {
-  cancelled: { label: "Cancelado (Churn)", icon: XCircle, className: "bg-red-100 text-red-700 border-red-200" },
-  ended: { label: "Encerrado", icon: Ban, className: "bg-slate-100 text-slate-700 border-slate-200" },
-  paused: { label: "Pausado", icon: PauseCircle, className: "bg-amber-100 text-amber-700 border-amber-200" },
+  cancelled: { label: "Cancelado (Churn)", icon: XCircle, className: "bg-danger-soft text-danger-strong border-danger" },
+  ended: { label: "Encerrado", icon: Ban, className: "bg-muted text-foreground border-border" },
+  paused: { label: "Pausado", icon: PauseCircle, className: "bg-warning-soft text-warning-strong border-warning" },
 };
 
 const PERIOD_OPTIONS = [
@@ -235,12 +235,12 @@ export function ChurnReportSection() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <XCircle className="h-4 w-4 text-red-500" />
+                <XCircle className="h-4 w-4 text-danger" />
                 Churn (Cancelados)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{metrics.totalChurned}</div>
+              <div className="text-2xl font-bold text-danger">{metrics.totalChurned}</div>
               <p className="text-xs text-muted-foreground">contratos</p>
             </CardContent>
           </Card>
@@ -248,12 +248,12 @@ export function ChurnReportSection() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <Ban className="h-4 w-4 text-slate-500" />
+                <Ban className="h-4 w-4 text-muted-foreground" />
                 Encerrados
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-slate-600">{metrics.totalEnded}</div>
+              <div className="text-2xl font-bold text-muted-foreground">{metrics.totalEnded}</div>
               <p className="text-xs text-muted-foreground">contratos</p>
             </CardContent>
           </Card>
@@ -261,12 +261,12 @@ export function ChurnReportSection() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <PauseCircle className="h-4 w-4 text-amber-500" />
+                <PauseCircle className="h-4 w-4 text-warning" />
                 Pausados
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{metrics.totalPaused}</div>
+              <div className="text-2xl font-bold text-warning">{metrics.totalPaused}</div>
               <p className="text-xs text-muted-foreground">contratos</p>
             </CardContent>
           </Card>
@@ -274,12 +274,12 @@ export function ChurnReportSection() {
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                <DollarSign className="h-4 w-4 text-red-500" />
+                <DollarSign className="h-4 w-4 text-danger" />
                 Receita Perdida (Churn)
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-red-600">{formatCurrency(metrics.totalValue)}</div>
+              <div className="text-2xl font-bold text-danger">{formatCurrency(metrics.totalValue)}</div>
               <p className="text-xs text-muted-foreground">valor total</p>
             </CardContent>
           </Card>
