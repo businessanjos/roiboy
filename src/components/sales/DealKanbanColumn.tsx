@@ -148,7 +148,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         >
           {deals.length === 0 ? (
             <div className={cn(
-              "flex items-center justify-center h-20 text-[10px] border border-dashed rounded-md transition-all duration-200",
+              "flex items-center justify-center h-20 text-[10px] border border-dashed rounded-xl transition-all duration-200",
               isOver 
                 ? "text-foreground font-medium bg-primary/5 border-primary/30" 
                 : "text-muted-foreground border-border/40 bg-muted/10",
@@ -175,7 +175,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
               {hasMore && (
                 <button
                   onClick={() => setVisibleCount(prev => prev + LOAD_MORE_INCREMENT)}
-                  className="w-full py-2 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-md border border-dashed border-border/40 transition-colors flex items-center justify-center gap-1"
+                  className="w-full py-2 text-[10px] text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-xl border border-dashed border-border/40 transition-colors flex items-center justify-center gap-1"
                 >
                   <ChevronDown className="h-3 w-3" />
                   Ver mais {Math.min(LOAD_MORE_INCREMENT, deals.length - visibleCount)} de {deals.length - visibleCount}

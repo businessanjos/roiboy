@@ -936,7 +936,7 @@ export function IncentivePlanSection() {
                     </div>
                   </div>
                 </div>
-                <div className="rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
+                <div className="rounded-xl border bg-muted/30 p-3 text-xs text-muted-foreground">
                   <p className="font-medium text-foreground mb-1">Como funciona:</p>
                   <p>
                     Quando o vendedor ultrapassa <strong>{uncappedThreshold || 0}%</strong> da meta, cada venda adicional paga{" "}

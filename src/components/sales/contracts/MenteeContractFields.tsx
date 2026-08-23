@@ -480,7 +480,7 @@ export const MenteeContractFields = ({
               onChange={(e) => update("client_email", e.target.value)}
             />
           </div>
-          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-6 gap-x-4 gap-y-3 rounded-md border border-border/60 p-3 bg-muted/20">
+          <div className="sm:col-span-2 grid grid-cols-1 sm:grid-cols-6 gap-x-4 gap-y-3 rounded-xl border border-border/60 p-3 bg-muted/20">
             <div className="sm:col-span-2 space-y-1.5">
               <Label className="text-xs">CEP</Label>
               <div className="relative">

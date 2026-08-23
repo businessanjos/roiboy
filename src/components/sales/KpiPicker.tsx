@@ -74,7 +74,7 @@ export function KpiPicker({
     return (
       <label
         key={opt.id}
-        className={`flex items-start gap-3 rounded-md p-2 cursor-pointer border border-transparent hover:bg-muted/50 ${
+        className={`flex items-start gap-3 rounded-xl p-2 cursor-pointer border border-transparent hover:bg-muted/50 ${
           disabled ? "opacity-50 cursor-not-allowed" : ""
         } ${checked ? "bg-muted/40 border-border" : ""}`}
       >

@@ -87,7 +87,7 @@ export function ContractSummaryPanel({ dealId }: ContractSummaryPanelProps) {
         </div>
 
         {contracts.length === 0 ? (
-          <div className="rounded-md border border-dashed p-4 text-center space-y-2">
+          <div className="rounded-xl border border-dashed p-4 text-center space-y-2">
             <p className="text-xs text-muted-foreground">
               Nenhum contrato gerado para este lead ainda.
             </p>
@@ -103,7 +103,7 @@ export function ContractSummaryPanel({ dealId }: ContractSummaryPanelProps) {
               return (
                 <div
                   key={c.id}
-                  className="rounded-md border bg-muted/30 p-3 flex items-center justify-between gap-3"
+                  className="rounded-xl border bg-muted/30 p-3 flex items-center justify-between gap-3"
                 >
                   <div className="min-w-0 space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">

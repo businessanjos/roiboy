@@ -902,7 +902,7 @@ export default function SalesDashboard() {
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-md bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -999,12 +999,12 @@ export default function SalesDashboard() {
       <Tabs defaultValue="goals" className="w-full">
         <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none">
           <TabsList className="inline-flex w-max md:grid md:grid-cols-6 md:w-fit gap-1">
-            <TabsTrigger value="goals" className="rounded-full md:rounded-md">Metas</TabsTrigger>
-            <TabsTrigger value="funnel" className="rounded-full md:rounded-md">Funil</TabsTrigger>
-            <TabsTrigger value="performance" className="rounded-full md:rounded-md">Performance</TabsTrigger>
-            <TabsTrigger value="team" className="rounded-full md:rounded-md">Equipe</TabsTrigger>
-            <TabsTrigger value="origin" className="rounded-full md:rounded-md">Origem & Perdas</TabsTrigger>
-            <TabsTrigger value="ask" className="gap-1.5 rounded-full md:rounded-md">
+            <TabsTrigger value="goals" className="rounded-full md:rounded-xl">Metas</TabsTrigger>
+            <TabsTrigger value="funnel" className="rounded-full md:rounded-xl">Funil</TabsTrigger>
+            <TabsTrigger value="performance" className="rounded-full md:rounded-xl">Performance</TabsTrigger>
+            <TabsTrigger value="team" className="rounded-full md:rounded-xl">Equipe</TabsTrigger>
+            <TabsTrigger value="origin" className="rounded-full md:rounded-xl">Origem & Perdas</TabsTrigger>
+            <TabsTrigger value="ask" className="gap-1.5 rounded-full md:rounded-xl">
               <span className="inline-flex items-center gap-1">✨ AION</span>
             </TabsTrigger>
           </TabsList>

@@ -1253,7 +1253,7 @@ export const DigitalContractTab = ({
                 return (
                   <div
                     key={s.token ?? i}
-                    className="flex items-center justify-between gap-2 rounded-md border bg-muted/30 px-2.5 py-1.5"
+                    className="flex items-center justify-between gap-2 rounded-xl border bg-muted/30 px-2.5 py-1.5"
                   >
                     <div className="min-w-0 flex-1">
                       <p className="text-xs font-medium truncate">{s.name || "Signatário"}</p>
@@ -1387,7 +1387,7 @@ export const DigitalContractTab = ({
           <ContractEditor data={data} onChange={setData} disabled={saving} dealId={dealId} />
         </TabsContent>
         <TabsContent value="preview" className="mt-3">
-          <ScrollArea className="h-[60vh] rounded-md border bg-muted/30">
+          <ScrollArea className="h-[60vh] rounded-xl border bg-muted/30">
             <div ref={docRef} className="p-4">
               {templateHtml ? (
                 <TemplatedContractPreview

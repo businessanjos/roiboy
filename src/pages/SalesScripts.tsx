@@ -664,19 +664,19 @@ export default function SalesScripts() {
         ) : (
           <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none mb-4 md:mb-6">
             <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-5 h-11 md:h-12 p-1 bg-muted/50 gap-1">
-              <TabsTrigger value="materials" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="materials" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
               </TabsTrigger>
-              <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
               </TabsTrigger>
-              <TabsTrigger value="analysis" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="analysis" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
               </TabsTrigger>
-              <TabsTrigger value="commission" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="commission" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
               </TabsTrigger>
-              <TabsTrigger value="scripts" className="gap-2 h-9 md:h-10 rounded-full md:rounded-md data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="scripts" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
               </TabsTrigger>
             </TabsList>
@@ -998,7 +998,7 @@ export default function SalesScripts() {
                               {driveScope !== 'drives-root' && (
                                 <div className="flex items-center gap-2 text-xs">
                                   <span className="text-muted-foreground">Mostrar:</span>
-                                  <div className="inline-flex rounded-md border bg-background p-0.5">
+                                  <div className="inline-flex rounded-xl border bg-background p-0.5">
                                     {([
                                       { value: 'all', label: 'Tudo' },
                                       { value: 'folders', label: 'Pastas' },
@@ -1012,7 +1012,7 @@ export default function SalesScripts() {
                                 </div>
                               )}
 
-                              <div className="max-h-72 overflow-y-auto rounded-md border bg-background">
+                              <div className="max-h-72 overflow-y-auto rounded-xl border bg-background">
                                 {loadingDriveFiles ? (
                                   <div className="flex items-center justify-center gap-2 p-4 text-sm text-muted-foreground"><Loader2 className="w-4 h-4 animate-spin" />Carregando...</div>
                                 ) : driveItems.length === 0 ? (
@@ -1073,7 +1073,7 @@ export default function SalesScripts() {
 
                     {/* Imported files summary (always visible if there are any) */}
                     {importedDriveFileNames.length > 0 && (
-                      <div className="rounded-md border bg-primary/5 border-primary/20 p-3">
+                      <div className="rounded-xl border bg-primary/5 border-primary/20 p-3">
                         <div className="flex items-center gap-2 mb-1.5">
                           <CheckCircle2 className="w-4 h-4 text-primary" />
                           <p className="text-sm font-medium">{importedDriveFileNames.length === 1 ? 'Arquivo importado do Drive' : `${importedDriveFileNames.length} arquivos importados do Drive`}</p>

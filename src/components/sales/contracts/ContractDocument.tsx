@@ -306,13 +306,13 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
           <Section title="Da Modalidade de Execução" icon={Settings2} number="3">
             {data.service_mode === "hours" ? (
               <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-md border border-border bg-muted/20 p-4">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                     Horas mensais
                   </p>
                   <p className="text-xl font-bold">{data.monthly_hours ?? 0}h</p>
                 </div>
-                <div className="rounded-md border border-border bg-muted/20 p-4">
+                <div className="rounded-xl border border-border bg-muted/20 p-4">
                   <p className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1">
                     Hora excedente
                   </p>
@@ -347,7 +347,7 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
 
           <div className="grid grid-cols-3 gap-3 mb-4">
             {((data.down_payment_value ?? 0) > 0) && (
-              <div className="rounded-md border border-border bg-muted/20 p-3">
+              <div className="rounded-xl border border-border bg-muted/20 p-3">
                 <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
                   Entrada
                 </p>
@@ -359,14 +359,14 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
                 )}
               </div>
             )}
-            <div className="rounded-md border border-border bg-muted/20 p-3">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
               <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
                 Parcelas
               </p>
               <p className="text-base font-bold">{data.installments ?? 1}x</p>
               <p className="text-[10px] text-muted-foreground mt-1">mensais</p>
             </div>
-            <div className="rounded-md border border-border bg-muted/20 p-3">
+            <div className="rounded-xl border border-border bg-muted/20 p-3">
               <p className="text-[9px] uppercase tracking-wider text-muted-foreground mb-1">
                 Valor da parcela
               </p>
@@ -387,7 +387,7 @@ export const ContractDocument = forwardRef<HTMLDivElement, ContractDocumentProps
 
         {/* Mora */}
         <Section title="Da Mora e Inadimplência" icon={AlertTriangle} number="5">
-          <div className="rounded-md border-l-4 border-l-amber-500 bg-warning/5 p-4 flex gap-3">
+          <div className="rounded-xl border-l-4 border-l-amber-500 bg-warning/5 p-4 flex gap-3">
             <AlertTriangle className="w-4 h-4 text-warning shrink-0 mt-0.5" />
             <p className="text-[12px]">
               Em caso de atraso no pagamento, será aplicada{" "}

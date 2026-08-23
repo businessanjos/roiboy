@@ -2304,7 +2304,7 @@ export const ContractWizard = ({
               </span>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
-              <div className="flex rounded-md border border-input overflow-hidden shrink-0">
+              <div className="flex rounded-xl border border-input overflow-hidden shrink-0">
                 <button
                   type="button"
                   onClick={() => {
@@ -2620,7 +2620,7 @@ export const ContractWizard = ({
           <Stepper steps={visibleSteps} current={step} onPick={setStep} filledCounts={filledCounts} />
 
           {!currentStepComplete && (
-            <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-strong dark:text-warning">
+            <div className="flex items-start gap-2 rounded-xl border border-warning/30 bg-warning/10 px-3 py-2 text-xs text-warning-strong dark:text-warning">
               <AlertCircle className="h-3.5 w-3.5 mt-0.5 shrink-0" />
               <div className="min-w-0">
                 <span className="font-medium">Para continuar, preencha:</span>{" "}

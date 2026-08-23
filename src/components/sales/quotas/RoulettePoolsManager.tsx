@@ -552,7 +552,7 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
     )}>
       <div className="flex items-center gap-2">
         <div
-          className="h-8 w-8 rounded-md flex-shrink-0 border-2 border-background shadow"
+          className="h-8 w-8 rounded-xl flex-shrink-0 border-2 border-background shadow"
           style={{ backgroundColor: color }}
         />
         <Input

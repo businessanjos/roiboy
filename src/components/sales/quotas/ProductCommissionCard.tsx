@@ -57,7 +57,7 @@ export function ProductCommissionCard({ products, getRate, setDraftRates, positi
               {configuredCount} de {products.length} produtos configurados
             </CardDescription>
           </div>
-          <div className="flex items-center gap-1 rounded-md border bg-muted/30 p-0.5">
+          <div className="flex items-center gap-1 rounded-xl border bg-muted/30 p-0.5">
             <FilterChip active={filter === "all"} onClick={() => setFilter("all")}>
               Todos <span className="ml-1 opacity-60">{products.length}</span>
             </FilterChip>
