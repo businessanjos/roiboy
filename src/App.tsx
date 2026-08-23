@@ -1,4 +1,5 @@
 import { lazy, Suspense, ComponentType } from "react";
+import SalesThemeLayout from "@/components/ryka/SalesThemeLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { Toaster as Sonner } from "@/components/ui/sonner";
