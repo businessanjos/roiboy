@@ -68,6 +68,7 @@ export function SnapshotTile({
   value,
   hint,
   icon: Icon,
+  iconNode,
   tone = "neutral",
   selected = false,
   panelId,
