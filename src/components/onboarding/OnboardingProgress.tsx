@@ -52,7 +52,7 @@ export function OnboardingProgress({
             initial={{ width: 0 }}
             animate={{ width: `${progress}%` }}
             transition={{ duration: 0.5, ease: "easeOut" }}
-            className="h-full bg-gradient-to-r from-primary via-primary to-green-500 relative"
+            className="h-full bg-gradient-to-r from-primary via-primary to-success relative"
           >
             {/* Shimmer effect */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer" />
@@ -156,7 +156,7 @@ export function OnboardingProgress({
                 whileHover={{ scale: 1.1 }}
                 className="group relative"
               >
-                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white shadow-sm cursor-pointer">
+                <div className="w-7 h-7 rounded-full bg-gradient-to-br from-warning to-warning flex items-center justify-center text-white shadow-sm cursor-pointer">
                   <achievement.icon className="h-3.5 w-3.5" />
                 </div>
                 

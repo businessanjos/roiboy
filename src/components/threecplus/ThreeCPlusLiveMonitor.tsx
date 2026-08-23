@@ -220,7 +220,7 @@ export function ThreeCPlusLiveMonitor() {
                 key={agent.userId}
                 className={cn(
                   "transition-all",
-                  agent.status === "on_call" && "border-danger/30 shadow-red-500/5 shadow-md",
+                  agent.status === "on_call" && "border-danger/30 shadow-danger/5 shadow-md",
                   agent.status === "on_break" && "border-warning/20"
                 )}
               >

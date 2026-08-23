@@ -173,7 +173,7 @@ Traga OBRIGATORIAMENTE:
     label: "SAM — Mercado de estética no recorte",
     short: "SAM",
     icon: Target,
-    gradient: "from-blue-500/10 via-blue-500/5 to-transparent",
+    gradient: "from-info/10 via-info/5 to-transparent",
     ring: "ring-info/20",
     text: "text-info",
     bg: "bg-info/10",
@@ -203,7 +203,7 @@ Traga:
     label: "SOM — Mercado prospectável em 12 meses",
     short: "SOM",
     icon: Crosshair,
-    gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
+    gradient: "from-success/10 via-success/5 to-transparent",
     ring: "ring-success/20",
     text: "text-success",
     bg: "bg-success/10",
@@ -934,7 +934,7 @@ function CurrentVsMarketPanel({
   const gapSomPpl = somPpl ? somPpl - activeClients : null;
 
   return (
-    <Card className="ring-1 ring-warning/20 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent">
+    <Card className="ring-1 ring-warning/20 bg-gradient-to-br from-warning/5 via-transparent to-transparent">
       <CardContent className="p-5 space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
@@ -1140,7 +1140,7 @@ function ScenarioComparePanel({
   const bestSomRev = Math.max(0, ...rollups.map((r) => r.som ?? 0));
 
   return (
-    <Card className="ring-1 ring-info/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+    <Card className="ring-1 ring-info/20 bg-gradient-to-br from-info/5 via-transparent to-transparent">
       <CardContent className="p-5 space-y-3">
         <div>
           <h3 className="text-sm font-semibold flex items-center gap-2">

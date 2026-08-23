@@ -55,7 +55,7 @@ export function QuotasIncentivesTab() {
           <Button
             size="sm"
             onClick={() => navigate("/sales-team/incentive-presentation/slideshow")}
-            className="gap-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-foreground font-semibold"
+            className="gap-1.5 bg-gradient-to-r from-warning to-warning hover:from-warning hover:to-warning text-foreground font-semibold"
           >
             <Presentation className="h-4 w-4" />
             Apresentar plano

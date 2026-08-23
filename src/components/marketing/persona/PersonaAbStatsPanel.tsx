@@ -18,7 +18,7 @@ export function PersonaAbStatsPanel() {
   const winner = test.winner ?? (stats.acceptRateA > stats.acceptRateB ? "A" : stats.acceptRateB > stats.acceptRateA ? "B" : null);
 
   return (
-    <Card className="border-warning/30 bg-gradient-to-br from-amber-500/5 via-background to-background">
+    <Card className="border-warning/30 bg-gradient-to-br from-warning/5 via-background to-background">
       <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen((o) => !o)}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">

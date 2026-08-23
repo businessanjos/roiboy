@@ -85,12 +85,12 @@ export interface ProjectMilestone {
 }
 
 export const MILESTONE_PHASE_META: Record<MilestonePhase, { label: string; color: string; description: string }> = {
-  discovery: { label: "Descoberta", color: "from-sky-500 to-cyan-500", description: "Pesquisa, benchmarks, definição de objetivos e métricas" },
+  discovery: { label: "Descoberta", color: "from-info to-info", description: "Pesquisa, benchmarks, definição de objetivos e métricas" },
   planning: { label: "Planejamento", color: "from-violet-500 to-purple-500", description: "Estratégia, cronograma, orçamento, briefings e aprovações" },
-  pre_production: { label: "Pré-Produção", color: "from-blue-500 to-indigo-500", description: "Fornecedores, contratos, conteúdo, setup de canais e ferramentas" },
-  production: { label: "Produção", color: "from-amber-500 to-orange-500", description: "Execução das entregas — criativos, filmagens, builds, materiais" },
-  launch: { label: "Lançamento", color: "from-pink-500 to-rose-500", description: "Go-live, mídia paga, eventos, ativação e comunicação" },
-  post_launch: { label: "Pós-Lançamento", color: "from-emerald-500 to-teal-500", description: "Resultados, retrospectiva, otimização e relatórios finais" },
+  pre_production: { label: "Pré-Produção", color: "from-info to-indigo-500", description: "Fornecedores, contratos, conteúdo, setup de canais e ferramentas" },
+  production: { label: "Produção", color: "from-warning to-warning", description: "Execução das entregas — criativos, filmagens, builds, materiais" },
+  launch: { label: "Lançamento", color: "from-pink-500 to-danger", description: "Go-live, mídia paga, eventos, ativação e comunicação" },
+  post_launch: { label: "Pós-Lançamento", color: "from-success to-success", description: "Resultados, retrospectiva, otimização e relatórios finais" },
 };
 
 export const MILESTONE_PHASE_ORDER: MilestonePhase[] = ["discovery", "planning", "pre_production", "production", "launch", "post_launch"];

@@ -1722,7 +1722,7 @@ export default function Tasks() {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-amber-500/5 to-transparent">
+          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-warning/5 to-transparent">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>
@@ -1765,7 +1765,7 @@ export default function Tasks() {
             </CardContent>
           </Card>
 
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-green-500/5 to-transparent">
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-success/5 to-transparent">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
                 <div>

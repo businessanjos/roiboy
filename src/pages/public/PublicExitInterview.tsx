@@ -63,7 +63,7 @@ export default function PublicExitInterview() {
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-white">
+      <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-success to-white">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
             <CheckCircle2 className="h-16 w-16 text-success mx-auto mb-4" />

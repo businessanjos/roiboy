@@ -275,7 +275,7 @@ export default function FinancialDRFPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-warning dark:border-warning">
+        <Card className="bg-gradient-to-br from-warning to-warning dark:from-warning/30 dark:to-warning/30 border-warning dark:border-warning">
           <CardContent className="pt-6">
             <div className="text-sm text-warning-strong dark:text-warning font-medium">EBITDA</div>
             <div className={`text-2xl font-bold ${drfData?.ebitda && drfData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
@@ -373,7 +373,7 @@ export default function FinancialDRFPage() {
                 </div>
                 <div className="text-sm text-muted-foreground">Margem Bruta</div>
               </div>
-              <div className="text-center p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
+              <div className="text-center p-4 rounded-lg bg-gradient-to-br from-warning to-warning dark:from-warning/30 dark:to-warning/30">
                 <div className={`text-3xl font-bold ${drfData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
                   {((drfData.ebitda / drfData.grossRevenue) * 100).toFixed(1)}%
                 </div>

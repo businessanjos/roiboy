@@ -197,7 +197,7 @@ export default function ContentHQ() {
           {/* Content area */}
           <div className="space-y-5 min-w-0">
             {showHqHeader && (
-              <div className="rounded-xl border bg-gradient-to-br from-amber-500/5 via-background to-primary/5 p-4">
+              <div className="rounded-xl border bg-gradient-to-br from-warning/5 via-background to-primary/5 p-4">
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
                   <KpiPill label="Publicados (mês)" value={publishedThisMonth} tone="emerald" />
                   <KpiPill label="Agendados (mês)" value={scheduledThisMonth} tone="cyan" />

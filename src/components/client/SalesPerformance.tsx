@@ -289,7 +289,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
               </CardContent>
             </Card>
 
-            <Card className="bg-gradient-to-br from-emerald-500/5 to-emerald-500/10 border-success/20">
+            <Card className="bg-gradient-to-br from-success/5 to-success/10 border-success/20">
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 bg-success/10 rounded-lg">
@@ -303,7 +303,7 @@ export function SalesPerformance({ clientId }: SalesPerformanceProps) {
               </CardContent>
             </Card>
 
-            <Card className={`bg-gradient-to-br ${overallPercentage >= 100 ? 'from-emerald-500/5 to-emerald-500/10 border-success/20' : overallPercentage >= 70 ? 'from-amber-500/5 to-amber-500/10 border-warning/20' : 'from-destructive/5 to-destructive/10 border-destructive/20'}`}>
+            <Card className={`bg-gradient-to-br ${overallPercentage >= 100 ? 'from-success/5 to-success/10 border-success/20' : overallPercentage >= 70 ? 'from-warning/5 to-warning/10 border-warning/20' : 'from-destructive/5 to-destructive/10 border-destructive/20'}`}>
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className={`p-2 rounded-lg ${overallPercentage >= 100 ? 'bg-success/10' : overallPercentage >= 70 ? 'bg-warning/10' : 'bg-destructive/10'}`}>

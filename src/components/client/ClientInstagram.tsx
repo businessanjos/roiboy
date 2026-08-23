@@ -194,7 +194,7 @@ export function ClientInstagram({ clientId, initialUsername }: { clientId: strin
           <>
             {/* Profile header */}
             <div className="flex flex-col sm:flex-row gap-6 items-center sm:items-start">
-              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 p-[3px]">
+              <div className="h-24 w-24 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-warning p-[3px]">
                 <Avatar className="h-full w-full border-2 border-card">
                   <AvatarImage src={snapshot.profile_pic_url || undefined} alt={snapshot.username} />
                   <AvatarFallback>{snapshot.username.slice(0, 2).toUpperCase()}</AvatarFallback>

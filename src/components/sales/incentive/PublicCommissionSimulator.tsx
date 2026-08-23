@@ -195,7 +195,7 @@ export function PublicCommissionSimulator({
         />
       </div>
 
-      <div className="rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-white p-5 shadow-lg">
+      <div className="rounded-xl bg-gradient-to-r from-warning to-warning text-white p-5 shadow-lg">
         <p className="text-xs uppercase tracking-wider opacity-90">
           Ganho mensal bruto estimado
         </p>

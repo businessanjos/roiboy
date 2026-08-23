@@ -79,7 +79,7 @@ const VARIANT_STYLES: Record<Section["variant"], {
 }> = {
   ranking: {
     border: "border-warning/30",
-    bg: "bg-gradient-to-br from-yellow-500/8 via-amber-500/4 to-transparent",
+    bg: "bg-gradient-to-br from-warning/8 via-warning/4 to-transparent",
     iconBg: "bg-warning/12",
     iconColor: "text-warning dark:text-warning",
     titleColor: "text-warning-strong dark:text-warning",
@@ -109,7 +109,7 @@ const VARIANT_STYLES: Record<Section["variant"], {
   },
   warning: {
     border: "border-warning/25",
-    bg: "bg-gradient-to-br from-amber-500/6 via-amber-500/2 to-transparent",
+    bg: "bg-gradient-to-br from-warning/6 via-warning/2 to-transparent",
     iconBg: "bg-warning/10",
     iconColor: "text-warning dark:text-warning",
     titleColor: "text-warning-strong dark:text-warning",
@@ -119,7 +119,7 @@ const VARIANT_STYLES: Record<Section["variant"], {
   },
   info: {
     border: "border-info/25",
-    bg: "bg-gradient-to-br from-blue-500/6 via-blue-500/2 to-transparent",
+    bg: "bg-gradient-to-br from-info/6 via-info/2 to-transparent",
     iconBg: "bg-info/10",
     iconColor: "text-info dark:text-info",
     titleColor: "text-info-strong dark:text-info",
@@ -129,7 +129,7 @@ const VARIANT_STYLES: Record<Section["variant"], {
   },
   success: {
     border: "border-success/25",
-    bg: "bg-gradient-to-br from-emerald-500/6 via-emerald-500/2 to-transparent",
+    bg: "bg-gradient-to-br from-success/6 via-success/2 to-transparent",
     iconBg: "bg-success/10",
     iconColor: "text-success dark:text-success",
     titleColor: "text-success-strong dark:text-success",

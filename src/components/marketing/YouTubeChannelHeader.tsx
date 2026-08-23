@@ -48,7 +48,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
   return (
     <div className="bg-card rounded-xl border p-6">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
-        <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-red-500 to-red-700 p-[3px]">
+        <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-danger to-danger p-[3px]">
           <Avatar className="h-full w-full border-2 border-card">
             <AvatarImage src={channel.profile_picture_url || undefined} alt={channel.username} className="object-cover" />
             <AvatarFallback className="text-2xl font-semibold bg-muted">{channel.username.slice(0, 2).toUpperCase()}</AvatarFallback>

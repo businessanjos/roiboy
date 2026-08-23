@@ -841,7 +841,7 @@ export default function RHOfferWizard() {
               </div>
 
               {/* Foto personalizada do candidato */}
-              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10">
+              <div className="rounded-xl border-2 border-dashed p-5 space-y-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10">
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <div className="flex items-center gap-2">
@@ -941,7 +941,7 @@ export default function RHOfferWizard() {
               </div>
 
               {/* Salvar como modelo */}
-              <div className="rounded-xl border-2 border-dashed border-warning/60 p-4 bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
+              <div className="rounded-xl border-2 border-dashed border-warning/60 p-4 bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10 space-y-3">
                 <label className="flex items-start gap-3 cursor-pointer">
                   <Checkbox
                     checked={form.is_template}

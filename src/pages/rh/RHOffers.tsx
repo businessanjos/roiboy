@@ -167,7 +167,7 @@ export default function RHOffers() {
             {templates.map((t) => (
               <Card
                 key={t.id}
-                className="overflow-hidden border-warning/60 bg-gradient-to-br from-amber-50/60 to-transparent dark:from-amber-950/20 hover:shadow-md transition-all"
+                className="overflow-hidden border-warning/60 bg-gradient-to-br from-warning/60 to-transparent dark:from-warning/20 hover:shadow-md transition-all"
               >
                 <div className="h-1.5" style={{ background: t.accent_color }} />
                 <CardContent className="p-4 space-y-3">
@@ -375,7 +375,7 @@ export default function RHOffers() {
             </button>
 
             {/* Bloco de modelos */}
-            <div className="p-5 rounded-xl border bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
+            <div className="p-5 rounded-xl border bg-gradient-to-br from-warning/40 to-transparent dark:from-warning/10 space-y-3">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-lg bg-warning/15 flex items-center justify-center">
                   <LayoutTemplate className="h-4 w-4 text-warning" />

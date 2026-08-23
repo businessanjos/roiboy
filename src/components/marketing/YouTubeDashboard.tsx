@@ -172,7 +172,7 @@ export function YouTubeDashboard() {
                   <TableRow key={ch.id} className="group">
                     <TableCell>
                       <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10 border-2 border-danger"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="bg-gradient-to-br from-red-600 to-red-800 text-white text-sm">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
+                        <Avatar className="h-10 w-10 border-2 border-danger"><AvatarImage src={ch.profile_picture_url || undefined} /><AvatarFallback className="bg-gradient-to-br from-danger to-danger text-white text-sm">{ch.username.slice(0, 2).toUpperCase()}</AvatarFallback></Avatar>
                         <div><p className="font-medium">@{ch.username}</p>{ch.display_name && <p className="text-xs text-muted-foreground">{ch.display_name}</p>}</div>
                       </div>
                     </TableCell>

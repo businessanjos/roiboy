@@ -50,7 +50,7 @@ function AccountPreview({ data }: { data: any }) {
   const hasData = data.accountName;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-blue-500/5 to-blue-500/10 border-info/20">
+    <Card className="p-4 bg-gradient-to-br from-info/5 to-info/10 border-info/20">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-12 h-12 rounded-xl bg-info/20 flex items-center justify-center">
           <Building2 className="h-6 w-6 text-info" />
@@ -128,7 +128,7 @@ function ClientPreview({ data }: { data: any }) {
     : "??";
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-green-500/5 to-green-500/10 border-success/20">
+    <Card className="p-4 bg-gradient-to-br from-success/5 to-success/10 border-success/20">
       <div className="flex items-center gap-3 mb-3">
         <Avatar className="h-12 w-12 bg-success/20">
           <AvatarFallback className="bg-success/20 text-success-strong dark:text-success font-semibold">
@@ -176,7 +176,7 @@ function ProductPreview({ data }: { data: any }) {
   const hasData = data.productName;
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-orange-500/5 to-orange-500/10 border-warning/20">
+    <Card className="p-4 bg-gradient-to-br from-warning/5 to-warning/10 border-warning/20">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-12 h-12 rounded-xl bg-warning/20 flex items-center justify-center">
           <Package className="h-6 w-6 text-warning" />
@@ -297,7 +297,7 @@ function TeamPreview({ data }: { data: any }) {
     : [];
 
   return (
-    <Card className="p-4 bg-gradient-to-br from-cyan-500/5 to-cyan-500/10 border-info/20">
+    <Card className="p-4 bg-gradient-to-br from-info/5 to-info/10 border-info/20">
       <div className="flex items-center gap-3 mb-3">
         <div className="w-12 h-12 rounded-xl bg-info/20 flex items-center justify-center">
           <Users className="h-6 w-6 text-info" />

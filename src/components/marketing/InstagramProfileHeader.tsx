@@ -55,7 +55,7 @@ export function InstagramProfileHeader({
     return (
       <div className="bg-card rounded-xl border p-8 text-center">
         <div className="flex flex-col items-center gap-4">
-          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 p-[3px]">
+          <div className="h-20 w-20 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-warning p-[3px]">
             <div className="h-full w-full rounded-full bg-card flex items-center justify-center">
               <Instagram className="h-8 w-8 text-muted-foreground" />
             </div>
@@ -76,7 +76,7 @@ export function InstagramProfileHeader({
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
         {/* Profile Picture with Instagram Gradient Border */}
         <div className="relative group">
-          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-orange-400 p-[3px]">
+          <div className="h-24 w-24 sm:h-28 sm:w-28 rounded-full bg-gradient-to-br from-pink-500 via-purple-500 to-warning p-[3px]">
             <Avatar className="h-full w-full border-2 border-card">
               <AvatarImage 
                 src={profile.profile_picture_url || undefined} 

@@ -159,11 +159,11 @@ function Speedometer({ value, max }: { value: number; max: number }) {
             <div className="text-5xl font-bold tabular-nums leading-none flex items-baseline justify-center gap-2">
               <span>{safeMax}</span>
               <span className="text-2xl text-muted-foreground font-medium">+</span>
-              <span className="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 bg-clip-text text-transparent drop-shadow-sm">
+              <span className="bg-gradient-to-r from-warning via-warning to-danger bg-clip-text text-transparent drop-shadow-sm">
                 {extras}
               </span>
             </div>
-            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-warning dark:text-warning ring-1 ring-warning/30 animate-pulse">
+            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-warning/15 via-warning/15 to-danger/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-warning dark:text-warning ring-1 ring-warning/30 animate-pulse">
               <Zap className="h-3 w-3 fill-current" />
               Turbo · {extras} {extras === 1 ? "extra" : "extras"} · {pctLabel}% da meta
             </div>
@@ -501,7 +501,7 @@ export default function CloserDashboard() {
                 <Target className="h-4 w-4 text-primary" />
                 Velocímetro de Vendas
                 {wonDeals > MONTH_QUOTA_DEFAULT && (
-                  <Badge className="ml-1 bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white border-0 gap-1">
+                  <Badge className="ml-1 bg-gradient-to-r from-warning via-warning to-danger text-white border-0 gap-1">
                     <Zap className="h-3 w-3 fill-current" /> TURBO
                   </Badge>
                 )}

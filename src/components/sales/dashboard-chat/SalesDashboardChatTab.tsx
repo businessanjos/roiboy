@@ -288,7 +288,7 @@ export function SalesDashboardChatTab() {
         {/* Header */}
         <div className="flex items-center gap-3 px-5 py-3 border-b bg-card/40 backdrop-blur">
           <div className="relative">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-amber-500/70 flex items-center justify-center shadow-[0_0_24px_-4px_hsl(var(--primary)/0.45)]">
+            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary via-primary/80 to-warning/70 flex items-center justify-center shadow-[0_0_24px_-4px_hsl(var(--primary)/0.45)]">
               <Sparkles className="w-4.5 h-4.5 text-primary-foreground" strokeWidth={2.25} />
             </div>
             {isStreaming && (
@@ -323,7 +323,7 @@ export function SalesDashboardChatTab() {
             {messages.length === 0 && (
               <div className="pt-12 pb-4">
                 <div className="text-center mb-8">
-                  <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-amber-500/70 items-center justify-center mb-4 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.5)]">
+                  <div className="inline-flex w-14 h-14 rounded-2xl bg-gradient-to-br from-primary via-primary/80 to-warning/70 items-center justify-center mb-4 shadow-[0_0_40px_-8px_hsl(var(--primary)/0.5)]">
                     <Sparkles className="w-6 h-6 text-primary-foreground" />
                   </div>
                   <h2 className="text-2xl font-semibold tracking-tight">Pergunte à AION</h2>
@@ -361,7 +361,7 @@ export function SalesDashboardChatTab() {
                 </div>
               ) : (
                 <div key={m.id} className="flex gap-3">
-                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary via-primary/80 to-amber-500/70 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
+                  <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-primary via-primary/80 to-warning/70 flex items-center justify-center shrink-0 shadow-sm mt-0.5">
                     <Sparkles className="w-3.5 h-3.5 text-primary-foreground" strokeWidth={2.5} />
                   </div>
                   <div className="flex-1 min-w-0 space-y-3">

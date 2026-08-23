@@ -129,7 +129,7 @@ export function AchievementNotification({
       exit={{ opacity: 0, y: -20, scale: 0.9 }}
       className="fixed top-4 right-4 z-50"
     >
-      <div className="bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-2xl p-4 shadow-2xl flex items-center gap-4 max-w-sm">
+      <div className="bg-gradient-to-r from-warning to-warning text-white rounded-2xl p-4 shadow-2xl flex items-center gap-4 max-w-sm">
         {/* Icon with glow effect */}
         <motion.div
           initial={{ scale: 0, rotate: -180 }}
@@ -241,7 +241,7 @@ export function AchievementsBadge({ achievements, onClick }: AchievementsBadgePr
       whileHover={{ scale: 1.05 }}
       whileTap={{ scale: 0.95 }}
       onClick={onClick}
-      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-amber-500/10 to-orange-500/10 border border-warning/30 text-warning dark:text-warning"
+      className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-gradient-to-r from-warning/10 to-warning/10 border border-warning/30 text-warning dark:text-warning"
     >
       <Trophy className="h-4 w-4" />
       <span className="text-sm font-medium">{unlocked.length}/{achievements.length}</span>

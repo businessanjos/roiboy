@@ -393,7 +393,7 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
         initial={{ y: 10, opacity: 0 }}
         animate={{ y: 0, opacity: 1 }}
         transition={{ delay: 0.2 }}
-        className="p-4 rounded-lg bg-gradient-to-r from-green-500/5 to-primary/5 border"
+        className="p-4 rounded-lg bg-gradient-to-r from-success/5 to-primary/5 border"
       >
         <div className="flex items-start gap-3">
           <MessageSquare className="h-5 w-5 text-success mt-0.5" />

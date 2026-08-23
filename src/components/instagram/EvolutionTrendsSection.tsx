@@ -290,7 +290,7 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
 
   return (
     <Card className="overflow-hidden">
-      <CardHeader className="pb-3 bg-gradient-to-r from-fuchsia-500/5 via-rose-500/5 to-sky-500/5 border-b">
+      <CardHeader className="pb-3 bg-gradient-to-r from-fuchsia-500/5 via-danger/5 to-info/5 border-b">
         <div className="flex items-center justify-between flex-wrap gap-2">
           <div>
             <CardTitle className="text-base flex items-center gap-2">

@@ -371,7 +371,7 @@ export function TikTokProfileAvatarUpload({
                 )}
               >
                 <div className="flex flex-col items-center gap-3">
-                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-cyan-400 to-pink-500 p-[2px]">
+                  <div className="h-16 w-16 rounded-full bg-gradient-to-br from-info to-pink-500 p-[2px]">
                     <div className="h-full w-full rounded-full bg-background flex items-center justify-center">
                       <Camera className="h-7 w-7 text-muted-foreground" />
                     </div>

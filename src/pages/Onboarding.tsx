@@ -408,7 +408,7 @@ export default function Onboarding() {
                   {achievements.filter(a => a.unlocked).map(a => (
                     <div 
                       key={a.id}
-                      className="w-8 h-8 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-white"
+                      className="w-8 h-8 rounded-full bg-gradient-to-br from-warning to-warning flex items-center justify-center text-white"
                     >
                       <a.icon className="h-4 w-4" />
                     </div>
@@ -687,7 +687,7 @@ function StepAI({
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ delay: 0.1 }}
-          className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-blue-500/5"
+          className="p-4 rounded-lg border bg-gradient-to-r from-purple-500/5 to-info/5"
         >
           <div className="flex items-start gap-3">
             <Sparkles className="h-5 w-5 text-purple-500 mt-0.5" />

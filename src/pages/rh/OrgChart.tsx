@@ -46,7 +46,7 @@ const COLUMNS: ColumnConfig[] = [
   {
     key: "comercial",
     label: "Comercial",
-    headerColor: "from-blue-500 to-blue-600",
+    headerColor: "from-info to-info",
     badgeColor: "bg-info/15 text-info-strong border-info dark:text-info dark:border-info",
     gestorNames: ["jonathan marcato"],
     deptMatches: ["comercial", "vendas"],
@@ -54,7 +54,7 @@ const COLUMNS: ColumnConfig[] = [
   {
     key: "operacao",
     label: "Operações",
-    headerColor: "from-amber-500 to-amber-600",
+    headerColor: "from-warning to-warning",
     badgeColor: "bg-warning/15 text-warning-strong border-warning dark:text-warning dark:border-warning",
     gestorNames: ["jessica marcato"],
     deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos"],
@@ -286,7 +286,7 @@ export default function OrgChart() {
             <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-teal-500 to-teal-600 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-success to-success flex items-center justify-center">
               <Network className="h-5 w-5 text-white" />
             </div>
             <div>

@@ -68,7 +68,7 @@ export default function RHVagas() {
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}><ArrowLeft className="h-5 w-5" /></Button>
-          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
+          <div className="h-10 w-10 rounded-lg bg-gradient-to-br from-success to-success flex items-center justify-center">
             <Briefcase className="h-5 w-5 text-white" />
           </div>
           <div>

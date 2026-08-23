@@ -276,7 +276,7 @@ export default function VipClients() {
     <div className="container mx-auto py-6 max-w-7xl">
       <div className="flex items-start justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
-          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center shadow-lg">
+          <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-warning to-warning flex items-center justify-center shadow-lg">
             <Crown className="h-6 w-6 text-white" />
           </div>
           <div>

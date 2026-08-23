@@ -117,7 +117,7 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
   return (
     <div className="space-y-4">
       {/* Generator */}
-      <Card className="p-5 bg-gradient-to-br from-amber-500/5 via-background to-primary/5">
+      <Card className="p-5 bg-gradient-to-br from-warning/5 via-background to-primary/5">
         <div className="flex items-start gap-3 mb-4">
           <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
             <Lightbulb className="h-5 w-5 text-warning" />

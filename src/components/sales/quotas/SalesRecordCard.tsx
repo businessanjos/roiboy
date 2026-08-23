@@ -27,7 +27,7 @@ export function SalesRecordCard({ record, monthLabel, current, loading }: SalesR
             <div className="h-16 w-24 bg-muted animate-pulse rounded" />
           ) : (
             <>
-              <div className="text-6xl font-bold tabular-nums bg-gradient-to-br from-amber-400 to-orange-600 bg-clip-text text-transparent">
+              <div className="text-6xl font-bold tabular-nums bg-gradient-to-br from-warning to-warning bg-clip-text text-transparent">
                 {record}
               </div>
               <p className="text-xs text-muted-foreground mt-1">

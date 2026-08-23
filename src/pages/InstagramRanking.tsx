@@ -351,8 +351,8 @@ export default function InstagramRanking() {
   return (
     <div className="container mx-auto p-6 space-y-6">
       {/* Hero */}
-      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-fuchsia-500/10 via-rose-500/5 to-sky-500/10 p-6">
-        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-rose-500/30 blur-3xl pointer-events-none" />
+      <div className="relative overflow-hidden rounded-2xl border bg-gradient-to-br from-fuchsia-500/10 via-danger/5 to-info/10 p-6">
+        <div className="absolute -top-10 -right-10 h-48 w-48 rounded-full bg-gradient-to-br from-fuchsia-500/30 to-danger/30 blur-3xl pointer-events-none" />
         <div className="relative flex items-start justify-between gap-4 flex-wrap">
           <div>
             <div className="flex items-center gap-2 text-sm font-medium text-muted-foreground mb-1">
@@ -375,7 +375,7 @@ export default function InstagramRanking() {
               onClick={handleManualSync}
               disabled={syncing}
               size="sm"
-              className="gap-2 bg-gradient-to-r from-fuchsia-500 to-rose-500 hover:from-fuchsia-600 hover:to-rose-600 text-white border-0 shadow-md"
+              className="gap-2 bg-gradient-to-r from-fuchsia-500 to-danger hover:from-fuchsia-600 hover:to-danger text-white border-0 shadow-md"
             >
               {syncing ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
               {syncing ? "Sincronizando…" : "Atualizar agora"}
@@ -414,7 +414,7 @@ export default function InstagramRanking() {
       </div>
 
       {syncing && (
-        <div className="rounded-xl border bg-gradient-to-r from-fuchsia-500/10 to-rose-500/10 px-4 py-3 flex items-center gap-3">
+        <div className="rounded-xl border bg-gradient-to-r from-fuchsia-500/10 to-danger/10 px-4 py-3 flex items-center gap-3">
           <Loader2 className="h-4 w-4 animate-spin text-fuchsia-500 shrink-0" />
           <div className="flex-1 min-w-0">
             <div className="text-sm font-medium">Sincronizando perfis do Eternum Club…</div>
@@ -423,7 +423,7 @@ export default function InstagramRanking() {
             </div>
           </div>
           <div className="relative h-1.5 w-32 overflow-hidden rounded-full bg-background/60">
-            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-fuchsia-500 to-rose-500 animate-pulse rounded-full" />
+            <div className="absolute inset-y-0 left-0 w-2/3 bg-gradient-to-r from-fuchsia-500 to-danger animate-pulse rounded-full" />
           </div>
         </div>
       )}
