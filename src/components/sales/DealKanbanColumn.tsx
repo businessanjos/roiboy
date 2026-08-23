@@ -148,7 +148,7 @@ export function DealKanbanColumn({ stage, deals, onDealClick, conversionRate, fa
         >
           {deals.length === 0 ? (
             <div className={cn(
-              "flex items-center justify-center h-20 text-[10px] border border-dashed rounded-md transition-all duration-200",
+              "flex items-center justify-center h-20 text-[10px] border border-dashed rounded-xl transition-all duration-200",
               isOver 
                 ? "text-foreground font-medium bg-primary/5 border-primary/30" 
                 : "text-muted-foreground border-border/40 bg-muted/10",
