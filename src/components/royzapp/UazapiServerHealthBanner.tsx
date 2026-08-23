@@ -54,7 +54,7 @@ export function UazapiServerHealthBanner({
       role="alert"
       data-testid="uazapi-server-offline-banner"
       className={cn(
-        "flex items-start gap-3 rounded-lg border border-red-500/40 bg-red-500/10 text-red-800 dark:text-red-200",
+        "flex items-start gap-3 rounded-lg border border-danger/40 bg-danger/10 text-danger-strong dark:text-danger",
         compact ? "px-3 py-2 text-xs" : "px-4 py-3 text-sm",
         className,
       )}
@@ -83,8 +83,8 @@ export function UazapiServerHealthBanner({
         onClick={handleRefresh}
         disabled={refreshing}
         className={cn(
-          "flex-shrink-0 inline-flex items-center gap-1 rounded-md border border-red-500/40",
-          "px-2 py-1 text-xs font-medium hover:bg-red-500/10 transition-colors disabled:opacity-60",
+          "flex-shrink-0 inline-flex items-center gap-1 rounded-md border border-danger/40",
+          "px-2 py-1 text-xs font-medium hover:bg-danger/10 transition-colors disabled:opacity-60",
         )}
       >
         {refreshing ? (

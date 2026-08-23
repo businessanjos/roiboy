@@ -37,7 +37,7 @@ const getColorClasses = (color: string, selected: boolean) => {
     purple: { bg: "bg-purple-500/10", hover: "hover:bg-purple-500/20", selected: "bg-purple-500 text-white" },
     pink: { bg: "bg-pink-500/10", hover: "hover:bg-pink-500/20", selected: "bg-pink-500 text-white" },
     orange: { bg: "bg-warning/10", hover: "hover:bg-warning/20", selected: "bg-warning text-white" },
-    gray: { bg: "bg-gray-500/10", hover: "hover:bg-gray-500/20", selected: "bg-gray-500 text-white" },
+    gray: { bg: "bg-muted-foreground/10", hover: "hover:bg-muted-foreground/20", selected: "bg-muted-foreground text-white" },
   };
   const colors = baseClasses[color] || baseClasses.gray;
   return selected ? colors.selected : `${colors.bg} ${colors.hover}`;

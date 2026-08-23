@@ -44,7 +44,7 @@ const STATUS_MAP: Record<string, { label: string; cls: string; icon: any }> = {
   viewed: { label: "Visualizada", cls: "bg-warning/15 text-warning-strong border-warning", icon: Eye },
   accepted: { label: "Aceita", cls: "bg-success/15 text-success-strong border-success", icon: CheckCircle2 },
   declined: { label: "Recusada", cls: "bg-danger/15 text-danger-strong border-danger", icon: XCircle },
-  expired: { label: "Expirada", cls: "bg-zinc-500/15 text-foreground border-border", icon: XCircle },
+  expired: { label: "Expirada", cls: "bg-muted-foreground/15 text-foreground border-border", icon: XCircle },
 };
 
 export default function RHOffers() {

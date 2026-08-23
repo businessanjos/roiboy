@@ -88,7 +88,7 @@ const COLOR_OPTIONS = [
   { value: "purple", label: "Roxo", class: "bg-purple-500" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
   { value: "orange", label: "Laranja", class: "bg-warning" },
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
+  { value: "gray", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 const FIELD_TYPE_CONFIG: Record<string, { 
@@ -760,7 +760,7 @@ function AddFieldDialog({
                             className={cn(
                               "h-3 w-3 rounded-full",
                               COLOR_OPTIONS.find((c) => c.value === option.color)
-                                ?.class || "bg-gray-500"
+                                ?.class || "bg-muted-foreground"
                             )}
                           />
                           <span className="text-xs">

@@ -463,7 +463,7 @@ export function TikTokDashboard() {
                       <div className="flex items-center gap-3">
                         <Avatar className="h-10 w-10 border-2 border-border">
                           <AvatarImage src={profile.profile_picture_url || undefined} />
-                          <AvatarFallback className="bg-gradient-to-br from-gray-700 to-black text-white text-sm">
+                          <AvatarFallback className="bg-gradient-to-br from-muted-foreground to-black text-white text-sm">
                             {profile.username.slice(0, 2).toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
@@ -675,7 +675,7 @@ export function TikTokDashboard() {
                             <div className="flex items-center gap-3">
                               <Avatar className="h-10 w-10 border-2 border-border">
                                 <AvatarImage src={profile.profile_picture_url || undefined} />
-                                <AvatarFallback className="bg-gradient-to-br from-gray-700 to-black text-white text-sm">
+                                <AvatarFallback className="bg-gradient-to-br from-muted-foreground to-black text-white text-sm">
                                   {profile.username.slice(0, 2).toUpperCase()}
                                 </AvatarFallback>
                               </Avatar>

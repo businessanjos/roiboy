@@ -308,7 +308,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                     {sectorName}
                   </Badge>
                   <div 
-                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${whatsappConnected ? 'bg-emerald-500' : 'bg-red-500'}`}
+                    className={`w-2.5 h-2.5 rounded-full shrink-0 ${whatsappConnected ? 'bg-success' : 'bg-danger'}`}
                     title={whatsappConnected ? 'WhatsApp conectado' : 'WhatsApp desconectado'}
                   />
                 </div>
@@ -412,7 +412,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               <DropdownMenuItem 
                 className={cn(
                   "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterArchived && "bg-amber-500 text-white font-semibold"
+                  filterArchived && "bg-warning text-white font-semibold"
                 )}
                 onClick={() => setFilterArchived(!filterArchived)}
               >
@@ -527,7 +527,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                         </Avatar>
                         <span className="truncate">{agent.user?.name || "Atendente"}</span>
                         {agent.is_online && (
-                          <div className="w-2 h-2 rounded-full bg-green-500 flex-shrink-0" />
+                          <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
                         )}
                       </div>
                       {filterAgentId === agent.id && <Check className="h-4 w-4 flex-shrink-0" />}

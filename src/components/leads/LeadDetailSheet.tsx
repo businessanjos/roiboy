@@ -65,7 +65,7 @@ const LEAD_STATUS = [
   { value: "new", label: "Novo", color: "bg-info" },
   { value: "contacted", label: "Contatado", color: "bg-warning" },
   { value: "qualified", label: "Qualificado", color: "bg-success" },
-  { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
+  { value: "unqualified", label: "Não Qualificado", color: "bg-muted-foreground" },
   { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
 

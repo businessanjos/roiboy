@@ -126,22 +126,22 @@ export const ZappNewConversationDialog = memo(function ZappNewConversationDialog
                           {formatName(client.full_name, client.type)}
                         </span>
                         {client.type === 'client' && (
-                          <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-success/20 text-success border-success/30 text-xs whitespace-nowrap">
                             Cliente
                           </Badge>
                         )}
                         {client.type === 'lead' && (
-                          <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-warning/20 text-warning border-warning/30 text-xs whitespace-nowrap">
                             Lead
                           </Badge>
                         )}
                         {client.type === 'conversation' && (
-                          <Badge variant="outline" className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-xs whitespace-nowrap">
+                          <Badge variant="outline" className="bg-muted-foreground/20 text-muted-foreground border-border/30 text-xs whitespace-nowrap">
                             Contato
                           </Badge>
                         )}
                         {client.type === 'group' && (
-                          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs whitespace-nowrap flex items-center gap-1">
+                          <Badge variant="outline" className="bg-info/20 text-info border-info/30 text-xs whitespace-nowrap flex items-center gap-1">
                             <Users className="h-3 w-3" />
                             Grupo
                           </Badge>

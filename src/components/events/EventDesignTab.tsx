@@ -72,11 +72,11 @@ const CATEGORIES = [
   { value: "social", label: "Redes Sociais", color: "bg-info" },
   { value: "impresso", label: "Impressos", color: "bg-warning" },
   { value: "video", label: "Vídeo / Motion", color: "bg-danger" },
-  { value: "outros", label: "Outros", color: "bg-slate-500" },
+  { value: "outros", label: "Outros", color: "bg-muted-foreground" },
 ];
 
 const STATUSES = [
-  { value: "wip", label: "Em produção", color: "bg-slate-500" },
+  { value: "wip", label: "Em produção", color: "bg-muted-foreground" },
   { value: "review", label: "Em aprovação", color: "bg-warning" },
   { value: "approved", label: "Aprovado", color: "bg-success" },
   { value: "rejected", label: "Rejeitado", color: "bg-danger" },

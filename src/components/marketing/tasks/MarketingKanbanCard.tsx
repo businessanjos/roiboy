@@ -23,7 +23,7 @@ interface MarketingKanbanCardProps {
 }
 
 const priorityConfig = {
-  low: { label: "Baixa", className: "bg-muted text-foreground dark:bg-slate-800 dark:text-muted-foreground" },
+  low: { label: "Baixa", className: "bg-muted text-foreground dark:bg-muted-foreground dark:text-muted-foreground" },
   medium: { label: "Média", className: "bg-warning-soft text-warning-strong dark:bg-warning/50 dark:text-warning" },
   high: { label: "Alta", className: "bg-danger-soft text-danger-strong dark:bg-danger/50 dark:text-danger" },
 };

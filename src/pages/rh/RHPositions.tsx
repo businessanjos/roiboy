@@ -48,7 +48,7 @@ const SENIORITY_COLORS: Record<string, string> = {
   "Sênior": "bg-success/10 text-success-strong border-success dark:text-success dark:border-success",
   "Pleno": "bg-warning/10 text-warning-strong border-warning dark:text-warning dark:border-warning",
   "Júnior": "bg-warning/10 text-warning-strong border-warning dark:text-warning dark:border-warning",
-  "Estagiário": "bg-slate-500/10 text-foreground border-border dark:text-muted-foreground dark:border-border",
+  "Estagiário": "bg-muted-foreground/10 text-foreground border-border dark:text-muted-foreground dark:border-border",
 };
 
 const EMPTY_FORM = {

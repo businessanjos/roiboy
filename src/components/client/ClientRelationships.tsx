@@ -112,7 +112,7 @@ const relationshipTypeLabels: Record<RelationshipType, { label: string; icon: Re
   dependent: { label: "Dependente", icon: <UserPlus className="h-3 w-3" />, color: "bg-info/20 text-info border-info/30" },
   associate: { label: "Sócio", icon: <Briefcase className="h-3 w-3" />, color: "bg-success/20 text-success border-success/30" },
   referral: { label: "Indicação", icon: <Gift className="h-3 w-3" />, color: "bg-purple-500/20 text-purple-400 border-purple-500/30" },
-  other: { label: "Outro", icon: <Link2 className="h-3 w-3" />, color: "bg-gray-500/20 text-muted-foreground border-border/30" },
+  other: { label: "Outro", icon: <Link2 className="h-3 w-3" />, color: "bg-muted-foreground/20 text-muted-foreground border-border/30" },
 };
 
 export function ClientRelationships({ clientId, accountId }: ClientRelationshipsProps) {

@@ -623,7 +623,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               {/* Ended (Completed) */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-slate-500/10 shrink-0">
+                  <div className="p-2 rounded-lg bg-muted-foreground/10 shrink-0">
                     <Ban className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
@@ -633,7 +633,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
-                        className="h-full rounded-full bg-gradient-to-r from-slate-500 to-slate-400"
+                        className="h-full rounded-full bg-gradient-to-r from-muted-foreground to-muted-foreground"
                         initial={{ width: 0 }}
                         animate={{ width: `${funnelData.completedRate}%` }}
                         transition={{ duration: 0.8, ease: "easeOut", delay: 0.4 }}
@@ -685,11 +685,11 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 <p className="text-xs text-muted-foreground font-medium mt-1">Em Andamento</p>
               </motion.div>
               <motion.div 
-                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border border-border/20 hover:border-border/40 transition-all duration-300"
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-muted-foreground/10 via-muted-foreground/5 to-transparent border border-border/20 hover:border-border/40 transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
               >
-                <div className="absolute inset-0 bg-slate-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
-                <p className="text-3xl font-bold bg-gradient-to-r from-slate-600 to-slate-500 bg-clip-text text-transparent">{funnelData.completedRate.toFixed(1)}%</p>
+                <div className="absolute inset-0 bg-muted-foreground/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <p className="text-3xl font-bold bg-gradient-to-r from-muted-foreground to-muted-foreground bg-clip-text text-transparent">{funnelData.completedRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground font-medium mt-1">Finalizados</p>
               </motion.div>
               <motion.div 
@@ -766,8 +766,8 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                   <div className="w-2.5 h-2.5 rounded-full bg-danger shadow-lg shadow-danger/50" />
                   <span className="text-xs font-medium text-danger">Cancelados</span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted-foreground/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground shadow-lg shadow-muted-foreground/50" />
                   <span className="text-xs font-medium text-muted-foreground">Encerrados</span>
                 </div>
               </div>
@@ -861,8 +861,8 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                   <div className="w-2.5 h-2.5 rounded-full bg-danger shadow-lg shadow-danger/50" />
                   <span className="text-xs font-medium text-danger">Cancelados</span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-muted-foreground/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-muted-foreground shadow-lg shadow-muted-foreground/50" />
                   <span className="text-xs font-medium text-muted-foreground">Encerrados</span>
                 </div>
               </div>

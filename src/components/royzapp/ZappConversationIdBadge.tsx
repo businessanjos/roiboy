@@ -44,7 +44,7 @@ export function ZappConversationIdBadge({ conversationId, className }: ZappConve
             )}
             aria-label={`Copiar ID da conversa ${conversationId}`}
           >
-            {copied ? <Check className="h-3 w-3 text-emerald-500" /> : <Copy className="h-3 w-3" />}
+            {copied ? <Check className="h-3 w-3 text-success" /> : <Copy className="h-3 w-3" />}
             {shortConversationId(conversationId)}
           </button>
         </TooltipTrigger>

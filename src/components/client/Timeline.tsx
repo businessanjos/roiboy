@@ -135,7 +135,7 @@ const getEventConfig = (event: TimelineEvent) => {
       const isGroup = event.metadata?.is_group === true;
       return {
         icon: isGroup ? <Users className="h-4 w-4" /> : isAudio ? <Mic className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />,
-        bgColor: isGroup ? "bg-indigo-500" : isClient ? "bg-info" : "bg-slate-500",
+        bgColor: isGroup ? "bg-indigo-500" : isClient ? "bg-info" : "bg-muted-foreground",
         textColor: isGroup ? "text-indigo-500" : isClient ? "text-info" : "text-muted-foreground",
         label: isGroup ? event.metadata?.group_name || "Grupo" : isClient ? "Cliente" : "Equipe",
       };
@@ -233,7 +233,7 @@ const getImpactBadge = (impact?: string) => {
   const config = {
     high: { className: "bg-success/10 text-success border-success/30", label: "Alto" },
     medium: { className: "bg-warning/10 text-warning border-warning/30", label: "Médio" },
-    low: { className: "bg-slate-500/10 text-muted-foreground border-border/30", label: "Baixo" },
+    low: { className: "bg-muted-foreground/10 text-muted-foreground border-border/30", label: "Baixo" },
   }[impact];
   
   return config ? (

@@ -511,8 +511,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                           className={cn(
                             "px-1.5 py-0 h-5 font-medium border",
                             p === "meta_official"
-                              ? "border-blue-500/40 bg-blue-500/10 text-blue-600 dark:text-blue-400"
-                              : "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                              ? "border-info/40 bg-info/10 text-info dark:text-info"
+                              : "border-success/40 bg-success/10 text-success dark:text-success"
                           )}
                         >
                           {p === "meta_official" ? "Meta API" : "UAZAPI"}
@@ -535,10 +535,10 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                             className={cn(
                               "px-1.5 py-0 h-5 font-medium border",
                               allOn
-                                ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                                ? "border-success/40 bg-success/10 text-success dark:text-success"
                                 : noneOn
-                                ? "border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400"
-                                : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                                ? "border-danger/40 bg-danger/10 text-danger dark:text-danger"
+                                : "border-warning/40 bg-warning/10 text-warning dark:text-warning"
                             )}
                             title={hasHeartbeat && rawOnline < online ? "Recebendo mensagens agora (heartbeat < 10min)" : undefined}
                           >
@@ -563,8 +563,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                         <div className="flex items-center gap-2" title={hasHeartbeat && !selectedInstance?.connected ? "Recebendo mensagens (status do servidor pode estar desatualizado)" : undefined}>
                           {effectiveOnline ? (
                             <>
-                              <Wifi className="h-4 w-4 text-emerald-500" />
-                              <span className="text-xs text-emerald-600 font-medium">
+                              <Wifi className="h-4 w-4 text-success" />
+                              <span className="text-xs text-success font-medium">
                                 {hasHeartbeat && !selectedInstance?.connected ? "Recebendo" : "Online"}
                               </span>
                             </>
@@ -591,7 +591,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                             {selectedInstance?.has_pin && 
                               !pinVerifiedInstances.has(selectedInstance.id) && 
                               !(selectedInstance.use_sector_pin && pinVerifiedSectors.has(sectorId)) && (
-                              <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                              <Lock className="h-3 w-3 text-warning shrink-0" />
                             )}
                             <span className="truncate">
                               {selectedInstance?.display_name || selectedInstance?.instance_name || "Selecionar"}
@@ -620,12 +620,12 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                                     {/* Connection indicator */}
                                     <div className={cn(
                                       "w-2 h-2 rounded-full shrink-0",
-                                      instance.connected ? "bg-emerald-500" : "bg-muted-foreground"
+                                      instance.connected ? "bg-success" : "bg-muted-foreground"
                                     )} />
                                     
                                     {/* PIN lock indicator */}
                                     {instance.has_pin && !isVerified && (
-                                      <Lock className="h-3 w-3 text-amber-500 shrink-0" />
+                                      <Lock className="h-3 w-3 text-warning shrink-0" />
                                     )}
                                     
                                     {/* Instance name */}

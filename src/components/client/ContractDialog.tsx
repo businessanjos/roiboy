@@ -335,7 +335,7 @@ export function ContractDialog({
       active: { label: "Ativo", className: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
       pending: { label: "Pendente", className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
       cancelled: { label: "Cancelado", className: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
-      ended: { label: "Encerrado", className: "bg-muted text-foreground dark:bg-slate-900/30 dark:text-muted-foreground" },
+      ended: { label: "Encerrado", className: "bg-muted text-foreground dark:bg-muted-foreground/30 dark:text-muted-foreground" },
       paused: { label: "Pausado", className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
     };
     return statusMap[status] || { label: status, className: "bg-muted text-muted-foreground" };

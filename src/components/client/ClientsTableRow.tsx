@@ -381,7 +381,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                       pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-info-soft dark:bg-info/30", textClass: "text-info-strong dark:text-info" },
                       paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
                       cancelled: { label: "Cancelado", labelTooltip: "Distrato de Cancelamento", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
-                      ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
+                      ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-muted-foreground/30", textClass: "text-foreground dark:text-muted-foreground" },
                       suspended_bonus: { label: "Susp. Bônus", labelTooltip: "Suspenso Bônus", icon: Ban, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
                       dismissal_termination: { label: "Dist. Demissão", labelTooltip: "Distrato por Demissão", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
                     };

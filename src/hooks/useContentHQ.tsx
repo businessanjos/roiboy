@@ -63,8 +63,8 @@ export type ContentPiece = {
 export const PLATFORMS = [
   { id: "instagram", label: "Instagram", color: "bg-pink-500/15 text-pink-600 border-pink-500/30" },
   { id: "youtube", label: "YouTube", color: "bg-danger/15 text-danger border-danger/30" },
-  { id: "tiktok", label: "TikTok", color: "bg-zinc-800/15 text-foreground dark:text-muted-foreground border-border/30" },
-  { id: "threads", label: "Threads", color: "bg-zinc-700/15 text-foreground dark:text-muted-foreground border-border/30" },
+  { id: "tiktok", label: "TikTok", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
+  { id: "threads", label: "Threads", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
   { id: "linkedin", label: "LinkedIn", color: "bg-info/15 text-info-strong border-info/30" },
   { id: "pinterest", label: "Pinterest", color: "bg-danger/15 text-danger-strong border-danger/30" },
   { id: "spotify", label: "Spotify", color: "bg-success/15 text-success-strong border-success/30" },

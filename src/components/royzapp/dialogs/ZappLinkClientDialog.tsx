@@ -424,7 +424,7 @@ export function ZappLinkClientDialog({
                     <div className="flex items-start gap-3">
                       <Avatar className="h-10 w-10">
                         <AvatarImage src={client.avatar_url || undefined} />
-                        <AvatarFallback className={`text-xs ${client.type === "lead" ? "bg-amber-500/20 text-amber-600" : "bg-muted"}`}>
+                        <AvatarFallback className={`text-xs ${client.type === "lead" ? "bg-warning/20 text-warning" : "bg-muted"}`}>
                           {getInitials(client.full_name)}
                         </AvatarFallback>
                       </Avatar>
@@ -435,8 +435,8 @@ export function ZappLinkClientDialog({
                             variant={client.type === "lead" ? "outline" : "secondary"} 
                             className={`text-[10px] px-1.5 py-0 h-4 ${
                               client.type === "lead" 
-                                ? "border-amber-500 text-amber-600 bg-amber-500/10" 
-                                : "bg-emerald-500/10 text-emerald-600 border-emerald-500"
+                                ? "border-warning text-warning bg-warning/10" 
+                                : "bg-success/10 text-success border-success"
                             }`}
                           >
                             {client.type === "lead" ? "Lead" : "Cliente"}
@@ -444,7 +444,7 @@ export function ZappLinkClientDialog({
                           {client.type === "lead" && client.status === "converted" && (
                             <Badge 
                               variant="outline" 
-                              className="text-[10px] px-1.5 py-0 h-4 border-orange-400 text-orange-600 bg-orange-500/10"
+                              className="text-[10px] px-1.5 py-0 h-4 border-warning text-warning bg-warning/10"
                             >
                               Convertido
                             </Badge>

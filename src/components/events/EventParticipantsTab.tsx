@@ -113,7 +113,7 @@ const rsvpStatusConfig: Record<EventRsvpStatus, { label: string; color: string; 
   declined: { label: "Recusado", color: "bg-danger/10 text-danger", icon: X },
   waitlist: { label: "Lista de Espera", color: "bg-info/10 text-info", icon: Clock },
   attended: { label: "Presente", color: "bg-success/10 text-success", icon: UserCheck },
-  no_show: { label: "Não Compareceu", color: "bg-gray-500/10 text-muted-foreground", icon: X },
+  no_show: { label: "Não Compareceu", color: "bg-muted-foreground/10 text-muted-foreground", icon: X },
 };
 
 export default function EventParticipantsTab({ 

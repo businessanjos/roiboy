@@ -643,7 +643,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     declined: "bg-danger/10 text-danger border-danger/30",
     pending: "bg-warning/10 text-warning border-warning/30",
     attended: "bg-success/10 text-success border-success/30",
-    no_show: "bg-gray-500/10 text-muted-foreground border-border/30",
+    no_show: "bg-muted-foreground/10 text-muted-foreground border-border/30",
     waitlist: "bg-info/10 text-info border-info/30",
   };
   const statusLabels: Record<string, string> = {

@@ -314,7 +314,7 @@ export default function WhatsAppDiagnostics() {
       financeiro: "bg-warning",
       
     };
-    return colors[sectorId] || "bg-gray-500";
+    return colors[sectorId] || "bg-muted-foreground";
   };
 
   // Group conversations by sector

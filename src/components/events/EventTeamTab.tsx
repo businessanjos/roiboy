@@ -72,7 +72,7 @@ const roleConfig: Record<EventTeamRole, { label: string; icon: React.ElementType
   mentor: { label: "Mentor", icon: GraduationCap, color: "bg-indigo-500/10 text-indigo-600" },
   host: { label: "Anfitrião", icon: User, color: "bg-pink-500/10 text-pink-600" },
   photographer: { label: "Fotógrafo", icon: Camera, color: "bg-warning/10 text-warning" },
-  other: { label: "Outro", icon: User, color: "bg-gray-500/10 text-muted-foreground" },
+  other: { label: "Outro", icon: User, color: "bg-muted-foreground/10 text-muted-foreground" },
 };
 
 export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) {

@@ -85,7 +85,7 @@ const actionColors: Record<string, string> = {
   delete: "bg-danger/10 text-danger border-danger/20",
   login: "bg-success/10 text-success border-success/20",
   logout: "bg-warning/10 text-warning border-warning/20",
-  view: "bg-gray-500/10 text-muted-foreground border-border/20",
+  view: "bg-muted-foreground/10 text-muted-foreground border-border/20",
   export: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   import: "bg-info/10 text-info border-info/20",
   assign: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",

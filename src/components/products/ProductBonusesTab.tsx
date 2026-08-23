@@ -27,7 +27,7 @@ const COLOR_OPTIONS = [
   { value: "red", label: "Vermelho", class: "bg-danger" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
   { value: "cyan", label: "Ciano", class: "bg-info" },
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
+  { value: "gray", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 interface Props {

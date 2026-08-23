@@ -32,7 +32,7 @@ function DealStatusBadge({ status }: { status?: string }) {
   };
   const info = status ? map[status] : null;
   const label = info?.label ?? 'Sem Negócio';
-  const className = info?.className ?? 'bg-gray-500/15 text-muted-foreground border-border/30';
+  const className = info?.className ?? 'bg-muted-foreground/15 text-muted-foreground border-border/30';
   return <Badge className={`text-[10px] px-1.5 py-0 font-medium ${className}`}>{label}</Badge>;
 }
 

@@ -111,7 +111,7 @@ const STATUS_META: Record<string, { label: string; className: string; icon: any 
   paid: { label: "Paga", className: "bg-success/15 text-success", icon: CheckCircle2 },
   overdue: { label: "Vencida", className: "bg-destructive/15 text-destructive", icon: AlertCircle },
   renegotiated: { label: "Renegociada", className: "bg-warning/15 text-warning", icon: RefreshCw },
-  written_off: { label: "Baixada", className: "bg-zinc-500/15 text-muted-foreground", icon: XCircle },
+  written_off: { label: "Baixada", className: "bg-muted-foreground/15 text-muted-foreground", icon: XCircle },
   judicial: { label: "Judicial", className: "bg-danger/15 text-danger", icon: Gavel },
   refunded: { label: "Estornada", className: "bg-pink-500/15 text-pink-600", icon: RefreshCw },
   partial: { label: "Parcial", className: "bg-warning/15 text-warning", icon: Clock },

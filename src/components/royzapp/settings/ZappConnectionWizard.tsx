@@ -255,8 +255,8 @@ export function ZappConnectionWizard({
                 )}
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-emerald-500/10">
-                    <Smartphone className="h-5 w-5 text-emerald-500" />
+                  <div className="p-2 rounded-lg bg-success/10">
+                    <Smartphone className="h-5 w-5 text-success" />
                   </div>
                   <div>
                     <p className="font-medium text-zapp-text">UAZAPI (QR Code)</p>
@@ -279,8 +279,8 @@ export function ZappConnectionWizard({
                 )}
               >
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="p-2 rounded-lg bg-blue-500/10">
-                    <Globe className="h-5 w-5 text-blue-500" />
+                  <div className="p-2 rounded-lg bg-info/10">
+                    <Globe className="h-5 w-5 text-info" />
                   </div>
                   <div>
                     <p className="font-medium text-zapp-text">Meta Cloud API</p>
@@ -321,7 +321,7 @@ export function ZappConnectionWizard({
                             <span
                               className={cn(
                                 "w-2 h-2 rounded-full",
-                                i.status === "connected" ? "bg-emerald-500" : "bg-red-500"
+                                i.status === "connected" ? "bg-success" : "bg-danger"
                               )}
                             />
                             <span>{i.profileName || i.name}</span>
@@ -457,8 +457,8 @@ export function ZappConnectionWizard({
               ) : (
                 <div className="space-y-4">
                   <div className="flex flex-col items-center gap-2 py-4">
-                    <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                      <Check className="h-6 w-6 text-emerald-500" />
+                    <div className="w-12 h-12 rounded-full bg-success/20 flex items-center justify-center">
+                      <Check className="h-6 w-6 text-success" />
                     </div>
                     <p className="text-zapp-text font-medium">Conexão criada com sucesso!</p>
                   </div>

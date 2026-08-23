@@ -105,7 +105,7 @@ const verificationMeta: Record<VerificationStatus, { label: string; className: s
   },
   removido: {
     label: "Descartado",
-    className: "bg-zinc-500/10 text-muted-foreground dark:text-muted-foreground border-border/30",
+    className: "bg-muted-foreground/10 text-muted-foreground dark:text-muted-foreground border-border/30",
   },
 };
 
@@ -113,9 +113,9 @@ const vStatus = (c: { verification_status?: string | null }): VerificationStatus
   (c.verification_status as VerificationStatus) || "nao_verificado";
 
 const tierClass: Record<string, string> = {
-  platinum: "bg-slate-500/10 text-foreground dark:text-muted-foreground border-border/30",
+  platinum: "bg-muted-foreground/10 text-foreground dark:text-muted-foreground border-border/30",
   gold: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
-  silver: "bg-zinc-500/10 text-foreground dark:text-muted-foreground border-border/30",
+  silver: "bg-muted-foreground/10 text-foreground dark:text-muted-foreground border-border/30",
   bronze: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
 };
 

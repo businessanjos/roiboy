@@ -175,14 +175,14 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
     const daysOverdue = getDaysOverdue(dueDate);
     
     if (isToday(date)) {
-      return <Badge className="bg-amber-500 text-white text-[10px]">Hoje</Badge>;
+      return <Badge className="bg-warning text-white text-[10px]">Hoje</Badge>;
     }
     if (isPast(date)) {
       return <Badge variant="destructive" className="text-[10px]">{daysOverdue}d atraso</Badge>;
     }
     const daysUntil = differenceInDays(date, new Date());
     if (daysUntil <= 7) {
-      return <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-500">{daysUntil}d</Badge>;
+      return <Badge variant="outline" className="text-[10px] border-warning text-warning">{daysUntil}d</Badge>;
     }
     return null;
   };
@@ -231,27 +231,27 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
         <div className="grid grid-cols-3 gap-2 mb-3">
           <Card className="p-2 bg-zapp-panel border-zapp-border">
             <div className="flex items-center gap-1.5">
-              <ArrowUpRight className="h-3 w-3 text-green-500" />
+              <ArrowUpRight className="h-3 w-3 text-success" />
               <div>
-                <p className="text-xs font-bold text-green-500">{formatCurrency(stats.totalReceivables)}</p>
+                <p className="text-xs font-bold text-success">{formatCurrency(stats.totalReceivables)}</p>
                 <p className="text-[9px] text-zapp-text-muted">A receber</p>
               </div>
             </div>
           </Card>
           <Card className="p-2 bg-zapp-panel border-zapp-border">
             <div className="flex items-center gap-1.5">
-              <ArrowDownRight className="h-3 w-3 text-red-500" />
+              <ArrowDownRight className="h-3 w-3 text-danger" />
               <div>
-                <p className="text-xs font-bold text-red-500">{formatCurrency(stats.totalPayables)}</p>
+                <p className="text-xs font-bold text-danger">{formatCurrency(stats.totalPayables)}</p>
                 <p className="text-[9px] text-zapp-text-muted">A pagar</p>
               </div>
             </div>
           </Card>
           <Card className="p-2 bg-zapp-panel border-zapp-border">
             <div className="flex items-center gap-1.5">
-              <AlertTriangle className="h-3 w-3 text-amber-500" />
+              <AlertTriangle className="h-3 w-3 text-warning" />
               <div>
-                <p className="text-xs font-bold text-amber-500">{stats.delinquentCount}</p>
+                <p className="text-xs font-bold text-warning">{stats.delinquentCount}</p>
                 <p className="text-[9px] text-zapp-text-muted">Inadimplentes</p>
               </div>
             </div>
@@ -327,7 +327,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="font-bold text-sm text-green-500 flex-shrink-0">
+                      <p className="font-bold text-sm text-success flex-shrink-0">
                         {formatCurrency(entry.amount)}
                       </p>
                     </div>
@@ -372,7 +372,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                           </span>
                         </div>
                       </div>
-                      <p className="font-bold text-sm text-red-500 flex-shrink-0">
+                      <p className="font-bold text-sm text-danger flex-shrink-0">
                         {formatCurrency(entry.amount)}
                       </p>
                     </div>
@@ -399,7 +399,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                   >
                     <div className="flex items-start gap-3">
                       <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarFallback className="text-xs bg-red-500/20 text-red-500">
+                        <AvatarFallback className="text-xs bg-danger/20 text-danger">
                           {client.client_name.split(" ").map(n => n[0]).slice(0, 2).join("")}
                         </AvatarFallback>
                       </Avatar>
@@ -413,7 +413,7 @@ export function ZappFinancePanel({ sectorId }: ZappFinancePanelProps) {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <p className="font-bold text-sm text-red-500">{formatCurrency(client.total_overdue)}</p>
+                        <p className="font-bold text-sm text-danger">{formatCurrency(client.total_overdue)}</p>
                       </div>
                     </div>
                   </Card>

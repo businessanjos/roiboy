@@ -49,11 +49,11 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
     <div className="bg-zapp-panel border-t border-zapp-border overflow-hidden">
       {/* Correction section */}
       {hasCorrection && (
-        <div className="px-2 sm:px-3 py-2 border-b border-zapp-border bg-amber-500/5">
+        <div className="px-2 sm:px-3 py-2 border-b border-zapp-border bg-warning/5">
           <div className="flex items-start gap-2">
-            <Wand2 className="h-4 w-4 text-amber-500 mt-0.5 flex-shrink-0" />
+            <Wand2 className="h-4 w-4 text-warning mt-0.5 flex-shrink-0" />
             <div className="flex-1 min-w-0">
-              <p className="text-xs text-amber-600 dark:text-amber-400 font-medium mb-1">
+              <p className="text-xs text-warning dark:text-warning font-medium mb-1">
                 Correção sugerida
               </p>
               <p className="text-sm text-zapp-text break-words">

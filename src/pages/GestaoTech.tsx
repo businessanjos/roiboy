@@ -40,7 +40,7 @@ const fmtBRL = (cents: number, currency = "BRL") =>
 const STATUS_COLORS: Record<string, string> = {
   active: "bg-success/15 text-success-strong border-success/30",
   paused: "bg-warning/15 text-warning-strong border-warning/30",
-  archived: "bg-zinc-500/15 text-foreground border-border/30",
+  archived: "bg-muted-foreground/15 text-foreground border-border/30",
 };
 
 interface TechProject {

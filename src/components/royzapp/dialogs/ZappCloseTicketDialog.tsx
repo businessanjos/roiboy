@@ -37,11 +37,11 @@ import { ConversationAssignment, ContactInfo, getContactInfo } from "../types";
 import { Link } from "react-router-dom";
 
 const OUTCOME_OPTIONS = [
-  { value: "resolved", label: "Resolvido", icon: CheckCircle, color: "text-emerald-500" },
-  { value: "follow_up", label: "Aguardando retorno", icon: Clock, color: "text-amber-500" },
-  { value: "escalated", label: "Encaminhado/Escalonado", icon: AlertTriangle, color: "text-orange-500" },
+  { value: "resolved", label: "Resolvido", icon: CheckCircle, color: "text-success" },
+  { value: "follow_up", label: "Aguardando retorno", icon: Clock, color: "text-warning" },
+  { value: "escalated", label: "Encaminhado/Escalonado", icon: AlertTriangle, color: "text-warning" },
   { value: "no_response", label: "Sem resposta do cliente", icon: XCircle, color: "text-muted-foreground" },
-  { value: "cancelled", label: "Cancelado/Inválido", icon: XCircle, color: "text-red-500" },
+  { value: "cancelled", label: "Cancelado/Inválido", icon: XCircle, color: "text-danger" },
 ];
 
 interface ZappCloseTicketDialogProps {
@@ -253,7 +253,7 @@ export function ZappCloseTicketDialog({
       <DialogContent className="max-w-lg bg-zapp-panel border-zapp-border">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-zapp-text">
-            <CheckCircle className="h-5 w-5 text-emerald-500" />
+            <CheckCircle className="h-5 w-5 text-success" />
             Finalizar Atendimento
           </DialogTitle>
         </DialogHeader>
@@ -291,12 +291,12 @@ export function ZappCloseTicketDialog({
                 <p className="text-xs text-zapp-text-muted">Duração</p>
               </div>
               <div className="text-center p-3 bg-zapp-bg-dark rounded-lg">
-                <MessageSquare className="h-4 w-4 mx-auto text-blue-400 mb-1" />
+                <MessageSquare className="h-4 w-4 mx-auto text-info mb-1" />
                 <p className="text-lg font-bold text-zapp-text">{stats.messagesCount}</p>
                 <p className="text-xs text-zapp-text-muted">Mensagens</p>
               </div>
               <div className="text-center p-3 bg-zapp-bg-dark rounded-lg">
-                <Calendar className="h-4 w-4 mx-auto text-amber-400 mb-1" />
+                <Calendar className="h-4 w-4 mx-auto text-warning mb-1" />
                 <p className="text-sm font-medium text-zapp-text">
                   {format(new Date(assignment.created_at), "dd/MM HH:mm", { locale: ptBR })}
                 </p>
@@ -399,7 +399,7 @@ export function ZappCloseTicketDialog({
           <Button
             onClick={handleClose}
             disabled={loading}
-            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+            className="bg-success hover:bg-success text-white"
           >
             {loading ? (
               <>

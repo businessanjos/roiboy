@@ -39,7 +39,7 @@ const formatConfig: Record<PostFormat, {
   static: {
     label: 'Estático',
     icon: Image,
-    className: 'bg-muted text-foreground border-border dark:bg-gray-800/50 dark:text-muted-foreground dark:border-border',
+    className: 'bg-muted text-foreground border-border dark:bg-muted-foreground/50 dark:text-muted-foreground dark:border-border',
   },
 };
 

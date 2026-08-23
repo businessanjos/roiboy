@@ -168,7 +168,7 @@ export const ZappTeamList = memo(function ZappTeamList({
                     {agent.has_global_access && (
                       <Badge
                         variant="outline"
-                        className="text-[10px] px-1.5 py-0 gap-1 border-amber-500/60 text-amber-400"
+                        className="text-[10px] px-1.5 py-0 gap-1 border-warning/60 text-warning"
                       >
                         <Globe className="h-2.5 w-2.5" />
                         Global
@@ -187,13 +187,13 @@ export const ZappTeamList = memo(function ZappTeamList({
                           <div className="flex items-center gap-1 px-2 py-1 rounded hover:bg-zapp-bg-dark">
                             <Globe className={cn(
                               "h-3.5 w-3.5",
-                              agent.has_global_access ? "text-amber-400" : "text-zapp-text-muted"
+                              agent.has_global_access ? "text-warning" : "text-zapp-text-muted"
                             )} />
                             <Switch
                               checked={!!agent.has_global_access}
                               disabled={!canManageGlobalAccess}
                               onCheckedChange={() => onToggleAgentGlobalAccess(agent)}
-                              className="data-[state=checked]:bg-amber-500 scale-75"
+                              className="data-[state=checked]:bg-warning scale-75"
                             />
                           </div>
                         </TooltipTrigger>

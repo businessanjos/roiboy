@@ -200,7 +200,7 @@ const getEventConfig = (eventType: string, title?: string) => {
         return { icon: XCircle, bgColor: "bg-danger", textColor: "text-danger", label: "Perdido" };
       }
       if (title === 'Negócio reaberto') {
-        return { icon: RotateCcw, bgColor: "bg-gray-500", textColor: "text-muted-foreground", label: "Reaberto" };
+        return { icon: RotateCcw, bgColor: "bg-muted-foreground", textColor: "text-muted-foreground", label: "Reaberto" };
       }
       return { icon: CheckCircle, bgColor: "bg-success", textColor: "text-success", label: "Ganho" };
     default:

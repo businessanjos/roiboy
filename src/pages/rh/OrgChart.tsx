@@ -62,8 +62,8 @@ const COLUMNS: ColumnConfig[] = [
   {
     key: "administrativo",
     label: "Administrativo",
-    headerColor: "from-slate-500 to-slate-600",
-    badgeColor: "bg-slate-500/15 text-foreground border-border dark:text-muted-foreground dark:border-border",
+    headerColor: "from-muted-foreground to-muted-foreground",
+    badgeColor: "bg-muted-foreground/15 text-foreground border-border dark:text-muted-foreground dark:border-border",
     gestorNames: ["arthur mudri"],
     deptMatches: ["administrativo", "financeiro", "recursos humanos", "rh", "jurídico", "juridico"],
   },

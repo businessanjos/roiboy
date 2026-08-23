@@ -68,7 +68,7 @@ const COLOR_OPTIONS = [
   { value: "purple", label: "Roxo", class: "bg-purple-500" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
   { value: "orange", label: "Laranja", class: "bg-warning" },
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
+  { value: "gray", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 // Sortable field item component
@@ -136,7 +136,7 @@ function SortableFieldItem({
                   opt.color === "purple" ? "bg-purple-500/20 text-purple-700" :
                   opt.color === "pink" ? "bg-pink-500/20 text-pink-700" :
                   opt.color === "orange" ? "bg-warning/20 text-warning-strong" :
-                  "bg-gray-500/20 text-foreground"
+                  "bg-muted-foreground/20 text-foreground"
                 }`}
               >
                 {opt.label}
@@ -555,7 +555,7 @@ export function FormFieldsManager({
                       >
                         <SelectTrigger className="w-[100px]">
                           <div className="flex items-center gap-2">
-                            <div className={`w-3 h-3 rounded-full ${COLOR_OPTIONS.find(c => c.value === opt.color)?.class || "bg-gray-500"}`} />
+                            <div className={`w-3 h-3 rounded-full ${COLOR_OPTIONS.find(c => c.value === opt.color)?.class || "bg-muted-foreground"}`} />
                           </div>
                         </SelectTrigger>
                         <SelectContent>

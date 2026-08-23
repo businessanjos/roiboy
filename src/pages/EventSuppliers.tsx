@@ -58,8 +58,8 @@ const CATEGORIES: { value: string; label: string; color: string }[] = [
   { value: "brindes", label: "Brindes & Presentes", color: "bg-success/10 text-success-strong border-success" },
   { value: "hospedagem", label: "Hospedagem", color: "bg-indigo-500/10 text-indigo-700 border-indigo-300" },
   { value: "papelaria", label: "Papelaria & Convites", color: "bg-danger/10 text-danger-strong border-danger" },
-  { value: "seguranca", label: "Segurança", color: "bg-slate-500/10 text-foreground border-border" },
-  { value: "outros", label: "Outros", color: "bg-gray-500/10 text-foreground border-border" },
+  { value: "seguranca", label: "Segurança", color: "bg-muted-foreground/10 text-foreground border-border" },
+  { value: "outros", label: "Outros", color: "bg-muted-foreground/10 text-foreground border-border" },
 ];
 
 const QUOTE_STATUS: { value: string; label: string; className: string }[] = [

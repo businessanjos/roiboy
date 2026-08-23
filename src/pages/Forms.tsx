@@ -1326,7 +1326,7 @@ export default function Forms() {
 
               // Generate a consistent color based on form index
               const colors = [
-                "bg-slate-700",
+                "bg-muted-foreground",
                 "bg-info",
                 "bg-success",
                 "bg-warning",

@@ -59,7 +59,7 @@ const CATEGORY_META: Record<string, { label: string; color: string }> = {
   web: { label: "Web", color: "bg-violet-500/10 text-violet-700" },
   social: { label: "Redes Sociais", color: "bg-pink-500/10 text-pink-700" },
   identity: { label: "Identidade Visual", color: "bg-warning/10 text-warning-strong" },
-  internal: { label: "Interno", color: "bg-slate-500/10 text-foreground" },
+  internal: { label: "Interno", color: "bg-muted-foreground/10 text-foreground" },
 };
 
 const TASK_STATUSES = [

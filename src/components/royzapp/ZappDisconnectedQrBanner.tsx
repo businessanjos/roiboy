@@ -152,7 +152,7 @@ export function ZappDisconnectedQrBanner({ sectorId, integrationId, className }:
       role="alert"
       data-testid="zapp-disconnected-qr-banner"
       className={cn(
-        "rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2.5 text-amber-900 dark:text-amber-100",
+        "rounded-lg border border-warning/40 bg-warning/10 px-3 py-2.5 text-warning-strong dark:text-warning",
         className,
       )}
     >
@@ -168,7 +168,7 @@ export function ZappDisconnectedQrBanner({ sectorId, integrationId, className }:
           type="button"
           onClick={() => instance && fetchQr(instance)}
           disabled={loadingQr}
-          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-amber-500/40 px-2 py-1 text-[11px] font-medium hover:bg-amber-500/10 transition-colors disabled:opacity-60"
+          className="shrink-0 inline-flex items-center gap-1 rounded-md border border-warning/40 px-2 py-1 text-[11px] font-medium hover:bg-warning/10 transition-colors disabled:opacity-60"
         >
           {loadingQr ? (
             <Loader2 className="h-3 w-3 animate-spin" aria-hidden />
@@ -182,7 +182,7 @@ export function ZappDisconnectedQrBanner({ sectorId, integrationId, className }:
       <div className="mt-2 flex justify-center">
         {reconnected ? (
           <div className="flex items-center gap-2 text-xs py-3">
-            <CheckCircle2 className="h-4 w-4 text-emerald-600" aria-hidden />
+            <CheckCircle2 className="h-4 w-4 text-success" aria-hidden />
             Conectado novamente
           </div>
         ) : loadingQr && !qrCode ? (

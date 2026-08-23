@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog";
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: any }> = {
-  draft:    { label: "Rascunho",     cls: "bg-slate-500/15 text-foreground",   icon: Clock },
+  draft:    { label: "Rascunho",     cls: "bg-muted-foreground/15 text-foreground",   icon: Clock },
   review:   { label: "Em revisão",   cls: "bg-warning/15 text-warning-strong",   icon: Eye },
   approved: { label: "Aprovado",     cls: "bg-success/15 text-success-strong", icon: CheckCircle2 },
   rejected: { label: "Reprovado",    cls: "bg-danger/15 text-danger-strong",       icon: XCircle },

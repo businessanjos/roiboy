@@ -102,7 +102,7 @@ const LEAD_STATUS = [
   { value: "new", label: "Novo", color: "bg-info" },
   { value: "contacted", label: "Contatado", color: "bg-warning" },
   { value: "qualified", label: "Qualificado", color: "bg-success" },
-  { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
+  { value: "unqualified", label: "Não Qualificado", color: "bg-muted-foreground" },
   { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
 
@@ -1188,7 +1188,7 @@ export default function Leads() {
   const getStatusBadge = (status: string) => {
     const s = LEAD_STATUS.find((s) => s.value === status);
     return (
-      <Badge variant="secondary" className={`${s?.color || "bg-gray-500"} text-white text-[10px]`}>
+      <Badge variant="secondary" className={`${s?.color || "bg-muted-foreground"} text-white text-[10px]`}>
         {s?.label || status}
       </Badge>
     );

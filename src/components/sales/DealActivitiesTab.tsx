@@ -62,7 +62,7 @@ interface DealActivitiesTabProps {
 }
 
 const PRIORITY_CONFIG = {
-  low: { label: "Baixa", color: "bg-slate-500" },
+  low: { label: "Baixa", color: "bg-muted-foreground" },
   medium: { label: "Média", color: "bg-info" },
   high: { label: "Alta", color: "bg-warning" },
   urgent: { label: "Urgente", color: "bg-danger" },

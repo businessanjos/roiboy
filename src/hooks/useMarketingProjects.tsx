@@ -96,7 +96,7 @@ export const MILESTONE_PHASE_META: Record<MilestonePhase, { label: string; color
 export const MILESTONE_PHASE_ORDER: MilestonePhase[] = ["discovery", "planning", "pre_production", "production", "launch", "post_launch"];
 
 export const MILESTONE_PRIORITY_META: Record<MilestonePriority, { label: string; color: string }> = {
-  low: { label: "Baixa", color: "bg-slate-500/15 text-foreground dark:text-muted-foreground border-border/30" },
+  low: { label: "Baixa", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
   medium: { label: "Média", color: "bg-info/15 text-info-strong dark:text-info border-info/30" },
   high: { label: "Alta", color: "bg-warning/15 text-warning-strong dark:text-warning border-warning/30" },
   critical: { label: "Crítica", color: "bg-danger/15 text-danger-strong dark:text-danger border-danger/30" },
@@ -115,7 +115,7 @@ export const PROJECT_STATUS_META: Record<
   MarketingProjectStatus,
   { label: string; color: string }
 > = {
-  planning: { label: "Planejamento", color: "bg-slate-500/15 text-foreground dark:text-muted-foreground border-border/30" },
+  planning: { label: "Planejamento", color: "bg-muted-foreground/15 text-foreground dark:text-muted-foreground border-border/30" },
   active: { label: "Em execução", color: "bg-info/15 text-info-strong dark:text-info border-info/30" },
   launched: { label: "Lançado", color: "bg-success/15 text-success-strong dark:text-success border-success/30" },
   completed: { label: "Concluído", color: "bg-success/15 text-success-strong dark:text-success border-success/30" },

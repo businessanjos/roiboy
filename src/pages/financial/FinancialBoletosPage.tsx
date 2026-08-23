@@ -50,7 +50,7 @@ interface Boleto {
 const statusColors: Record<string, string> = {
   pending: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning",
   paid: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success",
-  cancelled: "bg-muted text-foreground dark:bg-gray-900/30 dark:text-muted-foreground",
+  cancelled: "bg-muted text-foreground dark:bg-muted-foreground/30 dark:text-muted-foreground",
   overdue: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger",
 };
 

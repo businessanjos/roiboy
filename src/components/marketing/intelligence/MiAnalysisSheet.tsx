@@ -70,9 +70,9 @@ const TONE: Record<
   },
   slate: {
     text: "text-muted-foreground dark:text-muted-foreground",
-    bg: "bg-slate-500/10",
+    bg: "bg-muted-foreground/10",
     ring: "ring-border/20",
-    grad: "from-slate-500/10 via-slate-500/5 to-transparent",
+    grad: "from-muted-foreground/10 via-muted-foreground/5 to-transparent",
     headlineText: "text-foreground dark:text-muted-foreground",
   },
   fuchsia: {

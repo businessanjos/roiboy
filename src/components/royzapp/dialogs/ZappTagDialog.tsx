@@ -128,7 +128,7 @@ export const ZappTagDialog = memo(function ZappTagDialog({
           <AlertDialogFooter>
             <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-red-500 hover:bg-red-600"
+              className="bg-danger hover:bg-danger"
               onClick={() => deletingId && onDeleteConfirm(deletingId)}
             >
               Excluir

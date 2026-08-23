@@ -68,7 +68,7 @@ const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; class
   { value: "realizada_agendar_proxima", label: "Realizada – Agendar a próxima", className: "bg-success/10 text-success-strong border-success/30 dark:text-success" },
   { value: "remarcar", label: "Remarcar", className: "bg-warning/10 text-warning-strong border-warning/30 dark:text-warning" },
   { value: "nao_quer_agendar", label: "Não quer agendar", className: "bg-danger/10 text-danger-strong border-danger/30 dark:text-danger" },
-  { value: "nao_respondeu", label: "Não respondeu", className: "bg-gray-500/10 text-foreground border-border/30 dark:text-muted-foreground" },
+  { value: "nao_respondeu", label: "Não respondeu", className: "bg-muted-foreground/10 text-foreground border-border/30 dark:text-muted-foreground" },
 ];
 
 const STATUS_MAP = new Map(MENTORSHIP_STATUS_OPTIONS.map((o) => [o.value, o]));

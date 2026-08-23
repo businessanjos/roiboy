@@ -26,7 +26,7 @@ const statusLabels: Record<string, { label: string; color: string }> = {
   new: { label: "Novo", color: "bg-info" },
   contacted: { label: "Contatado", color: "bg-warning" },
   qualified: { label: "Qualificado", color: "bg-success" },
-  unqualified: { label: "Não Qualificado", color: "bg-gray-500" },
+  unqualified: { label: "Não Qualificado", color: "bg-muted-foreground" },
   converted: { label: "Convertido", color: "bg-purple-500" },
 };
 

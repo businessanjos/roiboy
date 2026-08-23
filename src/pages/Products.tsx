@@ -171,7 +171,7 @@ const COLOR_OPTIONS = [
   { value: "#ef4444", label: "Vermelho", class: "bg-danger" },
   { value: "#ec4899", label: "Rosa", class: "bg-pink-500" },
   { value: "#06b6d4", label: "Ciano", class: "bg-info" },
-  { value: "#6b7280", label: "Cinza", class: "bg-gray-500" },
+  { value: "#6b7280", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 // Using shared MLS_LEVELS from mls-utils

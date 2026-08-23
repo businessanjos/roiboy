@@ -109,7 +109,7 @@ export const ZappQuickRepliesDialog = memo(function ZappQuickRepliesDialog({
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="h-7 w-7 text-[#8696a0] hover:text-red-400"
+                        className="h-7 w-7 text-[#8696a0] hover:text-danger"
                         onClick={() => onDeleteReply(reply.id)}
                       >
                         <Trash2 className="h-3 w-3" />

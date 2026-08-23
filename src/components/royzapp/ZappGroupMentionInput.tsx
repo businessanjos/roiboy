@@ -279,7 +279,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
                       <div className="flex items-center gap-2">
                         <span className="truncate font-medium">{participant.name}</span>
                         {participant.isAdmin && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-500 flex-shrink-0">
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-warning/20 text-warning flex-shrink-0">
                             Admin
                           </span>
                         )}

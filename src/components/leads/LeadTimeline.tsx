@@ -71,7 +71,7 @@ const getEventConfig = (eventType: string) => {
     case "contact":
       return { icon: UserCheck, bgColor: "bg-info", textColor: "text-info", label: "Contato" };
     case "status_change":
-      return { icon: Clock, bgColor: "bg-slate-500", textColor: "text-muted-foreground", label: "Status" };
+      return { icon: Clock, bgColor: "bg-muted-foreground", textColor: "text-muted-foreground", label: "Status" };
     default:
       return { icon: StickyNote, bgColor: "bg-muted", textColor: "text-muted-foreground", label: "Evento" };
   }

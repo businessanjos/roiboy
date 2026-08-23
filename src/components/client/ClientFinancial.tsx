@@ -110,7 +110,7 @@ interface ClientFinancialProps {
 const paymentStatusConfig = {
   active: { label: "Ativo", icon: CheckCircle2, className: "bg-success/10 text-success border-success/30" },
   overdue: { label: "Em Atraso", icon: AlertCircle, className: "bg-danger/10 text-danger border-danger/30" },
-  cancelled: { label: "Cancelado", icon: XCircle, className: "bg-slate-500/10 text-muted-foreground border-border/30" },
+  cancelled: { label: "Cancelado", icon: XCircle, className: "bg-muted-foreground/10 text-muted-foreground border-border/30" },
   trial: { label: "Trial", icon: Clock, className: "bg-info/10 text-info border-info/30" },
   paused: { label: "Pausado", icon: PauseCircle, className: "bg-warning/10 text-warning border-warning/30" },
   pending: { label: "Pendente", icon: Clock, className: "bg-warning/10 text-warning border-warning/30" },
@@ -128,7 +128,7 @@ const entryStatusConfig: Record<string, { label: string; className: string }> = 
   pending: { label: "Pendente", className: "bg-warning/10 text-warning" },
   paid: { label: "Pago", className: "bg-success/10 text-success" },
   overdue: { label: "Vencido", className: "bg-danger/10 text-danger" },
-  cancelled: { label: "Cancelado", className: "bg-slate-500/10 text-muted-foreground" },
+  cancelled: { label: "Cancelado", className: "bg-muted-foreground/10 text-muted-foreground" },
 };
 
 const FINANCIAL_ALLOWED_ROLES = ["Admin", "Financeiro", "Gestor"];
@@ -729,13 +729,13 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                     active: { label: "Ativo", className: "bg-success/10 text-success" },
                     trialing: { label: "Trial", className: "bg-info/10 text-info" },
                     past_due: { label: "Atrasado", className: "bg-danger/10 text-danger" },
-                    canceled: { label: "Cancelado", className: "bg-slate-500/10 text-muted-foreground" },
+                    canceled: { label: "Cancelado", className: "bg-muted-foreground/10 text-muted-foreground" },
                     unpaid: { label: "Não pago", className: "bg-danger/10 text-danger" },
                     incomplete: { label: "Incompleto", className: "bg-warning/10 text-warning" },
-                    incomplete_expired: { label: "Expirado", className: "bg-slate-500/10 text-muted-foreground" },
+                    incomplete_expired: { label: "Expirado", className: "bg-muted-foreground/10 text-muted-foreground" },
                     paused: { label: "Pausado", className: "bg-warning/10 text-warning" },
                   };
-                  const statusConf = stripeStatusConfig[stripeSub.status] || { label: stripeSub.status, className: "bg-slate-500/10 text-muted-foreground" };
+                  const statusConf = stripeStatusConfig[stripeSub.status] || { label: stripeSub.status, className: "bg-muted-foreground/10 text-muted-foreground" };
                   
                   return (
                     <div key={stripeSub.id} className="p-4 rounded-lg border border-border bg-card/50">

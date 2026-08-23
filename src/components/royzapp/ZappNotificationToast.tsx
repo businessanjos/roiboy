@@ -70,7 +70,7 @@ export const ZappNotificationToast = memo(function ZappNotificationToast({
             <AvatarFallback className={cn(
               "text-sm font-medium",
               isGroup 
-                ? "bg-blue-500/20 text-blue-400" 
+                ? "bg-info/20 text-info" 
                 : "bg-zapp-accent/20 text-zapp-accent"
             )}>
               {isGroup ? <Users className="h-5 w-5" /> : getInitials(contactName)}
@@ -96,13 +96,13 @@ export const ZappNotificationToast = memo(function ZappNotificationToast({
             className={cn(
               "text-xs font-medium",
               isQueue
-                ? "bg-amber-500/10 text-amber-500 border-amber-500/30"
-                : "bg-emerald-500/10 text-emerald-500 border-emerald-500/30"
+                ? "bg-warning/10 text-warning border-warning/30"
+                : "bg-success/10 text-success border-success/30"
             )}
           >
             <span className={cn(
               "w-1.5 h-1.5 rounded-full mr-1.5",
-              isQueue ? "bg-amber-500" : "bg-emerald-500"
+              isQueue ? "bg-warning" : "bg-success"
             )} />
             {isQueue ? "Fila" : "Minhas"}
           </Badge>

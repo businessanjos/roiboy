@@ -64,7 +64,7 @@ const COLOR_OPTIONS = [
   { value: "purple", label: "Roxo", class: "bg-purple-500" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
   { value: "orange", label: "Laranja", class: "bg-warning" },
-  { value: "gray", label: "Cinza", class: "bg-gray-500" },
+  { value: "gray", label: "Cinza", class: "bg-muted-foreground" },
 ];
 
 // Sortable option item component for reordering options within a field
@@ -111,7 +111,7 @@ function SortableOptionItem({
         onValueChange={(color) => onUpdate(index, { color })}
       >
         <SelectTrigger className="w-10 h-9 p-0 justify-center border-0 bg-transparent hover:bg-muted">
-          <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-gray-500"}`} />
+          <div className={`w-5 h-5 rounded-full ${COLOR_OPTIONS.find(c => c.value === option.color)?.class || "bg-muted-foreground"}`} />
         </SelectTrigger>
         <SelectContent>
           {COLOR_OPTIONS.map((color) => (
@@ -210,7 +210,7 @@ function SortableFieldItem({
                   opt.color === "purple" ? "bg-purple-500/20 text-purple-700" :
                   opt.color === "pink" ? "bg-pink-500/20 text-pink-700" :
                   opt.color === "orange" ? "bg-warning/20 text-warning-strong" :
-                  "bg-gray-500/20 text-foreground"
+                  "bg-muted-foreground/20 text-foreground"
                 }`}
               >
                 {opt.label}

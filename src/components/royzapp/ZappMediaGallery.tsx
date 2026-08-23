@@ -155,8 +155,8 @@ function DocumentList({ items }: { items: Message[] }) {
           rel="noopener noreferrer"
           className="flex items-center gap-3 px-3 py-2 rounded hover:bg-zapp-hover transition-colors"
         >
-          <div className="w-9 h-9 rounded bg-blue-500/20 flex items-center justify-center flex-shrink-0">
-            <FileText className="h-4 w-4 text-blue-400" />
+          <div className="w-9 h-9 rounded bg-info/20 flex items-center justify-center flex-shrink-0">
+            <FileText className="h-4 w-4 text-info" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-xs text-zapp-text truncate">{m.media_filename || "Documento"}</p>

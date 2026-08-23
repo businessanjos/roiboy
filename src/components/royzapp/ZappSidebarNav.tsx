@@ -219,7 +219,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
           </span>
         </div>
         {totalQueueConversations > 0 && (
-          <Badge className="bg-amber-500 text-white text-[10px] px-1.5 py-0">
+          <Badge className="bg-warning text-white text-[10px] px-1.5 py-0">
             {totalQueueConversations}
           </Badge>
         )}

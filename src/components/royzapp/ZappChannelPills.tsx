@@ -144,7 +144,7 @@ export function ZappChannelPills({
                   "flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium transition-colors whitespace-nowrap border",
                   isActive
                     ? isMeta
-                      ? "bg-emerald-600 text-white border-emerald-600"
+                      ? "bg-success text-white border-success"
                       : "bg-zapp-accent text-white border-zapp-accent"
                     : "bg-zapp-panel text-zapp-text-muted border-zapp-border hover:text-zapp-text"
                 )}
@@ -153,10 +153,10 @@ export function ZappChannelPills({
                   className={cn(
                     "h-1.5 w-1.5 rounded-full shrink-0",
                     s.tone === "success"
-                      ? "bg-emerald-400"
+                      ? "bg-success"
                       : s.tone === "warning"
-                        ? "bg-amber-400"
-                        : "bg-red-400",
+                        ? "bg-warning"
+                        : "bg-danger",
                     isActive && "bg-white/80"
                   )}
                 />
@@ -183,7 +183,7 @@ export function ZappChannelPills({
 
       {activeMeta && (
         <div className="px-3 pb-2 -mt-1">
-          <div className="flex items-center gap-1.5 text-[11px] text-emerald-500">
+          <div className="flex items-center gap-1.5 text-[11px] text-success">
             <BadgeCheck className="h-3 w-3" />
             <span>Canal: Meta Cloud API · Verificado pela Meta</span>
           </div>

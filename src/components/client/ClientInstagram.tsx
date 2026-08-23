@@ -32,7 +32,7 @@ const formatBadgeConfig: Record<PostFormat, { label: string; Icon: typeof Video;
   static: {
     label: "Foto",
     Icon: ImageIcon,
-    className: "bg-zinc-800/80 text-white border-transparent",
+    className: "bg-muted-foreground/80 text-white border-transparent",
   },
 };
 

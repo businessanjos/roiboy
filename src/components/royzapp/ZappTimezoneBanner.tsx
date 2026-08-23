@@ -150,7 +150,7 @@ export const ZappTimezoneBanner = memo(function ZappTimezoneBanner({
 
         {offHours && (
           <span
-            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-amber-400 text-amber-950 font-bold text-xs whitespace-nowrap shadow-sm border border-amber-600/40"
+            className="flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-warning text-warning-strong font-bold text-xs whitespace-nowrap shadow-sm border border-warning/40"
             title={`Volta ao expediente em ${formatDurationShort(msUntilNextBusinessHour(tz, now))}`}
             aria-label={`Fora do horário comercial. Volta em ${formatDurationShort(msUntilNextBusinessHour(tz, now))}`}
           >

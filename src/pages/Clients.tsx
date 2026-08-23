@@ -2935,8 +2935,8 @@ export default function Clients() {
                                   paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
                                   suspended: { label: "Suspenso", labelTooltip: "Contrato Suspenso", icon: AlertTriangle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
                                   cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
-                                  ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
-                                  dismissed: { label: "Dispensado", labelTooltip: "Contrato Dispensado", icon: XCircle, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
+                                  ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-muted-foreground/30", textClass: "text-foreground dark:text-muted-foreground" },
+                                  dismissed: { label: "Dispensado", labelTooltip: "Contrato Dispensado", icon: XCircle, bgClass: "bg-muted dark:bg-muted-foreground/30", textClass: "text-foreground dark:text-muted-foreground" },
                                   dropout_7d: { label: "Desistência", labelTooltip: "Desistência em 7 dias", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
                                 };
                                 const config = statusConfig[contractStatus] || statusConfig.active;
