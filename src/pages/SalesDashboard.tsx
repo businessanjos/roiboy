@@ -98,6 +98,16 @@ import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { cn } from "@/lib/utils";
+import { RykaScope } from "@/components/ryka/RykaScope";
+import { RykaPage, RykaPageHeader, SectionTitle } from "@/components/ryka/section";
+import {
+  Snapshot,
+  SnapshotDetail,
+  SnapshotGrid,
+  SnapshotInsight,
+  SnapshotTile,
+  type RykaTone,
+} from "@/components/ryka/snapshot";
 import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
 import { Settings2 } from "lucide-react";
 
