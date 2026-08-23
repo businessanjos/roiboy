@@ -2,6 +2,8 @@
 @tailwind components;
 @tailwind utilities;
 
+@import "./styles/ryka.css";
+
 /* Fonts loaded via index.html with preload for better performance */
 
 /* ROIBOY Design System - Gold Theme */

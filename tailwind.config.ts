@@ -55,21 +55,29 @@ export default {
           DEFAULT: "hsl(var(--success))",
           foreground: "hsl(var(--success-foreground))",
           muted: "hsl(var(--success-muted))",
+          soft: "hsl(var(--success-soft, var(--success-muted)))",
+          strong: "hsl(var(--success-strong, var(--success-foreground)))",
         },
         warning: {
           DEFAULT: "hsl(var(--warning))",
           foreground: "hsl(var(--warning-foreground))",
           muted: "hsl(var(--warning-muted))",
+          soft: "hsl(var(--warning-soft, var(--warning-muted)))",
+          strong: "hsl(var(--warning-strong, var(--warning-foreground)))",
         },
         danger: {
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
           muted: "hsl(var(--danger-muted))",
+          soft: "hsl(var(--danger-soft, var(--danger-muted)))",
+          strong: "hsl(var(--danger-strong, var(--danger-foreground)))",
         },
         info: {
           DEFAULT: "hsl(var(--info))",
           foreground: "hsl(var(--info-foreground))",
           muted: "hsl(var(--info-muted))",
+          soft: "hsl(var(--info-soft, var(--info-muted)))",
+          strong: "hsl(var(--info-strong, var(--info-foreground)))",
         },
         score: {
           critical: "hsl(var(--score-critical))",
@@ -107,10 +115,15 @@ export default {
           input: "hsl(var(--zapp-input))",
           hover: "hsl(var(--zapp-hover))",
         },
+        hairline: "hsl(var(--hairline, var(--border)))",
         "roy-brown": {
           DEFAULT: "hsl(var(--roy-brown))",
           foreground: "hsl(var(--roy-brown-foreground))",
         },
+      },
+      boxShadow: {
+        soft: "var(--shadow-soft, 0 1px 2px 0 hsl(0 0% 0% / 0.06))",
+        lift: "var(--shadow-lift, 0 8px 24px -12px hsl(0 0% 0% / 0.24))",
       },
       borderRadius: {
         lg: "var(--radius)",
