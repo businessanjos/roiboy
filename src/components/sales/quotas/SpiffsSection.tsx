@@ -514,7 +514,7 @@ export function SpiffsSection() {
 
                       <div className="space-y-2">
                         {paymentTiers.map((tier, idx) => (
-                          <div key={idx} className="rounded-md border bg-background p-2 space-y-2">
+                          <div key={idx} className="rounded-xl border bg-background p-2 space-y-2">
                             <div className="flex items-center gap-2">
                               <Input
                                 value={tier.label}

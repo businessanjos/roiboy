@@ -192,7 +192,7 @@ export function ActivityTypesManager() {
                         key={opt.value}
                         type="button"
                         onClick={() => setFormData({ ...formData, icon: opt.value })}
-                        className={`p-2 rounded-md border transition-colors ${
+                        className={`p-2 rounded-xl border transition-colors ${
                           formData.icon === opt.value
                             ? "border-primary bg-primary/10"
                             : "border-border hover:bg-muted"

@@ -79,7 +79,7 @@ export function PipelineDebugDialog({ deals, activityStatusMap, isLoading }: Pip
 
         <div className="grid gap-4 md:grid-cols-[280px_1fr]">
           {/* Lista de deals */}
-          <div className="flex flex-col gap-2 border rounded-md p-2 min-h-[380px]">
+          <div className="flex flex-col gap-2 border rounded-xl p-2 min-h-[380px]">
             <div className="relative">
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
               <Input
@@ -105,7 +105,7 @@ export function PipelineDebugDialog({ deals, activityStatusMap, isLoading }: Pip
                       key={d.id}
                       type="button"
                       onClick={() => setSelectedId(d.id)}
-                      className={`text-left rounded-md px-2 py-1.5 text-xs border transition-colors ${
+                      className={`text-left rounded-xl px-2 py-1.5 text-xs border transition-colors ${
                         isSel ? "bg-accent border-accent-foreground/20" : "hover:bg-muted border-transparent"
                       }`}
                     >
@@ -127,7 +127,7 @@ export function PipelineDebugDialog({ deals, activityStatusMap, isLoading }: Pip
           </div>
 
           {/* Detalhe */}
-          <div className="border rounded-md p-3 min-h-[380px]">
+          <div className="border rounded-xl p-3 min-h-[380px]">
             {!selected && (
               <div className="h-full flex items-center justify-center text-sm text-muted-foreground text-center">
                 Selecione um negócio à esquerda para inspecionar por que ele aparece
@@ -158,7 +158,7 @@ export function PipelineDebugDialog({ deals, activityStatusMap, isLoading }: Pip
                   {explanations.map((exp) => (
                     <div
                       key={exp.filterId}
-                      className={`rounded-md border p-2.5 ${
+                      className={`rounded-xl border p-2.5 ${
                         exp.matches ? "border-success/40 bg-success/5" : "border-border bg-muted/30"
                       }`}
                     >
@@ -203,7 +203,7 @@ function MetricCard({
 }) {
   return (
     <div
-      className={`rounded-md border p-2 ${
+      className={`rounded-xl border p-2 ${
         tone === "danger" ? "border-destructive/40 bg-destructive/5" : "bg-muted/30"
       }`}
     >

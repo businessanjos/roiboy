@@ -84,7 +84,7 @@ export function PinKpiDialog({ open, onOpenChange, kpi, question, onPinned }: Pr
             </div>
             <Switch checked={shared} onCheckedChange={setShared} />
           </div>
-          <div className="p-3 rounded-md bg-muted text-sm">
+          <div className="p-3 rounded-xl bg-muted text-sm">
             <p className="text-xs text-muted-foreground">Valor atual</p>
             <p className="text-xl font-bold">{kpi.value_text ?? kpi.value}</p>
           </div>

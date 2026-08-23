@@ -544,11 +544,11 @@ export const TemplateBuilder = ({
             </div>
 
             <div className="grid grid-cols-2 gap-2 pt-1">
-              <label className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 cursor-pointer">
+              <label className="flex items-center justify-between gap-2 rounded-xl border border-border px-2.5 py-1.5 cursor-pointer">
                 <span className="text-xs">Padrão</span>
                 <Switch checked={isDefault} onCheckedChange={setIsDefault} />
               </label>
-              <label className="flex items-center justify-between gap-2 rounded-md border border-border px-2.5 py-1.5 cursor-pointer">
+              <label className="flex items-center justify-between gap-2 rounded-xl border border-border px-2.5 py-1.5 cursor-pointer">
                 <span className="text-xs">Ativo</span>
                 <Switch checked={isActive} onCheckedChange={setIsActive} />
               </label>
@@ -605,7 +605,7 @@ export const TemplateBuilder = ({
             {(orphanKeys.length > 0 || unusedKeys.length > 0) && (
               <div className="px-4 pb-2 space-y-1.5">
                 {orphanKeys.length > 0 && (
-                  <div className="rounded-md border border-destructive/30 bg-destructive/5 p-2 flex items-start justify-between gap-2">
+                  <div className="rounded-xl border border-destructive/30 bg-destructive/5 p-2 flex items-start justify-between gap-2">
                     <div className="text-[11px]">
                       <div className="font-semibold text-destructive flex items-center gap-1">
                         <Wand2 className="h-3 w-3" />
@@ -628,7 +628,7 @@ export const TemplateBuilder = ({
                   </div>
                 )}
                 {unusedKeys.length > 0 && (
-                  <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-[11px]">
+                  <div className="rounded-xl border border-warning/30 bg-warning/5 p-2 text-[11px]">
                     <div className="font-semibold text-warning-strong dark:text-warning">
                       {unusedKeys.length} variável(eis) não usada(s) no texto
                     </div>
@@ -779,7 +779,7 @@ export const TemplateBuilder = ({
             {/* PREVIEW ---------------------------------------------- */}
             <TabsContent value="preview" className="mt-3">
               <div className="rounded-xl border border-border bg-muted/40 p-6 overflow-auto" style={{ maxHeight: "calc(100vh - 220px)" }}>
-                <div className="mx-auto bg-background rounded-md shadow-sm border border-border" style={{ maxWidth: 860, padding: "24px" }}>
+                <div className="mx-auto bg-background rounded-xl shadow-sm border border-border" style={{ maxWidth: 860, padding: "24px" }}>
                   <div className="flex items-center justify-between text-[11px] text-muted-foreground mb-6 pb-3 border-b border-border">
                     <span className="font-mono">PRÉ-VISUALIZAÇÃO COM DADOS DE EXEMPLO</span>
                     <span>{name || "Template sem nome"}</span>

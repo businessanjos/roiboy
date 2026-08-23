@@ -382,7 +382,7 @@ export function DealActivitiesDialog({
                 {done.length > 0 && (
                   <Collapsible open={doneExpanded} onOpenChange={setDoneExpanded}>
                     <CollapsibleTrigger asChild>
-                      <button className="flex items-center gap-2 w-full text-left hover:bg-muted/50 rounded-md p-1 -ml-1">
+                      <button className="flex items-center gap-2 w-full text-left hover:bg-muted/50 rounded-xl p-1 -ml-1">
                         {doneExpanded ? (
                           <ChevronDown className="h-4 w-4 text-success" />
                         ) : (

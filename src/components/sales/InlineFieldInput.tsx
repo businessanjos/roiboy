@@ -140,7 +140,7 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
       onChange(selected.includes(id) ? selected.filter((s) => s !== id) : [...selected, id]);
     };
     return (
-      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto border rounded-md p-2">
+      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto border rounded-xl p-2">
         {teamUsers.map((u) => (
           <label key={u.id} className="flex items-center gap-2 px-2 py-1.5 rounded hover:bg-muted cursor-pointer">
             <Checkbox checked={selected.includes(u.id)} onCheckedChange={() => toggle(u.id)} />

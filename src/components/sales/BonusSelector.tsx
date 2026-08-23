@@ -134,7 +134,7 @@ export function BonusSelector({ dealId, value, onChange }: Props) {
 
   if (productMissing) {
     return (
-      <div className="rounded-md border border-dashed p-3 flex items-start gap-2 text-sm text-muted-foreground">
+      <div className="rounded-xl border border-dashed p-3 flex items-start gap-2 text-sm text-muted-foreground">
         <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
         <span>
           Selecione o <strong>Item da Venda</strong> antes para que os bônus do produto apareçam aqui.
@@ -153,7 +153,7 @@ export function BonusSelector({ dealId, value, onChange }: Props) {
       )}
 
       {bonuses.length === 0 ? (
-        <div className="rounded-md border border-dashed p-3 flex items-start gap-2 text-sm text-muted-foreground">
+        <div className="rounded-xl border border-dashed p-3 flex items-start gap-2 text-sm text-muted-foreground">
           <Gift className="h-4 w-4 mt-0.5 shrink-0" />
           <span>
             Este produto não possui bônus cadastrados. Cadastre em{" "}

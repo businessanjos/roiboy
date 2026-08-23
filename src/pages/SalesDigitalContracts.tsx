@@ -570,7 +570,7 @@ export default function SalesDigitalContracts() {
               />
             </div>
 
-            <div className="max-h-[52vh] overflow-y-auto rounded-md border border-border">
+            <div className="max-h-[52vh] overflow-y-auto rounded-xl border border-border">
               {loadingDeals ? (
                 <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />

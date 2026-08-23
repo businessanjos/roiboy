@@ -212,7 +212,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
 
       <div className={`grid gap-2 grid-cols-2 sm:grid-cols-${Math.min(tiers.length, 5)}`}>
         {tiers.map((t, i) => (
-          <div key={i} className={`rounded-md border px-2 py-1.5 text-center ${TIER_COLORS[i % TIER_COLORS.length]}`}>
+          <div key={i} className={`rounded-xl border px-2 py-1.5 text-center ${TIER_COLORS[i % TIER_COLORS.length]}`}>
             <p className="text-[10px] font-medium leading-tight">{t.label}</p>
             <p className="text-sm font-bold tabular-nums">R$ {formatBRL(t.bonus)}</p>
           </div>
