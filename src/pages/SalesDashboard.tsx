@@ -902,7 +902,7 @@ export default function SalesDashboard() {
           <div className="flex items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-md bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
