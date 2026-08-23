@@ -694,4 +694,15 @@
     font-variant-numeric: tabular-nums;
     font-feature-settings: "tnum";
   }
+
+  /* Ryka border-radius scale applied globally so every card / panel / container
+     uses the larger, softer corners while tiny elements stay proportional. */
+  .rounded-none { border-radius: 0; }
+  .rounded-sm   { border-radius: 0.375rem; }
+  .rounded-md   { border-radius: 0.625rem; }
+  .rounded-lg   { border-radius: 1rem; }
+  .rounded-xl   { border-radius: 1.25rem; }
+  .rounded-2xl  { border-radius: 1.5rem; }
+  .rounded-3xl  { border-radius: 2rem; }
+  .rounded-full { border-radius: 9999px; }
 }
