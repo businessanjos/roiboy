@@ -58,39 +58,39 @@ export const ZappTagDialog = memo(function ZappTagDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text">
           <DialogHeader>
             <DialogTitle>
               {editingTag ? "Editar Tag" : "Nova Tag"}
             </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogDescription className="text-zapp-text-muted">
               Tags ajudam a organizar suas conversas
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="tag-name" className="text-[#8696a0]">Nome</Label>
+              <Label htmlFor="tag-name" className="text-zapp-text-muted">Nome</Label>
               <Input
                 id="tag-name"
                 value={form.name}
                 onChange={(e) => onFormChange({ ...form, name: e.target.value })}
                 placeholder="Ex: Urgente, VIP, Suporte"
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                className="bg-zapp-panel border-zapp-border text-zapp-text"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="tag-description" className="text-[#8696a0]">Descrição</Label>
+              <Label htmlFor="tag-description" className="text-zapp-text-muted">Descrição</Label>
               <Textarea
                 id="tag-description"
                 value={form.description}
                 onChange={(e) => onFormChange({ ...form, description: e.target.value })}
                 placeholder="Descrição opcional"
                 rows={2}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                className="bg-zapp-panel border-zapp-border text-zapp-text"
               />
             </div>
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Cor</Label>
+              <Label className="text-zapp-text-muted">Cor</Label>
               <div className="flex items-center gap-2">
                 <input
                   type="color"
@@ -101,16 +101,16 @@ export const ZappTagDialog = memo(function ZappTagDialog({
                 <Input
                   value={form.color}
                   onChange={(e) => onFormChange({ ...form, color: e.target.value })}
-                  className="flex-1 bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                  className="flex-1 bg-zapp-panel border-zapp-border text-zapp-text"
                 />
               </div>
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zapp-border text-zapp-text-muted">
               Cancelar
             </Button>
-            <Button onClick={onSave} disabled={saving} className="bg-[#00a884] hover:bg-[#00a884]/90">
+            <Button onClick={onSave} disabled={saving} className="bg-zapp-accent hover:bg-zapp-accent/90">
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -118,15 +118,15 @@ export const ZappTagDialog = memo(function ZappTagDialog({
       </Dialog>
 
       <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && onDeleteCancel()}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
+        <AlertDialogContent className="bg-zapp-input border-zapp-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Excluir tag?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
+            <AlertDialogTitle className="text-zapp-text">Excluir tag?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
               A tag será removida de todas as conversas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-zapp-border text-zapp-text-muted">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-danger hover:bg-danger"
               onClick={() => deletingId && onDeleteConfirm(deletingId)}

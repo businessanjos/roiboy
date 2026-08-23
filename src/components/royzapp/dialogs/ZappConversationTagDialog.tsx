@@ -35,10 +35,10 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
 }: ZappConversationTagDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+      <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text">
         <DialogHeader>
           <DialogTitle>Etiquetar Conversa</DialogTitle>
-          <DialogDescription className="text-[#8696a0]">
+          <DialogDescription className="text-zapp-text-muted">
             Selecione as tags para esta conversa
           </DialogDescription>
         </DialogHeader>
@@ -50,7 +50,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
               <Button
                 size="sm"
                 variant="outline"
-                className="mt-3 border-[#3b4a54] text-[#8696a0]"
+                className="mt-3 border-zapp-border text-zapp-text-muted"
                 onClick={() => {
                   onOpenChange(false);
                   onNavigateToTags();
@@ -68,7 +68,7 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
                     "flex items-center gap-3 p-3 rounded-lg cursor-pointer transition-colors",
                     selectedTags.includes(tag.id)
                       ? "bg-zapp-accent/20 border border-zapp-accent"
-                      : "bg-[#202c33] hover:bg-[#2a3942] border border-transparent"
+                      : "bg-zapp-panel hover:bg-zapp-input border border-transparent"
                   )}
                   onClick={() => onToggleTag(tag.id)}
                 >
@@ -77,9 +77,9 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
                     style={{ backgroundColor: tag.color }}
                   />
                   <div className="flex-1 min-w-0">
-                    <p className="text-[#e9edef] text-sm font-medium truncate">{tag.name}</p>
+                    <p className="text-zapp-text text-sm font-medium truncate">{tag.name}</p>
                     {tag.description && (
-                      <p className="text-[#8696a0] text-xs truncate">{tag.description}</p>
+                      <p className="text-zapp-text-muted text-xs truncate">{tag.description}</p>
                     )}
                   </div>
                   {selectedTags.includes(tag.id) && (
@@ -94,14 +94,14 @@ export const ZappConversationTagDialog = memo(function ZappConversationTagDialog
           <Button 
             variant="outline" 
             onClick={() => onOpenChange(false)} 
-            className="border-[#3b4a54] text-[#8696a0]"
+            className="border-zapp-border text-zapp-text-muted"
           >
             Cancelar
           </Button>
           <Button 
             onClick={onSave} 
             disabled={saving || tags.length === 0}
-            className="bg-[#00a884] hover:bg-[#00a884]/90"
+            className="bg-zapp-accent hover:bg-zapp-accent/90"
           >
             {saving ? "Salvando..." : "Salvar"}
           </Button>

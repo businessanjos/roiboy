@@ -68,29 +68,29 @@ export const ZappAgentDialog = memo(function ZappAgentDialog({
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="bg-[#2a3942] border-[#3b4a54] text-[#e9edef]">
+        <DialogContent className="bg-zapp-input border-zapp-border text-zapp-text">
           <DialogHeader>
             <DialogTitle>
               {editingAgent ? "Editar Atendente" : "Adicionar Atendente"}
             </DialogTitle>
-            <DialogDescription className="text-[#8696a0]">
+            <DialogDescription className="text-zapp-text-muted">
               Configure as permissões do atendente
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Usuário</Label>
+              <Label className="text-zapp-text-muted">Usuário</Label>
               <Select
                 value={form.user_id}
                 onValueChange={(value) => onFormChange({ ...form, user_id: value })}
                 disabled={!!editingAgent}
               >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                <SelectTrigger className="bg-zapp-panel border-zapp-border text-zapp-text">
                   <SelectValue placeholder="Selecione" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
+                <SelectContent className="bg-zapp-hover border-zapp-border">
                   {availableUsers.map((user) => (
-                    <SelectItem key={user.id} value={user.id} className="text-[#e9edef]">
+                    <SelectItem key={user.id} value={user.id} className="text-zapp-text">
                       {user.name}
                     </SelectItem>
                   ))}
@@ -99,18 +99,18 @@ export const ZappAgentDialog = memo(function ZappAgentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Departamento</Label>
+              <Label className="text-zapp-text-muted">Departamento</Label>
               <Select
                 value={form.department_id || "all"}
                 onValueChange={(value) => onFormChange({ ...form, department_id: value === "all" ? "" : value })}
               >
-                <SelectTrigger className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]">
+                <SelectTrigger className="bg-zapp-panel border-zapp-border text-zapp-text">
                   <SelectValue placeholder="Todos" />
                 </SelectTrigger>
-                <SelectContent className="bg-[#233138] border-[#3b4a54]">
-                  <SelectItem value="all" className="text-[#e9edef]">Todos</SelectItem>
+                <SelectContent className="bg-zapp-hover border-zapp-border">
+                  <SelectItem value="all" className="text-zapp-text">Todos</SelectItem>
                   {departments.map((dept) => (
-                    <SelectItem key={dept.id} value={dept.id} className="text-[#e9edef]">
+                    <SelectItem key={dept.id} value={dept.id} className="text-zapp-text">
                       {dept.name}
                     </SelectItem>
                   ))}
@@ -119,22 +119,22 @@ export const ZappAgentDialog = memo(function ZappAgentDialog({
             </div>
 
             <div className="space-y-2">
-              <Label className="text-[#8696a0]">Máx. atendimentos simultâneos</Label>
+              <Label className="text-zapp-text-muted">Máx. atendimentos simultâneos</Label>
               <Input
                 type="number"
                 min={1}
                 max={20}
                 value={form.max_concurrent_chats}
                 onChange={(e) => onFormChange({ ...form, max_concurrent_chats: parseInt(e.target.value) || 5 })}
-                className="bg-[#202c33] border-[#3b4a54] text-[#e9edef]"
+                className="bg-zapp-panel border-zapp-border text-zapp-text"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-[#3b4a54] text-[#8696a0]">
+            <Button variant="outline" onClick={() => onOpenChange(false)} className="border-zapp-border text-zapp-text-muted">
               Cancelar
             </Button>
-            <Button onClick={onSave} disabled={saving} className="bg-[#00a884] hover:bg-[#00a884]/90">
+            <Button onClick={onSave} disabled={saving} className="bg-zapp-accent hover:bg-zapp-accent/90">
               {saving ? "Salvando..." : "Salvar"}
             </Button>
           </DialogFooter>
@@ -142,15 +142,15 @@ export const ZappAgentDialog = memo(function ZappAgentDialog({
       </Dialog>
 
       <AlertDialog open={!!deletingId} onOpenChange={(open) => !open && onDeleteCancel()}>
-        <AlertDialogContent className="bg-[#2a3942] border-[#3b4a54]">
+        <AlertDialogContent className="bg-zapp-input border-zapp-border">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-[#e9edef]">Remover atendente?</AlertDialogTitle>
-            <AlertDialogDescription className="text-[#8696a0]">
+            <AlertDialogTitle className="text-zapp-text">Remover atendente?</AlertDialogTitle>
+            <AlertDialogDescription className="text-zapp-text-muted">
               O usuário não poderá mais atender conversas.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel className="border-[#3b4a54] text-[#8696a0]">Cancelar</AlertDialogCancel>
+            <AlertDialogCancel className="border-zapp-border text-zapp-text-muted">Cancelar</AlertDialogCancel>
             <AlertDialogAction
               className="bg-danger hover:bg-danger"
               onClick={() => deletingId && onDeleteConfirm(deletingId)}
