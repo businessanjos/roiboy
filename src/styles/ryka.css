@@ -4,7 +4,6 @@
    Tokens portados do projeto "Design Model - Ecossistema Ryka"
    (OKLCH convertido para HSL, formato usado pelo Tailwind v3 deste app). */
 
-@layer base {
   .ryka {
     --background: 45 41% 97.5%;
     --foreground: 36 15% 20.4%;
@@ -130,7 +129,6 @@
   }
 }
 
-@layer components {
   .ryka .ryka-glass {
     background: hsl(var(--glass-bg-solid));
     border: 1px solid hsl(var(--glass-border));
