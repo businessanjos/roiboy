@@ -132,6 +132,17 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   last_year: "Ano passado",
 };
 
+const SNAPSHOT_PANEL_ID = "painel-comercial";
+
+const KPI_TONE: Record<string, RykaTone> = {
+  Receita: "success",
+  Conversão: "primary",
+  Atividade: "info",
+  Pipeline: "warning",
+  Churn: "danger",
+  Outros: "neutral",
+};
+
 function getRange(period: PeriodKey): { start: Date; end: Date } {
   const now = new Date();
   switch (period) {
