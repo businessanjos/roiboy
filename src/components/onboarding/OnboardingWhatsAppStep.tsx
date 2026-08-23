@@ -287,7 +287,7 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
             <span>Digite este código no seu WhatsApp</span>
             {pollingStatus && <Loader2 className="h-3 w-3 animate-spin" />}
           </div>
-          <div className="bg-white dark:bg-muted-foreground px-6 py-4 rounded-lg border-2 border-dashed border-primary/50">
+          <div className="bg-white dark:bg-card px-6 py-4 rounded-lg border-2 border-dashed border-primary/50">
             <span className="text-3xl font-mono font-bold tracking-[0.3em] text-primary">
               {paircode}
             </span>
