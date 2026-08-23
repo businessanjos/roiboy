@@ -1,0 +1,159 @@
+/* Ecossistema Ryka — tema escopado.
+   Aplicado apenas dentro de elementos com a classe `.ryka`
+   (ver <RykaScope /> em src/components/ryka/RykaScope.tsx).
+   Tokens portados do projeto "Design Model - Ecossistema Ryka"
+   (OKLCH convertido para HSL, formato usado pelo Tailwind v3 deste app). */
+
+@layer base {
+  .ryka {
+    --background: 45 41% 97.5%;
+    --foreground: 36 15% 20.4%;
+    --card: 0 0% 100%;
+    --card-foreground: 36 15% 20.4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 36 15% 20.4%;
+    --muted: 44 23% 89.2%;
+    --muted-foreground: 38 12% 38.9%;
+    --secondary: 44 23% 89.2%;
+    --secondary-foreground: 36 15% 20.4%;
+    --accent: 44 34% 92.1%;
+    --accent-foreground: 36 15% 20.4%;
+    --primary: 41 42% 48.2%;
+    --primary-foreground: 0 0% 100%;
+    --border: 42 21% 86%;
+    --input: 42 21% 86%;
+    --ring: 41 42% 48.2%;
+    --radius: 1rem;
+
+    --success: 153 64% 36%;
+    --success-soft: 142 45% 94%;
+    --success-foreground: 152 50% 22%;
+    --success-strong: 152 50% 22%;
+    --success-muted: 142 45% 94%;
+
+    --warning: 38 63% 51.5%;
+    --warning-soft: 42 90% 94%;
+    --warning-foreground: 35 70% 28%;
+    --warning-strong: 35 70% 28%;
+    --warning-muted: 42 90% 94%;
+
+    --info: 217 62% 53.4%;
+    --info-soft: 217 80% 95%;
+    --info-foreground: 217 70% 30%;
+    --info-strong: 217 70% 30%;
+    --info-muted: 217 80% 95%;
+
+    --danger: 2 72% 54.4%;
+    --danger-soft: 0 80% 96%;
+    --danger-foreground: 360 70% 40%;
+    --danger-strong: 360 70% 40%;
+    --danger-muted: 0 80% 96%;
+    --destructive: 2 72% 54.4%;
+    --destructive-foreground: 0 0% 100%;
+
+    --chart-1: 41 42% 48.2%;
+    --chart-2: 350 66% 62.2%;
+    --chart-3: 152 58% 39.1%;
+    --chart-4: 38 68% 55.7%;
+    --chart-5: 217 61% 55.7%;
+
+    --hairline: 42 21% 86%;
+    --glass-bg: 0 0% 100%;
+    --glass-bg-solid: 45 73% 99%;
+    --glass-border: 42 21% 86%;
+
+    --shadow-soft: 0 1px 2px 0 hsl(36 15% 20% / 0.06), 0 8px 20px -14px hsl(36 15% 20% / 0.22);
+    --shadow-lift: 0 2px 4px 0 hsl(36 15% 20% / 0.07), 0 18px 36px -18px hsl(36 15% 20% / 0.28);
+
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  .dark .ryka {
+    --background: 37 19% 6.8%;
+    --foreground: 0 0% 97.9%;
+    --card: 38 17% 10.4%;
+    --card-foreground: 0 0% 97.9%;
+    --popover: 38 17% 10.4%;
+    --popover-foreground: 0 0% 97.9%;
+    --muted: 38 13% 15.7%;
+    --muted-foreground: 41 8% 63.3%;
+    --secondary: 38 13% 15.7%;
+    --secondary-foreground: 0 0% 97.9%;
+    --accent: 38 13% 15.7%;
+    --accent-foreground: 0 0% 97.9%;
+    --primary: 42 58% 61.7%;
+    --primary-foreground: 37 19% 6.8%;
+    --border: 38 12% 20%;
+    --input: 38 12% 23%;
+    --ring: 42 58% 61.7%;
+
+    --success: 144 55% 60.5%;
+    --success-soft: 147 65% 13.4%;
+    --success-foreground: 142 78% 74.8%;
+    --success-strong: 142 67% 73.3%;
+    --success-muted: 147 65% 13.4%;
+
+    --warning: 40 81% 63.9%;
+    --warning-soft: 38 86% 14.2%;
+    --warning-foreground: 41 100% 73.2%;
+    --warning-strong: 39 100% 73.3%;
+    --warning-muted: 38 86% 14.2%;
+
+    --info: 214 79% 70.9%;
+    --info-soft: 216 59% 21.1%;
+    --info-foreground: 208 100% 81.2%;
+    --info-strong: 209 100% 80.5%;
+    --info-muted: 216 59% 21.1%;
+
+    --danger: 3 94% 73.1%;
+    --danger-soft: 0 60% 21.3%;
+    --danger-foreground: 3 100% 84.6%;
+    --danger-strong: 3 100% 84%;
+    --danger-muted: 0 60% 21.3%;
+    --destructive: 3 94% 73.1%;
+    --destructive-foreground: 37 19% 6.8%;
+
+    --chart-1: 42 58% 61.7%;
+    --chart-2: 351 83% 71.2%;
+    --chart-3: 144 55% 60.5%;
+    --chart-4: 40 81% 63.9%;
+    --chart-5: 214 79% 70.9%;
+
+    --hairline: 38 12% 20%;
+    --glass-bg: 38 17% 10.4%;
+    --glass-bg-solid: 38 18% 8.9%;
+    --glass-border: 38 12% 22%;
+
+    --shadow-soft: 0 1px 2px 0 hsl(0 0% 0% / 0.3), 0 8px 20px -14px hsl(0 0% 0% / 0.55);
+    --shadow-lift: 0 2px 4px 0 hsl(0 0% 0% / 0.35), 0 18px 36px -18px hsl(0 0% 0% / 0.6);
+  }
+}
+
+@layer components {
+  .ryka .ryka-glass {
+    background: hsl(var(--glass-bg-solid));
+    border: 1px solid hsl(var(--glass-border));
+    box-shadow: var(--shadow-soft);
+  }
+
+  @supports (backdrop-filter: blur(20px)) {
+    .ryka .ryka-glass {
+      background: hsl(var(--glass-bg) / 0.68);
+      backdrop-filter: blur(20px) saturate(180%);
+    }
+  }
+
+  .ryka .hairline-b {
+    border-bottom: 1px solid hsl(var(--hairline));
+  }
+
+  .ryka .hairline-t {
+    border-top: 1px solid hsl(var(--hairline));
+  }
+
+  .ryka .num {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+  }
+}
