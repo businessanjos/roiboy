@@ -53,6 +53,8 @@ export interface SnapshotTileProps
   value: ReactNode;
   hint?: string;
   icon?: LucideIcon;
+  /** Ícone já renderizado (alternativa a `icon`). */
+  iconNode?: ReactNode;
   tone?: RykaTone;
   selected?: boolean;
   panelId?: string;
