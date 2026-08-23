@@ -98,6 +98,16 @@ import { useCompanyGoals } from "@/hooks/useCompanyGoals";
 import { useSalesTeamMetrics } from "@/hooks/useSalesTeamMetrics";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { cn } from "@/lib/utils";
+import { RykaScope } from "@/components/ryka/RykaScope";
+import { RykaPage, RykaPageHeader, SectionTitle } from "@/components/ryka/section";
+import {
+  Snapshot,
+  SnapshotDetail,
+  SnapshotGrid,
+  SnapshotInsight,
+  SnapshotTile,
+  type RykaTone,
+} from "@/components/ryka/snapshot";
 import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
 import { Settings2 } from "lucide-react";
 
@@ -120,6 +130,17 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   last_quarter: "Trimestre passado",
   ytd: "Ano atual",
   last_year: "Ano passado",
+};
+
+const SNAPSHOT_PANEL_ID = "painel-comercial";
+
+const KPI_TONE: Record<string, RykaTone> = {
+  Receita: "success",
+  Conversão: "primary",
+  Atividade: "info",
+  Pipeline: "warning",
+  Churn: "danger",
+  Outros: "neutral",
 };
 
 function getRange(period: PeriodKey): { start: Date; end: Date } {
@@ -186,6 +207,7 @@ export default function SalesDashboard() {
   };
   const KPI_STORAGE_KEY = "sales-dashboard-kpis-v3";
   const [pickerOpen, setPickerOpen] = useState<KpiSection | null>(null);
+  const [selectedKpi, setSelectedKpi] = useState<string | null>(null);
   const [kpiSel, setKpiSel] = useState<Record<KpiSection, string[]>>(() => {
     try {
       const raw = localStorage.getItem(KPI_STORAGE_KEY);
@@ -865,55 +887,114 @@ export default function SalesDashboard() {
   const isLoading =
     dealsLoading || wonLoading || lostLoading || openLoading || teamLoading;
 
+  const headerKpis = (kpiSel.header || []).map((id) => KPI_CATALOG[id]).filter(Boolean);
+  const activeKpi =
+    headerKpis.find((k) => k.id === selectedKpi) || headerKpis[0] || null;
+
   return (
-    <div className="container mx-auto p-3 md:p-6 space-y-4 md:space-y-6 max-w-[1400px] pb-24 md:pb-6">
-      {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-3 md:gap-4">
-        <div className="hidden md:block">
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <TrendingUp className="w-7 h-7 text-primary" />
-            Dashboard Comercial
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            Visão executiva de receita, funil, equipe e origem dos ganhos
-          </p>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-            <SelectTrigger className="w-full md:w-[200px] h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {Object.entries(PERIOD_LABELS).map(([k, label]) => (
-                <SelectItem key={k} value={k}>
-                  {label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
-
-      <div className="text-xs text-muted-foreground -mt-2 md:-mt-3">
-        Período: {format(start, "dd/MM/yyyy", { locale: ptBR })} →{" "}
-        {format(end, "dd/MM/yyyy", { locale: ptBR })}
-      </div>
+    <RykaScope>
+      <RykaPage className="space-y-5 pb-24 md:space-y-7 md:pb-6">
+      <RykaPageHeader
+        eyebrow="Comercial · Painel"
+        title="Dashboard Comercial"
+        description="Visão executiva de receita, funil, equipe e origem dos ganhos."
+        actions={
+          <div className="flex items-center gap-2">
+            <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-md bg-card ring-1 ring-hairline">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {Object.entries(PERIOD_LABELS).map(([k, label]) => (
+                  <SelectItem key={k} value={k}>
+                    {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        }
+      />
 
       {/* KPIs fixados via IA */}
       <PinnedKpisStrip />
 
-      {/* KPI Row (configurável) */}
-      <div className="flex items-center justify-between -mb-2">
-        <span className="text-xs text-muted-foreground">Indicadores principais</span>
-        <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
-          <Settings2 className="w-4 h-4 mr-1.5" /> <span className="hidden sm:inline">Personalizar KPIs</span><span className="sm:hidden">KPIs</span>
-        </Button>
-      </div>
-      <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
-        {renderKpis("header")}
-      </div>
+      {/* Snapshot: indicadores selecionáveis + detalhe */}
+      <section className="space-y-3">
+        <SectionTitle
+          title="Indicadores principais"
+          description={`Período: ${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(end, "dd/MM/yyyy", { locale: ptBR })}`}
+          actions={
+            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
+              <Settings2 className="w-4 h-4 mr-1.5" />
+              <span className="hidden sm:inline">Personalizar KPIs</span>
+              <span className="sm:hidden">KPIs</span>
+            </Button>
+          }
+        />
+
+        <Snapshot
+          tiles={
+            <SnapshotGrid columns={2}>
+              {headerKpis.map((k) => (
+                <SnapshotTile
+                  key={k.id}
+                  label={k.label}
+                  value={k.value}
+                  hint={k.hint}
+                  iconNode={k.icon}
+                  tone={k.warn ? "warning" : KPI_TONE[KPI_CATEGORY[k.id] || "Outros"] || "neutral"}
+                  loading={isLoading}
+                  selected={activeKpi?.id === k.id}
+                  panelId={SNAPSHOT_PANEL_ID}
+                  onSelect={() => setSelectedKpi(k.id)}
+                />
+              ))}
+            </SnapshotGrid>
+          }
+          detail={
+            <SnapshotDetail
+              panelId={SNAPSHOT_PANEL_ID}
+              detailKey={activeKpi?.id || "none"}
+              title={activeKpi?.label || "Selecione um indicador"}
+              description={activeKpi?.description}
+              stats={
+                activeKpi
+                  ? [
+                      { label: "Categoria", value: KPI_CATEGORY[activeKpi.id] || "Outros" },
+                      { label: "Período", value: PERIOD_LABELS[period] },
+                    ]
+                  : undefined
+              }
+            >
+              {activeKpi ? (
+                <div className="space-y-4">
+                  <div>
+                    <p className="num text-[34px] font-semibold leading-none md:text-[44px]">
+                      {isLoading ? "—" : activeKpi.value}
+                    </p>
+                    {activeKpi.hint ? (
+                      <p className="mt-2 text-sm text-muted-foreground">{activeKpi.hint}</p>
+                    ) : null}
+                  </div>
+                  <SnapshotInsight icon={activeKpi.warn ? AlertTriangle : Activity}>
+                    {activeKpi.warn
+                      ? "Este indicador está fora da faixa saudável no período selecionado. Vale abrir as abas de Funil e Performance para investigar a causa."
+                      : `${activeKpi.description}. Use as abas abaixo para detalhar por etapa, vendedor e origem.`}
+                  </SnapshotInsight>
+                </div>
+              ) : (
+                <p className="text-sm text-muted-foreground">
+                  Nenhum indicador selecionado. Use "Personalizar KPIs" para escolher os
+                  indicadores deste painel.
+                </p>
+              )}
+            </SnapshotDetail>
+          }
+        />
+      </section>
+
 
       <Tabs defaultValue="goals" className="w-full">
         <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none">
@@ -1575,7 +1656,8 @@ export default function SalesDashboard() {
         onSave={(ids) => pickerOpen && saveKpiSel(pickerOpen, ids)}
         maxItems={8}
       />
-    </div>
+      </RykaPage>
+    </RykaScope>
   );
 }
 

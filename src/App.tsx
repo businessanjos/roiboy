@@ -1,4 +1,5 @@
 import { lazy, Suspense, ComponentType } from "react";
+import SalesThemeLayout from "@/components/ryka/SalesThemeLayout";
 import { Toaster } from "@/components/ui/toaster";
 import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { Toaster as Sonner } from "@/components/ui/sonner";
@@ -306,16 +307,18 @@ const App = () => (
                             <Route path="/operations/instagram-ranking" element={<InstagramRanking />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
-                            <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
-                            <Route path="/sales/contracts/templates" element={<SalesContractTemplates />} />
-                            <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
-                            <Route path="/pipeline" element={<SalesPipeline />} />
-                            <Route path="/sales-dashboard" element={<SalesDashboard />} />
-                            <Route path="/sales-calendar" element={<SalesCalendar />} />
-                            <Route path="/sales-team" element={<SalesTeam />} />
-                            <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
-                            <Route path="/sales-team/incentive-presentation" element={<CloserDashboard />} />
-                            <Route path="/sales-team/incentive-presentation/slideshow" element={<IncentivePresentation />} />
+                            <Route element={<SalesThemeLayout />}>
+                              <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
+                              <Route path="/sales/contracts/templates" element={<SalesContractTemplates />} />
+                              <Route path="/sales/contracts/defaults" element={<ContractDefaultsSettings />} />
+                              <Route path="/pipeline" element={<SalesPipeline />} />
+                              <Route path="/sales-dashboard" element={<SalesDashboard />} />
+                              <Route path="/sales-calendar" element={<SalesCalendar />} />
+                              <Route path="/sales-team" element={<SalesTeam />} />
+                              <Route path="/sales-team/spiffs" element={<SpiffsTracking />} />
+                              <Route path="/sales-team/incentive-presentation" element={<CloserDashboard />} />
+                              <Route path="/sales-team/incentive-presentation/slideshow" element={<IncentivePresentation />} />
+                            </Route>
                             <Route path="/leads" element={<Leads />} />
                             <Route path="/financial" element={<FinancialLayout />}>
                               <Route index element={<Navigate to="/financial/dashboard" replace />} />
