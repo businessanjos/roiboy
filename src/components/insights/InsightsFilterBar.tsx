@@ -116,7 +116,7 @@ export function InsightsFilterBar() {
     !!filters.globalFieldFilter;
 
   return (
-    <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-lg overflow-x-auto scrollbar-hide">
+    <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-2xl shadow-sm overflow-x-auto lg:overflow-visible lg:flex-wrap scrollbar-hide">
       {/* Date Filter: Presets via Dropdown, Custom via separate Popover */}
       {!datePickerOpen ? (
         <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
