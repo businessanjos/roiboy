@@ -105,15 +105,15 @@ export function SnapshotTile({
         <span className="text-[11px] font-medium uppercase tracking-[0.05em] text-muted-foreground">
           {label}
         </span>
-        {Icon ? (
+        {Icon || iconNode ? (
           <span
             aria-hidden="true"
             className={cn(
-              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full",
+              "inline-flex h-7 w-7 shrink-0 items-center justify-center rounded-full [&_svg]:h-4 [&_svg]:w-4",
               toneIcon[tone],
             )}
           >
-            <Icon className="h-4 w-4" />
+            {Icon ? <Icon className="h-4 w-4" /> : iconNode}
           </span>
         ) : null}
       </span>
