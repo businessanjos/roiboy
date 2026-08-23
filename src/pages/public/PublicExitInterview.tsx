@@ -66,7 +66,7 @@ export default function PublicExitInterview() {
       <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-emerald-50 to-white">
         <Card className="max-w-md w-full">
           <CardContent className="p-8 text-center">
-            <CheckCircle2 className="h-16 w-16 text-emerald-600 mx-auto mb-4" />
+            <CheckCircle2 className="h-16 w-16 text-success mx-auto mb-4" />
             <h1 className="text-2xl font-semibold mb-2">Obrigado!</h1>
             <p className="text-muted-foreground">Suas respostas foram registradas. Desejamos sucesso na sua próxima jornada.</p>
           </CardContent>

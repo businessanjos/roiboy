@@ -33,8 +33,8 @@ const PLATFORM_ICONS: Record<string, any> = {
 const PLATFORM_COLORS: Record<string, string> = {
   instagram: "bg-pink-500/10 text-pink-600 border-pink-500/30",
   tiktok: "bg-foreground/10 text-foreground border-foreground/30",
-  youtube: "bg-red-500/10 text-red-600 border-red-500/30",
-  linkedin: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+  youtube: "bg-danger/10 text-danger border-danger/30",
+  linkedin: "bg-info/10 text-info border-info/30",
   multi: "bg-purple-500/10 text-purple-600 border-purple-500/30",
   other: "bg-muted text-muted-foreground border-border",
 };

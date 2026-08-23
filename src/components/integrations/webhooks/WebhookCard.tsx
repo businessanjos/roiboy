@@ -58,9 +58,9 @@ export function WebhookCard({ webhook, onEdit }: WebhookCardProps) {
 
   const getStatusCodeColor = (code: number | null) => {
     if (!code) return "text-muted-foreground";
-    if (code >= 200 && code < 300) return "text-green-600";
-    if (code >= 400) return "text-red-600";
-    return "text-yellow-600";
+    if (code >= 200 && code < 300) return "text-success";
+    if (code >= 400) return "text-danger";
+    return "text-warning";
   };
 
   return (

@@ -178,7 +178,7 @@ function DeliverableRow({
         title={isDone ? 'Marcar como a fazer' : 'Marcar como pronto'}
       >
         <CheckCircle2
-          className={`h-5 w-5 ${isDone ? 'text-green-500' : 'text-muted-foreground'}`}
+          className={`h-5 w-5 ${isDone ? 'text-success' : 'text-muted-foreground'}`}
         />
       </button>
       <div className="flex-1 min-w-0">

@@ -163,16 +163,16 @@ const PRIORITY_ORDER: Record<string, number> = {
 };
 
 const PRIORITY_CONFIG = {
-  urgent: { label: "Urgente", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  high: { label: "Alta", className: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
-  medium: { label: "Média", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  urgent: { label: "Urgente", className: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
+  high: { label: "Alta", className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+  medium: { label: "Média", className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
   low: { label: "Baixa", className: "bg-muted text-muted-foreground" },
 };
 
 const STATUS_CONFIG = {
   pending: { label: "Pendente", icon: Clock, className: "bg-muted text-muted-foreground" },
-  in_progress: { label: "Em andamento", icon: ArrowRight, className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-  done: { label: "Concluído", icon: CheckCircle2, className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
+  in_progress: { label: "Em andamento", icon: ArrowRight, className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
+  done: { label: "Concluído", icon: CheckCircle2, className: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
   overdue: { label: "Atrasado", icon: AlertTriangle, className: "bg-destructive/10 text-destructive" },
   cancelled: { label: "Cancelado", icon: XCircle, className: "bg-muted text-muted-foreground" },
 };
@@ -792,10 +792,10 @@ export default function Tasks() {
       return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium" };
     }
     if (daysDiff === 0) {
-      return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium" };
+      return { text: `Hoje · ${formattedDate}`, className: "text-warning dark:text-warning font-medium" };
     }
     if (daysDiff === 1) {
-      return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400" };
+      return { text: `Amanhã · ${formattedDate}`, className: "text-warning dark:text-warning" };
     }
     if (daysDiff <= 7) {
       return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground" };
@@ -1334,7 +1334,7 @@ export default function Tasks() {
                           }}
                           className={cn(
                             "h-4 w-4 rounded-full border transition-colors",
-                            isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
+                            isCompleted ? "bg-success border-success text-white" : "border-muted-foreground/40"
                           )}
                         />
                       </TableCell>
@@ -1405,9 +1405,9 @@ export default function Tasks() {
                                 className={cn(task.priority === priority && "bg-muted")}
                               >
                                 <span className={cn("w-2 h-2 rounded-full mr-2", 
-                                  priority === "urgent" && "bg-red-500",
-                                  priority === "high" && "bg-orange-500",
-                                  priority === "medium" && "bg-blue-500",
+                                  priority === "urgent" && "bg-danger",
+                                  priority === "high" && "bg-warning",
+                                  priority === "medium" && "bg-info",
                                   priority === "low" && "bg-muted-foreground"
                                 )} />
                                 {config.label}
@@ -1497,7 +1497,7 @@ export default function Tasks() {
                               to={`/pipeline?deal=${task.deal_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
                             >
-                              <TrendingUp className="h-3 w-3 text-blue-500" />
+                              <TrendingUp className="h-3 w-3 text-info" />
                               <span className="truncate max-w-[100px]">{task.deals.title}</span>
                             </Link>
                           ) : null}
@@ -1506,7 +1506,7 @@ export default function Tasks() {
                               to={`/leads?lead=${task.lead_id}`}
                               className="flex items-center gap-1.5 text-xs hover:text-primary transition-colors"
                             >
-                              <User2 className="h-3 w-3 text-amber-500" />
+                              <User2 className="h-3 w-3 text-warning" />
                               <span className="truncate max-w-[100px]">{task.leads.full_name}</span>
                             </Link>
                           ) : null}
@@ -1579,7 +1579,7 @@ export default function Tasks() {
                                     leadId: contactInfo.leadId,
                                     name: contactInfo.name || undefined,
                                   })}
-                                  className="text-emerald-600 dark:text-emerald-400"
+                                  className="text-success dark:text-success"
                                   disabled={zappLoading}
                                 >
                                   <MessageCircle className="mr-2 h-4 w-4" />
@@ -1590,7 +1590,7 @@ export default function Tasks() {
                             {task.deals && task.deal_id && (
                               <DropdownMenuItem 
                                 onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
-                                className="text-blue-600 dark:text-blue-400"
+                                className="text-info dark:text-info"
                               >
                                 <TrendingUp className="mr-2 h-4 w-4" />
                                 Ver Negócio
@@ -1729,8 +1729,8 @@ export default function Tasks() {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pendentes</p>
                   <p className="text-3xl font-bold mt-1">{pendingCount}</p>
                 </div>
-                <div className="p-2.5 rounded-full bg-amber-500/10">
-                  <Clock className="h-5 w-5 text-amber-600" />
+                <div className="p-2.5 rounded-full bg-warning/10">
+                  <Clock className="h-5 w-5 text-warning" />
                 </div>
               </div>
             </CardContent>
@@ -1772,8 +1772,8 @@ export default function Tasks() {
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Concluídas</p>
                   <p className="text-3xl font-bold mt-1">{doneCount}</p>
                 </div>
-                <div className="p-2.5 rounded-full bg-green-500/10">
-                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                <div className="p-2.5 rounded-full bg-success/10">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
                 </div>
               </div>
             </CardContent>

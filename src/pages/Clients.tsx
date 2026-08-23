@@ -1536,7 +1536,7 @@ export default function Clients() {
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
           <span className="inline-flex items-baseline gap-1.5 text-sm text-muted-foreground">
-            <span className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-sm font-semibold">
+            <span className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded-full bg-success-soft text-success-strong dark:bg-success/40 dark:text-success text-sm font-semibold">
               {tabCounts.active ?? 0}
             </span>
             <span>ativos</span>
@@ -1694,7 +1694,7 @@ export default function Clients() {
                     <div className="flex items-center justify-between gap-4 text-sm flex-wrap">
                       <div className="flex items-center gap-3 flex-wrap">
                         <Badge variant="outline" className="gap-1">
-                          <CheckCircle2 className="h-3 w-3 text-emerald-500" />
+                          <CheckCircle2 className="h-3 w-3 text-success" />
                           {validCount} válido(s)
                         </Badge>
                         {invalidCount > 0 && (
@@ -1745,7 +1745,7 @@ export default function Clients() {
                               <TableRow key={index} className={!row.valid ? "bg-destructive/5" : ""}>
                                 <TableCell>
                                   {row.valid ? (
-                                    <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                                    <CheckCircle2 className="h-4 w-4 text-success" />
                                   ) : (
                                     <AlertCircle className="h-4 w-4 text-destructive" />
                                   )}
@@ -1858,7 +1858,7 @@ export default function Clients() {
                               Campos obrigatórios: {filledCount}/{totalCount}
                             </span>
                             {filledCount === totalCount ? (
-                              <span className="text-green-600 dark:text-green-500 flex items-center gap-1">
+                              <span className="text-success dark:text-success flex items-center gap-1">
                                 <Check className="h-3 w-3" />
                                 Completo
                               </span>
@@ -1882,10 +1882,10 @@ export default function Clients() {
                                   key={idx}
                                   className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
                                     check.filled 
-                                      ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                                      ? "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" 
                                       : Object.keys(formErrors).length > 0
-                                        ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
-                                        : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                        ? "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger animate-shake"
+                                        : "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning"
                                   }`}
                                 >
                                   {check.filled ? (
@@ -1913,10 +1913,10 @@ export default function Clients() {
                                       key={idx}
                                       className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] sm:text-xs transition-colors ${
                                         check.filled 
-                                          ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" 
+                                          ? "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" 
                                           : Object.keys(formErrors).length > 0
-                                            ? "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400 animate-shake"
-                                            : "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
+                                            ? "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger animate-shake"
+                                            : "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning"
                                     }`}
                                     >
                                       {check.filled ? (
@@ -2088,41 +2088,41 @@ export default function Clients() {
         <TabsList className="h-auto w-full flex-wrap justify-start bg-transparent border-b border-border rounded-none p-0 gap-6">
           <TabsTrigger
             value="active"
-            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-emerald-600 data-[state=active]:border-emerald-600 transition-colors"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-success data-[state=active]:border-success transition-colors"
           >
             <CheckCircle2 className="h-4 w-4 mr-2" />
             <span className="font-medium">Ativos</span>
-            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-900/40 dark:text-emerald-300 text-xs font-semibold">
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-success-soft text-success-strong dark:bg-success/40 dark:text-success text-xs font-semibold">
               {tabCounts.active ?? 0}
             </span>
           </TabsTrigger>
           <TabsTrigger
             value="awaiting"
-            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-sky-600 data-[state=active]:border-sky-600 transition-colors"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-info data-[state=active]:border-info transition-colors"
           >
             <Clock className="h-4 w-4 mr-2" />
             <span className="font-medium">Aguardando Contrato</span>
-            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-300 text-xs font-semibold">
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-info-soft text-info-strong dark:bg-info/40 dark:text-info text-xs font-semibold">
               {tabCounts.awaiting ?? 0}
             </span>
           </TabsTrigger>
           <TabsTrigger
             value="hold"
-            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-amber-600 data-[state=active]:border-amber-600 transition-colors"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-warning data-[state=active]:border-warning transition-colors"
           >
             <PauseCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Hold</span>
-            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 text-xs font-semibold">
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-warning-soft text-warning-strong dark:bg-warning/40 dark:text-warning text-xs font-semibold">
               {tabCounts.hold ?? 0}
             </span>
           </TabsTrigger>
           <TabsTrigger
             value="cancelled"
-            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-red-600 data-[state=active]:border-red-600 transition-colors"
+            className="group relative h-11 px-1 rounded-none border-b-2 border-transparent bg-transparent text-muted-foreground hover:text-foreground data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:text-danger data-[state=active]:border-danger transition-colors"
           >
             <XCircle className="h-4 w-4 mr-2" />
             <span className="font-medium">Cancelados</span>
-            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-300 text-xs font-semibold">
+            <span className="ml-2 inline-flex items-center justify-center min-w-[1.5rem] h-5 px-1.5 rounded-full bg-danger-soft text-danger-strong dark:bg-danger/40 dark:text-danger text-xs font-semibold">
               {tabCounts.cancelled ?? 0}
             </span>
           </TabsTrigger>
@@ -2825,7 +2825,7 @@ export default function Clients() {
                             const positive = pct >= 0;
                             const Icon = positive ? TrendingUp : TrendingDown;
                             return (
-                              <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-emerald-600" : "text-red-600")}>
+                              <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-success" : "text-danger")}>
                                 <Icon className="h-3 w-3" />
                                 {positive ? "+" : ""}{pct.toFixed(0)}%
                               </span>
@@ -2840,7 +2840,7 @@ export default function Clients() {
                               <Tooltip>
                                 <TooltipTrigger asChild>
                                   <div className="inline-flex flex-col items-center leading-tight">
-                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                                    <span className="inline-flex items-center gap-1 text-xs font-semibold text-warning">
                                       <Trophy className="h-3 w-3" />
                                       {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.revenue_record.revenue))}
                                     </span>
@@ -2864,9 +2864,9 @@ export default function Clients() {
                             const s = client.ryka_status || "none";
                             if (s === "none") return <span className="text-xs text-muted-foreground">—</span>;
                             const meta: Record<string, { label: string; cls: string; dot: string }> = {
-                              active: { label: "Ativo", cls: "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-500" },
-                              pending: { label: "Pendente", cls: "text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-500" },
-                              error: { label: "Erro", cls: "text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400", dot: "bg-red-500" },
+                              active: { label: "Ativo", cls: "text-success-strong bg-success-soft dark:bg-success/30 dark:text-success", dot: "bg-success" },
+                              pending: { label: "Pendente", cls: "text-warning-strong bg-warning-soft dark:bg-warning/30 dark:text-warning", dot: "bg-warning" },
+                              error: { label: "Erro", cls: "text-danger-strong bg-danger-soft dark:bg-danger/30 dark:text-danger", dot: "bg-danger" },
                             };
                             const m = meta[s];
                             return (
@@ -2896,7 +2896,7 @@ export default function Clients() {
                                         <CalendarDays className="h-3 w-3" />
                                         {format(d, "MMM/yy", { locale: ptBR })}
                                       </span>
-                                      <span className={cn("text-[10px]", estimated ? "text-amber-600" : "text-muted-foreground")}>
+                                      <span className={cn("text-[10px]", estimated ? "text-warning" : "text-muted-foreground")}>
                                         há {months} {months === 1 ? "mês" : "meses"}
                                       </span>
                                     </div>
@@ -2930,14 +2930,14 @@ export default function Clients() {
                                   bgClass: string; 
                                   textClass: string 
                                 }> = {
-                                  active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-green-100 dark:bg-green-900/30", textClass: "text-green-700 dark:text-green-400" },
-                                  pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-blue-100 dark:bg-blue-900/30", textClass: "text-blue-700 dark:text-blue-400" },
-                                  paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
-                                  suspended: { label: "Suspenso", labelTooltip: "Contrato Suspenso", icon: AlertTriangle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
-                                  cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
-                                  ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
-                                  dismissed: { label: "Dispensado", labelTooltip: "Contrato Dispensado", icon: XCircle, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
-                                  dropout_7d: { label: "Desistência", labelTooltip: "Desistência em 7 dias", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
+                                  active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-success-soft dark:bg-success/30", textClass: "text-success-strong dark:text-success" },
+                                  pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-info-soft dark:bg-info/30", textClass: "text-info-strong dark:text-info" },
+                                  paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
+                                  suspended: { label: "Suspenso", labelTooltip: "Contrato Suspenso", icon: AlertTriangle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
+                                  cancelled: { label: "Cancelado", labelTooltip: "Contrato Cancelado", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
+                                  ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
+                                  dismissed: { label: "Dispensado", labelTooltip: "Contrato Dispensado", icon: XCircle, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
+                                  dropout_7d: { label: "Desistência", labelTooltip: "Desistência em 7 dias", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
                                 };
                                 const config = statusConfig[contractStatus] || statusConfig.active;
                                 const StatusIcon = config.icon;
@@ -2976,7 +2976,7 @@ export default function Clients() {
                               <TooltipProvider>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                                    <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning">
                                       <AlertCircle className="h-3 w-3" />
                                       <span>Sem contrato</span>
                                     </div>
@@ -3159,7 +3159,7 @@ export default function Clients() {
                                         ? "bg-destructive/10 text-destructive" 
                                         : expiryStatus.type === "urgent"
                                           ? "bg-destructive/10 text-destructive animate-pulse"
-                                          : "bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400"
+                                          : "bg-warning-soft text-warning dark:bg-warning/30 dark:text-warning"
                                     }`}>
                                       {expiryStatus.type === "expired" ? (
                                         <AlertTriangle className="h-3.5 w-3.5" />
@@ -3180,7 +3180,7 @@ export default function Clients() {
                             <TooltipProvider>
                               <Tooltip>
                                 <TooltipTrigger asChild>
-                                  <div className="flex-shrink-0 p-1 rounded-full bg-amber-100 text-amber-600 dark:bg-amber-900/30 dark:text-amber-400">
+                                  <div className="flex-shrink-0 p-1 rounded-full bg-warning-soft text-warning dark:bg-warning/30 dark:text-warning">
                                     <FileText className="h-3.5 w-3.5" />
                                   </div>
                                 </TooltipTrigger>
@@ -3223,7 +3223,7 @@ export default function Clients() {
                           <TooltipTrigger asChild>
                             <div className={`flex items-center gap-1 px-2 py-1 rounded-full text-xs ${
                               whatsappMap[client.id]?.messageCount > 0 
-                                ? "bg-emerald-500/10 text-emerald-600" 
+                                ? "bg-success/10 text-success" 
                                 : "bg-muted text-muted-foreground"
                             }`}>
                               <MessageCircle className="h-3.5 w-3.5" />

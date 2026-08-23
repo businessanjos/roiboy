@@ -15,10 +15,10 @@ import {
 } from "@/components/ui/dialog";
 
 const STATUS_META: Record<string, { label: string; cls: string; icon: any }> = {
-  draft:    { label: "Rascunho",     cls: "bg-slate-500/15 text-slate-700",   icon: Clock },
-  review:   { label: "Em revisão",   cls: "bg-amber-500/15 text-amber-700",   icon: Eye },
-  approved: { label: "Aprovado",     cls: "bg-emerald-500/15 text-emerald-700", icon: CheckCircle2 },
-  rejected: { label: "Reprovado",    cls: "bg-red-500/15 text-red-700",       icon: XCircle },
+  draft:    { label: "Rascunho",     cls: "bg-slate-500/15 text-foreground",   icon: Clock },
+  review:   { label: "Em revisão",   cls: "bg-warning/15 text-warning-strong",   icon: Eye },
+  approved: { label: "Aprovado",     cls: "bg-success/15 text-success-strong", icon: CheckCircle2 },
+  rejected: { label: "Reprovado",    cls: "bg-danger/15 text-danger-strong",       icon: XCircle },
 };
 
 type Asset = {
@@ -195,7 +195,7 @@ export function AssetUploadBox({
               </code>
             )}
             {approved && (
-              <Badge className="bg-emerald-500/15 text-emerald-700 text-[10px]">
+              <Badge className="bg-success/15 text-success-strong text-[10px]">
                 <CheckCircle2 className="h-3 w-3 mr-0.5" /> Pronto
               </Badge>
             )}
@@ -267,17 +267,17 @@ export function AssetUploadBox({
                 )}
                 {a.status === "review" && (
                   <>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-emerald-600"
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-success"
                       onClick={() => updateStatus.mutate({ id: a.id, status: "approved" })} title="Aprovar">
                       <CheckCircle2 className="h-3 w-3" />
                     </Button>
-                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-red-600"
+                    <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-danger"
                       onClick={() => updateStatus.mutate({ id: a.id, status: "rejected" })} title="Rejeitar">
                       <XCircle className="h-3 w-3" />
                     </Button>
                   </>
                 )}
-                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-red-600"
+                <Button size="sm" variant="ghost" className="h-6 w-6 p-0 text-muted-foreground hover:text-danger"
                   onClick={() => { if (confirm("Remover arquivo?")) remove.mutate(a); }} title="Remover">
                   <Trash2 className="h-3 w-3" />
                 </Button>

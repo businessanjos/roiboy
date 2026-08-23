@@ -13,20 +13,20 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export const PAYMENT_STATUS_OPTIONS: Record<string, { label: string; group: string; className: string }> = {
-  cheque_enviado: { label: "Cheque enviado", group: "Cheque", className: "bg-blue-500/15 text-blue-600" },
-  cheque_pendente: { label: "Cheque pendente", group: "Cheque", className: "bg-amber-500/15 text-amber-600" },
-  cheque_recebido: { label: "Cheque recebido", group: "Cheque", className: "bg-emerald-500/15 text-emerald-600" },
+  cheque_enviado: { label: "Cheque enviado", group: "Cheque", className: "bg-info/15 text-info" },
+  cheque_pendente: { label: "Cheque pendente", group: "Cheque", className: "bg-warning/15 text-warning" },
+  cheque_recebido: { label: "Cheque recebido", group: "Cheque", className: "bg-success/15 text-success" },
   cheque_devolvido: { label: "Cheque devolvido", group: "Cheque", className: "bg-destructive/15 text-destructive" },
-  boleto_emitido: { label: "Boleto emitido", group: "Boleto", className: "bg-blue-500/15 text-blue-600" },
-  boleto_registrado: { label: "Boleto registrado", group: "Boleto", className: "bg-cyan-500/15 text-cyan-600" },
-  boleto_pago: { label: "Boleto pago", group: "Boleto", className: "bg-emerald-500/15 text-emerald-600" },
-  cartao_autorizado: { label: "Cartão autorizado", group: "Cartão", className: "bg-blue-500/15 text-blue-600" },
-  cartao_capturado: { label: "Cartão capturado", group: "Cartão", className: "bg-emerald-500/15 text-emerald-600" },
+  boleto_emitido: { label: "Boleto emitido", group: "Boleto", className: "bg-info/15 text-info" },
+  boleto_registrado: { label: "Boleto registrado", group: "Boleto", className: "bg-info/15 text-info" },
+  boleto_pago: { label: "Boleto pago", group: "Boleto", className: "bg-success/15 text-success" },
+  cartao_autorizado: { label: "Cartão autorizado", group: "Cartão", className: "bg-info/15 text-info" },
+  cartao_capturado: { label: "Cartão capturado", group: "Cartão", className: "bg-success/15 text-success" },
   cartao_estornado: { label: "Cartão estornado", group: "Cartão", className: "bg-pink-500/15 text-pink-600" },
-  pix_aguardando: { label: "PIX aguardando", group: "PIX", className: "bg-amber-500/15 text-amber-600" },
-  pix_confirmado: { label: "PIX confirmado", group: "PIX", className: "bg-emerald-500/15 text-emerald-600" },
-  transferencia_pendente: { label: "Transferência pendente", group: "Transferência", className: "bg-amber-500/15 text-amber-600" },
-  transferencia_confirmada: { label: "Transferência confirmada", group: "Transferência", className: "bg-emerald-500/15 text-emerald-600" },
+  pix_aguardando: { label: "PIX aguardando", group: "PIX", className: "bg-warning/15 text-warning" },
+  pix_confirmado: { label: "PIX confirmado", group: "PIX", className: "bg-success/15 text-success" },
+  transferencia_pendente: { label: "Transferência pendente", group: "Transferência", className: "bg-warning/15 text-warning" },
+  transferencia_confirmada: { label: "Transferência confirmada", group: "Transferência", className: "bg-success/15 text-success" },
 };
 
 const GROUPS = ["Cheque", "Boleto", "Cartão", "PIX", "Transferência"];

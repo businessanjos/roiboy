@@ -328,29 +328,29 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Cpu className="h-5 w-5 text-emerald-500" />
+            <Cpu className="h-5 w-5 text-success" />
             Uso de IA Agregado (Últimos 30 dias)
           </CardTitle>
           <CardDescription>Consumo e custos de inteligência artificial</CardDescription>
         </CardHeader>
         <CardContent>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-            <div className="p-4 rounded-lg bg-emerald-500/10 text-center">
-              <p className="text-3xl font-bold text-emerald-600">
+            <div className="p-4 rounded-lg bg-success/10 text-center">
+              <p className="text-3xl font-bold text-success">
                 R$ {(aiStats?.totalCost || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
               </p>
               <p className="text-sm text-muted-foreground mt-1">Custo Total (30d)</p>
             </div>
-            <div className="p-4 rounded-lg bg-blue-500/10 text-center">
-              <p className="text-3xl font-bold text-blue-600">{(aiStats?.totalAnalyses || 0).toLocaleString('pt-BR')}</p>
+            <div className="p-4 rounded-lg bg-info/10 text-center">
+              <p className="text-3xl font-bold text-info">{(aiStats?.totalAnalyses || 0).toLocaleString('pt-BR')}</p>
               <p className="text-sm text-muted-foreground mt-1">Análises Totais</p>
             </div>
             <div className="p-4 rounded-lg bg-purple-500/10 text-center">
               <p className="text-3xl font-bold text-purple-600">{aiStats?.accountsUsingAI || 0}</p>
               <p className="text-sm text-muted-foreground mt-1">Contas Usando IA</p>
             </div>
-            <div className="p-4 rounded-lg bg-amber-500/10 text-center">
-              <p className="text-3xl font-bold text-amber-600">
+            <div className="p-4 rounded-lg bg-warning/10 text-center">
+              <p className="text-3xl font-bold text-warning">
                 R$ {(aiStats?.costPerAnalysis || 0).toLocaleString('pt-BR', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}
               </p>
               <p className="text-sm text-muted-foreground mt-1">Custo por Análise</p>
@@ -394,9 +394,9 @@ function DashboardTab({ accounts, users }: { accounts: Account[]; users: User[] 
           <CardTitle className="text-base font-medium">Distribuição por Status</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <StatusBar label="Ativas" value={activeAccounts} total={accounts.length} color="bg-emerald-500" />
-          <StatusBar label="Trial" value={trialAccounts} total={accounts.length} color="bg-amber-500" />
-          <StatusBar label="Suspensas" value={suspendedAccounts} total={accounts.length} color="bg-red-500" />
+          <StatusBar label="Ativas" value={activeAccounts} total={accounts.length} color="bg-success" />
+          <StatusBar label="Trial" value={trialAccounts} total={accounts.length} color="bg-warning" />
+          <StatusBar label="Suspensas" value={suspendedAccounts} total={accounts.length} color="bg-danger" />
           <StatusBar label="Canceladas" value={cancelledAccounts} total={accounts.length} color="bg-muted-foreground/50" />
         </CardContent>
       </Card>
@@ -1006,7 +1006,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                           <Button 
                             variant="ghost" 
                             size="icon" 
-                            className="h-7 w-7 text-amber-600 hover:text-amber-700"
+                            className="h-7 w-7 text-warning hover:text-warning-strong"
                             onClick={() => handleImpersonate(account.id)}
                             disabled={isImpersonating || account.user_count === 0}
                             title="Visualizar como usuário desta conta"
@@ -1737,8 +1737,8 @@ function AICostsTab({ accounts }: { accounts: Account[] }) {
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 rounded-lg bg-emerald-500/10">
-                <DollarSign className="h-5 w-5 text-emerald-600" />
+              <div className="p-2.5 rounded-lg bg-success/10">
+                <DollarSign className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Custo Total</p>
@@ -1765,8 +1765,8 @@ function AICostsTab({ accounts }: { accounts: Account[] }) {
         <Card className="border-0 shadow-sm">
           <CardContent className="pt-5 pb-4">
             <div className="flex items-center gap-4">
-              <div className="p-2.5 rounded-lg bg-blue-500/10">
-                <Cpu className="h-5 w-5 text-blue-600" />
+              <div className="p-2.5 rounded-lg bg-info/10">
+                <Cpu className="h-5 w-5 text-info" />
               </div>
               <div>
                 <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">Tokens de Entrada</p>

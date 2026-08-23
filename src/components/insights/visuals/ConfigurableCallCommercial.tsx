@@ -107,7 +107,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
               <div className="flex gap-1">
                 {/* Agendadas em aberto */}
                 <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
-                  <Calendar className="h-3.5 w-3.5 text-amber-500" />
+                  <Calendar className="h-3.5 w-3.5 text-warning" />
                   <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {scheduled}
                   </span>
@@ -118,7 +118,7 @@ export function ConfigurableCallCommercial({ data, hiddenUsers, appearance }: Co
 
                 {/* Concluídas */}
                 <div className="flex flex-col items-center gap-0.5 rounded-lg bg-muted px-3 py-2 min-w-[52px]">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                  <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                   <span className="font-bold text-foreground tabular-nums leading-none" style={{ fontSize: `${Math.round(18 * m)}px` }}>
                     {completed}
                   </span>

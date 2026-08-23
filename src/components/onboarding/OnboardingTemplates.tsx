@@ -326,9 +326,9 @@ export function TemplateSelector({
                 <Icon className={cn(
                   "h-4 w-4",
                   business.color === "purple" && "text-purple-500",
-                  business.color === "blue" && "text-blue-500",
-                  business.color === "rose" && "text-rose-500",
-                  business.color === "emerald" && "text-emerald-500",
+                  business.color === "blue" && "text-info",
+                  business.color === "rose" && "text-danger",
+                  business.color === "emerald" && "text-success",
                   business.color === "pink" && "text-pink-500"
                 )} />
                 <span className="text-xs font-medium">{business.name}</span>

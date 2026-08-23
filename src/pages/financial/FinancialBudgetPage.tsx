@@ -244,7 +244,7 @@ export default function FinancialBudgetPage() {
           <div className="grid grid-cols-2 gap-4">
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <TrendingDown className="h-4 w-4 text-red-600" />
+                <TrendingDown className="h-4 w-4 text-danger" />
                 Despesas
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -254,7 +254,7 @@ export default function FinancialBudgetPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Realizado</p>
-                  <p className="text-lg font-bold text-red-600">{formatCurrency(totals.actualExpenses)}</p>
+                  <p className="text-lg font-bold text-danger">{formatCurrency(totals.actualExpenses)}</p>
                 </div>
               </div>
               <Progress 
@@ -264,7 +264,7 @@ export default function FinancialBudgetPage() {
             </div>
             <div className="p-4 border rounded-lg">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                <TrendingUp className="h-4 w-4 text-green-600" />
+                <TrendingUp className="h-4 w-4 text-success" />
                 Receitas
               </div>
               <div className="grid grid-cols-2 gap-4">
@@ -274,7 +274,7 @@ export default function FinancialBudgetPage() {
                 </div>
                 <div>
                   <p className="text-xs text-muted-foreground">Realizado</p>
-                  <p className="text-lg font-bold text-green-600">{formatCurrency(totals.actualIncome)}</p>
+                  <p className="text-lg font-bold text-success">{formatCurrency(totals.actualIncome)}</p>
                 </div>
               </div>
               <Progress 
@@ -323,15 +323,15 @@ export default function FinancialBudgetPage() {
                       </TableCell>
                       <TableCell className="text-right">{formatCurrency(row.planned_amount)}</TableCell>
                       <TableCell className="text-right">{formatCurrency(row.actual_amount)}</TableCell>
-                      <TableCell className={`text-right ${isOverBudget ? "text-red-600" : "text-green-600"}`}>
+                      <TableCell className={`text-right ${isOverBudget ? "text-danger" : "text-success"}`}>
                         {formatCurrency(row.variance)}
                         <span className="text-xs ml-1">({row.variance_percent.toFixed(1)}%)</span>
                       </TableCell>
                       <TableCell>
                         {isOverBudget ? (
-                          <AlertTriangle className="h-4 w-4 text-amber-500" />
+                          <AlertTriangle className="h-4 w-4 text-warning" />
                         ) : (
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          <CheckCircle2 className="h-4 w-4 text-success" />
                         )}
                       </TableCell>
                     </TableRow>

@@ -31,14 +31,14 @@ export function KPICard({
 }: KPICardProps) {
   const getTrendIcon = () => {
     if (!trend) return null;
-    if (trend.value > 0) return <TrendingUp className="h-3 w-3 text-emerald-500" />;
+    if (trend.value > 0) return <TrendingUp className="h-3 w-3 text-success" />;
     if (trend.value < 0) return <TrendingDown className="h-3 w-3 text-destructive" />;
     return <Minus className="h-3 w-3 text-muted-foreground" />;
   };
 
   const getTrendColor = () => {
     if (!trend) return "";
-    if (trend.value > 0) return "text-emerald-500";
+    if (trend.value > 0) return "text-success";
     if (trend.value < 0) return "text-destructive";
     return "text-muted-foreground";
   };

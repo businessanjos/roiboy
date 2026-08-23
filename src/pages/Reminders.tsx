@@ -144,10 +144,10 @@ const CAMPAIGN_TYPES = {
 
 const STATUS_CONFIG = {
   pending: { color: "bg-muted text-muted-foreground", label: "Pendente" },
-  queued: { color: "bg-yellow-500/20 text-yellow-700 dark:text-yellow-400", label: "Na fila" },
-  sending: { color: "bg-blue-500/20 text-blue-700 dark:text-blue-400", label: "Enviando" },
-  sent: { color: "bg-green-500/20 text-green-700 dark:text-green-400", label: "Enviado" },
-  failed: { color: "bg-red-500/20 text-red-700 dark:text-red-400", label: "Falhou" },
+  queued: { color: "bg-warning/20 text-warning-strong dark:text-warning", label: "Na fila" },
+  sending: { color: "bg-info/20 text-info-strong dark:text-info", label: "Enviando" },
+  sent: { color: "bg-success/20 text-success-strong dark:text-success", label: "Enviado" },
+  failed: { color: "bg-danger/20 text-danger-strong dark:text-danger", label: "Falhou" },
   responded: { color: "bg-purple-500/20 text-purple-700 dark:text-purple-400", label: "Respondeu" },
 };
 
@@ -1000,7 +1000,7 @@ export default function Reminders() {
                           onCheckedChange={(checked) => setSendWhatsapp(checked === true)}
                         />
                         <label htmlFor="whatsapp" className="text-sm flex items-center gap-2 cursor-pointer">
-                          <MessageSquare className="h-4 w-4 text-green-500" />
+                          <MessageSquare className="h-4 w-4 text-success" />
                           WhatsApp
                         </label>
                       </div>
@@ -1011,7 +1011,7 @@ export default function Reminders() {
                           onCheckedChange={(checked) => setSendEmail(checked === true)}
                         />
                         <label htmlFor="email" className="text-sm flex items-center gap-2 cursor-pointer">
-                          <Mail className="h-4 w-4 text-blue-500" />
+                          <Mail className="h-4 w-4 text-info" />
                           Email
                         </label>
                       </div>
@@ -1062,10 +1062,10 @@ export default function Reminders() {
                       />
                       
                       {isRecording ? (
-                        <div className="p-3 border rounded-lg bg-red-500/10 border-red-500/30">
+                        <div className="p-3 border rounded-lg bg-danger/10 border-danger/30">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-3">
-                              <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse" />
+                              <div className="w-3 h-3 bg-danger rounded-full animate-pulse" />
                               <span className="text-sm font-medium">Gravando...</span>
                               <span className="text-sm text-muted-foreground font-mono">
                                 {formatRecordingTime(recordingTime)}
@@ -1248,8 +1248,8 @@ export default function Reminders() {
                     <div className="p-4 bg-muted/50 rounded-lg">
                       <p className="text-sm text-muted-foreground">Canais</p>
                       <p className="font-medium flex items-center gap-2">
-                        {sendWhatsapp && <MessageSquare className="h-4 w-4 text-green-500" />}
-                        {sendEmail && <Mail className="h-4 w-4 text-blue-500" />}
+                        {sendWhatsapp && <MessageSquare className="h-4 w-4 text-success" />}
+                        {sendEmail && <Mail className="h-4 w-4 text-info" />}
                         {sendWhatsapp && "WhatsApp"}
                         {sendWhatsapp && sendEmail && " + "}
                         {sendEmail && "Email"}
@@ -1337,8 +1337,8 @@ export default function Reminders() {
                     </div>
                   )}
 
-                  <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                    <p className="text-sm text-amber-700 dark:text-amber-400 flex items-center gap-2">
+                  <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
+                    <p className="text-sm text-warning-strong dark:text-warning flex items-center gap-2">
                       <Clock className="h-4 w-4" />
                       {sendMode === "scheduled" 
                         ? `O envio será iniciado automaticamente em ${scheduledFor ? format(new Date(scheduledFor), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }) : "data selecionada"}`
@@ -1470,8 +1470,8 @@ export default function Reminders() {
                           <TableCell>
                             <div className="w-32">
                               <div className="flex items-center justify-between text-xs mb-1">
-                                <span className="text-green-600">{campaign.sent_count} ✓</span>
-                                <span className="text-red-600">{campaign.failed_count} ✗</span>
+                                <span className="text-success">{campaign.sent_count} ✓</span>
+                                <span className="text-danger">{campaign.failed_count} ✗</span>
                                 <span className="text-muted-foreground">/ {campaign.total_recipients}</span>
                               </div>
                               <Progress value={progress} className="h-2" />

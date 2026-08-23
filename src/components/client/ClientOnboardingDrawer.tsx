@@ -37,19 +37,19 @@ interface Props {
 }
 
 const PRIORITY_STYLES: Record<CoachInsight["priority"], { label: string; className: string }> = {
-  urgent: { label: "URGENTE", className: "bg-red-500/15 text-red-600 dark:text-red-400 border-red-500/30" },
-  high: { label: "ALTA", className: "bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/30" },
-  medium: { label: "MÉDIA", className: "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-amber-500/30" },
-  low: { label: "BAIXA", className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-emerald-500/30" },
+  urgent: { label: "URGENTE", className: "bg-danger/15 text-danger dark:text-danger border-danger/30" },
+  high: { label: "ALTA", className: "bg-warning/15 text-warning dark:text-warning border-warning/30" },
+  medium: { label: "MÉDIA", className: "bg-warning/15 text-warning-strong dark:text-warning border-warning/30" },
+  low: { label: "BAIXA", className: "bg-success/15 text-success-strong dark:text-success border-success/30" },
 };
 
 function HealthBadge({ client, stage }: { client: OnboardingClient; stage: OnboardingStage | null }) {
   const health = computeHealth(client.stage_changed_at, stage?.sla_hours ?? null);
   const days = daysInStage(client.stage_changed_at);
   const styles = {
-    on_track: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400",
-    at_risk: "bg-amber-500/15 text-amber-700 dark:text-amber-400",
-    overdue: "bg-red-500/15 text-red-600 dark:text-red-400",
+    on_track: "bg-success/15 text-success-strong dark:text-success",
+    at_risk: "bg-warning/15 text-warning-strong dark:text-warning",
+    overdue: "bg-danger/15 text-danger dark:text-danger",
     no_sla: "bg-muted text-muted-foreground",
   } as const;
   const label = {
@@ -277,16 +277,16 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
                     initial={{ opacity: 0, x: -8 }}
                     animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: i * 0.05 }}
-                    className="flex items-start gap-2 rounded-lg border border-amber-200 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/10 p-3"
+                    className="flex items-start gap-2 rounded-lg border border-warning dark:border-warning/40 bg-warning/50 dark:bg-warning/10 p-3"
                   >
-                    <AlertTriangle className="h-4 w-4 text-amber-600 dark:text-amber-400 mt-0.5 shrink-0" />
+                    <AlertTriangle className="h-4 w-4 text-warning dark:text-warning mt-0.5 shrink-0" />
                     <p className="text-sm leading-relaxed">{risk}</p>
                   </motion.div>
                 ))}
               </div>
             ) : (
               <p className="text-sm text-muted-foreground text-center py-8">
-                Nenhum risco crítico detectado. <CheckCircle2 className="inline h-4 w-4 text-emerald-500" />
+                Nenhum risco crítico detectado. <CheckCircle2 className="inline h-4 w-4 text-success" />
               </p>
             )}
           </TabsContent>
@@ -387,14 +387,14 @@ export function ClientOnboardingDrawer({ client, stage, open, onOpenChange }: Pr
                         variant="outline"
                         className={
                           rykaResult.whatsapp_status === "sent"
-                            ? "bg-emerald-500/15 text-emerald-700 dark:text-emerald-400 border-0"
-                            : "bg-amber-500/15 text-amber-700 dark:text-amber-400 border-0"
+                            ? "bg-success/15 text-success-strong dark:text-success border-0"
+                            : "bg-warning/15 text-warning-strong dark:text-warning border-0"
                         }
                       >
                         WhatsApp: {rykaResult.whatsapp_status}
                       </Badge>
                       {rykaResult.whatsapp_error && (
-                        <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1">
+                        <p className="text-[11px] text-warning dark:text-warning mt-1">
                           {rykaResult.whatsapp_error}
                         </p>
                       )}

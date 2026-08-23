@@ -443,7 +443,7 @@ export function AiStudio({
                   <div key={i} className="relative">
                     <img src={u} alt="" className="h-14 w-14 object-cover rounded border" />
                     <button onClick={() => setRefUrls(refUrls.filter((_, j) => j !== i))}
-                      className="absolute -top-1 -right-1 h-4 w-4 bg-red-500 text-white rounded-full text-[10px]">×</button>
+                      className="absolute -top-1 -right-1 h-4 w-4 bg-danger text-white rounded-full text-[10px]">×</button>
                   </div>
                 ))}
                 {refUrls.length < 4 && (

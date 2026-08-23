@@ -123,7 +123,7 @@ export function EmbeddedVideoCall({
       {/* Controls bar */}
       <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between p-2 bg-gradient-to-b from-black/60 to-transparent">
         <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-red-500/90 text-white text-xs font-medium">
+          <div className="flex items-center gap-1.5 px-2 py-1 rounded-full bg-danger/90 text-white text-xs font-medium">
             <span className="w-2 h-2 rounded-full bg-white animate-pulse" />
             Ao Vivo
           </div>
@@ -131,13 +131,13 @@ export function EmbeddedVideoCall({
             <span className="text-white/80 text-xs">{participantName}</span>
           )}
           {isRecording && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-red-600/90 text-white text-xs font-medium animate-pulse">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-danger/90 text-white text-xs font-medium animate-pulse">
               <Circle className="h-2.5 w-2.5 fill-current" />
               Gravando
             </div>
           )}
           {isUploading && (
-            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-yellow-500/90 text-white text-xs font-medium">
+            <div className="flex items-center gap-1 px-2 py-1 rounded-full bg-warning/90 text-white text-xs font-medium">
               <Loader2 className="h-2.5 w-2.5 animate-spin" />
               Enviando...
             </div>
@@ -154,7 +154,7 @@ export function EmbeddedVideoCall({
               onClick={startRecording}
               disabled={isUploading || isEnding}
             >
-              <Circle className="h-3.5 w-3.5 text-red-400 fill-red-400" />
+              <Circle className="h-3.5 w-3.5 text-danger fill-red-400" />
               Gravar
             </Button>
           ) : (
@@ -164,7 +164,7 @@ export function EmbeddedVideoCall({
               className="h-8 gap-1.5 text-white hover:bg-white/20 text-xs"
               onClick={stopRecording}
             >
-              <Square className="h-3.5 w-3.5 text-red-400 fill-red-400" />
+              <Square className="h-3.5 w-3.5 text-danger fill-red-400" />
               Parar
             </Button>
           )}
@@ -184,7 +184,7 @@ export function EmbeddedVideoCall({
           <Button
             variant="ghost"
             size="icon"
-            className="h-8 w-8 text-red-400 hover:bg-red-500/20 hover:text-red-300"
+            className="h-8 w-8 text-danger hover:bg-danger/20 hover:text-danger"
             onClick={handleEndCall}
             disabled={isEnding}
           >

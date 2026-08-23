@@ -87,14 +87,14 @@ export function DashboardDataTrustPanel({ data }: Props) {
   const warnCount = issues.filter((i) => i.level === "warn").length;
 
   return (
-    <Card className={warnCount > 0 ? "border-amber-500/40" : "border-emerald-500/30"}>
+    <Card className={warnCount > 0 ? "border-warning/40" : "border-success/30"}>
       <CardContent className="p-4 space-y-3">
         <div className="flex items-center justify-between gap-2 flex-wrap">
           <div className="flex items-center gap-2 text-sm font-semibold">
             {warnCount > 0 ? (
-              <AlertTriangle className="h-4 w-4 text-amber-500" />
+              <AlertTriangle className="h-4 w-4 text-warning" />
             ) : (
-              <ShieldCheck className="h-4 w-4 text-emerald-500" />
+              <ShieldCheck className="h-4 w-4 text-success" />
             )}
             Confiabilidade dos dados
           </div>
@@ -112,7 +112,7 @@ export function DashboardDataTrustPanel({ data }: Props) {
             {issues.map((i, idx) => (
               <li key={idx} className="flex items-start gap-2 text-xs text-muted-foreground">
                 {i.level === "warn" ? (
-                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-amber-500" />
+                  <AlertTriangle className="h-3.5 w-3.5 mt-0.5 shrink-0 text-warning" />
                 ) : (
                   <Info className="h-3.5 w-3.5 mt-0.5 shrink-0 text-muted-foreground" />
                 )}

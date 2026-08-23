@@ -57,13 +57,13 @@ export function LeadAdsConfig() {
         <div className="flex items-center justify-between">
           <div className="space-y-1">
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Zap className="w-5 h-5 text-amber-500" />
+              <Zap className="w-5 h-5 text-warning" />
               Lead Ads — Captação Automática
             </CardTitle>
             <CardDescription>Ative para receber leads de formulários direto no seu pipeline.</CardDescription>
           </div>
           {activeCount > 0 && (
-            <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20">
+            <Badge className="bg-success/10 text-success border-success/20">
               {activeCount} {activeCount === 1 ? 'página ativa' : 'páginas ativas'}
             </Badge>
           )}
@@ -91,7 +91,7 @@ export function LeadAdsConfig() {
                       <p className="font-medium text-sm truncate">{page.name}</p>
                       <p className="text-xs text-muted-foreground">
                         {page.is_active ? (
-                          <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-emerald-500" />Capturando leads</span>
+                          <span className="flex items-center gap-1"><CheckCircle2 className="w-3 h-3 text-success" />Capturando leads</span>
                         ) : 'Captação desativada'}
                       </p>
                     </div>

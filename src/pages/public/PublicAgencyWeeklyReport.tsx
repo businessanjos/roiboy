@@ -208,7 +208,7 @@ export default function PublicAgencyWeeklyReport() {
       <div className="flex min-h-screen items-center justify-center p-6">
         <Card className="max-w-md">
           <CardContent className="flex flex-col items-center gap-3 py-12 text-center">
-            <CheckCircle2 className="h-10 w-10 text-emerald-500" />
+            <CheckCircle2 className="h-10 w-10 text-success" />
             <h1 className="text-lg font-semibold">Relatório enviado</h1>
             <p className="text-sm text-muted-foreground">
               O relatório da semana de {format(parseISO(form.week_start), "dd/MM", { locale: ptBR })} a{" "}

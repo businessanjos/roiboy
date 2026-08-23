@@ -110,9 +110,9 @@ export function SectorsHealthBanner(props: SectorsHealthBannerProps) {
   if (tone === "ok") return null;
 
   const toneClasses = {
-    ok: "border-emerald-500/30 bg-emerald-500/5 text-emerald-700 dark:text-emerald-300",
+    ok: "border-success/30 bg-success/5 text-success-strong dark:text-success",
     loading: "border-muted bg-muted/30 text-muted-foreground",
-    warn: "border-amber-500/40 bg-amber-500/10 text-amber-800 dark:text-amber-200",
+    warn: "border-warning/40 bg-warning/10 text-warning-strong dark:text-warning",
   } as const;
 
   const Icon = tone === "warn" ? AlertTriangle : tone === "loading" ? Loader2 : CheckCircle2;

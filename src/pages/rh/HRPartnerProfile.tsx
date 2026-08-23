@@ -233,7 +233,7 @@ export default function HRPartnerProfile() {
             {saving ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...</>
             ) : lastSaved ? (
-              <><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+              <><CheckCircle2 className="h-3.5 w-3.5 text-success" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
             ) : null}
           </span>
           <Button onClick={handleSave} disabled={saving} size="sm">

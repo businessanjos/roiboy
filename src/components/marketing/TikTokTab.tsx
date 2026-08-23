@@ -308,7 +308,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
           )}
 
           {useMockData && (
-            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+            <Badge variant="outline" className="text-xs bg-warning-soft text-warning-strong border-warning">
               Dados de exemplo
             </Badge>
           )}
@@ -588,7 +588,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
                           {post.is_viral && (
                             <Tooltip>
                               <TooltipTrigger>
-                                <Flame className="h-4 w-4 text-orange-500" />
+                                <Flame className="h-4 w-4 text-warning" />
                               </TooltipTrigger>
                               <TooltipContent>Vídeo Viral</TooltipContent>
                             </Tooltip>
@@ -610,9 +610,9 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
                           className={cn(
                             'font-medium',
                             (post.completion_rate || 0) >= 70
-                              ? 'text-green-600'
+                              ? 'text-success'
                               : (post.completion_rate || 0) >= 50
-                              ? 'text-amber-600'
+                              ? 'text-warning'
                               : 'text-muted-foreground'
                           )}
                         >
@@ -621,7 +621,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
                       </TableCell>
                       <TableCell className="text-right">
                         {post.followers_gained > 0 && (
-                          <span className="text-green-600 font-medium">
+                          <span className="text-success font-medium">
                             +{formatNumber(post.followers_gained)}
                           </span>
                         )}

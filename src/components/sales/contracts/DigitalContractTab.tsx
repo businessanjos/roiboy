@@ -1182,7 +1182,7 @@ export const DigitalContractTab = ({
             onClick={handleReopenForEditing}
             disabled={saving}
             title="Volta o contrato para rascunho e desvincula da ZapSign para permitir edição"
-            className="border-amber-500/40 text-amber-600 hover:bg-amber-500/10 hover:text-amber-700"
+            className="border-warning/40 text-warning hover:bg-warning/10 hover:text-warning-strong"
           >
             <span className="ml-0.5">Reabrir para edição</span>
           </Button>
@@ -1237,11 +1237,11 @@ export const DigitalContractTab = ({
                 const isViewed = !isSigned && (s.status === "link-opened" || (s.times_viewed ?? 0) > 0 || !!s.last_view_at);
                 const isRefused = s.status === "refused";
                 const badgeClass = isSigned
-                  ? "bg-emerald-500/15 text-emerald-700 border-emerald-500/30"
+                  ? "bg-success/15 text-success-strong border-success/30"
                   : isRefused
-                  ? "bg-red-500/15 text-red-700 border-red-500/30"
+                  ? "bg-danger/15 text-danger-strong border-danger/30"
                   : isViewed
-                  ? "bg-amber-500/15 text-amber-700 border-amber-500/30"
+                  ? "bg-warning/15 text-warning-strong border-warning/30"
                   : "bg-muted text-muted-foreground border-border";
                 const label = isSigned
                   ? "Assinado"

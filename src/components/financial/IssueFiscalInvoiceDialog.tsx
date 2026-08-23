@@ -116,7 +116,7 @@ export function IssueFiscalInvoiceDialog({ invoiceId, open, onOpenChange, existi
                     new Date(existing.nf_issued_at).toLocaleString("pt-BR")}
                 </span>
               </div>
-              <div className="flex items-center gap-2 text-xs text-amber-600 dark:text-amber-400">
+              <div className="flex items-center gap-2 text-xs text-warning dark:text-warning">
                 <Lock className="h-3 w-3" />
                 Fatura travada por emissão fiscal
               </div>

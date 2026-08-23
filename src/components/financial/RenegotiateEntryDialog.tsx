@@ -491,7 +491,7 @@ export function RenegotiateEntryDialog({
             </span>
           </div>
           {entry && diff > 0.01 && (
-            <p className="text-xs text-amber-600">
+            <p className="text-xs text-warning">
               Atenção: total difere do lançamento original (
               {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(
                 Number(entry.amount)

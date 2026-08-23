@@ -196,9 +196,9 @@ export function JobStepCompensation({ form, isEditing }: Props) {
           </div>
 
           {marketClaimSelected && (
-            <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-2.5 flex items-start gap-2">
-              <AlertTriangle className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
-              <p className="text-[11px] text-amber-900 leading-snug">
+            <div className="rounded-md border border-warning/40 bg-warning/10 p-2.5 flex items-start gap-2">
+              <AlertTriangle className="h-4 w-4 text-warning-strong mt-0.5 shrink-0" />
+              <p className="text-[11px] text-warning-strong leading-snug">
                 Você marcou <strong>"{MARKET_COMPATIBLE_LABEL}"</strong>. Assim que a vaga for criada, o benchmark
                 automático verifica se o salário informado bate com o mercado. Se ficar <strong>abaixo do P50</strong>,
                 este diferencial é ocultado na página pública até você ajustar o salário ou remover o item.

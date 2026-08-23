@@ -194,7 +194,7 @@ function MonthYearSelect({
                   <span
                     className={
                       "h-1.5 w-1.5 rounded-full " +
-                      (filledMonths?.has(m.key) ? "bg-emerald-500" : "bg-muted-foreground/30")
+                      (filledMonths?.has(m.key) ? "bg-success" : "bg-muted-foreground/30")
                     }
                   />
                   {m.label} de {group.year}
@@ -547,9 +547,9 @@ export function ClientBusinessProfile({
   // -------------------- COMPACT CARD --------------------
   if (variant === "card") {
     const rykaMeta = {
-      active: { label: "Ativo", cls: "text-emerald-600", dot: "bg-emerald-500" },
-      pending: { label: "Provisionando", cls: "text-amber-600", dot: "bg-amber-500" },
-      error: { label: "Erro no provisionamento", cls: "text-red-600", dot: "bg-red-500" },
+      active: { label: "Ativo", cls: "text-success", dot: "bg-success" },
+      pending: { label: "Provisionando", cls: "text-warning", dot: "bg-warning" },
+      error: { label: "Erro no provisionamento", cls: "text-danger", dot: "bg-danger" },
       none: { label: "Não utiliza", cls: "text-muted-foreground", dot: "bg-muted-foreground/50" },
     }[rykaStatus];
 
@@ -638,7 +638,7 @@ export function ClientBusinessProfile({
                     <span
                       className={
                         "text-2xl font-bold " +
-                        (growth >= 0 ? "text-emerald-600" : "text-red-600")
+                        (growth >= 0 ? "text-success" : "text-danger")
                       }
                     >
                       {growth >= 0 ? "+" : ""}
@@ -727,7 +727,7 @@ export function ClientBusinessProfile({
                     {" • "}
                     {format(mentoringStart, "dd/MM/yyyy")}
                     {!client?.onboarding_started_at && !client?.contract_start_date && (
-                      <span className="text-amber-600"> (estimado)</span>
+                      <span className="text-warning"> (estimado)</span>
                     )}
                   </div>
                 </div>
@@ -757,11 +757,11 @@ export function ClientBusinessProfile({
 
             <div className="rounded-lg border bg-card p-3">
               <span className="text-[11px] uppercase tracking-wider text-muted-foreground font-semibold flex items-center gap-1">
-                <Trophy className="h-3.5 w-3.5 text-amber-500" /> Recorde de faturamento
+                <Trophy className="h-3.5 w-3.5 text-warning" /> Recorde de faturamento
               </span>
               {revenueRecord ? (
                 <div className="mt-1">
-                  <div className="text-lg font-bold text-amber-600">
+                  <div className="text-lg font-bold text-warning">
                     {currency(Number(revenueRecord.revenue))}
                   </div>
                   <div className="text-[11px] text-muted-foreground capitalize">

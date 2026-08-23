@@ -135,24 +135,24 @@ const getEventConfig = (event: TimelineEvent) => {
       const isGroup = event.metadata?.is_group === true;
       return {
         icon: isGroup ? <Users className="h-4 w-4" /> : isAudio ? <Mic className="h-4 w-4" /> : <MessageSquare className="h-4 w-4" />,
-        bgColor: isGroup ? "bg-indigo-500" : isClient ? "bg-blue-500" : "bg-slate-500",
-        textColor: isGroup ? "text-indigo-500" : isClient ? "text-blue-500" : "text-slate-500",
+        bgColor: isGroup ? "bg-indigo-500" : isClient ? "bg-info" : "bg-slate-500",
+        textColor: isGroup ? "text-indigo-500" : isClient ? "text-info" : "text-muted-foreground",
         label: isGroup ? event.metadata?.group_name || "Grupo" : isClient ? "Cliente" : "Equipe",
       };
     case "roi":
       const isTangible = event.metadata?.roi_type === "tangible";
       return {
         icon: <TrendingUp className="h-4 w-4" />,
-        bgColor: isTangible ? "bg-emerald-500" : "bg-teal-500",
-        textColor: isTangible ? "text-emerald-500" : "text-teal-500",
+        bgColor: isTangible ? "bg-success" : "bg-success",
+        textColor: isTangible ? "text-success" : "text-success",
         label: isTangible ? "ROI Tangível" : "ROI Intangível",
       };
     case "risk":
       const level = event.metadata?.level;
       return {
         icon: <AlertTriangle className="h-4 w-4" />,
-        bgColor: level === "high" ? "bg-red-500" : level === "medium" ? "bg-orange-500" : "bg-amber-500",
-        textColor: level === "high" ? "text-red-500" : level === "medium" ? "text-orange-500" : "text-amber-500",
+        bgColor: level === "high" ? "bg-danger" : level === "medium" ? "bg-warning" : "bg-warning",
+        textColor: level === "high" ? "text-danger" : level === "medium" ? "text-warning" : "text-warning",
         label: `Risco ${level === "high" ? "Alto" : level === "medium" ? "Médio" : "Baixo"}`,
       };
     case "recommendation":
@@ -186,15 +186,15 @@ const getEventConfig = (event: TimelineEvent) => {
     case "financial":
       return {
         icon: <DollarSign className="h-4 w-4" />,
-        bgColor: "bg-amber-500",
-        textColor: "text-amber-500",
+        bgColor: "bg-warning",
+        textColor: "text-warning",
         label: "Financeiro",
       };
     case "followup":
       return {
         icon: <FileText className="h-4 w-4" />,
-        bgColor: "bg-cyan-500",
-        textColor: "text-cyan-500",
+        bgColor: "bg-info",
+        textColor: "text-info",
         label: "Acompanhamento",
       };
     case "form_response":
@@ -207,15 +207,15 @@ const getEventConfig = (event: TimelineEvent) => {
     case "sales":
       return {
         icon: <Target className="h-4 w-4" />,
-        bgColor: "bg-green-500",
-        textColor: "text-green-500",
+        bgColor: "bg-success",
+        textColor: "text-success",
         label: "Vendas",
       };
     case "attendance":
       return {
         icon: <MapPin className="h-4 w-4" />,
-        bgColor: "bg-sky-500",
-        textColor: "text-sky-500",
+        bgColor: "bg-info",
+        textColor: "text-info",
         label: "Presença",
       };
     default:
@@ -231,9 +231,9 @@ const getEventConfig = (event: TimelineEvent) => {
 const getImpactBadge = (impact?: string) => {
   if (!impact) return null;
   const config = {
-    high: { className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30", label: "Alto" },
-    medium: { className: "bg-amber-500/10 text-amber-600 border-amber-500/30", label: "Médio" },
-    low: { className: "bg-slate-500/10 text-slate-600 border-slate-500/30", label: "Baixo" },
+    high: { className: "bg-success/10 text-success border-success/30", label: "Alto" },
+    medium: { className: "bg-warning/10 text-warning border-warning/30", label: "Médio" },
+    low: { className: "bg-slate-500/10 text-muted-foreground border-border/30", label: "Baixo" },
   }[impact];
   
   return config ? (

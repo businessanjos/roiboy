@@ -307,7 +307,7 @@ export default function MarketingTrafegoPago() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    <BarChart3 className="w-5 h-5 text-emerald-500" />Métricas de Performance
+                    <BarChart3 className="w-5 h-5 text-success" />Métricas de Performance
                   </CardTitle>
                   <CardDescription>Dados agregados da conta selecionada</CardDescription>
                 </div>
@@ -500,7 +500,7 @@ export default function MarketingTrafegoPago() {
                                       </Select>
                                     </td>
                                     <td className="p-3">
-                                      <Badge variant="outline" className={ad.status === 'active' ? 'bg-green-500/10 text-green-500 border-green-500/20' : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'}>
+                                      <Badge variant="outline" className={ad.status === 'active' ? 'bg-success/10 text-success border-success/20' : 'bg-warning/10 text-warning border-warning/20'}>
                                         {ad.status === 'active' ? 'Ativo' : 'Pausado'}
                                       </Badge>
                                     </td>

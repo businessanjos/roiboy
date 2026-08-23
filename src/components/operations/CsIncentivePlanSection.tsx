@@ -516,19 +516,19 @@ export function CsIncentivePlanSection() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <MetricInput
-            icon={<Target className="h-4 w-4 text-emerald-500" />}
+            icon={<Target className="h-4 w-4 text-success" />}
             label="Taxa de Renovação"
             value={form.weight_renewal ?? 0}
             onChange={(v) => setF("weight_renewal", v)}
           />
           <MetricInput
-            icon={<TrendingDown className="h-4 w-4 text-rose-500" />}
+            icon={<TrendingDown className="h-4 w-4 text-danger" />}
             label="Churn"
             value={form.weight_churn ?? 0}
             onChange={(v) => setF("weight_churn", v)}
           />
           <MetricInput
-            icon={<Star className="h-4 w-4 text-amber-500" />}
+            icon={<Star className="h-4 w-4 text-warning" />}
             label="NPS"
             value={form.weight_nps ?? 0}
             onChange={(v) => setF("weight_nps", v)}
@@ -648,10 +648,10 @@ export function CsIncentivePlanSection() {
                 const pct = Math.round((toNumber(t.multiplier) || 0) * 100);
                 const tone =
                   pct === 0
-                    ? "text-rose-600"
+                    ? "text-danger"
                     : pct >= 100
-                    ? "text-emerald-600"
-                    : "text-amber-600";
+                    ? "text-success"
+                    : "text-warning";
                 const monthly = toNumber(form.monthly_bonus_value);
                 const quarterValue = monthly * 3 * (toNumber(t.multiplier) || 0);
                 return (
@@ -767,7 +767,7 @@ export function CsIncentivePlanSection() {
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-base flex items-center gap-2">
-            <ShieldAlert className="h-4 w-4 text-rose-500" /> Penalidade por Churn
+            <ShieldAlert className="h-4 w-4 text-danger" /> Penalidade por Churn
           </CardTitle>
           <CardDescription>
             Reduz o bônus mensal quando o churn ultrapassar o limite definido.
@@ -865,7 +865,7 @@ export function CsIncentivePlanSection() {
             </span>
             <span>
               Bônus mensal base:{" "}
-              <strong className="text-amber-600">
+              <strong className="text-warning">
                 {formatBRL(toNumber(form.monthly_bonus_value))}
               </strong>
             </span>
@@ -1166,7 +1166,7 @@ function BonusSimulator({
         <p className="text-[11px] text-muted-foreground">
           Penalidade por churn: acima de {churnPenaltyThreshold}% desconta {churnPenaltyPercent}% do bônus.
           {churnTriggered && (
-            <span className="text-rose-600"> Aplicado: −{formatBRL(churnDiscountValue)}</span>
+            <span className="text-danger"> Aplicado: −{formatBRL(churnDiscountValue)}</span>
           )}
         </p>
       )}
@@ -1174,11 +1174,11 @@ function BonusSimulator({
       <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div className="rounded-md border p-3 bg-muted/30">
           <div className="text-xs text-muted-foreground">Bônus no mês</div>
-          <div className="text-lg font-semibold text-amber-600">{formatBRL(monthlyBonusValue)}</div>
+          <div className="text-lg font-semibold text-warning">{formatBRL(monthlyBonusValue)}</div>
         </div>
         <div className="rounded-md border p-3 bg-muted/30">
           <div className="text-xs text-muted-foreground">Bônus no trimestre</div>
-          <div className="text-lg font-semibold text-amber-600">{formatBRL(quarterBonus)}</div>
+          <div className="text-lg font-semibold text-warning">{formatBRL(quarterBonus)}</div>
         </div>
         <div className="rounded-md border p-3 bg-primary/5 border-primary/30">
           <div className="text-xs text-muted-foreground">Trimestre: salário bruto + bônus</div>

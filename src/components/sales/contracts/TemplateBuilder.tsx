@@ -628,8 +628,8 @@ export const TemplateBuilder = ({
                   </div>
                 )}
                 {unusedKeys.length > 0 && (
-                  <div className="rounded-md border border-amber-500/30 bg-amber-500/5 p-2 text-[11px]">
-                    <div className="font-semibold text-amber-700 dark:text-amber-500">
+                  <div className="rounded-md border border-warning/30 bg-warning/5 p-2 text-[11px]">
+                    <div className="font-semibold text-warning-strong dark:text-warning">
                       {unusedKeys.length} variável(eis) não usada(s) no texto
                     </div>
                     <div className="text-muted-foreground truncate">

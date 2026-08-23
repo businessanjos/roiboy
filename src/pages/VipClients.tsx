@@ -468,7 +468,7 @@ export default function VipClients() {
                     <td className="px-4 py-3 text-right tabular-nums font-medium">
                       {formatBRL(r.total)}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600 dark:text-emerald-400 font-semibold">
+                    <td className="px-4 py-3 text-right tabular-nums text-success dark:text-success font-semibold">
                       {formatBRL(r.received)}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">

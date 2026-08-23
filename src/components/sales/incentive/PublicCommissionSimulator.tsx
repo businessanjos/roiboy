@@ -103,12 +103,12 @@ export function PublicCommissionSimulator({
   }, [sales, baseSalary, sortedTiers, plan]);
 
   return (
-    <Card className="p-6 space-y-6 bg-white border-slate-200 shadow-sm">
+    <Card className="p-6 space-y-6 bg-white border-border shadow-sm">
       <div className="flex items-center gap-2">
-        <Calculator className="h-5 w-5 text-amber-600" />
+        <Calculator className="h-5 w-5 text-warning" />
         <div>
-          <h3 className="text-lg font-bold text-slate-900">Simulador</h3>
-          <p className="text-sm text-slate-600">
+          <h3 className="text-lg font-bold text-foreground">Simulador</h3>
+          <p className="text-sm text-muted-foreground">
             Ajuste o nº de vendas e o salário para simular ganhos mensais.
           </p>
         </div>
@@ -117,11 +117,11 @@ export function PublicCommissionSimulator({
       <div className="grid md:grid-cols-2 gap-5">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
-            <Label className="text-slate-700">
+            <Label className="text-foreground">
               Nº de vendas no mês:{" "}
-              <span className="font-bold text-slate-900">{sales}</span>
+              <span className="font-bold text-foreground">{sales}</span>
             </Label>
-            <Badge variant="outline" className="text-xs border-slate-300 text-slate-700 bg-white">
+            <Badge variant="outline" className="text-xs border-border text-foreground bg-white">
               {Math.round(sim.pct)}% da meta
             </Badge>
           </div>
@@ -132,7 +132,7 @@ export function PublicCommissionSimulator({
             max={20}
             step={1}
           />
-          <div className="flex justify-between text-[10px] text-slate-500">
+          <div className="flex justify-between text-[10px] text-muted-foreground">
             <span>0</span>
             <span>5</span>
             <span>10</span>
@@ -142,16 +142,16 @@ export function PublicCommissionSimulator({
         </div>
 
         <div className="space-y-2">
-          <Label className="text-slate-700">Salário base mensal (R$)</Label>
+          <Label className="text-foreground">Salário base mensal (R$)</Label>
           <Input
             type="number"
             min={0}
             step={500}
             value={baseSalary}
             onChange={(e) => setBaseSalary(Number(e.target.value || 0))}
-            className="text-slate-900 bg-white border-slate-300 placeholder:text-slate-400"
+            className="text-foreground bg-white border-border placeholder:text-muted-foreground"
           />
-          <p className="text-[11px] text-slate-500">
+          <p className="text-[11px] text-muted-foreground">
             Valor ilustrativo — substitua pelo CLT real do vendedor.
           </p>
         </div>
@@ -168,8 +168,8 @@ export function PublicCommissionSimulator({
             onClick={() => setSales(n)}
             className={
               sales === n
-                ? "h-7 px-2.5 text-xs bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold border-0"
-                : "h-7 px-2.5 text-xs bg-white hover:bg-slate-100 text-slate-700 border border-slate-300"
+                ? "h-7 px-2.5 text-xs bg-warning hover:bg-warning text-foreground font-semibold border-0"
+                : "h-7 px-2.5 text-xs bg-white hover:bg-muted text-foreground border border-border"
             }
           >
             {n} vendas
@@ -179,19 +179,19 @@ export function PublicCommissionSimulator({
 
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Metric label="Faixa" value={sim.activeTier?.label ?? "—"} accent="text-slate-900" big />
+        <Metric label="Faixa" value={sim.activeTier?.label ?? "—"} accent="text-foreground" big />
         <Metric label="Salário" value={fmt(baseSalary)} icon={DollarSign} />
         <Metric
           label="Bônus de Faixa"
           value={fmt(sim.tierBonus)}
           icon={TrendingUp}
-          accent="text-emerald-600"
+          accent="text-success"
         />
         <Metric
           label={`Sem Teto (${sim.extra} venda${sim.extra === 1 ? "" : "s"} extra)`}
           value={fmt(sim.uncapped)}
           icon={Zap}
-          accent="text-amber-600"
+          accent="text-warning"
         />
       </div>
 
@@ -208,14 +208,14 @@ export function PublicCommissionSimulator({
       {(plan.quarterly_bonus_enabled || plan.annual_bonus_enabled) && (
         <div className="grid md:grid-cols-2 gap-3">
           {plan.quarterly_bonus_enabled && (
-            <Card className="p-4 bg-cyan-50 border-cyan-200 shadow-none">
-              <div className="flex items-center gap-2 text-cyan-800 text-xs uppercase tracking-wide font-semibold">
+            <Card className="p-4 bg-info-soft border-info shadow-none">
+              <div className="flex items-center gap-2 text-info-strong text-xs uppercase tracking-wide font-semibold">
                 <Trophy className="h-4 w-4" /> Bônus Trimestral
               </div>
-              <p className="text-2xl font-black text-cyan-900 mt-1">
+              <p className="text-2xl font-black text-info-strong mt-1">
                 {fmt(sim.quarterly)}
               </p>
-              <p className="text-[11px] text-cyan-800/80">
+              <p className="text-[11px] text-info/80">
                 Pago se atingir {QUARTERLY_THRESHOLD}% da meta no trimestre.
               </p>
             </Card>
@@ -244,7 +244,7 @@ function Metric({
   label,
   value,
   icon: Icon,
-  accent = "text-slate-900",
+  accent = "text-foreground",
   big = false,
 }: {
   label: string;
@@ -254,8 +254,8 @@ function Metric({
   big?: boolean;
 }) {
   return (
-    <div className="rounded-lg border border-slate-200 bg-slate-50 p-3">
-      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-slate-500">
+    <div className="rounded-lg border border-border bg-muted p-3">
+      <div className="flex items-center gap-1.5 text-[10px] uppercase tracking-wider text-muted-foreground">
         {Icon && <Icon className="h-3 w-3" />}
         {label}
       </div>

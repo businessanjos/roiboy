@@ -20,24 +20,24 @@ interface InlineFieldInputProps {
 }
 
 const colorClasses: Record<string, string> = {
-  green: "bg-emerald-500/10 hover:bg-emerald-500/20 border-emerald-500/30",
-  red: "bg-red-500/10 hover:bg-red-500/20 border-red-500/30",
-  yellow: "bg-amber-500/10 hover:bg-amber-500/20 border-amber-500/30",
-  blue: "bg-blue-500/10 hover:bg-blue-500/20 border-blue-500/30",
+  green: "bg-success/10 hover:bg-success/20 border-success/30",
+  red: "bg-danger/10 hover:bg-danger/20 border-danger/30",
+  yellow: "bg-warning/10 hover:bg-warning/20 border-warning/30",
+  blue: "bg-info/10 hover:bg-info/20 border-info/30",
   purple: "bg-purple-500/10 hover:bg-purple-500/20 border-purple-500/30",
   pink: "bg-pink-500/10 hover:bg-pink-500/20 border-pink-500/30",
-  orange: "bg-orange-500/10 hover:bg-orange-500/20 border-orange-500/30",
+  orange: "bg-warning/10 hover:bg-warning/20 border-warning/30",
   gray: "bg-muted hover:bg-muted/80 border-border",
 };
 
 const colorSelected: Record<string, string> = {
-  green: "bg-emerald-500 text-white border-emerald-500",
-  red: "bg-red-500 text-white border-red-500",
-  yellow: "bg-amber-500 text-white border-amber-500",
-  blue: "bg-blue-500 text-white border-blue-500",
+  green: "bg-success text-white border-success",
+  red: "bg-danger text-white border-danger",
+  yellow: "bg-warning text-white border-warning",
+  blue: "bg-info text-white border-info",
   purple: "bg-purple-500 text-white border-purple-500",
   pink: "bg-pink-500 text-white border-pink-500",
-  orange: "bg-orange-500 text-white border-orange-500",
+  orange: "bg-warning text-white border-warning",
   gray: "bg-foreground text-background border-foreground",
 };
 
@@ -223,7 +223,7 @@ export function InlineFieldInput({ field, value, onChange }: InlineFieldInputPro
             {list.map((ig, i) => (
               <span key={i} className="inline-flex items-center gap-1 px-2 py-1 rounded bg-pink-500/10 text-pink-600 dark:text-pink-400 text-xs border border-pink-500/20">
                 <Instagram className="h-3 w-3" />@{ig}
-                <button type="button" onClick={() => remove(i)} className="ml-1 hover:text-red-500">×</button>
+                <button type="button" onClick={() => remove(i)} className="ml-1 hover:text-danger">×</button>
               </span>
             ))}
           </div>

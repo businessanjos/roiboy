@@ -153,7 +153,7 @@ function SortableStageItem({
             onClick={handleUpdateStage}
             disabled={savingStage}
           >
-            <Check className="h-4 w-4 text-green-600" />
+            <Check className="h-4 w-4 text-success" />
           </Button>
           <Button
             size="icon"
@@ -638,7 +638,7 @@ export function StageChecklistEditor({
                                           isPast(parseISO(item.due_date)) && !isToday(parseISO(item.due_date))
                                             ? "text-destructive"
                                             : isToday(parseISO(item.due_date))
-                                              ? "text-amber-600"
+                                              ? "text-warning"
                                               : "text-muted-foreground"
                                         )}>
                                           {isPast(parseISO(item.due_date)) && !isToday(parseISO(item.due_date)) && (

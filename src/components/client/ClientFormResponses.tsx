@@ -503,19 +503,19 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     const strVal = typeof value === "string" ? value : "";
 
     if (/email|e-mail/.test(l) || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(strVal))
-      return { Icon: Mail, tone: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10" };
+      return { Icon: Mail, tone: "text-info dark:text-info", bg: "bg-info/10" };
     if (/telefone|whats|celular|phone|contato/.test(l))
-      return { Icon: Phone, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" };
+      return { Icon: Phone, tone: "text-success dark:text-success", bg: "bg-success/10" };
     if (/data|nasc|aniver|date/.test(l) || ft === "date")
       return { Icon: CalendarIcon, tone: "text-violet-600 dark:text-violet-400", bg: "bg-violet-500/10" };
     if (/endere|cidade|estado|cep|local/.test(l))
-      return { Icon: MapPin, tone: "text-rose-600 dark:text-rose-400", bg: "bg-rose-500/10" };
+      return { Icon: MapPin, tone: "text-danger dark:text-danger", bg: "bg-danger/10" };
     if (/cnpj|cpf|documento|rg/.test(l))
-      return { Icon: Hash, tone: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10" };
+      return { Icon: Hash, tone: "text-warning dark:text-warning", bg: "bg-warning/10" };
     if (/fatur|receita|invest|valor|orcam|orçam|preço|preco|r\$/.test(l))
-      return { Icon: DollarSign, tone: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10" };
+      return { Icon: DollarSign, tone: "text-success dark:text-success", bg: "bg-success/10" };
     if (/site|url|link|insta|face|youtube|tiktok/.test(l) || /^https?:\/\//.test(strVal))
-      return { Icon: LinkIcon, tone: "text-sky-600 dark:text-sky-400", bg: "bg-sky-500/10" };
+      return { Icon: LinkIcon, tone: "text-info dark:text-info", bg: "bg-info/10" };
     if (/nome|razão|razao|empresa|companhia/.test(l))
       return { Icon: User, tone: "text-indigo-600 dark:text-indigo-400", bg: "bg-indigo-500/10" };
     if (Array.isArray(value) || ft === "multiselect" || ft === "checkbox")
@@ -616,7 +616,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
               <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                 <div className="rounded-lg border bg-card/60 p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <CheckCircle2 className="h-3.5 w-3.5 text-emerald-600" />
+                    <CheckCircle2 className="h-3.5 w-3.5 text-success" />
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Preenchidos</span>
                   </div>
                   <p className="text-2xl font-bold tabular-nums">{totalFilled}</p>
@@ -630,14 +630,14 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                 </div>
                 <div className="rounded-lg border bg-card/60 p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <DollarSign className="h-3.5 w-3.5 text-emerald-600" />
+                    <DollarSign className="h-3.5 w-3.5 text-success" />
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Moeda</span>
                   </div>
                   <p className="text-2xl font-bold tabular-nums">{currencyCount}</p>
                 </div>
                 <div className="rounded-lg border bg-card/60 p-3">
                   <div className="flex items-center gap-2 mb-1">
-                    <Phone className="h-3.5 w-3.5 text-emerald-600" />
+                    <Phone className="h-3.5 w-3.5 text-success" />
                     <span className="text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">Telefone</span>
                   </div>
                   <p className="text-2xl font-bold tabular-nums">{phoneCount}</p>
@@ -645,10 +645,10 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
               </div>
 
               {missingLabels.length > 0 && (
-                <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3">
+                <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
                   <div className="flex items-center gap-2 mb-2">
-                    <X className="h-3.5 w-3.5 text-amber-600" />
-                    <span className="text-xs font-semibold text-amber-700 dark:text-amber-400">
+                    <X className="h-3.5 w-3.5 text-warning" />
+                    <span className="text-xs font-semibold text-warning-strong dark:text-warning">
                       {missingLabels.length} {missingLabels.length === 1 ? "valor" : "valores"} sem label resolvido
                     </span>
                   </div>
@@ -659,7 +659,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                     {missingLabels.slice(0, 12).map((m, i) => (
                       <span
                         key={i}
-                        className="inline-flex items-center gap-1.5 rounded-md bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 text-[11px] font-medium text-amber-800 dark:text-amber-300"
+                        className="inline-flex items-center gap-1.5 rounded-md bg-warning/10 border border-warning/30 px-2 py-0.5 text-[11px] font-medium text-warning-strong dark:text-warning"
                         title={`${m.label}: ${m.rawValue}`}
                       >
                         <span className="font-semibold">{m.label}:</span>
@@ -812,7 +812,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                             if (fieldType === "currency") {
                               return (
                                 <div>
-                                  <p className="text-base font-bold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                                  <p className="text-base font-bold text-success dark:text-success tabular-nums">
                                     {formatCurrencyForLocale(value, clientLocale)}
                                   </p>
                                   <p className="text-[10px] text-muted-foreground mt-0.5">
@@ -830,7 +830,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                                   href={`https://wa.me/${String(value ?? "").replace(/\D/g, "")}`}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-sm font-medium text-emerald-700 dark:text-emerald-400 hover:underline tabular-nums"
+                                  className="text-sm font-medium text-success-strong dark:text-success hover:underline tabular-nums"
                                 >
                                   {formatPhone(value)}
                                 </a>
@@ -840,7 +840,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                             // 4) Email
                             if (fieldType === "text" && /email|e-mail/i.test(label)) {
                               return (
-                                <a href={`mailto:${value}`} className="text-sm font-medium text-blue-700 dark:text-blue-400 hover:underline break-all">
+                                <a href={`mailto:${value}`} className="text-sm font-medium text-info-strong dark:text-info hover:underline break-all">
                                   {String(value ?? "")}
                                 </a>
                               );
@@ -872,10 +872,10 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                                 <span className={cn(
                                   "inline-flex items-center gap-1.5 rounded-md px-2 py-1 text-xs font-medium border",
                                   truthy
-                                    ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-400 border-emerald-500/30"
-                                    : "bg-rose-500/10 text-rose-700 dark:text-rose-400 border-rose-500/30"
+                                    ? "bg-success/10 text-success-strong dark:text-success border-success/30"
+                                    : "bg-danger/10 text-danger-strong dark:text-danger border-danger/30"
                                 )}>
-                                  <span className={cn("h-1.5 w-1.5 rounded-full", truthy ? "bg-emerald-500" : "bg-rose-500")} />
+                                  <span className={cn("h-1.5 w-1.5 rounded-full", truthy ? "bg-success" : "bg-danger")} />
                                   {truthy ? "Sim" : "Não"}
                                 </span>
                               );
@@ -885,7 +885,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                             if (fieldType === "location") {
                               return (
                                 <p className="text-sm font-medium inline-flex items-start gap-1.5">
-                                  <MapPin className="h-3.5 w-3.5 text-rose-500 mt-0.5 shrink-0" />
+                                  <MapPin className="h-3.5 w-3.5 text-danger mt-0.5 shrink-0" />
                                   {formatLocation(value)}
                                 </p>
                               );
@@ -935,7 +935,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
                     ) : (
                       <ChevronRight className="h-4 w-4 text-muted-foreground" />
                     )}
-                    <Building2 className="h-5 w-5 text-emerald-500" />
+                    <Building2 className="h-5 w-5 text-success" />
                     <div>
                       <CardTitle className="text-base">
                         Diagnóstico Empresarial

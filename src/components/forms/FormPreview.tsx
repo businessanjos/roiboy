@@ -86,7 +86,7 @@ export function FormPreview({ formData, customFields }: FormPreviewProps) {
           <div className="space-y-2">
             <Label style={{ color: appearance.text_color }}>
               {field.name}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+              {field.is_required && <span className="text-danger ml-1">*</span>}
             </Label>
             <RadioGroup disabled>
               {field.options?.map((option, idx) => (
@@ -109,7 +109,7 @@ export function FormPreview({ formData, customFields }: FormPreviewProps) {
           <div className="space-y-2">
             <Label style={{ color: appearance.text_color }}>
               {field.name}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+              {field.is_required && <span className="text-danger ml-1">*</span>}
             </Label>
             <div className="space-y-2">
               {field.options?.map((option, idx) => (
@@ -132,7 +132,7 @@ export function FormPreview({ formData, customFields }: FormPreviewProps) {
           <div className="space-y-2">
             <Label style={{ color: appearance.text_color }}>
               {field.name}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+              {field.is_required && <span className="text-danger ml-1">*</span>}
             </Label>
             <Textarea
               disabled
@@ -147,7 +147,7 @@ export function FormPreview({ formData, customFields }: FormPreviewProps) {
           <div className="space-y-2">
             <Label style={{ color: appearance.text_color }}>
               {field.name}
-              {field.is_required && <span className="text-red-500 ml-1">*</span>}
+              {field.is_required && <span className="text-danger ml-1">*</span>}
             </Label>
             <Input
               disabled
@@ -240,13 +240,13 @@ export function FormPreview({ formData, customFields }: FormPreviewProps) {
                 <div className="space-y-4 pb-4 border-b">
                   <div className="space-y-2">
                     <Label style={{ color: appearance.text_color }}>
-                      Nome Completo <span className="text-red-500">*</span>
+                      Nome Completo <span className="text-danger">*</span>
                     </Label>
                     <Input disabled placeholder="Seu nome..." />
                   </div>
                   <div className="space-y-2">
                     <Label style={{ color: appearance.text_color }}>
-                      Telefone <span className="text-red-500">*</span>
+                      Telefone <span className="text-danger">*</span>
                     </Label>
                     <Input disabled placeholder="(00) 00000-0000" />
                   </div>

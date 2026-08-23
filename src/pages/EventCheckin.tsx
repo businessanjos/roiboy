@@ -153,8 +153,8 @@ export default function EventCheckin() {
       <div className="min-h-screen bg-gradient-to-br from-background to-muted flex items-center justify-center p-4">
         <Card className="w-full max-w-md border-0 shadow-xl">
           <CardContent className="flex flex-col items-center justify-center py-12">
-            <div className="h-20 w-20 rounded-full bg-green-500/10 flex items-center justify-center mb-6">
-              <CheckCircle className="h-10 w-10 text-green-500" />
+            <div className="h-20 w-20 rounded-full bg-success/10 flex items-center justify-center mb-6">
+              <CheckCircle className="h-10 w-10 text-success" />
             </div>
             <h2 className="text-2xl font-semibold mb-2 text-center">Check-in realizado!</h2>
             <p className="text-muted-foreground text-center mb-4">

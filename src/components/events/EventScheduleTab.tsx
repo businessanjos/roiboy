@@ -412,7 +412,7 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
                                 </AvatarFallback>
                               </Avatar>
                               <span>{speaker.users?.name}</span>
-                              <Badge variant="outline" className={`text-xs ${speaker.is_external ? "border-orange-500 text-orange-600" : "border-blue-500 text-blue-600"}`}>
+                              <Badge variant="outline" className={`text-xs ${speaker.is_external ? "border-warning text-warning" : "border-info text-info"}`}>
                                 {speaker.is_external ? "Externo" : "Interno"}
                               </Badge>
                             </div>

@@ -6,10 +6,10 @@ export type MiKpiTone = "neutral" | "success" | "warning" | "danger" | "info" | 
 
 const TONE: Record<MiKpiTone, { text: string; bg: string; ring: string }> = {
   neutral: { text: "text-foreground", bg: "bg-muted", ring: "ring-border" },
-  success: { text: "text-emerald-600 dark:text-emerald-400", bg: "bg-emerald-500/10", ring: "ring-emerald-500/20" },
-  warning: { text: "text-amber-600 dark:text-amber-400", bg: "bg-amber-500/10", ring: "ring-amber-500/20" },
-  danger:  { text: "text-red-600 dark:text-red-400", bg: "bg-red-500/10", ring: "ring-red-500/20" },
-  info:    { text: "text-blue-600 dark:text-blue-400", bg: "bg-blue-500/10", ring: "ring-blue-500/20" },
+  success: { text: "text-success dark:text-success", bg: "bg-success/10", ring: "ring-success/20" },
+  warning: { text: "text-warning dark:text-warning", bg: "bg-warning/10", ring: "ring-warning/20" },
+  danger:  { text: "text-danger dark:text-danger", bg: "bg-danger/10", ring: "ring-danger/20" },
+  info:    { text: "text-info dark:text-info", bg: "bg-info/10", ring: "ring-info/20" },
   accent:  { text: "text-purple-600 dark:text-purple-400", bg: "bg-purple-500/10", ring: "ring-purple-500/20" },
 };
 

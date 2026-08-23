@@ -62,7 +62,7 @@ export function EmitirNFButton({ installmentId, invoiceId, size = "sm", variant 
         onClick={() => existing.pdf_url && window.open(existing.pdf_url, "_blank")}
         title={`NFS-e ${existing.nfse_number ?? ""}`}
       >
-        <Receipt className="h-3.5 w-3.5 mr-1 text-emerald-600" />
+        <Receipt className="h-3.5 w-3.5 mr-1 text-success" />
         NF {existing.nfse_number ?? "✓"}
       </Button>
     );

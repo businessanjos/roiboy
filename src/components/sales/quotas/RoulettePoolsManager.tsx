@@ -160,7 +160,7 @@ export function RoulettePoolsManager() {
         <CardHeader className="flex flex-row items-center justify-between space-y-0">
           <div>
             <CardTitle className="flex items-center gap-2 text-lg">
-              <Dice5 className="h-5 w-5 text-amber-500" />
+              <Dice5 className="h-5 w-5 text-warning" />
               Roletas de Prêmios
             </CardTitle>
             <CardDescription>
@@ -384,7 +384,7 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
       <CardHeader className="flex flex-row items-center justify-between space-y-0">
         <div>
           <CardTitle className="text-base flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-amber-500" />
+            <Sparkles className="h-4 w-4 text-warning" />
             Prêmios de "{pool.name}"
           </CardTitle>
           <CardDescription>
@@ -449,7 +449,7 @@ function PrizeListEditor({ pool, prizes, accountId, onClose }: {
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
-              <Play className="h-5 w-5 text-amber-500" />
+              <Play className="h-5 w-5 text-warning" />
               Teste — {pool.name}
             </DialogTitle>
             <DialogDescription>
@@ -547,8 +547,8 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
   return (
     <div className={cn(
       "rounded-md border bg-card p-2 space-y-2 transition-colors",
-      dirty && "border-amber-500/50 bg-amber-500/5",
-      savedFlash && "border-emerald-500/50 bg-emerald-500/5",
+      dirty && "border-warning/50 bg-warning/5",
+      savedFlash && "border-success/50 bg-success/5",
     )}>
       <div className="flex items-center gap-2">
         <div
@@ -565,11 +565,11 @@ function PrizeRow({ prize, probability, onSave, onDelete }: {
           {probability.toFixed(1)}%
         </Badge>
         {dirty ? (
-          <Badge variant="outline" className="text-[10px] border-amber-500 text-amber-600">
+          <Badge variant="outline" className="text-[10px] border-warning text-warning">
             salvando…
           </Badge>
         ) : savedFlash ? (
-          <Badge variant="outline" className="text-[10px] border-emerald-500 text-emerald-600">
+          <Badge variant="outline" className="text-[10px] border-success text-success">
             ✓ salvo
           </Badge>
         ) : null}

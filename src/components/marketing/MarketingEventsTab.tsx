@@ -661,8 +661,8 @@ export default function MarketingEventsTab() {
                         <Badge 
                           variant={event.category === "marketing" ? "default" : "secondary"}
                           className={event.category === "marketing" 
-                            ? "bg-orange-500 hover:bg-orange-600 text-white" 
-                            : "bg-blue-500 hover:bg-blue-600 text-white"
+                            ? "bg-warning hover:bg-warning text-white" 
+                            : "bg-info hover:bg-info text-white"
                           }
                         >
                           {event.category === "marketing" ? "MARKETING" : "OPERAÇÃO"}
@@ -709,7 +709,7 @@ export default function MarketingEventsTab() {
                           return (
                             <div className="flex flex-wrap gap-1">
                               {stageNames.slice(0, 2).map((name, idx) => (
-                                <Badge key={idx} variant="outline" className="text-xs bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300">
+                                <Badge key={idx} variant="outline" className="text-xs bg-info-soft dark:bg-info border-info dark:border-info text-info-strong dark:text-info">
                                   {name}
                                 </Badge>
                               ))}
@@ -1138,7 +1138,7 @@ export default function MarketingEventsTab() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Meta de Confirmados</span>
-                        <span className="font-medium text-blue-600">
+                        <span className="font-medium text-info">
                           Meta: {selectedEventForAttendance.goal_confirmed}
                         </span>
                       </div>
@@ -1153,7 +1153,7 @@ export default function MarketingEventsTab() {
                     <div className="space-y-1">
                       <div className="flex justify-between text-sm">
                         <span className="text-muted-foreground">Meta de Convidados</span>
-                        <span className="font-medium text-amber-600">
+                        <span className="font-medium text-warning">
                           Meta: {selectedEventForAttendance.goal_invited}
                         </span>
                       </div>

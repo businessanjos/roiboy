@@ -274,7 +274,7 @@ export function CancelDelinquentDialog({
       <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertTriangle className="h-5 w-5 text-amber-600" />
+            <AlertTriangle className="h-5 w-5 text-warning" />
             Cancelar por inadimplência
           </DialogTitle>
           <DialogDescription>
@@ -291,7 +291,7 @@ export function CancelDelinquentDialog({
           </div>
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">Já recebido</span>
-            <span className="font-medium tabular-nums text-emerald-700">
+            <span className="font-medium tabular-nums text-success-strong">
               {formatBRLPrecise(target.total_received)}
             </span>
           </div>
@@ -303,7 +303,7 @@ export function CancelDelinquentDialog({
                 <Badge variant="destructive" className="h-5">{overdueCount} vencida(s)</Badge>
               )}
             </span>
-            <span className="text-lg font-bold tabular-nums text-red-600">
+            <span className="text-lg font-bold tabular-nums text-danger">
               {isLoading ? "..." : formatBRLPrecise(totalOwed)}
             </span>
           </div>
@@ -320,11 +320,11 @@ export function CancelDelinquentDialog({
             type="button"
             onClick={() => setMode("cancel")}
             className={`rounded-lg border p-3 text-left transition-colors ${
-              mode === "cancel" ? "border-red-500 bg-red-50 dark:bg-red-950/20" : "hover:bg-muted/50"
+              mode === "cancel" ? "border-danger bg-danger-soft dark:bg-danger/20" : "hover:bg-muted/50"
             }`}
           >
             <div className="flex items-center gap-2 font-medium text-sm">
-              <Ban className="h-4 w-4 text-red-600" /> Cancelar contrato
+              <Ban className="h-4 w-4 text-danger" /> Cancelar contrato
             </div>
             <p className="text-xs text-muted-foreground mt-1">
               Marca o contrato como Cancelado e dá baixa (write-off) nas parcelas em aberto.
@@ -525,7 +525,7 @@ export function CancelDelinquentDialog({
               <span className="font-semibold tabular-nums">{formatBRLPrecise(totalRenegotiated)}</span>
             </div>
             {Math.abs(totalRenegotiated - totalOwed) > 0.01 && (
-              <p className="text-xs text-amber-600">
+              <p className="text-xs text-warning">
                 Atenção: total difere do valor devido em aberto ({formatBRLPrecise(totalOwed)}).
               </p>
             )}

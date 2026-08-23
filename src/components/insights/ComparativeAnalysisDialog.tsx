@@ -145,7 +145,7 @@ function DeltaBadge({ pct, positive, neutral }: { pct: number | null; positive: 
         neutral
           ? "text-muted-foreground"
           : positive
-            ? "text-emerald-600 border-emerald-500/40 bg-emerald-500/10"
+            ? "text-success border-success/40 bg-success/10"
             : "text-destructive border-destructive/40 bg-destructive/10",
       )}
     >

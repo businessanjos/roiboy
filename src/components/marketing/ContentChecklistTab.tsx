@@ -240,8 +240,8 @@ export function ContentChecklistTab() {
 
   const decisionBadge = (decision: string) => {
     const map: Record<string, { label: string; className: string }> = {
-      approved: { label: 'Aprovado', className: 'bg-emerald-500/15 text-emerald-600 border-emerald-500/30' },
-      adjust: { label: 'Ajustar', className: 'bg-amber-500/15 text-amber-600 border-amber-500/30' },
+      approved: { label: 'Aprovado', className: 'bg-success/15 text-success border-success/30' },
+      adjust: { label: 'Ajustar', className: 'bg-warning/15 text-warning border-warning/30' },
       rejected: { label: 'Reprovado', className: 'bg-destructive/15 text-destructive border-destructive/30' },
       pending: { label: 'Em preenchimento', className: 'bg-muted text-muted-foreground border-border' },
     };
@@ -430,11 +430,11 @@ export function ContentChecklistTab() {
               </div>
 
             ) : progress === 100 ? (
-              <div className="flex items-center gap-2 rounded-md border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600">
+              <div className="flex items-center gap-2 rounded-md border border-success/30 bg-success/10 p-3 text-sm text-success">
                 <CheckCircle2 className="h-4 w-4" /> Pronto para enviar à Bruna
               </div>
             ) : (
-              <div className="flex items-start gap-2 rounded-md border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-600">
+              <div className="flex items-start gap-2 rounded-md border border-warning/30 bg-warning/10 p-3 text-xs text-warning">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
                 Regra: se houver dúvida, não sobe. Complete todos os itens antes de aprovar.
               </div>

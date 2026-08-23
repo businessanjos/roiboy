@@ -49,7 +49,7 @@ const COMMISSION_MODELS: CommissionModel[] = [
     key: "percent_tiers",
     label: "Escalonado",
     description: "Percentual varia de acordo com a faixa de atingimento da meta.",
-    icon: <TrendingUp className="h-5 w-5 text-emerald-600" />,
+    icon: <TrendingUp className="h-5 w-5 text-success" />,
     examples: "Ex: até 80% da cota = 0,5% · 81-99% = 0,8% · 100%+ = 2%",
   },
   {
@@ -63,49 +63,49 @@ const COMMISSION_MODELS: CommissionModel[] = [
     key: "recurring",
     label: "Recorrente",
     description: "Comissão paga mensalmente enquanto o cliente mantiver contrato.",
-    icon: <ArrowRight className="h-5 w-5 text-blue-600" />,
+    icon: <ArrowRight className="h-5 w-5 text-info" />,
     examples: "Ex: 5% recorrente sobre mensalidade do cliente ativo",
   },
   {
     key: "team",
     label: "Por Equipe",
     description: "Comissão pelo desempenho coletivo do time.",
-    icon: <Users className="h-5 w-5 text-teal-600" />,
+    icon: <Users className="h-5 w-5 text-success" />,
     examples: "Ex: 1% sobre faturamento total da equipe dividido entre membros",
   },
   {
     key: "ote",
     label: "OTE",
     description: "Salário fixo + variável. Transparência total.",
-    icon: <Target className="h-5 w-5 text-amber-600" />,
+    icon: <Target className="h-5 w-5 text-warning" />,
     examples: "Ex: R$ 5.000 fixo + R$ 5.000 variável ao bater 100% da meta",
   },
   {
     key: "pure_commission",
     label: "Comissão Pura",
     description: "Baixo fixo, alta variável.",
-    icon: <Zap className="h-5 w-5 text-red-500" />,
+    icon: <Zap className="h-5 w-5 text-danger" />,
     examples: "Ex: Sem salário fixo, 10% sobre todas as vendas fechadas",
   },
   {
     key: "gross_revenue",
     label: "Por Faturamento Bruto",
     description: "Comissão sobre faturamento bruto total.",
-    icon: <BarChart3 className="h-5 w-5 text-blue-500" />,
+    icon: <BarChart3 className="h-5 w-5 text-info" />,
     examples: "Ex: 2% sobre o faturamento bruto mensal gerado",
   },
   {
     key: "profit_margin",
     label: "Por Margem de Lucro",
     description: "Comissão baseada na margem, não no faturamento.",
-    icon: <Shield className="h-5 w-5 text-teal-500" />,
+    icon: <Shield className="h-5 w-5 text-success" />,
     examples: "Ex: 8% sobre a margem líquida de cada venda",
   },
   {
     key: "bonus_model",
     label: "Modelo de Bônus",
     description: "Remuneração variável por metas específicas.",
-    icon: <Award className="h-5 w-5 text-orange-500" />,
+    icon: <Award className="h-5 w-5 text-warning" />,
     examples: "Ex: R$ 2.000 ao atingir 100% da meta · R$ 5.000 ao atingir 150%",
   },
 ];
@@ -311,7 +311,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                         {model.label}
                       </h3>
                       {(savedModel || "percent_tiers") === model.key && (
-                        <Badge className="text-[9px] px-1.5 py-0 bg-emerald-500 text-white border-emerald-600 hover:bg-emerald-500">
+                        <Badge className="text-[9px] px-1.5 py-0 bg-success text-white border-success hover:bg-success">
                           Modelo atual
                         </Badge>
                       )}
@@ -522,7 +522,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
             <div
               key={index}
               className={`border rounded-lg p-4 space-y-3 ${
-                tier.is_super_meta ? "border-amber-500/50 bg-amber-500/5" : ""
+                tier.is_super_meta ? "border-warning/50 bg-warning/5" : ""
               }`}
             >
               <div className="flex items-center justify-between">
@@ -533,7 +533,7 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
                     className="w-52 h-8 text-sm font-medium"
                   />
                   {tier.is_super_meta && (
-                    <Badge className="bg-amber-500 text-white text-[10px]">⭐ Super Meta</Badge>
+                    <Badge className="bg-warning text-white text-[10px]">⭐ Super Meta</Badge>
                   )}
                 </div>
                 <div className="flex items-center gap-2">
@@ -717,11 +717,11 @@ export function CommissionPlanSetup({ plan, onSave }: CommissionPlanSetupProps) 
 
           {/* Draw summary */}
           {selectedModel === "draw_against" && drawAmount > 0 && (
-            <div className="p-3 border rounded-lg bg-amber-500/5 border-amber-500/20">
+            <div className="p-3 border rounded-lg bg-warning/5 border-warning/20">
               <div className="flex items-center gap-2 text-sm">
-                <DollarSign className="h-4 w-4 text-amber-600" />
+                <DollarSign className="h-4 w-4 text-warning" />
                 <span className="font-medium">Draw mensal:</span>
-                <span className="text-amber-600 font-bold">{formatCurrency(drawAmount)}</span>
+                <span className="text-warning font-bold">{formatCurrency(drawAmount)}</span>
                 <span className="text-xs text-muted-foreground">descontado da comissão total</span>
               </div>
             </div>

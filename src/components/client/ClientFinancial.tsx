@@ -108,12 +108,12 @@ interface ClientFinancialProps {
 }
 
 const paymentStatusConfig = {
-  active: { label: "Ativo", icon: CheckCircle2, className: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30" },
-  overdue: { label: "Em Atraso", icon: AlertCircle, className: "bg-red-500/10 text-red-600 border-red-500/30" },
-  cancelled: { label: "Cancelado", icon: XCircle, className: "bg-slate-500/10 text-slate-600 border-slate-500/30" },
-  trial: { label: "Trial", icon: Clock, className: "bg-blue-500/10 text-blue-600 border-blue-500/30" },
-  paused: { label: "Pausado", icon: PauseCircle, className: "bg-amber-500/10 text-amber-600 border-amber-500/30" },
-  pending: { label: "Pendente", icon: Clock, className: "bg-orange-500/10 text-orange-600 border-orange-500/30" },
+  active: { label: "Ativo", icon: CheckCircle2, className: "bg-success/10 text-success border-success/30" },
+  overdue: { label: "Em Atraso", icon: AlertCircle, className: "bg-danger/10 text-danger border-danger/30" },
+  cancelled: { label: "Cancelado", icon: XCircle, className: "bg-slate-500/10 text-muted-foreground border-border/30" },
+  trial: { label: "Trial", icon: Clock, className: "bg-info/10 text-info border-info/30" },
+  paused: { label: "Pausado", icon: PauseCircle, className: "bg-warning/10 text-warning border-warning/30" },
+  pending: { label: "Pendente", icon: Clock, className: "bg-warning/10 text-warning border-warning/30" },
 };
 
 const billingPeriodLabels = {
@@ -125,10 +125,10 @@ const billingPeriodLabels = {
 };
 
 const entryStatusConfig: Record<string, { label: string; className: string }> = {
-  pending: { label: "Pendente", className: "bg-amber-500/10 text-amber-600" },
-  paid: { label: "Pago", className: "bg-emerald-500/10 text-emerald-600" },
-  overdue: { label: "Vencido", className: "bg-red-500/10 text-red-600" },
-  cancelled: { label: "Cancelado", className: "bg-slate-500/10 text-slate-600" },
+  pending: { label: "Pendente", className: "bg-warning/10 text-warning" },
+  paid: { label: "Pago", className: "bg-success/10 text-success" },
+  overdue: { label: "Vencido", className: "bg-danger/10 text-danger" },
+  cancelled: { label: "Cancelado", className: "bg-slate-500/10 text-muted-foreground" },
 };
 
 const FINANCIAL_ALLOWED_ROLES = ["Admin", "Financeiro", "Gestor"];
@@ -630,11 +630,11 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                   <div key={entry.id} className="p-3 rounded-lg border border-border bg-card/50 hover:bg-card/80 transition-colors">
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3">
-                        <div className={`p-2 rounded-full ${isReceivable ? "bg-emerald-500/10" : "bg-red-500/10"}`}>
+                        <div className={`p-2 rounded-full ${isReceivable ? "bg-success/10" : "bg-danger/10"}`}>
                           {isReceivable ? (
-                            <ArrowDownLeft className="h-4 w-4 text-emerald-600" />
+                            <ArrowDownLeft className="h-4 w-4 text-success" />
                           ) : (
-                            <ArrowUpRight className="h-4 w-4 text-red-600" />
+                            <ArrowUpRight className="h-4 w-4 text-danger" />
                           )}
                         </div>
                         <div className="space-y-0.5">
@@ -674,7 +674,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                         </div>
                       </div>
                       <div className="text-right space-y-1">
-                        <p className={`font-semibold ${isReceivable ? "text-emerald-600" : "text-red-600"}`}>
+                        <p className={`font-semibold ${isReceivable ? "text-success" : "text-danger"}`}>
                           {isReceivable ? "+" : "-"} {formatCurrency(entry.amount, entry.currency)}
                         </p>
                         <Badge variant="outline" className={`text-[10px] ${statusConf.className}`}>
@@ -726,16 +726,16 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
               <div className="space-y-2">
                 {stripeSubscriptions.map((stripeSub) => {
                   const stripeStatusConfig: Record<string, { label: string; className: string }> = {
-                    active: { label: "Ativo", className: "bg-emerald-500/10 text-emerald-600" },
-                    trialing: { label: "Trial", className: "bg-blue-500/10 text-blue-600" },
-                    past_due: { label: "Atrasado", className: "bg-red-500/10 text-red-600" },
-                    canceled: { label: "Cancelado", className: "bg-slate-500/10 text-slate-600" },
-                    unpaid: { label: "Não pago", className: "bg-red-500/10 text-red-600" },
-                    incomplete: { label: "Incompleto", className: "bg-amber-500/10 text-amber-600" },
-                    incomplete_expired: { label: "Expirado", className: "bg-slate-500/10 text-slate-600" },
-                    paused: { label: "Pausado", className: "bg-amber-500/10 text-amber-600" },
+                    active: { label: "Ativo", className: "bg-success/10 text-success" },
+                    trialing: { label: "Trial", className: "bg-info/10 text-info" },
+                    past_due: { label: "Atrasado", className: "bg-danger/10 text-danger" },
+                    canceled: { label: "Cancelado", className: "bg-slate-500/10 text-muted-foreground" },
+                    unpaid: { label: "Não pago", className: "bg-danger/10 text-danger" },
+                    incomplete: { label: "Incompleto", className: "bg-warning/10 text-warning" },
+                    incomplete_expired: { label: "Expirado", className: "bg-slate-500/10 text-muted-foreground" },
+                    paused: { label: "Pausado", className: "bg-warning/10 text-warning" },
                   };
-                  const statusConf = stripeStatusConfig[stripeSub.status] || { label: stripeSub.status, className: "bg-slate-500/10 text-slate-600" };
+                  const statusConf = stripeStatusConfig[stripeSub.status] || { label: stripeSub.status, className: "bg-slate-500/10 text-muted-foreground" };
                   
                   return (
                     <div key={stripeSub.id} className="p-4 rounded-lg border border-border bg-card/50">
@@ -781,7 +781,7 @@ export function ClientFinancial({ clientId }: ClientFinancialProps) {
                               <span className="text-muted-foreground/70">{stripeSub.customer_email}</span>
                             )}
                             {stripeSub.cancel_at_period_end && (
-                              <Badge variant="outline" className="text-[10px] bg-amber-500/10 text-amber-600">
+                              <Badge variant="outline" className="text-[10px] bg-warning/10 text-warning">
                                 Cancela no fim do período
                               </Badge>
                             )}

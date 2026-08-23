@@ -184,7 +184,7 @@ export function ICPDashboard() {
       {/* Summary cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4 text-center">
-          <Crown className="w-6 h-6 text-green-500 mx-auto mb-1" />
+          <Crown className="w-6 h-6 text-success mx-auto mb-1" />
           <p className="text-2xl font-bold">{icpData.totalSuccess}</p>
           <p className="text-xs text-muted-foreground">Calls Campeãs</p>
         </CardContent></Card>
@@ -194,21 +194,21 @@ export function ICPDashboard() {
           <p className="text-xs text-muted-foreground">Taxa de Conversão</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <Sparkles className="w-6 h-6 text-amber-500 mx-auto mb-1" />
+          <Sparkles className="w-6 h-6 text-warning mx-auto mb-1" />
           <p className="text-2xl font-bold">{signalsCoverage}%</p>
           <p className="text-xs text-muted-foreground">Cobertura ICP (IA)</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <Building2 className="w-6 h-6 text-blue-500 mx-auto mb-1" />
+          <Building2 className="w-6 h-6 text-info mx-auto mb-1" />
           <p className="text-2xl font-bold">{Object.keys(icpData.niches).length}</p>
           <p className="text-xs text-muted-foreground">Nichos distintos</p>
         </CardContent></Card>
       </div>
 
       {signalsCoverage < 100 && (
-        <Card className="border-amber-500/30 bg-amber-500/5">
+        <Card className="border-warning/30 bg-warning/5">
           <CardContent className="p-3 flex items-center gap-3 text-xs flex-wrap">
-            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+            <AlertCircle className="w-4 h-4 text-warning shrink-0" />
             <p className="text-muted-foreground flex-1 min-w-[220px]">
               <span className="font-semibold text-foreground">{icpData.withSignals}/{icpData.totalSuccess}</span> calls campeãs com sinais ICP extraídos.
               {signalsCoverage < 100 && ' Reanalise para preencher os nichos das calls antigas.'}
@@ -255,7 +255,7 @@ export function ICPDashboard() {
           <CardContent><TopItems data={icpData.businessModels} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-emerald-500" />Faixa de ticket / faturamento</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><DollarSign className="w-4 h-4 text-success" />Faixa de ticket / faturamento</CardTitle></CardHeader>
           <CardContent className="space-y-3">
             <div>
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground mb-1">Ticket médio do lead</p>
@@ -285,15 +285,15 @@ export function ICPDashboard() {
           </CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4 text-rose-500" />Dores recorrentes (que fecharam)</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><AlertCircle className="w-4 h-4 text-danger" />Dores recorrentes (que fecharam)</CardTitle></CardHeader>
           <CardContent><TopItems data={icpData.pains} /></CardContent>
         </Card>
         <Card>
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-amber-500" />Objeções vencidas</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Users className="w-4 h-4 text-warning" />Objeções vencidas</CardTitle></CardHeader>
           <CardContent><TopItems data={icpData.objections} /></CardContent>
         </Card>
         <Card className="md:col-span-2">
-          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-emerald-500" />Gatilhos que mais funcionaram</CardTitle></CardHeader>
+          <CardHeader className="pb-2"><CardTitle className="text-sm flex items-center gap-2"><Sparkles className="w-4 h-4 text-success" />Gatilhos que mais funcionaram</CardTitle></CardHeader>
           <CardContent><TopItems data={icpData.triggers} /></CardContent>
         </Card>
       </div>

@@ -175,7 +175,7 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
           <CardContent className="p-3">
             <div className="text-xs text-muted-foreground">Gatilhos atingidos</div>
             <div className="text-xl font-bold flex items-center gap-2">
-              <Trophy className="h-4 w-4 text-amber-500" />
+              <Trophy className="h-4 w-4 text-warning" />
               {totalAchieved}
             </div>
           </CardContent>
@@ -183,7 +183,7 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
         <Card>
           <CardContent className="p-3">
             <div className="text-xs text-muted-foreground">Bônus apurado</div>
-            <div className="text-xl font-bold text-amber-500">
+            <div className="text-xl font-bold text-warning">
               {formatBRL(totalEarned)}
             </div>
           </CardContent>
@@ -293,9 +293,9 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                                   className={
                                     "h-7 text-xs text-center w-[68px] " +
                                     (achieved && previewActual !== null
-                                      ? "border-emerald-500"
+                                      ? "border-success"
                                       : previewActual !== null
-                                      ? "border-rose-500"
+                                      ? "border-danger"
                                       : "")
                                   }
                                   value={value}
@@ -337,9 +337,9 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                             {previewActual !== null && (
                               <div className="flex items-center gap-1">
                                 {achieved ? (
-                                  <Check className="h-3 w-3 text-emerald-500" />
+                                  <Check className="h-3 w-3 text-success" />
                                 ) : (
-                                  <X className="h-3 w-3 text-rose-500" />
+                                  <X className="h-3 w-3 text-danger" />
                                 )}
                                 <span className="text-[10px] font-medium">
                                   {achieved
@@ -356,7 +356,7 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                               return (
                                 <button
                                   type="button"
-                                  className="text-[10px] text-blue-500 hover:underline"
+                                  className="text-[10px] text-info hover:underline"
                                   title={`Valor real calculado: ${real}${unit}. Clique para aplicar.`}
                                   onClick={() => setCellValue(g.id, month, String(real))}
                                 >
@@ -368,7 +368,7 @@ export function ConsultantPayoutTable({ goals, userId, year, products }: Props) 
                         </td>
                       );
                     })}
-                    <td className="p-2 text-right font-semibold text-amber-500">
+                    <td className="p-2 text-right font-semibold text-warning">
                       {formatBRL(goalTotal)}
                     </td>
                   </tr>

@@ -16,16 +16,16 @@ interface LeadDuplicateAlertProps {
 }
 
 const matchTypeConfig = {
-  phone: { label: "Telefone", icon: Phone, color: "text-blue-600 bg-blue-100" },
-  cpf: { label: "CPF", icon: FileText, color: "text-orange-600 bg-orange-100" },
+  phone: { label: "Telefone", icon: Phone, color: "text-info bg-info-soft" },
+  cpf: { label: "CPF", icon: FileText, color: "text-warning bg-warning-soft" },
   cnpj: { label: "CNPJ", icon: Building2, color: "text-purple-600 bg-purple-100" },
-  email: { label: "Email", icon: Mail, color: "text-emerald-600 bg-emerald-100" },
+  email: { label: "Email", icon: Mail, color: "text-success bg-success-soft" },
 };
 
 const statusLabels: Record<string, { label: string; color: string }> = {
-  new: { label: "Novo", color: "bg-blue-500" },
-  contacted: { label: "Contatado", color: "bg-amber-500" },
-  qualified: { label: "Qualificado", color: "bg-emerald-500" },
+  new: { label: "Novo", color: "bg-info" },
+  contacted: { label: "Contatado", color: "bg-warning" },
+  qualified: { label: "Qualificado", color: "bg-success" },
   unqualified: { label: "Não Qualificado", color: "bg-gray-500" },
   converted: { label: "Convertido", color: "bg-purple-500" },
 };
@@ -49,12 +49,12 @@ export function LeadDuplicateAlert({
   };
 
   return (
-    <Alert variant="destructive" className="bg-amber-50 border-amber-200">
-      <AlertTriangle className="h-4 w-4 text-amber-600" />
-      <AlertTitle className="text-amber-800">
+    <Alert variant="destructive" className="bg-warning-soft border-warning">
+      <AlertTriangle className="h-4 w-4 text-warning" />
+      <AlertTitle className="text-warning-strong">
         Lead já cadastrado
       </AlertTitle>
-      <AlertDescription className="text-amber-700">
+      <AlertDescription className="text-warning-strong">
         <p className="mb-3">
           Encontramos {duplicates.length} lead{duplicates.length > 1 ? "s" : ""} com dados similares. 
           Verifique antes de continuar:
@@ -69,12 +69,12 @@ export function LeadDuplicateAlert({
             return (
               <div
                 key={lead.id}
-                className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-amber-200 shadow-sm overflow-hidden"
+                className="flex flex-col gap-2 p-3 bg-white rounded-lg border border-warning shadow-sm overflow-hidden"
               >
                 {/* Header: Avatar + Nome + Status */}
                 <div className="flex items-center gap-2">
                   <Avatar className="h-8 w-8 shrink-0">
-                    <AvatarFallback className="bg-amber-100 text-amber-700 text-xs font-medium">
+                    <AvatarFallback className="bg-warning-soft text-warning-strong text-xs font-medium">
                       {getInitials(lead.full_name)}
                     </AvatarFallback>
                   </Avatar>
@@ -104,7 +104,7 @@ export function LeadDuplicateAlert({
                       variant="outline"
                       size="sm"
                       onClick={() => onViewLead(lead.id)}
-                      className="text-amber-700 border-amber-300 hover:bg-amber-100 flex-1"
+                      className="text-warning-strong border-warning hover:bg-warning-soft flex-1"
                     >
                       <ExternalLink className="h-3.5 w-3.5 mr-1" />
                       Ver
@@ -116,7 +116,7 @@ export function LeadDuplicateAlert({
                       variant="default"
                       size="sm"
                       onClick={() => onSelectLead(lead)}
-                      className="bg-amber-600 hover:bg-amber-700 text-white flex-1"
+                      className="bg-warning hover:bg-warning text-white flex-1"
                     >
                       <UserCheck className="h-3.5 w-3.5 mr-1" />
                       Usar este
@@ -134,7 +134,7 @@ export function LeadDuplicateAlert({
               variant="ghost"
               size="sm"
               onClick={onDismiss}
-              className="text-amber-700 hover:text-amber-800 hover:bg-amber-100"
+              className="text-warning-strong hover:text-warning-strong hover:bg-warning-soft"
             >
               Ignorar e criar novo lead
             </Button>

@@ -321,15 +321,15 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
   };
 
   const getRateColor = (rate: number) => {
-    if (rate >= 80) return "text-green-600 dark:text-green-400";
-    if (rate >= 50) return "text-amber-600 dark:text-amber-400";
-    return "text-red-600 dark:text-red-400";
+    if (rate >= 80) return "text-success dark:text-success";
+    if (rate >= 50) return "text-warning dark:text-warning";
+    return "text-danger dark:text-danger";
   };
 
   const getRateBadge = (rate: number) => {
-    if (rate >= 80) return "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
-    if (rate >= 50) return "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-400";
-    return "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400";
+    if (rate >= 80) return "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success";
+    if (rate >= 50) return "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning";
+    return "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger";
   };
 
   if (loading) {
@@ -387,7 +387,7 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600 dark:text-green-400">{totalAttended}</div>
+            <div className="text-2xl font-bold text-success dark:text-success">{totalAttended}</div>
           </CardContent>
         </Card>
 

@@ -393,7 +393,7 @@ export function EditTikTokPostDialog({
 
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
                 <div className="flex items-center gap-2">
-                  <Flame className="h-4 w-4 text-orange-500" />
+                  <Flame className="h-4 w-4 text-warning" />
                   <Label htmlFor="is-viral" className="cursor-pointer">Marcar como Viral</Label>
                 </div>
                 <Switch

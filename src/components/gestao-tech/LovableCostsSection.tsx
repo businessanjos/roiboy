@@ -234,7 +234,7 @@ export function LovableCostsSection() {
                       variant="outline"
                       className={
                         r.kind === "recarga"
-                          ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                          ? "bg-warning/10 text-warning-strong border-warning/30"
                           : "bg-indigo-500/10 text-indigo-700 border-indigo-500/30"
                       }
                     >

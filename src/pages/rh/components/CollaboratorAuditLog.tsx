@@ -89,7 +89,7 @@ function formatValue(v: any): string {
 }
 
 function actionBadge(a: string) {
-  if (a === "create") return <Badge className="bg-emerald-500/15 text-emerald-700 hover:bg-emerald-500/20">Criação</Badge>;
+  if (a === "create") return <Badge className="bg-success/15 text-success-strong hover:bg-success/20">Criação</Badge>;
   if (a === "delete") return <Badge variant="destructive">Exclusão</Badge>;
   return <Badge variant="secondary">Edição</Badge>;
 }
@@ -185,7 +185,7 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
                               <span className="line-through">{formatValue(e.old_values?.[k])}</span>
                             </div>
                             <div className="text-foreground">
-                              <span className="text-[10px] uppercase mr-1 text-emerald-600">para</span>
+                              <span className="text-[10px] uppercase mr-1 text-success">para</span>
                               {formatValue(e.new_values?.[k])}
                             </div>
                           </div>

@@ -190,8 +190,8 @@ function ProjectCard({ project, onOpen, onEdit, onDelete }: { project: Marketing
           <Badge variant="outline" className={status.color}>{status.label}</Badge>
           {project.target_date && daysToTarget !== null && (
             <Badge variant="outline" className={
-              daysToTarget < 0 ? "border-red-500/40 text-red-600" :
-              daysToTarget < 14 ? "border-amber-500/40 text-amber-600" :
+              daysToTarget < 0 ? "border-danger/40 text-danger" :
+              daysToTarget < 14 ? "border-warning/40 text-warning" :
               "border-muted-foreground/30 text-muted-foreground"
             }>
               <Calendar className="h-3 w-3 mr-1" />

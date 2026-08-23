@@ -163,7 +163,7 @@ function Speedometer({ value, max }: { value: number; max: number }) {
                 {extras}
               </span>
             </div>
-            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-orange-600 dark:text-orange-300 ring-1 ring-orange-500/30 animate-pulse">
+            <div className="mt-1.5 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-red-500/15 px-3 py-1 text-xs font-bold uppercase tracking-wider text-warning dark:text-warning ring-1 ring-warning/30 animate-pulse">
               <Zap className="h-3 w-3 fill-current" />
               Turbo · {extras} {extras === 1 ? "extra" : "extras"} · {pctLabel}% da meta
             </div>
@@ -201,19 +201,19 @@ function MetricCard({
 }) {
   const colorClass =
     variant === "success"
-      ? "text-emerald-600"
+      ? "text-success"
       : variant === "warning"
-        ? "text-amber-600"
+        ? "text-warning"
         : variant === "danger"
-          ? "text-red-600"
+          ? "text-danger"
           : "text-foreground";
   const bgClass =
     variant === "success"
-      ? "bg-emerald-500/10"
+      ? "bg-success/10"
       : variant === "warning"
-        ? "bg-amber-500/10"
+        ? "bg-warning/10"
         : variant === "danger"
-          ? "bg-red-500/10"
+          ? "bg-danger/10"
           : "bg-muted";
 
   return (
@@ -386,7 +386,7 @@ export default function CloserDashboard() {
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div>
               <h1 className="text-2xl font-semibold flex items-center gap-2">
-                <Trophy className="h-6 w-6 text-amber-500" />
+                <Trophy className="h-6 w-6 text-warning" />
                 Acelerômetro
               </h1>
               <p className="text-sm text-muted-foreground mt-1 capitalize">
@@ -455,14 +455,14 @@ export default function CloserDashboard() {
           <ShareIncentivePlanDialog open={shareOpen} onOpenChange={setShareOpen} />
 
           {isViewingOther && (
-            <div className="rounded-lg border border-sky-200 bg-sky-50 dark:bg-sky-950/30 dark:border-sky-900 px-4 py-2.5 text-sm text-sky-900 dark:text-sky-200 flex items-center gap-2">
+            <div className="rounded-lg border border-info bg-info-soft dark:bg-info/30 dark:border-info px-4 py-2.5 text-sm text-info-strong dark:text-info flex items-center gap-2">
               <Eye className="h-4 w-4" />
               Você está visualizando o Acelerômetro de <strong>{viewedUserName}</strong>. Modo somente leitura.
             </div>
           )}
 
           {!isCurrentMonth && (
-            <div className="rounded-lg border border-amber-200 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-900 px-4 py-2.5 text-sm text-amber-900 dark:text-amber-200">
+            <div className="rounded-lg border border-warning bg-warning-soft dark:bg-warning/30 dark:border-warning px-4 py-2.5 text-sm text-warning-strong dark:text-warning">
               Você está visualizando o histórico de <span className="capitalize font-medium">{monthLabel}</span>. Os dados são apenas para consulta.
             </div>
           )}
@@ -480,18 +480,18 @@ export default function CloserDashboard() {
             className={cn(
               "lg:col-span-1 relative transition-shadow cursor-pointer hover:ring-1 hover:ring-primary/30",
               wonDeals > MONTH_QUOTA_DEFAULT &&
-                "animate-turbo-glow border-orange-500/40 ring-1 ring-orange-500/40 overflow-visible",
+                "animate-turbo-glow border-warning/40 ring-1 ring-warning/40 overflow-visible",
             )}
           >
             {wonDeals > MONTH_QUOTA_DEFAULT && (
               <>
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-orange-500/50 animate-turbo-ring"
+                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-warning/50 animate-turbo-ring"
                 />
                 <span
                   aria-hidden
-                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-amber-400/40 animate-turbo-ring"
+                  className="pointer-events-none absolute inset-0 rounded-lg ring-2 ring-warning/40 animate-turbo-ring"
                   style={{ animationDelay: "0.6s" }}
                 />
               </>
@@ -588,7 +588,7 @@ export default function CloserDashboard() {
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <div>
               <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Zap className="h-5 w-5 text-amber-500" />
+                <Zap className="h-5 w-5 text-warning" />
                 Meus SPIFFs
               </h2>
               <p className="text-xs text-muted-foreground">

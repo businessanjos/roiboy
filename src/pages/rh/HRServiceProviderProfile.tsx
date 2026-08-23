@@ -250,14 +250,14 @@ export default function HRServiceProviderProfile() {
         </Button>
         <Avatar className="h-12 w-12">
           <AvatarImage src={provider.avatar_url || undefined} />
-          <AvatarFallback className="bg-amber-100 text-amber-700 font-semibold">
+          <AvatarFallback className="bg-warning-soft text-warning-strong font-semibold">
             {getInitials(provider.full_name)}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
             {provider.full_name}
-            <Handshake className="h-4 w-4 text-amber-600" />
+            <Handshake className="h-4 w-4 text-warning" />
           </h1>
           <p className="text-sm text-muted-foreground">
             {provider.position || "Prestador"} • {provider.service_type || "Sem tipo definido"}
@@ -286,7 +286,7 @@ export default function HRServiceProviderProfile() {
             {saving ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...</>
             ) : lastSaved ? (
-              <><CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
+              <><CheckCircle2 className="h-3.5 w-3.5 text-success" /> Salvo às {lastSaved.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}</>
             ) : null}
           </span>
           <Button onClick={handleSave} disabled={saving} size="sm">
@@ -374,10 +374,10 @@ export default function HRServiceProviderProfile() {
                 <SelectTrigger><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="director">
-                    <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-amber-600" /> Diretor / Cargo de confiança</span>
+                    <span className="flex items-center gap-1.5"><Crown className="h-3.5 w-3.5 text-warning" /> Diretor / Cargo de confiança</span>
                   </SelectItem>
                   <SelectItem value="on_demand">
-                    <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-amber-600" /> Prestador sob demanda</span>
+                    <span className="flex items-center gap-1.5"><Handshake className="h-3.5 w-3.5 text-warning" /> Prestador sob demanda</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
@@ -389,9 +389,9 @@ export default function HRServiceProviderProfile() {
             </div>
 
             {((form as any).provider_kind || "on_demand") === "director" && (
-              <div className="rounded-lg border border-amber-200 bg-amber-50/50 p-3 space-y-3">
-                <div className="flex items-center gap-1.5 text-sm font-medium text-amber-800">
-                  <Crown className="h-4 w-4 text-amber-600" /> Posicionamento no Organograma
+              <div className="rounded-lg border border-warning bg-warning/50 p-3 space-y-3">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-warning-strong">
+                  <Crown className="h-4 w-4 text-warning" /> Posicionamento no Organograma
                 </div>
                 <p className="text-xs text-muted-foreground">
                   Diretores PJ aparecem no organograma da empresa. Defina o setor e o cargo para posicioná-lo corretamente.

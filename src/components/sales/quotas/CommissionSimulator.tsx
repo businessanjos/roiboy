@@ -576,7 +576,7 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
                   <span className="text-muted-foreground"> {" "}· Volume total: {fmt(simulation.mixTotalQty * simulation.avgTicket)}</span>
                 </p>
                 {simulation.mixTotalQty > simulation.wholeSalesCount && (
-                  <p className="text-[10px] text-amber-700 dark:text-amber-400">
+                  <p className="text-[10px] text-warning-strong dark:text-warning">
                     ⚠ A soma do mix ({simulation.mixTotalQty}) excede o nº de vendas simuladas ({simulation.wholeSalesCount}).
                   </p>
                 )}
@@ -702,8 +702,8 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
                   )}
                 </p>
               </div>
-              <div className="p-3 rounded-lg border bg-amber-500/10 border-amber-500/30 space-y-1">
-                <div className="flex items-center gap-1.5 text-xs text-amber-700 dark:text-amber-400">
+              <div className="p-3 rounded-lg border bg-warning/10 border-warning/30 space-y-1">
+                <div className="flex items-center gap-1.5 text-xs text-warning-strong dark:text-warning">
                   <Zap className="h-3.5 w-3.5" />
                   Bônus sem teto
                 </div>
@@ -739,7 +739,7 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
 
             {/* Explicação do bônus sem teto */}
             {simulation.uncappedEnabled && (
-              <div className="text-xs p-3 rounded-lg border bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800 space-y-1">
+              <div className="text-xs p-3 rounded-lg border bg-warning-soft dark:bg-warning/20 border-warning dark:border-warning space-y-1">
                 <p className="font-medium flex items-center gap-1.5">
                   <Target className="h-3.5 w-3.5" />
                   Bônus sem teto: ativo a partir de {simulation.uncappedThreshold}% de atingimento

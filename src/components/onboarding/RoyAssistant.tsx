@@ -74,8 +74,8 @@ export function RoyAssistant({
       >
         <Sparkles className="h-6 w-6" />
         <span className="absolute -top-1 -right-1 flex h-4 w-4">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-          <span className="relative inline-flex rounded-full h-4 w-4 bg-green-500"></span>
+          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-success opacity-75"></span>
+          <span className="relative inline-flex rounded-full h-4 w-4 bg-success"></span>
         </span>
       </motion.button>
     );
@@ -162,10 +162,10 @@ export function RoyAssistant({
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-3 pt-3 border-t border-primary/10"
               >
-                <div className="flex items-start gap-2 bg-amber-500/10 rounded-lg p-2.5">
-                  <Lightbulb className="h-4 w-4 text-amber-500 flex-shrink-0 mt-0.5" />
+                <div className="flex items-start gap-2 bg-warning/10 rounded-lg p-2.5">
+                  <Lightbulb className="h-4 w-4 text-warning flex-shrink-0 mt-0.5" />
                   <div className="flex-1">
-                    <p className="text-xs font-medium text-amber-700 dark:text-amber-400 mb-0.5">
+                    <p className="text-xs font-medium text-warning-strong dark:text-warning mb-0.5">
                       Dica {currentTipIndex + 1}/{currentMessage.tips.length}
                     </p>
                     <motion.p 
@@ -181,7 +181,7 @@ export function RoyAssistant({
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-6 w-6 text-amber-500 hover:text-amber-600"
+                      className="h-6 w-6 text-warning hover:text-warning"
                       onClick={nextTip}
                     >
                       <ChevronRight className="h-3 w-3" />

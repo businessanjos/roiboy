@@ -784,10 +784,10 @@ export function PlaybookItemForm({
                     >
                       <div className="flex-shrink-0 pt-2">
                         {button.type === 'quick_reply' && (
-                          <MessageSquareReply className="h-4 w-4 text-blue-500" />
+                          <MessageSquareReply className="h-4 w-4 text-info" />
                         )}
                         {button.type === 'url' && (
-                          <ExternalLink className="h-4 w-4 text-green-500" />
+                          <ExternalLink className="h-4 w-4 text-success" />
                         )}
                         {button.type === 'phone' && (
                           <Phone className="h-4 w-4 text-purple-500" />

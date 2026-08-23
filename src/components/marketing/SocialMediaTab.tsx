@@ -364,7 +364,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           )}
 
           {useMockData && (
-            <Badge variant="outline" className="text-xs bg-amber-50 text-amber-700 border-amber-200">
+            <Badge variant="outline" className="text-xs bg-warning-soft text-warning-strong border-warning">
               Dados de exemplo
             </Badge>
           )}
@@ -798,7 +798,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                             key={post.id}
                             className={cn(
                               'group transition-colors',
-                              post.is_trending && 'bg-amber-50/50 dark:bg-amber-950/10',
+                              post.is_trending && 'bg-warning/50 dark:bg-warning/10',
                               isSelected && 'bg-primary/5'
                             )}
                           >
@@ -832,7 +832,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                 {post.is_trending && (
                                   <Tooltip>
                                     <TooltipTrigger>
-                                      <Flame className="h-4 w-4 text-orange-500 animate-pulse" />
+                                      <Flame className="h-4 w-4 text-warning animate-pulse" />
                                     </TooltipTrigger>
                                     <TooltipContent>
                                       Em tendência!
@@ -884,9 +884,9 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                 variant="outline" 
                                 className={cn(
                                   'font-medium',
-                                  post.engagement_rate >= 5 && 'bg-emerald-50 text-emerald-700 border-emerald-200',
-                                  post.engagement_rate >= 3 && post.engagement_rate < 5 && 'bg-blue-50 text-blue-700 border-blue-200',
-                                  post.engagement_rate < 3 && 'bg-gray-50 text-gray-600 border-gray-200'
+                                  post.engagement_rate >= 5 && 'bg-success-soft text-success-strong border-success',
+                                  post.engagement_rate >= 3 && post.engagement_rate < 5 && 'bg-info-soft text-info-strong border-info',
+                                  post.engagement_rate < 3 && 'bg-muted text-muted-foreground border-border'
                                 )}
                               >
                                 {post.engagement_rate?.toFixed(1)}%
@@ -899,7 +899,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                                   'font-medium',
                                   post.virality_rate >= 10 && 'bg-purple-50 text-purple-700 border-purple-200',
                                   post.virality_rate >= 5 && post.virality_rate < 10 && 'bg-indigo-50 text-indigo-700 border-indigo-200',
-                                  post.virality_rate < 5 && 'bg-gray-50 text-gray-600 border-gray-200'
+                                  post.virality_rate < 5 && 'bg-muted text-muted-foreground border-border'
                                 )}
                               >
                                 {post.virality_rate?.toFixed(1)}%

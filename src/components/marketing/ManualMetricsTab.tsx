@@ -398,10 +398,10 @@ export function ManualMetricsTab() {
                           pct === null
                             ? 'text-muted-foreground'
                             : pct >= 100
-                              ? 'text-emerald-600'
+                              ? 'text-success'
                               : pct < 80
                                 ? 'text-destructive font-bold'
-                                : 'text-amber-600'
+                                : 'text-warning'
                         }`}
                       >
                         {pct === null ? '—' : `${pct}%`}

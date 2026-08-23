@@ -596,10 +596,10 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                     variant="outline"
                     className={
                       positioning.tone === "emerald"
-                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        ? "bg-success/10 text-success-strong border-success/30"
                         : positioning.tone === "amber"
-                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-                        : "bg-red-500/10 text-red-700 border-red-500/30"
+                        ? "bg-warning/10 text-warning-strong border-warning/30"
+                        : "bg-danger/10 text-danger-strong border-danger/30"
                     }
                   >
                     <positioning.icon className="h-3 w-3 mr-1" />
@@ -620,25 +620,25 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                     variant="outline"
                     className={
                       attractiveness.tier.tone === "emerald"
-                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        ? "bg-success/10 text-success-strong border-success/30"
                         : attractiveness.tier.tone === "blue"
-                        ? "bg-blue-500/10 text-blue-700 border-blue-500/30"
+                        ? "bg-info/10 text-info-strong border-info/30"
                         : attractiveness.tier.tone === "amber"
-                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
-                        : "bg-red-500/10 text-red-700 border-red-500/30"
+                        ? "bg-warning/10 text-warning-strong border-warning/30"
+                        : "bg-danger/10 text-danger-strong border-danger/30"
                     }
                   >
                     {attractiveness.tier.label} · {attractiveness.total}/100
                   </Badge>
                 </div>
                 {isLowAttractiveness && (
-                  <div className="rounded-md border border-amber-500/40 bg-amber-500/10 p-3 flex items-start gap-2.5">
-                    <BellRing className="h-4 w-4 text-amber-700 mt-0.5 shrink-0" />
+                  <div className="rounded-md border border-warning/40 bg-warning/10 p-3 flex items-start gap-2.5">
+                    <BellRing className="h-4 w-4 text-warning-strong mt-0.5 shrink-0" />
                     <div className="min-w-0 flex-1 space-y-1.5">
-                      <p className="text-[12px] font-semibold text-amber-900">
+                      <p className="text-[12px] font-semibold text-warning-strong">
                         Atratividade abaixo do limiar ({attractiveness!.total}/100 · alvo ≥ {alertThreshold})
                       </p>
-                      <p className="text-[11px] text-amber-900/80 leading-snug">
+                      <p className="text-[11px] text-warning/80 leading-snug">
                         {recommendations.length > 0
                           ? `Prioridade: ${recommendations.slice(0, 2).map(r => r.title).join(" · ")}.`
                           : "Revise salário e benefícios antes de publicar a vaga."}
@@ -648,7 +648,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                         <Button
                           size="sm"
                           variant="outline"
-                          className="h-7 text-[11px] border-amber-500/40 bg-background/60"
+                          className="h-7 text-[11px] border-warning/40 bg-background/60"
                           onClick={() => sendLowAttractivenessAlert(false)}
                           disabled={alertSending}
                         >
@@ -660,7 +660,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                           Reenviar alerta ao RH
                         </Button>
                         {alertSentAt && (
-                          <span className="text-[10px] text-amber-900/70">
+                          <span className="text-[10px] text-warning/70">
                             Último envio: {alertSentAt.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
                           </span>
                         )}
@@ -844,12 +844,12 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                     const Icon = rec.icon;
                     const toneClasses =
                       rec.tone === "emerald"
-                        ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30"
+                        ? "bg-success/10 text-success-strong border-success/30"
                         : rec.tone === "amber"
-                        ? "bg-amber-500/10 text-amber-700 border-amber-500/30"
+                        ? "bg-warning/10 text-warning-strong border-warning/30"
                         : rec.tone === "red"
-                        ? "bg-red-500/10 text-red-700 border-red-500/30"
-                        : "bg-blue-500/10 text-blue-700 border-blue-500/30";
+                        ? "bg-danger/10 text-danger-strong border-danger/30"
+                        : "bg-info/10 text-info-strong border-info/30";
                     return (
                       <div key={rec.id} className="flex items-start gap-3 rounded-md border bg-background p-3">
                         <div className={`rounded-md border p-1.5 ${toneClasses}`}>
@@ -886,13 +886,13 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
             )}
 
             {claimEval.claimed && !claimEval.valid && (
-              <div className="rounded-md border border-red-500/40 bg-red-500/10 p-3 flex items-start gap-2.5">
-                <AlertTriangle className="h-4 w-4 text-red-700 mt-0.5 shrink-0" />
+              <div className="rounded-md border border-danger/40 bg-danger/10 p-3 flex items-start gap-2.5">
+                <AlertTriangle className="h-4 w-4 text-danger-strong mt-0.5 shrink-0" />
                 <div className="min-w-0 flex-1 space-y-1">
-                  <p className="text-[12px] font-semibold text-red-900">
+                  <p className="text-[12px] font-semibold text-danger-strong">
                     Diferencial incompatível com o mercado: "{MARKET_COMPATIBLE_LABEL}"
                   </p>
-                  <p className="text-[11px] text-red-900/80 leading-snug">
+                  <p className="text-[11px] text-danger/80 leading-snug">
                     {claimEval.reason} Este diferencial fica <strong>oculto</strong> na página pública da vaga até
                     o salário ser ajustado ou o item ser removido no wizard.
                   </p>
@@ -916,20 +916,20 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
                   )}
                   {result.missing_benefits && result.missing_benefits.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium mb-1.5 text-amber-700">Você NÃO oferece</p>
+                      <p className="text-xs font-medium mb-1.5 text-warning-strong">Você NÃO oferece</p>
                       <div className="flex flex-wrap gap-1">
                         {result.missing_benefits.map((b, i) => (
-                          <Badge key={i} variant="outline" className="bg-amber-500/10 text-amber-700 border-amber-500/30 text-[10px]">{b}</Badge>
+                          <Badge key={i} variant="outline" className="bg-warning/10 text-warning-strong border-warning/30 text-[10px]">{b}</Badge>
                         ))}
                       </div>
                     </div>
                   )}
                   {cleanExtraBenefits.length > 0 && (
                     <div>
-                      <p className="text-xs font-medium mb-1.5 text-emerald-700">Diferenciais seus</p>
+                      <p className="text-xs font-medium mb-1.5 text-success-strong">Diferenciais seus</p>
                       <div className="flex flex-wrap gap-1">
                         {cleanExtraBenefits.map((b, i) => (
-                          <Badge key={i} variant="outline" className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30 text-[10px]">{b}</Badge>
+                          <Badge key={i} variant="outline" className="bg-success/10 text-success-strong border-success/30 text-[10px]">{b}</Badge>
                         ))}
                       </div>
                     </div>

@@ -332,11 +332,11 @@ export function ContractDialog({
 
   const getStatusLabel = (status: string) => {
     const statusMap: Record<string, { label: string; className: string }> = {
-      active: { label: "Ativo", className: "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400" },
-      pending: { label: "Pendente", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
-      cancelled: { label: "Cancelado", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-      ended: { label: "Encerrado", className: "bg-slate-100 text-slate-700 dark:bg-slate-900/30 dark:text-slate-400" },
-      paused: { label: "Pausado", className: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400" },
+      active: { label: "Ativo", className: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success" },
+      pending: { label: "Pendente", className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
+      cancelled: { label: "Cancelado", className: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
+      ended: { label: "Encerrado", className: "bg-muted text-foreground dark:bg-slate-900/30 dark:text-muted-foreground" },
+      paused: { label: "Pausado", className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
     };
     return statusMap[status] || { label: status, className: "bg-muted text-muted-foreground" };
   };

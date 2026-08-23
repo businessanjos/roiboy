@@ -174,9 +174,9 @@ Traga OBRIGATORIAMENTE:
     short: "SAM",
     icon: Target,
     gradient: "from-blue-500/10 via-blue-500/5 to-transparent",
-    ring: "ring-blue-500/20",
-    text: "text-blue-600",
-    bg: "bg-blue-500/10",
+    ring: "ring-info/20",
+    text: "text-info",
+    bg: "bg-info/10",
     helper: "Fatia do mercado de estética dentro do recorte específico (geografia, nicho, canal).",
     buildQuery: (scenario) => {
       return `Calcule o SAM (Serviceable Addressable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL restrito ao recorte abaixo.
@@ -204,9 +204,9 @@ Traga:
     short: "SOM",
     icon: Crosshair,
     gradient: "from-emerald-500/10 via-emerald-500/5 to-transparent",
-    ring: "ring-emerald-500/20",
-    text: "text-emerald-600",
-    bg: "bg-emerald-500/10",
+    ring: "ring-success/20",
+    text: "text-success",
+    bg: "bg-success/10",
     helper: "Fatia do SAM realisticamente alcançável em 12 meses — clínicas ativas, endereçáveis, sem barreira estrutural.",
     buildQuery: (scenario) => {
       return `Calcule o SOM (Serviceable Obtainable Market) do MERCADO DE ESTÉTICA AVANÇADA/MÉDICA NO BRASIL no recorte abaixo, para uma janela de 12 MESES.
@@ -493,7 +493,7 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
       <div className="flex items-center justify-between gap-3 flex-wrap">
         <div>
           <h2 className="text-base font-semibold flex items-center gap-2">
-            <Target className="h-4 w-4 text-blue-600" /> TAM · SAM · SOM
+            <Target className="h-4 w-4 text-info" /> TAM · SAM · SOM
           </h2>
           <p className="text-xs text-muted-foreground">
             Salve cenários (geografia, categoria, canal, faixas) e compare qual maximiza o SOM.
@@ -804,7 +804,7 @@ function DetailSheet({
     <>
       <div className="rounded-xl border bg-muted/30 p-3.5">
         <div className="flex items-center gap-2 mb-2.5">
-          <ListChecks className="h-3.5 w-3.5 text-blue-600" />
+          <ListChecks className="h-3.5 w-3.5 text-info" />
           <h4 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
             Faixas de ticket usadas
           </h4>
@@ -821,10 +821,10 @@ function DetailSheet({
         </div>
       </div>
 
-      <div className="rounded-xl border border-red-500/20 bg-red-500/5 p-3.5">
+      <div className="rounded-xl border border-danger/20 bg-danger/5 p-3.5">
         <div className="flex items-center gap-2 mb-2">
-          <Ban className="h-3.5 w-3.5 text-red-600" />
-          <h4 className="text-xs font-bold uppercase tracking-widest text-red-700 dark:text-red-400">
+          <Ban className="h-3.5 w-3.5 text-danger" />
+          <h4 className="text-xs font-bold uppercase tracking-widest text-danger-strong dark:text-danger">
             Critério de recorte
           </h4>
         </div>
@@ -906,16 +906,16 @@ function CurrentVsMarketPanel({
 
   const revenueBars = [
     { label: "TAM", value: tamRev, color: "bg-purple-500", text: "text-purple-700" },
-    { label: "SAM", value: samRev, color: "bg-blue-500", text: "text-blue-700" },
-    { label: "SOM (12m)", value: somRev, color: "bg-emerald-500", text: "text-emerald-700" },
-    { label: "Você (anualizado)", value: annualRevenue, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+    { label: "SAM", value: samRev, color: "bg-info", text: "text-info-strong" },
+    { label: "SOM (12m)", value: somRev, color: "bg-success", text: "text-success-strong" },
+    { label: "Você (anualizado)", value: annualRevenue, color: "bg-warning", text: "text-warning-strong", isSelf: true },
   ];
 
   const peopleBars = [
     { label: "TAM", value: tamPpl, color: "bg-purple-500", text: "text-purple-700" },
-    { label: "SAM", value: samPpl, color: "bg-blue-500", text: "text-blue-700" },
-    { label: "SOM (12m)", value: somPpl, color: "bg-emerald-500", text: "text-emerald-700" },
-    { label: "Você (clientes ativos)", value: activeClients, color: "bg-amber-500", text: "text-amber-700", isSelf: true },
+    { label: "SAM", value: samPpl, color: "bg-info", text: "text-info-strong" },
+    { label: "SOM (12m)", value: somPpl, color: "bg-success", text: "text-success-strong" },
+    { label: "Você (clientes ativos)", value: activeClients, color: "bg-warning", text: "text-warning-strong", isSelf: true },
   ];
 
   // Penetração da operação em cada tier
@@ -934,12 +934,12 @@ function CurrentVsMarketPanel({
   const gapSomPpl = somPpl ? somPpl - activeClients : null;
 
   return (
-    <Card className="ring-1 ring-amber-500/20 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent">
+    <Card className="ring-1 ring-warning/20 bg-gradient-to-br from-amber-500/5 via-transparent to-transparent">
       <CardContent className="p-5 space-y-5">
         <div className="flex items-start justify-between gap-3 flex-wrap">
           <div>
             <h3 className="text-sm font-semibold flex items-center gap-2">
-              <Crosshair className="h-4 w-4 text-amber-600" />
+              <Crosshair className="h-4 w-4 text-warning" />
               Você × Mercado — onde estão seus pontos cegos
             </h3>
             <p className="text-xs text-muted-foreground">
@@ -964,7 +964,7 @@ function CurrentVsMarketPanel({
             </p>
             {penR.som !== null && (
               <span className="text-[11px] text-muted-foreground">
-                Penetração SOM: <strong className="text-amber-700">{fmtPct(penR.som)}</strong>
+                Penetração SOM: <strong className="text-warning-strong">{fmtPct(penR.som)}</strong>
                 {penR.sam !== null && <> · SAM: <strong>{fmtPct(penR.sam)}</strong></>}
                 {penR.tam !== null && <> · TAM: <strong>{fmtPct(penR.tam)}</strong></>}
               </span>
@@ -987,7 +987,7 @@ function CurrentVsMarketPanel({
           {gapSomRev !== null && gapSomRev > 0 && (
             <p className="mt-2 text-[11px] text-muted-foreground">
               💡 Gap para atingir o SOM em 12 meses:{" "}
-              <strong className="text-emerald-700">{fmtBigBRL(gapSomRev)}</strong> — equivalente a{" "}
+              <strong className="text-success-strong">{fmtBigBRL(gapSomRev)}</strong> — equivalente a{" "}
               {avgTicket > 0 ? Math.ceil(gapSomRev / avgTicket).toLocaleString("pt-BR") : "?"} contratos
               no seu ticket médio atual.
             </p>
@@ -1002,7 +1002,7 @@ function CurrentVsMarketPanel({
             </p>
             {penP.som !== null && (
               <span className="text-[11px] text-muted-foreground">
-                Penetração SOM: <strong className="text-amber-700">{fmtPct(penP.som)}</strong>
+                Penetração SOM: <strong className="text-warning-strong">{fmtPct(penP.som)}</strong>
                 {penP.sam !== null && <> · SAM: <strong>{fmtPct(penP.sam)}</strong></>}
                 {penP.tam !== null && <> · TAM: <strong>{fmtPct(penP.tam)}</strong></>}
               </span>
@@ -1024,7 +1024,7 @@ function CurrentVsMarketPanel({
           </div>
           {gapSomPpl !== null && gapSomPpl > 0 && (
             <p className="mt-2 text-[11px] text-muted-foreground">
-              💡 Faltam <strong className="text-emerald-700">{fmtBigNum(gapSomPpl)}</strong>{" "}
+              💡 Faltam <strong className="text-success-strong">{fmtBigNum(gapSomPpl)}</strong>{" "}
               clientes para capturar todo o SOM projetado.
             </p>
           )}
@@ -1081,7 +1081,7 @@ function BarRow({
       <div className="h-2.5 rounded-full bg-muted overflow-hidden">
         {value ? (
           <div
-            className={`h-full ${color} ${isSelf ? "ring-2 ring-amber-500/40" : ""} transition-all`}
+            className={`h-full ${color} ${isSelf ? "ring-2 ring-warning/40" : ""} transition-all`}
             style={{ width: `${pct}%` }}
           />
         ) : null}
@@ -1140,11 +1140,11 @@ function ScenarioComparePanel({
   const bestSomRev = Math.max(0, ...rollups.map((r) => r.som ?? 0));
 
   return (
-    <Card className="ring-1 ring-blue-500/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
+    <Card className="ring-1 ring-info/20 bg-gradient-to-br from-blue-500/5 via-transparent to-transparent">
       <CardContent className="p-5 space-y-3">
         <div>
           <h3 className="text-sm font-semibold flex items-center gap-2">
-            <ListChecks className="h-4 w-4 text-blue-600" />
+            <ListChecks className="h-4 w-4 text-info" />
             Comparativo de cenários — qual maximiza SOM
           </h3>
           <p className="text-xs text-muted-foreground">
@@ -1175,13 +1175,13 @@ function ScenarioComparePanel({
                 return (
                   <tr
                     key={r.scenario.id}
-                    className={`border-b last:border-0 ${isBest ? "bg-emerald-500/5" : ""} ${isActive ? "ring-1 ring-inset ring-blue-500/30" : ""}`}
+                    className={`border-b last:border-0 ${isBest ? "bg-success/5" : ""} ${isActive ? "ring-1 ring-inset ring-info/30" : ""}`}
                   >
                     <td className="px-2 py-2 align-top">
                       <div className="flex items-center gap-1.5">
                         <span className="font-semibold text-foreground">{r.scenario.name}</span>
                         {isBest && (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white text-[9px] px-1.5 py-0">
+                          <Badge className="bg-success hover:bg-success text-white text-[9px] px-1.5 py-0">
                             melhor SOM
                           </Badge>
                         )}
@@ -1201,7 +1201,7 @@ function ScenarioComparePanel({
                     <td className="px-2 py-2 text-right tabular-nums align-top">
                       {r.sam !== null ? fmtBigBRL(r.sam) : "—"}
                     </td>
-                    <td className={`px-2 py-2 text-right tabular-nums align-top ${isBest ? "text-emerald-700 font-bold" : "font-semibold"}`}>
+                    <td className={`px-2 py-2 text-right tabular-nums align-top ${isBest ? "text-success-strong font-bold" : "font-semibold"}`}>
                       {r.som !== null ? fmtBigBRL(r.som) : "—"}
                     </td>
                     <td className="px-2 py-2 text-right tabular-nums align-top">
@@ -1215,7 +1215,7 @@ function ScenarioComparePanel({
                         ? formatDistanceToNow(new Date(r.lastCalc), { addSuffix: true, locale: ptBR })
                         : "—"}
                       {r.missing > 0 && (
-                        <div className="text-amber-600 text-[10px]">
+                        <div className="text-warning text-[10px]">
                           {r.missing} tier(s) pendente(s)
                         </div>
                       )}

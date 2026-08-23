@@ -246,7 +246,7 @@ export default function EventsPlaybooks() {
                   items.map((it) => (
                     <div key={it.id} className="flex items-start gap-3 p-3 border rounded-md hover:bg-muted/30">
                       <div className="flex-shrink-0 text-center min-w-[60px]">
-                        <div className={`text-lg font-bold ${it.days_offset < 0 ? "text-primary" : it.days_offset === 0 ? "text-amber-600" : "text-green-600"}`}>
+                        <div className={`text-lg font-bold ${it.days_offset < 0 ? "text-primary" : it.days_offset === 0 ? "text-warning" : "text-success"}`}>
                           {it.days_offset > 0 ? `+${it.days_offset}` : it.days_offset}
                         </div>
                         <div className="text-[10px] text-muted-foreground uppercase">dias</div>

@@ -214,7 +214,7 @@ function ScriptCard({
     <div
       className={cn(
         "rounded-xl border bg-card p-4 space-y-3 transition-colors",
-        checked ? "border-emerald-500/40 bg-emerald-500/5" : "hover:border-primary/40",
+        checked ? "border-success/40 bg-success/5" : "hover:border-primary/40",
       )}
     >
       <div className="flex items-start gap-3">
@@ -235,7 +235,7 @@ function ScriptCard({
           onClick={handleCopy}
           className="h-7 px-2 flex-shrink-0"
         >
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
         </Button>
       </div>
       <div className="ml-12 space-y-1.5 text-xs text-muted-foreground">
@@ -388,7 +388,7 @@ export default function OperationsScripts() {
             </Button>
             <p className={cn(
               "text-xs",
-              canRegister ? "text-emerald-600" : "text-muted-foreground",
+              canRegister ? "text-success" : "text-muted-foreground",
             )}>
               {canRegister
                 ? "✓ Check-in completo, pronto pra registrar"

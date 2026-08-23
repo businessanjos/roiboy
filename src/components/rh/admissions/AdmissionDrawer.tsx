@@ -52,9 +52,9 @@ const DOC_STATUS_LABEL = {
 
 const DOC_STATUS_COLOR = {
   pending: "bg-muted text-muted-foreground",
-  received: "bg-blue-500/10 text-blue-700",
-  approved: "bg-emerald-500/10 text-emerald-700",
-  rejected: "bg-rose-500/10 text-rose-700",
+  received: "bg-info/10 text-info-strong",
+  approved: "bg-success/10 text-success-strong",
+  rejected: "bg-danger/10 text-danger-strong",
 } as const;
 
 export default function AdmissionDrawer({ admission, open, onOpenChange }: Props) {
@@ -226,9 +226,9 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
           </div>
 
           {/* Exam admissional */}
-          <div className="rounded-lg border bg-rose-500/5 p-4 space-y-3">
+          <div className="rounded-lg border bg-danger/5 p-4 space-y-3">
             <div className="flex items-center justify-between gap-2 flex-wrap">
-              <div className="flex items-center gap-2 font-semibold text-sm"><Stethoscope className="h-4 w-4 text-rose-600" />Exame Admissional</div>
+              <div className="flex items-center gap-2 font-semibold text-sm"><Stethoscope className="h-4 w-4 text-danger" />Exame Admissional</div>
               <Button size="sm" variant="outline" onClick={() => setReferralOpen(true)} className="h-7">
                 <FileText className="h-3.5 w-3.5 mr-1" /> Guia de Encaminhamento
               </Button>
@@ -270,8 +270,8 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
           {/* Contract & onboarding */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div className="rounded-lg border bg-blue-500/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm"><FileSignature className="h-4 w-4 text-blue-600" />Contrato</div>
+            <div className="rounded-lg border bg-info/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-sm"><FileSignature className="h-4 w-4 text-info" />Contrato</div>
               <Input
                 type="datetime-local"
                 defaultValue={admission.contract_signed_at ? admission.contract_signed_at.slice(0, 16) : ""}
@@ -298,15 +298,15 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
             const sent = !!admission.esocial_sent_to_accountant_at;
             const overdue = !confirmed && daysToStart !== null && daysToStart <= 2;
             return (
-              <div className={`rounded-lg border p-4 space-y-3 ${overdue ? "border-rose-500/40 bg-rose-500/5" : "bg-teal-500/5"}`}>
+              <div className={`rounded-lg border p-4 space-y-3 ${overdue ? "border-danger/40 bg-danger/5" : "bg-success/5"}`}>
                 <div className="flex items-center justify-between gap-2 flex-wrap">
                   <div className="flex items-center gap-2 font-semibold text-sm">
-                    <Landmark className="h-4 w-4 text-teal-600" />
+                    <Landmark className="h-4 w-4 text-success" />
                     eSocial / Envio para Contabilidade
-                    {confirmed && <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 text-[10px]" variant="outline">Confirmado</Badge>}
-                    {!confirmed && sent && <Badge className="bg-amber-500/15 text-amber-700 border-amber-500/30 text-[10px]" variant="outline">Aguardando protocolo</Badge>}
+                    {confirmed && <Badge className="bg-success/15 text-success-strong border-success/30 text-[10px]" variant="outline">Confirmado</Badge>}
+                    {!confirmed && sent && <Badge className="bg-warning/15 text-warning-strong border-warning/30 text-[10px]" variant="outline">Aguardando protocolo</Badge>}
                     {overdue && (
-                      <Badge className="bg-rose-500/15 text-rose-700 border-rose-500/30 text-[10px]" variant="outline">
+                      <Badge className="bg-danger/15 text-danger-strong border-danger/30 text-[10px]" variant="outline">
                         <AlertTriangle className="h-3 w-3 mr-1" />
                         {daysToStart! < 0 ? "Atrasado" : `Faltam ${daysToStart}d`}
                       </Badge>
@@ -409,9 +409,9 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
 
 
           {/* Public candidate link */}
-          <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 space-y-2">
+          <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-2">
             <div className="flex items-center gap-2 font-semibold text-sm">
-              <LinkIcon className="h-4 w-4 text-amber-600" />
+              <LinkIcon className="h-4 w-4 text-warning" />
               Link para o candidato enviar os documentos
             </div>
             <p className="text-xs text-muted-foreground">
@@ -452,7 +452,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
               </div>
               <div className="flex items-center gap-2">
                 {awaitingReview > 0 && (
-                  <Badge className="text-xs bg-blue-500/15 text-blue-700 border-blue-500/30" variant="outline">
+                  <Badge className="text-xs bg-info/15 text-info-strong border-info/30" variant="outline">
                     <Sparkles className="h-3 w-3 mr-1" />
                     {awaitingReview} novo{awaitingReview > 1 ? "s" : ""} envio{awaitingReview > 1 ? "s" : ""} do candidato
                   </Badge>
@@ -476,7 +476,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                     <div
                       key={doc.id}
                       className={`border rounded-lg p-3 flex flex-wrap items-center gap-3 transition ${
-                        highlight ? "border-blue-500/40 bg-blue-500/5 ring-1 ring-blue-500/20" : ""
+                        highlight ? "border-info/40 bg-info/5 ring-1 ring-info/20" : ""
                       } ${doc.visible_to_candidate === false ? "opacity-60 bg-muted/30" : ""}`}
                     >
                       <div className="flex-1 min-w-[200px]">
@@ -488,7 +488,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             title={doc.required ? "Tornar opcional" : "Tornar obrigatório"}
                             className={`text-[10px] h-5 px-1.5 rounded border transition ${
                               doc.required
-                                ? "border-rose-500/40 bg-rose-500/10 text-rose-700 hover:bg-rose-500/20"
+                                ? "border-danger/40 bg-danger/10 text-danger-strong hover:bg-danger/20"
                                 : "border-muted-foreground/30 bg-muted text-muted-foreground hover:bg-muted/70"
                             }`}
                           >
@@ -501,7 +501,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             className={`text-[10px] h-5 px-1.5 rounded border transition inline-flex items-center gap-1 ${
                               doc.visible_to_candidate === false
                                 ? "border-muted-foreground/30 bg-muted text-muted-foreground hover:bg-muted/70"
-                                : "border-emerald-500/40 bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/20"
+                                : "border-success/40 bg-success/10 text-success-strong hover:bg-success/20"
                             }`}
                           >
                             {doc.visible_to_candidate === false ? (
@@ -516,7 +516,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             </Badge>
                           )}
                           {fromCandidate && (
-                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-blue-500/40 text-blue-700">
+                            <Badge variant="outline" className="text-[10px] h-4 px-1 border-info/40 text-info-strong">
                               enviado pelo candidato
                             </Badge>
                           )}
@@ -549,7 +549,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                                   href={att.url || "#"}
                                   target="_blank"
                                   rel="noreferrer"
-                                  className="text-blue-600 hover:underline truncate flex-1"
+                                  className="text-info hover:underline truncate flex-1"
                                 >
                                   {att.name || "arquivo"}
                                 </a>
@@ -557,7 +557,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                                   type="button"
                                   onClick={() => handleRemoveAttachment(doc.id, att.path)}
                                   title="Remover este arquivo"
-                                  className="text-rose-500 hover:text-rose-700 shrink-0"
+                                  className="text-danger hover:text-danger-strong shrink-0"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />
                                 </button>
@@ -566,7 +566,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                           </ul>
                         )}
                         {doc.status === "rejected" && doc.notes && (
-                          <p className="text-xs text-rose-600 mt-1">Motivo enviado: {doc.notes}</p>
+                          <p className="text-xs text-danger mt-1">Motivo enviado: {doc.notes}</p>
                         )}
                       </div>
                       <Badge className={`text-xs ${DOC_STATUS_COLOR[doc.status]}`} variant="secondary">{DOC_STATUS_LABEL[doc.status]}</Badge>
@@ -585,7 +585,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                         </>
                       )}
                       {doc.status !== "approved" ? (
-                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-emerald-600" /></Button>
+                        <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "approved")} title="Aprovar"><Check className="h-4 w-4 text-success" /></Button>
                       ) : (
                         <Button size="sm" variant="ghost" onClick={() => setDocStatus(doc.id, "pending")} title="Reabrir"><X className="h-4 w-4 text-muted-foreground" /></Button>
                       )}
@@ -601,7 +601,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                               title="Rejeitar com motivo"
                               onClick={() => { setRejectingId(doc.id); setRejectReason(doc.notes || ""); }}
                             >
-                              <MessageSquareWarning className="h-4 w-4 text-amber-600" />
+                              <MessageSquareWarning className="h-4 w-4 text-warning" />
                             </Button>
                           </DialogTrigger>
                           <DialogContent>
@@ -620,7 +620,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                             />
                             <DialogFooter>
                               <Button variant="outline" onClick={() => { setRejectingId(null); setRejectReason(""); }}>Cancelar</Button>
-                              <Button className="bg-amber-600 hover:bg-amber-700" onClick={() => handleReject(doc.id)}>
+                              <Button className="bg-warning hover:bg-warning" onClick={() => handleReject(doc.id)}>
                                 Rejeitar e notificar
                               </Button>
                             </DialogFooter>
@@ -655,7 +655,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
             </p>
             <AlertDialog>
               <AlertDialogTrigger asChild>
-                <Button variant="outline" size="sm" className="text-rose-600 border-rose-200 hover:bg-rose-50 hover:text-rose-700">
+                <Button variant="outline" size="sm" className="text-danger border-danger hover:bg-danger-soft hover:text-danger-strong">
                   <Trash2 className="h-4 w-4 mr-1.5" />
                   Excluir admissão
                 </Button>
@@ -670,7 +670,7 @@ export default function AdmissionDrawer({ admission, open, onOpenChange }: Props
                 <AlertDialogFooter>
                   <AlertDialogCancel>Cancelar</AlertDialogCancel>
                   <AlertDialogAction
-                    className="bg-rose-600 hover:bg-rose-700"
+                    className="bg-danger hover:bg-danger"
                     onClick={async () => {
                       await deleteAdmission.mutateAsync(admission.id);
                       onOpenChange(false);

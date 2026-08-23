@@ -197,7 +197,7 @@ export default function PublicRSVP() {
           ) : hasResponded ? (
             <>
               {data?.rsvp_status === "confirmed" ? (
-                <CheckCircle2 className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                <CheckCircle2 className="h-16 w-16 text-success mx-auto mb-4" />
               ) : (
                 <XCircle className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
               )}

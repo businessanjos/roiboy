@@ -16,7 +16,7 @@ export function ComingSoonTab({ title, description, icon }: Props) {
       </div>
       <h3 className="text-lg font-semibold mb-2">{title}</h3>
       <p className="text-muted-foreground max-w-md mx-auto mb-4">{description}</p>
-      <div className="inline-flex items-center gap-2 text-sm text-amber-600 dark:text-amber-400">
+      <div className="inline-flex items-center gap-2 text-sm text-warning dark:text-warning">
         <Construction className="h-4 w-4" />
         Próxima entrega: Fase 2 (IA + integrações)
       </div>

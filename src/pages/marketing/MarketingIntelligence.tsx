@@ -110,9 +110,9 @@ function DistBar({
   }
   const barColor =
     tone === "success"
-      ? "bg-emerald-500 dark:bg-emerald-400"
+      ? "bg-success dark:bg-success"
       : tone === "danger"
-      ? "bg-red-500 dark:bg-red-400"
+      ? "bg-danger dark:bg-danger"
       : "bg-primary";
   const max = Math.max(...data.items.map((i) => i.pct), 1);
   return (
@@ -236,9 +236,9 @@ function ProfileGrid({
         </Card>
 
         {variant === "anti" && profile.byCancellationReason.items.length > 0 && (
-          <Card className="lg:col-span-2 border-red-500/30">
+          <Card className="lg:col-span-2 border-danger/30">
             <CardHeader className="pb-3">
-              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-red-600 dark:text-red-400">
+              <CardTitle className="text-sm font-semibold flex items-center gap-2 text-danger dark:text-danger">
                 <AlertTriangle className="h-3.5 w-3.5" /> Motivos de saída
               </CardTitle>
             </CardHeader>
@@ -341,9 +341,9 @@ export default function MarketingIntelligence() {
       )}
 
       {error && (
-        <Card className="border-red-500/30 bg-red-500/5">
+        <Card className="border-danger/30 bg-danger/5">
           <CardContent className="pt-6">
-            <p className="text-sm text-red-600">
+            <p className="text-sm text-danger">
               Erro ao carregar análise: {(error as Error).message}
             </p>
           </CardContent>
@@ -465,18 +465,18 @@ export default function MarketingIntelligence() {
                 look="Quem hoje performa, quem cancela e onde os dois perfis divergem."
                 act="Use o ICP para calibrar qualificação e o Anti-ICP como filtro de risco antes de fechar deals parecidos."
               />
-              <Card className="border-blue-500/30 bg-blue-500/5">
+              <Card className="border-info/30 bg-info/5">
                 <CardContent className="pt-3 pb-3 text-xs text-muted-foreground">
                   <strong className="text-foreground">Régua de contagem:</strong> "Clientes ativos" usa a mesma definição da área de Customer Success — apenas contratos com status <code>active</code>. Contratos <code>paused</code>, <code>suspended</code> e <code>suspended_bonus</code> aparecem como "em hold" e não entram no ICP. Encerrados/cancelados entram no Anti-ICP.
                 </CardContent>
               </Card>
 
               {(data.coverage.with_gender === 0 || data.coverage.with_specialty === 0) && (
-                <Card className="border-amber-500/30 bg-amber-500/5">
+                <Card className="border-warning/30 bg-warning/5">
                   <CardContent className="pt-4 pb-4">
                     <div className="flex items-start gap-2">
-                      <Info className="h-4 w-4 text-amber-600 mt-0.5" />
-                      <div className="text-xs text-amber-900 dark:text-amber-200">
+                      <Info className="h-4 w-4 text-warning mt-0.5" />
+                      <div className="text-xs text-warning-strong dark:text-warning">
                         <strong>Baixa cobertura de perfil:</strong> gênero, especialidade e faturamento
                         dos mentorados estão pouco preenchidos. Isso limita a profundidade da análise
                         de ICP. Considere um mutirão de enriquecimento na ficha dos clientes ativos.
@@ -566,8 +566,8 @@ export default function MarketingIntelligence() {
                                     variant="outline"
                                     className={
                                       risky
-                                        ? "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30"
-                                        : "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
+                                        ? "bg-danger/10 text-danger dark:text-danger border-danger/30"
+                                        : "bg-success/10 text-success dark:text-success border-success/30"
                                     }
                                   >
                                     {risky ? (

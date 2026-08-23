@@ -63,15 +63,15 @@ interface DealActivitiesTabProps {
 
 const PRIORITY_CONFIG = {
   low: { label: "Baixa", color: "bg-slate-500" },
-  medium: { label: "Média", color: "bg-blue-500" },
-  high: { label: "Alta", color: "bg-amber-500" },
-  urgent: { label: "Urgente", color: "bg-red-500" },
+  medium: { label: "Média", color: "bg-info" },
+  high: { label: "Alta", color: "bg-warning" },
+  urgent: { label: "Urgente", color: "bg-danger" },
 };
 
 const COMPUTED_STATUS_CONFIG = {
-  pending: { label: "Pendente", color: "text-gray-600", bgColor: "bg-gray-100", borderColor: "border-gray-300" },
-  overdue: { label: "Atrasada", color: "text-red-600", bgColor: "bg-red-100", borderColor: "border-red-300" },
-  done: { label: "Feita", color: "text-emerald-600", bgColor: "bg-emerald-100", borderColor: "border-emerald-300" },
+  pending: { label: "Pendente", color: "text-muted-foreground", bgColor: "bg-muted", borderColor: "border-border" },
+  overdue: { label: "Atrasada", color: "text-danger", bgColor: "bg-danger-soft", borderColor: "border-danger" },
+  done: { label: "Feita", color: "text-success", bgColor: "bg-success-soft", borderColor: "border-success" },
 };
 
 const getComputedStatus = (task: Task): "pending" | "overdue" | "done" => {
@@ -277,12 +277,12 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                         <span className="text-sm font-medium truncate">{task.activity_type?.name || task.title}</span>
                         <span className={cn("w-1.5 h-1.5 rounded-full", priorityConfig.color)} />
                         {overdue && (
-                          <AlertTriangle className="h-3 w-3 text-red-500 flex-shrink-0" />
+                          <AlertTriangle className="h-3 w-3 text-danger flex-shrink-0" />
                         )}
                       </div>
                       <div className="flex items-center gap-2 mt-0.5 text-[10px] text-muted-foreground">
                         {task.due_date && (
-                          <span className={cn("flex items-center gap-0.5", overdue && "text-red-500")}>
+                          <span className={cn("flex items-center gap-0.5", overdue && "text-danger")}>
                             <Calendar className="h-2.5 w-2.5" />
                             {formatLocalDate(task.due_date)}
                           </span>

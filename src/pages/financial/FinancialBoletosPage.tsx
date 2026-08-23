@@ -48,10 +48,10 @@ interface Boleto {
 }
 
 const statusColors: Record<string, string> = {
-  pending: "bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400",
-  paid: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  cancelled: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
-  overdue: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
+  pending: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning",
+  paid: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success",
+  cancelled: "bg-muted text-foreground dark:bg-gray-900/30 dark:text-muted-foreground",
+  overdue: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger",
 };
 
 const statusLabels: Record<string, string> = {
@@ -619,7 +619,7 @@ export default function FinancialBoletosPage() {
                               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
                             >
                               {copiedId === boleto.id ? (
-                                <Check className="h-3 w-3 text-green-500" />
+                                <Check className="h-3 w-3 text-success" />
                               ) : (
                                 <Copy className="h-3 w-3" />
                               )}

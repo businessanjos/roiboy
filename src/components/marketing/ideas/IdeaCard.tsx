@@ -32,9 +32,9 @@ const FORMAT_LABELS: Record<IdeaFormat, string> = {
 
 const PRIORITY_COLORS: Record<IdeaPriority, string> = {
   low: "bg-muted text-muted-foreground",
-  medium: "bg-blue-500/15 text-blue-600 dark:text-blue-400",
-  high: "bg-amber-500/15 text-amber-600 dark:text-amber-400",
-  urgent: "bg-red-500/15 text-red-600 dark:text-red-400",
+  medium: "bg-info/15 text-info dark:text-info",
+  high: "bg-warning/15 text-warning dark:text-warning",
+  urgent: "bg-danger/15 text-danger dark:text-danger",
 };
 
 const PRIORITY_LABELS: Record<IdeaPriority, string> = {

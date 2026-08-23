@@ -116,8 +116,8 @@ export default function RHAdmissions() {
   return (
     <div className="p-4 md:p-6 space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-emerald-500/10">
-          <UserPlus className="h-6 w-6 text-emerald-600" />
+        <div className="p-2.5 rounded-xl bg-success/10">
+          <UserPlus className="h-6 w-6 text-success" />
         </div>
         <div>
           <h1 className="text-2xl font-bold">Admissões</h1>

@@ -50,7 +50,7 @@ export function YouTubeConnectDialog({ open, onOpenChange, onConnect, isLoading 
       <DialogContent className="sm:max-w-[450px]">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Youtube className="h-5 w-5 text-red-600" />
+            <Youtube className="h-5 w-5 text-danger" />
             Conectar Canal do YouTube
           </DialogTitle>
           <DialogDescription>

@@ -46,9 +46,9 @@ const fmt = (n: number | null | undefined) => {
 };
 
 function MedalIcon({ rank }: { rank: number }) {
-  if (rank === 1) return <Trophy className="h-5 w-5 text-yellow-500" />;
-  if (rank === 2) return <Medal className="h-5 w-5 text-zinc-400" />;
-  if (rank === 3) return <Award className="h-5 w-5 text-amber-700" />;
+  if (rank === 1) return <Trophy className="h-5 w-5 text-warning" />;
+  if (rank === 2) return <Medal className="h-5 w-5 text-muted-foreground" />;
+  if (rank === 3) return <Award className="h-5 w-5 text-warning-strong" />;
   return <span className="text-sm font-semibold text-muted-foreground tabular-nums w-5 text-center">{rank}</span>;
 }
 
@@ -115,9 +115,9 @@ function RankRow({ rank, row, metric, value, sublabel }: {
     Images;
   const accent =
     metric === "followers" ? "text-fuchsia-500" :
-    metric === "likes" ? "text-rose-500" :
-    metric === "comments" ? "text-sky-500" :
-    "text-emerald-500";
+    metric === "likes" ? "text-danger" :
+    metric === "comments" ? "text-info" :
+    "text-success";
 
   return (
     <Link
@@ -135,7 +135,7 @@ function RankRow({ rank, row, metric, value, sublabel }: {
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 truncate">
           <span className="font-medium truncate">{row.full_name || row.username}</span>
-          {row.is_verified && <BadgeCheck className="h-3.5 w-3.5 text-sky-500 shrink-0" />}
+          {row.is_verified && <BadgeCheck className="h-3.5 w-3.5 text-info shrink-0" />}
         </div>
         <div className="text-xs text-muted-foreground truncate flex items-center gap-1">
           <span>@{row.username}</span>
@@ -400,15 +400,15 @@ export default function InstagramRanking() {
           </div>
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Images className="h-3 w-3" /> Posts</div>
-            <div className="text-xl font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">{fmt(stats.totalPosts)}</div>
+            <div className="text-xl font-semibold tabular-nums text-success dark:text-success">{fmt(stats.totalPosts)}</div>
           </div>
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><Heart className="h-3 w-3" /> Curtidas</div>
-            <div className="text-xl font-semibold tabular-nums text-rose-600 dark:text-rose-400">{fmt(stats.totalLikes)}</div>
+            <div className="text-xl font-semibold tabular-nums text-danger dark:text-danger">{fmt(stats.totalLikes)}</div>
           </div>
           <div className="rounded-xl bg-background/70 backdrop-blur border p-3">
             <div className="text-xs text-muted-foreground flex items-center gap-1"><MessageCircle className="h-3 w-3" /> Comentários</div>
-            <div className="text-xl font-semibold tabular-nums text-sky-600 dark:text-sky-400">{fmt(stats.totalComments)}</div>
+            <div className="text-xl font-semibold tabular-nums text-info dark:text-info">{fmt(stats.totalComments)}</div>
           </div>
         </div>
       </div>
@@ -502,7 +502,7 @@ export default function InstagramRanking() {
           <TabsContent value="posts" className="mt-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Images className="h-4 w-4 text-emerald-500" /> Mais posts</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Images className="h-4 w-4 text-success" /> Mais posts</CardTitle>
                 <CardDescription>
                   {period === "all"
                     ? "Total de publicações no perfil (snapshot mais recente)."
@@ -525,7 +525,7 @@ export default function InstagramRanking() {
           <TabsContent value="likes" className="mt-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><Heart className="h-4 w-4 text-rose-500" /> Mais curtidas</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><Heart className="h-4 w-4 text-danger" /> Mais curtidas</CardTitle>
                 <CardDescription>Soma de curtidas nos últimos posts sincronizados.</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">
@@ -542,7 +542,7 @@ export default function InstagramRanking() {
           <TabsContent value="comments" className="mt-4">
             <Card>
               <CardHeader className="pb-3">
-                <CardTitle className="text-base flex items-center gap-2"><MessageCircle className="h-4 w-4 text-sky-500" /> Mais comentários</CardTitle>
+                <CardTitle className="text-base flex items-center gap-2"><MessageCircle className="h-4 w-4 text-info" /> Mais comentários</CardTitle>
                 <CardDescription>Soma de comentários nos últimos posts sincronizados.</CardDescription>
               </CardHeader>
               <CardContent className="pt-0">

@@ -148,7 +148,7 @@ export function AddMetaInstanceDialog({
       <DialogContent className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Globe className="h-5 w-5 text-blue-500" />
+            <Globe className="h-5 w-5 text-info" />
             Conectar Meta Cloud API
           </DialogTitle>
           <DialogDescription>
@@ -252,12 +252,12 @@ export function AddMetaInstanceDialog({
           {testResult && (
             <Alert variant={testResult.success ? "default" : "destructive"}>
               {testResult.success ? (
-                <CheckCircle2 className="h-4 w-4 text-green-500" />
+                <CheckCircle2 className="h-4 w-4 text-success" />
               ) : null}
               <AlertDescription>
                 {testResult.success ? (
                   <div className="space-y-1">
-                    <p className="font-medium text-green-600">✅ Conexão OK!</p>
+                    <p className="font-medium text-success">✅ Conexão OK!</p>
                     {testResult.name && <p className="text-sm">Nome: {testResult.name}</p>}
                     {testResult.phone && <p className="text-sm">Número: {testResult.phone}</p>}
                   </div>

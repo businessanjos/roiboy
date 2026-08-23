@@ -7,9 +7,9 @@ const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v);
 
 const RISK: Record<Exclude<FinancialRisk, "ok">, { label: string; cls: string }> = {
-  critical: { label: "Inadimplente", cls: "bg-red-600 text-white border-red-700 hover:bg-red-700" },
-  high: { label: "Em atraso", cls: "bg-orange-500 text-white border-orange-600 hover:bg-orange-600" },
-  warning: { label: "Vence ≤7d", cls: "bg-amber-500 text-white border-amber-600 hover:bg-amber-600" },
+  critical: { label: "Inadimplente", cls: "bg-danger text-white border-danger hover:bg-danger" },
+  high: { label: "Em atraso", cls: "bg-warning text-white border-warning hover:bg-warning" },
+  warning: { label: "Vence ≤7d", cls: "bg-warning text-white border-warning hover:bg-warning" },
 };
 
 interface Props {

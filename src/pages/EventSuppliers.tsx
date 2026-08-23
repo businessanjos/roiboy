@@ -48,25 +48,25 @@ import {
 
 // ===== Categorias de fornecedores =====
 const CATEGORIES: { value: string; label: string; color: string }[] = [
-  { value: "buffet", label: "Buffet & Gastronomia", color: "bg-orange-500/10 text-orange-700 border-orange-300" },
+  { value: "buffet", label: "Buffet & Gastronomia", color: "bg-warning/10 text-warning-strong border-warning" },
   { value: "decoracao", label: "Decoração", color: "bg-pink-500/10 text-pink-700 border-pink-300" },
   { value: "espaco", label: "Espaço / Venue", color: "bg-purple-500/10 text-purple-700 border-purple-300" },
-  { value: "fotografia", label: "Fotografia & Vídeo", color: "bg-blue-500/10 text-blue-700 border-blue-300" },
-  { value: "audio_visual", label: "Áudio e Iluminação", color: "bg-amber-500/10 text-amber-700 border-amber-300" },
+  { value: "fotografia", label: "Fotografia & Vídeo", color: "bg-info/10 text-info-strong border-info" },
+  { value: "audio_visual", label: "Áudio e Iluminação", color: "bg-warning/10 text-warning-strong border-warning" },
   { value: "entretenimento", label: "Entretenimento", color: "bg-fuchsia-500/10 text-fuchsia-700 border-fuchsia-300" },
-  { value: "transporte", label: "Transporte & Logística", color: "bg-teal-500/10 text-teal-700 border-teal-300" },
-  { value: "brindes", label: "Brindes & Presentes", color: "bg-emerald-500/10 text-emerald-700 border-emerald-300" },
+  { value: "transporte", label: "Transporte & Logística", color: "bg-success/10 text-success-strong border-success" },
+  { value: "brindes", label: "Brindes & Presentes", color: "bg-success/10 text-success-strong border-success" },
   { value: "hospedagem", label: "Hospedagem", color: "bg-indigo-500/10 text-indigo-700 border-indigo-300" },
-  { value: "papelaria", label: "Papelaria & Convites", color: "bg-rose-500/10 text-rose-700 border-rose-300" },
-  { value: "seguranca", label: "Segurança", color: "bg-slate-500/10 text-slate-700 border-slate-300" },
-  { value: "outros", label: "Outros", color: "bg-gray-500/10 text-gray-700 border-gray-300" },
+  { value: "papelaria", label: "Papelaria & Convites", color: "bg-danger/10 text-danger-strong border-danger" },
+  { value: "seguranca", label: "Segurança", color: "bg-slate-500/10 text-foreground border-border" },
+  { value: "outros", label: "Outros", color: "bg-gray-500/10 text-foreground border-border" },
 ];
 
 const QUOTE_STATUS: { value: string; label: string; className: string }[] = [
-  { value: "requested", label: "Solicitado", className: "bg-blue-500/10 text-blue-700 border-blue-300" },
-  { value: "received", label: "Recebido", className: "bg-amber-500/10 text-amber-700 border-amber-300" },
-  { value: "approved", label: "Aprovado", className: "bg-emerald-500/10 text-emerald-700 border-emerald-300" },
-  { value: "rejected", label: "Rejeitado", className: "bg-rose-500/10 text-rose-700 border-rose-300" },
+  { value: "requested", label: "Solicitado", className: "bg-info/10 text-info-strong border-info" },
+  { value: "received", label: "Recebido", className: "bg-warning/10 text-warning-strong border-warning" },
+  { value: "approved", label: "Aprovado", className: "bg-success/10 text-success-strong border-success" },
+  { value: "rejected", label: "Rejeitado", className: "bg-danger/10 text-danger-strong border-danger" },
 ];
 
 function getCategory(value: string) {
@@ -475,7 +475,7 @@ export default function EventSuppliers() {
                       {Array.from({ length: 5 }).map((_, i) => (
                         <Star
                           key={i}
-                          className={`h-4 w-4 ${i < (s.rating || 0) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30"}`}
+                          className={`h-4 w-4 ${i < (s.rating || 0) ? "fill-amber-400 text-warning" : "text-muted-foreground/30"}`}
                         />
                       ))}
                     </div>
@@ -487,14 +487,14 @@ export default function EventSuppliers() {
                         href={`https://wa.me/${s.phone.replace(/\D/g, "")}`}
                         target="_blank"
                         rel="noreferrer"
-                        className="text-emerald-600 hover:text-emerald-700"
+                        className="text-success hover:text-success-strong"
                         title="WhatsApp"
                       >
                         <MessageSquare className="h-4 w-4" />
                       </a>
                     )}
                     {s.website && (
-                      <a href={s.website} target="_blank" rel="noreferrer" className="text-blue-600" title="Site">
+                      <a href={s.website} target="_blank" rel="noreferrer" className="text-info" title="Site">
                         <Globe className="h-4 w-4" />
                       </a>
                     )}
@@ -937,7 +937,7 @@ function QuoteDialog({
           <Button
             disabled={!title || saving || !state.supplier?.phone}
             onClick={() => submit(true)}
-            className="bg-emerald-600 hover:bg-emerald-700"
+            className="bg-success hover:bg-success"
           >
             <MessageSquare className="h-4 w-4 mr-2" />
             Salvar e enviar WhatsApp

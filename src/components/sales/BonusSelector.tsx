@@ -19,13 +19,13 @@ interface Props {
 }
 
 const COLOR_CLASS: Record<string, string> = {
-  green: "bg-emerald-500",
-  blue: "bg-blue-500",
+  green: "bg-success",
+  blue: "bg-info",
   purple: "bg-violet-500",
-  yellow: "bg-amber-500",
-  red: "bg-red-500",
+  yellow: "bg-warning",
+  red: "bg-danger",
   pink: "bg-pink-500",
-  cyan: "bg-cyan-500",
+  cyan: "bg-info",
   gray: "bg-gray-500",
 };
 
@@ -135,7 +135,7 @@ export function BonusSelector({ dealId, value, onChange }: Props) {
   if (productMissing) {
     return (
       <div className="rounded-md border border-dashed p-3 flex items-start gap-2 text-sm text-muted-foreground">
-        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-amber-500" />
+        <AlertCircle className="h-4 w-4 mt-0.5 shrink-0 text-warning" />
         <span>
           Selecione o <strong>Item da Venda</strong> antes para que os bônus do produto apareçam aqui.
         </span>

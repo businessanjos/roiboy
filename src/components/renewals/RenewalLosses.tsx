@@ -573,8 +573,8 @@ export function RenewalLosses() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-red-100 dark:bg-red-900/30">
-              <TrendingDown className="h-5 w-5 text-red-600 dark:text-red-400" />
+            <div className="p-2 rounded-lg bg-danger-soft dark:bg-danger/30">
+              <TrendingDown className="h-5 w-5 text-danger dark:text-danger" />
             </div>
             <div>
               <p className="text-2xl font-bold">{formatCurrency(totalLostValue)}</p>
@@ -584,8 +584,8 @@ export function RenewalLosses() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-emerald-100 dark:bg-emerald-900/30">
-              <DollarSign className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="p-2 rounded-lg bg-success-soft dark:bg-success/30">
+              <DollarSign className="h-5 w-5 text-success dark:text-success" />
             </div>
             <div>
               <p className="text-2xl font-bold">{formatCurrency(totalRenewedValue)}</p>
@@ -595,8 +595,8 @@ export function RenewalLosses() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-              <Percent className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            <div className="p-2 rounded-lg bg-info-soft dark:bg-info/30">
+              <Percent className="h-5 w-5 text-info dark:text-info" />
             </div>
             <div>
               <p className="text-2xl font-bold">{renewalRate.toFixed(1)}%</p>
@@ -606,8 +606,8 @@ export function RenewalLosses() {
         </Card>
         <Card>
           <CardContent className="p-4 flex items-center gap-3">
-            <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-900/30">
-              <Users className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+            <div className="p-2 rounded-lg bg-warning-soft dark:bg-warning/30">
+              <Users className="h-5 w-5 text-warning dark:text-warning" />
             </div>
             <div>
               <p className="text-2xl font-bold">{renewed.length} / {items.length}</p>
@@ -711,24 +711,24 @@ export function RenewalLosses() {
                     <TableRow key={c.name}>
                       <TableCell className="font-medium">{c.name}</TableCell>
                       <TableCell className="text-center">
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Badge className="bg-success-soft text-success-strong dark:bg-success/30 dark:text-success">
                           {c.renewed}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
-                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger">
                           {c.lost}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-center">
                         <span className={cn(
                           "font-medium",
-                          rate >= 70 ? "text-emerald-600" : rate >= 40 ? "text-amber-600" : "text-red-600"
+                          rate >= 70 ? "text-success" : rate >= 40 ? "text-warning" : "text-danger"
                         )}>
                           {rate.toFixed(0)}%
                         </span>
                       </TableCell>
-                      <TableCell className="text-right font-medium text-red-600">
+                      <TableCell className="text-right font-medium text-danger">
                         {formatCurrency(c.lostValue)}
                       </TableCell>
                     </TableRow>
@@ -851,8 +851,8 @@ export function RenewalLosses() {
                               className={cn(
                                 "mt-1 ml-11 text-[10px] font-medium cursor-help",
                                 item.has_new_contract
-                                  ? "border-emerald-500/50 text-emerald-600 dark:text-emerald-400"
-                                  : "border-sky-500/50 text-sky-600 dark:text-sky-400"
+                                  ? "border-success/50 text-success dark:text-success"
+                                  : "border-info/50 text-info dark:text-info"
                               )}
                             >
                               Lista: Resultados
@@ -893,11 +893,11 @@ export function RenewalLosses() {
                     </TableCell>
                     <TableCell className="text-center">
                       {item.outcome === "renewed" ? (
-                        <Badge className="bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
+                        <Badge className="bg-success-soft text-success-strong dark:bg-success/30 dark:text-success">
                           ✅ Renovado
                         </Badge>
                       ) : item.outcome === "lost" ? (
-                        <Badge className="bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400">
+                        <Badge className="bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger">
                           ❌ Cancelou
                         </Badge>
                       ) : null}

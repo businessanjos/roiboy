@@ -360,8 +360,8 @@ export default function PenetrationTab() {
     <div className="space-y-6">
       {/* Alerta de qualidade dos dados */}
       {dataQualityLow && (
-        <Alert variant="default" className="border-amber-500/40 bg-amber-500/5">
-          <AlertTriangle className="h-4 w-4 text-amber-600" />
+        <Alert variant="default" className="border-warning/40 bg-warning/5">
+          <AlertTriangle className="h-4 w-4 text-warning" />
           <AlertTitle className="text-sm">Cobertura de dados limitada</AlertTitle>
           <AlertDescription className="text-xs space-y-1">
             <div>
@@ -461,7 +461,7 @@ export default function PenetrationTab() {
               label="Com UF mapeada"
               value={totals.withUf.toString()}
               hint={`${coverage.clientsCoveragePct.toFixed(0)}% de cobertura`}
-              accent={coverage.clientsCoveragePct < 50 ? "text-amber-600" : "text-foreground"}
+              accent={coverage.clientsCoveragePct < 50 ? "text-warning" : "text-foreground"}
             />
             <MetricMini
               label="MQLs com sinal geo"
@@ -483,7 +483,7 @@ export default function PenetrationTab() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <Zap className="h-4 w-4 text-emerald-600" /> Top 5 UFs para atacar (whitespace)
+              <Zap className="h-4 w-4 text-success" /> Top 5 UFs para atacar (whitespace)
             </CardTitle>
             <CardDescription>Score = TAM alto × baixa penetração × sinal de demanda (MQLs).</CardDescription>
           </CardHeader>
@@ -502,8 +502,8 @@ export default function PenetrationTab() {
                 <div className="flex items-center gap-3 text-xs">
                   <span className="text-muted-foreground">TAM {r.tam.toLocaleString("pt-BR")}</span>
                   <span className="text-muted-foreground">{r.clients} ativos</span>
-                  <span className="text-emerald-600 font-medium">{r.leads} MQL</span>
-                  <Badge className="bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                  <span className="text-success font-medium">{r.leads} MQL</span>
+                  <Badge className="bg-success/10 text-success-strong border-success/30">
                     score {r.score.toFixed(1)}
                   </Badge>
                 </div>
@@ -515,7 +515,7 @@ export default function PenetrationTab() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base flex items-center gap-2">
-              <TrendingUp className="h-4 w-4 text-amber-600" /> Top 5 UFs mais penetradas
+              <TrendingUp className="h-4 w-4 text-warning" /> Top 5 UFs mais penetradas
             </CardTitle>
             <CardDescription>Onde já temos share alto — foco em retenção, upsell e defesa da posição.</CardDescription>
           </CardHeader>
@@ -539,7 +539,7 @@ export default function PenetrationTab() {
                 <div className="flex items-center gap-3 text-xs">
                   <span className="text-muted-foreground">TAM {r.tam.toLocaleString("pt-BR")}</span>
                   <span className="text-muted-foreground">{r.clients} ativos</span>
-                  <Badge className="bg-amber-500/10 text-amber-700 border-amber-500/30">
+                  <Badge className="bg-warning/10 text-warning-strong border-warning/30">
                     {r.penetrationPct.toFixed(2)}%
                   </Badge>
                 </div>
@@ -594,7 +594,7 @@ export default function PenetrationTab() {
                         </span>
                       </div>
                     </td>
-                    <td className="py-2 pr-2 text-right tabular-nums text-emerald-600">
+                    <td className="py-2 pr-2 text-right tabular-nums text-success">
                       {r.opportunity.toLocaleString("pt-BR")}
                     </td>
                     <td className="py-2 pr-2 text-right">
@@ -665,9 +665,9 @@ export default function PenetrationTab() {
         </Card>
       )}
 
-      <Card className="border-blue-500/30 bg-blue-500/5">
+      <Card className="border-info/30 bg-info/5">
         <CardContent className="pt-3 pb-3 text-xs text-muted-foreground flex items-start gap-2">
-          <Info className="h-4 w-4 mt-0.5 text-blue-600 shrink-0" />
+          <Info className="h-4 w-4 mt-0.5 text-info shrink-0" />
           <div className="space-y-1">
             <div>
               <strong className="text-foreground">Como o score é calculado:</strong>{" "}

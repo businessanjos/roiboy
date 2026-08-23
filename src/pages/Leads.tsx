@@ -99,9 +99,9 @@ const LEAD_SOURCES = [
 ];
 
 const LEAD_STATUS = [
-  { value: "new", label: "Novo", color: "bg-blue-500" },
-  { value: "contacted", label: "Contatado", color: "bg-amber-500" },
-  { value: "qualified", label: "Qualificado", color: "bg-emerald-500" },
+  { value: "new", label: "Novo", color: "bg-info" },
+  { value: "contacted", label: "Contatado", color: "bg-warning" },
+  { value: "qualified", label: "Qualificado", color: "bg-success" },
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
   { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
@@ -1253,18 +1253,18 @@ export default function Leads() {
             <span className="text-sm font-medium">{filteredLeads.length}</span>
             <span className="text-xs text-muted-foreground">Total</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-blue-500/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-blue-500" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-info/10 min-w-fit">
+            <div className="w-2 h-2 rounded-full bg-info" />
             <span className="text-sm font-medium">{filteredNewLeads.length}</span>
             <span className="text-xs text-muted-foreground">Novos</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-amber-500/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-amber-500" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 min-w-fit">
+            <div className="w-2 h-2 rounded-full bg-warning" />
             <span className="text-sm font-medium">{filteredContactedLeads.length}</span>
             <span className="text-xs text-muted-foreground">Contatados</span>
           </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-emerald-500/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-emerald-500" />
+          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 min-w-fit">
+            <div className="w-2 h-2 rounded-full bg-success" />
             <span className="text-sm font-medium">{filteredQualifiedLeads.length}</span>
             <span className="text-xs text-muted-foreground">Qualificados</span>
           </div>
@@ -1414,7 +1414,7 @@ export default function Leads() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 hover:bg-emerald-500/20"
+                              className="h-7 w-7 hover:bg-success/20"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenZappForLead(lead);
@@ -1422,7 +1422,7 @@ export default function Leads() {
                               disabled={zappLoading}
                               title="Abrir conversa no RoyZapp"
                             >
-                              <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                              <MessageCircle className="h-3.5 w-3.5 text-success" />
                             </Button>
                           )}
 
@@ -1836,12 +1836,12 @@ export default function Leads() {
                     </p>
                   </div>
                   {existingClient ? (
-                    <Badge className="ml-auto bg-emerald-500 text-white">
+                    <Badge className="ml-auto bg-success text-white">
                       <UserCheck className="h-3 w-3 mr-1" />
                       Cliente
                     </Badge>
                   ) : (
-                    <Badge className="ml-auto bg-blue-500 text-white">
+                    <Badge className="ml-auto bg-info text-white">
                       <Users className="h-3 w-3 mr-1" />
                       Lead
                     </Badge>

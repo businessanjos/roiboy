@@ -26,9 +26,9 @@ import { AreaKpiSnapshot } from "@/components/leader-meetings/AreaKpiSnapshot";
 
 const AREAS = [
   { id: "marketing", label: "Marketing", icon: Megaphone, color: "text-purple-600 bg-purple-500/10" },
-  { id: "comercial", label: "Comercial", icon: Target, color: "text-blue-600 bg-blue-500/10" },
-  { id: "cs", label: "Customer Success", icon: Heart, color: "text-yellow-700 bg-yellow-700/10" },
-  { id: "financeiro", label: "Financeiro", icon: Wallet, color: "text-emerald-600 bg-emerald-500/10" },
+  { id: "comercial", label: "Comercial", icon: Target, color: "text-info bg-info/10" },
+  { id: "cs", label: "Customer Success", icon: Heart, color: "text-warning-strong bg-warning/10" },
+  { id: "financeiro", label: "Financeiro", icon: Wallet, color: "text-success bg-success/10" },
 ] as const;
 
 type AreaId = typeof AREAS[number]["id"];
@@ -568,7 +568,7 @@ function ActionsList({
                   className="mt-0.5 text-muted-foreground hover:text-primary"
                 >
                   {a.status === "done" ? (
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                   ) : (
                     <Circle className="h-5 w-5" />
                   )}
@@ -742,7 +742,7 @@ function AutoSaveTextarea({
       <div className="text-[10px] text-muted-foreground h-3 flex items-center gap-1">
         {status === "dirty" && <span>Editando…</span>}
         {status === "saving" && <span>Salvando…</span>}
-        {status === "saved" && <span className="text-green-600">✓ Salvo</span>}
+        {status === "saved" && <span className="text-success">✓ Salvo</span>}
       </div>
     </div>
   );

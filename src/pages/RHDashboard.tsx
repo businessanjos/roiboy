@@ -35,9 +35,9 @@ interface KpiProps {
 function Kpi({ icon: Icon, label, value, hint, tone = "default" }: KpiProps) {
   const toneMap = {
     default: { text: "text-foreground", bg: "bg-muted", icon: "text-muted-foreground" },
-    success: { text: "text-emerald-600", bg: "bg-emerald-500/10", icon: "text-emerald-600" },
-    warning: { text: "text-amber-600", bg: "bg-amber-500/10", icon: "text-amber-600" },
-    danger:  { text: "text-red-600",    bg: "bg-red-500/10",    icon: "text-red-600" },
+    success: { text: "text-success", bg: "bg-success/10", icon: "text-success" },
+    warning: { text: "text-warning", bg: "bg-warning/10", icon: "text-warning" },
+    danger:  { text: "text-danger",    bg: "bg-danger/10",    icon: "text-danger" },
     primary: { text: "text-indigo-600", bg: "bg-indigo-500/10", icon: "text-indigo-600" },
   }[tone];
   return (
@@ -261,8 +261,8 @@ export default function RHDashboard() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       <div className="flex items-center gap-3">
-        <div className="p-2.5 rounded-xl bg-rose-500/10">
-          <Briefcase className="h-7 w-7 text-rose-600" strokeWidth={1.5} />
+        <div className="p-2.5 rounded-xl bg-danger/10">
+          <Briefcase className="h-7 w-7 text-danger" strokeWidth={1.5} />
         </div>
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">Dashboard de RH</h1>

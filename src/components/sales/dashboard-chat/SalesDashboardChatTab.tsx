@@ -292,7 +292,7 @@ export function SalesDashboardChatTab() {
               <Sparkles className="w-4.5 h-4.5 text-primary-foreground" strokeWidth={2.25} />
             </div>
             {isStreaming && (
-              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 ring-2 ring-background animate-pulse" />
+              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-success ring-2 ring-background animate-pulse" />
             )}
           </div>
           <div className="flex-1 min-w-0">
@@ -398,8 +398,8 @@ export function SalesDashboardChatTab() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <Badge variant="secondary" className="text-[10px] uppercase tracking-wider font-medium">{m.metadata.kpi.period || "KPI"}</Badge>
-                            {m.metadata.kpi.trend === "up" && <TrendingUp className="w-3.5 h-3.5 text-emerald-500" />}
-                            {m.metadata.kpi.trend === "down" && <TrendingDown className="w-3.5 h-3.5 text-rose-500" />}
+                            {m.metadata.kpi.trend === "up" && <TrendingUp className="w-3.5 h-3.5 text-success" />}
+                            {m.metadata.kpi.trend === "down" && <TrendingDown className="w-3.5 h-3.5 text-danger" />}
                             {m.metadata.kpi.trend === "flat" && <Minus className="w-3.5 h-3.5 text-muted-foreground" />}
                           </div>
                           <p className="text-xs text-muted-foreground mt-1.5">{sanitizeExecutiveText(m.metadata.kpi.label)}</p>

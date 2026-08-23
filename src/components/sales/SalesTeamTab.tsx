@@ -221,8 +221,8 @@ export function SalesTeamTab() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-lg bg-blue-500/10">
-                <Phone className="h-4 w-4 text-blue-500" />
+              <div className="p-2 rounded-lg bg-info/10">
+                <Phone className="h-4 w-4 text-info" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold">{totals.total_calls}</p>
@@ -250,14 +250,14 @@ export function SalesTeamTab() {
           </CardContent>
         </Card>
 
-        <Card className="bg-emerald-500/5 border-emerald-500/20">
+        <Card className="bg-success/5 border-success/20">
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-lg bg-emerald-500/10">
-                <Trophy className="h-4 w-4 text-emerald-500" />
+              <div className="p-2 rounded-lg bg-success/10">
+                <Trophy className="h-4 w-4 text-success" />
               </div>
               <div className="min-w-0">
-                <p className="text-lg sm:text-xl font-bold text-emerald-600">{totals.won_deals}</p>
+                <p className="text-lg sm:text-xl font-bold text-success">{totals.won_deals}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   Ganhos: {formatCurrency(totals.won_value)}
                 </p>
@@ -269,8 +269,8 @@ export function SalesTeamTab() {
         <Card>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-lg bg-amber-500/10">
-                <CheckCircle2 className="h-4 w-4 text-amber-500" />
+              <div className="p-2 rounded-lg bg-warning/10">
+                <CheckCircle2 className="h-4 w-4 text-warning" />
               </div>
               <div className="min-w-0">
                 <p className="text-lg sm:text-xl font-bold">{totals.completed_tasks}</p>
@@ -300,14 +300,14 @@ export function SalesTeamTab() {
         </Card>
 
         {/* No-Show */}
-        <Card className={totals.noshow_calls > 0 ? "bg-red-500/5 border-red-500/20" : ""}>
+        <Card className={totals.noshow_calls > 0 ? "bg-danger/5 border-danger/20" : ""}>
           <CardContent className="p-3 sm:p-4">
             <div className="flex items-center gap-2 sm:gap-3">
-              <div className="p-2 rounded-lg bg-red-500/10">
-                <UserX className="h-4 w-4 text-red-500" />
+              <div className="p-2 rounded-lg bg-danger/10">
+                <UserX className="h-4 w-4 text-danger" />
               </div>
               <div className="min-w-0">
-                <p className={`text-lg sm:text-xl font-bold ${totals.noshow_calls > 0 ? 'text-red-600' : ''}`}>{totals.noshow_calls}</p>
+                <p className={`text-lg sm:text-xl font-bold ${totals.noshow_calls > 0 ? 'text-danger' : ''}`}>{totals.noshow_calls}</p>
                 <p className="text-[10px] sm:text-xs text-muted-foreground truncate">
                   No-Show {totals.scheduled_calls > 0 ? `(${Math.round((totals.noshow_calls / totals.scheduled_calls) * 100)}%)` : ''}
                 </p>

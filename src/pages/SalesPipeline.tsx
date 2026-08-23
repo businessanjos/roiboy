@@ -2826,10 +2826,10 @@ export default function SalesPipeline() {
                       <Badge variant="secondary" className="font-normal">
                         Total: <span className="font-semibold ml-1">{lostCohortStats.total}</span>
                       </Badge>
-                      <Badge variant="secondary" className="font-normal bg-amber-500/15 text-amber-700 dark:text-amber-400">
+                      <Badge variant="secondary" className="font-normal bg-warning/15 text-warning-strong dark:text-warning">
                         Criados e perdidos no mesmo mês: <span className="font-semibold ml-1">{lostCohortStats.sameMonth}</span>
                       </Badge>
-                      <Badge variant="secondary" className="font-normal bg-sky-500/15 text-sky-700 dark:text-sky-400">
+                      <Badge variant="secondary" className="font-normal bg-info/15 text-info-strong dark:text-info">
                         Criados em meses anteriores: <span className="font-semibold ml-1">{lostCohortStats.carriedOver}</span>
                       </Badge>
                       {lostCohortStats.unknown > 0 && (
@@ -2858,23 +2858,23 @@ export default function SalesPipeline() {
                 <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
                   <Trophy className="h-3.5 w-3.5" />
                   Ganhas
-                  <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-700 text-[10px] ml-0.5">
+                  <Badge variant="secondary" className="bg-success/20 text-success-strong text-[10px] ml-0.5">
                     {filteredWonDeals.length}
                   </Badge>
                 </TabsTrigger>
                 <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
                   <XCircle className="h-3.5 w-3.5" />
                   Perdidas
-                  <Badge variant="secondary" className="bg-red-500/20 text-red-700 text-[10px] ml-0.5">
+                  <Badge variant="secondary" className="bg-danger/20 text-danger-strong text-[10px] ml-0.5">
                     {filteredLostDealsByMonth.length}
                   </Badge>
                 </TabsTrigger>
               </TabsList>
               <TabsContent value="open" className="mt-0">
                 {hiddenOpenCount > 0 && (
-                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-amber-500/40 bg-amber-500/10 px-3 py-2 text-xs">
-                    <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span className="text-amber-900 dark:text-amber-200">
+                  <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
+                    <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
+                    <span className="text-warning-strong dark:text-warning">
                       <b>{hiddenOpenCount}</b> {hiddenOpenCount === 1 ? "negócio em aberto está oculto" : "negócios em aberto estão ocultos"} pelos filtros ativos (de {openDeals.length} no funil).
                     </span>
                     <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
@@ -2901,21 +2901,21 @@ export default function SalesPipeline() {
 
               <TabsContent value="won" className="mt-0 space-y-3 sm:space-y-4">
                 {/* Summary stats */}
-                <div className="flex items-center gap-4 bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center gap-4 bg-success/10 border border-success/20 rounded-lg p-3 sm:p-4">
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Total de Ganhas</p>
-                    <p className="text-lg sm:text-2xl font-bold text-emerald-600">
+                    <p className="text-lg sm:text-2xl font-bold text-success">
                       {formatCurrency(filteredWonTotal)}
                     </p>
                   </div>
-                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div className="h-8 sm:h-10 w-px bg-success/20" />
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
                     <p className="text-lg sm:text-xl font-semibold">
                       {filteredWonDealsByMonth.length}
                     </p>
                   </div>
-                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div className="h-8 sm:h-10 w-px bg-success/20" />
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Ciclo Médio</p>
                     <p className="text-lg sm:text-xl font-semibold">
@@ -2931,7 +2931,7 @@ export default function SalesPipeline() {
                       })()}
                     </p>
                   </div>
-                  <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                  <div className="h-8 sm:h-10 w-px bg-success/20" />
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Ticket Médio</p>
                     <p className="text-lg sm:text-xl font-semibold">
@@ -2947,12 +2947,12 @@ export default function SalesPipeline() {
                     if (incompleteCount === 0) return null;
                     return (
                       <>
-                        <div className="h-8 sm:h-10 w-px bg-emerald-500/20" />
+                        <div className="h-8 sm:h-10 w-px bg-success/20" />
                         <div className="flex items-center gap-2">
-                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <AlertTriangle className="h-4 w-4 text-warning" />
                           <div>
                             <p className="text-xs sm:text-sm text-muted-foreground">Negociação incompleta</p>
-                            <p className="text-lg sm:text-xl font-semibold text-amber-600">
+                            <p className="text-lg sm:text-xl font-semibold text-warning">
                               {incompleteCount}
                               <span className="text-xs sm:text-sm text-muted-foreground font-normal">
                                 {" "}/ {filteredWonDealsByMonth.length}
@@ -2979,14 +2979,14 @@ export default function SalesPipeline() {
 
               <TabsContent value="lost" className="mt-0 space-y-3 sm:space-y-4">
                 {/* Summary stats */}
-                <div className="flex items-center gap-4 bg-red-500/10 border border-red-500/20 rounded-lg p-3 sm:p-4">
+                <div className="flex items-center gap-4 bg-danger/10 border border-danger/20 rounded-lg p-3 sm:p-4">
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Total de Perdidas</p>
-                    <p className="text-lg sm:text-2xl font-bold text-red-600">
+                    <p className="text-lg sm:text-2xl font-bold text-danger">
                       {formatCurrency(filteredLostTotal)}
                     </p>
                   </div>
-                  <div className="h-8 sm:h-10 w-px bg-red-500/20" />
+                  <div className="h-8 sm:h-10 w-px bg-danger/20" />
                   <div>
                     <p className="text-xs sm:text-sm text-muted-foreground">Negócios</p>
                     <p className="text-lg sm:text-xl font-semibold">
@@ -3287,7 +3287,7 @@ function DealListView({
                     {showStatus && (
                       <Badge
                         variant={deal.status === 'won' ? 'default' : 'destructive'}
-                        className={cn("text-[10px] sm:text-xs", deal.status === 'won' ? 'bg-emerald-500' : '')}
+                        className={cn("text-[10px] sm:text-xs", deal.status === 'won' ? 'bg-success' : '')}
                       >
                         {deal.status === 'won' ? 'Ganha' : 'Perdida'}
                       </Badge>
@@ -3295,7 +3295,7 @@ function DealListView({
                     {dealMqlMap?.[deal.id] && (() => {
                       const mql = dealMqlMap[deal.id];
                       const tone = mql.color === 'green'
-                        ? 'border-emerald-500/50 text-emerald-700 bg-emerald-500/10'
+                        ? 'border-success/50 text-success-strong bg-success/10'
                         : mql.color === 'red'
                           ? 'border-destructive/50 text-destructive bg-destructive/10'
                           : 'border-primary/40 text-primary bg-primary/10';
@@ -3311,7 +3311,7 @@ function DealListView({
                           <TooltipTrigger asChild>
                             <Badge
                               variant="outline"
-                              className="text-[10px] sm:text-xs gap-1 border-amber-500/60 text-amber-700 bg-amber-500/10"
+                              className="text-[10px] sm:text-xs gap-1 border-warning/60 text-warning-strong bg-warning/10"
                             >
                               <AlertTriangle className="h-3 w-3" />
                               Negociação incompleta
@@ -3330,7 +3330,7 @@ function DealListView({
                     ) : null}
                     {/* Won date - shown only for won deals */}
                     {deal.status === 'won' && deal.won_at && (
-                      <div className="flex items-center gap-1 text-xs sm:text-sm text-emerald-600">
+                      <div className="flex items-center gap-1 text-xs sm:text-sm text-success">
                         <Calendar className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
                         <span>
                           {(() => {

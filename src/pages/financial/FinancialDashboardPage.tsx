@@ -272,7 +272,7 @@ export default function FinancialDashboardPage() {
             <CardContent className="space-y-3">
               {k.totalOverdue === 0 ? (
                 <div className="text-center py-6 text-sm text-muted-foreground">
-                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-emerald-500" />
+                  <CheckCircle2 className="h-8 w-8 mx-auto mb-2 text-success" />
                   Sem inadimplência neste momento
                 </div>
               ) : (
@@ -334,7 +334,7 @@ export default function FinancialDashboardPage() {
                         </div>
                       </div>
                     </div>
-                    <div className="font-semibold tabular-nums text-red-600 dark:text-red-400">
+                    <div className="font-semibold tabular-nums text-danger dark:text-danger">
                       {formatBRLCompact(d.total)}
                     </div>
                   </div>

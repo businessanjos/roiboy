@@ -133,7 +133,7 @@ export default function RHDepartments() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="p-2 rounded-xl bg-slate-500/10">
-          <Building className="h-6 w-6 text-slate-600" strokeWidth={1.5} />
+          <Building className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
         </div>
         <div className="flex-1">
           <h1 className="text-xl font-semibold text-foreground">Departamentos</h1>

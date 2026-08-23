@@ -105,9 +105,9 @@ const ICON_MAP: Record<string, React.ElementType> = {
 };
 
 const PRIORITY_CONFIG = {
-  urgent: { label: "Urgente", className: "bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400" },
-  high: { label: "Alta", className: "bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400" },
-  medium: { label: "Média", className: "bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400" },
+  urgent: { label: "Urgente", className: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger" },
+  high: { label: "Alta", className: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning" },
+  medium: { label: "Média", className: "bg-info-soft text-info-strong dark:bg-info/30 dark:text-info" },
   low: { label: "Baixa", className: "bg-muted text-muted-foreground" },
 };
 
@@ -142,10 +142,10 @@ function getDueDateInfo(task: Task, statuses: CustomTaskStatus[]) {
     return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium" };
   }
   if (daysDiff === 0) {
-    return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium" };
+    return { text: `Hoje · ${formattedDate}`, className: "text-warning dark:text-warning font-medium" };
   }
   if (daysDiff === 1) {
-    return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400" };
+    return { text: `Amanhã · ${formattedDate}`, className: "text-warning dark:text-warning" };
   }
   if (daysDiff <= 7) {
     return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground" };

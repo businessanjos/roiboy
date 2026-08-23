@@ -163,7 +163,7 @@ export default function CollaboratorDocuments({ collaboratorId, accountId }: Pro
                   {doc.expiry_date && (
                     <>
                       <span>•</span>
-                      <span className={isPast(new Date(doc.expiry_date)) ? "text-destructive" : isExpiringSoon(doc.expiry_date) ? "text-yellow-600" : ""}>
+                      <span className={isPast(new Date(doc.expiry_date)) ? "text-destructive" : isExpiringSoon(doc.expiry_date) ? "text-warning" : ""}>
                         {isPast(new Date(doc.expiry_date)) && <AlertCircle className="h-3 w-3 inline mr-0.5" />}
                         Vence: {format(new Date(doc.expiry_date), "dd/MM/yyyy")}
                       </span>
@@ -175,7 +175,7 @@ export default function CollaboratorDocuments({ collaboratorId, accountId }: Pro
                 <Badge variant="destructive" className="text-xs">Vencido</Badge>
               )}
               {doc.expiry_date && isExpiringSoon(doc.expiry_date) && (
-                <Badge variant="outline" className="text-xs text-yellow-600 border-yellow-300">Vencendo</Badge>
+                <Badge variant="outline" className="text-xs text-warning border-warning">Vencendo</Badge>
               )}
               {doc.file_url && (
                 <Button

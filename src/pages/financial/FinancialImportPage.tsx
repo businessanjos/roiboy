@@ -127,10 +127,10 @@ function fmtBRL(n: number | null | undefined) {
 
 function StatusBadge({ status }: { status: string }) {
   const variants: Record<string, { label: string; className: string }> = {
-    matched: { label: "Conciliada", className: "bg-emerald-500/15 text-emerald-700 border-emerald-300" },
-    unmatched: { label: "Sem match", className: "bg-amber-500/15 text-amber-700 border-amber-300" },
-    duplicate: { label: "Duplicada", className: "bg-blue-500/15 text-blue-700 border-blue-300" },
-    settled: { label: "Baixada", className: "bg-emerald-600/20 text-emerald-800 border-emerald-400" },
+    matched: { label: "Conciliada", className: "bg-success/15 text-success-strong border-success" },
+    unmatched: { label: "Sem match", className: "bg-warning/15 text-warning-strong border-warning" },
+    duplicate: { label: "Duplicada", className: "bg-info/15 text-info-strong border-info" },
+    settled: { label: "Baixada", className: "bg-success/20 text-success-strong border-success" },
     error: { label: "Erro", className: "bg-destructive/15 text-destructive border-destructive/40" },
     ignored: { label: "Ignorada", className: "bg-muted text-muted-foreground" },
   };
@@ -211,7 +211,7 @@ function ImporterTab({ source }: { source: ImportSource }) {
                 variant="default"
                 onClick={() => runPreview(true)}
                 disabled={applying || loading}
-                className="bg-emerald-600 hover:bg-emerald-700"
+                className="bg-success hover:bg-success"
               >
                 {applying ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <CheckCircle2 className="h-4 w-4 mr-2" />}
                 Aplicar baixa ({result.matched})
@@ -222,9 +222,9 @@ function ImporterTab({ source }: { source: ImportSource }) {
           {result && (
             <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
               <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Total</p><p className="text-2xl font-bold">{result.total}</p></CardContent></Card>
-              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Conciliadas</p><p className="text-2xl font-bold text-emerald-600">{result.matched}</p></CardContent></Card>
-              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Sem match</p><p className="text-2xl font-bold text-amber-600">{result.unmatched}</p></CardContent></Card>
-              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Baixadas</p><p className="text-2xl font-bold text-emerald-700">{result.settled ?? 0}</p></CardContent></Card>
+              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Conciliadas</p><p className="text-2xl font-bold text-success">{result.matched}</p></CardContent></Card>
+              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Sem match</p><p className="text-2xl font-bold text-warning">{result.unmatched}</p></CardContent></Card>
+              <Card><CardContent className="p-3"><p className="text-xs text-muted-foreground">Baixadas</p><p className="text-2xl font-bold text-success-strong">{result.settled ?? 0}</p></CardContent></Card>
             </div>
           )}
 
@@ -254,7 +254,7 @@ function ImporterTab({ source }: { source: ImportSource }) {
                           <TableCell><StatusBadge status={r.status} /></TableCell>
                           <TableCell className="text-xs">{r.parsed_date ?? "—"}</TableCell>
                           <TableCell className="text-right font-mono text-xs">{fmtBRL(r.parsed_amount)}</TableCell>
-                          {source === "cielo" && <TableCell className="text-right font-mono text-xs text-amber-700">{fmtBRL(r.parsed_fee_amount)}</TableCell>}
+                          {source === "cielo" && <TableCell className="text-right font-mono text-xs text-warning-strong">{fmtBRL(r.parsed_fee_amount)}</TableCell>}
                           {source === "cielo" && <TableCell className="text-right font-mono text-xs">{fmtBRL(r.parsed_net_amount)}</TableCell>}
                           {source === "cielo" && <TableCell className="text-xs">{r.parsed_brand ?? "—"}</TableCell>}
                           <TableCell className="text-xs">{(source === "cielo" ? r.parsed_nsu : r.parsed_doc) ?? "—"}</TableCell>

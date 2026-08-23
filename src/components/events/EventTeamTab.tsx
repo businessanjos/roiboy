@@ -65,14 +65,14 @@ interface EventTeamTabProps {
 }
 
 const roleConfig: Record<EventTeamRole, { label: string; icon: React.ElementType; color: string }> = {
-  organizer: { label: "Organizador", icon: Star, color: "bg-yellow-500/10 text-yellow-600" },
-  coordinator: { label: "Coordenador", icon: UserCog, color: "bg-blue-500/10 text-blue-600" },
-  support: { label: "Apoio", icon: Headphones, color: "bg-green-500/10 text-green-600" },
+  organizer: { label: "Organizador", icon: Star, color: "bg-warning/10 text-warning" },
+  coordinator: { label: "Coordenador", icon: UserCog, color: "bg-info/10 text-info" },
+  support: { label: "Apoio", icon: Headphones, color: "bg-success/10 text-success" },
   speaker: { label: "Palestrante", icon: Mic, color: "bg-purple-500/10 text-purple-600" },
   mentor: { label: "Mentor", icon: GraduationCap, color: "bg-indigo-500/10 text-indigo-600" },
   host: { label: "Anfitrião", icon: User, color: "bg-pink-500/10 text-pink-600" },
-  photographer: { label: "Fotógrafo", icon: Camera, color: "bg-orange-500/10 text-orange-600" },
-  other: { label: "Outro", icon: User, color: "bg-gray-500/10 text-gray-600" },
+  photographer: { label: "Fotógrafo", icon: Camera, color: "bg-warning/10 text-warning" },
+  other: { label: "Outro", icon: User, color: "bg-gray-500/10 text-muted-foreground" },
 };
 
 export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) {
@@ -230,7 +230,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
                         <div className="flex items-center gap-2">
                           <p className="font-medium">{member.users?.name}</p>
                           {member.is_primary && (
-                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                            <Star className="h-4 w-4 text-warning fill-yellow-500" />
                           )}
                         </div>
                         <p className="text-sm text-muted-foreground">{member.users?.email}</p>
@@ -252,7 +252,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
                         <RoleIcon className="h-3 w-3 mr-1" />
                         {roleConfig[member.role].label}
                       </Badge>
-                      <Badge variant="outline" className={member.is_external ? "border-orange-500 text-orange-600" : "border-blue-500 text-blue-600"}>
+                      <Badge variant="outline" className={member.is_external ? "border-warning text-warning" : "border-info text-info"}>
                         {member.is_external ? (
                           <>
                             <Building2 className="h-3 w-3 mr-1" />

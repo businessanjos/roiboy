@@ -438,14 +438,14 @@ function SummaryTile({
       className={cn(
         "rounded-lg border px-3 py-2 flex items-center gap-2",
         tone === "danger" && "border-destructive/40 bg-destructive/5",
-        tone === "ok" && "border-emerald-500/30 bg-emerald-500/5",
+        tone === "ok" && "border-success/30 bg-success/5",
       )}
     >
       <span
         className={cn(
           "text-muted-foreground",
           tone === "danger" && "text-destructive",
-          tone === "ok" && "text-emerald-600 dark:text-emerald-400",
+          tone === "ok" && "text-success dark:text-success",
         )}
       >
         {icon}
@@ -484,7 +484,7 @@ function ToggleCell({
               checked={checked}
               disabled={disabled}
               onCheckedChange={onCheckedChange}
-              className={cn(tone === "zapp" && "data-[state=checked]:bg-emerald-600")}
+              className={cn(tone === "zapp" && "data-[state=checked]:bg-success")}
             />
           )}
         </span>

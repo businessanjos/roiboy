@@ -337,7 +337,7 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
       >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Stethoscope className="h-5 w-5 text-rose-600" />
+            <Stethoscope className="h-5 w-5 text-danger" />
             Guia de Encaminhamento — Exame Ocupacional
           </DialogTitle>
           <DialogDescription>
@@ -405,7 +405,7 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
                 </div>
               </div>
               <p className="text-[11px] text-muted-foreground flex items-center gap-1">
-                <Sparkles className="h-3 w-3 text-amber-500" />
+                <Sparkles className="h-3 w-3 text-warning" />
                 Use a câmera ou envie a foto — o sistema preenche os campos automaticamente.
               </p>
               <div className="grid grid-cols-2 gap-2">
@@ -453,7 +453,7 @@ export default function ExamReferralDialog({ admission, open, onOpenChange }: Pr
               </div>
             </div>
 
-            <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded border bg-amber-500/5 border-amber-500/30">
+            <label className="flex items-center gap-2 text-sm cursor-pointer p-2 rounded border bg-warning/5 border-warning/30">
               <Checkbox checked={saveAsDefault} onCheckedChange={(v) => setSaveAsDefault(!!v)} />
               <span>Salvar empresa e médico coordenador como padrão (auto-preenche próximos guias)</span>
             </label>

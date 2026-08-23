@@ -39,10 +39,10 @@ const CATEGORIES = [
 ];
 
 const STATUSES = [
-  { value: "available", label: "Disponível", color: "bg-green-500/10 text-green-700 border-green-500/30" },
-  { value: "in_use", label: "Em uso", color: "bg-blue-500/10 text-blue-700 border-blue-500/30" },
-  { value: "maintenance", label: "Manutenção", color: "bg-amber-500/10 text-amber-700 border-amber-500/30" },
-  { value: "lost", label: "Perdido/Quebrado", color: "bg-red-500/10 text-red-700 border-red-500/30" },
+  { value: "available", label: "Disponível", color: "bg-success/10 text-success-strong border-success/30" },
+  { value: "in_use", label: "Em uso", color: "bg-info/10 text-info-strong border-info/30" },
+  { value: "maintenance", label: "Manutenção", color: "bg-warning/10 text-warning-strong border-warning/30" },
+  { value: "lost", label: "Perdido/Quebrado", color: "bg-danger/10 text-danger-strong border-danger/30" },
 ];
 
 interface Item {
@@ -171,9 +171,9 @@ export default function EventsInventory() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label: "Total", value: stats.total, color: "text-foreground" },
-          { label: "Disponível", value: stats.available, color: "text-green-600" },
-          { label: "Em uso", value: stats.inUse, color: "text-blue-600" },
-          { label: "Manutenção", value: stats.maintenance, color: "text-amber-600" },
+          { label: "Disponível", value: stats.available, color: "text-success" },
+          { label: "Em uso", value: stats.inUse, color: "text-info" },
+          { label: "Manutenção", value: stats.maintenance, color: "text-warning" },
         ].map((s) => (
           <Card key={s.label}>
             <CardContent className="py-4">

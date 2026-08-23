@@ -359,7 +359,7 @@ export function QuotasSection() {
                       <TableCell className="text-right text-xs font-medium whitespace-nowrap">
                         {u.metaTotalValue > 0 ? fmtBRL(u.metaTotalValue) : "—"}
                       </TableCell>
-                      <TableCell className="text-right text-xs font-bold text-emerald-600 whitespace-nowrap">
+                      <TableCell className="text-right text-xs font-bold text-success whitespace-nowrap">
                         {u.realizadoTotalValue > 0 ? fmtBRL(u.realizadoTotalValue) : "—"}
                       </TableCell>
                       <TableCell className="text-center">
@@ -387,7 +387,7 @@ export function QuotasSection() {
                       </td>
                     ))}
                     <td className="py-2 text-right px-4 whitespace-nowrap">{fmtBRL(footerMetaTotal)}</td>
-                    <td className="py-2 text-right px-4 whitespace-nowrap text-emerald-600">{fmtBRL(footerRealizadoTotal)}</td>
+                    <td className="py-2 text-right px-4 whitespace-nowrap text-success">{fmtBRL(footerRealizadoTotal)}</td>
                     <td className="py-2 text-center">
                       <Badge variant={footerAtingimento >= 100 ? "default" : "secondary"} className="text-[10px] px-1.5">
                         {footerAtingimento.toFixed(0)}%

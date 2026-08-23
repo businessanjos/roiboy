@@ -342,9 +342,9 @@ export function EntryTemplatesManager({
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center gap-2">
                         {template.type === "income" ? (
-                          <ArrowDownCircle className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                          <ArrowDownCircle className="h-3.5 w-3.5 text-success shrink-0" />
                         ) : (
-                          <ArrowUpCircle className="h-3.5 w-3.5 text-red-600 shrink-0" />
+                          <ArrowUpCircle className="h-3.5 w-3.5 text-danger shrink-0" />
                         )}
                         <span className="font-medium text-sm truncate">{template.name}</span>
                         {template.use_count > 0 && (

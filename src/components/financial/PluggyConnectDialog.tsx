@@ -312,10 +312,10 @@ export function PluggyConnectDialog({ open, onOpenChange, bankAccountId, bankAcc
 
         {hasUnlinkedAccounts && (
           <>
-            <div className="rounded-md border border-amber-500/50 bg-amber-500/10 p-3 flex gap-2 items-start">
-              <AlertCircle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+            <div className="rounded-md border border-warning/50 bg-warning/10 p-3 flex gap-2 items-start">
+              <AlertCircle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
               <div className="text-sm">
-                <p className="font-medium text-amber-700 dark:text-amber-400">
+                <p className="font-medium text-warning-strong dark:text-warning">
                   Passo final obrigatório
                 </p>
                 <p className="text-xs text-muted-foreground mt-0.5">

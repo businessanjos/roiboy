@@ -459,7 +459,7 @@ export function PipelineFilterButton({
                             : ""
                         }`}
                       >
-                        <Star className="h-4 w-4 text-amber-500 shrink-0" />
+                        <Star className="h-4 w-4 text-warning shrink-0" />
                         <span className="text-sm">{filter.name}</span>
                       </button>
                     );
@@ -501,7 +501,7 @@ export function PipelineFilterButton({
                       }`}
                     >
                       {filter.is_public ? (
-                        <Globe className="h-4 w-4 text-blue-500 shrink-0" />
+                        <Globe className="h-4 w-4 text-info shrink-0" />
                       ) : (
                         <Lock className="h-4 w-4 text-muted-foreground shrink-0" />
                       )}

@@ -48,8 +48,8 @@ const fmtPct = (v: number | null | undefined) => v == null ? '—' : `${Number(v
 
 function StatusBadge({ status }: { status: string }) {
   const map: Record<string, string> = {
-    active: 'bg-emerald-500/15 text-emerald-500 border-emerald-500/30',
-    paused: 'bg-amber-500/15 text-amber-500 border-amber-500/30',
+    active: 'bg-success/15 text-success border-success/30',
+    paused: 'bg-warning/15 text-warning border-warning/30',
     deleted: 'bg-destructive/15 text-destructive border-destructive/30',
     archived: 'bg-muted text-muted-foreground border-border',
   };
@@ -559,7 +559,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                           <td className="p-2 text-right text-primary">{c.insights?.cpl ? fmtBRL(c.insights.cpl) : '—'}</td>
                           <td className="p-2 text-right">
                             {c.insights?.roas ? (
-                              <span className={c.insights.roas >= 1 ? 'text-emerald-500 font-medium' : 'text-muted-foreground'}>
+                              <span className={c.insights.roas >= 1 ? 'text-success font-medium' : 'text-muted-foreground'}>
                                 {c.insights.roas.toFixed(2)}x
                               </span>
                             ) : '—'}

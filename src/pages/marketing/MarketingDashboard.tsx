@@ -86,10 +86,10 @@ function KpiCard({
 }) {
   const toneClass = {
     default: "text-foreground",
-    success: "text-emerald-600 dark:text-emerald-400",
-    warning: "text-amber-600 dark:text-amber-400",
-    danger: "text-red-600 dark:text-red-400",
-    info: "text-blue-600 dark:text-blue-400",
+    success: "text-success dark:text-success",
+    warning: "text-warning dark:text-warning",
+    danger: "text-danger dark:text-danger",
+    info: "text-info dark:text-info",
     purple: "text-purple-600 dark:text-purple-400",
   }[tone];
   return (

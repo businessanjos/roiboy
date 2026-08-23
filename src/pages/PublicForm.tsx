@@ -132,7 +132,7 @@ function CivilStatusDropdown({ value, hasError, dark, onSelect }: {
           className={cn(
             "w-full h-12 rounded-lg border flex items-center justify-between px-4 text-[15px] outline-none transition-all duration-200",
             "hover:border-[rgba(255,255,255,0.12)]",
-            hasError && "ring-2 ring-red-500/50 border-red-500/30"
+            hasError && "ring-2 ring-danger/50 border-danger/30"
           )}
           style={{
             backgroundColor: dark.surface,
@@ -881,7 +881,7 @@ function isMetodoProprio(field: CustomField): boolean {
       "w-full h-12 rounded-lg border bg-transparent px-4 text-[15px] outline-none transition-all duration-200",
       "placeholder:text-[rgba(240,240,242,0.25)]",
       "focus:border-transparent focus:ring-2",
-      hasError ? "ring-2 ring-red-500/50 border-red-500/30" : ""
+      hasError ? "ring-2 ring-danger/50 border-danger/30" : ""
     );
 
     const inputStyles: React.CSSProperties = {
@@ -1109,7 +1109,7 @@ function isMetodoProprio(field: CustomField): boolean {
               className={cn(
                 "w-full h-12 rounded-lg border flex items-center gap-3 px-4 text-[15px] outline-none transition-all duration-200 group",
                 "hover:border-[rgba(255,255,255,0.12)]",
-                hasError && "ring-2 ring-red-500/50 border-red-500/30"
+                hasError && "ring-2 ring-danger/50 border-danger/30"
               )}
               style={{
                 backgroundColor: dark.surface,
@@ -1808,7 +1808,7 @@ function isMetodoProprio(field: CustomField): boolean {
               "w-full rounded-lg border bg-transparent px-4 py-3 text-[15px] outline-none resize-none transition-all duration-200",
               "placeholder:text-[rgba(240,240,242,0.25)]",
               "focus:border-transparent focus:ring-2",
-              hasError && "ring-2 ring-red-500/50 border-red-500/30"
+              hasError && "ring-2 ring-danger/50 border-danger/30"
             )}
             style={inputStyles}
           />
@@ -2019,7 +2019,7 @@ function isMetodoProprio(field: CustomField): boolean {
                             className={cn(
                               "w-full h-12 rounded-lg border bg-transparent pl-14 pr-4 text-[15px] outline-none transition-all duration-200",
                               "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2",
-                              fieldErrors.clientName && "ring-2 ring-red-500/50 border-red-500/30"
+                              fieldErrors.clientName && "ring-2 ring-danger/50 border-danger/30"
                             )}
                             style={{
                               backgroundColor: dark.surface,
@@ -2052,7 +2052,7 @@ function isMetodoProprio(field: CustomField): boolean {
                             className={cn(
                               "w-full h-12 rounded-lg border bg-transparent pl-14 pr-4 text-[15px] outline-none transition-all duration-200",
                               "placeholder:text-[rgba(240,240,242,0.25)] focus:ring-2",
-                              fieldErrors.clientPhone && "ring-2 ring-red-500/50 border-red-500/30"
+                              fieldErrors.clientPhone && "ring-2 ring-danger/50 border-danger/30"
                             )}
                             style={{
                               backgroundColor: dark.surface,

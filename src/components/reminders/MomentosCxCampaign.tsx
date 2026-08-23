@@ -520,7 +520,7 @@ Um abraço!`);
                 <div className="p-4 bg-muted/50 rounded-lg">
                   <p className="text-sm text-muted-foreground">Canal</p>
                   <p className="font-medium flex items-center gap-2">
-                    <MessageSquare className="h-4 w-4 text-green-500" />
+                    <MessageSquare className="h-4 w-4 text-success" />
                     WhatsApp
                   </p>
                 </div>
@@ -555,8 +555,8 @@ Um abraço!`);
                 </div>
               </div>
 
-              <div className="p-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                <p className="text-sm text-amber-700 dark:text-amber-400">
+              <div className="p-4 bg-warning/10 border border-warning/30 rounded-lg">
+                <p className="text-sm text-warning-strong dark:text-warning">
                   Os envios serão feitos com intervalo de 3-10 segundos entre cada mensagem para simular envio humano.
                 </p>
               </div>

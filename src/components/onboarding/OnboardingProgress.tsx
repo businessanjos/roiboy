@@ -38,7 +38,7 @@ export function OnboardingProgress({
       <div className="relative">
         <div className="flex justify-between text-xs text-muted-foreground mb-2">
           <span className="flex items-center gap-1.5">
-            <Trophy className="h-3.5 w-3.5 text-amber-500" />
+            <Trophy className="h-3.5 w-3.5 text-warning" />
             Progresso: {Math.round(progress)}%
           </span>
           <span>
@@ -91,7 +91,7 @@ export function OnboardingProgress({
                   className={cn(
                     "flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-300",
                     isCurrent && "border-primary bg-primary text-primary-foreground shadow-lg",
-                    isCompleted && !isCurrent && "border-green-500 bg-green-500 text-white",
+                    isCompleted && !isCurrent && "border-success bg-success text-white",
                     isSkipped && "border-muted bg-muted/50 text-muted-foreground",
                     !isCurrent && !isCompleted && !isSkipped && "border-muted bg-background text-muted-foreground"
                   )}
@@ -116,7 +116,7 @@ export function OnboardingProgress({
                   <div 
                     className={cn(
                       "absolute top-5 left-full w-full h-0.5 -ml-0.5",
-                      isCompleted ? "bg-green-500" : "bg-muted"
+                      isCompleted ? "bg-success" : "bg-muted"
                     )}
                     style={{ width: "calc(100% - 20px)" }}
                   />
@@ -127,7 +127,7 @@ export function OnboardingProgress({
                 className={cn(
                   "text-[10px] text-center leading-tight transition-colors",
                   isCurrent && "text-primary font-semibold",
-                  isCompleted && !isCurrent && "text-green-600 dark:text-green-400",
+                  isCompleted && !isCurrent && "text-success dark:text-success",
                   isSkipped && "text-muted-foreground line-through",
                   !isCurrent && !isCompleted && !isSkipped && "text-muted-foreground"
                 )}
@@ -146,7 +146,7 @@ export function OnboardingProgress({
           animate={{ opacity: 1, y: 0 }}
           className="flex items-center gap-2 pt-2"
         >
-          <Star className="h-4 w-4 text-amber-500" />
+          <Star className="h-4 w-4 text-warning" />
           <div className="flex gap-1">
             {unlockedAchievements.map((achievement) => (
               <motion.div

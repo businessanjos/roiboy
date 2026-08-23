@@ -123,7 +123,7 @@ export function EditYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading
             </div>
             <div className="space-y-4">
               <div className="space-y-2"><Label className="flex items-center gap-1.5"><Hash className="h-3.5 w-3.5" />Tags</Label><Input placeholder="#tutorial #dicas" value={hashtagsInput} onChange={(e) => setHashtagsInput(e.target.value)} /></div>
-              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-orange-500" /><Label htmlFor="edit-is-viral-yt" className="cursor-pointer">Marcar como Viral</Label></div><Switch id="edit-is-viral-yt" checked={isViral} onCheckedChange={setIsViral} /></div>
+              <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"><div className="flex items-center gap-2"><Flame className="h-4 w-4 text-warning" /><Label htmlFor="edit-is-viral-yt" className="cursor-pointer">Marcar como Viral</Label></div><Switch id="edit-is-viral-yt" checked={isViral} onCheckedChange={setIsViral} /></div>
               <div className="space-y-2"><Label>Observações</Label><Textarea placeholder="Anotações..." value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} /></div>
             </div>
           </form>

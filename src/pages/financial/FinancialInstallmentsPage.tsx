@@ -107,14 +107,14 @@ type InstallmentRow = {
 
 const STATUS_META: Record<string, { label: string; className: string; icon: any }> = {
   pending: { label: "Pendente", className: "bg-muted text-muted-foreground", icon: Clock },
-  scheduled: { label: "Agendada", className: "bg-blue-500/15 text-blue-600", icon: Clock },
-  paid: { label: "Paga", className: "bg-emerald-500/15 text-emerald-600", icon: CheckCircle2 },
+  scheduled: { label: "Agendada", className: "bg-info/15 text-info", icon: Clock },
+  paid: { label: "Paga", className: "bg-success/15 text-success", icon: CheckCircle2 },
   overdue: { label: "Vencida", className: "bg-destructive/15 text-destructive", icon: AlertCircle },
-  renegotiated: { label: "Renegociada", className: "bg-orange-500/15 text-orange-600", icon: RefreshCw },
-  written_off: { label: "Baixada", className: "bg-zinc-500/15 text-zinc-600", icon: XCircle },
-  judicial: { label: "Judicial", className: "bg-red-500/15 text-red-600", icon: Gavel },
+  renegotiated: { label: "Renegociada", className: "bg-warning/15 text-warning", icon: RefreshCw },
+  written_off: { label: "Baixada", className: "bg-zinc-500/15 text-muted-foreground", icon: XCircle },
+  judicial: { label: "Judicial", className: "bg-danger/15 text-danger", icon: Gavel },
   refunded: { label: "Estornada", className: "bg-pink-500/15 text-pink-600", icon: RefreshCw },
-  partial: { label: "Parcial", className: "bg-amber-500/15 text-amber-600", icon: Clock },
+  partial: { label: "Parcial", className: "bg-warning/15 text-warning", icon: Clock },
 };
 
 const PAYMENT_METHOD_LABELS: Record<string, string> = {
@@ -767,7 +767,7 @@ export default function FinancialInstallmentsPage() {
                       <TableCell className="font-medium">{r.number}</TableCell>
                       <TableCell className="font-medium">{clientName}</TableCell>
                       <TableCell>
-                        <Badge variant="outline" className={isCnpj ? "bg-blue-500/10 text-blue-600 border-blue-500/30" : "bg-purple-500/10 text-purple-600 border-purple-500/30"}>
+                        <Badge variant="outline" className={isCnpj ? "bg-info/10 text-info border-info/30" : "bg-purple-500/10 text-purple-600 border-purple-500/30"}>
                           {isCnpj ? "CNPJ" : "CPF"}
                         </Badge>
                       </TableCell>

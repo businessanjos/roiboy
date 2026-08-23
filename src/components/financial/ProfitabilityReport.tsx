@@ -162,23 +162,23 @@ export function ProfitabilityReport({ open, onOpenChange }: ProfitabilityReportP
         <div className="grid grid-cols-3 gap-4">
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <TrendingUp className="h-4 w-4 text-green-600" />
+              <TrendingUp className="h-4 w-4 text-success" />
               Receita Total
             </div>
-            <p className="text-2xl font-bold text-green-600">{formatCurrency(totals.revenue)}</p>
+            <p className="text-2xl font-bold text-success">{formatCurrency(totals.revenue)}</p>
           </div>
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
-              <TrendingDown className="h-4 w-4 text-red-600" />
+              <TrendingDown className="h-4 w-4 text-danger" />
               Custos Total
             </div>
-            <p className="text-2xl font-bold text-red-600">{formatCurrency(totals.costs)}</p>
+            <p className="text-2xl font-bold text-danger">{formatCurrency(totals.costs)}</p>
           </div>
           <div className="p-4 border rounded-lg">
             <div className="flex items-center gap-2 text-sm text-muted-foreground mb-1">
               Lucro Líquido
             </div>
-            <p className={`text-2xl font-bold ${totals.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+            <p className={`text-2xl font-bold ${totals.profit >= 0 ? "text-success" : "text-danger"}`}>
               {formatCurrency(totals.profit)}
             </p>
             <p className="text-sm text-muted-foreground">
@@ -212,13 +212,13 @@ export function ProfitabilityReport({ open, onOpenChange }: ProfitabilityReportP
               {profitability.map((client) => (
                 <TableRow key={client.client_id}>
                   <TableCell className="font-medium">{client.client_name}</TableCell>
-                  <TableCell className="text-right text-green-600">
+                  <TableCell className="text-right text-success">
                     {formatCurrency(client.total_revenue)}
                   </TableCell>
-                  <TableCell className="text-right text-red-600">
+                  <TableCell className="text-right text-danger">
                     {formatCurrency(client.total_costs)}
                   </TableCell>
-                  <TableCell className={`text-right font-bold ${client.profit >= 0 ? "text-green-600" : "text-red-600"}`}>
+                  <TableCell className={`text-right font-bold ${client.profit >= 0 ? "text-success" : "text-danger"}`}>
                     {formatCurrency(client.profit)}
                   </TableCell>
                   <TableCell className="text-right">
@@ -230,7 +230,7 @@ export function ProfitabilityReport({ open, onOpenChange }: ProfitabilityReportP
                     <div className="flex items-center gap-2">
                       <Progress 
                         value={maxProfit > 0 ? (Math.abs(client.profit) / maxProfit) * 100 : 0} 
-                        className={`h-2 ${client.profit >= 0 ? "" : "[&>div]:bg-red-500"}`}
+                        className={`h-2 ${client.profit >= 0 ? "" : "[&>div]:bg-danger"}`}
                       />
                     </div>
                   </TableCell>

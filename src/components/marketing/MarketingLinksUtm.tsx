@@ -584,7 +584,7 @@ function LinkRow({
               </Badge>
             )}
             {link.meta_campaign_name && (
-              <Badge variant="outline" className="text-[10px] bg-blue-500/10 border-blue-500/30 text-blue-400">
+              <Badge variant="outline" className="text-[10px] bg-info/10 border-info/30 text-info">
                 Meta: {link.meta_campaign_name}
               </Badge>
             )}
@@ -608,7 +608,7 @@ function LinkRow({
         </div>
         <div className="flex items-center gap-1 shrink-0">
           <Button size="sm" variant="outline" onClick={onCopy} className="gap-1.5">
-            {copied ? <Check className="w-3.5 h-3.5 text-green-500" /> : <Copy className="w-3.5 h-3.5" />}
+            {copied ? <Check className="w-3.5 h-3.5 text-success" /> : <Copy className="w-3.5 h-3.5" />}
             {copied ? 'Copiado' : 'Copiar'}
           </Button>
           <Button size="sm" variant="ghost" onClick={onAnalytics} title="Atribuição de leads">

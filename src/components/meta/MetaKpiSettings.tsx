@@ -8,7 +8,7 @@ import { Settings2, RotateCcw } from 'lucide-react';
 import { ALL_META_KPIS, useMetaKpiPreferences } from '@/hooks/useMetaKpiPreferences';
 
 const categoryLabels: Record<string, string> = { performance: 'Performance', engagement: 'Engajamento', cost: 'Custos', conversion: 'Conversão' };
-const categoryColors: Record<string, string> = { performance: 'text-blue-500', engagement: 'text-emerald-500', cost: 'text-amber-500', conversion: 'text-purple-500' };
+const categoryColors: Record<string, string> = { performance: 'text-info', engagement: 'text-success', cost: 'text-warning', conversion: 'text-purple-500' };
 
 export function MetaKpiSettings() {
   const { visibleKpis, toggleKpi, resetToDefaults } = useMetaKpiPreferences();

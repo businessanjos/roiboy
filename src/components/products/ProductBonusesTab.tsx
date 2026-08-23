@@ -20,13 +20,13 @@ export interface ProductBonus {
 }
 
 const COLOR_OPTIONS = [
-  { value: "green", label: "Verde", class: "bg-emerald-500" },
-  { value: "blue", label: "Azul", class: "bg-blue-500" },
+  { value: "green", label: "Verde", class: "bg-success" },
+  { value: "blue", label: "Azul", class: "bg-info" },
   { value: "purple", label: "Roxo", class: "bg-violet-500" },
-  { value: "yellow", label: "Amarelo", class: "bg-amber-500" },
-  { value: "red", label: "Vermelho", class: "bg-red-500" },
+  { value: "yellow", label: "Amarelo", class: "bg-warning" },
+  { value: "red", label: "Vermelho", class: "bg-danger" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
-  { value: "cyan", label: "Ciano", class: "bg-cyan-500" },
+  { value: "cyan", label: "Ciano", class: "bg-info" },
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
 ];
 

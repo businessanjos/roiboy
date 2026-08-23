@@ -119,11 +119,11 @@ type SignatureFilter = "all" | "awaiting" | "signed" | "none";
 const SIGNATURE_LABELS: Record<string, { label: string; className: string }> = {
   signed: {
     label: "Assinado",
-    className: "border-emerald-500/40 bg-emerald-500/10 text-emerald-600",
+    className: "border-success/40 bg-success/10 text-success",
   },
   awaiting: {
     label: "Aguardando assinatura",
-    className: "border-amber-500/40 bg-amber-500/10 text-amber-600",
+    className: "border-warning/40 bg-warning/10 text-warning",
   },
   none: {
     label: "Sem contrato digital",
@@ -653,7 +653,7 @@ export default function FinancialSalesReconciliationPage() {
           </div>
 
           {signedPending.length > 0 && (
-            <div className="flex flex-col gap-3 rounded-md border border-amber-500/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-700 dark:text-amber-400 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex flex-col gap-3 rounded-md border border-warning/40 bg-warning/10 px-4 py-3 text-sm text-warning-strong dark:text-warning sm:flex-row sm:items-center sm:justify-between">
               <div>
                 <p className="font-medium">
                   {signedPending.length} contrato(s) assinado(s) ainda sem parcelas geradas.

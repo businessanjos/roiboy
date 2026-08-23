@@ -22,12 +22,12 @@ interface Props {
 }
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
-  paid: { label: "Pago", className: "bg-emerald-500/15 text-emerald-700 border-emerald-500/30" },
-  pending: { label: "A vencer", className: "bg-blue-500/15 text-blue-700 border-blue-500/30" },
-  overdue: { label: "Vencido", className: "bg-red-500/15 text-red-700 border-red-500/30" },
-  partially_paid: { label: "Parcial", className: "bg-amber-500/15 text-amber-700 border-amber-500/30" },
+  paid: { label: "Pago", className: "bg-success/15 text-success-strong border-success/30" },
+  pending: { label: "A vencer", className: "bg-info/15 text-info-strong border-info/30" },
+  overdue: { label: "Vencido", className: "bg-danger/15 text-danger-strong border-danger/30" },
+  partially_paid: { label: "Parcial", className: "bg-warning/15 text-warning-strong border-warning/30" },
   cancelled: { label: "Cancelado", className: "bg-muted text-muted-foreground border-border" },
-  renegotiated: { label: "Renegociado", className: "bg-orange-100 text-orange-800 border-orange-200" },
+  renegotiated: { label: "Renegociado", className: "bg-warning-soft text-warning-strong border-warning" },
 };
 
 export function ActiveClientContractSheet({
@@ -136,40 +136,40 @@ export function ActiveClientContractSheet({
             {/* Auditoria de saldo — flag para revisão antes de aprovar pagamento */}
             {data?.contract && data.entries.length > 0 && (
               hasDivergence ? (
-                <div className="rounded-lg border border-red-500/40 bg-red-500/10 p-3 flex gap-3">
-                  <AlertTriangle className="h-5 w-5 text-red-600 shrink-0 mt-0.5" />
+                <div className="rounded-lg border border-danger/40 bg-danger/10 p-3 flex gap-3">
+                  <AlertTriangle className="h-5 w-5 text-danger shrink-0 mt-0.5" />
                   <div className="text-sm space-y-1">
-                    <p className="font-semibold text-red-700">
+                    <p className="font-semibold text-danger-strong">
                       Divergência de {formatBRLPrecise(Math.abs(balanceDiff))} — revisar antes de aprovar pagamento
                     </p>
-                    <p className="text-xs text-red-700/80">
+                    <p className="text-xs text-danger/80">
                       Contrato: {formatBRLPrecise(contractValue)}
                       {pendingGroupsSum > 0 && ` · Grupos pendentes: ${formatBRLPrecise(pendingGroupsSum)}`}
                       {` · Esperado nas parcelas: ${formatBRLPrecise(expectedInEntries)}`}
                       {` · Soma atual: ${formatBRLPrecise(entriesSum)}`}
                       {` · Diferença: ${balanceDiff > 0 ? "+" : ""}${formatBRLPrecise(balanceDiff)}`}
                     </p>
-                    <p className="text-xs text-red-700/80">
+                    <p className="text-xs text-danger/80">
                       Use o botão <strong>Regenerar (🔄)</strong> em Clientes Ativos ou revise os grupos de pagamento na aba Negociação.
                     </p>
                   </div>
                 </div>
               ) : pendingGroupsSum > 0 ? (
-                <div className="rounded-lg border border-blue-500/40 bg-blue-500/10 p-3 flex gap-3">
-                  <Info className="h-5 w-5 text-blue-600 shrink-0 mt-0.5" />
+                <div className="rounded-lg border border-info/40 bg-info/10 p-3 flex gap-3">
+                  <Info className="h-5 w-5 text-info shrink-0 mt-0.5" />
                   <div className="text-sm">
-                    <p className="font-semibold text-blue-700">
+                    <p className="font-semibold text-info-strong">
                       {formatBRLPrecise(pendingGroupsSum)} pendente de definição em grupos de pagamento
                     </p>
-                    <p className="text-xs text-blue-700/80">
+                    <p className="text-xs text-info/80">
                       Parcelas confirmadas ({formatBRLPrecise(entriesSum)}) batem com o esperado. Feche o grupo pendente na aba Negociação para gerar o restante.
                     </p>
                   </div>
                 </div>
               ) : (
-                <div className="rounded-lg border border-emerald-500/40 bg-emerald-500/10 p-3 flex gap-2 items-center">
-                  <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                  <p className="text-xs text-emerald-700">
+                <div className="rounded-lg border border-success/40 bg-success/10 p-3 flex gap-2 items-center">
+                  <CheckCircle2 className="h-4 w-4 text-success shrink-0" />
+                  <p className="text-xs text-success-strong">
                     Saldo conferido: parcelas somam exatamente {formatBRLPrecise(contractValue)}.
                   </p>
                 </div>
@@ -189,13 +189,13 @@ export function ActiveClientContractSheet({
               </InfoRow>
               <InfoRow label="Recebíveis gerados">
                 {data?.contract?.receivables_generated ? (
-                  <span className="text-emerald-600">
+                  <span className="text-success">
                     Sim
                     {data.contract.receivables_generated_at &&
                       ` — ${format(new Date(data.contract.receivables_generated_at), "dd/MM/yyyy", { locale: ptBR })}`}
                   </span>
                 ) : (
-                  <span className="text-amber-600">Pendente — gerar na ficha do cliente</span>
+                  <span className="text-warning">Pendente — gerar na ficha do cliente</span>
                 )}
               </InfoRow>
               <InfoRow label="Conciliados">
@@ -253,7 +253,7 @@ export function ActiveClientContractSheet({
                             <TableCell className="text-sm">
                               {e.description}
                               {e.is_conciliated && (
-                                <Badge variant="outline" className="ml-2 text-[10px] py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/30">
+                                <Badge variant="outline" className="ml-2 text-[10px] py-0 h-4 bg-success/10 text-success-strong border-success/30">
                                   Conciliado
                                 </Badge>
                               )}
@@ -324,7 +324,7 @@ function SummaryTile({
   tone?: "ok" | "warn";
 }) {
   const toneClass =
-    tone === "ok" ? "text-emerald-600" : tone === "warn" ? "text-amber-600" : "text-foreground";
+    tone === "ok" ? "text-success" : tone === "warn" ? "text-warning" : "text-foreground";
   return (
     <div className="rounded-lg border bg-muted/30 p-3">
       <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{label}</p>

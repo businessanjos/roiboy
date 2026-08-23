@@ -435,7 +435,7 @@ export default function EternumAttendance() {
                             }
                             if (done) {
                               return (
-                                <Badge className="text-[10px] py-0 bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/20">
+                                <Badge className="text-[10px] py-0 bg-success/15 text-success-strong border-success/30 hover:bg-success/20">
                                   Concluído
                                 </Badge>
                               );

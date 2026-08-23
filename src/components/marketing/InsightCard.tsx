@@ -65,7 +65,7 @@ export function InsightCard({ metricType, currentData, previousData, isLoading }
 
   const hasData = currentData.length > 0;
   const TrendIcon = percentChange > 0 ? TrendingUp : percentChange < 0 ? TrendingDown : Minus;
-  const trendColor = percentChange > 0 ? 'text-emerald-600' : percentChange < 0 ? 'text-red-500' : 'text-muted-foreground';
+  const trendColor = percentChange > 0 ? 'text-success' : percentChange < 0 ? 'text-danger' : 'text-muted-foreground';
 
   return (
     <Card className="overflow-hidden hover:shadow-md transition-shadow">

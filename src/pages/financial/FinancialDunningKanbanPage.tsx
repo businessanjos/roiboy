@@ -54,12 +54,12 @@ type Stage =
 
 const STAGES: { key: Stage; label: string; color: string }[] = [
   { key: "a_vencer", label: "A vencer (7d)", color: "bg-slate-500" },
-  { key: "vencida", label: "Vencida", color: "bg-amber-500" },
-  { key: "negociando", label: "Negociando", color: "bg-blue-500" },
+  { key: "vencida", label: "Vencida", color: "bg-warning" },
+  { key: "negociando", label: "Negociando", color: "bg-info" },
   { key: "promessa", label: "Promessa", color: "bg-indigo-500" },
-  { key: "quebrou", label: "Promessa quebrada", color: "bg-orange-500" },
-  { key: "judicial", label: "Judicial", color: "bg-red-600" },
-  { key: "recuperada", label: "Recuperada", color: "bg-emerald-500" },
+  { key: "quebrou", label: "Promessa quebrada", color: "bg-warning" },
+  { key: "judicial", label: "Judicial", color: "bg-danger" },
+  { key: "recuperada", label: "Recuperada", color: "bg-success" },
   { key: "perdida", label: "Perdida", color: "bg-zinc-600" },
 ];
 

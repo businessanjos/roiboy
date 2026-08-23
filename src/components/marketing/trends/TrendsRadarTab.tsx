@@ -119,10 +119,10 @@ export function TrendsRadarTab() {
 
   const hypeColor = (score: number | null) => {
     if (!score) return "bg-muted";
-    if (score >= 80) return "bg-red-500/10 text-red-600 border-red-500/30";
-    if (score >= 60) return "bg-orange-500/10 text-orange-600 border-orange-500/30";
-    if (score >= 40) return "bg-yellow-500/10 text-yellow-600 border-yellow-500/30";
-    return "bg-blue-500/10 text-blue-600 border-blue-500/30";
+    if (score >= 80) return "bg-danger/10 text-danger border-danger/30";
+    if (score >= 60) return "bg-warning/10 text-warning border-warning/30";
+    if (score >= 40) return "bg-warning/10 text-warning border-warning/30";
+    return "bg-info/10 text-info border-info/30";
   };
 
   const filtered = trends.filter((t) => sourceFilter === "all" || t.source === sourceFilter);
@@ -145,8 +145,8 @@ export function TrendsRadarTab() {
             <Badge
               variant="outline"
               className={personaFilled
-                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
-                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+                ? "bg-success/10 text-success-strong border-success/30 dark:text-success"
+                : "bg-warning/10 text-warning-strong border-warning/30 dark:text-warning"}
             >
               {personaFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
               <Target className="h-3 w-3 mr-1" />
@@ -155,8 +155,8 @@ export function TrendsRadarTab() {
             <Badge
               variant="outline"
               className={voiceFilled
-                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
-                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+                ? "bg-success/10 text-success-strong border-success/30 dark:text-success"
+                : "bg-warning/10 text-warning-strong border-warning/30 dark:text-warning"}
             >
               {voiceFilled ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
               <Wand2 className="h-3 w-3 mr-1" />
@@ -165,8 +165,8 @@ export function TrendsRadarTab() {
             <Badge
               variant="outline"
               className={instagramConnected
-                ? "bg-emerald-500/10 text-emerald-700 border-emerald-500/30 dark:text-emerald-400"
-                : "bg-amber-500/10 text-amber-700 border-amber-500/30 dark:text-amber-400"}
+                ? "bg-success/10 text-success-strong border-success/30 dark:text-success"
+                : "bg-warning/10 text-warning-strong border-warning/30 dark:text-warning"}
               title={instagramConnected ? `@${instagramStatus?.username} · ${instagramStatus?.postsCount} posts (90d)` : "Conecte o Instagram para usar dados reais de performance"}
             >
               {instagramConnected ? <CheckCircle2 className="h-3 w-3 mr-1" /> : <AlertCircle className="h-3 w-3 mr-1" />}
@@ -186,7 +186,7 @@ export function TrendsRadarTab() {
 
       <Card className="p-6 space-y-4">
         <div className="flex items-center gap-2">
-          <div className="p-2 rounded-md bg-orange-500/10 text-orange-600"><Flame className="h-5 w-5" /></div>
+          <div className="p-2 rounded-md bg-warning/10 text-warning"><Flame className="h-5 w-5" /></div>
           <div>
             <h3 className="font-semibold">Hype Radar</h3>
             <p className="text-xs text-muted-foreground">Descubra tendências reais e ganhe adaptações para a marca</p>

@@ -215,14 +215,14 @@ export default function FinancialDREPage() {
     : [];
 
   const getValueColor = (value: number) => {
-    if (value > 0) return "text-emerald-600 dark:text-emerald-400";
-    if (value < 0) return "text-red-600 dark:text-red-400";
+    if (value > 0) return "text-success dark:text-success";
+    if (value < 0) return "text-danger dark:text-danger";
     return "text-muted-foreground";
   };
 
   const getValueIcon = (value: number) => {
-    if (value > 0) return <TrendingUp className="h-4 w-4 text-emerald-600" />;
-    if (value < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    if (value > 0) return <TrendingUp className="h-4 w-4 text-success" />;
+    if (value < 0) return <TrendingDown className="h-4 w-4 text-danger" />;
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
@@ -265,7 +265,7 @@ export default function FinancialDREPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Receita Bruta</div>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-success">
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(dreData?.grossRevenue || 0)}
             </div>
           </CardContent>
@@ -278,14 +278,14 @@ export default function FinancialDREPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-warning dark:border-warning">
           <CardContent className="pt-6">
-            <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">EBITDA</div>
-            <div className={`text-2xl font-bold ${dreData?.ebitda && dreData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+            <div className="text-sm text-warning-strong dark:text-warning font-medium">EBITDA</div>
+            <div className={`text-2xl font-bold ${dreData?.ebitda && dreData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(dreData?.ebitda || 0)}
             </div>
             {dreData && dreData.grossRevenue > 0 && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <div className="text-xs text-warning dark:text-warning mt-1">
                 {((dreData.ebitda / dreData.grossRevenue) * 100).toFixed(1)}% da receita
               </div>
             )}
@@ -367,10 +367,10 @@ export default function FinancialDREPage() {
                 <div className="text-sm text-muted-foreground">Margem Bruta</div>
               </div>
               <div className="text-center p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
-                <div className={`text-3xl font-bold ${dreData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+                <div className={`text-3xl font-bold ${dreData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
                   {((dreData.ebitda / dreData.grossRevenue) * 100).toFixed(1)}%
                 </div>
-                <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">Margem EBITDA</div>
+                <div className="text-sm text-warning-strong dark:text-warning font-medium">Margem EBITDA</div>
               </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(dreData.operatingResult)}`}>

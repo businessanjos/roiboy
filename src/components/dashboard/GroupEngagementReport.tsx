@@ -212,8 +212,8 @@ export function GroupEngagementReport() {
         <Card>
           <CardContent className="pt-6">
             <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-500/10 rounded-lg">
-                <Users className="h-5 w-5 text-emerald-500" />
+              <div className="p-2 bg-success/10 rounded-lg">
+                <Users className="h-5 w-5 text-success" />
               </div>
               <div>
                 <p className="text-2xl font-bold">{clientEngagement.length}</p>
@@ -243,9 +243,9 @@ export function GroupEngagementReport() {
                   <div className="flex items-center gap-3">
                     <span className={cn(
                       "w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold",
-                      index === 0 ? "bg-amber-500 text-white" :
-                      index === 1 ? "bg-slate-400 text-white" :
-                      index === 2 ? "bg-amber-700 text-white" :
+                      index === 0 ? "bg-warning text-white" :
+                      index === 1 ? "bg-muted text-white" :
+                      index === 2 ? "bg-warning text-white" :
                       "bg-muted text-muted-foreground"
                     )}>
                       {index + 1}

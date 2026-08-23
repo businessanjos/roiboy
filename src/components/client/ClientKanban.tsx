@@ -175,7 +175,7 @@ function SortableClientCard({
       className={cn(
         "bg-card border rounded-lg p-3 shadow-sm transition-all hover:shadow-md",
         isDragging && "opacity-50 shadow-lg ring-2 ring-primary",
-        hasPendingPrevious && "ring-2 ring-amber-500/50"
+        hasPendingPrevious && "ring-2 ring-warning/50"
       )}
     >
       <div className="flex items-start gap-2">
@@ -246,7 +246,7 @@ function SortableClientCard({
                 <button className="w-full text-left">
                   <div className="flex items-center gap-2 p-2 rounded-md bg-muted/50 hover:bg-muted transition-colors">
                     {checklistStatus.isComplete ? (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-green-600 shrink-0" />
+                      <CheckCircle2 className="h-3.5 w-3.5 text-success shrink-0" />
                     ) : (
                       <Circle className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
                     )}
@@ -259,7 +259,7 @@ function SortableClientCard({
                           <TooltipProvider>
                             <Tooltip>
                               <TooltipTrigger>
-                                <AlertTriangle className="h-3 w-3 text-amber-500" />
+                                <AlertTriangle className="h-3 w-3 text-warning" />
                               </TooltipTrigger>
                               <TooltipContent>
                                 <p className="text-xs">Pendências em etapas anteriores</p>
@@ -292,7 +292,7 @@ function SortableClientCard({
                           key={item.id}
                           className={cn(
                             "flex items-start gap-2 p-2 rounded-md cursor-pointer transition-colors",
-                            isCompleted ? "bg-green-50 dark:bg-green-950/20" : "hover:bg-muted"
+                            isCompleted ? "bg-success-soft dark:bg-success/20" : "hover:bg-muted"
                           )}
                         >
                           <Checkbox
@@ -326,7 +326,7 @@ function SortableClientCard({
 
           {/* Warning for pending in previous stages */}
           {hasPendingPrevious && !checklistStatus.hasItems && (
-            <div className="flex items-center gap-1.5 p-2 rounded-md bg-amber-50 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
+            <div className="flex items-center gap-1.5 p-2 rounded-md bg-warning-soft dark:bg-warning/20 text-warning-strong dark:text-warning">
               <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
               <span className="text-[10px]">Pendências em etapas anteriores</span>
             </div>

@@ -15,11 +15,11 @@ const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 
 const TIER_COLORS = [
-  "bg-emerald-500/10 border-emerald-500/40 text-emerald-700 dark:text-emerald-400",
-  "bg-blue-500/10 border-blue-500/40 text-blue-700 dark:text-blue-400",
+  "bg-success/10 border-success/40 text-success-strong dark:text-success",
+  "bg-info/10 border-info/40 text-info-strong dark:text-info",
   "bg-indigo-500/10 border-indigo-500/40 text-indigo-700 dark:text-indigo-400",
-  "bg-amber-500/10 border-amber-500/40 text-amber-700 dark:text-amber-500",
-  "bg-orange-500/10 border-orange-500/40 text-orange-700 dark:text-orange-400",
+  "bg-warning/10 border-warning/40 text-warning-strong dark:text-warning",
+  "bg-warning/10 border-warning/40 text-warning-strong dark:text-warning",
   "bg-pink-500/10 border-pink-500/40 text-pink-700 dark:text-pink-400",
   "bg-purple-500/10 border-purple-500/40 text-purple-700 dark:text-purple-400",
 ];

@@ -43,9 +43,9 @@ function formatCompactNumber(v: number, isCurrency: boolean) {
 function achievementClass(value: number, dailyGoal: number | null) {
   if (!dailyGoal || dailyGoal <= 0 || value <= 0) return "text-foreground";
   const pct = value / dailyGoal;
-  if (pct >= 1) return "text-emerald-400";
-  if (pct >= 0.6) return "text-amber-400";
-  return "text-red-400";
+  if (pct >= 1) return "text-success";
+  if (pct >= 0.6) return "text-warning";
+  return "text-danger";
 }
 
 
@@ -292,9 +292,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       orderedStages[i].lostCount = lostHere;
     }
 
-    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", valueClass: "text-emerald-400", days: emptyDays(), total: 0 };
-    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", valueClass: "text-red-400", days: emptyDays(), total: 0 };
-    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", valueClass: "text-emerald-400", isCurrency: true, days: emptyDays(), total: 0 };
+    const won: MetricRow = { key: WON_ROW, label: "Venda", color: "#22c55e", valueClass: "text-success", days: emptyDays(), total: 0 };
+    const lost: MetricRow = { key: LOST_ROW, label: "Perdido", color: "#ef4444", valueClass: "text-danger", days: emptyDays(), total: 0 };
+    const revenue: MetricRow = { key: REVENUE_ROW, label: "Receita (R$)", color: "#10b981", valueClass: "text-success", isCurrency: true, days: emptyDays(), total: 0 };
 
     // O próprio mapa de dias delimita o período (inclusive o último dia).
     for (const d of data.deals as any[]) {
@@ -394,13 +394,13 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
                     </span>
                   </td>
                   <td className={cn("px-3 py-2 text-right font-semibold", row.valueClass)}>{row.total}</td>
-                  <td className="px-3 py-2 text-right text-red-400">
+                  <td className="px-3 py-2 text-right text-danger">
                     {row.lostCount === undefined || row.total === 0 ? (
                       <span className="text-muted-foreground/40">—</span>
                     ) : (
                       <>
                         {row.lostCount}
-                        <span className="ml-1 text-[10px] text-red-400/70">
+                        <span className="ml-1 text-[10px] text-danger/70">
                           {((row.lostCount / row.total) * 100).toFixed(1).replace(".", ",")}%
                         </span>
                       </>
@@ -495,9 +495,9 @@ export function DailyPerformanceTable({ config }: { config: VisualConfig }) {
       </table>
       <p className="px-3 py-2 text-[11px] text-muted-foreground">
         Cores indicam atingimento da meta diária (meta total ÷ {businessDays} dias úteis do período).
-        <span className="ml-2 text-emerald-400">● ≥ 100%</span>
-        <span className="ml-2 text-amber-400">● 60–99%</span>
-        <span className="ml-2 text-red-400">● &lt; 60%</span>
+        <span className="ml-2 text-success">● ≥ 100%</span>
+        <span className="ml-2 text-warning">● 60–99%</span>
+        <span className="ml-2 text-danger">● &lt; 60%</span>
       </p>
     </div>
   );

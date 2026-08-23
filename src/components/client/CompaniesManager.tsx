@@ -217,7 +217,7 @@ export function CompaniesManager({ companies, onChange, label = "Empresas Adicio
                   maxLength={18}
                   className={`pr-9 ${
                     isCnpjValid
-                      ? "border-emerald-500/50 ring-1 ring-emerald-500/20"
+                      ? "border-success/50 ring-1 ring-success/20"
                       : cnpjDigits.length === 14 && !isCnpjValid
                         ? "border-destructive ring-1 ring-destructive/30"
                         : ""
@@ -228,7 +228,7 @@ export function CompaniesManager({ companies, onChange, label = "Empresas Adicio
                     <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
                   </div>
                 ) : isCnpjValid ? (
-                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-emerald-500">
+                  <div className="absolute right-3 top-1/2 -translate-y-1/2 text-success">
                     <Check className="h-4 w-4" />
                   </div>
                 ) : cnpjDigits.length === 14 ? (

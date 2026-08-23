@@ -158,9 +158,9 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
 
   const getNPSColor = (nps: number | null) => {
     if (nps === null) return "text-muted-foreground";
-    if (nps >= 50) return "text-green-600";
-    if (nps >= 0) return "text-yellow-600";
-    return "text-red-600";
+    if (nps >= 50) return "text-success";
+    if (nps >= 0) return "text-warning";
+    return "text-danger";
   };
 
   const getNPSLabel = (nps: number | null) => {
@@ -177,7 +177,7 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
         {[1, 2, 3, 4, 5].map(star => (
           <Star 
             key={star}
-            className={`h-4 w-4 ${star <= rating ? 'text-yellow-500 fill-yellow-500' : 'text-muted-foreground'}`}
+            className={`h-4 w-4 ${star <= rating ? 'text-warning fill-yellow-500' : 'text-muted-foreground'}`}
           />
         ))}
       </div>
@@ -342,9 +342,9 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
                   )}
                   {f.would_recommend !== null && (
                     f.would_recommend ? (
-                      <ThumbsUp className="h-5 w-5 text-green-600" />
+                      <ThumbsUp className="h-5 w-5 text-success" />
                     ) : (
-                      <ThumbsDown className="h-5 w-5 text-red-600" />
+                      <ThumbsDown className="h-5 w-5 text-danger" />
                     )
                   )}
                 </div>
@@ -383,13 +383,13 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
                 <div className="mt-4 space-y-3 border-t pt-4">
                   {f.highlights && (
                     <div>
-                      <p className="text-xs font-medium text-green-600 mb-1">Pontos Fortes</p>
+                      <p className="text-xs font-medium text-success mb-1">Pontos Fortes</p>
                       <p className="text-sm">{f.highlights}</p>
                     </div>
                   )}
                   {f.improvements && (
                     <div>
-                      <p className="text-xs font-medium text-orange-600 mb-1">Sugestões de Melhoria</p>
+                      <p className="text-xs font-medium text-warning mb-1">Sugestões de Melhoria</p>
                       <p className="text-sm">{f.improvements}</p>
                     </div>
                   )}

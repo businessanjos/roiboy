@@ -159,12 +159,12 @@ export function PipelineDebugDialog({ deals, activityStatusMap, isLoading }: Pip
                     <div
                       key={exp.filterId}
                       className={`rounded-md border p-2.5 ${
-                        exp.matches ? "border-emerald-500/40 bg-emerald-500/5" : "border-border bg-muted/30"
+                        exp.matches ? "border-success/40 bg-success/5" : "border-border bg-muted/30"
                       }`}
                     >
                       <div className="flex items-center gap-2 text-sm font-medium">
                         {exp.matches ? (
-                          <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                          <CheckCircle2 className="h-4 w-4 text-success" />
                         ) : (
                           <XCircle className="h-4 w-4 text-muted-foreground" />
                         )}

@@ -18,11 +18,11 @@ export function PersonaAbStatsPanel() {
   const winner = test.winner ?? (stats.acceptRateA > stats.acceptRateB ? "A" : stats.acceptRateB > stats.acceptRateA ? "B" : null);
 
   return (
-    <Card className="border-amber-500/30 bg-gradient-to-br from-amber-500/5 via-background to-background">
+    <Card className="border-warning/30 bg-gradient-to-br from-amber-500/5 via-background to-background">
       <CardHeader className="pb-3 cursor-pointer" onClick={() => setOpen((o) => !o)}>
         <div className="flex items-center justify-between gap-3">
           <div className="flex items-center gap-2">
-            <FlaskConical className="h-5 w-5 text-amber-500" />
+            <FlaskConical className="h-5 w-5 text-warning" />
             <div>
               <CardTitle className="text-lg">A/B Test: prompts COM vs SEM Destaques</CardTitle>
               <CardDescription className="mt-0.5">
@@ -126,7 +126,7 @@ function VariantCard({
     <div className={`rounded-lg border ${accentClass} p-3 space-y-2.5`}>
       <div className="flex items-center justify-between">
         <span className="text-sm font-semibold">{label}</span>
-        {isWinner && <Trophy className="h-4 w-4 text-amber-500" />}
+        {isWinner && <Trophy className="h-4 w-4 text-warning" />}
       </div>
 
       <div>
@@ -139,10 +139,10 @@ function VariantCard({
 
       <div className="flex items-center justify-between text-xs">
         <div className="flex items-center gap-3">
-          <span className="flex items-center gap-1 text-emerald-600">
+          <span className="flex items-center gap-1 text-success">
             <ThumbsUp className="h-3 w-3" /> {thumbsUp}
           </span>
-          <span className="flex items-center gap-1 text-rose-600">
+          <span className="flex items-center gap-1 text-danger">
             <ThumbsDown className="h-3 w-3" /> {thumbsDown}
           </span>
           <span className="text-muted-foreground tabular-nums">({thumbsUpRate}% 👍)</span>
@@ -163,9 +163,9 @@ function StatTestBlock({ test }: { test: ReturnType<typeof twoProportionZTest> }
   const variantStyles = !minSampleReached
     ? { border: "border-muted-foreground/30", bg: "bg-muted/30", icon: <MinusCircle className="h-5 w-5 text-muted-foreground" />, label: "Amostra insuficiente" }
     : significant
-      ? { border: "border-emerald-500/40", bg: "bg-emerald-500/5", icon: <CheckCircle2 className="h-5 w-5 text-emerald-600" />, label: `Diferença ${significanceLabel}` }
+      ? { border: "border-success/40", bg: "bg-success/5", icon: <CheckCircle2 className="h-5 w-5 text-success" />, label: `Diferença ${significanceLabel}` }
       : significanceLabel === "tendência"
-        ? { border: "border-amber-500/40", bg: "bg-amber-500/5", icon: <AlertCircle className="h-5 w-5 text-amber-600" />, label: "Tendência (não conclusivo)" }
+        ? { border: "border-warning/40", bg: "bg-warning/5", icon: <AlertCircle className="h-5 w-5 text-warning" />, label: "Tendência (não conclusivo)" }
         : { border: "border-border", bg: "bg-muted/20", icon: <MinusCircle className="h-5 w-5 text-muted-foreground" />, label: "Sem diferença significativa" };
 
   const diffPct = (diff * 100).toFixed(1);
@@ -192,7 +192,7 @@ function StatTestBlock({ test }: { test: ReturnType<typeof twoProportionZTest> }
           <Stat
             label="Diferença (A−B)"
             value={`${diffSign}${diffPct} pp`}
-            valueClass={significant ? (winner === "A" ? "text-emerald-600" : "text-rose-600") : ""}
+            valueClass={significant ? (winner === "A" ? "text-success" : "text-danger") : ""}
           />
           <Stat label="p-value" value={formatP(pValue)} />
           <Stat label="z-score" value={z.toFixed(2)} />

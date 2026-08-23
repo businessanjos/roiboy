@@ -381,20 +381,20 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-yellow-600 text-sm">
+                <div className="flex items-center gap-2 text-warning text-sm">
                   <TrendingUp className="h-4 w-4" />
                   Pendentes
                 </div>
-                <div className="text-2xl font-bold text-yellow-600">{formatCurrency(summary.pending)}</div>
+                <div className="text-2xl font-bold text-warning">{formatCurrency(summary.pending)}</div>
               </CardContent>
             </Card>
             <Card>
               <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-green-600 text-sm">
+                <div className="flex items-center gap-2 text-success text-sm">
                   <CheckCircle2 className="h-4 w-4" />
                   Pagas
                 </div>
-                <div className="text-2xl font-bold text-green-600">{formatCurrency(summary.paid)}</div>
+                <div className="text-2xl font-bold text-success">{formatCurrency(summary.paid)}</div>
               </CardContent>
             </Card>
             <Card>
@@ -486,12 +486,12 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
                         <TableCell className="text-right">
                           {formatCurrency(entry.base_value)}
                         </TableCell>
-                        <TableCell className="text-right font-medium text-green-600">
+                        <TableCell className="text-right font-medium text-success">
                           {formatCurrency(entry.commission_value)}
                         </TableCell>
                         <TableCell>
                           {entry.status === "paid" ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800">
+                            <Badge variant="default" className="bg-success-soft text-success-strong">
                               <CheckCircle2 className="h-3 w-3 mr-1" />
                               Pago
                             </Badge>
@@ -510,7 +510,7 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
                               variant="ghost"
                               size="sm"
                               onClick={() => payCommissionMutation.mutate(entry.id)}
-                              className="text-green-600"
+                              className="text-success"
                             >
                               <CheckCircle2 className="h-4 w-4 mr-1" />
                               Pagar
@@ -599,7 +599,7 @@ export function CommissionsManager({ open, onOpenChange }: CommissionsManagerPro
                         </TableCell>
                         <TableCell>
                           {rule.is_active ? (
-                            <Badge variant="default" className="bg-green-100 text-green-800">
+                            <Badge variant="default" className="bg-success-soft text-success-strong">
                               Ativo
                             </Badge>
                           ) : (

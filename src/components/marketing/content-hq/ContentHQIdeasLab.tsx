@@ -26,10 +26,10 @@ type Idea = {
 };
 
 const INTENSITY_META: Record<Idea["intensity"], { label: string; icon: any; cls: string }> = {
-  quick_win: { label: "Quick Win", icon: Zap,       cls: "bg-emerald-500/10 text-emerald-700 border-emerald-500/30" },
-  autoridade: { label: "Autoridade", icon: Crown,   cls: "bg-amber-500/10 text-amber-700 border-amber-500/30" },
-  viral:     { label: "Viral",     icon: Flame,     cls: "bg-rose-500/10 text-rose-700 border-rose-500/30" },
-  conversao: { label: "Conversão", icon: TargetIcon, cls: "bg-blue-500/10 text-blue-700 border-blue-500/30" },
+  quick_win: { label: "Quick Win", icon: Zap,       cls: "bg-success/10 text-success-strong border-success/30" },
+  autoridade: { label: "Autoridade", icon: Crown,   cls: "bg-warning/10 text-warning-strong border-warning/30" },
+  viral:     { label: "Viral",     icon: Flame,     cls: "bg-danger/10 text-danger-strong border-danger/30" },
+  conversao: { label: "Conversão", icon: TargetIcon, cls: "bg-info/10 text-info-strong border-info/30" },
 };
 
 const DEFAULT_PLATFORMS = ["instagram", "youtube", "tiktok"];
@@ -119,8 +119,8 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
       {/* Generator */}
       <Card className="p-5 bg-gradient-to-br from-amber-500/5 via-background to-primary/5">
         <div className="flex items-start gap-3 mb-4">
-          <div className="h-10 w-10 rounded-lg bg-amber-500/10 flex items-center justify-center shrink-0">
-            <Lightbulb className="h-5 w-5 text-amber-500" />
+          <div className="h-10 w-10 rounded-lg bg-warning/10 flex items-center justify-center shrink-0">
+            <Lightbulb className="h-5 w-5 text-warning" />
           </div>
           <div className="flex-1">
             <h3 className="font-semibold">Banco de Ideias — {talent.name}</h3>
@@ -311,7 +311,7 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
 
       {ideas.length === 0 && !loading && (
         <Card className="p-10 text-center">
-          <Lightbulb className="h-10 w-10 mx-auto text-amber-500/60 mb-3" />
+          <Lightbulb className="h-10 w-10 mx-auto text-warning/60 mb-3" />
           <p className="text-sm text-muted-foreground">
             Pronto pra desbloquear o time. Clique em <strong>Gerar ideias agora</strong> e receba um lote completo para esta semana.
           </p>

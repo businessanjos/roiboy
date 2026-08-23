@@ -199,7 +199,7 @@ export function AddInstanceDialog({
                     <SelectItem key={instance.name} value={instance.name}>
                       <div className="flex items-center gap-2 w-full">
                         <div className={`w-2 h-2 rounded-full flex-shrink-0 ${
-                          instance.status === "connected" ? "bg-green-500" : "bg-red-500"
+                          instance.status === "connected" ? "bg-success" : "bg-danger"
                         }`} />
                         <span className="truncate">{instance.profileName || instance.name}</span>
                         {instance.owner && (
@@ -207,7 +207,7 @@ export function AddInstanceDialog({
                             ({instance.owner.replace(/^(\d{2})(\d{2})(\d{5})(\d{4})$/, "+$1 $2 $3-$4")})
                           </span>
                         )}
-                        <span className="ml-auto text-xs text-green-600 flex-shrink-0">✓ Disponível</span>
+                        <span className="ml-auto text-xs text-success flex-shrink-0">✓ Disponível</span>
                       </div>
                     </SelectItem>
                   ))}
@@ -221,9 +221,9 @@ export function AddInstanceDialog({
             <div className="p-3 bg-muted/50 rounded-lg border space-y-1">
               <div className="flex items-center gap-2">
                 {selectedInstanceData.status === "connected" ? (
-                  <Wifi className="h-4 w-4 text-green-500" />
+                  <Wifi className="h-4 w-4 text-success" />
                 ) : (
-                  <WifiOff className="h-4 w-4 text-red-500" />
+                  <WifiOff className="h-4 w-4 text-danger" />
                 )}
                 <span className="font-medium">
                   {selectedInstanceData.profileName || selectedInstanceData.name}

@@ -129,11 +129,11 @@ export function SpiffSpinsCompactMonth() {
                     </TableCell>
                     <TableCell className="py-2 text-center">
                       {r.payment_status === "paid" ? (
-                        <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1 text-[10px] h-5">
+                        <Badge className="bg-success hover:bg-success text-white gap-1 text-[10px] h-5">
                           <CheckCircle2 className="h-2.5 w-2.5" /> Pago
                         </Badge>
                       ) : Number(r.prize_amount) > 0 ? (
-                        <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400 text-[10px] h-5">
+                        <Badge variant="outline" className="gap-1 border-warning text-warning-strong dark:text-warning text-[10px] h-5">
                           <Clock className="h-2.5 w-2.5" /> A pagar
                         </Badge>
                       ) : (

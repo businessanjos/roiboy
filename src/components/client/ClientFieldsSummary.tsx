@@ -81,13 +81,13 @@ const FIELD_TYPES = [
 ];
 
 const COLOR_OPTIONS = [
-  { value: "green", label: "Verde", class: "bg-emerald-500" },
-  { value: "red", label: "Vermelho", class: "bg-red-500" },
-  { value: "yellow", label: "Amarelo", class: "bg-amber-500" },
-  { value: "blue", label: "Azul", class: "bg-blue-500" },
+  { value: "green", label: "Verde", class: "bg-success" },
+  { value: "red", label: "Vermelho", class: "bg-danger" },
+  { value: "yellow", label: "Amarelo", class: "bg-warning" },
+  { value: "blue", label: "Azul", class: "bg-info" },
   { value: "purple", label: "Roxo", class: "bg-purple-500" },
   { value: "pink", label: "Rosa", class: "bg-pink-500" },
-  { value: "orange", label: "Laranja", class: "bg-orange-500" },
+  { value: "orange", label: "Laranja", class: "bg-warning" },
   { value: "gray", label: "Cinza", class: "bg-gray-500" },
 ];
 
@@ -106,26 +106,26 @@ const FIELD_TYPE_CONFIG: Record<string, {
   number: { 
     icon: Hash, 
     label: "Número", 
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10"
+    color: "text-info",
+    bgColor: "bg-info/10"
   },
   currency: { 
     icon: DollarSign, 
     label: "Moeda", 
-    color: "text-emerald-500",
-    bgColor: "bg-emerald-500/10"
+    color: "text-success",
+    bgColor: "bg-success/10"
   },
   date: { 
     icon: Calendar, 
     label: "Data", 
-    color: "text-orange-500",
-    bgColor: "bg-orange-500/10"
+    color: "text-warning",
+    bgColor: "bg-warning/10"
   },
   select: { 
     icon: List, 
     label: "Seleção", 
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10"
+    color: "text-info",
+    bgColor: "bg-info/10"
   },
   multi_select: { 
     icon: ListChecks, 
@@ -136,8 +136,8 @@ const FIELD_TYPE_CONFIG: Record<string, {
   user: { 
     icon: Users, 
     label: "Responsável", 
-    color: "text-amber-500",
-    bgColor: "bg-amber-500/10"
+    color: "text-warning",
+    bgColor: "bg-warning/10"
   },
   text: { 
     icon: Type, 
@@ -160,8 +160,8 @@ const FIELD_TYPE_CONFIG: Record<string, {
   location: { 
     icon: MapPin, 
     label: "Localização", 
-    color: "text-red-500",
-    bgColor: "bg-red-500/10"
+    color: "text-danger",
+    bgColor: "bg-danger/10"
   },
 };
 
@@ -459,7 +459,7 @@ export function ClientFieldsSummary({ clientId, expanded = false }: ClientFields
                     {/* Status indicator */}
                     <div className="absolute top-3 right-3">
                       {hasValue ? (
-                        <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                        <CheckCircle2 className="h-4 w-4 text-success" />
                       ) : (
                         <Circle className="h-4 w-4 text-muted-foreground/30" />
                       )}

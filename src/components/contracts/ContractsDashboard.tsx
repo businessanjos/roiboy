@@ -354,7 +354,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
   const renderTrend = (value: number, inverted = false) => {
     const isPositive = inverted ? value < 0 : value > 0;
     const Icon = value > 0 ? ArrowUpRight : value < 0 ? ArrowDownRight : Minus;
-    const color = isPositive ? "text-emerald-500" : value === 0 ? "text-muted-foreground" : "text-rose-500";
+    const color = isPositive ? "text-success" : value === 0 ? "text-muted-foreground" : "text-danger";
     
     return (
       <span className={`flex items-center gap-0.5 text-xs font-medium ${color}`}>
@@ -396,14 +396,14 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-emerald-500/15 via-emerald-500/5 to-transparent shadow-xl shadow-emerald-500/10 hover:shadow-2xl hover:shadow-emerald-500/20 transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-emerald-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute top-0 right-0 w-40 h-40 bg-emerald-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-emerald-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-success/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-success/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
-                  <CheckCircle className="h-5 w-5 text-emerald-500" />
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-600/10 ring-1 ring-success/30 shadow-lg shadow-emerald-500/20">
+                  <CheckCircle className="h-5 w-5 text-success" />
                 </div>
-                <Badge className="bg-emerald-500/15 text-emerald-600 border-0 text-xs font-semibold backdrop-blur-sm">
+                <Badge className="bg-success/15 text-success border-0 text-xs font-semibold backdrop-blur-sm">
                   +{kpis.newThisMonth} novos
                 </Badge>
               </div>
@@ -416,16 +416,16 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-blue-500/15 via-blue-500/5 to-transparent shadow-xl shadow-blue-500/10 hover:shadow-2xl hover:shadow-blue-500/20 transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-blue-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute top-0 right-0 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-blue-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-info/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-info/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/20">
-                  <DollarSign className="h-5 w-5 text-blue-500" />
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-600/10 ring-1 ring-info/30 shadow-lg shadow-blue-500/20">
+                  <DollarSign className="h-5 w-5 text-info" />
                 </div>
                 <div className="text-right backdrop-blur-sm bg-background/30 rounded-lg px-2 py-1">
                   <p className="text-[10px] text-muted-foreground uppercase tracking-wider font-medium">Ticket médio</p>
-                  <p className="text-xs font-bold text-blue-600">{formatCurrency(kpis.averageTicket)}</p>
+                  <p className="text-xs font-bold text-info">{formatCurrency(kpis.averageTicket)}</p>
                 </div>
               </div>
               <p className="text-2xl font-bold tracking-tight bg-gradient-to-r from-blue-600 to-blue-500 bg-clip-text text-transparent">{formatCurrency(kpis.totalValue)}</p>
@@ -455,18 +455,18 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
         <motion.div variants={itemVariants} whileHover={{ scale: 1.02, y: -4 }} transition={{ type: "spring", stiffness: 300 }}>
           <Card className="group relative overflow-hidden border-0 bg-gradient-to-br from-rose-500/15 via-rose-500/5 to-transparent shadow-xl shadow-rose-500/10 hover:shadow-2xl hover:shadow-rose-500/20 transition-all duration-500">
             <div className="absolute inset-0 bg-gradient-to-br from-rose-500/5 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
-            <div className="absolute top-0 right-0 w-40 h-40 bg-rose-500/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
-            <div className="absolute bottom-0 left-0 w-24 h-24 bg-rose-400/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
+            <div className="absolute top-0 right-0 w-40 h-40 bg-danger/20 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 group-hover:scale-150 transition-transform duration-700" />
+            <div className="absolute bottom-0 left-0 w-24 h-24 bg-danger/10 rounded-full blur-2xl translate-y-1/2 -translate-x-1/2" />
             <CardContent className="p-5 relative">
               <div className="flex items-start justify-between mb-4">
-                <div className="p-2.5 rounded-xl bg-gradient-to-br from-rose-500/20 to-rose-600/10 ring-1 ring-rose-500/30 shadow-lg shadow-rose-500/20">
-                  <XCircle className="h-5 w-5 text-rose-500" />
+                <div className="p-2.5 rounded-xl bg-gradient-to-br from-rose-500/20 to-rose-600/10 ring-1 ring-danger/30 shadow-lg shadow-rose-500/20">
+                  <XCircle className="h-5 w-5 text-danger" />
                 </div>
-                <Badge variant="outline" className="border-rose-500/40 text-rose-600 text-xs font-semibold backdrop-blur-sm bg-rose-500/5">
+                <Badge variant="outline" className="border-danger/40 text-danger text-xs font-semibold backdrop-blur-sm bg-danger/5">
                   {kpis.churnRate.toFixed(1)}% taxa
                 </Badge>
               </div>
-              <p className="text-4xl font-bold tracking-tight text-rose-600">{kpis.churnThisMonth}</p>
+              <p className="text-4xl font-bold tracking-tight text-danger">{kpis.churnThisMonth}</p>
               <p className="text-sm text-muted-foreground mt-1 font-medium">Churn este mês</p>
             </CardContent>
           </Card>
@@ -521,13 +521,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               {/* Active (In Progress) */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-emerald-500/10 shrink-0">
-                    <CheckCircle className="h-4 w-4 text-emerald-500" />
+                  <div className="p-2 rounded-lg bg-success/10 shrink-0">
+                    <CheckCircle className="h-4 w-4 text-success" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Ativos</span>
-                      <span className="text-lg font-bold text-emerald-600">{funnelData.active}</span>
+                      <span className="text-lg font-bold text-success">{funnelData.active}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -538,20 +538,20 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-emerald-600 font-medium w-12 text-right">{funnelData.activeRate.toFixed(1)}%</span>
+                  <span className="text-xs text-success font-medium w-12 text-right">{funnelData.activeRate.toFixed(1)}%</span>
                 </div>
               </div>
 
               {/* Pending + Scheduled */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-blue-500/10 shrink-0">
-                    <Clock className="h-4 w-4 text-blue-500" />
+                  <div className="p-2 rounded-lg bg-info/10 shrink-0">
+                    <Clock className="h-4 w-4 text-info" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Pendentes + A Iniciar</span>
-                      <span className="text-lg font-bold text-blue-600">{funnelData.pending + funnelData.scheduled}</span>
+                      <span className="text-lg font-bold text-info">{funnelData.pending + funnelData.scheduled}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -562,7 +562,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-blue-600 font-medium w-12 text-right">
+                  <span className="text-xs text-info font-medium w-12 text-right">
                     {funnelData.total > 0 ? (((funnelData.pending + funnelData.scheduled) / funnelData.total) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
@@ -571,13 +571,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               {/* Suspensos */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-amber-500/10 shrink-0">
-                    <PauseCircle className="h-4 w-4 text-amber-500" />
+                  <div className="p-2 rounded-lg bg-warning/10 shrink-0">
+                    <PauseCircle className="h-4 w-4 text-warning" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Suspensos</span>
-                      <span className="text-lg font-bold text-amber-600">{funnelData.suspended}</span>
+                      <span className="text-lg font-bold text-warning">{funnelData.suspended}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -588,7 +588,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-amber-600 font-medium w-12 text-right">
+                  <span className="text-xs text-warning font-medium w-12 text-right">
                     {funnelData.total > 0 ? ((funnelData.suspended / funnelData.total) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
@@ -597,13 +597,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               {/* Pausados */}
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-sky-500/10 shrink-0">
-                    <PauseCircle className="h-4 w-4 text-sky-500" />
+                  <div className="p-2 rounded-lg bg-info/10 shrink-0">
+                    <PauseCircle className="h-4 w-4 text-info" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Pausados</span>
-                      <span className="text-lg font-bold text-sky-600">{funnelData.paused}</span>
+                      <span className="text-lg font-bold text-info">{funnelData.paused}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -614,7 +614,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-sky-600 font-medium w-12 text-right">
+                  <span className="text-xs text-info font-medium w-12 text-right">
                     {funnelData.total > 0 ? ((funnelData.paused / funnelData.total) * 100).toFixed(1) : 0}%
                   </span>
                 </div>
@@ -624,12 +624,12 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               <div className="relative pl-6 border-l-2 border-dashed border-muted-foreground/20 ml-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-slate-500/10 shrink-0">
-                    <Ban className="h-4 w-4 text-slate-500" />
+                    <Ban className="h-4 w-4 text-muted-foreground" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
                       <span className="text-sm font-medium">Encerrados</span>
-                      <span className="text-lg font-bold text-slate-600">{funnelData.ended}</span>
+                      <span className="text-lg font-bold text-muted-foreground">{funnelData.ended}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -640,15 +640,15 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-slate-600 font-medium w-12 text-right">{funnelData.completedRate.toFixed(1)}%</span>
+                  <span className="text-xs text-muted-foreground font-medium w-12 text-right">{funnelData.completedRate.toFixed(1)}%</span>
                 </div>
               </div>
 
               {/* Churn (Cancelled + Dismissed + Dropout) */}
-              <div className="relative pl-6 border-l-2 border-dashed border-rose-500/30 ml-4">
+              <div className="relative pl-6 border-l-2 border-dashed border-danger/30 ml-4">
                 <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-rose-500/10 shrink-0">
-                    <UserX className="h-4 w-4 text-rose-500" />
+                  <div className="p-2 rounded-lg bg-danger/10 shrink-0">
+                    <UserX className="h-4 w-4 text-danger" />
                   </div>
                   <div className="flex-1">
                     <div className="flex justify-between items-center mb-1">
@@ -658,7 +658,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                           (Cancel: {funnelData.cancelled} | Demitidas: {funnelData.dismissed} | 7D: {funnelData.dropout7d})
                         </span>
                       </div>
-                      <span className="text-lg font-bold text-rose-600">{funnelData.churnTotal}</span>
+                      <span className="text-lg font-bold text-danger">{funnelData.churnTotal}</span>
                     </div>
                     <div className="h-3 bg-muted/50 rounded-full overflow-hidden">
                       <motion.div 
@@ -669,7 +669,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       />
                     </div>
                   </div>
-                  <span className="text-xs text-rose-600 font-medium w-12 text-right">{funnelData.churnRate.toFixed(1)}%</span>
+                  <span className="text-xs text-danger font-medium w-12 text-right">{funnelData.churnRate.toFixed(1)}%</span>
                 </div>
               </div>
             </div>
@@ -677,15 +677,15 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
             {/* Summary Stats */}
             <div className="grid grid-cols-3 gap-4 mt-6 pt-5 border-t border-border/30">
               <motion.div 
-                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-emerald-500/20 hover:border-emerald-500/40 transition-all duration-300"
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-transparent border border-success/20 hover:border-success/40 transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
               >
-                <div className="absolute inset-0 bg-emerald-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-success/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 <p className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-emerald-500 bg-clip-text text-transparent">{funnelData.inProgressRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground font-medium mt-1">Em Andamento</p>
               </motion.div>
               <motion.div 
-                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border border-slate-500/20 hover:border-slate-500/40 transition-all duration-300"
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-slate-500/10 via-slate-500/5 to-transparent border border-border/20 hover:border-border/40 transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
               >
                 <div className="absolute inset-0 bg-slate-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -693,10 +693,10 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 <p className="text-xs text-muted-foreground font-medium mt-1">Finalizados</p>
               </motion.div>
               <motion.div 
-                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border border-rose-500/20 hover:border-rose-500/40 transition-all duration-300"
+                className="group relative text-center p-4 rounded-2xl bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-transparent border border-danger/20 hover:border-danger/40 transition-all duration-300"
                 whileHover={{ scale: 1.03 }}
               >
-                <div className="absolute inset-0 bg-rose-500/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
+                <div className="absolute inset-0 bg-danger/5 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity" />
                 <p className="text-3xl font-bold bg-gradient-to-r from-rose-600 to-rose-500 bg-clip-text text-transparent">{funnelData.churnRate.toFixed(1)}%</p>
                 <p className="text-xs text-muted-foreground font-medium mt-1">Taxa de Churn</p>
               </motion.div>
@@ -758,17 +758,17 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 </ResponsiveContainer>
               </div>
               <div className="flex items-center justify-center gap-6 mt-4">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 shadow-lg shadow-emerald-500/50" />
-                  <span className="text-xs font-medium text-emerald-600">Novos</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-success shadow-lg shadow-emerald-500/50" />
+                  <span className="text-xs font-medium text-success">Novos</span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-lg shadow-rose-500/50" />
-                  <span className="text-xs font-medium text-rose-600">Cancelados</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-danger shadow-lg shadow-rose-500/50" />
+                  <span className="text-xs font-medium text-danger">Cancelados</span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
                   <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
-                  <span className="text-xs font-medium text-slate-600">Encerrados</span>
+                  <span className="text-xs font-medium text-muted-foreground">Encerrados</span>
                 </div>
               </div>
             </CardContent>
@@ -777,11 +777,11 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
 
         <motion.div variants={itemVariants}>
           <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-blue-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
-            <div className="absolute top-0 right-0 w-48 h-48 bg-blue-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <div className="absolute top-0 right-0 w-48 h-48 bg-info/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
             <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 ring-1 ring-blue-500/30 shadow-lg shadow-blue-500/20">
-                  <TrendingUp className="h-4 w-4 text-blue-500" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/20 to-blue-500/10 ring-1 ring-info/30 shadow-lg shadow-blue-500/20">
+                  <TrendingUp className="h-4 w-4 text-info" />
                 </div>
                 <CardTitle className="text-base font-semibold">Tendência Anual</CardTitle>
               </div>
@@ -853,17 +853,17 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 </ResponsiveContainer>
               </div>
               <div className="flex items-center justify-center gap-4 mt-4">
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-blue-500 shadow-lg shadow-blue-500/50" />
-                  <span className="text-xs font-medium text-blue-600">Ativos</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-info/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-info shadow-lg shadow-blue-500/50" />
+                  <span className="text-xs font-medium text-info">Ativos</span>
                 </div>
-                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
-                  <div className="w-2.5 h-2.5 rounded-full bg-rose-500 shadow-lg shadow-rose-500/50" />
-                  <span className="text-xs font-medium text-rose-600">Cancelados</span>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10">
+                  <div className="w-2.5 h-2.5 rounded-full bg-danger shadow-lg shadow-rose-500/50" />
+                  <span className="text-xs font-medium text-danger">Cancelados</span>
                 </div>
                 <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-500/10">
                   <div className="w-2.5 h-2.5 rounded-full bg-slate-500 shadow-lg shadow-slate-500/50" />
-                  <span className="text-xs font-medium text-slate-600">Encerrados</span>
+                  <span className="text-xs font-medium text-muted-foreground">Encerrados</span>
                 </div>
               </div>
             </CardContent>
@@ -952,11 +952,11 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
 
         <motion.div variants={itemVariants}>
           <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-amber-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-warning/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
             <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 ring-1 ring-amber-500/30 shadow-lg shadow-amber-500/20">
-                  <Zap className="h-4 w-4 text-amber-500" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-amber-500/20 to-amber-500/10 ring-1 ring-warning/30 shadow-lg shadow-amber-500/20">
+                  <Zap className="h-4 w-4 text-warning" />
                 </div>
                 <CardTitle className="text-base font-semibold">Por Tipo</CardTitle>
               </div>
@@ -1010,11 +1010,11 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
 
         <motion.div variants={itemVariants}>
           <Card className="group relative overflow-hidden border-0 shadow-xl bg-gradient-to-br from-card via-card to-emerald-500/5 backdrop-blur-sm hover:shadow-2xl transition-all duration-500">
-            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
+            <div className="absolute top-0 right-0 w-32 h-32 bg-success/10 rounded-full blur-3xl -translate-y-1/2 translate-x-1/2 opacity-50 group-hover:opacity-80 transition-opacity" />
             <CardHeader className="pb-2 relative">
               <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
-                  <DollarSign className="h-4 w-4 text-emerald-500" />
+                <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-emerald-500/10 ring-1 ring-success/30 shadow-lg shadow-emerald-500/20">
+                  <DollarSign className="h-4 w-4 text-success" />
                 </div>
                 <CardTitle className="text-base font-semibold">Por Produto</CardTitle>
               </div>
@@ -1074,8 +1074,8 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-emerald-500/10 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2 opacity-30" />
           <CardHeader className="pb-2 relative">
             <div className="flex items-center gap-2">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 ring-1 ring-emerald-500/30 shadow-lg shadow-emerald-500/20">
-                <TrendingUp className="h-4 w-4 text-emerald-500" />
+              <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/20 to-teal-500/10 ring-1 ring-success/30 shadow-lg shadow-emerald-500/20">
+                <TrendingUp className="h-4 w-4 text-success" />
               </div>
               <CardTitle className="text-base font-semibold">Valor de Novos Contratos</CardTitle>
             </div>
@@ -1118,7 +1118,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       if (!active || !payload?.[0]) return null;
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-background/95 backdrop-blur-md border border-emerald-500/30 rounded-xl px-4 py-3 shadow-2xl shadow-emerald-500/20">
+                        <div className="bg-background/95 backdrop-blur-md border border-success/30 rounded-xl px-4 py-3 shadow-2xl shadow-emerald-500/20">
                           <p className="text-sm font-medium mb-1">{data?.fullMonth || label}</p>
                           <p className="text-2xl font-bold bg-gradient-to-r from-emerald-600 to-teal-500 bg-clip-text text-transparent">{formatCurrency(payload[0].value as number)}</p>
                         </div>
@@ -1149,8 +1149,8 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-amber-500/10 via-rose-500/5 to-transparent rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
           <CardHeader className="pb-3 relative">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 ring-1 ring-rose-500/30 shadow-lg shadow-rose-500/20">
-                <Route className="h-5 w-5 text-rose-500" />
+              <div className="p-2 rounded-xl bg-gradient-to-br from-rose-500/20 to-orange-500/20 ring-1 ring-danger/30 shadow-lg shadow-rose-500/20">
+                <Route className="h-5 w-5 text-danger" />
               </div>
               <div>
                 <CardTitle className="text-lg font-semibold">Jornada de Retenção</CardTitle>
@@ -1161,7 +1161,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                   current.churned > max.churned ? current : max
                 , customerJourneyData[0]);
                 return peakMonth && peakMonth.churned > 0 ? (
-                  <Badge className="ml-auto bg-gradient-to-r from-rose-500/20 to-orange-500/20 text-rose-600 border-rose-500/30 text-xs font-semibold px-3 py-1">
+                  <Badge className="ml-auto bg-gradient-to-r from-rose-500/20 to-orange-500/20 text-danger border-danger/30 text-xs font-semibold px-3 py-1">
                     ⚠️ Pico: {peakMonth.label} mês ({peakMonth.churned} saídas)
                   </Badge>
                 ) : null;
@@ -1211,13 +1211,13 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       if (!active || !payload?.[0]) return null;
                       const data = payload[0].payload;
                       return (
-                        <div className="bg-background/95 backdrop-blur-md border border-rose-500/30 rounded-xl px-4 py-3 shadow-2xl shadow-rose-500/20">
+                        <div className="bg-background/95 backdrop-blur-md border border-danger/30 rounded-xl px-4 py-3 shadow-2xl shadow-rose-500/20">
                           <p className="text-sm font-semibold mb-2">{label} mês de contrato</p>
                           <div className="space-y-1">
                             <div className="flex items-center gap-2">
-                              <div className="w-2.5 h-2.5 rounded-full bg-rose-500" />
+                              <div className="w-2.5 h-2.5 rounded-full bg-danger" />
                               <span className="text-xs text-muted-foreground">Desistências:</span>
-                              <span className="text-sm font-bold text-rose-600">{data.churned}</span>
+                              <span className="text-sm font-bold text-danger">{data.churned}</span>
                             </div>
                             <div className="flex items-center gap-2">
                               <div className="w-2.5 h-2.5 rounded-full bg-violet-500" />
@@ -1250,9 +1250,9 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
               </ResponsiveContainer>
             </div>
             <div className="flex items-center justify-center gap-6 mt-4">
-              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-rose-500/10">
+              <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-danger/10">
                 <div className="w-2.5 h-2.5 rounded-full bg-gradient-to-r from-rose-500 to-orange-400 shadow-lg shadow-rose-500/50" />
-                <span className="text-xs font-medium text-rose-600">Desistências</span>
+                <span className="text-xs font-medium text-danger">Desistências</span>
               </div>
               <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-violet-500/10">
                 <div className="w-2.5 h-2.5 rounded-full bg-violet-500 shadow-lg shadow-violet-500/50" />
@@ -1283,10 +1283,10 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                 ];
                 
                 const colorClasses: Record<string, { bg: string; border: string; text: string; gradient: string }> = {
-                  rose: { bg: 'from-rose-500/10 via-rose-500/5', border: 'border-rose-500/20 hover:border-rose-500/40', text: 'text-rose-500', gradient: 'from-rose-600 to-rose-500' },
-                  amber: { bg: 'from-amber-500/10 via-amber-500/5', border: 'border-amber-500/20 hover:border-amber-500/40', text: 'text-amber-500', gradient: 'from-amber-600 to-amber-500' },
+                  rose: { bg: 'from-rose-500/10 via-rose-500/5', border: 'border-danger/20 hover:border-danger/40', text: 'text-danger', gradient: 'from-rose-600 to-rose-500' },
+                  amber: { bg: 'from-amber-500/10 via-amber-500/5', border: 'border-warning/20 hover:border-warning/40', text: 'text-warning', gradient: 'from-amber-600 to-amber-500' },
                   violet: { bg: 'from-violet-500/10 via-violet-500/5', border: 'border-violet-500/20 hover:border-violet-500/40', text: 'text-violet-500', gradient: 'from-violet-600 to-violet-500' },
-                  emerald: { bg: 'from-emerald-500/10 via-emerald-500/5', border: 'border-emerald-500/20 hover:border-emerald-500/40', text: 'text-emerald-500', gradient: 'from-emerald-600 to-emerald-500' },
+                  emerald: { bg: 'from-emerald-500/10 via-emerald-500/5', border: 'border-success/20 hover:border-success/40', text: 'text-success', gradient: 'from-emerald-600 to-emerald-500' },
                 };
                 
                 return quarters.map((q) => {

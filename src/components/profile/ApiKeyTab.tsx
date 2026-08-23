@@ -191,7 +191,7 @@ export function ApiKeyTab({ userId, accountId }: ApiKeyTabProps) {
                     <Key className="h-4 w-4 text-muted-foreground" />
                     <span className="font-medium">Sua Chave Atual</span>
                   </div>
-                  <Badge variant="default" className="bg-green-500/10 text-green-600 border-green-200">
+                  <Badge variant="default" className="bg-success/10 text-success border-success">
                     Ativa
                   </Badge>
                 </div>
@@ -221,7 +221,7 @@ export function ApiKeyTab({ userId, accountId }: ApiKeyTabProps) {
                   )}
                 </div>
 
-                <div className="flex items-start gap-2 p-3 rounded bg-amber-500/10 border border-amber-200 text-amber-700 text-sm">
+                <div className="flex items-start gap-2 p-3 rounded bg-warning/10 border border-warning text-warning-strong text-sm">
                   <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
                   <span>A chave completa foi exibida apenas no momento da criação.</span>
                 </div>
@@ -326,7 +326,7 @@ export function ApiKeyTab({ userId, accountId }: ApiKeyTabProps) {
       <Dialog open={newKeyDialog} onOpenChange={handleCloseNewKeyDialog}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-green-600">
+            <DialogTitle className="flex items-center gap-2 text-success">
               <Check className="h-5 w-5" />
               Chave Gerada com Sucesso!
             </DialogTitle>
@@ -336,7 +336,7 @@ export function ApiKeyTab({ userId, accountId }: ApiKeyTabProps) {
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex items-start gap-2 p-3 rounded bg-amber-500/10 border border-amber-200 text-amber-700 text-sm">
+            <div className="flex items-start gap-2 p-3 rounded bg-warning/10 border border-warning text-warning-strong text-sm">
               <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
               <span>
                 <strong>ATENÇÃO:</strong> Esta chave só será exibida UMA VEZ. 
@@ -358,7 +358,7 @@ export function ApiKeyTab({ userId, accountId }: ApiKeyTabProps) {
                   className="shrink-0"
                 >
                   {copied ? (
-                    <Check className="h-4 w-4 text-green-600" />
+                    <Check className="h-4 w-4 text-success" />
                   ) : (
                     <Copy className="h-4 w-4" />
                   )}

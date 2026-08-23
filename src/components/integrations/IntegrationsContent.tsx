@@ -560,7 +560,7 @@ export function IntegrationsContent() {
                     );
                   })()}
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                     <div className="flex-1">
                       <p className="font-medium">Conectado como</p>
                       <p className="text-sm text-muted-foreground">
@@ -685,7 +685,7 @@ export function IntegrationsContent() {
               {googleUserIntegration ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                     <div className="flex-1">
                       <p className="font-medium">Conectado como</p>
                       <p className="text-sm text-muted-foreground">
@@ -817,7 +817,7 @@ export function IntegrationsContent() {
               {threeCPlusIntegration?.status === "connected" ? (
                 <div className="space-y-4">
                   <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-green-500" />
+                    <CheckCircle2 className="h-5 w-5 text-success" />
                     <div className="flex-1">
                       <p className="font-medium">Conectado</p>
                       <p className="text-sm text-muted-foreground">

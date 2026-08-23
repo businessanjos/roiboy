@@ -757,8 +757,8 @@ function InstagramHighlightsPanel({ sessionHighlights, profileId, fallbackUserna
         </div>
       </CardHeader>
       <CardContent className="grid gap-4 md:grid-cols-3">
-        <HighlightGroup icon={Film} label="Top 3 Formatos" items={display.formats} accent="text-blue-500" />
-        <HighlightGroup icon={TrendingUp} label="Top 3 Temas" items={display.themes} accent="text-amber-500" />
+        <HighlightGroup icon={Film} label="Top 3 Formatos" items={display.formats} accent="text-info" />
+        <HighlightGroup icon={TrendingUp} label="Top 3 Temas" items={display.themes} accent="text-warning" />
         <HighlightGroup icon={Hash} label="Top 3 Hashtags" items={display.hashtags} accent="text-pink-500" />
       </CardContent>
     </Card>

@@ -158,7 +158,7 @@ export function AddYouTubeVideoDialog({ open, onOpenChange, onSubmit, isLoading 
                 <Input placeholder="#tutorial #dicas (separadas por espaço ou vírgula)" value={hashtagsInput} onChange={(e) => setHashtagsInput(e.target.value)} />
               </div>
               <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
-                <div className="flex items-center gap-2"><Flame className="h-4 w-4 text-orange-500" /><Label htmlFor="is-viral-yt" className="cursor-pointer">Marcar como Viral</Label></div>
+                <div className="flex items-center gap-2"><Flame className="h-4 w-4 text-warning" /><Label htmlFor="is-viral-yt" className="cursor-pointer">Marcar como Viral</Label></div>
                 <Switch id="is-viral-yt" checked={isViral} onCheckedChange={setIsViral} />
               </div>
               <div className="space-y-2">

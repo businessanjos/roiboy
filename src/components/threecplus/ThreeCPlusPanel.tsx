@@ -56,19 +56,19 @@ function formatTime(seconds: number): string {
 function getStatusInfo(status: AgentStatus) {
   switch (status) {
     case "idle":
-      return { label: "Ocioso", color: "bg-green-500", icon: Headphones };
+      return { label: "Ocioso", color: "bg-success", icon: Headphones };
     case "on_call":
-      return { label: "Em chamada", color: "bg-red-500", icon: PhoneCall };
+      return { label: "Em chamada", color: "bg-danger", icon: PhoneCall };
     case "manual_mode":
-      return { label: "Modo manual", color: "bg-blue-500", icon: PhoneForwarded };
+      return { label: "Modo manual", color: "bg-info", icon: PhoneForwarded };
     case "manual_call_connected":
-      return { label: "Chamada manual", color: "bg-red-500", icon: PhoneCall };
+      return { label: "Chamada manual", color: "bg-danger", icon: PhoneCall };
     case "acw":
-      return { label: "TPA", color: "bg-yellow-500", icon: Clock };
+      return { label: "TPA", color: "bg-warning", icon: Clock };
     case "on_break":
-      return { label: "Intervalo", color: "bg-orange-500", icon: Coffee };
+      return { label: "Intervalo", color: "bg-warning", icon: Coffee };
     case "connecting":
-      return { label: "Conectando...", color: "bg-blue-400", icon: Loader2 };
+      return { label: "Conectando...", color: "bg-info", icon: Loader2 };
     default:
       return { label: "Offline", color: "bg-muted", icon: WifiOff };
   }
@@ -253,10 +253,10 @@ export function ThreeCPlusPanel() {
       ? statusInfo
       : extensionLoaded
         ? isConnected
-          ? { label: "Ramal carregado", color: "bg-green-500", icon: Wifi }
-          : { label: "WebRTC carregando", color: "bg-yellow-500", icon: Loader2 }
+          ? { label: "Ramal carregado", color: "bg-success", icon: Wifi }
+          : { label: "WebRTC carregando", color: "bg-warning", icon: Loader2 }
         : connectionInfo || loading
-          ? { label: "Conectando...", color: "bg-blue-400", icon: Loader2 }
+          ? { label: "Conectando...", color: "bg-info", icon: Loader2 }
           : statusInfo;
   const liveStatusInfo = hasCallActivity
     ? {
@@ -330,7 +330,7 @@ export function ThreeCPlusPanel() {
           <Phone className="h-4 w-4 text-primary" />
           <span className="font-semibold text-sm">3C Plus</span>
           {isConnected ? (
-            <Wifi className="h-3.5 w-3.5 text-green-500" />
+            <Wifi className="h-3.5 w-3.5 text-success" />
           ) : (
             <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
           )}
@@ -387,7 +387,7 @@ export function ThreeCPlusPanel() {
                 </Button>
               </div>
               {!savedExtension && !extensionLoaded && (
-                <p className="text-xs text-yellow-600">
+                <p className="text-xs text-warning">
                   ⚠️ Configure seu ramal abaixo para fazer ligações.
                 </p>
               )}
@@ -396,7 +396,7 @@ export function ThreeCPlusPanel() {
                   <Headphones className="h-3 w-3" />
                   <span>Ramal: <strong>{savedExtension}</strong></span>
                   {savedExtensionPassword && (
-                    <span className="text-green-600">• Senha OK</span>
+                    <span className="text-success">• Senha OK</span>
                   )}
                 </div>
               )}
@@ -410,9 +410,9 @@ export function ThreeCPlusPanel() {
 
           {/* ===== Ramal Config (when not configured) ===== */}
           {extensionLoaded && !savedExtension && !hasCallActivity && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-3 space-y-2">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
               <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-yellow-600" />
+                <Settings className="h-4 w-4 text-warning" />
                 <p className="text-sm font-medium">Configure seu ramal</p>
               </div>
               <p className="text-xs text-muted-foreground">
@@ -453,7 +453,7 @@ export function ThreeCPlusPanel() {
                   <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
                   <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
                   {savedExtensionPassword && (
-                    <span className="text-xs text-green-600">• Senha configurada</span>
+                    <span className="text-xs text-success">• Senha configurada</span>
                   )}
                 </div>
               </div>
@@ -593,7 +593,7 @@ export function ThreeCPlusPanel() {
 
           {/* Emergency hangup */}
           {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && !hasCallTarget && (
-            <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-3">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
               <Button
                 variant="outline"
                 size="sm"
@@ -609,9 +609,9 @@ export function ThreeCPlusPanel() {
 
           {/* TPA (After Call Work) */}
           {agentStatus === "acw" && (
-            <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/5 p-4 space-y-3">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-yellow-600" />
+                <Clock className="h-5 w-5 text-warning" />
                 <div>
                   <p className="text-sm font-medium">Pós-atendimento (TPA)</p>
                   <p className="text-xs text-muted-foreground">Qualifique a chamada para continuar</p>
@@ -767,9 +767,9 @@ export function ThreeCPlusPanel() {
 
           {/* On Break */}
           {agentStatus === "on_break" && (
-            <div className="rounded-lg border border-orange-500/30 bg-orange-500/5 p-4 space-y-3">
+            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
               <div className="flex items-center gap-2">
-                <Coffee className="h-5 w-5 text-orange-600" />
+                <Coffee className="h-5 w-5 text-warning" />
                 <p className="text-sm font-medium">Em intervalo</p>
               </div>
               <Button variant="outline" size="sm" className="w-full" onClick={exitPause}>

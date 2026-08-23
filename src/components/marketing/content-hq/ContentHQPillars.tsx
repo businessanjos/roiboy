@@ -20,7 +20,7 @@ export function ContentHQPillars({ talent }: { talent: Talent }) {
       <Card className="p-4 flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold">Pilares de conteúdo — {talent.name}</h2>
-          <p className="text-sm text-muted-foreground">Mix total: <strong className={total === 100 ? "text-emerald-600" : "text-amber-600"}>{total}%</strong> {total !== 100 && "(ideal: 100%)"}</p>
+          <p className="text-sm text-muted-foreground">Mix total: <strong className={total === 100 ? "text-success" : "text-warning"}>{total}%</strong> {total !== 100 && "(ideal: 100%)"}</p>
         </div>
         <Button onClick={() => setEditing({ talent_id: talent.id, mix_percentage: 0, platforms: [] })} className="gap-2"><Plus className="h-4 w-4" /> Novo pilar</Button>
       </Card>

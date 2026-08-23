@@ -84,22 +84,22 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     if (daysUntilExpiry < 0) {
       return { 
         label: `Vencido há ${Math.abs(daysUntilExpiry)} dias`, 
-        bg: 'bg-red-500/20', 
-        text: 'text-red-600',
+        bg: 'bg-danger/20', 
+        text: 'text-danger',
         isExpired: true 
       };
     } else if (daysUntilExpiry === 0) {
       return { 
         label: 'Vence hoje', 
-        bg: 'bg-red-500/20', 
-        text: 'text-red-600',
+        bg: 'bg-danger/20', 
+        text: 'text-danger',
         isExpired: false 
       };
     } else {
       return { 
         label: `Vence em ${daysUntilExpiry} dias`, 
-        bg: 'bg-amber-500/20', 
-        text: 'text-amber-600',
+        bg: 'bg-warning/20', 
+        text: 'text-warning',
         isExpired: false 
       };
     }
@@ -114,11 +114,11 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
   // Determine time badge color
   const getTimeBadgeStyle = () => {
     if (daysSinceCreation <= 7) {
-      return { bg: 'bg-emerald-500/20', text: 'text-emerald-600', label: `Há ${daysSinceCreation} dias` };
+      return { bg: 'bg-success/20', text: 'text-success', label: `Há ${daysSinceCreation} dias` };
     } else if (daysSinceCreation <= 30) {
-      return { bg: 'bg-amber-500/20', text: 'text-amber-600', label: `Há ${daysSinceCreation} dias` };
+      return { bg: 'bg-warning/20', text: 'text-warning', label: `Há ${daysSinceCreation} dias` };
     } else {
-      return { bg: 'bg-red-500/20', text: 'text-red-600', label: `Há ${daysSinceCreation} dias` };
+      return { bg: 'bg-danger/20', text: 'text-danger', label: `Há ${daysSinceCreation} dias` };
     }
   };
 
@@ -129,8 +129,8 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     // No pending activities = all done (or no activities)
     if (activityStatus.pendingCount === 0) {
       return { 
-        bgColor: "bg-emerald-500", 
-        textColor: "text-emerald-600", 
+        bgColor: "bg-success", 
+        textColor: "text-success", 
         label: "Feito" 
       };
     }
@@ -138,16 +138,16 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     // Has overdue activities
     if (activityStatus.hasOverdue) {
       return { 
-        bgColor: "bg-red-500", 
-        textColor: "text-red-600", 
+        bgColor: "bg-danger", 
+        textColor: "text-danger", 
         label: "Atrasado!" 
       };
     }
     
     // Has pending but none overdue
     return { 
-      bgColor: "bg-amber-500", 
-      textColor: "text-amber-600", 
+      bgColor: "bg-warning", 
+      textColor: "text-warning", 
       label: "A fazer" 
     };
   };
@@ -163,7 +163,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       {...listeners}
       className={cn(
         "relative cursor-pointer hover:shadow-md transition-all duration-200 bg-card border-border/40 overflow-hidden group",
-        isRenewal && "ring-1 ring-amber-400/40 bg-amber-500/5",
+        isRenewal && "ring-1 ring-warning/40 bg-warning/5",
         (isDragging || isSortableDragging) && "opacity-30 shadow-none scale-95 border-dashed border-primary/40"
       )}
       onClick={onClick}
@@ -189,9 +189,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
             {deal.responsible_user && (
               <Avatar
                 title={`${deal.responsible_user.name}${deal.responsible_user.is_active === false ? " (inativo)" : ""}`}
-                className={`h-3.5 w-3.5 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ${deal.responsible_user.is_active === false ? "ring-amber-500 grayscale" : "ring-background"}`}>
+                className={`h-3.5 w-3.5 absolute -bottom-0.5 -right-0.5 border border-background ring-1 ${deal.responsible_user.is_active === false ? "ring-warning grayscale" : "ring-background"}`}>
                 <AvatarImage src={deal.responsible_user.avatar_url || undefined} />
-                <AvatarFallback className="text-[5px] bg-blue-500 text-white font-bold">
+                <AvatarFallback className="text-[5px] bg-info text-white font-bold">
                   {deal.responsible_user.name.split(" ").map(n => n[0]).join("").slice(0, 2).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
@@ -211,7 +211,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
         {/* Row 2: Renewal badge */}
         {isRenewal && (
-          <div className="flex items-center gap-1 text-amber-600">
+          <div className="flex items-center gap-1 text-warning">
             <RefreshCw className="h-2.5 w-2.5" />
             <span className="text-[9px] font-semibold uppercase tracking-wide">Renovação</span>
           </div>
@@ -219,7 +219,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
         {/* 2ª Cadeira badge */}
         {(deal as any).has_second_seat && (
-          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-amber-500/10 text-amber-700 border-amber-500/30 self-start">
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-warning/10 text-warning-strong border-warning/30 self-start">
             2ª cadeira{(deal as any).second_seat_name ? `: ${(deal as any).second_seat_name}` : ''}
           </Badge>
         )}
@@ -258,7 +258,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-5 w-5 hover:bg-emerald-500/10"
+                className="h-5 w-5 hover:bg-success/10"
                 onClick={(e) => {
                   e.stopPropagation();
                   openZappConversation({
@@ -272,7 +272,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                 disabled={zappLoading}
                 title="Abrir conversa no RoyZapp"
               >
-                <MessageCircle className="h-3 w-3 text-emerald-600" />
+                <MessageCircle className="h-3 w-3 text-success" />
               </Button>
             )}
             {/* Activities */}
@@ -334,7 +334,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
           {/* Tags compact */}
           <div className="flex items-center gap-1 min-w-0 flex-1 justify-end overflow-hidden">
             {faturamentoLabel && (
-              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-emerald-500/10 text-emerald-700 border-emerald-500/20 max-w-[80px] min-w-0 shrink overflow-hidden">
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-success/10 text-success-strong border-success/20 max-w-[80px] min-w-0 shrink overflow-hidden">
                 <span className="truncate">$ {faturamentoLabel}</span>
               </Badge>
             )}

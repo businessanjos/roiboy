@@ -511,7 +511,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     key={event.id}
                     className={cn(
                       isTodayEvent && "bg-primary/5",
-                      showParticipation && participated && "bg-emerald-500/5"
+                      showParticipation && participated && "bg-success/5"
                     )}
                   >
                     {showParticipation && (
@@ -527,11 +527,11 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                       <div className="flex items-center gap-2">
                         <span className="font-medium">{event.title}</span>
                         {event.client_id !== null ? (
-                          <Badge className="text-xs bg-emerald-500/10 text-emerald-600 border-emerald-500/30" variant="outline">
+                          <Badge className="text-xs bg-success/10 text-success border-success/30" variant="outline">
                             Individual
                           </Badge>
                         ) : (
-                          <Badge className="text-xs bg-blue-500/10 text-blue-600 border-blue-500/30" variant="outline">
+                          <Badge className="text-xs bg-info/10 text-info border-info/30" variant="outline">
                             Compartilhado
                           </Badge>
                         )}
@@ -580,12 +580,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     {showParticipation && (
                       <TableCell>
                         {hasCheckedIn ? (
-                          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
                             <QrCode className="h-3 w-3 mr-1" />
                             Check-in
                           </Badge>
                         ) : isDelivered ? (
-                          <Badge variant="outline" className="text-emerald-600 border-emerald-500/30 bg-emerald-500/10">
+                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
                             <Check className="h-3 w-3 mr-1" />
                             Participou
                           </Badge>
@@ -639,12 +639,12 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
   };
 
   const statusColors: Record<string, string> = {
-    confirmed: "bg-green-500/10 text-green-600 border-green-500/30",
-    declined: "bg-red-500/10 text-red-600 border-red-500/30",
-    pending: "bg-yellow-500/10 text-yellow-600 border-yellow-500/30",
-    attended: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-    no_show: "bg-gray-500/10 text-gray-500 border-gray-500/30",
-    waitlist: "bg-blue-500/10 text-blue-600 border-blue-500/30",
+    confirmed: "bg-success/10 text-success border-success/30",
+    declined: "bg-danger/10 text-danger border-danger/30",
+    pending: "bg-warning/10 text-warning border-warning/30",
+    attended: "bg-success/10 text-success border-success/30",
+    no_show: "bg-gray-500/10 text-muted-foreground border-border/30",
+    waitlist: "bg-info/10 text-info border-info/30",
   };
   const statusLabels: Record<string, string> = {
     confirmed: "Confirmado",
@@ -788,7 +788,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
                     <div className="text-center">
                       <p className={cn(
                         "text-lg font-bold",
-                        f.nps_score >= 9 ? "text-green-600" : f.nps_score >= 7 ? "text-yellow-600" : "text-red-600"
+                        f.nps_score >= 9 ? "text-success" : f.nps_score >= 7 ? "text-warning" : "text-danger"
                       )}>
                         {f.nps_score}
                       </p>

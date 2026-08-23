@@ -35,7 +35,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
     return (
       <div className="bg-card rounded-xl border p-6">
         <div className="flex items-center gap-4 text-muted-foreground">
-          <Youtube className="h-12 w-12 text-red-600" />
+          <Youtube className="h-12 w-12 text-danger" />
           <div>
             <p className="font-medium">Nenhum canal selecionado</p>
             <p className="text-sm">Conecte um canal do YouTube para começar</p>
@@ -57,7 +57,7 @@ export function YouTubeChannelHeader({ channel, isLoading }: YouTubeChannelHeade
         <div className="flex-1 text-center sm:text-left space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center gap-2">
             <div className="flex items-center justify-center sm:justify-start gap-2">
-              <Youtube className="h-5 w-5 text-red-600" />
+              <Youtube className="h-5 w-5 text-danger" />
               <h2 className="text-xl font-bold">@{channel.username}</h2>
             </div>
             {channel.display_name && <span className="text-muted-foreground">({channel.display_name})</span>}

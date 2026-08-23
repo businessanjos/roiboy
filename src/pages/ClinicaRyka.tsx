@@ -223,7 +223,7 @@ export default function ClinicaRyka() {
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
-            <Heart className="h-6 w-6 text-rose-500" />
+            <Heart className="h-6 w-6 text-danger" />
             Clínica Ryka
           </h1>
           <p className="text-sm text-muted-foreground mt-1">
@@ -248,11 +248,11 @@ export default function ClinicaRyka() {
 
       <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
         <SummaryCard label="Total elegíveis" value={counts.total} />
-        <SummaryCard label="Já com acesso" value={counts.provisioned} accent="text-emerald-600" />
-        <SummaryCard label="Falta liberar" value={counts.pending} accent="text-amber-600" />
-        <SummaryCard label="Falhas" value={counts.failed} accent="text-rose-600" />
-        <SummaryCard label="Ativos no Ryka" value={counts.rykaActive} accent="text-emerald-600" />
-        <SummaryCard label="Inativos no Ryka" value={counts.rykaInactive} accent="text-slate-500" />
+        <SummaryCard label="Já com acesso" value={counts.provisioned} accent="text-success" />
+        <SummaryCard label="Falta liberar" value={counts.pending} accent="text-warning" />
+        <SummaryCard label="Falhas" value={counts.failed} accent="text-danger" />
+        <SummaryCard label="Ativos no Ryka" value={counts.rykaActive} accent="text-success" />
+        <SummaryCard label="Inativos no Ryka" value={counts.rykaInactive} accent="text-muted-foreground" />
       </div>
 
       <Card>
@@ -450,11 +450,11 @@ function StatusBadge({
   if (state === "provisioned") {
     return (
       <div className="flex items-center gap-1.5">
-        <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+        <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
           <CheckCircle2 className="h-3 w-3 mr-1" /> Com acesso
         </Badge>
         {whatsapp && whatsapp !== "sent" && (
-          <Badge variant="outline" className="text-amber-700 border-amber-500/40">
+          <Badge variant="outline" className="text-warning-strong border-warning/40">
             WhatsApp: {whatsapp}
           </Badge>
         )}
@@ -463,13 +463,13 @@ function StatusBadge({
   }
   if (state === "failed") {
     return (
-      <Badge className="bg-rose-500/15 text-rose-700 border-rose-500/30 hover:bg-rose-500/15">
+      <Badge className="bg-danger/15 text-danger-strong border-danger/30 hover:bg-danger/15">
         <AlertCircle className="h-3 w-3 mr-1" /> Falhou
       </Badge>
     );
   }
   return (
-    <Badge variant="outline" className="text-amber-700 border-amber-500/40">
+    <Badge variant="outline" className="text-warning-strong border-warning/40">
       <Clock className="h-3 w-3 mr-1" /> Falta liberar
     </Badge>
   );
@@ -478,14 +478,14 @@ function StatusBadge({
 function RykaStatusBadge({ status }: { status: "active" | "inactive" | null }) {
   if (status === "active") {
     return (
-      <Badge className="bg-emerald-500/15 text-emerald-700 border-emerald-500/30 hover:bg-emerald-500/15">
+      <Badge className="bg-success/15 text-success-strong border-success/30 hover:bg-success/15">
         <CheckCircle2 className="h-3 w-3 mr-1" /> Ativo
       </Badge>
     );
   }
   if (status === "inactive") {
     return (
-      <Badge variant="outline" className="text-slate-600 border-slate-400/50">
+      <Badge variant="outline" className="text-muted-foreground border-border/50">
         <AlertCircle className="h-3 w-3 mr-1" /> Inativo
       </Badge>
     );

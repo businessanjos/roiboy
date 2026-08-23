@@ -19,13 +19,13 @@ import {
 import { cn } from "@/lib/utils";
 
 const RESOURCE_CONFIG: Record<ResourceType, { icon: typeof Users; label: string; color: string }> = {
-  clients: { icon: Users, label: "Clientes", color: "text-blue-500" },
+  clients: { icon: Users, label: "Clientes", color: "text-info" },
   users: { icon: UserCircle, label: "Usuários", color: "text-purple-500" },
-  events: { icon: CalendarDays, label: "Eventos", color: "text-green-500" },
-  products: { icon: Package, label: "Produtos", color: "text-orange-500" },
+  events: { icon: CalendarDays, label: "Eventos", color: "text-success" },
+  products: { icon: Package, label: "Produtos", color: "text-warning" },
   forms: { icon: FileText, label: "Formulários", color: "text-pink-500" },
-  ai_analyses: { icon: Sparkles, label: "Análises IA", color: "text-cyan-500" },
-  whatsapp_connections: { icon: MessageCircle, label: "Conexões WhatsApp", color: "text-emerald-500" },
+  ai_analyses: { icon: Sparkles, label: "Análises IA", color: "text-info" },
+  whatsapp_connections: { icon: MessageCircle, label: "Conexões WhatsApp", color: "text-success" },
 };
 
 interface UsageItemProps {
@@ -50,7 +50,7 @@ function UsageItem({ resource, usage, limit }: UsageItemProps) {
         </div>
         <span className={cn(
           "text-muted-foreground",
-          isNearLimit && "text-amber-600 dark:text-amber-400",
+          isNearLimit && "text-warning dark:text-warning",
           atLimit && "text-destructive"
         )}>
           {usage} / {limit}
@@ -61,7 +61,7 @@ function UsageItem({ resource, usage, limit }: UsageItemProps) {
         className={cn(
           "h-2",
           atLimit && "[&>div]:bg-destructive",
-          isNearLimit && !atLimit && "[&>div]:bg-amber-500"
+          isNearLimit && !atLimit && "[&>div]:bg-warning"
         )} 
       />
     </div>

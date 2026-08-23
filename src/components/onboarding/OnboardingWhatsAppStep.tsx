@@ -181,8 +181,8 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
     return (
       <div className="space-y-6">
         <div className="text-center mb-6">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 mb-3">
-            <CheckCircle2 className="h-6 w-6 text-green-500" />
+          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-success/10 mb-3">
+            <CheckCircle2 className="h-6 w-6 text-success" />
           </div>
           <h2 className="text-xl font-semibold">WhatsApp Conectado!</h2>
           <p className="text-sm text-muted-foreground mt-1">
@@ -193,11 +193,11 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
         <motion.div 
           initial={{ scale: 0.95, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
-          className="flex flex-col items-center gap-4 p-6 rounded-lg border bg-green-500/5 border-green-500/20"
+          className="flex flex-col items-center gap-4 p-6 rounded-lg border bg-success/5 border-success/20"
         >
           <div className="flex items-center gap-3">
-            <div className="h-3 w-3 rounded-full bg-green-500 animate-pulse" />
-            <span className="font-medium text-green-600 dark:text-green-400">Conectado e Ativo</span>
+            <div className="h-3 w-3 rounded-full bg-success animate-pulse" />
+            <span className="font-medium text-success dark:text-success">Conectado e Ativo</span>
           </div>
           <p className="text-sm text-muted-foreground text-center">
             As mensagens do WhatsApp serão sincronizadas automaticamente.
@@ -230,8 +230,8 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
   return (
     <div className="space-y-6">
       <div className="text-center mb-6">
-        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-green-500/10 mb-3">
-          <MessageSquare className="h-6 w-6 text-green-500" />
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-success/10 mb-3">
+          <MessageSquare className="h-6 w-6 text-success" />
         </div>
         <h2 className="text-xl font-semibold">Conecte seu WhatsApp</h2>
         <p className="text-sm text-muted-foreground mt-1">
@@ -396,24 +396,24 @@ export function OnboardingWhatsAppStep({ onConnected, onSkip }: OnboardingWhatsA
         className="p-4 rounded-lg bg-gradient-to-r from-green-500/5 to-primary/5 border"
       >
         <div className="flex items-start gap-3">
-          <MessageSquare className="h-5 w-5 text-green-500 mt-0.5" />
+          <MessageSquare className="h-5 w-5 text-success mt-0.5" />
           <div>
             <p className="text-sm font-medium">Por que conectar o WhatsApp?</p>
             <ul className="text-sm text-muted-foreground mt-2 space-y-1">
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <CheckCircle2 className="h-3 w-3 text-success" />
                 Análise automática de mensagens por IA
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <CheckCircle2 className="h-3 w-3 text-success" />
                 Detecção de ROI, riscos e eventos importantes
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <CheckCircle2 className="h-3 w-3 text-success" />
                 Vinculação automática de mensagens a clientes
               </li>
               <li className="flex items-center gap-2">
-                <CheckCircle2 className="h-3 w-3 text-green-500" />
+                <CheckCircle2 className="h-3 w-3 text-success" />
                 Envio de lembretes e notificações automatizadas
               </li>
             </ul>

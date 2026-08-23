@@ -212,14 +212,14 @@ export default function FinancialDRFPage() {
     : [];
 
   const getValueColor = (value: number) => {
-    if (value > 0) return "text-emerald-600 dark:text-emerald-400";
-    if (value < 0) return "text-red-600 dark:text-red-400";
+    if (value > 0) return "text-success dark:text-success";
+    if (value < 0) return "text-danger dark:text-danger";
     return "text-muted-foreground";
   };
 
   const getValueIcon = (value: number) => {
-    if (value > 0) return <TrendingUp className="h-4 w-4 text-emerald-600" />;
-    if (value < 0) return <TrendingDown className="h-4 w-4 text-red-600" />;
+    if (value > 0) return <TrendingUp className="h-4 w-4 text-success" />;
+    if (value < 0) return <TrendingDown className="h-4 w-4 text-danger" />;
     return <Minus className="h-4 w-4 text-muted-foreground" />;
   };
 
@@ -262,7 +262,7 @@ export default function FinancialDRFPage() {
         <Card>
           <CardContent className="pt-6">
             <div className="text-sm text-muted-foreground">Receita Bruta Faturada</div>
-            <div className="text-2xl font-bold text-emerald-600">
+            <div className="text-2xl font-bold text-success">
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(drfData?.grossRevenue || 0)}
             </div>
           </CardContent>
@@ -275,14 +275,14 @@ export default function FinancialDRFPage() {
             </div>
           </CardContent>
         </Card>
-        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-amber-200 dark:border-amber-800">
+        <Card className="bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30 border-warning dark:border-warning">
           <CardContent className="pt-6">
-            <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">EBITDA</div>
-            <div className={`text-2xl font-bold ${drfData?.ebitda && drfData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+            <div className="text-sm text-warning-strong dark:text-warning font-medium">EBITDA</div>
+            <div className={`text-2xl font-bold ${drfData?.ebitda && drfData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
               {isLoading ? <Skeleton className="h-8 w-28" /> : formatCurrency(drfData?.ebitda || 0)}
             </div>
             {drfData && drfData.grossRevenue > 0 && (
-              <div className="text-xs text-amber-600 dark:text-amber-400 mt-1">
+              <div className="text-xs text-warning dark:text-warning mt-1">
                 {((drfData.ebitda / drfData.grossRevenue) * 100).toFixed(1)}% da receita
               </div>
             )}
@@ -307,9 +307,9 @@ export default function FinancialDRFPage() {
       </div>
 
       {/* Info Card */}
-      <Card className="bg-blue-50/50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800">
+      <Card className="bg-info/50 dark:bg-info/20 border-info dark:border-info">
         <CardContent className="pt-6">
-          <p className="text-sm text-blue-700 dark:text-blue-300">
+          <p className="text-sm text-info-strong dark:text-info">
             <strong>DRF vs DRE:</strong> O DRF considera o faturamento bruto (data de vencimento), 
             independente de ter sido pago ou não. Já o DRE considera apenas os valores efetivamente recebidos.
           </p>
@@ -374,10 +374,10 @@ export default function FinancialDRFPage() {
                 <div className="text-sm text-muted-foreground">Margem Bruta</div>
               </div>
               <div className="text-center p-4 rounded-lg bg-gradient-to-br from-amber-50 to-orange-50 dark:from-amber-950/30 dark:to-orange-950/30">
-                <div className={`text-3xl font-bold ${drfData.ebitda >= 0 ? 'text-amber-600 dark:text-amber-400' : 'text-red-600'}`}>
+                <div className={`text-3xl font-bold ${drfData.ebitda >= 0 ? 'text-warning dark:text-warning' : 'text-danger'}`}>
                   {((drfData.ebitda / drfData.grossRevenue) * 100).toFixed(1)}%
                 </div>
-                <div className="text-sm text-amber-700 dark:text-amber-300 font-medium">Margem EBITDA</div>
+                <div className="text-sm text-warning-strong dark:text-warning font-medium">Margem EBITDA</div>
               </div>
               <div className="text-center">
                 <div className={`text-3xl font-bold ${getValueColor(drfData.operatingResult)}`}>

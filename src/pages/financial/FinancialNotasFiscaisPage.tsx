@@ -59,10 +59,10 @@ interface NotaFiscal {
 }
 
 const statusColors: Record<string, string> = {
-  draft: "bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400",
-  issued: "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400",
-  cancelled: "bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400",
-  rejected: "bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400",
+  draft: "bg-muted text-foreground dark:bg-gray-900/30 dark:text-muted-foreground",
+  issued: "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success",
+  cancelled: "bg-danger-soft text-danger-strong dark:bg-danger/30 dark:text-danger",
+  rejected: "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning",
 };
 
 const statusLabels: Record<string, string> = {
@@ -838,7 +838,7 @@ export default function FinancialNotasFiscaisPage() {
                               className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 mt-1"
                             >
                               {copiedId === nota.id ? (
-                                <Check className="h-3 w-3 text-green-500" />
+                                <Check className="h-3 w-3 text-success" />
                               ) : (
                                 <Copy className="h-3 w-3" />
                               )}

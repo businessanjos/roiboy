@@ -148,15 +148,15 @@ interface Contract {
 
 const CONTRACT_STATUS_CONFIG: Record<string, { label: string; icon: typeof CheckCircle; className: string }> = {
   scheduled: { label: "A Iniciar", icon: Clock, className: "border-indigo-500 text-indigo-600 bg-indigo-50" },
-  active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600 bg-green-50" },
-  pending: { label: "Pendente", icon: FileText, className: "border-blue-500 text-blue-600 bg-blue-50" },
-  suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600 bg-orange-50" },
-  paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600 bg-amber-50" },
-  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-yellow-500 text-yellow-600 bg-yellow-50" },
-  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-red-500 text-red-600 bg-red-50" },
-  ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600 bg-slate-50" },
-  dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600 bg-rose-50" },
-  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-rose-600 text-rose-700 bg-rose-50" },
+  active: { label: "Ativo", icon: CheckCircle, className: "border-success text-success bg-success-soft" },
+  pending: { label: "Pendente", icon: FileText, className: "border-info text-info bg-info-soft" },
+  suspended: { label: "Suspenso", icon: Ban, className: "border-warning text-warning bg-warning-soft" },
+  paused: { label: "Pausado", icon: PauseCircle, className: "border-warning text-warning bg-warning-soft" },
+  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-warning text-warning bg-warning-soft" },
+  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-danger text-danger bg-danger-soft" },
+  ended: { label: "Encerrado", icon: Ban, className: "border-border text-muted-foreground bg-muted" },
+  dismissed: { label: "Demitida", icon: XCircle, className: "border-danger text-danger bg-danger-soft" },
+  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-danger text-danger-strong bg-danger-soft" },
   dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600 bg-pink-50" },
 };
 
@@ -215,7 +215,7 @@ const getExpiryBadgeStatic = (endDate: string | null) => {
   }
   if (daysUntilExpiry <= 30) {
     return (
-      <Badge variant="outline" className="text-xs border-amber-500 text-amber-600 bg-amber-50">
+      <Badge variant="outline" className="text-xs border-warning text-warning bg-warning-soft">
         <Clock className="h-3 w-3 mr-1" />
         Vence em {daysUntilExpiry} dias
       </Badge>
@@ -1807,12 +1807,12 @@ export default function Contracts() {
           <FileText className="h-3 w-3" />
           {stats.total} Total
         </Badge>
-        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-green-600 border-green-600/30 bg-green-500/5">
+        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-success border-success/30 bg-success/5">
           <CheckCircle className="h-3 w-3" />
           {stats.active} Ativos
         </Badge>
         {stats.pending > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-blue-600 border-blue-600/30 bg-blue-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-info border-info/30 bg-info/5">
             <Clock className="h-3 w-3" />
             {stats.pending} Pendentes
           </Badge>
@@ -1824,19 +1824,19 @@ export default function Contracts() {
           </Badge>
         )}
         {stats.suspended > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-orange-600 border-orange-600/30 bg-orange-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-warning border-warning/30 bg-warning/5">
             <Ban className="h-3 w-3" />
             {stats.suspended} Suspensos
           </Badge>
         )}
         {stats.paused > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-amber-600 border-amber-600/30 bg-amber-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-warning border-warning/30 bg-warning/5">
             <PauseCircle className="h-3 w-3" />
             {stats.paused} Pausados
           </Badge>
         )}
         {stats.cancelled > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-red-600 border-red-600/30 bg-red-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-danger border-danger/30 bg-danger/5">
             <XCircle className="h-3 w-3" />
             {stats.cancelled} Cancelados
           </Badge>
@@ -1848,7 +1848,7 @@ export default function Contracts() {
           </Badge>
         )}
         {stats.dismissed > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-rose-600 border-rose-600/30 bg-rose-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-danger border-danger/30 bg-danger/5">
             <XCircle className="h-3 w-3" />
             {stats.dismissed} Demitidas
           </Badge>
@@ -1859,18 +1859,18 @@ export default function Contracts() {
             {stats.dropout_7d} Desist. 7D
           </Badge>
         )}
-        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-emerald-600 border-emerald-600/30 bg-emerald-500/5">
+        <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-success border-success/30 bg-success/5">
           <TrendingUp className="h-3 w-3" />
           {formatCurrency(stats.totalValue)}
         </Badge>
         {stats.expiringSoon > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-amber-600 border-amber-600/30 bg-amber-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-warning border-warning/30 bg-warning/5">
             <Clock className="h-3 w-3" />
             {stats.expiringSoon} Vencendo
           </Badge>
         )}
         {stats.expired > 0 && (
-          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-red-600 border-red-600/30 bg-red-500/5">
+          <Badge variant="outline" className="gap-1 py-0.5 px-2 text-[11px] font-medium whitespace-nowrap shrink-0 text-danger border-danger/30 bg-danger/5">
             <AlertTriangle className="h-3 w-3" />
             {stats.expired} Vencidos
           </Badge>
@@ -1989,16 +1989,16 @@ export default function Contracts() {
           <TabsContent value={activeTab} className="space-y-4">
             {/* Queue Status Info */}
             {activeTab === "fila" && (
-            <Card className="border-amber-200 bg-amber-50/50">
+            <Card className="border-warning bg-warning/50">
               <CardContent className="p-4">
                 <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-amber-600 mt-0.5" />
+                  <Clock className="h-5 w-5 text-warning mt-0.5" />
                   <div>
-                    <p className="font-medium text-amber-800">Contratos aguardando conciliação</p>
-                    <p className="text-sm text-amber-700">
+                    <p className="font-medium text-warning-strong">Contratos aguardando conciliação</p>
+                    <p className="text-sm text-warning-strong">
                       O botão "Conciliar" será liberado quando:
                     </p>
-                    <ul className="text-sm text-amber-700 mt-1 list-disc list-inside">
+                    <ul className="text-sm text-warning-strong mt-1 list-disc list-inside">
                       <li>Lançamentos financeiros gerados</li>
                       <li>CPF ou CNPJ preenchido</li>
                       <li>Endereço completo cadastrado</li>
@@ -2012,13 +2012,13 @@ export default function Contracts() {
 
           {activeTab === "triagem" && (
             <>
-              <Card className="border-blue-200 bg-blue-50/50">
+              <Card className="border-info bg-info/50">
                 <CardContent className="p-4">
                   <div className="flex items-start gap-3">
-                    <Users className="h-5 w-5 text-blue-600 mt-0.5" />
+                    <Users className="h-5 w-5 text-info mt-0.5" />
                     <div>
-                      <p className="font-medium text-blue-800">Clientes aguardando atribuição</p>
-                      <p className="text-sm text-blue-700">
+                      <p className="font-medium text-info-strong">Clientes aguardando atribuição</p>
+                      <p className="text-sm text-info-strong">
                         Estes clientes ainda não possuem um consultor responsável. 
                         Clique em "Puxar" para assumir o atendimento ou inicie uma conversa no ROY zAPP.
                       </p>

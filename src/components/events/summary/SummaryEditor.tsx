@@ -162,7 +162,7 @@ export default function SummaryEditor({ value, onChange }: Props) {
                       onChange={(e) => updateBlock(sIdx, bIdx, { text: e.target.value })}
                       rows={2}
                       placeholder="Frase de impacto..."
-                      className="bg-yellow-100/60"
+                      className="bg-warning/60"
                     />
                   )}
                   {block.type === "list" && (

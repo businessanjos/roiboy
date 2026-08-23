@@ -340,7 +340,7 @@ export function AgencyWeeklyReportDialog({ open, onOpenChange, agencyId, report,
           {/* Melhor criativo */}
           <div className="space-y-3">
             <h4 className="flex items-center gap-1.5 text-sm font-semibold">
-              <Trophy className="h-4 w-4 text-amber-500" /> Melhor criativo da semana
+              <Trophy className="h-4 w-4 text-warning" /> Melhor criativo da semana
             </h4>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <FieldShell label="Nome do criativo">

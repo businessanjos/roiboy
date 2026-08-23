@@ -50,16 +50,16 @@ const BRAND_COLORS: Record<string, { bg: string; fg: string }> = {
 
 const STATUS_META: Record<string, { label: string; color: string; progress: number }> = {
   not_started: { label: "Não iniciado", color: "bg-muted text-muted-foreground", progress: 0 },
-  in_progress: { label: "Em andamento", color: "bg-blue-500/15 text-blue-600", progress: 50 },
-  review: { label: "Em revisão", color: "bg-amber-500/15 text-amber-700", progress: 80 },
-  done: { label: "Concluído", color: "bg-emerald-500/15 text-emerald-700", progress: 100 },
+  in_progress: { label: "Em andamento", color: "bg-info/15 text-info", progress: 50 },
+  review: { label: "Em revisão", color: "bg-warning/15 text-warning-strong", progress: 80 },
+  done: { label: "Concluído", color: "bg-success/15 text-success-strong", progress: 100 },
 };
 
 const CATEGORY_META: Record<string, { label: string; color: string }> = {
   web: { label: "Web", color: "bg-violet-500/10 text-violet-700" },
   social: { label: "Redes Sociais", color: "bg-pink-500/10 text-pink-700" },
-  identity: { label: "Identidade Visual", color: "bg-amber-500/10 text-amber-700" },
-  internal: { label: "Interno", color: "bg-slate-500/10 text-slate-700" },
+  identity: { label: "Identidade Visual", color: "bg-warning/10 text-warning-strong" },
+  internal: { label: "Interno", color: "bg-slate-500/10 text-foreground" },
 };
 
 const TASK_STATUSES = [
@@ -196,8 +196,8 @@ export default function Rebranding() {
       {/* KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <KpiCard label="Canais" value={String(stats.total)} hint="mapeados" />
-        <KpiCard label="Concluídos" value={String(stats.done)} hint={`${stats.pct}% do total`} accent="text-emerald-600" />
-        <KpiCard label="Em andamento" value={String(stats.inProg)} hint="ativos agora" accent="text-blue-600" />
+        <KpiCard label="Concluídos" value={String(stats.done)} hint={`${stats.pct}% do total`} accent="text-success" />
+        <KpiCard label="Em andamento" value={String(stats.inProg)} hint="ativos agora" accent="text-info" />
         <KpiCard label="Tarefas" value={`${stats.taskDone}/${stats.totalTasks}`} hint="executadas" />
       </div>
 
@@ -963,7 +963,7 @@ function ChannelSpecDetail({ spec }: { spec: (typeof REBRANDING_SPECS)[number] }
       <ul className="space-y-1.5 text-xs">
         {spec.checklist.map((c, i) => (
           <li key={i} className="flex gap-2">
-            <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+            <Check className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
             <span>{c}</span>
           </li>
         ))}
@@ -976,12 +976,12 @@ function ChannelSpecDetail({ spec }: { spec: (typeof REBRANDING_SPECS)[number] }
       id: "donot",
       label: "Atenção / Não fazer",
       count: spec.doNot.length,
-      icon: <AlertTriangle className="h-4 w-4 text-red-600" />,
+      icon: <AlertTriangle className="h-4 w-4 text-danger" />,
       render: () => (
         <ul className="space-y-1.5 text-xs">
           {spec.doNot!.map((c, i) => (
             <li key={i} className="flex gap-2">
-              <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+              <X className="h-3.5 w-3.5 text-danger shrink-0 mt-0.5" />
               <span>{c}</span>
             </li>
           ))}
@@ -1052,7 +1052,7 @@ function ChannelSpecDetail({ spec }: { spec: (typeof REBRANDING_SPECS)[number] }
         ))}
 
         {spec.notes && (
-          <div className="rounded-md bg-amber-500/10 border border-amber-500/20 p-2.5 text-xs text-amber-900 dark:text-amber-200">
+          <div className="rounded-md bg-warning/10 border border-warning/20 p-2.5 text-xs text-warning-strong dark:text-warning">
             <strong>Nota:</strong> {spec.notes}
           </div>
         )}
@@ -1117,28 +1117,28 @@ function BrandKit() {
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-emerald-600">
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-success">
               <Check className="h-4 w-4" />
               Faça
             </div>
             <ul className="space-y-1.5 text-xs">
               {BRAND_KIT.doDont.do.map((d, i) => (
                 <li key={i} className="flex gap-2">
-                  <Check className="h-3.5 w-3.5 text-emerald-600 shrink-0 mt-0.5" />
+                  <Check className="h-3.5 w-3.5 text-success shrink-0 mt-0.5" />
                   <span>{d}</span>
                 </li>
               ))}
             </ul>
           </div>
           <div>
-            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-red-600">
+            <div className="flex items-center gap-2 mb-2 text-sm font-medium text-danger">
               <X className="h-4 w-4" />
               Não faça
             </div>
             <ul className="space-y-1.5 text-xs">
               {BRAND_KIT.doDont.dont.map((d, i) => (
                 <li key={i} className="flex gap-2">
-                  <X className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                  <X className="h-3.5 w-3.5 text-danger shrink-0 mt-0.5" />
                   <span>{d}</span>
                 </li>
               ))}
@@ -1196,7 +1196,7 @@ function ProductsRebrand() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-amber-500" />
+            <Sparkles className="h-5 w-5 text-warning" />
             Renomeações — atualização obrigatória
           </CardTitle>
         </CardHeader>
@@ -1240,9 +1240,9 @@ function ProductsRebrand() {
         </CardContent>
       </Card>
 
-      <Card className="border-amber-500/30 bg-amber-500/5">
+      <Card className="border-warning/30 bg-warning/5">
         <CardContent className="p-4 flex items-start gap-3 text-xs">
-          <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0 mt-0.5" />
+          <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
           <p className="text-muted-foreground">
             <span className="font-semibold text-foreground">Atenção:</span> esta é a referência visual do rebranding. As renomeações em <span className="font-mono">products.name</span> (banco) só devem ser aplicadas quando você confirmar — isso reflete em contratos, dashboards, badges e integrações.
           </p>

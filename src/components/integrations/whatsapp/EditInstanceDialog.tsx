@@ -182,9 +182,9 @@ export function EditInstanceDialog({
           <TabsContent value="pin" className="space-y-4 mt-4">
             {instance.has_pin ? (
               <>
-                <div className="p-3 bg-amber-500/10 rounded-lg border border-amber-500/20">
+                <div className="p-3 bg-warning/10 rounded-lg border border-warning/20">
                   <div className="flex items-start gap-2">
-                    <Lock className="h-4 w-4 text-amber-500 mt-0.5" />
+                    <Lock className="h-4 w-4 text-warning mt-0.5" />
                     <div>
                       <p className="text-sm font-medium">Esta instância está protegida</p>
                       <p className="text-xs text-muted-foreground">

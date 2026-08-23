@@ -108,14 +108,14 @@ interface Contract {
 type ContractStatusAction = 'cancelled' | 'ended' | 'paused' | 'active';
 
 const CONTRACT_STATUS_CONFIG = {
-  active: { label: "Ativo", icon: CheckCircle, className: "border-green-500 text-green-600" },
-  suspended: { label: "Suspenso", icon: Ban, className: "border-orange-500 text-orange-600" },
-  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-yellow-500 text-yellow-600" },
-  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-red-500 text-red-600" },
-  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-rose-600 text-rose-700" },
-  ended: { label: "Encerrado", icon: Ban, className: "border-slate-500 text-slate-600" },
-  paused: { label: "Pausado", icon: PauseCircle, className: "border-amber-500 text-amber-600" },
-  dismissed: { label: "Demitida", icon: XCircle, className: "border-rose-500 text-rose-600" },
+  active: { label: "Ativo", icon: CheckCircle, className: "border-success text-success" },
+  suspended: { label: "Suspenso", icon: Ban, className: "border-warning text-warning" },
+  suspended_bonus: { label: "Suspenso Bônus", icon: Ban, className: "border-warning text-warning" },
+  cancelled: { label: "Distrato de Cancelamento", icon: XCircle, className: "border-danger text-danger" },
+  dismissal_termination: { label: "Distrato por Demissão", icon: XCircle, className: "border-danger text-danger-strong" },
+  ended: { label: "Encerrado", icon: Ban, className: "border-border text-muted-foreground" },
+  paused: { label: "Pausado", icon: PauseCircle, className: "border-warning text-warning" },
+  dismissed: { label: "Demitida", icon: XCircle, className: "border-danger text-danger" },
   dropout_7d: { label: "Desistência 7D", icon: XCircle, className: "border-pink-500 text-pink-600" },
 };
 
@@ -641,9 +641,9 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
       return { label: "Expirado", variant: "destructive" as const, icon: AlertTriangle, className: "", reason: null };
     }
     if (daysRemaining <= 30) {
-      return { label: `${daysRemaining}d restantes`, variant: "outline" as const, icon: AlertTriangle, className: "border-amber-500 text-amber-600", reason: null };
+      return { label: `${daysRemaining}d restantes`, variant: "outline" as const, icon: AlertTriangle, className: "border-warning text-warning", reason: null };
     }
-    return { label: "Ativo", variant: "outline" as const, icon: CheckCircle, className: "border-green-500 text-green-600", reason: null };
+    return { label: "Ativo", variant: "outline" as const, icon: CheckCircle, className: "border-success text-success", reason: null };
   };
 
   const formatCurrency = (value: number) => {
@@ -1049,14 +1049,14 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                             <>
                               <DropdownMenuItem 
                                 onClick={() => openStatusDialog(contract, 'paused')}
-                                className="text-amber-600"
+                                className="text-warning"
                               >
                                 <PauseCircle className="h-4 w-4 mr-2" />
                                 Pausar
                               </DropdownMenuItem>
                               <DropdownMenuItem 
                                 onClick={() => openStatusDialog(contract, 'ended')}
-                                className="text-slate-600"
+                                className="text-muted-foreground"
                               >
                                 <Ban className="h-4 w-4 mr-2" />
                                 Encerrar (Demissão)
@@ -1073,7 +1073,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                           {contract.status !== 'active' && (
                             <DropdownMenuItem 
                               onClick={() => openStatusDialog(contract, 'active')}
-                              className="text-green-600"
+                              className="text-success"
                             >
                               <CheckCircle className="h-4 w-4 mr-2" />
                               Reativar
@@ -1110,7 +1110,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
                             size="icon"
                             className={`h-8 w-8 ${
                               contract.clinica_ryka_status === 'success' 
-                                ? 'text-green-600' 
+                                ? 'text-success' 
                                 : contract.clinica_ryka_status === 'error' 
                                   ? 'text-destructive' 
                                   : ''

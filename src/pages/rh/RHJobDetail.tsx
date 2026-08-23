@@ -42,10 +42,10 @@ const OFFER_STATUS_LABELS: Record<string, string> = {
 
 const OFFER_STATUS_COLORS: Record<string, string> = {
   draft: "bg-muted text-muted-foreground",
-  sent: "bg-blue-500/10 text-blue-600 border-blue-500/30",
-  viewed: "bg-amber-500/10 text-amber-600 border-amber-500/30",
-  accepted: "bg-emerald-500/10 text-emerald-600 border-emerald-500/30",
-  declined: "bg-red-500/10 text-red-600 border-red-500/30",
+  sent: "bg-info/10 text-info border-info/30",
+  viewed: "bg-warning/10 text-warning border-warning/30",
+  accepted: "bg-success/10 text-success border-success/30",
+  declined: "bg-danger/10 text-danger border-danger/30",
   expired: "bg-muted text-muted-foreground",
 };
 
@@ -65,9 +65,9 @@ function JobManagementPanel({ jobId, job }: { jobId: string; job: any }) {
   const daysLeft = target ? differenceInCalendarDays(target, new Date()) : null;
   let slaTone = ""; let slaText: string | null = null;
   if (daysLeft !== null) {
-    if (daysLeft < 0) { slaTone = "bg-red-500/15 text-red-700 border-red-300"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
-    else if (daysLeft <= 7) { slaTone = "bg-amber-500/15 text-amber-700 border-amber-300"; slaText = `${daysLeft}d para o prazo`; }
-    else { slaTone = "bg-emerald-500/15 text-emerald-700 border-emerald-300"; slaText = `${daysLeft}d no prazo`; }
+    if (daysLeft < 0) { slaTone = "bg-danger/15 text-danger-strong border-danger"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
+    else if (daysLeft <= 7) { slaTone = "bg-warning/15 text-warning-strong border-warning"; slaText = `${daysLeft}d para o prazo`; }
+    else { slaTone = "bg-success/15 text-success-strong border-success"; slaText = `${daysLeft}d no prazo`; }
   }
   return (
     <Card>

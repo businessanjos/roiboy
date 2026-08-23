@@ -23,7 +23,7 @@ const IMPLEMENTATION_STEPS: Step[] = [
 
 const COMMISSION_VS_BONUS = {
   commission: { title: 'Comissão', icon: DollarSign, color: 'text-primary', bgColor: 'bg-primary/10', points: ['Ligada diretamente às ações de venda', 'Padronizada por time/cargo', 'Calculada sobre vendas individuais ou do time', 'Frequência: mensal'] },
-  bonus: { title: 'Bonificação', icon: Gift, color: 'text-amber-500', bgColor: 'bg-amber-500/10', points: ['Premiação por atingimento de metas da empresa', 'Pode ser paga a todos os colaboradores', 'Geralmente é um % do salário anual', 'Frequência: trimestral, semestral ou anual'] },
+  bonus: { title: 'Bonificação', icon: Gift, color: 'text-warning', bgColor: 'bg-warning/10', points: ['Premiação por atingimento de metas da empresa', 'Pode ser paga a todos os colaboradores', 'Geralmente é um % do salário anual', 'Frequência: trimestral, semestral ou anual'] },
 };
 
 const COMMISSION_TRIGGERS = [
@@ -106,7 +106,7 @@ export default function CommissionGuide() {
       </Card>
 
       <Card>
-        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Lightbulb className="w-5 h-5 text-amber-500" />Incentivos Não Monetários</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-lg flex items-center gap-2"><Lightbulb className="w-5 h-5 text-warning" />Incentivos Não Monetários</CardTitle></CardHeader>
         <CardContent><div className="flex flex-wrap gap-2">{NON_MONETARY_INCENTIVES.map((inc, i) => <Badge key={i} variant="secondary" className="text-xs font-normal py-1.5">{inc}</Badge>)}</div></CardContent>
       </Card>
     </div>

@@ -1801,7 +1801,7 @@ export default function ClientDetail() {
   if (fetchError?.type === 'network') {
     return (
       <div className="p-6 lg:p-8 flex flex-col items-center justify-center min-h-[50vh]">
-        <AlertTriangle className="h-12 w-12 text-yellow-500 mb-4" />
+        <AlertTriangle className="h-12 w-12 text-warning mb-4" />
         <h2 className="text-lg font-semibold mb-2">Erro de Conexão</h2>
         <p className="text-muted-foreground mb-4 text-center">{fetchError.message}</p>
         <Button onClick={() => { setRetryCount(0); fetchData(); }} className="gap-2">
@@ -1976,7 +1976,7 @@ export default function ClientDetail() {
                   const salesperson = teamUsers.find(u => u.id === client.sales_user_id);
                   return salesperson ? (
                     <span className="flex items-center gap-1">
-                      <Building2 className="h-3 w-3 text-emerald-600" />
+                      <Building2 className="h-3 w-3 text-success" />
                       <span className="text-muted-foreground">Vendedor:</span>
                       <span className="font-medium text-foreground">{salesperson.name}</span>
                     </span>

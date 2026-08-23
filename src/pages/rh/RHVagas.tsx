@@ -221,9 +221,9 @@ function JobMetaRow({ job }: { job: HRJob }) {
   let slaTone: string | null = null;
   let slaText: string | null = null;
   if (job.status === "active" && daysLeft !== null) {
-    if (daysLeft < 0) { slaTone = "bg-red-500/15 text-red-700 border-red-300"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
-    else if (daysLeft <= 7) { slaTone = "bg-amber-500/15 text-amber-700 border-amber-300"; slaText = `${daysLeft}d para o prazo`; }
-    else { slaTone = "bg-emerald-500/15 text-emerald-700 border-emerald-300"; slaText = `${daysLeft}d no prazo`; }
+    if (daysLeft < 0) { slaTone = "bg-danger/15 text-danger-strong border-danger"; slaText = `Atrasada ${Math.abs(daysLeft)}d`; }
+    else if (daysLeft <= 7) { slaTone = "bg-warning/15 text-warning-strong border-warning"; slaText = `${daysLeft}d para o prazo`; }
+    else { slaTone = "bg-success/15 text-success-strong border-success"; slaText = `${daysLeft}d no prazo`; }
   }
   const reason = (job as any).opening_reason;
 
@@ -264,12 +264,12 @@ function JobScoreBadge({ job, benchmark }: { job: HRJob; benchmark: any }) {
   });
   const toneClass =
     a.tier.tone === "emerald"
-      ? "bg-emerald-500/15 text-emerald-700 border-emerald-300"
+      ? "bg-success/15 text-success-strong border-success"
       : a.tier.tone === "blue"
-      ? "bg-blue-500/15 text-blue-700 border-blue-300"
+      ? "bg-info/15 text-info-strong border-info"
       : a.tier.tone === "amber"
-      ? "bg-amber-500/15 text-amber-700 border-amber-300"
-      : "bg-red-500/15 text-red-700 border-red-300";
+      ? "bg-warning/15 text-warning-strong border-warning"
+      : "bg-danger/15 text-danger-strong border-danger";
   return (
     <TooltipProvider delayDuration={100}>
       <Tooltip>

@@ -87,7 +87,7 @@ export function ConversationView({ messages, clientName = "Cliente" }: Conversat
                     {!isSameSender && (
                       <div className={cn(
                         "flex items-center gap-1.5 text-xs font-medium mb-1",
-                        isClient ? "text-blue-600 dark:text-blue-400" : "text-primary-foreground/80"
+                        isClient ? "text-info dark:text-info" : "text-primary-foreground/80"
                       )}>
                         {isGroup ? (
                           <>

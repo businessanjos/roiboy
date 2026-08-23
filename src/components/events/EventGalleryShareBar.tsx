@@ -147,11 +147,11 @@ export default function EventGalleryShareBar({ eventId, accountId, eventName }: 
   const isPublic = !!(album?.is_public && album?.public_token);
 
   return (
-    <Card className={isPublic ? "border-emerald-500/40 bg-emerald-500/5" : ""}>
+    <Card className={isPublic ? "border-success/40 bg-success/5" : ""}>
       <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
           {isPublic ? (
-            <Globe className="h-5 w-5 text-emerald-600" />
+            <Globe className="h-5 w-5 text-success" />
           ) : (
             <Lock className="h-5 w-5 text-muted-foreground" />
           )}
@@ -159,7 +159,7 @@ export default function EventGalleryShareBar({ eventId, accountId, eventName }: 
             <div className="font-medium flex items-center gap-2">
               Galeria compartilhável
               {isPublic && (
-                <Badge variant="secondary" className="bg-emerald-500 text-white border-0">
+                <Badge variant="secondary" className="bg-success text-white border-0">
                   Pública
                 </Badge>
               )}

@@ -30,8 +30,8 @@ export function SocialMediaKPICard({
 
   const getTrendColor = () => {
     if (trend === undefined) return '';
-    if (trend > 0) return 'text-green-600';
-    if (trend < 0) return 'text-red-500';
+    if (trend > 0) return 'text-success';
+    if (trend < 0) return 'text-danger';
     return 'text-muted-foreground';
   };
 
@@ -39,8 +39,8 @@ export function SocialMediaKPICard({
 
   const variantStyles = {
     default: 'bg-card',
-    success: 'bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-900',
-    warning: 'bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900',
+    success: 'bg-success-soft dark:bg-success/20 border-success dark:border-success',
+    warning: 'bg-warning-soft dark:bg-warning/20 border-warning dark:border-warning',
     insight: 'bg-primary/5 border-primary/20',
   };
 

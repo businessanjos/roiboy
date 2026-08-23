@@ -23,9 +23,9 @@ interface MarketingKanbanCardProps {
 }
 
 const priorityConfig = {
-  low: { label: "Baixa", className: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300" },
-  medium: { label: "Média", className: "bg-yellow-100 text-yellow-700 dark:bg-yellow-900/50 dark:text-yellow-400" },
-  high: { label: "Alta", className: "bg-red-100 text-red-700 dark:bg-red-900/50 dark:text-red-400" },
+  low: { label: "Baixa", className: "bg-muted text-foreground dark:bg-slate-800 dark:text-muted-foreground" },
+  medium: { label: "Média", className: "bg-warning-soft text-warning-strong dark:bg-warning/50 dark:text-warning" },
+  high: { label: "Alta", className: "bg-danger-soft text-danger-strong dark:bg-danger/50 dark:text-danger" },
 };
 
 export function MarketingKanbanCard({
@@ -146,8 +146,8 @@ export function MarketingKanbanCard({
                 className={cn(
                   "flex items-center gap-1 text-xs",
                   isPastDue && "text-destructive",
-                  isDueToday && "text-orange-600 dark:text-orange-400",
-                  isDueTomorrow && "text-blue-600 dark:text-blue-400",
+                  isDueToday && "text-warning dark:text-warning",
+                  isDueTomorrow && "text-info dark:text-info",
                   !isPastDue && !isDueToday && !isDueTomorrow && "text-muted-foreground"
                 )}
               >

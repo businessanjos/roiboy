@@ -145,7 +145,7 @@ export function OverdueClientsCard() {
         <div className="flex items-center justify-between">
           <div>
             <CardTitle className="text-base flex items-center gap-2">
-              <AlertTriangle className="h-5 w-5 text-red-500" />
+              <AlertTriangle className="h-5 w-5 text-danger" />
               Clientes em atraso
             </CardTitle>
             <CardDescription>
@@ -157,7 +157,7 @@ export function OverdueClientsCard() {
           {!loading && rows.length > 0 && (
             <div className="text-right">
               <div className="text-xs text-muted-foreground">Total em aberto</div>
-              <div className="text-lg font-bold text-red-600">
+              <div className="text-lg font-bold text-danger">
                 {formatBRL(total)}
               </div>
             </div>
@@ -205,8 +205,8 @@ export function OverdueClientsCard() {
                         variant="outline"
                         className={
                           isCritical
-                            ? "bg-red-500/10 text-red-600 border-red-500/30 text-[10px]"
-                            : "bg-orange-500/10 text-orange-600 border-orange-500/30 text-[10px]"
+                            ? "bg-danger/10 text-danger border-danger/30 text-[10px]"
+                            : "bg-warning/10 text-warning border-warning/30 text-[10px]"
                         }
                       >
                         {r.oldest_overdue_days}d

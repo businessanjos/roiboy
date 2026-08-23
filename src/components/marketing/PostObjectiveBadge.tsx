@@ -18,12 +18,12 @@ const objectiveConfig: Record<PostObjective, {
   growth: {
     label: 'Crescimento',
     icon: TrendingUp,
-    className: 'bg-green-100 text-green-700 border-green-200 dark:bg-green-950/30 dark:text-green-400 dark:border-green-900',
+    className: 'bg-success-soft text-success-strong border-success dark:bg-success/30 dark:text-success dark:border-success',
   },
   connection: {
     label: 'Conexão',
     icon: Heart,
-    className: 'bg-blue-100 text-blue-700 border-blue-200 dark:bg-blue-950/30 dark:text-blue-400 dark:border-blue-900',
+    className: 'bg-info-soft text-info-strong border-info dark:bg-info/30 dark:text-info dark:border-info',
   },
   authority: {
     label: 'Autoridade',
@@ -33,7 +33,7 @@ const objectiveConfig: Record<PostObjective, {
   sales: {
     label: 'Vendas',
     icon: ShoppingCart,
-    className: 'bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-950/30 dark:text-amber-400 dark:border-amber-900',
+    className: 'bg-warning-soft text-warning-strong border-warning dark:bg-warning/30 dark:text-warning dark:border-warning',
   },
 };
 

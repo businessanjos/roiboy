@@ -57,26 +57,26 @@ type Snapshot = {
 };
 
 const urgencyColors: Record<string, string> = {
-  low: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
-  medium: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  high: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+  low: "bg-success/10 text-success-strong dark:text-success border-success/30",
+  medium: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
+  high: "bg-danger/10 text-danger-strong dark:text-danger border-danger/30",
 };
 
 const typeMeta: Record<CompetitorType, { label: string; hint: string; className: string }> = {
   direto: {
     label: "Direto",
     hint: "Disputa o mesmo ICP (médico / estética avançada empresário).",
-    className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+    className: "bg-danger/10 text-danger-strong dark:text-danger border-danger/30",
   },
   indireto: {
     label: "Indireto",
     hint: "Saúde/odonto adjacente — mesmo bolso, ICP vizinho.",
-    className: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
+    className: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
   },
   transversal: {
     label: "Transversal",
     hint: "Mentoria generalista de negócios que também atrai médicos.",
-    className: "bg-sky-500/10 text-sky-700 dark:text-sky-300 border-sky-500/30",
+    className: "bg-info/10 text-info-strong dark:text-info border-info/30",
   },
 };
 
@@ -97,15 +97,15 @@ const verificationMeta: Record<VerificationStatus, { label: string; className: s
   },
   verificado: {
     label: "Verificado",
-    className: "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30",
+    className: "bg-success/10 text-success-strong dark:text-success border-success/30",
   },
   contestado: {
     label: "Dado contestado",
-    className: "bg-red-500/10 text-red-700 dark:text-red-300 border-red-500/30",
+    className: "bg-danger/10 text-danger-strong dark:text-danger border-danger/30",
   },
   removido: {
     label: "Descartado",
-    className: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
+    className: "bg-zinc-500/10 text-muted-foreground dark:text-muted-foreground border-border/30",
   },
 };
 
@@ -113,10 +113,10 @@ const vStatus = (c: { verification_status?: string | null }): VerificationStatus
   (c.verification_status as VerificationStatus) || "nao_verificado";
 
 const tierClass: Record<string, string> = {
-  platinum: "bg-slate-500/10 text-slate-700 dark:text-slate-300 border-slate-500/30",
-  gold: "bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30",
-  silver: "bg-zinc-500/10 text-zinc-700 dark:text-zinc-300 border-zinc-500/30",
-  bronze: "bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30",
+  platinum: "bg-slate-500/10 text-foreground dark:text-muted-foreground border-border/30",
+  gold: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
+  silver: "bg-zinc-500/10 text-foreground dark:text-muted-foreground border-border/30",
+  bronze: "bg-warning/10 text-warning-strong dark:text-warning border-warning/30",
 };
 
 const TIER_RANK: Record<string, number> = {
@@ -376,7 +376,7 @@ export default function CompetitorsTab() {
 
       <CompetitorsSyncPanel />
 
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs text-amber-800 dark:text-amber-200 flex items-start gap-2">
+      <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 text-xs text-warning-strong dark:text-warning flex items-start gap-2">
         <AlertTriangle className="h-4 w-4 mt-0.5 shrink-0" />
         <div>
           <p className="font-medium">Base gerada por IA — precisa de curadoria humana.</p>
@@ -455,7 +455,7 @@ export default function CompetitorsTab() {
           const st = vStatus(c);
           const vMeta = verificationMeta[st];
           return (
-            <Card key={c.id} className={st === "removido" ? "opacity-60" : st === "contestado" ? "border-red-500/40" : undefined}>
+            <Card key={c.id} className={st === "removido" ? "opacity-60" : st === "contestado" ? "border-danger/40" : undefined}>
               <CardContent className="pt-4 pb-4">
                 <div className="flex items-start justify-between gap-3 flex-wrap">
                   <div className="min-w-0 flex-1">
@@ -523,7 +523,7 @@ export default function CompetitorsTab() {
                     {c.notes && <p className="text-xs text-muted-foreground mt-1 whitespace-pre-line">{c.notes}</p>}
 
                     {c.verification_note && (
-                      <p className="text-xs mt-1.5 text-red-700 dark:text-red-300 inline-flex items-start gap-1">
+                      <p className="text-xs mt-1.5 text-danger-strong dark:text-danger inline-flex items-start gap-1">
                         <AlertTriangle className="h-3 w-3 mt-0.5 shrink-0" /> {c.verification_note}
                       </p>
                     )}
@@ -623,15 +623,15 @@ export default function CompetitorsTab() {
                     )}
                     {a.target_audience && (
                       <div className="flex items-start gap-2 text-sm">
-                        <Target className="h-4 w-4 text-blue-600 mt-0.5 shrink-0" />
+                        <Target className="h-4 w-4 text-info mt-0.5 shrink-0" />
                         <p><span className="font-medium">Público-alvo:</span> {a.target_audience}</p>
                       </div>
                     )}
 
                     <div className="grid gap-3 md:grid-cols-2">
                       {Array.isArray(a.threats_to_eternum) && a.threats_to_eternum.length > 0 && (
-                        <div className="p-3 rounded border border-red-500/30 bg-red-500/5">
-                          <div className="flex items-center gap-1 text-xs font-semibold text-red-700 mb-2">
+                        <div className="p-3 rounded border border-danger/30 bg-danger/5">
+                          <div className="flex items-center gap-1 text-xs font-semibold text-danger-strong mb-2">
                             <ShieldAlert className="h-3.5 w-3.5" /> Ameaças à Eternum
                           </div>
                           <ul className="text-xs space-y-1 list-disc pl-4">
@@ -640,8 +640,8 @@ export default function CompetitorsTab() {
                         </div>
                       )}
                       {Array.isArray(a.opportunities_for_eternum) && a.opportunities_for_eternum.length > 0 && (
-                        <div className="p-3 rounded border border-emerald-500/30 bg-emerald-500/5">
-                          <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 mb-2">
+                        <div className="p-3 rounded border border-success/30 bg-success/5">
+                          <div className="flex items-center gap-1 text-xs font-semibold text-success-strong mb-2">
                             <Lightbulb className="h-3.5 w-3.5" /> Oportunidades p/ Eternum
                           </div>
                           <ul className="text-xs space-y-1 list-disc pl-4">
@@ -680,7 +680,7 @@ export default function CompetitorsTab() {
                         <div className="grid gap-3 md:grid-cols-2">
                           {Array.isArray(a.strengths) && a.strengths.length > 0 && (
                             <div>
-                              <div className="flex items-center gap-1 text-xs font-semibold text-emerald-700 mb-1">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-success-strong mb-1">
                                 <TrendingUp className="h-3 w-3" /> Forças
                               </div>
                               <ul className="text-xs space-y-1 list-disc pl-4">
@@ -690,7 +690,7 @@ export default function CompetitorsTab() {
                           )}
                           {Array.isArray(a.weaknesses) && a.weaknesses.length > 0 && (
                             <div>
-                              <div className="flex items-center gap-1 text-xs font-semibold text-red-700 mb-1">
+                              <div className="flex items-center gap-1 text-xs font-semibold text-danger-strong mb-1">
                                 <TrendingDown className="h-3 w-3" /> Fraquezas
                               </div>
                               <ul className="text-xs space-y-1 list-disc pl-4">

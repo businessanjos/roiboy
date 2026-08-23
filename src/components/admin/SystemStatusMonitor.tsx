@@ -108,10 +108,10 @@ const SYSTEM_FUNCTIONS: SystemFunction[] = [
 ];
 
 const CATEGORY_LABELS: Record<string, { label: string; color: string }> = {
-  core: { label: "Core", color: "bg-blue-500/10 text-blue-500 border-blue-500/20" },
+  core: { label: "Core", color: "bg-info/10 text-info border-info/20" },
   integration: { label: "Integração", color: "bg-purple-500/10 text-purple-500 border-purple-500/20" },
-  ai: { label: "IA", color: "bg-emerald-500/10 text-emerald-500 border-emerald-500/20" },
-  communication: { label: "Comunicação", color: "bg-amber-500/10 text-amber-500 border-amber-500/20" },
+  ai: { label: "IA", color: "bg-success/10 text-success border-success/20" },
+  communication: { label: "Comunicação", color: "bg-warning/10 text-warning border-warning/20" },
 };
 
 export function SystemStatusMonitor() {
@@ -270,21 +270,21 @@ export function SystemStatusMonitor() {
     switch (status) {
       case "online":
         return (
-          <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/20 gap-1">
+          <Badge variant="outline" className="bg-success/10 text-success border-success/20 gap-1">
             <CheckCircle2 className="h-3 w-3" />
             Online
           </Badge>
         );
       case "offline":
         return (
-          <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 gap-1">
+          <Badge variant="outline" className="bg-danger/10 text-danger border-danger/20 gap-1">
             <XCircle className="h-3 w-3" />
             Offline
           </Badge>
         );
       case "degraded":
         return (
-          <Badge variant="outline" className="bg-amber-500/10 text-amber-500 border-amber-500/20 gap-1">
+          <Badge variant="outline" className="bg-warning/10 text-warning border-warning/20 gap-1">
             <AlertCircle className="h-3 w-3" />
             Degradado
           </Badge>
@@ -329,13 +329,13 @@ export function SystemStatusMonitor() {
                   {offlineCount === 0 ? "Operacional" : offlineCount < 3 ? "Degradado" : "Crítico"}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${offlineCount === 0 ? "bg-green-500/10" : offlineCount < 3 ? "bg-amber-500/10" : "bg-red-500/10"}`}>
+              <div className={`p-3 rounded-full ${offlineCount === 0 ? "bg-success/10" : offlineCount < 3 ? "bg-warning/10" : "bg-danger/10"}`}>
                 {offlineCount === 0 ? (
-                  <CheckCircle2 className="h-6 w-6 text-green-500" />
+                  <CheckCircle2 className="h-6 w-6 text-success" />
                 ) : offlineCount < 3 ? (
-                  <AlertCircle className="h-6 w-6 text-amber-500" />
+                  <AlertCircle className="h-6 w-6 text-warning" />
                 ) : (
-                  <XCircle className="h-6 w-6 text-red-500" />
+                  <XCircle className="h-6 w-6 text-danger" />
                 )}
               </div>
             </div>
@@ -370,8 +370,8 @@ export function SystemStatusMonitor() {
                   {queueStats?.processing || 0} processando
                 </p>
               </div>
-              <div className="p-3 rounded-full bg-emerald-500/10">
-                <Brain className="h-6 w-6 text-emerald-500" />
+              <div className="p-3 rounded-full bg-success/10">
+                <Brain className="h-6 w-6 text-success" />
               </div>
             </div>
           </CardContent>
@@ -391,8 +391,8 @@ export function SystemStatusMonitor() {
                   </p>
                 )}
               </div>
-              <div className={`p-3 rounded-full ${dbHealth?.status === "online" ? "bg-green-500/10" : "bg-red-500/10"}`}>
-                <Database className={`h-6 w-6 ${dbHealth?.status === "online" ? "text-green-500" : "text-red-500"}`} />
+              <div className={`p-3 rounded-full ${dbHealth?.status === "online" ? "bg-success/10" : "bg-danger/10"}`}>
+                <Database className={`h-6 w-6 ${dbHealth?.status === "online" ? "text-success" : "text-danger"}`} />
               </div>
             </div>
           </CardContent>
@@ -404,7 +404,7 @@ export function SystemStatusMonitor() {
         <Card>
           <CardHeader className="pb-3">
             <CardTitle className="text-lg flex items-center gap-2">
-              <Zap className="h-5 w-5 text-emerald-500" />
+              <Zap className="h-5 w-5 text-success" />
               Estatísticas da Fila de IA (Hoje)
             </CardTitle>
           </CardHeader>
@@ -414,16 +414,16 @@ export function SystemStatusMonitor() {
                 <p className="text-2xl font-bold">{queueStats.pending}</p>
                 <p className="text-xs text-muted-foreground">Pendentes</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-blue-500/10">
-                <p className="text-2xl font-bold text-blue-500">{queueStats.processing}</p>
+              <div className="text-center p-3 rounded-lg bg-info/10">
+                <p className="text-2xl font-bold text-info">{queueStats.processing}</p>
                 <p className="text-xs text-muted-foreground">Processando</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-green-500/10">
-                <p className="text-2xl font-bold text-green-500">{queueStats.completed_today}</p>
+              <div className="text-center p-3 rounded-lg bg-success/10">
+                <p className="text-2xl font-bold text-success">{queueStats.completed_today}</p>
                 <p className="text-xs text-muted-foreground">Concluídos</p>
               </div>
-              <div className="text-center p-3 rounded-lg bg-red-500/10">
-                <p className="text-2xl font-bold text-red-500">{queueStats.failed_today}</p>
+              <div className="text-center p-3 rounded-lg bg-danger/10">
+                <p className="text-2xl font-bold text-danger">{queueStats.failed_today}</p>
                 <p className="text-xs text-muted-foreground">Falhas</p>
               </div>
             </div>

@@ -84,7 +84,7 @@ interface TaskCardProps {
 
 const STATUS_CONFIG = {
   pending: { label: "Pendente", icon: Clock, className: "bg-muted text-muted-foreground" },
-  done: { label: "Feita", icon: CheckCircle2, className: "bg-green-500/10 text-green-600 dark:text-green-400" },
+  done: { label: "Feita", icon: CheckCircle2, className: "bg-success/10 text-success dark:text-success" },
   overdue: { label: "Atrasada", icon: AlertTriangle, className: "bg-destructive/10 text-destructive" },
 };
 
@@ -131,10 +131,10 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
       return { text: `${Math.abs(daysDiff)}d atrasado · ${formattedDate}`, className: "text-destructive font-medium", urgent: true };
     }
     if (daysDiff === 0) {
-      return { text: `Hoje · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400 font-medium", urgent: true };
+      return { text: `Hoje · ${formattedDate}`, className: "text-warning dark:text-warning font-medium", urgent: true };
     }
     if (daysDiff === 1) {
-      return { text: `Amanhã · ${formattedDate}`, className: "text-amber-600 dark:text-amber-400", urgent: false };
+      return { text: `Amanhã · ${formattedDate}`, className: "text-warning dark:text-warning", urgent: false };
     }
     if (daysDiff <= 7) {
       return { text: `${daysDiff} dias · ${formattedDate}`, className: "text-foreground", urgent: false };
@@ -178,7 +178,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
           onCheckedChange={() => onToggleComplete(task)}
           className={cn(
             "h-4 w-4 rounded-full border transition-colors",
-            isCompleted ? "bg-green-500 border-green-500 text-white" : "border-muted-foreground/40"
+            isCompleted ? "bg-success border-success text-white" : "border-muted-foreground/40"
           )}
         />
       </div>
@@ -224,7 +224,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
                       leadId: contactInfo.leadId,
                       name: contactInfo.name || undefined,
                     })}
-                    className="text-emerald-600 dark:text-emerald-400"
+                    className="text-success dark:text-success"
                     disabled={zappLoading}
                   >
                     <MessageCircle className="mr-2 h-4 w-4" />
@@ -235,7 +235,7 @@ export function TaskCard({ task, onEdit, onDelete, onToggleComplete, showClient 
               {task.deals && task.deal_id && (
                 <DropdownMenuItem 
                   onClick={() => navigate(`/pipeline?deal=${task.deal_id}`)}
-                  className="text-blue-600 dark:text-blue-400"
+                  className="text-info dark:text-info"
                 >
                   <TrendingUp className="mr-2 h-4 w-4" />
                   Ver Negócio

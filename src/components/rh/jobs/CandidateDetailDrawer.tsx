@@ -117,13 +117,13 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
               </Button>
             )}
             {candidate.stage !== "hired" && (
-              <Button size="sm" variant="outline" className="text-green-600 border-green-300 hover:bg-green-50"
+              <Button size="sm" variant="outline" className="text-success border-success hover:bg-success-soft"
                 onClick={() => handleMoveStage("hired")} disabled={updateStage.isPending}>
                 <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />Contratar
               </Button>
             )}
             {candidate.stage !== "rejected" && (
-              <Button size="sm" variant="outline" className="text-red-600 border-red-300 hover:bg-red-50"
+              <Button size="sm" variant="outline" className="text-danger border-danger hover:bg-danger-soft"
                 onClick={() => handleMoveStage("rejected")} disabled={updateStage.isPending}>
                 <XCircle className="h-3.5 w-3.5 mr-1.5" />Rejeitar
               </Button>
@@ -302,10 +302,10 @@ function AiMatchPanel({ candidate }: { candidate: HRJobApplication }) {
   };
 
   const verdictColor: Record<string, string> = {
-    strong_match: "bg-emerald-500/15 text-emerald-700 border-emerald-300",
-    possible: "bg-blue-500/15 text-blue-700 border-blue-300",
-    weak: "bg-amber-500/15 text-amber-700 border-amber-300",
-    reject: "bg-red-500/15 text-red-700 border-red-300",
+    strong_match: "bg-success/15 text-success-strong border-success",
+    possible: "bg-info/15 text-info-strong border-info",
+    weak: "bg-warning/15 text-warning-strong border-warning",
+    reject: "bg-danger/15 text-danger-strong border-danger",
   };
 
   return (
@@ -368,9 +368,9 @@ function AiMatchPanel({ candidate }: { candidate: HRJobApplication }) {
 
 function Block({ title, items, tone }: { title: string; items: string[]; tone: "emerald" | "amber" | "red" | "muted" }) {
   const toneClass = {
-    emerald: "border-emerald-200 bg-emerald-500/5",
-    amber: "border-amber-200 bg-amber-500/5",
-    red: "border-red-200 bg-red-500/5",
+    emerald: "border-success bg-success/5",
+    amber: "border-warning bg-warning/5",
+    red: "border-danger bg-danger/5",
     muted: "border-border bg-muted/30",
   }[tone];
   return (

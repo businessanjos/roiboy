@@ -19,14 +19,14 @@ interface FieldValueBadgeProps {
 
 const getColorClasses = (color: string) => {
   const colorMap: Record<string, string> = {
-    green: "bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border-emerald-500/40 dark:border-emerald-400/50",
-    red: "bg-red-500/25 text-red-600 dark:text-red-400 border-red-500/40 dark:border-red-400/50",
-    yellow: "bg-amber-500/25 text-amber-600 dark:text-amber-400 border-amber-500/40 dark:border-amber-400/50",
-    blue: "bg-blue-500/25 text-blue-600 dark:text-blue-400 border-blue-500/40 dark:border-blue-400/50",
+    green: "bg-success/25 text-success dark:text-success border-success/40 dark:border-success/50",
+    red: "bg-danger/25 text-danger dark:text-danger border-danger/40 dark:border-danger/50",
+    yellow: "bg-warning/25 text-warning dark:text-warning border-warning/40 dark:border-warning/50",
+    blue: "bg-info/25 text-info dark:text-info border-info/40 dark:border-info/50",
     purple: "bg-purple-500/25 text-purple-600 dark:text-purple-400 border-purple-500/40 dark:border-purple-400/50",
     pink: "bg-pink-500/25 text-pink-600 dark:text-pink-400 border-pink-500/40 dark:border-pink-400/50",
-    orange: "bg-orange-500/25 text-orange-600 dark:text-orange-400 border-orange-500/40 dark:border-orange-400/50",
-    gray: "bg-gray-500/25 text-gray-600 dark:text-gray-400 border-gray-500/40 dark:border-gray-400/50",
+    orange: "bg-warning/25 text-warning dark:text-warning border-warning/40 dark:border-warning/50",
+    gray: "bg-gray-500/25 text-muted-foreground dark:text-muted-foreground border-border/40 dark:border-border/50",
   };
   return colorMap[color] || colorMap.gray;
 };
@@ -39,14 +39,14 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
   if (field.field_type === "boolean") {
     if (value === true) {
       return (
-        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 border border-emerald-500/40 dark:border-emerald-400/50 font-medium ${textSize}`}>
+        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-success/25 text-success dark:text-success border border-success/40 dark:border-success/50 font-medium ${textSize}`}>
           <Check className="h-3 w-3" />
           Sim
         </span>
       );
     } else if (value === false) {
       return (
-        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-red-500/25 text-red-600 dark:text-red-400 border border-red-500/40 dark:border-red-400/50 font-medium ${textSize}`}>
+        <span className={`inline-flex items-center gap-1 ${padding} rounded bg-danger/25 text-danger dark:text-danger border border-danger/40 dark:border-danger/50 font-medium ${textSize}`}>
           <X className="h-3 w-3" />
           Não
         </span>
@@ -175,7 +175,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
           target="_blank"
           rel="noopener noreferrer"
           onClick={(e) => e.stopPropagation()}
-          className={`inline-flex items-center gap-1 ${padding} rounded bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/30 hover:bg-blue-500/25 transition-colors font-medium ${textSize} max-w-full min-w-0 overflow-hidden`}
+          className={`inline-flex items-center gap-1 ${padding} rounded bg-info/15 text-info dark:text-info border border-info/30 hover:bg-info/25 transition-colors font-medium ${textSize} max-w-full min-w-0 overflow-hidden`}
         >
           <ExternalLink className="h-3 w-3 flex-shrink-0" />
           <span className="truncate">{value.replace(/^https?:\/\//, '')}</span>
@@ -265,7 +265,7 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
-      <span className={`inline-flex items-start gap-1 ${padding} rounded bg-cyan-500/15 text-cyan-600 dark:text-cyan-400 border border-cyan-500/30 font-medium ${textSize}`}>
+      <span className={`inline-flex items-start gap-1 ${padding} rounded bg-info/15 text-info dark:text-info border border-info/30 font-medium ${textSize}`}>
         <MapPin className="h-3 w-3 flex-shrink-0 mt-0.5" />
         <span className="break-words whitespace-normal">{value.formatted_address}</span>
       </span>

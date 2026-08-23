@@ -337,14 +337,14 @@ export function RouletteCardShuffle({
               className={cn(
                 "absolute rounded-xl border-2 shadow-2xl flex items-center justify-center",
                 dims.card,
-                "bg-gradient-to-br from-primary/90 via-primary to-primary/70 border-amber-400/60",
-                isWinner && phase === "picked" && "ring-4 ring-amber-400 ring-offset-2 ring-offset-background",
+                "bg-gradient-to-br from-primary/90 via-primary to-primary/70 border-warning/60",
+                isWinner && phase === "picked" && "ring-4 ring-warning ring-offset-2 ring-offset-background",
               )}
               style={style}
             >
               {/* Padrão decorativo nas costas das cartas */}
-              <div className="absolute inset-2 rounded-lg border border-amber-400/30 flex items-center justify-center">
-                <Sparkles className={cn("text-amber-300/80", size === "xl" ? "h-12 w-12" : "h-8 w-8")} />
+              <div className="absolute inset-2 rounded-lg border border-warning/30 flex items-center justify-center">
+                <Sparkles className={cn("text-warning/80", size === "xl" ? "h-12 w-12" : "h-8 w-8")} />
               </div>
             </div>
           );

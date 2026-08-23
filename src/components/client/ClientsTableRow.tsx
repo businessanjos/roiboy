@@ -248,7 +248,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
           const positive = pct >= 0;
           const Icon = positive ? TrendingUp : TrendingDown;
           return (
-            <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-emerald-600" : "text-red-600")}>
+            <span className={cn("inline-flex items-center gap-1 text-xs font-semibold", positive ? "text-success" : "text-danger")}>
               <Icon className="h-3 w-3" />
               {positive ? "+" : ""}{pct.toFixed(0)}%
             </span>
@@ -263,7 +263,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             <Tooltip>
               <TooltipTrigger asChild>
                 <div className="inline-flex flex-col items-center leading-tight">
-                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-amber-600">
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold text-warning">
                     <Trophy className="h-3 w-3" />
                     {new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(Number(client.revenue_record.revenue))}
                   </span>
@@ -311,9 +311,9 @@ export const ClientsTableRow = memo(function ClientsTableRow({
         {(() => {
           const s = client.ryka_status || "none";
           const meta: Record<string, { label: string; cls: string; dot: string }> = {
-            active: { label: "Ativo", cls: "text-emerald-700 bg-emerald-100 dark:bg-emerald-900/30 dark:text-emerald-400", dot: "bg-emerald-500" },
-            pending: { label: "Pendente", cls: "text-amber-700 bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400", dot: "bg-amber-500" },
-            error: { label: "Erro", cls: "text-red-700 bg-red-100 dark:bg-red-900/30 dark:text-red-400", dot: "bg-red-500" },
+            active: { label: "Ativo", cls: "text-success-strong bg-success-soft dark:bg-success/30 dark:text-success", dot: "bg-success" },
+            pending: { label: "Pendente", cls: "text-warning-strong bg-warning-soft dark:bg-warning/30 dark:text-warning", dot: "bg-warning" },
+            error: { label: "Erro", cls: "text-danger-strong bg-danger-soft dark:bg-danger/30 dark:text-danger", dot: "bg-danger" },
             none: { label: "—", cls: "text-muted-foreground bg-muted", dot: "bg-muted-foreground/40" },
           };
           const m = meta[s];
@@ -346,7 +346,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                       <CalendarDays className="h-3 w-3" />
                       {format(d, "MMM/yy", { locale: ptBR })}
                     </span>
-                    <span className={cn("text-[10px]", estimated ? "text-amber-600" : "text-muted-foreground")}>
+                    <span className={cn("text-[10px]", estimated ? "text-warning" : "text-muted-foreground")}>
                       há {months} {months === 1 ? "mês" : "meses"}
                     </span>
                   </div>
@@ -377,13 +377,13 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                   {(() => {
                     const status = contractData.status || 'active';
                     const statusConfig: Record<string, { label: string; labelTooltip: string; icon: typeof CheckCircle2; bgClass: string; textClass: string }> = {
-                      active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-green-100 dark:bg-green-900/30", textClass: "text-green-700 dark:text-green-400" },
-                      pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-blue-100 dark:bg-blue-900/30", textClass: "text-blue-700 dark:text-blue-400" },
-                      paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-amber-100 dark:bg-amber-900/30", textClass: "text-amber-700 dark:text-amber-400" },
-                      cancelled: { label: "Cancelado", labelTooltip: "Distrato de Cancelamento", icon: XCircle, bgClass: "bg-red-100 dark:bg-red-900/30", textClass: "text-red-700 dark:text-red-400" },
-                      ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-slate-100 dark:bg-slate-900/30", textClass: "text-slate-700 dark:text-slate-400" },
-                      suspended_bonus: { label: "Susp. Bônus", labelTooltip: "Suspenso Bônus", icon: Ban, bgClass: "bg-yellow-100 dark:bg-yellow-900/30", textClass: "text-yellow-700 dark:text-yellow-400" },
-                      dismissal_termination: { label: "Dist. Demissão", labelTooltip: "Distrato por Demissão", icon: XCircle, bgClass: "bg-rose-100 dark:bg-rose-900/30", textClass: "text-rose-700 dark:text-rose-400" },
+                      active: { label: "Ativo", labelTooltip: "Contrato Ativo", icon: CheckCircle2, bgClass: "bg-success-soft dark:bg-success/30", textClass: "text-success-strong dark:text-success" },
+                      pending: { label: "Pendente", labelTooltip: "Contrato Pendente (em assinatura)", icon: Clock, bgClass: "bg-info-soft dark:bg-info/30", textClass: "text-info-strong dark:text-info" },
+                      paused: { label: "Pausado", labelTooltip: "Contrato Pausado", icon: PauseCircle, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
+                      cancelled: { label: "Cancelado", labelTooltip: "Distrato de Cancelamento", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
+                      ended: { label: "Encerrado", labelTooltip: "Contrato Encerrado", icon: Ban, bgClass: "bg-muted dark:bg-slate-900/30", textClass: "text-foreground dark:text-muted-foreground" },
+                      suspended_bonus: { label: "Susp. Bônus", labelTooltip: "Suspenso Bônus", icon: Ban, bgClass: "bg-warning-soft dark:bg-warning/30", textClass: "text-warning-strong dark:text-warning" },
+                      dismissal_termination: { label: "Dist. Demissão", labelTooltip: "Distrato por Demissão", icon: XCircle, bgClass: "bg-danger-soft dark:bg-danger/30", textClass: "text-danger-strong dark:text-danger" },
                     };
                     const config = statusConfig[status] || statusConfig.active;
                     const StatusIcon = config.icon;
@@ -402,7 +402,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                 </TooltipTrigger>
                 <TooltipContent>
                   <div className="text-xs">
-                    <p className={cn("font-medium", contractData.status === 'pending' ? "text-blue-600 dark:text-blue-400" : contractData.status === 'paused' ? "text-amber-600 dark:text-amber-400" : "text-green-600 dark:text-green-400")}>
+                    <p className={cn("font-medium", contractData.status === 'pending' ? "text-info dark:text-info" : contractData.status === 'paused' ? "text-warning dark:text-warning" : "text-success dark:text-success")}>
                       {contractData.status === 'pending' ? "Contrato Pendente (em assinatura)" : contractData.status === 'paused' ? "Contrato Pausado" : contractData.status === 'cancelled' ? "Contrato Cancelado" : contractData.status === 'ended' ? "Contrato Encerrado" : "Contrato Ativo"}
                     </p>
                     {contractData.start_date && (
@@ -420,7 +420,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             <TooltipProvider>
               <Tooltip>
                 <TooltipTrigger asChild>
-                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400">
+                  <div className="inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning">
                     <AlertCircle className="h-3 w-3" />
                     <span>Sem contrato</span>
                   </div>
@@ -443,7 +443,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
               <div className={cn(
                 "inline-flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium",
                 hasMessages 
-                  ? "bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400"
+                  ? "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success"
                   : "bg-muted text-muted-foreground"
               )}>
                 {hasMessages ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
@@ -453,7 +453,7 @@ export const ClientsTableRow = memo(function ClientsTableRow({
             <TooltipContent>
               {hasMessages ? (
                 <div className="text-xs">
-                  <p className="font-medium text-green-600 dark:text-green-400">WhatsApp conectado</p>
+                  <p className="font-medium text-success dark:text-success">WhatsApp conectado</p>
                   <p>{whatsappData!.messageCount} mensagem(ns)</p>
                   {whatsappData!.lastMessageAt && (
                     <p>Última: {format(new Date(whatsappData!.lastMessageAt), "dd/MM/yy", { locale: ptBR })}</p>

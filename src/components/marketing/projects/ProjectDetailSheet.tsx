@@ -334,7 +334,7 @@ function MilestoneRow({
               </span>
             )}
             {hasDates && (
-              <span className={`inline-flex items-center gap-1 ${isOverdue ? "text-red-600 font-medium" : "text-muted-foreground"}`}>
+              <span className={`inline-flex items-center gap-1 ${isOverdue ? "text-danger font-medium" : "text-muted-foreground"}`}>
                 <CalendarRange className="h-3 w-3" />
                 {milestone.start_date && format(parseISO(milestone.start_date), "dd MMM", { locale: ptBR })}
                 {milestone.start_date && milestone.due_date && " → "}
@@ -343,7 +343,7 @@ function MilestoneRow({
               </span>
             )}
             {milestone.completed && milestone.completed_at && (
-              <span className="inline-flex items-center gap-1 text-emerald-600">
+              <span className="inline-flex items-center gap-1 text-success">
                 <CheckCircle2 className="h-3 w-3" /> Concluído {format(parseISO(milestone.completed_at), "dd MMM", { locale: ptBR })}
               </span>
             )}

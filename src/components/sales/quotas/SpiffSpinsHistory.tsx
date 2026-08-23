@@ -202,22 +202,22 @@ export function SpiffSpinsHistory() {
             <div className="text-2xl font-semibold mt-1 tabular-nums">{formatBRL(totals.totalAmount)}</div>
           </CardContent>
         </Card>
-        <Card className="border-amber-200 dark:border-amber-900/40">
+        <Card className="border-warning dark:border-warning/40">
           <CardContent className="p-4">
-            <div className="text-xs text-amber-700 dark:text-amber-400 uppercase tracking-wide flex items-center gap-1.5">
+            <div className="text-xs text-warning-strong dark:text-warning uppercase tracking-wide flex items-center gap-1.5">
               <Clock className="h-3 w-3" /> A Pagar
             </div>
-            <div className="text-2xl font-semibold mt-1 tabular-nums text-amber-700 dark:text-amber-400">
+            <div className="text-2xl font-semibold mt-1 tabular-nums text-warning-strong dark:text-warning">
               {formatBRL(totals.pendingAmount)}
             </div>
           </CardContent>
         </Card>
-        <Card className="border-emerald-200 dark:border-emerald-900/40">
+        <Card className="border-success dark:border-success/40">
           <CardContent className="p-4">
-            <div className="text-xs text-emerald-700 dark:text-emerald-400 uppercase tracking-wide flex items-center gap-1.5">
+            <div className="text-xs text-success-strong dark:text-success uppercase tracking-wide flex items-center gap-1.5">
               <CheckCircle2 className="h-3 w-3" /> Pago
             </div>
-            <div className="text-2xl font-semibold mt-1 tabular-nums text-emerald-700 dark:text-emerald-400">
+            <div className="text-2xl font-semibold mt-1 tabular-nums text-success-strong dark:text-success">
               {formatBRL(totals.paidAmount)}
             </div>
           </CardContent>
@@ -348,11 +348,11 @@ export function SpiffSpinsHistory() {
                       </TableCell>
                       <TableCell className="text-center">
                         {r.payment_status === "paid" ? (
-                          <Badge className="bg-emerald-600 hover:bg-emerald-600 text-white gap-1">
+                          <Badge className="bg-success hover:bg-success text-white gap-1">
                             <CheckCircle2 className="h-3 w-3" /> Pago
                           </Badge>
                         ) : Number(r.prize_amount) > 0 ? (
-                          <Badge variant="outline" className="gap-1 border-amber-300 text-amber-700 dark:text-amber-400">
+                          <Badge variant="outline" className="gap-1 border-warning text-warning-strong dark:text-warning">
                             <Clock className="h-3 w-3" /> A pagar
                           </Badge>
                         ) : (

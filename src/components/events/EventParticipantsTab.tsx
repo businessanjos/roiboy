@@ -108,12 +108,12 @@ interface EventParticipantsTabProps {
 }
 
 const rsvpStatusConfig: Record<EventRsvpStatus, { label: string; color: string; icon: React.ElementType }> = {
-  pending: { label: "Pendente", color: "bg-yellow-500/10 text-yellow-600", icon: Clock },
-  confirmed: { label: "Confirmado", color: "bg-green-500/10 text-green-600", icon: Check },
-  declined: { label: "Recusado", color: "bg-red-500/10 text-red-600", icon: X },
-  waitlist: { label: "Lista de Espera", color: "bg-blue-500/10 text-blue-600", icon: Clock },
-  attended: { label: "Presente", color: "bg-emerald-500/10 text-emerald-600", icon: UserCheck },
-  no_show: { label: "Não Compareceu", color: "bg-gray-500/10 text-gray-600", icon: X },
+  pending: { label: "Pendente", color: "bg-warning/10 text-warning", icon: Clock },
+  confirmed: { label: "Confirmado", color: "bg-success/10 text-success", icon: Check },
+  declined: { label: "Recusado", color: "bg-danger/10 text-danger", icon: X },
+  waitlist: { label: "Lista de Espera", color: "bg-info/10 text-info", icon: Clock },
+  attended: { label: "Presente", color: "bg-success/10 text-success", icon: UserCheck },
+  no_show: { label: "Não Compareceu", color: "bg-gray-500/10 text-muted-foreground", icon: X },
 };
 
 export default function EventParticipantsTab({ 
@@ -495,12 +495,12 @@ export default function EventParticipantsTab({
 
   const filterCards: { key: EventRsvpStatus | "all"; label: string; value: number; color: string }[] = [
     { key: "all", label: "Total", value: stats.total, color: "text-foreground" },
-    { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-green-600" },
-    { key: "attended", label: "Presentes", value: stats.attended, color: "text-emerald-600" },
-    { key: "pending", label: "Pendentes", value: stats.pending, color: "text-yellow-600" },
-    { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-blue-600" },
-    { key: "declined", label: "Recusados", value: stats.declined, color: "text-red-600" },
-    { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-gray-500" },
+    { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-success" },
+    { key: "attended", label: "Presentes", value: stats.attended, color: "text-success" },
+    { key: "pending", label: "Pendentes", value: stats.pending, color: "text-warning" },
+    { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-info" },
+    { key: "declined", label: "Recusados", value: stats.declined, color: "text-danger" },
+    { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-muted-foreground" },
   ];
 
   const filteredParticipants = participants.filter((p) => {
@@ -722,19 +722,19 @@ export default function EventParticipantsTab({
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'pending')}>
-                              <Clock className="h-4 w-4 mr-2 text-yellow-600" /> Marcar Pendente
+                              <Clock className="h-4 w-4 mr-2 text-warning" /> Marcar Pendente
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'confirmed')}>
-                              <Check className="h-4 w-4 mr-2 text-green-600" /> Confirmar
+                              <Check className="h-4 w-4 mr-2 text-success" /> Confirmar
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'attended')}>
-                              <UserCheck className="h-4 w-4 mr-2 text-emerald-600" /> Marcar Presente
+                              <UserCheck className="h-4 w-4 mr-2 text-success" /> Marcar Presente
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'declined')}>
-                              <X className="h-4 w-4 mr-2 text-red-600" /> Recusar
+                              <X className="h-4 w-4 mr-2 text-danger" /> Recusar
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'no_show')}>
-                              <X className="h-4 w-4 mr-2 text-gray-600" /> Não Compareceu
+                              <X className="h-4 w-4 mr-2 text-muted-foreground" /> Não Compareceu
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => deleteParticipant(p.id)}
@@ -887,14 +887,14 @@ export default function EventParticipantsTab({
             {/* Summary */}
             <div className="flex gap-4 text-sm">
               <div className="flex items-center gap-2">
-                <Badge variant="outline" className="bg-green-500/10 text-green-600">
+                <Badge variant="outline" className="bg-success/10 text-success">
                   <Check className="h-3 w-3 mr-1" />
                   {importPreview.filter(r => r.valid).length} válidos
                 </Badge>
               </div>
               {importPreview.filter(r => !r.valid).length > 0 && (
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="bg-red-500/10 text-red-600">
+                  <Badge variant="outline" className="bg-danger/10 text-danger">
                     <AlertCircle className="h-3 w-3 mr-1" />
                     {importPreview.filter(r => !r.valid).length} inválidos
                   </Badge>
@@ -917,16 +917,16 @@ export default function EventParticipantsTab({
                 </TableHeader>
                 <TableBody>
                   {importPreview.map((row, idx) => (
-                    <TableRow key={idx} className={!row.valid ? 'bg-red-500/5' : ''}>
+                    <TableRow key={idx} className={!row.valid ? 'bg-danger/5' : ''}>
                       <TableCell>
                         {row.valid ? (
-                          <Check className="h-4 w-4 text-green-600" />
+                          <Check className="h-4 w-4 text-success" />
                         ) : (
-                          <AlertCircle className="h-4 w-4 text-red-600" />
+                          <AlertCircle className="h-4 w-4 text-danger" />
                         )}
                       </TableCell>
                       <TableCell className="font-medium">
-                        {row.nome || <span className="text-red-600 text-sm">{row.error}</span>}
+                        {row.nome || <span className="text-danger text-sm">{row.error}</span>}
                       </TableCell>
                       <TableCell className="text-muted-foreground">{row.email || '—'}</TableCell>
                       <TableCell className="text-muted-foreground">{row.telefone || '—'}</TableCell>

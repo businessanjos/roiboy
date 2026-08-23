@@ -95,9 +95,9 @@ const LEAD_SOURCES = [
 ];
 
 const LEAD_STATUS = [
-  { value: "new", label: "Novo", color: "bg-blue-500" },
-  { value: "contacted", label: "Contatado", color: "bg-amber-500" },
-  { value: "qualified", label: "Qualificado", color: "bg-emerald-500" },
+  { value: "new", label: "Novo", color: "bg-info" },
+  { value: "contacted", label: "Contatado", color: "bg-warning" },
+  { value: "qualified", label: "Qualificado", color: "bg-success" },
   { value: "unqualified", label: "Não Qualificado", color: "bg-gray-500" },
   { value: "converted", label: "Convertido", color: "bg-purple-500" },
 ];
@@ -1022,8 +1022,8 @@ export default function LeadsTab() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-blue-500/10 rounded-lg">
-                  <Users className="h-5 w-5 text-blue-500" />
+                <div className="p-2 bg-info/10 rounded-lg">
+                  <Users className="h-5 w-5 text-info" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{newLeads.length}</p>
@@ -1035,8 +1035,8 @@ export default function LeadsTab() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-amber-500/10 rounded-lg">
-                  <MessageSquare className="h-5 w-5 text-amber-500" />
+                <div className="p-2 bg-warning/10 rounded-lg">
+                  <MessageSquare className="h-5 w-5 text-warning" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{contactedLeads.length}</p>
@@ -1048,8 +1048,8 @@ export default function LeadsTab() {
           <Card>
             <CardContent className="p-4">
               <div className="flex items-center gap-3">
-                <div className="p-2 bg-emerald-500/10 rounded-lg">
-                  <UserCheck className="h-5 w-5 text-emerald-500" />
+                <div className="p-2 bg-success/10 rounded-lg">
+                  <UserCheck className="h-5 w-5 text-success" />
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{qualifiedLeads.length}</p>
@@ -1202,7 +1202,7 @@ export default function LeadsTab() {
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-6 w-6 hover:bg-emerald-500/20"
+                            className="h-6 w-6 hover:bg-success/20"
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenZappForLead(lead);
@@ -1210,7 +1210,7 @@ export default function LeadsTab() {
                             disabled={zappLoading}
                             title="Abrir conversa no RoyZapp"
                           >
-                            <MessageCircle className="h-3.5 w-3.5 text-emerald-600" />
+                            <MessageCircle className="h-3.5 w-3.5 text-success" />
                           </Button>
                         )}
                         <DropdownMenu>

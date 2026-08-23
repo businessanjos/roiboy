@@ -268,7 +268,7 @@ function PreviewBlock({ text }: { text: string }) {
           Prévia do que vai pra Timeline
         </div>
         <Button size="sm" variant="ghost" onClick={handleCopy} className="h-7 gap-1.5 text-xs">
-          {copied ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : <Copy className="h-3.5 w-3.5" />}
+          {copied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
           {copied ? "Copiado" : "Copiar"}
         </Button>
       </div>

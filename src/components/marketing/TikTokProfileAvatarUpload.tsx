@@ -366,7 +366,7 @@ export function TikTokProfileAvatarUpload({
                 className={cn(
                   "border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-colors",
                   isDragging
-                    ? "border-cyan-500 bg-cyan-500/5"
+                    ? "border-info bg-info/5"
                     : "border-muted-foreground/25 hover:border-pink-500/50"
                 )}
               >

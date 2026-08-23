@@ -601,7 +601,7 @@ export default function SharedInsights() {
       <div className="flex min-h-screen items-center justify-center bg-background p-4">
         <Card className="w-full max-w-md text-center">
           <CardContent className="pt-8 pb-8 space-y-4">
-            <Clock className="h-12 w-12 text-amber-500 mx-auto" />
+            <Clock className="h-12 w-12 text-warning mx-auto" />
             <h2 className="text-xl font-semibold">Aguardando aprovação</h2>
             <p className="text-muted-foreground text-sm">
               Sua solicitação foi enviada para <strong>{email}</strong>. O proprietário do painel precisa aprovar seu acesso.
@@ -701,7 +701,7 @@ export default function SharedInsights() {
                   <div key={i} className="flex items-start justify-between gap-3 px-3 py-2">
                     <div className="flex items-center gap-2">
                       {c.ok ? (
-                        <CheckCircle className="h-4 w-4 text-green-500 shrink-0" />
+                        <CheckCircle className="h-4 w-4 text-success shrink-0" />
                       ) : (
                         <XCircle className="h-4 w-4 text-destructive shrink-0" />
                       )}
@@ -768,7 +768,7 @@ export default function SharedInsights() {
           <span className="ml-auto flex items-center gap-3">
             <ZoomControls zoom={zoom} onZoomChange={setZoom} min={50} max={250} step={10} />
             <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
-              <CheckCircle className="h-3.5 w-3.5 text-green-500" />
+              <CheckCircle className="h-3.5 w-3.5 text-success" />
               Somente leitura
             </span>
           </span>

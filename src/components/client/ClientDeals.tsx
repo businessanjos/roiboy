@@ -481,20 +481,20 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
     <div className="space-y-4">
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
+        <div className="p-3 rounded-lg bg-info/10 border border-info/20">
           <div className="flex items-center gap-2 mb-1">
-            <Clock className="h-4 w-4 text-blue-500" />
+            <Clock className="h-4 w-4 text-info" />
             <span className="text-xs text-muted-foreground">Em Aberto</span>
           </div>
           <p className="text-lg font-bold">{openDeals.length}</p>
           <p className="text-xs text-muted-foreground">{formatCurrency(totalOpen)}</p>
         </div>
-        <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+        <div className="p-3 rounded-lg bg-success/10 border border-success/20">
           <div className="flex items-center gap-2 mb-1">
-            <Trophy className="h-4 w-4 text-emerald-500" />
+            <Trophy className="h-4 w-4 text-success" />
             <span className="text-xs text-muted-foreground">Ganhos</span>
           </div>
-          <p className="text-lg font-bold text-emerald-600">{wonDeals.length}</p>
+          <p className="text-lg font-bold text-success">{wonDeals.length}</p>
           <p className="text-xs text-muted-foreground">{formatCurrency(totalWon)}</p>
         </div>
         <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">

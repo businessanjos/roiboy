@@ -40,11 +40,11 @@ type OfferRow = {
 
 const STATUS_MAP: Record<string, { label: string; cls: string; icon: any }> = {
   draft: { label: "Rascunho", cls: "bg-muted text-muted-foreground", icon: FileText },
-  sent: { label: "Enviada", cls: "bg-blue-500/15 text-blue-700 border-blue-300", icon: Send },
-  viewed: { label: "Visualizada", cls: "bg-amber-500/15 text-amber-700 border-amber-300", icon: Eye },
-  accepted: { label: "Aceita", cls: "bg-emerald-500/15 text-emerald-700 border-emerald-300", icon: CheckCircle2 },
-  declined: { label: "Recusada", cls: "bg-rose-500/15 text-rose-700 border-rose-300", icon: XCircle },
-  expired: { label: "Expirada", cls: "bg-zinc-500/15 text-zinc-700 border-zinc-300", icon: XCircle },
+  sent: { label: "Enviada", cls: "bg-info/15 text-info-strong border-info", icon: Send },
+  viewed: { label: "Visualizada", cls: "bg-warning/15 text-warning-strong border-warning", icon: Eye },
+  accepted: { label: "Aceita", cls: "bg-success/15 text-success-strong border-success", icon: CheckCircle2 },
+  declined: { label: "Recusada", cls: "bg-danger/15 text-danger-strong border-danger", icon: XCircle },
+  expired: { label: "Expirada", cls: "bg-zinc-500/15 text-foreground border-border", icon: XCircle },
 };
 
 export default function RHOffers() {
@@ -157,7 +157,7 @@ export default function RHOffers() {
       {templates.length > 0 && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
-            <LayoutTemplate className="h-4 w-4 text-amber-600" />
+            <LayoutTemplate className="h-4 w-4 text-warning" />
             <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
               Modelos salvos
             </h2>
@@ -167,14 +167,14 @@ export default function RHOffers() {
             {templates.map((t) => (
               <Card
                 key={t.id}
-                className="overflow-hidden border-amber-300/60 bg-gradient-to-br from-amber-50/60 to-transparent dark:from-amber-950/20 hover:shadow-md transition-all"
+                className="overflow-hidden border-warning/60 bg-gradient-to-br from-amber-50/60 to-transparent dark:from-amber-950/20 hover:shadow-md transition-all"
               >
                 <div className="h-1.5" style={{ background: t.accent_color }} />
                 <CardContent className="p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5">
-                        <LayoutTemplate className="h-3.5 w-3.5 text-amber-600 shrink-0" />
+                        <LayoutTemplate className="h-3.5 w-3.5 text-warning shrink-0" />
                         <h3 className="font-semibold truncate text-sm">
                           {t.template_name || t.position_title || "Modelo sem nome"}
                         </h3>
@@ -183,14 +183,14 @@ export default function RHOffers() {
                         {t.position_title}{t.department && ` • ${t.department}`}
                       </p>
                     </div>
-                    <Badge variant="outline" className="bg-amber-500/15 text-amber-700 border-amber-300 text-[10px] shrink-0">
+                    <Badge variant="outline" className="bg-warning/15 text-warning-strong border-warning text-[10px] shrink-0">
                       Modelo
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-1 pt-2 border-t border-amber-200/40">
+                  <div className="flex items-center gap-1 pt-2 border-t border-warning/40">
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-amber-600 hover:bg-amber-700">
+                        <Button size="sm" variant="default" onClick={() => startFromTemplate(t.id)} className="gap-1.5 flex-1 bg-warning hover:bg-warning">
                           <FilePlus2 className="h-3.5 w-3.5" /> Usar modelo
                         </Button>
                       </TooltipTrigger>
@@ -206,7 +206,7 @@ export default function RHOffers() {
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-rose-600 hover:text-rose-700">
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(t.id)} className="text-danger hover:text-danger-strong">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
@@ -329,7 +329,7 @@ export default function RHOffers() {
                     </Tooltip>
                     <Tooltip>
                       <TooltipTrigger asChild>
-                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-rose-600 hover:text-rose-700">
+                        <Button size="sm" variant="ghost" onClick={() => setDeleteId(o.id)} className="text-danger hover:text-danger-strong">
                           <Trash2 className="h-3.5 w-3.5" />
                         </Button>
                       </TooltipTrigger>
@@ -377,8 +377,8 @@ export default function RHOffers() {
             {/* Bloco de modelos */}
             <div className="p-5 rounded-xl border bg-gradient-to-br from-amber-50/40 to-transparent dark:from-amber-950/10 space-y-3">
               <div className="flex items-center gap-2">
-                <div className="w-9 h-9 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                  <LayoutTemplate className="h-4 w-4 text-amber-600" />
+                <div className="w-9 h-9 rounded-lg bg-warning/15 flex items-center justify-center">
+                  <LayoutTemplate className="h-4 w-4 text-warning" />
                 </div>
                 <span className="font-semibold">A partir de um modelo</span>
               </div>
@@ -392,7 +392,7 @@ export default function RHOffers() {
                     <button
                       key={t.id}
                       onClick={() => startFromTemplate(t.id)}
-                      className="w-full text-left px-3 py-2 rounded-lg border bg-background hover:border-amber-500 hover:bg-amber-50/50 dark:hover:bg-amber-950/20 transition-all"
+                      className="w-full text-left px-3 py-2 rounded-lg border bg-background hover:border-warning hover:bg-warning/50 dark:hover:bg-warning/20 transition-all"
                     >
                       <div className="text-sm font-medium truncate">
                         {t.template_name || t.position_title || "Modelo"}
@@ -419,7 +419,7 @@ export default function RHOffers() {
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} className="bg-rose-600 hover:bg-rose-700">
+            <AlertDialogAction onClick={handleDelete} className="bg-danger hover:bg-danger">
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>

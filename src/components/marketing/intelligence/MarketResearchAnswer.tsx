@@ -37,11 +37,11 @@ const iconMap = {
 };
 
 const iconColor = {
-  insight: "text-amber-600",
-  risk: "text-red-600",
-  trend: "text-emerald-600",
+  insight: "text-warning",
+  risk: "text-danger",
+  trend: "text-success",
   target: "text-purple-600",
-  data: "text-blue-600",
+  data: "text-info",
 };
 
 function parseAnswer(raw: string): { tldr: string | null; stats: KeyStat[]; sections: Section[]; rest: string } {
