@@ -207,6 +207,7 @@ export default function SalesDashboard() {
   };
   const KPI_STORAGE_KEY = "sales-dashboard-kpis-v3";
   const [pickerOpen, setPickerOpen] = useState<KpiSection | null>(null);
+  const [selectedKpi, setSelectedKpi] = useState<string | null>(null);
   const [kpiSel, setKpiSel] = useState<Record<KpiSection, string[]>>(() => {
     try {
       const raw = localStorage.getItem(KPI_STORAGE_KEY);
