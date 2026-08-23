@@ -1634,7 +1634,8 @@ export default function SalesDashboard() {
         onSave={(ids) => pickerOpen && saveKpiSel(pickerOpen, ids)}
         maxItems={8}
       />
-    </div>
+      </RykaPage>
+    </RykaScope>
   );
 }
 
