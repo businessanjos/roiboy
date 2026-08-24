@@ -66,6 +66,7 @@
 
 ### Clients & Contracts
 - [VIP Crown Indicator](mem://features/client/vip-crown-indicator-pt) — Coroa âmbar via `<VipBadge clientId>`
+- [Checkpoints & Contatos CS](mem://features/client/checkins-and-checkpoints-pt) — Cadência de 15 dias, `client_checkins`, painel /clients/checkpoints e resumo diário por IA do RoyZapp
 - [Timezone Detection](mem://features/client/timezone-detection-pt) — Cascata DDD > UF > DDI, override manual em `clients.timezone`
 - [Contract Lifecycle Statuses](mem://features/contracts/status-lifecycle) — Mandatory reasons for terminal statuses
 - [Contract List Filter](mem://features/client/contract-filter-logic-pt) — Server-side logic for urgent/warning expirations

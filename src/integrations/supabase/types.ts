@@ -1814,6 +1814,69 @@ export type Database = {
           },
         ]
       }
+      client_checkins: {
+        Row: {
+          account_id: string
+          channel: string
+          client_id: string
+          created_at: string
+          happened_at: string
+          id: string
+          initiated_by: string
+          kind: string
+          message_count: number
+          source: string
+          summary: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          channel?: string
+          client_id: string
+          created_at?: string
+          happened_at?: string
+          id?: string
+          initiated_by?: string
+          kind?: string
+          message_count?: number
+          source?: string
+          summary: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          channel?: string
+          client_id?: string
+          created_at?: string
+          happened_at?: string
+          id?: string
+          initiated_by?: string
+          kind?: string
+          message_count?: number
+          source?: string
+          summary?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "client_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "client_checkins_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       client_churn_analyses: {
         Row: {
           account_id: string | null

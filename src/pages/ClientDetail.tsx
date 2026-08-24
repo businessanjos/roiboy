@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
+import { ClientCheckinsCard } from "@/components/client/ClientCheckinsCard";
+import { getChannelLabel as getCheckinChannelLabel } from "@/lib/cs/checkins";
 
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
@@ -742,6 +744,7 @@ export default function ClientDetail() {
         attendanceResult,
         subscriptionsResult,
         allRiskResult,
+        checkinsResult,
       ] = await Promise.all([
         supabase.from("client_products").select("product_id, products(id, name)").eq("client_id", id),
         supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
@@ -757,6 +760,7 @@ export default function ClientDetail() {
         supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
         supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
         supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
+        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).limit(200),
       ]);
 
       // Process client products
@@ -874,6 +878,26 @@ export default function ClientDetail() {
             file_size: followup.file_size,
             followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
             updated_at: followup.updated_at,
+          },
+        });
+      });
+
+      // Add check-ins (checkpoints e contatos registrados pelo CS)
+      (checkinsResult.data || []).forEach((ci: any) => {
+        const fromClient = ci.initiated_by === "cliente";
+        const channelLabel = getCheckinChannelLabel(ci.channel);
+        timelineItems.push({
+          id: `checkin-${ci.id}`,
+          type: "checkin",
+          title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
+          description: ci.summary,
+          timestamp: ci.happened_at,
+          metadata: {
+            category: ci.kind,
+            direction: fromClient ? "client_to_team" : "team_to_client",
+            source: ci.source,
+            user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
+            user_avatar: ci.users?.avatar_url,
           },
         });
       });
@@ -1049,6 +1073,7 @@ export default function ClientDetail() {
         allRiskResult,
         roiResult,
         recResult,
+        checkinsResult,
       ] = await Promise.all([
         supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
         supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
@@ -1059,6 +1084,7 @@ export default function ClientDetail() {
         supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
         supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
         supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).limit(200),
       ]);
 
       const timelineItems: TimelineEvent[] = [];
@@ -1145,6 +1171,26 @@ export default function ClientDetail() {
             file_size: followup.file_size,
             followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
             updated_at: followup.updated_at,
+          },
+        });
+      });
+
+      // Add check-ins (checkpoints e contatos registrados pelo CS)
+      (checkinsResult.data || []).forEach((ci: any) => {
+        const fromClient = ci.initiated_by === "cliente";
+        const channelLabel = getCheckinChannelLabel(ci.channel);
+        timelineItems.push({
+          id: `checkin-${ci.id}`,
+          type: "checkin",
+          title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
+          description: ci.summary,
+          timestamp: ci.happened_at,
+          metadata: {
+            category: ci.kind,
+            direction: fromClient ? "client_to_team" : "team_to_client",
+            source: ci.source,
+            user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
+            user_avatar: ci.users?.avatar_url,
           },
         });
       });
@@ -2415,6 +2461,12 @@ export default function ClientDetail() {
         switch (activeTab) {
           case "timeline":
             return (
+              <div className="space-y-4">
+              <ClientCheckinsCard
+                clientId={id!}
+                clientName={client?.full_name}
+                onSaved={refreshTimeline}
+              />
               <Card className="shadow-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
@@ -2449,6 +2501,7 @@ export default function ClientDetail() {
                   />
                 </CardContent>
               </Card>
+              </div>
             );
           case "churn-signals":
             return <ClientChurnSignals clientId={id!} />;

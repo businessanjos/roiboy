@@ -1,0 +1,219 @@
+import { useMemo, useState } from "react";
+import { Link } from "react-router-dom";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { CalendarCheck, Loader2, Plus, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useCheckpointsPanel } from "@/hooks/useClientCheckins";
+import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
+import {
+  CHECKPOINT_STATUS_LABELS,
+  CHECKPOINT_STATUS_STYLES,
+  getCheckpointState,
+  type CheckpointStatus,
+} from "@/lib/cs/checkins";
+
+type FilterKey = "todos" | CheckpointStatus;
+
+export default function ClientCheckpoints() {
+  const { data = [], isLoading, refetch } = useCheckpointsPanel();
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState<FilterKey>("todos");
+  const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
+
+  const rows = useMemo(() => {
+    return data
+      .map((r) => ({ ...r, state: getCheckpointState(r.last_checkpoint_at) }))
+      .sort((a, b) => {
+        const order: Record<CheckpointStatus, number> = {
+          vencido: 0,
+          sem_registro: 1,
+          atencao: 2,
+          em_dia: 3,
+        };
+        return order[a.state.status] - order[b.state.status];
+      });
+  }, [data]);
+
+  const counts = useMemo(() => {
+    const c: Record<CheckpointStatus, number> = { vencido: 0, sem_registro: 0, atencao: 0, em_dia: 0 };
+    rows.forEach((r) => (c[r.state.status] += 1));
+    return c;
+  }, [rows]);
+
+  const filtered = rows.filter((r) => {
+    if (filter !== "todos" && r.state.status !== filter) return false;
+    const q = search.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      r.full_name?.toLowerCase().includes(q) ||
+      (r.consultant_name || "").toLowerCase().includes(q)
+    );
+  });
+
+  return (
+    <div className="space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-semibold flex items-center gap-2">
+            <CalendarCheck className="h-5 w-5" />
+            Checkpoints quinzenais
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            Todo cliente precisa de um checkpoint a cada 15 dias.
+          </p>
+        </div>
+        <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
+          {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+          Atualizar
+        </Button>
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-4">
+        <Kpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
+        <Kpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
+        <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
+        <Kpi label="Em dia" value={counts.em_dia} tone="text-success" />
+      </div>
+
+      <Card className="shadow-card">
+        <CardHeader className="pb-3 space-y-3">
+          <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="relative flex-1 min-w-[220px]">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                className="pl-9"
+                placeholder="Buscar cliente ou consultor..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+              />
+            </div>
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
+              <TabsList>
+                <TabsTrigger value="todos">Todos</TabsTrigger>
+                <TabsTrigger value="vencido">Vencidos</TabsTrigger>
+                <TabsTrigger value="sem_registro">Sem registro</TabsTrigger>
+                <TabsTrigger value="atencao">Em breve</TabsTrigger>
+                <TabsTrigger value="em_dia">Em dia</TabsTrigger>
+              </TabsList>
+            </Tabs>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {isLoading ? (
+            <div className="flex justify-center py-10">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : filtered.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-8 text-center">
+              Nenhum cliente encontrado com esse filtro.
+            </p>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cliente</TableHead>
+                    <TableHead>Consultor</TableHead>
+                    <TableHead>Último checkpoint</TableHead>
+                    <TableHead>Próximo</TableHead>
+                    <TableHead>Último contato</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="text-right">Ação</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {filtered.map((r) => (
+                    <TableRow key={r.client_id}>
+                      <TableCell className="font-medium">
+                        <Link to={`/clients/${r.client_id}`} className="hover:underline">
+                          {r.full_name}
+                        </Link>
+                      </TableCell>
+                      <TableCell className="text-muted-foreground">{r.consultant_name || "—"}</TableCell>
+                      <TableCell>
+                        {r.last_checkpoint_at
+                          ? format(new Date(r.last_checkpoint_at), "dd/MM/yyyy", { locale: ptBR })
+                          : "—"}
+                      </TableCell>
+                      <TableCell>
+                        {r.state.nextDueAt
+                          ? format(new Date(r.state.nextDueAt), "dd/MM/yyyy", { locale: ptBR })
+                          : "—"}
+                      </TableCell>
+                      <TableCell className="max-w-[280px]">
+                        {r.last_contact_at ? (
+                          <div className="truncate text-sm">
+                            <span className="text-muted-foreground">
+                              {format(new Date(r.last_contact_at), "dd/MM", { locale: ptBR })} ·{" "}
+                            </span>
+                            {r.last_summary}
+                          </div>
+                        ) : (
+                          "—"
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge
+                          variant="outline"
+                          className={cn("text-xs", CHECKPOINT_STATUS_STYLES[r.state.status])}
+                        >
+                          {CHECKPOINT_STATUS_LABELS[r.state.status]}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setTarget({ id: r.client_id, name: r.full_name })}
+                        >
+                          <Plus className="h-3.5 w-3.5 mr-1" />
+                          Registrar
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {target && (
+        <ClientCheckinDialog
+          open={!!target}
+          onOpenChange={(o) => !o && setTarget(null)}
+          clientId={target.id}
+          clientName={target.name}
+          onSaved={() => refetch()}
+        />
+      )}
+    </div>
+  );
+}
+
+function Kpi({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <Card className="shadow-card">
+      <CardContent className="p-4">
+        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className={cn("text-2xl font-semibold mt-1", tone)}>{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
