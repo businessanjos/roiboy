@@ -25,6 +25,7 @@ import { PushNotificationPreferences } from "@/components/notifications/PushNoti
 const TABS = [
   { id: "all", label: "Todas", icon: Inbox },
   { id: "sales", label: "Vendas", icon: ShoppingCart },
+  { id: "checkpoints", label: "Checkpoints", icon: CalendarCheck },
   { id: "forms", label: "Formulários", icon: FileText },
   { id: "mentions", label: "Menções", icon: AtSign },
   { id: "other", label: "Outros", icon: MessageSquare },
@@ -38,7 +39,10 @@ const SOURCE_TYPE_MAP: Record<string, TabId> = {
   client_contracts: "sales",
   form_response: "forms",
   client_followup: "mentions",
+  client_checkpoint: "checkpoints",
+  client_checkpoint_digest: "checkpoints",
 };
+
 
 function getTabForNotification(sourceType: string | null): TabId {
   if (!sourceType) return "other";
