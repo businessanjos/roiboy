@@ -83,7 +83,7 @@ export function useCheckpointsPanel() {
     queryFn: async (): Promise<CheckpointRow[]> => {
       const { data: clients, error } = await supabase
         .from("clients")
-        .select("id, full_name, status, consultant:users!clients_consultant_id_fkey(name)")
+        .select("id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name)")
         .eq("account_id", currentUser!.account_id)
         .in("status", ["active", "churn_risk", "paused"])
         .order("full_name");
