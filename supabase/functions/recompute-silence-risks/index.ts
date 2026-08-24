@@ -35,42 +35,17 @@ Deno.serve(async (req) => {
 
     const clientIds = clients.map((c) => c.id);
 
-    // 2) Última interação viva: mensagens do RoyZapp (qualquer setor)
+    // 2) Última interação viva por cliente:
+    //    max(zapp_messages.sent_at) + max(client_checkins.happened_at) + clients.recent_activity_at
     const lastByClient = new Map<string, string>();
-    const bump = (clientId: string | null, ts: string | null) => {
-      if (!clientId || !ts) return;
-      const cur = lastByClient.get(clientId);
-      if (!cur || new Date(ts) > new Date(cur)) lastByClient.set(clientId, ts);
-    };
+    const { data: activity, error: actErr } = await supabase.rpc('client_last_live_activity');
+    if (actErr) throw actErr;
+    (activity ?? []).forEach((row: { client_id: string; last_at: string | null }) => {
+      if (!row.last_at) return;
+      if (new Date(row.last_at).getFullYear() < 2000) return; // 'epoch' = sem histórico
+      lastByClient.set(row.client_id, row.last_at);
+    });
 
-    for (let i = 0; i < clientIds.length; i += 200) {
-      const chunk = clientIds.slice(i, i + 200);
-      const { data: convs, error } = await supabase
-        .from('zapp_conversations')
-        .select('client_id, last_message_at')
-        .in('client_id', chunk)
-        .not('last_message_at', 'is', null);
-      if (error) throw error;
-      convs?.forEach((c) => bump(c.client_id, c.last_message_at));
-
-      // 3) Check-ins de CS (inclui resumos automáticos por IA)
-      const { data: checkins, error: ckErr } = await supabase
-        .from('client_checkins')
-        .select('client_id, happened_at')
-        .in('client_id', chunk)
-        .not('happened_at', 'is', null);
-      if (ckErr) throw ckErr;
-      checkins?.forEach((c) => bump(c.client_id, c.happened_at));
-
-      // 4) Atividade genérica registrada na ficha
-      const { data: acts, error: actErr } = await supabase
-        .from('clients')
-        .select('id, recent_activity_at')
-        .in('id', chunk)
-        .not('recent_activity_at', 'is', null);
-      if (actErr) throw actErr;
-      acts?.forEach((c) => bump(c.id, c.recent_activity_at));
-    }
 
     // 5) Alertas recentes para dedupe
     const since = new Date(Date.now() - DEDUPE_DAYS * 86400000).toISOString();
