@@ -61,7 +61,7 @@ import { linkifyText } from "@/lib/linkify";
 
 export interface TimelineEvent {
   id: string;
-  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response" | "sales" | "attendance";
+  type: "message" | "roi" | "risk" | "recommendation" | "session" | "comment" | "field_change" | "life_event" | "financial" | "followup" | "form_response" | "sales" | "attendance" | "checkin";
   title: string;
   description?: string;
   timestamp: string;
