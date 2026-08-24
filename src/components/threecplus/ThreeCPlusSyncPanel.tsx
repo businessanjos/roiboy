@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, RefreshCw, Trash2, KeyRound } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
