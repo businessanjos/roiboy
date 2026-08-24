@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check } from "lucide-react";
+import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { EducationSelect } from "@/components/client/EducationSelect";
 
@@ -299,8 +299,8 @@ export default function MedicalClients() {
               </TableHeader>
               <TableBody>
                 {filtered.map((c) => (
-                  <>
-                  <TableRow key={c.id}>
+                  <Fragment key={c.id}>
+                  <TableRow>
                     <TableCell className="font-medium">
                       <button
                         type="button"
@@ -386,7 +386,7 @@ export default function MedicalClients() {
                     </TableCell>
                   </TableRow>
                   {expanded[c.id] && (
-                    <TableRow key={`${c.id}-details`} className="bg-muted/30 hover:bg-muted/30">
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
                       <TableCell colSpan={5} className="p-4">
                         <div className="space-y-4">
                           <div>
@@ -427,7 +427,7 @@ export default function MedicalClients() {
                       </TableCell>
                     </TableRow>
                   )}
-                  </>
+                  </Fragment>
                 ))}
 
               </TableBody>
