@@ -299,8 +299,21 @@ export default function MedicalClients() {
               </TableHeader>
               <TableBody>
                 {filtered.map((c) => (
+                  <>
                   <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-left hover:text-primary transition-colors"
+                        onClick={() => setExpanded((p) => ({ ...p, [c.id]: !p[c.id] }))}
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground transition-transform ${expanded[c.id] ? "rotate-180" : ""}`}
+                        />
+                        {c.full_name}
+                      </button>
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {c.products.map((p) => (
