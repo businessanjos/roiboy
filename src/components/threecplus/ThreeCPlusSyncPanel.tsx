@@ -61,6 +61,11 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
   const [tokenInput, setTokenInput] = useState("");
   const [userInput, setUserInput] = useState<string>("none");
   const [saving, setSaving] = useState(false);
+  const [adminConfigured, setAdminConfigured] = useState(false);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [savingAdmin, setSavingAdmin] = useState(false);
+
 
   const load = useCallback(async () => {
     if (!currentUser?.account_id) return;
