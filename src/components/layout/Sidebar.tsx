@@ -508,8 +508,25 @@ export function MobileHeader() {
   );
 }
 
+const SIDEBAR_COLLAPSED_KEY = "sidebar_collapsed";
+
 export function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState<boolean>(() => {
+    try {
+      return localStorage.getItem(SIDEBAR_COLLAPSED_KEY) === "1";
+    } catch {
+      return false;
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(SIDEBAR_COLLAPSED_KEY, collapsed ? "1" : "0");
+    } catch {
+      /* ignore */
+    }
+  }, [collapsed]);
+
   const isMobile = useIsMobile();
   const { currentSector } = useSector();
   const location = useLocation();
