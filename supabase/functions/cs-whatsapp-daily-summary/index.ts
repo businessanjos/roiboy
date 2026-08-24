@@ -8,9 +8,8 @@ const corsHeaders = {
 interface MessageRow {
   client_id: string;
   direction: string | null;
-  content_text: string | null;
+  content: string | null;
   sent_at: string;
-  is_group: boolean | null;
 }
 
 /**
@@ -36,25 +35,56 @@ Deno.serve(async (req) => {
     const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
     const since = new Date(Date.now() - hours * 3600_000).toISOString();
 
-    let query = supabase
-      .from("message_events")
-      .select("client_id, direction, content_text, sent_at, is_group")
-      .gte("sent_at", since)
+    // Conversas individuais (não grupos) já vinculadas a um cliente
+    let convQuery = supabase
+      .from("zapp_conversations")
+      .select("id, client_id")
       .not("client_id", "is", null)
-      .order("sent_at", { ascending: true })
-      .limit(5000);
-    if (clientFilter) query = query.eq("client_id", clientFilter);
+      .eq("is_group", false)
+      .gte("last_message_at", since)
+      .limit(2000);
+    if (clientFilter) convQuery = convQuery.eq("client_id", clientFilter);
 
-    const { data: messages, error: msgErr } = await query;
-    if (msgErr) throw msgErr;
+    const { data: conversations, error: convErr } = await convQuery;
+    if (convErr) throw convErr;
+
+    const convToClient = new Map<string, string>();
+    for (const c of (conversations || []) as any[]) convToClient.set(c.id, c.client_id);
 
     const byClient = new Map<string, MessageRow[]>();
-    for (const m of (messages || []) as MessageRow[]) {
-      if (m.is_group) continue;
-      if (!m.content_text || m.content_text.trim().length < 2) continue;
-      const list = byClient.get(m.client_id) || [];
-      list.push(m);
-      byClient.set(m.client_id, list);
+    const convIds = [...convToClient.keys()];
+
+    for (let i = 0; i < convIds.length; i += 100) {
+      const chunk = convIds.slice(i, i + 100);
+      const { data: messages, error: msgErr } = await supabase
+        .from("zapp_messages")
+        .select("zapp_conversation_id, direction, content, transcription, sent_at, is_deleted")
+        .in("zapp_conversation_id", chunk)
+        .gte("sent_at", since)
+        .order("sent_at", { ascending: true })
+        .limit(5000);
+      if (msgErr) throw msgErr;
+
+      for (const m of (messages || []) as any[]) {
+        if (m.is_deleted) continue;
+        const text: string = (m.content || m.transcription || "").trim();
+        if (text.length < 2) continue;
+        const clientId = convToClient.get(m.zapp_conversation_id);
+        if (!clientId) continue;
+        const list = byClient.get(clientId) || [];
+        list.push({
+          client_id: clientId,
+          direction: m.direction === "inbound" ? "client_to_team" : "team_to_client",
+          content: text,
+          sent_at: m.sent_at,
+        });
+        byClient.set(clientId, list);
+      }
+    }
+
+    for (const [k, v] of byClient) {
+      v.sort((a, b) => new Date(a.sent_at).getTime() - new Date(b.sent_at).getTime());
+      byClient.set(k, v);
     }
 
     let created = 0;
@@ -99,7 +129,7 @@ Deno.serve(async (req) => {
           .slice(-60)
           .map(
             (m) =>
-              `${m.direction === "client_to_team" ? "Cliente" : "Consultor"}: ${(m.content_text || "").slice(0, 400)}`
+              `${m.direction === "client_to_team" ? "Cliente" : "Consultor"}: ${(m.content || "").slice(0, 400)}`
           )
           .join("\n");
 
