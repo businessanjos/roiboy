@@ -41,6 +41,8 @@ export default function MedicalClients() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
 
   const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
     setSavingId(id);
