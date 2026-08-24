@@ -292,6 +292,7 @@ const App = () => (
                             <Route path="/dashboard/cadeira-dupla" element={<DoubleChairList />} />
                             <Route path="/clients" element={<Clients />} />
                             <Route path="/clients/medicos" element={<MedicalClients />} />
+                            <Route path="/clients/checkpoints" element={<ClientCheckpoints />} />
                             <Route path="/vips" element={<VipClients />} />
                             <Route path="/clients/new" element={<Clients />} />
                             <Route path="/clients/:id" element={<ClientDetail />} />
