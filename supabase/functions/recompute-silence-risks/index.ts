@@ -17,11 +17,18 @@ Deno.serve(async (req) => {
 
   try {
     // 1) Clientes ativos
-    const { data: clients, error: clientsErr } = await supabase
-      .from('clients')
-      .select('id, account_id, status')
-      .in('status', ['active', 'churn_risk', 'paused']);
-    if (clientsErr) throw clientsErr;
+    const clients: { id: string; account_id: string; status: string }[] = [];
+    for (let page = 0; ; page++) {
+      const { data, error: clientsErr } = await supabase
+        .from('clients')
+        .select('id, account_id, status')
+        .in('status', ['active', 'churn_risk', 'paused'])
+        .range(page * 1000, page * 1000 + 999);
+      if (clientsErr) throw clientsErr;
+      if (!data?.length) break;
+      clients.push(...(data as typeof clients));
+      if (data.length < 1000) break;
+    }
     if (!clients?.length) {
       return json({ ok: true, evaluated: 0, created: 0 });
     }
