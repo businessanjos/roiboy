@@ -91,6 +91,12 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
     setState((stateRes.data as SyncState) || null);
     setUsers((usersRes.data as { id: string; name: string }[]) || []);
     setLoading(false);
+
+    const { data: statusData } = await supabase.functions.invoke("threecplus-register-agent", {
+      body: { action: "status" },
+    });
+    setAdminConfigured(!!statusData?.admin_token_configured);
+
   }, [currentUser?.account_id]);
 
   useEffect(() => {
