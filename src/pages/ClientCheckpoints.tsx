@@ -34,6 +34,7 @@ import {
 import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
 import { ClientCheckinsReportDialog } from "@/components/client/ClientCheckinsReportDialog";
 import {
