@@ -34,6 +34,7 @@ import {
 import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
 import { ClientCheckinsReportDialog } from "@/components/client/ClientCheckinsReportDialog";
 import {
@@ -56,15 +57,17 @@ type FilterKey = "todos" | CheckpointStatus;
 
 export default function ClientCheckpoints() {
   const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
-  const [search, setSearch] = useState("");
-  const [filter, setFilter] = useState<FilterKey>("todos");
+  const [search, setSearch] = usePersistedFilter<string>("checkpoints", "search", "");
+  const [filter, setFilter] = usePersistedFilter<FilterKey>("checkpoints", "status", "todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
   const [report, setReport] = useState<{ id: string; name: string } | null>(null);
 
   // Filtros de período/canal usados nos relatórios e exportações
-  const [from, setFrom] = useState("");
-  const [to, setTo] = useState("");
-  const [channel, setChannel] = useState("todos");
+  // (persistidos para sobreviver à ida e volta da ficha do cliente)
+  const [from, setFrom] = usePersistedFilter<string>("checkpoints", "from", "");
+  const [to, setTo] = usePersistedFilter<string>("checkpoints", "to", "");
+  const [channel, setChannel] = usePersistedFilter<string>("checkpoints", "channel", "todos");
+
 
   const detailed = useCheckinsReport({ from: from || null, to: to || null, channel, enabled: true });
 
