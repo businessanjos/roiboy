@@ -293,6 +293,68 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+              Token de administrador
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {adminConfigured
+                ? "Importação única: todas as ligações da conta são sincronizadas, sem cadastrar agente por agente."
+                : "Com um token de administrador da 3C Plus, o ROY importa todas as ligações de uma vez."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {adminConfigured && (
+              <Badge variant="default" className="text-[10px]">
+                Ativo
+              </Badge>
+            )}
+            <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {adminConfigured ? "Substituir token" : "Adicionar token"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Token de administrador da 3C Plus</DialogTitle>
+                  <DialogDescription>
+                    Cole um token de API de um usuário com perfil de administrador. Ele libera o relatório
+                    global da conta e substitui a necessidade de cadastrar o token de cada agente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tc-admin-token">Token de administrador</Label>
+                  <Input
+                    id="tc-admin-token"
+                    value={adminTokenInput}
+                    onChange={(e) => setAdminTokenInput(e.target.value)}
+                    placeholder="ex.: ij1wUgu9thSZ..."
+                    autoComplete="off"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveAdminToken} disabled={savingAdmin}>
+                    {savingAdmin && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                    Validar e salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {adminConfigured && (
+              <Button variant="ghost" size="sm" onClick={handleClearAdminToken}>
+                Remover
+              </Button>
+            )}
+          </div>
+        </div>
+
+
         {state?.last_error && (
           <p className="text-xs text-destructive">{state.last_error}</p>
         )}
