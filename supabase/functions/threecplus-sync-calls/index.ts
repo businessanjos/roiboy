@@ -256,14 +256,21 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("status", "connected")
       .maybeSingle();
 
-    if (!integration?.config?.api_token) {
+    const adminToken: string | null =
+      typeof integration?.config?.admin_api_token === "string" && integration.config.admin_api_token.trim()
+        ? integration.config.admin_api_token.trim()
+        : null;
+
+    if (!integration?.config?.api_token && !adminToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
       return { error: "Integração 3C Plus não configurada", synced: 0 };
     }
     const baseDomain = getBaseDomain(integration.config.domain || null);
 
     // Semeia o agente dono do token da conta, se ainda não existir
-    await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
+    if (integration.config.api_token) {
+      await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
+    }
 
     const { data: agents } = await supabaseAdmin
       .from("threecplus_agents")
@@ -271,18 +278,19 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("account_id", accountId);
 
     const withToken = (agents || []).filter((a: any) => a.is_tracked && a.api_token);
-    if (withToken.length === 0) {
+    if (withToken.length === 0 && !adminToken) {
       await finish({
         status: "error",
         last_error:
-          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de API de cada agente para sincronizar as ligações.",
+          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de administrador ou o token de API de cada agente.",
       });
       return {
         error:
-          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de API de cada agente para sincronizar as ligações.",
+          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de administrador ou o token de API de cada agente.",
         synced: 0,
       };
     }
+
 
     // Janela de busca
     const days = Math.min(Math.max(Number(payload?.days) || 0, 0), 365);
