@@ -279,7 +279,7 @@ export default function ClientCheckpoints() {
                   {filtered.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell className="font-medium">
-                        <Link to={`/clients/${r.client_id}?from=checkpoints`} className="hover:underline">
+                        <Link to={`/clients/${r.client_id}${clientDetailSearch}`} className="hover:underline">
                           {r.full_name}
                         </Link>
                       </TableCell>
