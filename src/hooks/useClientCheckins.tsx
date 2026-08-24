@@ -90,7 +90,7 @@ export function useCheckpointsPanel() {
           .from("clients")
           .select("id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name)")
           .eq("account_id", currentUser!.account_id)
-          .in("status", ["active", "churn_risk", "paused"])
+          .eq("status", "active")
           .order("full_name")
           .range(from, from + PAGE - 1);
         if (error) throw error;
