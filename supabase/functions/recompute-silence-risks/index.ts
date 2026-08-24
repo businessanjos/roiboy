@@ -38,13 +38,20 @@ Deno.serve(async (req) => {
     // 2) Última interação viva por cliente:
     //    max(zapp_messages.sent_at) + max(client_checkins.happened_at) + clients.recent_activity_at
     const lastByClient = new Map<string, string>();
-    const { data: activity, error: actErr } = await supabase.rpc('client_last_live_activity');
-    if (actErr) throw actErr;
-    (activity ?? []).forEach((row: { client_id: string; last_at: string | null }) => {
-      if (!row.last_at) return;
-      if (new Date(row.last_at).getFullYear() < 2000) return; // 'epoch' = sem histórico
-      lastByClient.set(row.client_id, row.last_at);
-    });
+    for (let page = 0; ; page++) {
+      const { data: activity, error: actErr } = await supabase
+        .rpc('client_last_live_activity')
+        .range(page * 1000, page * 1000 + 999);
+      if (actErr) throw actErr;
+      const rowsPage = (activity ?? []) as { client_id: string; last_at: string | null }[];
+      rowsPage.forEach((row) => {
+        if (!row.last_at) return;
+        if (new Date(row.last_at).getFullYear() < 2000) return; // 'epoch' = sem histórico
+        lastByClient.set(row.client_id, row.last_at);
+      });
+      if (rowsPage.length < 1000) break;
+    }
+
 
 
     // 5) Alertas recentes para dedupe
