@@ -16,10 +16,14 @@ export async function isRenewalDeal(
 
   const { data: freshDeal } = await supabase
     .from("deals")
-    .select("is_renewal")
+    .select("is_renewal, source, tags")
     .eq("id", dealId)
     .maybeSingle();
-  if ((freshDeal as { is_renewal?: boolean } | null)?.is_renewal) return true;
+  const d = freshDeal as { is_renewal?: boolean; source?: string | null; tags?: string[] | null } | null;
+  if (d?.is_renewal) return true;
+  if (d?.source === "contract_renewal") return true;
+  if (Array.isArray(d?.tags) && d!.tags!.some((t) => String(t).toLowerCase().includes("renova"))) return true;
+
 
   const { data: itemVenda } = await supabase
     .from("deal_field_values")
