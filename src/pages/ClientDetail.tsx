@@ -1908,23 +1908,34 @@ export default function ClientDetail() {
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to="/clients">Customer Success</Link>
+              <Link to="/clients" title="Voltar para Customer Success">
+                Customer Success
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={returnPath}>{returnLabel}</Link>
+              <Link to={returnPath} title={`Voltar para ${returnLabel} (filtros preservados)`}>
+                {returnLabel}
+              </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
           <BreadcrumbSeparator />
           <BreadcrumbItem>
-            <BreadcrumbPage className="truncate max-w-[200px] sm:max-w-[320px]">
-              {client.full_name}
-            </BreadcrumbPage>
+            <BreadcrumbLink asChild>
+              <Link
+                to={`/clients/${client.id}${fromContext ? `?from=${fromContext}` : ""}`}
+                className="truncate max-w-[200px] sm:max-w-[320px] font-medium text-foreground"
+                aria-current="page"
+              >
+                {client.full_name}
+              </Link>
+            </BreadcrumbLink>
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
