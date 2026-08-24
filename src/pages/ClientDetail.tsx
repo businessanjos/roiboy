@@ -15,6 +15,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientCheckinsCard } from "@/components/client/ClientCheckinsCard";
 import { getChannelLabel as getCheckinChannelLabel } from "@/lib/cs/checkins";
