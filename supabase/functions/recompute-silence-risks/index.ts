@@ -33,7 +33,7 @@ Deno.serve(async (req) => {
       return json({ ok: true, evaluated: 0, created: 0 });
     }
 
-    const clientIds = clients.map((c) => c.id);
+    
 
     // 2) Última interação viva por cliente:
     //    max(zapp_messages.sent_at) + max(client_checkins.happened_at) + clients.recent_activity_at
