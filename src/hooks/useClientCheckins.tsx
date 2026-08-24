@@ -134,3 +134,67 @@ export function useCheckpointsPanel() {
     },
   });
 }
+
+export interface CheckinsReportFilters {
+  from?: string | null; // yyyy-MM-dd
+  to?: string | null; // yyyy-MM-dd
+  channel?: string | null; // "todos" | CheckinChannel
+  kind?: string | null; // "todos" | CheckinKind
+  clientId?: string | null;
+  enabled?: boolean;
+}
+
+export interface CheckinReportRow extends ClientCheckin {
+  client_name: string | null;
+  consultant_name: string | null;
+}
+
+/** Todos os check-ins da conta no período/canal escolhido (para relatório e CSV). */
+export function useCheckinsReport(filters: CheckinsReportFilters) {
+  const { currentUser } = useCurrentUser();
+  const { from, to, channel, kind, clientId, enabled = true } = filters;
+
+  return useQuery({
+    queryKey: [
+      "checkins-report",
+      currentUser?.account_id,
+      from || null,
+      to || null,
+      channel || "todos",
+      kind || "todos",
+      clientId || null,
+    ],
+    enabled: enabled && !!currentUser?.account_id,
+    queryFn: async (): Promise<CheckinReportRow[]> => {
+      const PAGE = 1000;
+      const out: any[] = [];
+      for (let page = 0; page < 20; page++) {
+        let q = supabase
+          .from("client_checkins")
+          .select(
+            "*, clients(full_name, responsible:users!clients_responsible_user_id_fkey(name)), users(name, avatar_url)"
+          )
+          .eq("account_id", currentUser!.account_id)
+          .order("happened_at", { ascending: false })
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+
+        if (from) q = q.gte("happened_at", `${from}T00:00:00`);
+        if (to) q = q.lte("happened_at", `${to}T23:59:59`);
+        if (channel && channel !== "todos") q = q.eq("channel", channel);
+        if (kind && kind !== "todos") q = q.eq("kind", kind);
+        if (clientId) q = q.eq("client_id", clientId);
+
+        const { data, error } = await q;
+        if (error) throw error;
+        out.push(...(data || []));
+        if (!data || data.length < PAGE) break;
+      }
+
+      return out.map((r: any) => ({
+        ...r,
+        client_name: r.clients?.full_name ?? null,
+        consultant_name: r.users?.name ?? r.clients?.responsible?.name ?? null,
+      })) as CheckinReportRow[];
+    },
+  });
+}
