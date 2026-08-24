@@ -61,6 +61,7 @@ import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
 import { royZappSectorLabel } from "@/lib/royZappSectors";
+import { isClientDetailRoute } from "@/lib/navigation/clientRoutes";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
