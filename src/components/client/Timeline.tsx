@@ -218,6 +218,16 @@ const getEventConfig = (event: TimelineEvent) => {
         textColor: "text-info",
         label: "Presença",
       };
+    case "checkin": {
+      const isCheckpoint = event.metadata?.category === "checkpoint";
+      const fromClient = event.metadata?.direction === "client_to_team";
+      return {
+        icon: <MessageSquare className="h-4 w-4" />,
+        bgColor: isCheckpoint ? "bg-primary" : fromClient ? "bg-info" : "bg-muted-foreground",
+        textColor: isCheckpoint ? "text-primary" : fromClient ? "text-info" : "text-muted-foreground",
+        label: isCheckpoint ? "Checkpoint" : "Contato",
+      };
+    }
     default:
       return {
         icon: <MessageSquare className="h-4 w-4" />,
