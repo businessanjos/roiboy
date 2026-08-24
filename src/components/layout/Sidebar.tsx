@@ -61,6 +61,7 @@ import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
 import { royZappSectorLabel } from "@/lib/royZappSectors";
+import { isClientDetailRoute } from "@/lib/navigation/clientRoutes";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
@@ -237,12 +238,8 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   // Route-specific sidebar navigation
   const isOnSettings = location.pathname === "/settings";
   const isOnAdmin = location.pathname === "/admin";
-  const clientDetailMatch = (() => {
-    const match = location.pathname.match(/^\/clients\/([^/]+)$/);
-    if (!match) return null;
-    const reserved = new Set(["medicos", "checkpoints", "new"]);
-    return reserved.has(match[1]) ? null : match;
-  })();
+  const clientDetailMatch = isClientDetailRoute(location.pathname);
+
 
   if (isOnSettings) {
     return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
