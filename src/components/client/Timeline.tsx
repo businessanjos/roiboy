@@ -562,7 +562,24 @@ function SystemEventItem({
                   </span>
                 </>
               )}
-              {event.metadata?.source && (
+              {event.type === "checkin" && event.metadata?.source === "ai_whatsapp" && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <Badge variant="outline" className="text-[10px] h-4 gap-1 border-primary/30 text-primary">
+                    <Sparkles className="h-2.5 w-2.5" />
+                    RoyZapp CS · resumo por IA
+                  </Badge>
+                </>
+              )}
+              {event.type === "checkin" && event.metadata?.source === "manual" && (
+                <>
+                  <span className="text-muted-foreground">·</span>
+                  <span className="text-xs text-muted-foreground">
+                    Registro manual do CS
+                  </span>
+                </>
+              )}
+              {event.type !== "checkin" && event.metadata?.source && (
                 <>
                   <span className="text-muted-foreground">·</span>
                   <span className="text-xs text-muted-foreground">
@@ -572,6 +589,7 @@ function SystemEventItem({
                   </span>
                 </>
               )}
+
             </div>
           </div>
           <div className="flex items-center gap-2">
