@@ -34,12 +34,6 @@ export default function MedicalClients() {
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const EDUCATION_OPTIONS = [
-    "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
-    "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
-    "Educador Físico","Esteticista","Outro",
-  ];
-
   const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
     setSavingId(id);
     const { error } = await supabase.from("clients").update(patch).eq("id", id);
@@ -48,12 +42,14 @@ export default function MedicalClients() {
     } else {
       setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } as MedicalClient : c)));
       toast.success("Salvo");
+      // A classificação depende da ficha — recarrega para refletir entradas/saídas da lista.
+      void load({ silent: true });
     }
     setSavingId(null);
   };
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     const { data: session } = await supabase.auth.getSession();
     const token = session.session?.access_token;
     if (!token) {
@@ -66,16 +62,44 @@ export default function MedicalClients() {
     });
     if (error) {
       console.error(error);
-      setClients([]);
+      if (!opts?.silent) setClients([]);
     } else {
       setClients(data?.clients ?? []);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+
+  // Sincronização automática: a ficha do cliente é a fonte única.
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleReload = useCallback(() => {
+    if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    reloadTimer.current = setTimeout(() => load({ silent: true }), 800);
+  }, [load]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("medical-clients-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_field_values" }, scheduleReload)
+      .subscribe();
+
+    const onFocus = () => load({ silent: true });
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") onFocus();
+    });
+
+    return () => {
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [load, scheduleReload]);
+
 
   const products = useMemo(() => {
     const s = new Set<string>();
