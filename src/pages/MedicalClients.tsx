@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -10,6 +10,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check } from "lucide-react";
 import { toast } from "sonner";
+import { EducationSelect } from "@/components/client/EducationSelect";
+
 
 type Evidence = { source: string; field?: string; text: string };
 type MedicalClient = {
@@ -32,12 +34,6 @@ export default function MedicalClients() {
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
 
-  const EDUCATION_OPTIONS = [
-    "Médico","Dentista","Nutricionista","Fisioterapeuta","Psicólogo","Veterinário",
-    "Biomédico","Enfermeiro","Farmacêutico","Fonoaudiólogo","Terapeuta Ocupacional",
-    "Educador Físico","Esteticista","Outro",
-  ];
-
   const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
     setSavingId(id);
     const { error } = await supabase.from("clients").update(patch).eq("id", id);
@@ -46,12 +42,14 @@ export default function MedicalClients() {
     } else {
       setClients((prev) => prev.map((c) => (c.id === id ? { ...c, ...patch } as MedicalClient : c)));
       toast.success("Salvo");
+      // A classificação depende da ficha — recarrega para refletir entradas/saídas da lista.
+      void load({ silent: true });
     }
     setSavingId(null);
   };
 
-  const load = async () => {
-    setLoading(true);
+  const load = useCallback(async (opts?: { silent?: boolean }) => {
+    if (!opts?.silent) setLoading(true);
     const { data: session } = await supabase.auth.getSession();
     const token = session.session?.access_token;
     if (!token) {
@@ -64,16 +62,44 @@ export default function MedicalClients() {
     });
     if (error) {
       console.error(error);
-      setClients([]);
+      if (!opts?.silent) setClients([]);
     } else {
       setClients(data?.clients ?? []);
     }
     setLoading(false);
-  };
+  }, []);
 
   useEffect(() => {
     load();
-  }, []);
+  }, [load]);
+
+  // Sincronização automática: a ficha do cliente é a fonte única.
+  const reloadTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const scheduleReload = useCallback(() => {
+    if (reloadTimer.current) clearTimeout(reloadTimer.current);
+    reloadTimer.current = setTimeout(() => load({ silent: true }), 800);
+  }, [load]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel("medical-clients-sync")
+      .on("postgres_changes", { event: "*", schema: "public", table: "clients" }, scheduleReload)
+      .on("postgres_changes", { event: "*", schema: "public", table: "client_field_values" }, scheduleReload)
+      .subscribe();
+
+    const onFocus = () => load({ silent: true });
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", () => {
+      if (document.visibilityState === "visible") onFocus();
+    });
+
+    return () => {
+      if (reloadTimer.current) clearTimeout(reloadTimer.current);
+      supabase.removeChannel(channel);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [load, scheduleReload]);
+
 
   const products = useMemo(() => {
     const s = new Set<string>();
@@ -148,7 +174,7 @@ export default function MedicalClients() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -281,24 +307,16 @@ export default function MedicalClients() {
                     </TableCell>
                     <TableCell className="text-sm min-w-[240px]">
                       <div className="space-y-1.5">
-                        <Select
-                          value={c.education || "none"}
+                        <EducationSelect
+                          value={c.education}
                           disabled={savingId === c.id}
-                          onValueChange={(v) =>
-                            updateClientField(c.id, { education: v === "none" ? null : v })
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não informado</SelectItem>
-                            {EDUCATION_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8 text-xs"
+                          placeholder="Formação"
+                          onChange={(v) => updateClientField(c.id, { education: v })}
+                        />
+
                         <Input
+                          key={`spec-${c.id}-${c.education_specialty ?? ""}`}
                           className="h-8 text-xs"
                           placeholder="Especialidade"
                           defaultValue={c.education_specialty ?? ""}
