@@ -15079,6 +15079,24 @@ export type Database = {
           },
         ]
       }
+      internal_cron_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       internal_messages: {
         Row: {
           audio_duration: number | null
