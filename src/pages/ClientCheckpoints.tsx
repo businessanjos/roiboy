@@ -29,7 +29,7 @@ import {
 type FilterKey = "todos" | CheckpointStatus;
 
 export default function ClientCheckpoints() {
-  const { data = [], isLoading, refetch } = useCheckpointsPanel();
+  const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
