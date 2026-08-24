@@ -307,23 +307,14 @@ export default function MedicalClients() {
                     </TableCell>
                     <TableCell className="text-sm min-w-[240px]">
                       <div className="space-y-1.5">
-                        <Select
-                          value={c.education || "none"}
+                        <EducationSelect
+                          value={c.education}
                           disabled={savingId === c.id}
-                          onValueChange={(v) =>
-                            updateClientField(c.id, { education: v === "none" ? null : v })
-                          }
-                        >
-                          <SelectTrigger className="h-8 text-xs">
-                            <SelectValue placeholder="Selecione" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">Não informado</SelectItem>
-                            {EDUCATION_OPTIONS.map((opt) => (
-                              <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                          className="h-8 text-xs"
+                          placeholder="Formação"
+                          onChange={(v) => updateClientField(c.id, { education: v })}
+                        />
+
                         <Input
                           className="h-8 text-xs"
                           placeholder="Especialidade"
