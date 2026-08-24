@@ -73,7 +73,11 @@ export interface CheckpointRow {
   last_summary: string | null;
 }
 
-/** Lista clientes ativos com a data do último checkpoint/contato. */
+/**
+ * Lista clientes realmente ativos (com contrato vigente) e a data do último
+ * checkpoint/contato. A coluna `clients.status` está defasada em muitos
+ * registros legados, por isso a base é o contrato ativo.
+ */
 export function useCheckpointsPanel() {
   const { currentUser } = useCurrentUser();
 
@@ -82,23 +86,35 @@ export function useCheckpointsPanel() {
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<CheckpointRow[]> => {
       // Paginação manual: o PostgREST corta em 1000 linhas por requisição.
-      const clients: any[] = [];
+      const byId = new Map<string, any>();
       const PAGE = 1000;
       for (let page = 0; page < 20; page++) {
         const from = page * PAGE;
         const { data, error } = await supabase
-          .from("clients")
-          .select("id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name)")
+          .from("client_contracts")
+          .select(
+            "client_id, client:clients!inner(id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name))",
+          )
           .eq("account_id", currentUser!.account_id)
           .eq("status", "active")
-          .order("full_name")
           .range(from, from + PAGE - 1);
         if (error) throw error;
-        clients.push(...(data || []));
+        for (const row of (data || []) as any[]) {
+          const c = row.client;
+          if (!c) continue;
+          const status = String(c.status || "");
+          if (status === "churned") continue;
+          if (!byId.has(c.id)) byId.set(c.id, c);
+        }
         if (!data || data.length < PAGE) break;
       }
 
+      const clients = Array.from(byId.values()).sort((a, b) =>
+        String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR"),
+      );
+
       if (clients.length === 0) return [];
+
 
       // Buscar check-ins por conta (não por lista de IDs: a URL estoura com
       // milhares de clientes e a requisição falha com 414).
