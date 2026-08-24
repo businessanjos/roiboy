@@ -51,6 +51,15 @@ export default function ClientCheckpoints() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
+  const [report, setReport] = useState<{ id: string; name: string } | null>(null);
+
+  // Filtros de período/canal usados nos relatórios e exportações
+  const [from, setFrom] = useState("");
+  const [to, setTo] = useState("");
+  const [channel, setChannel] = useState("todos");
+
+  const detailed = useCheckinsReport({ from: from || null, to: to || null, channel, enabled: true });
+
 
   const rows = useMemo(() => {
     return data
