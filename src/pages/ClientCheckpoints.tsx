@@ -71,6 +71,15 @@ export default function ClientCheckpoints() {
 
   const detailed = useCheckinsReport({ from: from || null, to: to || null, channel, enabled: true });
 
+  const clientDetailSearch = useMemo(() => {
+    const params = new URLSearchParams({ from: "checkpoints" });
+    if (from) params.set("period_from", from);
+    if (to) params.set("period_to", to);
+    if (channel && channel !== "todos") params.set("channel", channel);
+    return `?${params.toString()}`;
+  }, [from, to, channel]);
+
+
 
   const rows = useMemo(() => {
     return data
