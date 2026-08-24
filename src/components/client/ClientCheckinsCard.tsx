@@ -4,10 +4,11 @@ import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, Plus, Sparkles, ArrowDownLeft, ArrowUpRight, Loader2 } from "lucide-react";
+import { CalendarCheck, Plus, Sparkles, ArrowDownLeft, ArrowUpRight, Loader2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useClientCheckins } from "@/hooks/useClientCheckins";
 import { ClientCheckinDialog } from "./ClientCheckinDialog";
+import { ClientCheckinsReportDialog } from "./ClientCheckinsReportDialog";
 import {
   CHECKPOINT_STATUS_LABELS,
   CHECKPOINT_STATUS_STYLES,
@@ -24,6 +25,7 @@ interface Props {
 export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const { data: checkins = [], isLoading, refetch } = useClientCheckins(clientId);
   const [open, setOpen] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
 
   const lastCheckpoint = useMemo(
     () => checkins.find((c) => c.kind === "checkpoint")?.happened_at ?? null,
@@ -48,6 +50,10 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
             <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[state.status])}>
               {CHECKPOINT_STATUS_LABELS[state.status]}
             </Badge>
+            <Button size="sm" variant="outline" onClick={() => setReportOpen(true)}>
+              <FileText className="h-4 w-4 mr-1.5" />
+              Relatório
+            </Button>
             <Button size="sm" onClick={() => setOpen(true)}>
               <Plus className="h-4 w-4 mr-1.5" />
               Registrar contato
@@ -120,6 +126,13 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
           refetch();
           onSaved?.();
         }}
+      />
+
+      <ClientCheckinsReportDialog
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        clientId={clientId}
+        clientName={clientName || "Cliente"}
       />
     </Card>
   );
