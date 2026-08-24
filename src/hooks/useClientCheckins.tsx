@@ -81,24 +81,35 @@ export function useCheckpointsPanel() {
     queryKey: ["checkpoints-panel", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<CheckpointRow[]> => {
-      const { data: clients, error } = await supabase
-        .from("clients")
-        .select("id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name)")
-        .eq("account_id", currentUser!.account_id)
-        .in("status", ["active", "churn_risk", "paused"])
-        .order("full_name");
-      if (error) throw error;
+      // Paginação manual: o PostgREST corta em 1000 linhas por requisição.
+      const clients: any[] = [];
+      const PAGE = 1000;
+      for (let page = 0; page < 20; page++) {
+        const from = page * PAGE;
+        const { data, error } = await supabase
+          .from("clients")
+          .select("id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name)")
+          .eq("account_id", currentUser!.account_id)
+          .in("status", ["active", "churn_risk", "paused"])
+          .order("full_name")
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        clients.push(...(data || []));
+        if (!data || data.length < PAGE) break;
+      }
 
-      const ids = (clients || []).map((c: any) => c.id);
-      if (ids.length === 0) return [];
+      if (clients.length === 0) return [];
 
+      // Buscar check-ins por conta (não por lista de IDs: a URL estoura com
+      // milhares de clientes e a requisição falha com 414).
       const { data: checkins, error: cErr } = await supabase
         .from("client_checkins")
         .select("client_id, happened_at, kind, summary")
-        .in("client_id", ids)
+        .eq("account_id", currentUser!.account_id)
         .order("happened_at", { ascending: false })
         .limit(5000);
       if (cErr) throw cErr;
+
 
       const lastCheckpoint = new Map<string, string>();
       const lastContact = new Map<string, { at: string; summary: string }>();

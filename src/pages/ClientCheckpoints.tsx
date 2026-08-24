@@ -29,7 +29,7 @@ import {
 type FilterKey = "todos" | CheckpointStatus;
 
 export default function ClientCheckpoints() {
-  const { data = [], isLoading, refetch } = useCheckpointsPanel();
+  const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
@@ -118,10 +118,15 @@ export default function ClientCheckpoints() {
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
             </div>
+          ) : error ? (
+            <p className="text-sm text-destructive py-8 text-center">
+              Não foi possível carregar os checkpoints: {(error as Error).message}
+            </p>
           ) : filtered.length === 0 ? (
             <p className="text-sm text-muted-foreground py-8 text-center">
               Nenhum cliente encontrado com esse filtro.
             </p>
+
           ) : (
             <div className="overflow-x-auto">
               <Table>
