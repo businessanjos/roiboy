@@ -15079,6 +15079,24 @@ export type Database = {
           },
         ]
       }
+      internal_cron_tokens: {
+        Row: {
+          created_at: string
+          name: string
+          token: string
+        }
+        Insert: {
+          created_at?: string
+          name: string
+          token?: string
+        }
+        Update: {
+          created_at?: string
+          name?: string
+          token?: string
+        }
+        Relationships: []
+      }
       internal_messages: {
         Row: {
           audio_duration: number | null
@@ -23817,10 +23835,73 @@ export type Database = {
           },
         ]
       }
+      threecplus_agents: {
+        Row: {
+          account_id: string
+          api_token: string | null
+          created_at: string
+          external_agent_id: string
+          external_email: string | null
+          external_name: string | null
+          id: string
+          is_tracked: boolean
+          last_synced_at: string | null
+          token_status: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          account_id: string
+          api_token?: string | null
+          created_at?: string
+          external_agent_id: string
+          external_email?: string | null
+          external_name?: string | null
+          id?: string
+          is_tracked?: boolean
+          last_synced_at?: string | null
+          token_status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          api_token?: string | null
+          created_at?: string
+          external_agent_id?: string
+          external_email?: string | null
+          external_name?: string | null
+          id?: string
+          is_tracked?: boolean
+          last_synced_at?: string | null
+          token_status?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threecplus_agents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_agents_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       threecplus_call_logs: {
         Row: {
           account_id: string
           acw_seconds: number | null
+          agent_email: string | null
+          agent_external_id: string | null
+          agent_name: string | null
           call_id: string | null
           call_type: string
           campaign_id: string | null
@@ -23842,12 +23923,15 @@ export type Database = {
           started_at: string | null
           status: string
           updated_at: string
-          user_id: string
+          user_id: string | null
           wait_seconds: number | null
         }
         Insert: {
           account_id: string
           acw_seconds?: number | null
+          agent_email?: string | null
+          agent_external_id?: string | null
+          agent_name?: string | null
           call_id?: string | null
           call_type?: string
           campaign_id?: string | null
@@ -23869,12 +23953,15 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           wait_seconds?: number | null
         }
         Update: {
           account_id?: string
           acw_seconds?: number | null
+          agent_email?: string | null
+          agent_external_id?: string | null
+          agent_name?: string | null
           call_id?: string | null
           call_type?: string
           campaign_id?: string | null
@@ -23896,7 +23983,7 @@ export type Database = {
           started_at?: string | null
           status?: string
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           wait_seconds?: number | null
         }
         Relationships: [
@@ -23950,6 +24037,45 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      threecplus_sync_state: {
+        Row: {
+          account_id: string
+          calls_synced: number
+          created_at: string
+          is_paused: boolean
+          last_error: string | null
+          last_run_at: string | null
+          last_synced_at: string | null
+          lease_until: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          calls_synced?: number
+          created_at?: string
+          is_paused?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_synced_at?: string | null
+          lease_until?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          calls_synced?: number
+          created_at?: string
+          is_paused?: boolean
+          last_error?: string | null
+          last_run_at?: string | null
+          last_synced_at?: string | null
+          lease_until?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       tiktok_credentials: {
         Row: {

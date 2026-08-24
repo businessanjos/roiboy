@@ -161,4 +161,5 @@
 - [Clinica Ryka Integration](mem://integrations/clinica-ryka-sync-v2-pt) — Bidirectional sync
 - [Ryka Onboarding Provisioning](mem://integrations/clinica-ryka-onboarding-provisioning-pt) — Botão no ClientOnboardingDrawer
 - [3C Plus Telephony](mem://integrations/telephony/3c-plus-v3-pt) — UI integration
+- [3C Plus Calls Sync](mem://integrations/telephony/3c-plus-calls-sync-pt) — Import por agente via token individual (`/api/v1/agent/calls`), cron horário e painel em Telefonia
 - [Ever IA Lead Sync](mem://integrations/ever-ia/api-lead-sync-v1-pt) — Pipeline ingestion
