@@ -281,14 +281,24 @@ export default function ClientCheckpoints() {
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={() => setTarget({ id: r.client_id, name: r.full_name })}
-                        >
-                          <Plus className="h-3.5 w-3.5 mr-1" />
-                          Registrar
-                        </Button>
+                        <div className="flex justify-end gap-2">
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() => setReport({ id: r.client_id, name: r.full_name })}
+                          >
+                            <FileText className="h-3.5 w-3.5 mr-1" />
+                            Relatório
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => setTarget({ id: r.client_id, name: r.full_name })}
+                          >
+                            <Plus className="h-3.5 w-3.5 mr-1" />
+                            Registrar
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -305,9 +315,22 @@ export default function ClientCheckpoints() {
           onOpenChange={(o) => !o && setTarget(null)}
           clientId={target.id}
           clientName={target.name}
-          onSaved={() => refetch()}
+          onSaved={() => { refetch(); detailed.refetch(); }}
         />
       )}
+
+      {report && (
+        <ClientCheckinsReportDialog
+          open={!!report}
+          onOpenChange={(o) => !o && setReport(null)}
+          clientId={report.id}
+          clientName={report.name}
+          defaultFrom={from || null}
+          defaultTo={to || null}
+          defaultChannel={channel}
+        />
+      )}
+
     </div>
   );
 }
