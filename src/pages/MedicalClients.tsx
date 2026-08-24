@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent } from "@/components/ui/card";
@@ -8,22 +8,30 @@ import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check } from "lucide-react";
+import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { EducationSelect } from "@/components/client/EducationSelect";
 
 
 type Evidence = { source: string; field?: string; text: string };
+type FieldEntry = { key: string; label: string; value: string };
 type MedicalClient = {
   id: string;
   full_name: string;
   logo_url: string | null;
   education: string | null;
   education_specialty: string | null;
+  status?: string | null;
+  phone_e164?: string | null;
+  city?: string | null;
+  state?: string | null;
   products: string[];
   productColors: Record<string, string>;
   evidence: Evidence[];
+  recordFields?: FieldEntry[];
+  customFields?: FieldEntry[];
 };
+
 
 export default function MedicalClients() {
   const [loading, setLoading] = useState(true);
@@ -33,6 +41,8 @@ export default function MedicalClients() {
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+
 
   const updateClientField = async (id: string, patch: { education?: string | null; education_specialty?: string | null }) => {
     setSavingId(id);
@@ -128,7 +138,10 @@ export default function MedicalClients() {
         c.education_specialty ?? "",
         ...c.products,
         ...c.evidence.map((e) => `${e.field ?? ""} ${e.text}`),
+        ...(c.recordFields ?? []).map((f) => `${f.label} ${f.value}`),
+        ...(c.customFields ?? []).map((f) => `${f.label} ${f.value}`),
       ]
+
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
@@ -137,13 +150,15 @@ export default function MedicalClients() {
 
   const exportCsv = () => {
     const rows = [
-      ["Nome", "Produtos", "Formação", "Especialidade", "Evidências"],
+      ["Nome", "Produtos", "Formação", "Especialidade", "Evidências", "Ficha do cliente", "Campos personalizados"],
       ...filtered.map((c) => [
         c.full_name,
         c.products.join(" | "),
         c.education ?? "",
         c.education_specialty ?? "",
         c.evidence.map((e) => `[${e.source}${e.field ? ` · ${e.field}` : ""}] ${e.text}`).join(" || "),
+        (c.recordFields ?? []).map((f) => `${f.label}: ${f.value}`).join(" || "),
+        (c.customFields ?? []).map((f) => `${f.label}: ${f.value}`).join(" || "),
       ]),
     ];
     const csv = rows
@@ -286,8 +301,21 @@ export default function MedicalClients() {
               </TableHeader>
               <TableBody>
                 {filtered.map((c) => (
-                  <TableRow key={c.id}>
-                    <TableCell className="font-medium">{c.full_name}</TableCell>
+                  <Fragment key={c.id}>
+                  <TableRow>
+                    <TableCell className="font-medium">
+                      <button
+                        type="button"
+                        className="flex items-center gap-2 text-left hover:text-primary transition-colors"
+                        onClick={() => setExpanded((p) => ({ ...p, [c.id]: !p[c.id] }))}
+                      >
+                        <ChevronDown
+                          className={`h-4 w-4 text-muted-foreground transition-transform ${expanded[c.id] ? "rotate-180" : ""}`}
+                        />
+                        {c.full_name}
+                      </button>
+                    </TableCell>
+
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
                         {c.products.map((p) => (
@@ -359,7 +387,51 @@ export default function MedicalClients() {
                       </Link>
                     </TableCell>
                   </TableRow>
+                  {expanded[c.id] && (
+                    <TableRow className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={5} className="p-4">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                              Ficha do cliente
+                            </div>
+                            {(c.recordFields ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Sem dados preenchidos na ficha.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                                {(c.recordFields ?? []).map((f) => (
+                                  <div key={f.key} className="text-xs">
+                                    <span className="text-muted-foreground">{f.label}: </span>
+                                    <span className="font-medium break-words">{f.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                              Campos personalizados
+                            </div>
+                            {(c.customFields ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Nenhum campo personalizado preenchido.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                                {(c.customFields ?? []).map((f) => (
+                                  <div key={f.key} className="text-xs">
+                                    <span className="text-muted-foreground">{f.label}: </span>
+                                    <span className="font-medium break-words">{f.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </Fragment>
                 ))}
+
               </TableBody>
             </Table>
           )}
