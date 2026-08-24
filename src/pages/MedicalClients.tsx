@@ -136,7 +136,10 @@ export default function MedicalClients() {
         c.education_specialty ?? "",
         ...c.products,
         ...c.evidence.map((e) => `${e.field ?? ""} ${e.text}`),
+        ...(c.recordFields ?? []).map((f) => `${f.label} ${f.value}`),
+        ...(c.customFields ?? []).map((f) => `${f.label} ${f.value}`),
       ]
+
         .join(" ")
         .toLowerCase();
       return hay.includes(q);
