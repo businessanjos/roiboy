@@ -287,7 +287,12 @@ export function ZappChatView({
 
   if (!selectedConversation) {
     return (
-      <div className="flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
+      <div
+        className={cn(
+          "flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden",
+          sectorId === "operacoes" && "zapp-cs-theme",
+        )}
+      >
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
             <MessageSquare className="h-12 w-12 text-zapp-accent" />
