@@ -222,8 +222,11 @@ Deno.serve(async (req) => {
     const excludedByClient = new Set<string>();
 
     for (const fv of fieldValues ?? []) {
+      // Classificação continua restrita aos campos relevantes de profissão.
+      if (!RELEVANT_FIELD_IDS.includes((fv as any).field_id)) continue;
       const text = (fv as any).value_text as string | null;
       if (!text) continue;
+
       const lower = text.toLowerCase();
       // Se qualquer campo indica profissão excluída, cliente é descartado.
       if (EXCLUDE_TERMS.some((t) => lower.includes(t))) {
