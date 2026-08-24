@@ -50,7 +50,19 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "register");
 
+    if (action === "status") {
+      const { data: integration } = await supabaseAdmin
+        .from("integrations")
+        .select("config")
+        .eq("account_id", me.account_id)
+        .eq("type", "3cplus")
+        .maybeSingle();
+      const token = (integration?.config as Record<string, unknown> | null)?.admin_api_token;
+      return json({ success: true, admin_token_configured: typeof token === "string" && token.trim().length > 0 });
+    }
+
     if (action === "delete") {
+
       if (!body?.agent_id) return json({ error: "Agente não informado" }, 400);
       await supabaseAdmin
         .from("threecplus_agents")
@@ -59,6 +71,64 @@ Deno.serve(async (req) => {
         .eq("account_id", me.account_id);
       return json({ success: true });
     }
+
+    // Token de administrador: permite importar todas as ligações da conta de uma vez
+    if (action === "set_admin_token" || action === "clear_admin_token") {
+      const { data: integration } = await supabaseAdmin
+        .from("integrations")
+        .select("id, config")
+        .eq("account_id", me.account_id)
+        .eq("type", "3cplus")
+        .maybeSingle();
+
+      const config = (integration?.config as Record<string, unknown>) || {};
+      const baseDomain = getBaseDomain((config.domain as string) || null);
+
+      if (action === "clear_admin_token") {
+        if (!integration) return json({ success: true });
+        await supabaseAdmin
+          .from("integrations")
+          .update({ config: { ...config, admin_api_token: null } })
+          .eq("id", integration.id);
+        return json({ success: true, admin_token_configured: false });
+      }
+
+      const adminToken = String(body?.api_token || "").trim();
+      if (!adminToken) return json({ error: "Informe o token de administrador" }, 400);
+
+      // Valida contra o relatório global, disponível apenas para administradores
+      const probe = await fetch(
+        `${baseDomain}/api/v1/calls?page=1&per_page=1`,
+        { headers: { Accept: "application/json", Authorization: `Bearer ${adminToken}` } },
+      );
+      if (!probe.ok) {
+        return json({
+          success: false,
+          error:
+            probe.status === 401 || probe.status === 403
+              ? "Esse token não tem permissão de administrador (relatório global bloqueado pela 3C Plus)."
+              : `Não foi possível validar o token (status ${probe.status}).`,
+        });
+      }
+
+      if (integration) {
+        await supabaseAdmin
+          .from("integrations")
+          .update({ config: { ...config, admin_api_token: adminToken }, status: "connected" })
+          .eq("id", integration.id);
+      } else {
+        await supabaseAdmin.from("integrations").insert({
+          account_id: me.account_id,
+          type: "3cplus",
+          status: "connected",
+          display_name: "3C Plus",
+          config: { admin_api_token: adminToken },
+        });
+      }
+
+      return json({ success: true, admin_token_configured: true });
+    }
+
 
     const apiToken = String(body?.api_token || "").trim();
     const linkUserId: string | null = body?.user_id || null;

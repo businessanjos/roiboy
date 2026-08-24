@@ -108,7 +108,41 @@ async function fetchAgentCallsPage(
   return { ok: true, status: res.status, items, hasMore };
 }
 
+// Relatório global (somente token de administrador)
+async function fetchAdminCallsPage(
+  baseDomain: string,
+  apiToken: string,
+  start: string,
+  end: string,
+  page: number,
+) {
+  const url =
+    `${baseDomain}/api/v1/calls?start_date=${encodeURIComponent(start)}` +
+    `&end_date=${encodeURIComponent(end)}&page=${page}&per_page=${PER_PAGE}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
+  });
+  const text = await res.text();
+  if (!res.ok) return { ok: false, status: res.status, items: [], hasMore: false, body: text };
+  let parsed: any = {};
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, status: 500, items: [], hasMore: false, body: "Resposta inválida" };
+  }
+  const items: any[] = Array.isArray(parsed?.data)
+    ? parsed.data
+    : Array.isArray(parsed?.data?.data)
+    ? parsed.data.data
+    : [];
+  const meta = parsed?.meta || parsed?.data || {};
+  const lastPage = Number(meta?.last_page ?? meta?.total_pages ?? NaN);
+  const hasMore = Number.isFinite(lastPage) ? page < lastPage : items.length === PER_PAGE;
+  return { ok: true, status: res.status, items, hasMore };
+}
+
 async function fetchMe(baseDomain: string, apiToken: string) {
+
   const res = await fetch(`${baseDomain}/api/v1/me`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
@@ -222,14 +256,21 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("status", "connected")
       .maybeSingle();
 
-    if (!integration?.config?.api_token) {
+    const adminToken: string | null =
+      typeof integration?.config?.admin_api_token === "string" && integration.config.admin_api_token.trim()
+        ? integration.config.admin_api_token.trim()
+        : null;
+
+    if (!integration?.config?.api_token && !adminToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
       return { error: "Integração 3C Plus não configurada", synced: 0 };
     }
     const baseDomain = getBaseDomain(integration.config.domain || null);
 
     // Semeia o agente dono do token da conta, se ainda não existir
-    await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
+    if (integration.config.api_token) {
+      await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
+    }
 
     const { data: agents } = await supabaseAdmin
       .from("threecplus_agents")
@@ -237,18 +278,19 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("account_id", accountId);
 
     const withToken = (agents || []).filter((a: any) => a.is_tracked && a.api_token);
-    if (withToken.length === 0) {
+    if (withToken.length === 0 && !adminToken) {
       await finish({
         status: "error",
         last_error:
-          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de API de cada agente para sincronizar as ligações.",
+          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de administrador ou o token de API de cada agente.",
       });
       return {
         error:
-          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de API de cada agente para sincronizar as ligações.",
+          "Nenhum agente com token da 3C Plus cadastrado. Cadastre o token de administrador ou o token de API de cada agente.",
         synced: 0,
       };
     }
+
 
     // Janela de busca
     const days = Math.min(Math.max(Number(payload?.days) || 0, 0), 365);
@@ -283,7 +325,111 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       return null;
     };
 
+    const agentByExternalId = new Map<string, any>();
+    for (const a of agents || []) agentByExternalId.set(String(a.external_agent_id), a);
+
+    const buildRow = (call: any, fallbackAgent: any | null) => {
+      const callId = call?.id || call?.telephony_id;
+      if (!callId) return null;
+      const externalId = call?.agent_id != null ? String(call.agent_id) : fallbackAgent ? String(fallbackAgent.external_agent_id) : null;
+      const known = externalId ? agentByExternalId.get(externalId) : null;
+      const agentName = call?.agent || known?.external_name || fallbackAgent?.external_name || null;
+      const agentEmail = known?.external_email || fallbackAgent?.external_email || null;
+      const userId = known?.user_id ?? fallbackAgent?.user_id ?? matchUser(agentEmail, agentName);
+      const startedAt = toIso(call?.call_date_rfc3339 || call?.call_date || call?.created_at);
+      const speaking = hmsToSeconds(call?.speaking_time);
+      const isInbound = !!call?.receptive_did || String(call?.mode || "") === "receptive";
+      return {
+        account_id: accountId,
+        user_id: userId,
+        call_id: String(callId),
+        call_type: String(call?.mode || "dialer"),
+        direction: isInbound ? "inbound" : "outbound",
+        phone: call?.number ? String(call.number) : null,
+        contact_name: call?.receptive_name || null,
+        campaign_id: call?.campaign_id != null ? String(call.campaign_id) : null,
+        campaign_name: call?.campaign || null,
+        status: normalizeStatus(call),
+        qualification: call?.qualification_id != null ? String(call.qualification_id) : null,
+        qualification_name: call?.qualification || null,
+        duration_seconds: speaking,
+        acw_seconds: hmsToSeconds(call?.acw_time),
+        wait_seconds: hmsToSeconds(call?.waiting_time),
+        started_at: startedAt,
+        connected_at: speaking > 0 ? startedAt : null,
+        ended_at: toIso(call?.updated_at),
+        agent_external_id: externalId,
+        agent_name: agentName,
+        agent_email: agentEmail,
+        metadata: {
+          source: adminToken ? "api_sync_admin" : "api_sync",
+          telephony_id: call?.telephony_id ?? null,
+          recording: call?.recording ?? null,
+          readable_status_text: call?.readable_status_text ?? null,
+          billed_time: call?.billed_time ?? null,
+        },
+      };
+    };
+
+    // ---- Modo administrador: uma única importação com todas as ligações ----
+    if (adminToken) {
+      const rows: any[] = [];
+      let adminMaxStarted: string | null = null;
+      let page = 1;
+      let adminError: string | null = null;
+
+      while (page <= MAX_PAGES_PER_AGENT * 5) {
+        const res = await fetchAdminCallsPage(baseDomain, adminToken, startStr, endStr, page);
+        if (!res.ok) {
+          adminError =
+            res.status === 401 || res.status === 403
+              ? "Token de administrador inválido ou sem permissão para o relatório global (/api/v1/calls)."
+              : `Erro na API (status ${res.status})`;
+          break;
+        }
+        for (const call of res.items) {
+          const row = buildRow(call, null);
+          if (!row) continue;
+          if (row.started_at && (!adminMaxStarted || row.started_at > adminMaxStarted)) {
+            adminMaxStarted = row.started_at;
+          }
+          rows.push(row);
+        }
+        if (!res.hasMore) break;
+        page++;
+      }
+
+      if (!adminError) {
+        for (let i = 0; i < rows.length; i += 200) {
+          const chunk = rows.slice(i, i + 200);
+          const { error } = await supabaseAdmin
+            .from("threecplus_call_logs")
+            .upsert(chunk, { onConflict: "account_id,call_id" });
+          if (error) {
+            adminError = error.message;
+            break;
+          }
+        }
+      }
+
+      if (adminError) {
+        await finish({ status: "error", last_error: adminError });
+        return { error: adminError, synced: 0, mode: "admin" };
+      }
+
+      await finish({
+        status: "ok",
+        last_error: null,
+        is_paused: false,
+        calls_synced: rows.length,
+        last_synced_at: adminMaxStarted || now.toISOString(),
+      });
+
+      return { synced: rows.length, mode: "admin", from: startStr, to: endStr };
+    }
+
     let totalSynced = 0;
+
     const perAgent: any[] = [];
     const errors: string[] = [];
     let maxStarted: string | null = null;

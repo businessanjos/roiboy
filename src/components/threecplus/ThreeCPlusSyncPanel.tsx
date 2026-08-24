@@ -22,7 +22,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, RefreshCw, Trash2, KeyRound } from "lucide-react";
+import { Loader2, Plus, RefreshCw, Trash2, KeyRound, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -61,6 +61,11 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
   const [tokenInput, setTokenInput] = useState("");
   const [userInput, setUserInput] = useState<string>("none");
   const [saving, setSaving] = useState(false);
+  const [adminConfigured, setAdminConfigured] = useState(false);
+  const [adminDialogOpen, setAdminDialogOpen] = useState(false);
+  const [adminTokenInput, setAdminTokenInput] = useState("");
+  const [savingAdmin, setSavingAdmin] = useState(false);
+
 
   const load = useCallback(async () => {
     if (!currentUser?.account_id) return;
@@ -86,6 +91,12 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
     setState((stateRes.data as SyncState) || null);
     setUsers((usersRes.data as { id: string; name: string }[]) || []);
     setLoading(false);
+
+    const { data: statusData } = await supabase.functions.invoke("threecplus-register-agent", {
+      body: { action: "status" },
+    });
+    setAdminConfigured(!!statusData?.admin_token_configured);
+
   }, [currentUser?.account_id]);
 
   useEffect(() => {
@@ -113,7 +124,46 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
     }
   };
 
+  const handleSaveAdminToken = async () => {
+    if (!adminTokenInput.trim()) {
+      toast.error("Informe o token de administrador");
+      return;
+    }
+    setSavingAdmin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-register-agent", {
+        body: { action: "set_admin_token", api_token: adminTokenInput.trim() },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Não foi possível validar o token de administrador");
+        return;
+      }
+      toast.success("Token de administrador salvo. A sincronização passa a importar todas as ligações.");
+      setAdminTokenInput("");
+      setAdminDialogOpen(false);
+      setAdminConfigured(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao salvar token de administrador");
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
+  const handleClearAdminToken = async () => {
+    const { error } = await supabase.functions.invoke("threecplus-register-agent", {
+      body: { action: "clear_admin_token" },
+    });
+    if (error) {
+      toast.error("Não foi possível remover o token de administrador");
+      return;
+    }
+    setAdminConfigured(false);
+    toast.success("Token de administrador removido. Voltamos à importação por agente.");
+  };
+
   const handleSaveAgent = async () => {
+
     if (!tokenInput.trim()) {
       toast.error("Informe o token da API do agente");
       return;
@@ -243,6 +293,68 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2">
+          <div className="min-w-0">
+            <p className="text-sm font-medium flex items-center gap-2">
+              <ShieldCheck className="h-3.5 w-3.5 text-muted-foreground" />
+              Token de administrador
+            </p>
+            <p className="text-[11px] text-muted-foreground">
+              {adminConfigured
+                ? "Importação única: todas as ligações da conta são sincronizadas, sem cadastrar agente por agente."
+                : "Com um token de administrador da 3C Plus, o ROY importa todas as ligações de uma vez."}
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            {adminConfigured && (
+              <Badge variant="default" className="text-[10px]">
+                Ativo
+              </Badge>
+            )}
+            <Dialog open={adminDialogOpen} onOpenChange={setAdminDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" size="sm">
+                  {adminConfigured ? "Substituir token" : "Adicionar token"}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Token de administrador da 3C Plus</DialogTitle>
+                  <DialogDescription>
+                    Cole um token de API de um usuário com perfil de administrador. Ele libera o relatório
+                    global da conta e substitui a necessidade de cadastrar o token de cada agente.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tc-admin-token">Token de administrador</Label>
+                  <Input
+                    id="tc-admin-token"
+                    value={adminTokenInput}
+                    onChange={(e) => setAdminTokenInput(e.target.value)}
+                    placeholder="ex.: ij1wUgu9thSZ..."
+                    autoComplete="off"
+                  />
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setAdminDialogOpen(false)}>
+                    Cancelar
+                  </Button>
+                  <Button onClick={handleSaveAdminToken} disabled={savingAdmin}>
+                    {savingAdmin && <Loader2 className="h-3.5 w-3.5 mr-1.5 animate-spin" />}
+                    Validar e salvar
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+            {adminConfigured && (
+              <Button variant="ghost" size="sm" onClick={handleClearAdminToken}>
+                Remover
+              </Button>
+            )}
+          </div>
+        </div>
+
+
         {state?.last_error && (
           <p className="text-xs text-destructive">{state.last_error}</p>
         )}
