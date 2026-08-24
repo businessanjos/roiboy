@@ -385,7 +385,51 @@ export default function MedicalClients() {
                       </Link>
                     </TableCell>
                   </TableRow>
+                  {expanded[c.id] && (
+                    <TableRow key={`${c.id}-details`} className="bg-muted/30 hover:bg-muted/30">
+                      <TableCell colSpan={5} className="p-4">
+                        <div className="space-y-4">
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                              Ficha do cliente
+                            </div>
+                            {(c.recordFields ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Sem dados preenchidos na ficha.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                                {(c.recordFields ?? []).map((f) => (
+                                  <div key={f.key} className="text-xs">
+                                    <span className="text-muted-foreground">{f.label}: </span>
+                                    <span className="font-medium break-words">{f.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
+                              Campos personalizados
+                            </div>
+                            {(c.customFields ?? []).length === 0 ? (
+                              <p className="text-xs text-muted-foreground">Nenhum campo personalizado preenchido.</p>
+                            ) : (
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-x-6 gap-y-2">
+                                {(c.customFields ?? []).map((f) => (
+                                  <div key={f.key} className="text-xs">
+                                    <span className="text-muted-foreground">{f.label}: </span>
+                                    <span className="font-medium break-words">{f.value}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  )}
+                  </>
                 ))}
+
               </TableBody>
             </Table>
           )}
