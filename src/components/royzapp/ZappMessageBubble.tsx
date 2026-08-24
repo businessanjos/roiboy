@@ -398,6 +398,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         </div>
       )}
       <div 
+        data-zapp-row
         className={cn(
           "flex mb-1 group",
           message.is_from_client ? "justify-start" : "justify-end"
@@ -413,7 +414,9 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
         )}>
 
           {/* Message bubble */}
-          <div className={cn(
+          <div
+            data-zapp-bubble={message.is_from_client ? "in" : "out"}
+            className={cn(
             "px-3 py-2 rounded-lg relative shadow overflow-hidden flex-1 min-w-0 transition-all duration-300",
             message.is_from_client
               ? "bg-zapp-message-in text-zapp-text rounded-tl-none"
