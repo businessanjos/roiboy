@@ -164,11 +164,11 @@ Deno.serve(async (req) => {
       evidenceByClient.set((fv as any).client_id, list);
     }
 
-    // 3) Compile final list: apenas médicos e dentistas com evidência positiva.
+    // 3) Compile final list: a ficha do cliente (cadastro) é a fonte autoritativa.
     const result = clientList
       .filter((c) => c.isMentorship)
       .map((c) => {
-        const evidence: Ev[] = evidenceByClient.get(c.id) ?? [];
+        const evidence: Ev[] = [...(evidenceByClient.get(c.id) ?? [])];
         const eduKind = classify(c.education);
         if (eduKind) {
           evidence.push({ source: "cadastro", field: "Formação", text: c.education!, kind: eduKind });
@@ -177,20 +177,30 @@ Deno.serve(async (req) => {
         if (specKind) {
           evidence.push({ source: "cadastro", field: "Especialidade", text: c.education_specialty!, kind: specKind });
         }
-        // Também descarta se cadastro traz profissão excluída.
+
         const eduLower = (c.education ?? "").toLowerCase();
         const specLower = (c.education_specialty ?? "").toLowerCase();
-        if (EXCLUDE_TERMS.some((t) => eduLower.includes(t) || specLower.includes(t))) {
-          excludedByClient.add(c.id);
-        }
-        const kind: "doctor" | "dentist" | null =
-          evidence.some((e) => e.kind === "doctor") ? "doctor"
-          : evidence.some((e) => e.kind === "dentist") ? "dentist"
+        const cadastroExcluded = EXCLUDE_TERMS.some(
+          (t) => eduLower.includes(t) || specLower.includes(t),
+        );
+        // A ficha manda: se ela classifica como médico/dentista, entra mesmo que
+        // o onboarding antigo diga outra coisa; se ela diz outra profissão, sai.
+        const cadastroKind = cadastroExcluded ? null : (eduKind ?? specKind);
+        const onboardingKind: "doctor" | "dentist" | null =
+          evidence.some((e) => e.source === "onboarding" && e.kind === "doctor") ? "doctor"
+          : evidence.some((e) => e.source === "onboarding" && e.kind === "dentist") ? "dentist"
           : null;
+
+        const hasCadastroInfo = Boolean(c.education || c.education_specialty);
+        const kind: "doctor" | "dentist" | null = hasCadastroInfo
+          ? cadastroKind
+          : (excludedByClient.has(c.id) ? null : onboardingKind);
+
         return { ...c, evidence, kind };
       })
-      .filter((c) => c.kind !== null && !excludedByClient.has(c.id))
+      .filter((c) => c.kind !== null)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+
 
     return new Response(
       JSON.stringify({ clients: result, total: result.length }),
