@@ -15,3 +15,5 @@ Solução adotada: sincronizar **por agente** via `/api/v1/agent/calls` (datas o
 - UI: `ThreeCPlusSyncPanel` dentro de `ThreeCPlusMetrics` (Vendas > Gestão > Performance > Telefonia).
 
 Durações vêm como "HH:MM:SS" (`speaking_time`, `acw_time`, `waiting_time`); status via `readable_status_text`.
+
+Modo administrador (opcional): salvando um token com perfil admin em `integrations.config.admin_api_token` (ação `set_admin_token` na edge function `threecplus-register-agent`, validada contra `/api/v1/calls`), a sync usa o relatório global e importa todas as ligações da conta de uma vez, ignorando os tokens por agente. Removendo o token, volta ao modo por agente.
