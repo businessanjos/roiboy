@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
+import { ClientCheckinsCard } from "@/components/client/ClientCheckinsCard";
+import { getChannelLabel as getCheckinChannelLabel } from "@/lib/cs/checkins";
 
 import { ClientFinancial } from "@/components/client/ClientFinancial";
 import { SalesPerformance } from "@/components/client/SalesPerformance";
@@ -2459,6 +2461,12 @@ export default function ClientDetail() {
         switch (activeTab) {
           case "timeline":
             return (
+              <div className="space-y-4">
+              <ClientCheckinsCard
+                clientId={id!}
+                clientName={client?.full_name}
+                onSaved={refreshTimeline}
+              />
               <Card className="shadow-card">
                 <CardHeader className="pb-2">
                   <div className="flex items-start justify-between gap-3">
@@ -2493,6 +2501,7 @@ export default function ClientDetail() {
                   />
                 </CardContent>
               </Card>
+              </div>
             );
           case "churn-signals":
             return <ClientChurnSignals clientId={id!} />;
