@@ -50,7 +50,19 @@ Deno.serve(async (req) => {
     const body = await req.json().catch(() => ({}));
     const action = String(body?.action || "register");
 
+    if (action === "status") {
+      const { data: integration } = await supabaseAdmin
+        .from("integrations")
+        .select("config")
+        .eq("account_id", me.account_id)
+        .eq("type", "3cplus")
+        .maybeSingle();
+      const token = (integration?.config as Record<string, unknown> | null)?.admin_api_token;
+      return json({ success: true, admin_token_configured: typeof token === "string" && token.trim().length > 0 });
+    }
+
     if (action === "delete") {
+
       if (!body?.agent_id) return json({ error: "Agente não informado" }, 400);
       await supabaseAdmin
         .from("threecplus_agents")
