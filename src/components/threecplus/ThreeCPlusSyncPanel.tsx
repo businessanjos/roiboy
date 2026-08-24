@@ -124,7 +124,46 @@ export function ThreeCPlusSyncPanel({ onSynced }: Props) {
     }
   };
 
+  const handleSaveAdminToken = async () => {
+    if (!adminTokenInput.trim()) {
+      toast.error("Informe o token de administrador");
+      return;
+    }
+    setSavingAdmin(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-register-agent", {
+        body: { action: "set_admin_token", api_token: adminTokenInput.trim() },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error(data?.error || "Não foi possível validar o token de administrador");
+        return;
+      }
+      toast.success("Token de administrador salvo. A sincronização passa a importar todas as ligações.");
+      setAdminTokenInput("");
+      setAdminDialogOpen(false);
+      setAdminConfigured(true);
+    } catch (err: any) {
+      toast.error(err?.message || "Falha ao salvar token de administrador");
+    } finally {
+      setSavingAdmin(false);
+    }
+  };
+
+  const handleClearAdminToken = async () => {
+    const { error } = await supabase.functions.invoke("threecplus-register-agent", {
+      body: { action: "clear_admin_token" },
+    });
+    if (error) {
+      toast.error("Não foi possível remover o token de administrador");
+      return;
+    }
+    setAdminConfigured(false);
+    toast.success("Token de administrador removido. Voltamos à importação por agente.");
+  };
+
   const handleSaveAgent = async () => {
+
     if (!tokenInput.trim()) {
       toast.error("Informe o token da API do agente");
       return;
