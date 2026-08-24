@@ -107,9 +107,52 @@ Deno.serve(async (req) => {
     // 1) All non-inactive clients in this account with their (mentorship) products
     const { data: clients } = await supabase
       .from("clients")
-      .select("id, full_name, logo_url, status, education, education_specialty, client_products(product_id, products(name, color))")
+      .select("*, client_products(product_id, products(name, color)), responsible:users!clients_responsible_user_id_fkey(name)")
       .eq("account_id", accountId)
       .in("status", ["active", "churn_risk"]);
+
+    // Campos da ficha que não fazem sentido expor na sincronização
+    const HIDDEN_COLUMNS = new Set([
+      "id", "account_id", "client_products", "responsible",
+      "full_name_normalized", "company_name_normalized",
+      "responsible_user_id", "sales_user_id", "stage_id",
+      "logo_url", "avatar_url",
+    ]);
+
+    const COLUMN_LABELS: Record<string, string> = {
+      full_name: "Nome", phone_e164: "Telefone", emails: "E-mails",
+      additional_phones: "Telefones adicionais", status: "Status", tags: "Tags",
+      cpf: "CPF", cnpj: "CNPJ", rg: "RG", birth_date: "Nascimento", gender: "Gênero",
+      company_name: "Empresa", companies: "Empresas", notes: "Observações",
+      street: "Rua", street_number: "Número", complement: "Complemento",
+      neighborhood: "Bairro", city: "Cidade", state: "UF", zip_code: "CEP", country: "País",
+      business_street: "Rua (negócio)", business_street_number: "Número (negócio)",
+      business_complement: "Complemento (negócio)", business_neighborhood: "Bairro (negócio)",
+      business_city: "Cidade (negócio)", business_state: "UF (negócio)", business_zip_code: "CEP (negócio)",
+      contract_start_date: "Início do contrato", contract_end_date: "Fim do contrato",
+      is_mls: "MLS", mls_level: "Nível MLS", instagram: "Instagram", instagrams: "Instagrams",
+      bio: "Bio", business_segment: "Segmento", business_niche: "Nicho",
+      education: "Formação", education_specialty: "Especialidade",
+      initial_revenue: "Faturamento inicial", current_revenue: "Faturamento atual",
+      current_revenue_month: "Mês do faturamento", differential: "Diferencial",
+      method_name: "Nome do método", timezone: "Fuso horário",
+      pix_key_type: "Tipo chave PIX", pix_key: "Chave PIX", bank_name: "Banco",
+      bank_code: "Código do banco", bank_agency: "Agência", bank_account: "Conta",
+      bank_account_type: "Tipo de conta", additional_pix_keys: "Chaves PIX adicionais",
+      additional_bank_accounts: "Contas bancárias adicionais",
+      created_at: "Criado em", onboarding_started_at: "Onboarding iniciado em",
+      stage_changed_at: "Etapa alterada em", recent_activity_at: "Última atividade",
+      ai_next_step: "Próximo passo (IA)", ai_next_step_at: "Próximo passo em",
+      overdue_exception_until: "Exceção de inadimplência até",
+    };
+
+    const formatValue = (v: any): string => {
+      if (v === null || v === undefined || v === "") return "";
+      if (Array.isArray(v)) return v.map((x) => (typeof x === "object" ? JSON.stringify(x) : String(x))).filter(Boolean).join(", ");
+      if (typeof v === "object") return JSON.stringify(v);
+      if (typeof v === "boolean") return v ? "Sim" : "Não";
+      return String(v);
+    };
 
     const clientList = (clients ?? []).map((c: any) => {
       const productNames: string[] = (c.client_products ?? [])
@@ -119,12 +162,29 @@ Deno.serve(async (req) => {
       for (const cp of c.client_products ?? []) {
         if (cp.products?.name) productColors[cp.products.name] = cp.products.color || "#6b7280";
       }
+
+      // Todos os campos da ficha (fonte única), já formatados
+      const recordFields = Object.keys(c)
+        .filter((k) => !HIDDEN_COLUMNS.has(k))
+        .map((k) => ({ key: k, label: COLUMN_LABELS[k] ?? k, value: formatValue(c[k]) }))
+        .filter((f) => f.value !== "")
+        .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+
+      if (c.responsible?.name) {
+        recordFields.push({ key: "responsible", label: "Responsável", value: c.responsible.name });
+      }
+
       return {
         id: c.id,
         full_name: c.full_name,
         logo_url: c.logo_url,
         education: c.education,
         education_specialty: c.education_specialty,
+        status: c.status,
+        phone_e164: c.phone_e164,
+        city: c.city,
+        state: c.state,
+        recordFields,
         products: productNames,
         productColors,
         isMentorship: productNames.some((n) =>
@@ -135,14 +195,27 @@ Deno.serve(async (req) => {
 
     const mentorshipClientIds = clientList.filter((c) => c.isMentorship).map((c) => c.id);
 
-    // 2) Field values evidence
+    // 2) Todos os campos personalizados preenchidos (sincronização completa)
     const { data: fieldValues } = mentorshipClientIds.length
       ? await supabase
           .from("client_field_values")
-          .select("client_id, field_id, value_text, custom_fields(name)")
+          .select("client_id, field_id, value_text, value_number, value_boolean, value_date, value_json, custom_fields(name)")
           .in("client_id", mentorshipClientIds)
-          .in("field_id", RELEVANT_FIELD_IDS)
       : { data: [] };
+
+    const customByClient = new Map<string, { key: string; label: string; value: string }[]>();
+    for (const fv of (fieldValues ?? []) as any[]) {
+      const raw = fv.value_text ?? fv.value_number ?? fv.value_boolean ?? fv.value_date ?? fv.value_json;
+      const value = formatValue(raw);
+      if (!value) continue;
+      const list = customByClient.get(fv.client_id) ?? [];
+      list.push({ key: fv.field_id, label: fv.custom_fields?.name ?? "Campo personalizado", value });
+      customByClient.set(fv.client_id, list);
+    }
+    for (const list of customByClient.values()) {
+      list.sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    }
+
 
     type Ev = { source: string; field?: string; text: string; kind: "doctor" | "dentist" };
     const evidenceByClient = new Map<string, Ev[]>();
