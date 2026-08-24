@@ -103,10 +103,18 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
                         <Badge variant="outline" className="text-[10px] h-4">Checkpoint</Badge>
                       )}
                       {c.source === "ai_whatsapp" && (
-                        <Badge variant="outline" className="text-[10px] h-4 gap-1">
-                          <Sparkles className="h-2.5 w-2.5" /> IA
+                        <Badge
+                          variant="outline"
+                          className="text-[10px] h-4 gap-1 border-primary/30 text-primary"
+                          title="Resumo gerado por IA a partir do RoyZapp de Customer Success"
+                        >
+                          <Sparkles className="h-2.5 w-2.5" /> RoyZapp CS · IA
                         </Badge>
                       )}
+                      {c.source === "manual" && (
+                        <Badge variant="outline" className="text-[10px] h-4">Manual</Badge>
+                      )}
+
                     </div>
                     <p className="text-sm mt-1 break-words">{c.summary}</p>
                   </div>
