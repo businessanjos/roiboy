@@ -43,8 +43,9 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
               Checkpoints e contatos
             </CardTitle>
             <CardDescription>
-              Checkpoint a cada 15 dias · registros aparecem na timeline
+              Checkpoint a cada 15 dias · resumos automáticos vêm somente do RoyZapp de Customer Success (conversas do comercial não entram)
             </CardDescription>
+
           </div>
           <div className="flex items-center gap-2">
             <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[state.status])}>
