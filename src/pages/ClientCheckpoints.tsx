@@ -15,16 +15,34 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { CalendarCheck, Loader2, Plus, Search } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { useCheckpointsPanel } from "@/hooks/useClientCheckins";
-import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
+import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
+import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
+import { ClientCheckinsReportDialog } from "@/components/client/ClientCheckinsReportDialog";
+import {
+  CHECKIN_CHANNELS,
   CHECKPOINT_STATUS_LABELS,
   CHECKPOINT_STATUS_STYLES,
   getCheckpointState,
   type CheckpointStatus,
 } from "@/lib/cs/checkins";
+import {
+  CHECKIN_CSV_HEADERS,
+  buildCsv,
+  checkinToCsvRow,
+  downloadCsv,
+  fileStamp,
+} from "@/lib/cs/checkinsExport";
+
 
 type FilterKey = "todos" | CheckpointStatus;
 
