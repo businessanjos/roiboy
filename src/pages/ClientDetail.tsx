@@ -15,6 +15,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
 import { Timeline, TimelineEvent } from "@/components/client/Timeline";
 import { ClientCheckinsCard } from "@/components/client/ClientCheckinsCard";
 import { getChannelLabel as getCheckinChannelLabel } from "@/lib/cs/checkins";
@@ -1889,16 +1897,38 @@ export default function ClientDetail() {
     );
   }
 
+  const fromContext = searchParams.get("from");
+  const returnPath = fromContext === "checkpoints" ? "/clients/checkpoints" : "/clients";
+  const returnLabel = fromContext === "checkpoints" ? "Checkpoints" : "Clientes";
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
+      {/* Breadcrumb */}
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/clients">Customer Success</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to={returnPath}>{returnLabel}</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage className="truncate max-w-[200px] sm:max-w-[320px]">
+              {client.full_name}
+            </BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
         <div className="flex items-start gap-3 sm:gap-4">
-          <Button variant="ghost" size="icon" asChild className="shrink-0 mt-0.5">
-            <Link to="/clients">
-              <ArrowLeft className="h-5 w-5" />
-            </Link>
-          </Button>
           <ClientAvatarUpload
             clientId={client.id}
             clientName={client.full_name}

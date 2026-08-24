@@ -7,6 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from "@/components/ui/breadcrumb";
+import {
   Table,
   TableBody,
   TableCell,
@@ -117,6 +125,20 @@ export default function ClientCheckpoints() {
 
   return (
     <div className="space-y-4">
+      <Breadcrumb>
+        <BreadcrumbList>
+          <BreadcrumbItem>
+            <BreadcrumbLink asChild>
+              <Link to="/clients">Customer Success</Link>
+            </BreadcrumbLink>
+          </BreadcrumbItem>
+          <BreadcrumbSeparator />
+          <BreadcrumbItem>
+            <BreadcrumbPage>Checkpoints quinzenais</BreadcrumbPage>
+          </BreadcrumbItem>
+        </BreadcrumbList>
+      </Breadcrumb>
+
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
@@ -245,7 +267,7 @@ export default function ClientCheckpoints() {
                   {filtered.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell className="font-medium">
-                        <Link to={`/clients/${r.client_id}`} className="hover:underline">
+                        <Link to={`/clients/${r.client_id}?from=checkpoints`} className="hover:underline">
                           {r.full_name}
                         </Link>
                       </TableCell>
