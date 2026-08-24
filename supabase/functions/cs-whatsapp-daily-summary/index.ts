@@ -36,11 +36,14 @@ Deno.serve(async (req) => {
     const since = new Date(Date.now() - hours * 3600_000).toISOString();
 
     // Conversas individuais (não grupos) já vinculadas a um cliente
+    // IMPORTANTE: somente conversas do RoyZapp de Customer Success (setor "operacoes").
+    // Conversas do time comercial (setor "vendas") NÃO geram check-in na timeline.
     let convQuery = supabase
       .from("zapp_conversations")
       .select("id, client_id")
       .not("client_id", "is", null)
       .eq("is_group", false)
+      .eq("sector_id", "operacoes")
       .gte("last_message_at", since)
       .limit(2000);
     if (clientFilter) convQuery = convQuery.eq("client_id", clientFilter);
