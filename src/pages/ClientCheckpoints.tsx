@@ -71,6 +71,15 @@ export default function ClientCheckpoints() {
 
   const detailed = useCheckinsReport({ from: from || null, to: to || null, channel, enabled: true });
 
+  const clientDetailSearch = useMemo(() => {
+    const params = new URLSearchParams({ from: "checkpoints" });
+    if (from) params.set("period_from", from);
+    if (to) params.set("period_to", to);
+    if (channel && channel !== "todos") params.set("channel", channel);
+    return `?${params.toString()}`;
+  }, [from, to, channel]);
+
+
 
   const rows = useMemo(() => {
     return data
@@ -270,7 +279,7 @@ export default function ClientCheckpoints() {
                   {filtered.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell className="font-medium">
-                        <Link to={`/clients/${r.client_id}?from=checkpoints`} className="hover:underline">
+                        <Link to={`/clients/${r.client_id}${clientDetailSearch}`} className="hover:underline">
                           {r.full_name}
                         </Link>
                       </TableCell>

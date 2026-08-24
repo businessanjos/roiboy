@@ -1901,6 +1901,30 @@ export default function ClientDetail() {
   const returnPath = fromContext === "checkpoints" ? "/clients/checkpoints" : "/clients";
   const returnLabel = fromContext === "checkpoints" ? "Checkpoints" : "Clientes";
 
+  const checkpointPeriodFrom = searchParams.get("period_from");
+  const checkpointPeriodTo = searchParams.get("period_to");
+  const checkpointChannel = searchParams.get("channel") || "todos";
+
+  const formatParamDate = (value: string | null) => {
+    if (!value) return null;
+    const d = new Date(value);
+    if (isNaN(d.getTime())) return null;
+    return format(d, "dd/MM/yyyy", { locale: ptBR });
+  };
+
+  const checkpointPeriodLabel = (() => {
+    const fromText = formatParamDate(checkpointPeriodFrom);
+    const toText = formatParamDate(checkpointPeriodTo);
+    if (fromText && toText) return `${fromText} – ${toText}`;
+    if (fromText) return `A partir de ${fromText}`;
+    if (toText) return `Até ${toText}`;
+    return "Todo o período";
+  })();
+
+  const checkpointChannelLabel = checkpointChannel === "todos" 
+    ? "Todos os canais" 
+    : getCheckinChannelLabel(checkpointChannel);
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 space-y-6 animate-fade-in">
       {/* Breadcrumb */}
@@ -1916,8 +1940,17 @@ export default function ClientDetail() {
           <BreadcrumbSeparator />
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
-              <Link to={returnPath} title={`Voltar para ${returnLabel} (filtros preservados)`}>
-                {returnLabel}
+              <Link
+                to={returnPath}
+                title={`Voltar para ${returnLabel} (filtros preservados)`}
+                className="flex flex-col items-start"
+              >
+                <span>{returnLabel}</span>
+                {fromContext === "checkpoints" && (
+                  <span className="text-xs text-muted-foreground font-normal">
+                    {checkpointPeriodLabel} • {checkpointChannelLabel}
+                  </span>
+                )}
               </Link>
             </BreadcrumbLink>
           </BreadcrumbItem>
@@ -1935,6 +1968,7 @@ export default function ClientDetail() {
           </BreadcrumbItem>
         </BreadcrumbList>
       </Breadcrumb>
+
 
 
       {/* Header */}
