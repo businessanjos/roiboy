@@ -745,3 +745,55 @@
     --ring: 39 62% 62%;
   }
 }
+
+/* ROY zAPP CS — legibilidade: tipografia, espaçamento e estados.
+   Escopado a .zapp-cs-theme para não afetar os demais setores. */
+@layer components {
+  /* Estados (hover / selecionado) com menos saturação e mais contraste */
+  .zapp-cs-theme {
+    --zapp-hover: 28 26% 23%;
+    --accent: 28 26% 23%;
+    /* Balão do mentor (saída): tom mais suave, reduz fadiga em leituras longas */
+    --zapp-message-out: 36 34% 25%;
+    --zapp-message-in: 28 20% 18%;
+  }
+
+  /* Ritmo vertical: mais respiro entre balões, sem quebrar agrupamentos */
+  .zapp-cs-theme [data-zapp-row] {
+    margin-bottom: 0.375rem;
+  }
+
+  /* Corpo da mensagem: altura de linha e leve tracking para leitura confortável */
+  .zapp-cs-theme [data-zapp-text] {
+    font-size: 0.9375rem;
+    line-height: 1.6;
+    letter-spacing: 0.006em;
+    color: hsl(var(--zapp-text));
+  }
+
+  /* Metadados (hora, status): legíveis sem competir com o texto */
+  .zapp-cs-theme [data-zapp-meta] {
+    margin-top: 0.25rem;
+    opacity: 1;
+    color: hsl(var(--zapp-text-muted));
+  }
+  .zapp-cs-theme [data-zapp-meta] .text-\[10px\],
+  .zapp-cs-theme [data-zapp-meta] .text-\[9px\] {
+    font-size: 0.6875rem;
+    line-height: 1.1;
+  }
+
+  /* Balões: padding um pouco maior e sombra discreta */
+  .zapp-cs-theme [data-zapp-bubble] {
+    padding: 0.5rem 0.75rem 0.4375rem;
+    box-shadow: 0 1px 2px hsl(27 53% 5% / 0.45);
+  }
+  .zapp-cs-theme [data-zapp-bubble="out"] [data-zapp-meta] {
+    color: hsl(40 30% 92% / 0.85);
+  }
+
+  /* Hover do balão: realce sutil em vez de mudança de cor forte */
+  .zapp-cs-theme [data-zapp-row]:hover [data-zapp-bubble] {
+    box-shadow: 0 1px 2px hsl(27 53% 5% / 0.45), 0 0 0 1px hsl(var(--zapp-accent) / 0.22);
+  }
+}
