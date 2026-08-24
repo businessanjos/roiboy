@@ -174,7 +174,7 @@ export default function MedicalClients() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
+          <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
             <RefreshCw className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`} />
             Atualizar
           </Button>
@@ -316,6 +316,7 @@ export default function MedicalClients() {
                         />
 
                         <Input
+                          key={`spec-${c.id}-${c.education_specialty ?? ""}`}
                           className="h-8 text-xs"
                           placeholder="Especialidade"
                           defaultValue={c.education_specialty ?? ""}
