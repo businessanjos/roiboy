@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -56,7 +56,6 @@ type FilterKey = "todos" | CheckpointStatus;
 
 export default function ClientCheckpoints() {
   const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
-  const [searchParams, setSearchParams] = useSearchParams();
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
