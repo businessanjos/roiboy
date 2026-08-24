@@ -33,12 +33,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { ThreeCPlusSyncPanel } from "./ThreeCPlusSyncPanel";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface CallLog {
   id: string;
-  user_id: string;
+  user_id: string | null;
+  agent_name: string | null;
   call_type: string;
   direction: string;
   phone: string | null;
@@ -92,6 +94,10 @@ function formatPhoneDisplay(phone: string | null): string {
   return phone;
 }
 
+function agentKeyOf(log: { user_id: string | null; agent_name: string | null }): string {
+  return log.user_id || `name:${(log.agent_name || "desconhecido").toLowerCase()}`;
+}
+
 type DateRange = "today" | "yesterday" | "7d" | "30d" | "this_month" | "last_month";
 
 function getDateRange(range: DateRange): { start: Date; end: Date } {
@@ -138,6 +144,7 @@ export function ThreeCPlusMetrics() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("today");
   const [selectedUser, setSelectedUser] = useState<string>("all");
+  const [refreshKey, setRefreshKey] = useState(0);
 
   // Fetch data
   useEffect(() => {
@@ -148,7 +155,7 @@ export function ThreeCPlusMetrics() {
       const [logsRes, sessionsRes, usersRes] = await Promise.all([
         supabase
           .from("threecplus_call_logs")
-          .select("id, user_id, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
+          .select("id, user_id, agent_name, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
           .gte("started_at", start.toISOString())
           .lte("started_at", end.toISOString())
           .order("started_at", { ascending: false })
@@ -163,7 +170,7 @@ export function ThreeCPlusMetrics() {
           .from("users")
           .select("id, name")
           .eq("account_id", currentUser?.account_id || "")
-          .or("name.ilike.%jonathan%,name.ilike.%darlan%,name.ilike.%george%,name.ilike.%vanessa%"),
+          .order("name"),
       ]);
 
       setCallLogs((logsRes.data as CallLog[]) || []);
@@ -173,11 +180,14 @@ export function ThreeCPlusMetrics() {
     }
 
     if (currentUser?.account_id) fetchData();
-  }, [dateRange, currentUser?.account_id]);
+  }, [dateRange, currentUser?.account_id, refreshKey]);
 
   // Filter by user
   const filteredLogs = useMemo(
-    () => (selectedUser === "all" ? callLogs : callLogs.filter((l) => l.user_id === selectedUser)),
+    () =>
+      selectedUser === "all"
+        ? callLogs
+        : callLogs.filter((l) => agentKeyOf(l) === selectedUser),
     [callLogs, selectedUser]
   );
 
@@ -185,6 +195,16 @@ export function ThreeCPlusMetrics() {
     () => (selectedUser === "all" ? sessions : sessions.filter((s) => s.user_id === selectedUser)),
     [sessions, selectedUser]
   );
+
+  const agentOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const log of callLogs) {
+      const key = agentKeyOf(log);
+      const label = users.find((u) => u.id === log.user_id)?.name || log.agent_name || "Sem agente";
+      if (!map.has(key)) map.set(key, label);
+    }
+    return Array.from(map.entries()).sort((a, b) => a[1].localeCompare(b[1]));
+  }, [callLogs, users]);
 
   // Compute metrics
   const metrics = useMemo(() => {
@@ -212,21 +232,23 @@ export function ThreeCPlusMetrics() {
     // Per-agent breakdown
     const agentMap = new Map<string, { total: number; connected: number; duration: number; acw: number }>();
     for (const log of filteredLogs) {
-      const entry = agentMap.get(log.user_id) || { total: 0, connected: 0, duration: 0, acw: 0 };
+      const key = agentKeyOf(log);
+      const entry = agentMap.get(key) || { total: 0, connected: 0, duration: 0, acw: 0 };
       entry.total++;
       if (["connected", "finished", "hangup"].includes(log.status)) {
         entry.connected++;
         entry.duration += log.duration_seconds || 0;
         entry.acw += log.acw_seconds || 0;
       }
-      agentMap.set(log.user_id, entry);
+      agentMap.set(key, entry);
     }
 
     const agentStats = Array.from(agentMap.entries()).map(([userId, stats]) => {
       const user = users.find((u) => u.id === userId);
+      const fromLog = filteredLogs.find((l) => agentKeyOf(l) === userId);
       return {
         userId,
-        name: user?.name || "Desconhecido",
+        name: user?.name || fromLog?.agent_name || "Desconhecido",
         ...stats,
         avgDuration: stats.connected > 0 ? Math.round(stats.duration / stats.connected) : 0,
         avgAcw: stats.connected > 0 ? Math.round(stats.acw / stats.connected) : 0,
@@ -264,6 +286,8 @@ export function ThreeCPlusMetrics() {
 
   return (
     <div className="space-y-6">
+      <ThreeCPlusSyncPanel onSynced={() => setRefreshKey((k) => k + 1)} />
+
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">
         <Select value={dateRange} onValueChange={(v) => setDateRange(v as DateRange)}>
@@ -288,9 +312,9 @@ export function ThreeCPlusMetrics() {
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">Todos os agentes</SelectItem>
-            {users.map((u) => (
-              <SelectItem key={u.id} value={u.id}>
-                {u.name}
+            {agentOptions.map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
               </SelectItem>
             ))}
           </SelectContent>
@@ -476,7 +500,8 @@ export function ThreeCPlusMetrics() {
               <TableBody>
                 {filteredLogs.slice(0, 50).map((log) => {
                   const statusInfo = getStatusLabel(log.status);
-                  const userName = users.find((u) => u.id === log.user_id)?.name || "-";
+                  const userName =
+                    users.find((u) => u.id === log.user_id)?.name || log.agent_name || "-";
                   return (
                     <TableRow key={log.id}>
                       <TableCell className="text-xs">
