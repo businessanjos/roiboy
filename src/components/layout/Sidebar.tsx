@@ -301,9 +301,17 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
             const [otherPath, otherSearch = ""] = other.to.split("?");
             return otherPath === itemPath && !!otherSearch;
           });
-          const hasMoreSpecificMatch = filteredNavItems.some(other => {
+          // Compare against ALL sector items (not only the visible/permitted ones),
+          // so a hidden child route (ex.: /clients/checkpoints) still prevents the
+          // parent (/clients) from being highlighted on that route.
+          const allItems = currentSector?.navItems ?? filteredNavItems;
+          const hasMoreSpecificMatch = allItems.some(other => {
             const [otherPath] = other.to.split("?");
-            return other.to !== item.to && otherPath.startsWith(itemPath + "/") && (location.pathname === otherPath || location.pathname.startsWith(otherPath + "/"));
+            return (
+              otherPath !== itemPath &&
+              otherPath.startsWith(itemPath + "/") &&
+              (location.pathname === otherPath || location.pathname.startsWith(otherPath + "/"))
+            );
           });
           const isActive = itemSearchValue
             ? location.pathname === itemPath && searchParamsMatch(itemSearchValue, location.search)
