@@ -14,16 +14,24 @@ import { EducationSelect } from "@/components/client/EducationSelect";
 
 
 type Evidence = { source: string; field?: string; text: string };
+type FieldEntry = { key: string; label: string; value: string };
 type MedicalClient = {
   id: string;
   full_name: string;
   logo_url: string | null;
   education: string | null;
   education_specialty: string | null;
+  status?: string | null;
+  phone_e164?: string | null;
+  city?: string | null;
+  state?: string | null;
   products: string[];
   productColors: Record<string, string>;
   evidence: Evidence[];
+  recordFields?: FieldEntry[];
+  customFields?: FieldEntry[];
 };
+
 
 export default function MedicalClients() {
   const [loading, setLoading] = useState(true);
