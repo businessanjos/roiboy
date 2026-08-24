@@ -27,6 +27,7 @@ import { DynamicIcon } from "@/components/ui/dynamic-icon";
 import { ZappLeadDataEditor } from "./ZappLeadDataEditor";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
+import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
 import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface ZappDealDetailSheetProps {
@@ -132,6 +133,7 @@ export function ZappDealDetailSheet({
     targetStageName: string;
     missingFields: CustomField[];
     outcomeType?: "won" | "lost";
+    skipBriefing?: boolean;
   } | null>(null);
 
   const toggleItemExpanded = (itemId: string) => {
@@ -436,13 +438,15 @@ export function ZappDealDetailSheet({
                       onClick={async () => {
                         if (currentUser?.account_id && deal) {
                           const result = await validateDealOutcome(dealId, "won", currentUser.account_id);
-                          // Briefing para operação é obrigatório em todo ganho (inclui carteira/renovação)
+                          // Briefing para operação é obrigatório no ganho, exceto em renovações
+                          const isRenewal = await isRenewalDeal(dealId, (deal as any).is_renewal);
                           const { data: briefingRow } = await supabase
                             .from("deal_operation_briefings")
                             .select("is_complete")
                             .eq("deal_id", dealId)
                             .maybeSingle();
-                          if (!result.canMoveToStage || !briefingRow?.is_complete) {
+                          const briefingMissing = !isRenewal && !briefingRow?.is_complete;
+                          if (!result.canMoveToStage || briefingMissing) {
                             setRequiredFieldsModal({
                               open: true,
                               dealId: dealId,
@@ -450,6 +454,7 @@ export function ZappDealDetailSheet({
                               targetStageName: "Ganho",
                               missingFields: result.missingFields,
                               outcomeType: "won",
+                              skipBriefing: isRenewal,
                             });
                           } else {
                             updateDealStatus.mutate("won");
@@ -864,6 +869,7 @@ export function ZappDealDetailSheet({
           missingFields={requiredFieldsModal.missingFields}
           accountId={currentUser?.account_id || ""}
           outcomeType={requiredFieldsModal.outcomeType}
+          skipBriefing={!!requiredFieldsModal.skipBriefing}
           onComplete={() => {
             if (requiredFieldsModal.outcomeType) {
               updateDealStatus.mutate(requiredFieldsModal.outcomeType);

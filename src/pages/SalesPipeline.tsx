@@ -102,6 +102,7 @@ import { DeletedDealsDrawer } from "@/components/sales/DeletedDealsDrawer";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { Trash2 as Trash2Icon } from "lucide-react";
+import { isRenewalDeal } from "@/lib/sales/renewalBriefing";
 
 
 export default function SalesPipeline() {
@@ -1650,7 +1651,7 @@ export default function SalesPipeline() {
         .select("is_complete")
         .eq("deal_id", dealId)
         .maybeSingle();
-      const briefingMissing = !isRenewalDeal && !briefingRow?.is_complete;
+      const briefingMissing = !isRenewal && !briefingRow?.is_complete;
 
       if (hasMissingFields || briefingMissing) {
         if (!hasMissingFields && briefingMissing) {
@@ -1663,7 +1664,7 @@ export default function SalesPipeline() {
           outcomeType: "won",
           missingFields: validation.missingFields,
           clientId: deal.client_id ?? null,
-          skipBriefing: isRenewalDeal,
+          skipBriefing: isRenewal,
         } as any);
         return;
       }
