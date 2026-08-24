@@ -1644,6 +1644,15 @@ export default function SalesPipeline() {
       // ou produto marcado como renovação no Item da Venda)
       let isRenewalDeal = !!(deal as any).is_renewal;
       if (!isRenewalDeal) {
+        // Fallback: lê o flag direto do banco (evita estado local desatualizado)
+        const { data: freshDeal } = await supabase
+          .from("deals")
+          .select("is_renewal")
+          .eq("id", dealId)
+          .maybeSingle();
+        isRenewalDeal = !!(freshDeal as any)?.is_renewal;
+      }
+      if (!isRenewalDeal) {
         const { data: itemVenda } = await supabase
           .from("deal_field_values")
           .select("value_text")
