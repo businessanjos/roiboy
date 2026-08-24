@@ -128,7 +128,15 @@ Deno.serve(async (req) => {
   try {
     const payload = await req.json().catch(() => ({}));
     const cronSecret = req.headers.get("x-cron-secret");
-    const isCron = !!cronSecret && cronSecret === Deno.env.get("THREECPLUS_CRON_SECRET");
+    let isCron = !!cronSecret && cronSecret === Deno.env.get("THREECPLUS_CRON_SECRET");
+    if (cronSecret && !isCron) {
+      const { data: tokenRow } = await supabaseAdmin
+        .from("internal_cron_tokens")
+        .select("token")
+        .eq("name", "threecplus_sync")
+        .maybeSingle();
+      isCron = !!tokenRow?.token && tokenRow.token === cronSecret;
+    }
 
     let accountId: string | null = payload?.account_id ?? null;
 
