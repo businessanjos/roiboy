@@ -272,7 +272,7 @@ Deno.serve(async (req) => {
           ? cadastroKind
           : (excludedByClient.has(c.id) ? null : onboardingKind);
 
-        return { ...c, evidence, kind };
+        return { ...c, evidence, kind, customFields: customByClient.get(c.id) ?? [] };
       })
       .filter((c) => c.kind !== null)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
