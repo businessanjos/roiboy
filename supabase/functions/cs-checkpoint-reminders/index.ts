@@ -11,7 +11,7 @@ const LEAD_DAYS = [3, 1, 0];
 /** Cadência de cobrança depois de vencido (a cada N dias). */
 const OVERDUE_EVERY_DAYS = 3;
 const MAX_CLIENTS = 5000;
-const ACTIVE_STATUSES = ["active", "churn_risk", "paused"];
+const ACTIVE_STATUSES = ["active"];
 
 function brazilToday(): Date {
   const now = new Date();
