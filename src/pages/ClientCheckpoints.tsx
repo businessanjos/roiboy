@@ -91,6 +91,30 @@ export default function ClientCheckpoints() {
     );
   });
 
+  const exportPanel = () => {
+    const csv = buildCsv(
+      ["Cliente", "Consultor", "Status do cliente", "Último checkpoint", "Próximo checkpoint", "Situação", "Último contato", "Resumo do último contato"],
+      filtered.map((r) => [
+        r.full_name,
+        r.consultant_name || "",
+        r.status || "",
+        r.last_checkpoint_at ? format(new Date(r.last_checkpoint_at), "dd/MM/yyyy") : "",
+        r.state.nextDueAt ? format(new Date(r.state.nextDueAt), "dd/MM/yyyy") : "",
+        CHECKPOINT_STATUS_LABELS[r.state.status],
+        r.last_contact_at ? format(new Date(r.last_contact_at), "dd/MM/yyyy") : "",
+        r.last_summary || "",
+      ])
+    );
+    downloadCsv(`checkpoints_painel_${fileStamp()}.csv`, csv);
+  };
+
+  const exportDetailed = () => {
+    const visible = new Set(filtered.map((r) => r.client_id));
+    const rowsToExport = (detailed.data || []).filter((r) => visible.has(r.client_id));
+    const csv = buildCsv(CHECKIN_CSV_HEADERS, rowsToExport.map((r) => checkinToCsvRow(r)));
+    downloadCsv(`checkpoints_registros_${fileStamp()}.csv`, csv);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -103,10 +127,28 @@ export default function ClientCheckpoints() {
             Todo cliente precisa de um checkpoint a cada 15 dias.
           </p>
         </div>
-        <Button variant="outline" onClick={() => refetch()} disabled={isLoading}>
-          {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-          Atualizar
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={exportPanel} disabled={filtered.length === 0}>
+            <Download className="h-4 w-4 mr-2" />
+            CSV do painel
+          </Button>
+          <Button
+            variant="outline"
+            onClick={exportDetailed}
+            disabled={detailed.isLoading || (detailed.data || []).length === 0}
+          >
+            {detailed.isLoading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Download className="h-4 w-4 mr-2" />
+            )}
+            CSV dos registros
+          </Button>
+          <Button variant="outline" onClick={() => { refetch(); detailed.refetch(); }} disabled={isLoading}>
+            {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+            Atualizar
+          </Button>
+        </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-4">
@@ -115,6 +157,37 @@ export default function ClientCheckpoints() {
         <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
         <Kpi label="Em dia" value={counts.em_dia} tone="text-success" />
       </div>
+
+      <Card className="shadow-card">
+        <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
+          <div className="space-y-1.5">
+            <Label className="text-xs">De</Label>
+            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Até</Label>
+            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-xs">Canal</Label>
+            <Select value={channel} onValueChange={setChannel}>
+              <SelectTrigger><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="todos">Todos os canais</SelectItem>
+                {CHECKIN_CHANNELS.map((c) => (
+                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-end text-xs text-muted-foreground">
+            {detailed.isLoading
+              ? "Carregando registros..."
+              : `${(detailed.data || []).length} registro(s) no período/canal selecionado`}
+          </div>
+        </CardContent>
+      </Card>
+
 
       <Card className="shadow-card">
         <CardHeader className="pb-3 space-y-3">
