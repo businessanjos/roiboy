@@ -27199,6 +27199,13 @@ export type Database = {
       cleanup_ai_analysis_queue: { Args: never; Returns: undefined }
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
       cleanup_old_rate_limit_logs: { Args: never; Returns: undefined }
+      client_last_live_activity: {
+        Args: never
+        Returns: {
+          client_id: string
+          last_at: string
+        }[]
+      }
       compute_consultant_metric: {
         Args: {
           p_metric: string
