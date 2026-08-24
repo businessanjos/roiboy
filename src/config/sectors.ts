@@ -71,6 +71,7 @@ import {
   type LucideIcon,
   Stethoscope,
   Telescope,
+  CalendarCheck,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
 import { buildRoyZappUrl } from "@/lib/royZappRoutes";
