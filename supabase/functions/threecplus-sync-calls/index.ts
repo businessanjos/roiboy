@@ -108,7 +108,41 @@ async function fetchAgentCallsPage(
   return { ok: true, status: res.status, items, hasMore };
 }
 
+// Relatório global (somente token de administrador)
+async function fetchAdminCallsPage(
+  baseDomain: string,
+  apiToken: string,
+  start: string,
+  end: string,
+  page: number,
+) {
+  const url =
+    `${baseDomain}/api/v1/calls?start_date=${encodeURIComponent(start)}` +
+    `&end_date=${encodeURIComponent(end)}&page=${page}&per_page=${PER_PAGE}`;
+  const res = await fetch(url, {
+    headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
+  });
+  const text = await res.text();
+  if (!res.ok) return { ok: false, status: res.status, items: [], hasMore: false, body: text };
+  let parsed: any = {};
+  try {
+    parsed = JSON.parse(text);
+  } catch {
+    return { ok: false, status: 500, items: [], hasMore: false, body: "Resposta inválida" };
+  }
+  const items: any[] = Array.isArray(parsed?.data)
+    ? parsed.data
+    : Array.isArray(parsed?.data?.data)
+    ? parsed.data.data
+    : [];
+  const meta = parsed?.meta || parsed?.data || {};
+  const lastPage = Number(meta?.last_page ?? meta?.total_pages ?? NaN);
+  const hasMore = Number.isFinite(lastPage) ? page < lastPage : items.length === PER_PAGE;
+  return { ok: true, status: res.status, items, hasMore };
+}
+
 async function fetchMe(baseDomain: string, apiToken: string) {
+
   const res = await fetch(`${baseDomain}/api/v1/me`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
