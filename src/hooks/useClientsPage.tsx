@@ -6,6 +6,8 @@ import { useAuditLog } from "@/hooks/useAuditLog";
 import { toast } from "sonner";
 import { CustomField, FieldOption } from "@/components/custom-fields";
 import { ClientFormData, getEmptyClientFormData } from "@/components/client/ClientInfoForm";
+import { useClientProductsChanged } from "@/lib/client/clientProductsEvents";
+
 
 // E.164 format: + followed by 1-15 digits
 const E164_REGEX = /^\+[1-9]\d{1,14}$/;
@@ -318,6 +320,13 @@ export function useClientsPage() {
     };
     loadAll();
   }, [fetchClients, fetchProducts, fetchCustomFields, fetchTeamUsers]);
+
+  // Reflete imediatamente mudanças de produto ativo/histórico feitas em outras telas
+  const handleProductsChanged = useCallback(() => {
+    fetchClients();
+  }, [fetchClients]);
+  useClientProductsChanged(handleProductsChanged);
+
 
   useEffect(() => {
     if (accountId || currentUser?.account_id) {

@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import { Loader2, Package } from "lucide-react";
 import { Link } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { emitClientProductsChanged } from "@/lib/client/clientProductsEvents";
+
 
 interface Product {
   id: string;
@@ -116,7 +118,9 @@ export function ProductDialog({
         if (error) throw error;
       }
 
+      emitClientProductsChanged(clientId);
       toast.success("Produtos atualizados");
+
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
