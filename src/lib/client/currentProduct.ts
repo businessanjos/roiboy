@@ -4,6 +4,7 @@
 
 export interface ClientProductEntry {
   product_id: string;
+  is_active?: boolean | null;
   products?: { id?: string; name?: string; color?: string | null } | null;
 }
 
@@ -14,12 +15,16 @@ interface ClientLike {
 
 /**
  * Retorna o produto atual do cliente:
+ * 0) considera apenas produtos ativos (quando houver algum);
  * 1) produto do contrato vigente (quando existe e está entre os produtos do cliente);
  * 2) caso contrário, o último produto vinculado.
  */
 export function getCurrentClientProduct(client: ClientLike): ClientProductEntry | null {
-  const list = client?.client_products || [];
-  if (list.length === 0) return null;
+  const all = client?.client_products || [];
+  if (all.length === 0) return null;
+
+  const actives = all.filter((cp) => cp.is_active !== false);
+  const list = actives.length > 0 ? actives : all;
 
   const contractProductId = client?.contract?.product_id || null;
   if (contractProductId) {
