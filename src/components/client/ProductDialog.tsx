@@ -90,15 +90,20 @@ export function ProductDialog({
     
     setSaving(true);
     try {
-      // Remove all current products
-      await supabase
-        .from("client_products")
-        .delete()
-        .eq("client_id", clientId);
+      const removed = currentProductIds.filter((pid) => !selectedProducts.includes(pid));
+      const added = selectedProducts.filter((pid) => !currentProductIds.includes(pid));
 
-      // Add selected products
-      if (selectedProducts.length > 0) {
-        const productInserts = selectedProducts.map((productId) => ({
+      // Remove apenas os desmarcados, preservando o status ativo/histórico dos demais
+      if (removed.length > 0) {
+        await supabase
+          .from("client_products")
+          .delete()
+          .eq("client_id", clientId)
+          .in("product_id", removed);
+      }
+
+      if (added.length > 0) {
+        const productInserts = added.map((productId) => ({
           client_id: clientId,
           product_id: productId,
           account_id: currentUser.account_id,
