@@ -422,12 +422,14 @@ export default function ClientDetail() {
       toast.error("Erro ao atualizar o status do produto");
       return;
     }
+    emitClientProductsChanged(id);
     toast.success(
       active
         ? "Produto marcado como ativo (os demais foram para histórico)"
         : "Produto movido para histórico"
     );
   };
+
 
 
   const handleSaveProducts = async () => {
