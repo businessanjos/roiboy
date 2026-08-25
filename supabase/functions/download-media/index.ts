@@ -167,6 +167,19 @@ Deno.serve(async (req) => {
       ));
     }
 
+    const unresolvedMsgs = (allMessages || []).filter((msg: any) =>
+      msg.media_type && !msg.media_url && !msg.media_encrypted_url
+    );
+    if (unresolvedMsgs.length > 0) {
+      await Promise.all(unresolvedMsgs.map((msg: any) =>
+        supabase.from("zapp_messages").update({
+          media_download_status: "failed",
+          media_last_error: "URL de mídia não recebida do provedor",
+          updated_at: new Date().toISOString(),
+        }).eq("id", msg.id).eq("account_id", msg.account_id)
+      ));
+    }
+
     // Filter to only those that actually need downloading:
     // Must have media_encrypted_url AND be in pending/failed/stuck-downloading state
     const messages = (allMessages || []).filter((msg: any) => {
@@ -191,6 +204,7 @@ Deno.serve(async (req) => {
         success: true, 
         processed: 0, 
         auto_corrected: autoCorrectMsgs.length,
+        failed_unresolved: unresolvedMsgs.length,
         message: autoCorrectMsgs.length > 0 
           ? `Auto-corrected ${autoCorrectMsgs.length} messages, no downloads needed` 
           : "No pending media to download"

@@ -926,6 +926,10 @@ Deno.serve(async (req) => {
         // 3. Processing distributed across user requests
         // ============================================
         const mediaKey = contentObj?.mediaKey ? String(contentObj.mediaKey) : null;
+        const directPath = String(contentObj?.directPath || msgAny.directPath || "");
+        if (!mediaUrl && directPath.startsWith("/")) {
+          mediaUrl = `https://mmg.whatsapp.net${directPath}`;
+        }
         
         // Check if this is a VALID WhatsApp media URL (mmg.whatsapp.net for actual media)
         // Some messages come with invalid URLs like "https://web.whatsapp.net" for stickers
@@ -947,6 +951,8 @@ Deno.serve(async (req) => {
         } else if (permanentMediaUrl) {
           // URL already points to permanent storage (e.g. Supabase Storage for outbound audio)
           initialMediaDownloadStatus = "completed";
+        } else if (mediaType) {
+          initialMediaDownloadStatus = "failed";
         }
         
         const messageId = msg.id || `${Date.now()}`;
