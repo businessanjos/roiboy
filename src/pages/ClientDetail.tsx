@@ -402,7 +402,16 @@ export default function ClientDetail() {
   const toggleProductActive = async (productId: string, active: boolean) => {
     if (!id) return;
     const previous = clientProducts;
-    setClientProducts(prev => prev.map(p => (p.id === productId ? { ...p, is_active: active } : p)));
+    // Regra do banco: apenas um produto ativo por cliente
+    setClientProducts(prev =>
+      prev.map(p =>
+        p.id === productId
+          ? { ...p, is_active: active }
+          : active
+            ? { ...p, is_active: false }
+            : p
+      )
+    );
     const { error } = await supabase
       .from("client_products")
       .update({ is_active: active, deactivated_at: active ? null : new Date().toISOString() })
@@ -413,8 +422,13 @@ export default function ClientDetail() {
       toast.error("Erro ao atualizar o status do produto");
       return;
     }
-    toast.success(active ? "Produto marcado como ativo" : "Produto movido para histórico");
+    toast.success(
+      active
+        ? "Produto marcado como ativo (os demais foram para histórico)"
+        : "Produto movido para histórico"
+    );
   };
+
 
   const handleSaveProducts = async () => {
     if (!id) return;
