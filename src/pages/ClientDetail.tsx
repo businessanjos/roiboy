@@ -415,15 +415,21 @@ export default function ClientDetail() {
     setSavingProducts(true);
 
     try {
-      // Delete existing client_products
-      await supabase
-        .from("client_products")
-        .delete()
-        .eq("client_id", id);
+      const existingIds = clientProducts.map((p) => p.id);
+      const removedIds = existingIds.filter((pid) => !selectedProductIds.includes(pid));
+      const addedIds = selectedProductIds.filter((pid) => !existingIds.includes(pid));
 
-      // Insert new client_products
-      if (selectedProductIds.length > 0) {
-        const newClientProducts = selectedProductIds.map(productId => ({
+      // Remove apenas os produtos desmarcados (preserva o status ativo/inativo dos demais)
+      if (removedIds.length > 0) {
+        await supabase
+          .from("client_products")
+          .delete()
+          .eq("client_id", id)
+          .in("product_id", removedIds);
+      }
+
+      if (addedIds.length > 0) {
+        const newClientProducts = addedIds.map(productId => ({
           account_id: currentUser.account_id,
           client_id: id,
           product_id: productId,
@@ -439,7 +445,12 @@ export default function ClientDetail() {
       // Update local state
       const newProducts = allProducts
         .filter(p => selectedProductIds.includes(p.id))
-        .map(p => ({ id: p.id, name: p.name }));
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          color: (p as any).color ?? null,
+          is_active: clientProducts.find((cp) => cp.id === p.id)?.is_active ?? true,
+        }));
       setClientProducts(newProducts);
 
       toast.success("Produtos atualizados!");
