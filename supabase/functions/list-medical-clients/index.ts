@@ -155,13 +155,16 @@ Deno.serve(async (req) => {
     };
 
     const clientList = (clients ?? []).map((c: any) => {
-      const productNames: string[] = (c.client_products ?? [])
+      // Considera apenas vínculos de produto ativos (toggle na ficha do cliente)
+      const activeProducts = (c.client_products ?? []).filter((cp: any) => cp.is_active !== false);
+      const productNames: string[] = activeProducts
         .map((cp: any) => cp.products?.name)
         .filter(Boolean);
       const productColors: Record<string, string> = {};
-      for (const cp of c.client_products ?? []) {
+      for (const cp of activeProducts) {
         if (cp.products?.name) productColors[cp.products.name] = cp.products.color || "#6b7280";
       }
+
 
       // Todos os campos da ficha (fonte única), já formatados
       const recordFields = Object.keys(c)
