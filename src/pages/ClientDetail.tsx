@@ -757,7 +757,7 @@ export default function ClientDetail() {
         allRiskResult,
         checkinsResult,
       ] = await Promise.all([
-        supabase.from("client_products").select("product_id, products(id, name)").eq("client_id", id),
+        supabase.from("client_products").select("product_id, is_active, products(id, name, color)").eq("client_id", id),
         supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("score_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("vnps_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
