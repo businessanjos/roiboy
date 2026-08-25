@@ -473,16 +473,22 @@ export default function ClientDetail() {
         if (error) throw error;
       }
 
-      // Update local state
-      const newProducts = allProducts
-        .filter(p => selectedProductIds.includes(p.id))
-        .map(p => ({
-          id: p.id,
-          name: p.name,
-          color: (p as any).color ?? null,
-          is_active: clientProducts.find((cp) => cp.id === p.id)?.is_active ?? true,
-        }));
+      // Recarrega do banco para refletir a regra de produto ativo único
+      const { data: refreshed } = await supabase
+        .from("client_products")
+        .select("product_id, is_active, products(id, name, color)")
+        .eq("client_id", id);
+
+      const newProducts = (refreshed || [])
+        .filter((cp: any) => cp.products)
+        .map((cp: any) => ({
+          id: cp.products.id,
+          name: cp.products.name,
+          color: cp.products.color ?? null,
+          is_active: cp.is_active !== false,
+        })) as ClientProduct[];
       setClientProducts(newProducts);
+
 
       toast.success("Produtos atualizados!");
       setProductsDialogOpen(false);
