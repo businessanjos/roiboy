@@ -69,6 +69,7 @@ export function usePendingTasksCount() {
       const { data: clientProducts } = await supabase
         .from("client_products")
         .select("client_id, product_id")
+        .eq("is_active", true)
         .in("client_id", myClientIds);
 
       if (!clientProducts || clientProducts.length === 0) {

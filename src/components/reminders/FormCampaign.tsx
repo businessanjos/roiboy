@@ -133,6 +133,7 @@ export default function FormCampaign() {
       const { data, error } = await supabase
         .from("client_products")
         .select("client_id")
+        .eq("is_active", true)
         .eq("product_id", productFilter);
       if (error) throw error;
       return data.map(cp => cp.client_id);
