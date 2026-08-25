@@ -2194,9 +2194,47 @@ export default function ClientDetail() {
             <DialogHeader>
               <DialogTitle>Editar Produtos</DialogTitle>
               <DialogDescription>
-                Selecione os produtos vinculados a este cliente
+                Selecione os produtos vinculados e marque quais estão ativos hoje
               </DialogDescription>
             </DialogHeader>
+            {clientProducts.length > 0 && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Produtos deste cliente
+                </p>
+                {clientProducts.map((product) => {
+                  const active = product.is_active !== false;
+                  const color = product.color || "#6b7280";
+                  return (
+                    <div key={product.id} className="flex items-center justify-between gap-3">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-medium ${active ? "" : "opacity-60"}`}
+                        style={{
+                          backgroundColor: active ? `${color}20` : "transparent",
+                          borderColor: color,
+                          color: color,
+                        }}
+                      >
+                        {product.name}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {active ? "Ativo" : "Histórico"}
+                        </span>
+                        <Switch
+                          checked={active}
+                          onCheckedChange={(checked) => toggleProductActive(product.id, checked)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-muted-foreground">
+                  Produtos em histórico continuam visíveis na ficha, mas não contam como ativos nos filtros por produto.
+                </p>
+              </div>
+            )}
             <div className="py-4">
               {allProducts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
