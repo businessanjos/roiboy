@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { z } from "npm:zod@3.23.8";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -27,6 +28,42 @@ const corsHeaders = {
 // Limite de tamanho por mídia (memória do isolate é compartilhada)
 const MAX_MEDIA_BYTES = 90 * 1024 * 1024;
 
+const BodySchema = z.object({
+  message_id: z.string().uuid().optional(),
+  message_ids: z.array(z.string().uuid()).min(1).max(25).optional(),
+  account_id: z.string().uuid().optional(),
+  force: z.boolean().optional().default(false),
+}).refine((body) => body.message_id || body.message_ids?.length, {
+  message: "message_id or message_ids required",
+});
+
+function constantTimeEqual(left: Uint8Array, right: Uint8Array): boolean {
+  if (left.length !== right.length) return false;
+  let difference = 0;
+  for (let index = 0; index < left.length; index++) difference |= left[index] ^ right[index];
+  return difference === 0;
+}
+
+function hasExpectedMediaSignature(data: Uint8Array, mediaType: string, mimetype: string | null): boolean {
+  if (data.byteLength < 12) return false;
+  if (mediaType === "video") {
+    // ISO BMFF containers used by MP4/MOV have an `ftyp` box near the start.
+    return new TextDecoder().decode(data.subarray(4, 12)).includes("ftyp");
+  }
+  if (mediaType === "image") {
+    return (data[0] === 0xff && data[1] === 0xd8) ||
+      (data[0] === 0x89 && data[1] === 0x50 && data[2] === 0x4e && data[3] === 0x47) ||
+      new TextDecoder().decode(data.subarray(0, 12)).includes("WEBP");
+  }
+  if (mediaType === "audio") {
+    const header = new TextDecoder().decode(data.subarray(0, 12));
+    return header.startsWith("OggS") || header.startsWith("ID3") || header.includes("ftyp") ||
+      (data[0] === 0xff && (data[1] & 0xe0) === 0xe0);
+  }
+  // Documents can be any binary format; the authenticated WhatsApp MAC is the validation.
+  return mediaType === "document" || Boolean(mimetype);
+}
+
 // Download with timeout
 async function downloadWithTimeout(url: string, timeoutMs: number = 30000): Promise<Response> {
   const controller = new AbortController();
@@ -49,16 +86,43 @@ Deno.serve(async (req) => {
     const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    const { message_id, message_ids, account_id: requestedAccountId } = await req.json();
+    const parsedBody = BodySchema.safeParse(await req.json());
+    if (!parsedBody.success) {
+      return new Response(JSON.stringify({ error: parsedBody.error.flatten() }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+    const { message_id, message_ids, account_id: requestedAccountId, force } = parsedBody.data;
     
     // Support both single message and batch processing
     const idsToProcess = message_ids || (message_id ? [message_id] : []);
     
-    if (idsToProcess.length === 0) {
-      return new Response(JSON.stringify({ error: "message_id or message_ids required" }), {
-        status: 400,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
+    const authorization = req.headers.get("Authorization") || "";
+    const bearerToken = authorization.replace(/^Bearer\s+/i, "");
+    const isInternalCall = bearerToken === supabaseKey;
+    let authorizedAccountId = requestedAccountId || null;
+
+    if (!isInternalCall) {
+      const { data: authData, error: authError } = await supabase.auth.getUser(bearerToken);
+      if (authError || !authData.user) {
+        return new Response(JSON.stringify({ error: "Unauthorized" }), {
+          status: 401,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const { data: appUser } = await supabase
+        .from("users")
+        .select("account_id")
+        .eq("auth_user_id", authData.user.id)
+        .maybeSingle();
+      if (!appUser?.account_id) {
+        return new Response(JSON.stringify({ error: "Account not found" }), {
+          status: 403,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      authorizedAccountId = appUser.account_id;
     }
 
     console.log(`Processing ${idsToProcess.length} media messages for account ${requestedAccountId || 'any'}`);
@@ -74,8 +138,8 @@ Deno.serve(async (req) => {
       .in("id", idsToProcess);
     
     // SECURITY: If account_id provided, filter to prevent cross-account access
-    if (requestedAccountId) {
-      messagesQuery = messagesQuery.eq("account_id", requestedAccountId);
+    if (authorizedAccountId) {
+      messagesQuery = messagesQuery.eq("account_id", authorizedAccountId);
     }
     
     // Fetch messages that need processing
@@ -109,7 +173,7 @@ Deno.serve(async (req) => {
       // Skip if no encrypted URL to download from
       if (!msg.media_encrypted_url) return false;
       // Skip already completed
-      if (msg.media_download_status === "completed") return false;
+      if (msg.media_download_status === "completed" && !force) return false;
       // Skip auto-corrected
       if (autoCorrectMsgs.some((ac: any) => ac.id === msg.id)) return false;
       
@@ -117,7 +181,8 @@ Deno.serve(async (req) => {
       if (msg.media_download_status === "downloading") {
         return msg.updated_at && msg.updated_at < fiveMinutesAgo;
       }
-      if (msg.media_download_status === "failed") return true;
+      if (msg.media_download_status === "failed" || msg.media_download_status === "abandoned") return true;
+      if (force) return true;
       return false;
     });
 
@@ -237,10 +302,22 @@ Deno.serve(async (req) => {
               const derivedBytes = new Uint8Array(derivedBits);
               const iv = derivedBytes.slice(0, 16);
               const cipherKey = derivedBytes.slice(16, 48);
+              const macKey = derivedBytes.slice(48, 80);
               
               // subarray (view) em vez de slice: evita duplicar o buffer inteiro
               // em memória, o que derrubava o isolate em vídeos grandes.
               const ciphertext = new Uint8Array(encryptedData).subarray(0, -10);
+              const receivedMac = new Uint8Array(encryptedData).subarray(-10);
+              const macPayload = new Uint8Array(iv.byteLength + ciphertext.byteLength);
+              macPayload.set(iv, 0);
+              macPayload.set(ciphertext, iv.byteLength);
+              const importedMacKey = await crypto.subtle.importKey(
+                "raw", macKey, { name: "HMAC", hash: "SHA-256" }, false, ["sign"]
+              );
+              const calculatedMac = new Uint8Array(await crypto.subtle.sign("HMAC", importedMacKey, macPayload)).subarray(0, 10);
+              if (!constantTimeEqual(receivedMac, calculatedMac)) {
+                throw new Error("WhatsApp media authentication failed");
+              }
               
               const aesKey = await crypto.subtle.importKey(
                 'raw',
@@ -257,13 +334,16 @@ Deno.serve(async (req) => {
               );
               
               finalData = new Uint8Array(decrypted);
+              if (!hasExpectedMediaSignature(finalData, msg.media_type, msg.media_mimetype)) {
+                throw new Error(`Invalid decrypted ${msg.media_type} format`);
+              }
               console.log(`Decrypted: ${finalData.byteLength} bytes`);
             } catch (decryptError) {
               console.error(`Decryption failed:`, decryptError);
-              finalData = new Uint8Array(encryptedData);
+              throw new Error(`Media decryption failed: ${String(decryptError)}`);
             }
           } else {
-            finalData = new Uint8Array(encryptedData);
+            throw new Error("Missing media key for encrypted WhatsApp media");
           }
 
           // Upload to storage if data is valid

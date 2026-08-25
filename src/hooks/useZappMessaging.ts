@@ -1521,6 +1521,10 @@ export function useZappMessaging({
 
   // Retry media download
   const retryMediaDownload = async (messageId: string) => {
+    if (!currentUser?.account_id) {
+      toast.error("Conta não identificada para baixar a mídia");
+      return;
+    }
     const { error } = await supabase
       .from("zapp_messages")
       .update({ media_download_status: "pending" })
@@ -1532,7 +1536,7 @@ export function useZappMessaging({
     }
     
     supabase.functions.invoke("download-media", {
-      body: { message_ids: [messageId] }
+      body: { message_ids: [messageId], account_id: currentUser.account_id, force: true }
     }).then(({ data, error: invokeError }) => {
       if (invokeError) {
         toast.error("Erro ao baixar mídia");
@@ -1540,6 +1544,10 @@ export function useZappMessaging({
         if (selectedConversation?.zapp_conversation_id) {
           fetchMessages(selectedConversation.zapp_conversation_id);
         }
+      } else {
+        const failure = data?.results?.find((result: { success?: boolean; error?: string }) => result.success === false);
+        toast.error(failure?.error || "Não foi possível recuperar esta mídia");
+        if (selectedConversation?.zapp_conversation_id) fetchMessages(selectedConversation.zapp_conversation_id);
       }
     });
     

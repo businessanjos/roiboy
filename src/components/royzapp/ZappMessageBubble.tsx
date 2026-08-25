@@ -254,6 +254,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
+  const [videoPlaybackFailed, setVideoPlaybackFailed] = useState(false);
   const [transcription, setTranscription] = useState<string | null>(
     message.transcription || null
   );
@@ -515,6 +516,20 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               )}
             </div>
           )}
+          {message.media_download_status === "abandoned" && message.media_type && !message.media_url && message.media_type !== "sticker" && (
+            <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-xs text-zapp-text-muted">Mídia indisponível</span>
+              </div>
+              {onRetryMediaDownload && (
+                <Button variant="ghost" size="sm" onClick={() => onRetryMediaDownload(message.id)} className="text-xs text-zapp-accent hover:text-zapp-accent/80">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Tentar novamente
+                </Button>
+              )}
+            </div>
+          )}
           
           {/* Sticker without URL - show placeholder */}
           {message.media_type === "sticker" && !message.media_url && (
@@ -596,16 +611,31 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
           )}
           
           {/* Video */}
-          {message.media_url && message.media_type === "video" && (
+          {message.media_url && message.media_type === "video" && !videoPlaybackFailed && (
             <div className="mb-2 rounded-lg overflow-hidden">
               <video 
                 controls 
                 preload="none"
                 className="max-w-full max-h-72"
+                onError={() => setVideoPlaybackFailed(true)}
               >
 
                 <source src={message.media_url} type={message.media_mimetype || "video/mp4"} />
               </video>
+            </div>
+          )}
+          {message.media_url && message.media_type === "video" && videoPlaybackFailed && (
+            <div className="mb-2 rounded-lg bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-warning" />
+                <span className="text-xs text-zapp-text-muted">Vídeo corrompido ou incompatível</span>
+              </div>
+              {onRetryMediaDownload && (
+                <Button variant="ghost" size="sm" onClick={() => onRetryMediaDownload(message.id)} className="text-xs text-zapp-accent hover:text-zapp-accent/80">
+                  <RefreshCw className="h-3 w-3 mr-1" />
+                  Recuperar vídeo
+                </Button>
+              )}
             </div>
           )}
           

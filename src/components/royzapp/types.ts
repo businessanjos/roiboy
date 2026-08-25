@@ -77,7 +77,7 @@ export interface Message {
   audio_duration_sec?: number | null;
   sender_name?: string | null;
   delivery_status?: "pending" | "sent" | "delivered" | "read" | "failed" | null;
-  media_download_status?: "pending" | "downloading" | "completed" | "failed" | null;
+  media_download_status?: "pending" | "downloading" | "completed" | "failed" | "abandoned" | null;
   external_message_id?: string | null;
   transcription?: string | null;
   is_deleted?: boolean;

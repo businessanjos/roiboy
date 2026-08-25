@@ -901,6 +901,17 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Some provider payloads label ordinary link previews as "document/media"
+        // even though they contain no media URL, key, mimetype or filename. Keeping
+        // that classification makes the UI wait forever for a file that does not exist.
+        const declaredTypeForText = String((msg as any).type || (msg as any).messageType || msgAny.messageType || "").toLowerCase();
+        const isPlainTextOrLink = Boolean(content.trim()) && !mediaUrl && !mediaMimetype && !mediaFilename &&
+          !contentObj?.mediaKey && !/image|video|audio|ptt|ptv|sticker|view_?once/.test(declaredTypeForText);
+        if (mediaType === "document" && isPlainTextOrLink) {
+          console.log(`[WEBHOOK] Normalized false document/link preview to text. msgId=${msg.id}`);
+          mediaType = "";
+        }
+
         
         // Media content: don't add labels, just use caption if available
         // The UI will show emojis for media types in previews
