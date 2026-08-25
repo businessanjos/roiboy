@@ -492,7 +492,9 @@ export default function ClientDetail() {
       setClientProducts(newProducts);
 
 
+      emitClientProductsChanged(id);
       toast.success("Produtos atualizados!");
+
       setProductsDialogOpen(false);
     } catch (error: any) {
       console.error("Error saving products:", error);
