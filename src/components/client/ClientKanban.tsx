@@ -92,6 +92,7 @@ interface Client {
   stage_id: string | null;
   status: string;
   client_products?: Array<{
+    is_active?: boolean | null;
     products: { name: string } | null;
   }>;
 }
@@ -224,16 +225,16 @@ function SortableClientCard({
             )}
           </div>
 
-          {client.client_products && client.client_products.length > 0 && (
+          {activeProducts.length > 0 && (
             <div className="flex gap-1 flex-wrap">
-              {client.client_products.slice(0, 2).map((cp, idx) => (
+              {activeProducts.slice(0, 2).map((cp, idx) => (
                 <Badge key={idx} variant="secondary" className="text-[9px] px-1.5 py-0">
                   {cp.products?.name}
                 </Badge>
               ))}
-              {client.client_products.length > 2 && (
+              {activeProducts.length > 2 && (
                 <Badge variant="outline" className="text-[9px] px-1.5 py-0">
-                  +{client.client_products.length - 2}
+                  +{activeProducts.length - 2}
                 </Badge>
               )}
             </div>
