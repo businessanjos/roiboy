@@ -16,6 +16,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
+import { emitClientProductsChanged } from "@/lib/client/clientProductsEvents";
+
 import {
   Breadcrumb,
   BreadcrumbItem,
