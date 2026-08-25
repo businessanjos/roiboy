@@ -3114,7 +3114,7 @@ export default function Clients() {
       ) : viewMode === "cards" ? (
         <div className="grid gap-3">
           {filtered.map((client) => {
-            const clientProductsData = client.client_products || [];
+            const clientProductsData = (client.client_products || []).filter((cp: any) => cp.is_active !== false);
             
             return (
               <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
