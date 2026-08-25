@@ -144,6 +144,11 @@ function SortableClientCard({
     ? client.emails[0] 
     : null;
 
+  // Apenas produtos com toggle "Ativo" na ficha do cliente
+  const activeProducts = (client.client_products || []).filter((cp) => cp.is_active !== false);
+
+
+
   // Calculate checklist status
   const currentStage = stages.find(s => s.id === client.stage_id);
   const checklistStatus = client.stage_id 
