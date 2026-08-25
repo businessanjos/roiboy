@@ -174,6 +174,8 @@ interface Recommendation {
 interface ClientProduct {
   id: string;
   name: string;
+  color?: string | null;
+  is_active?: boolean;
 }
 
 interface AllProduct {
