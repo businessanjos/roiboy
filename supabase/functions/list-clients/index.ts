@@ -183,7 +183,8 @@ Deno.serve(async (req) => {
         .from("client_products")
         .select("client_id")
         .eq("account_id", accountId)
-        .eq("product_id", productId);
+        .eq("product_id", productId)
+        .eq("is_active", true);
 
       productFilterClientIds = clientProducts?.map((cp) => cp.client_id) || [];
       if (productFilterClientIds.length === 0) {
@@ -406,6 +407,7 @@ Deno.serve(async (req) => {
         contract_start_date,
         client_products (
           product_id,
+          is_active,
           products:product_id (
             id,
             name,

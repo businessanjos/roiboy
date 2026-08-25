@@ -96,6 +96,7 @@ export function useClientsPage() {
         birth_date, cnpj, cpf, notes, additional_phones, mls_level, business_segment,
         client_products (
           product_id,
+          is_active,
           products (
             id,
             name
