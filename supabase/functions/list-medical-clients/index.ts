@@ -107,7 +107,7 @@ Deno.serve(async (req) => {
     // 1) All non-inactive clients in this account with their (mentorship) products
     const { data: clients } = await supabase
       .from("clients")
-      .select("*, client_products(product_id, products(name, color)), responsible:users!clients_responsible_user_id_fkey(name)")
+      .select("*, client_products(product_id, is_active, products(name, color)), responsible:users!clients_responsible_user_id_fkey(name)")
       .eq("account_id", accountId)
       .in("status", ["active", "churn_risk"]);
 
