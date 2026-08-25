@@ -152,7 +152,7 @@ Deno.serve(async (req) => {
 
     // Auto-correct: messages that already have a permanent media_url (e.g. Supabase Storage)
     // but are stuck with wrong status — fix them immediately without downloading
-    const autoCorrectMsgs = (allMessages || []).filter((msg: any) => {
+    const autoCorrectMsgs = force ? [] : (allMessages || []).filter((msg: any) => {
       return msg.media_url 
         && msg.media_url.includes("supabase") 
         && msg.media_download_status !== "completed";
