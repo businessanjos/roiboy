@@ -586,11 +586,19 @@ export default function Clients() {
       // Transform enriched clients to match expected format
       const transformedClients = result.clients.map((c: any) => ({
         ...c,
-        client_products: c.products?.map((p: any) => ({
-          product_id: p.id,
-          products: p
-        })) || []
+        client_products: Array.isArray(c.products_history) && c.products_history.length > 0
+          ? c.products_history.map((h: any) => ({
+              product_id: h.product_id,
+              is_active: h.is_active !== false,
+              products: h.products,
+            }))
+          : c.products?.map((p: any) => ({
+              product_id: p.id,
+              is_active: true,
+              products: p
+            })) || []
       }));
+
       
       setClients(transformedClients);
       setTotalClients(result.total || 0);
