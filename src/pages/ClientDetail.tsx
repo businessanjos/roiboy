@@ -399,6 +399,23 @@ export default function ClientDetail() {
     );
   };
 
+  const toggleProductActive = async (productId: string, active: boolean) => {
+    if (!id) return;
+    const previous = clientProducts;
+    setClientProducts(prev => prev.map(p => (p.id === productId ? { ...p, is_active: active } : p)));
+    const { error } = await supabase
+      .from("client_products")
+      .update({ is_active: active, deactivated_at: active ? null : new Date().toISOString() })
+      .eq("client_id", id)
+      .eq("product_id", productId);
+    if (error) {
+      setClientProducts(previous);
+      toast.error("Erro ao atualizar o status do produto");
+      return;
+    }
+    toast.success(active ? "Produto marcado como ativo" : "Produto movido para histórico");
+  };
+
   const handleSaveProducts = async () => {
     if (!id) return;
     
