@@ -116,7 +116,9 @@ export function ProductDialog({
         if (error) throw error;
       }
 
+      emitClientProductsChanged(clientId);
       toast.success("Produtos atualizados");
+
       onOpenChange(false);
       onSuccess?.();
     } catch (error) {
