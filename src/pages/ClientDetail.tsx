@@ -2080,12 +2080,26 @@ export default function ClientDetail() {
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
               {clientProducts.length > 0 ? (
-                clientProducts.map((product) => (
-                  <Badge key={product.id} variant="secondary" className="text-xs">
-                    <Package className="h-3 w-3 mr-1" />
-                    {product.name}
-                  </Badge>
-                ))
+                clientProducts.map((product) => {
+                  const active = product.is_active !== false;
+                  const color = product.color || "#6b7280";
+                  return (
+                    <Badge
+                      key={product.id}
+                      variant="outline"
+                      className={`text-xs font-medium ${active ? "" : "opacity-60 line-through"}`}
+                      style={{
+                        backgroundColor: active ? `${color}20` : "transparent",
+                        borderColor: color,
+                        color: color,
+                      }}
+                    >
+                      <Package className="h-3 w-3 mr-1" />
+                      {product.name}
+                      {!active && <span className="ml-1 no-underline">(histórico)</span>}
+                    </Badge>
+                  );
+                })
               ) : (
                 <span className="text-sm text-muted-foreground">Nenhum produto</span>
               )}
