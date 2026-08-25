@@ -402,7 +402,16 @@ export default function ClientDetail() {
   const toggleProductActive = async (productId: string, active: boolean) => {
     if (!id) return;
     const previous = clientProducts;
-    setClientProducts(prev => prev.map(p => (p.id === productId ? { ...p, is_active: active } : p)));
+    // Regra do banco: apenas um produto ativo por cliente
+    setClientProducts(prev =>
+      prev.map(p =>
+        p.id === productId
+          ? { ...p, is_active: active }
+          : active
+            ? { ...p, is_active: false }
+            : p
+      )
+    );
     const { error } = await supabase
       .from("client_products")
       .update({ is_active: active, deactivated_at: active ? null : new Date().toISOString() })
@@ -413,8 +422,13 @@ export default function ClientDetail() {
       toast.error("Erro ao atualizar o status do produto");
       return;
     }
-    toast.success(active ? "Produto marcado como ativo" : "Produto movido para histórico");
+    toast.success(
+      active
+        ? "Produto marcado como ativo (os demais foram para histórico)"
+        : "Produto movido para histórico"
+    );
   };
+
 
   const handleSaveProducts = async () => {
     if (!id) return;
@@ -459,16 +473,22 @@ export default function ClientDetail() {
         if (error) throw error;
       }
 
-      // Update local state
-      const newProducts = allProducts
-        .filter(p => selectedProductIds.includes(p.id))
-        .map(p => ({
-          id: p.id,
-          name: p.name,
-          color: (p as any).color ?? null,
-          is_active: clientProducts.find((cp) => cp.id === p.id)?.is_active ?? true,
-        }));
+      // Recarrega do banco para refletir a regra de produto ativo único
+      const { data: refreshed } = await supabase
+        .from("client_products")
+        .select("product_id, is_active, products(id, name, color)")
+        .eq("client_id", id);
+
+      const newProducts = (refreshed || [])
+        .filter((cp: any) => cp.products)
+        .map((cp: any) => ({
+          id: cp.products.id,
+          name: cp.products.name,
+          color: cp.products.color ?? null,
+          is_active: cp.is_active !== false,
+        })) as ClientProduct[];
       setClientProducts(newProducts);
+
 
       toast.success("Produtos atualizados!");
       setProductsDialogOpen(false);
