@@ -901,6 +901,17 @@ Deno.serve(async (req) => {
           }
         }
 
+        // Some provider payloads label ordinary link previews as "document/media"
+        // even though they contain no media URL, key, mimetype or filename. Keeping
+        // that classification makes the UI wait forever for a file that does not exist.
+        const declaredTypeForText = String((msg as any).type || (msg as any).messageType || msgAny.messageType || "").toLowerCase();
+        const isPlainTextOrLink = Boolean(content.trim()) && !mediaUrl && !mediaMimetype && !mediaFilename &&
+          !contentObj?.mediaKey && !/image|video|audio|ptt|ptv|sticker|view_?once/.test(declaredTypeForText);
+        if (mediaType === "document" && isPlainTextOrLink) {
+          console.log(`[WEBHOOK] Normalized false document/link preview to text. msgId=${msg.id}`);
+          mediaType = "";
+        }
+
         
         // Media content: don't add labels, just use caption if available
         // The UI will show emojis for media types in previews
@@ -915,6 +926,10 @@ Deno.serve(async (req) => {
         // 3. Processing distributed across user requests
         // ============================================
         const mediaKey = contentObj?.mediaKey ? String(contentObj.mediaKey) : null;
+        const directPath = String(contentObj?.directPath || msgAny.directPath || "");
+        if (!mediaUrl && directPath.startsWith("/")) {
+          mediaUrl = `https://mmg.whatsapp.net${directPath}`;
+        }
         
         // Check if this is a VALID WhatsApp media URL (mmg.whatsapp.net for actual media)
         // Some messages come with invalid URLs like "https://web.whatsapp.net" for stickers
@@ -936,6 +951,8 @@ Deno.serve(async (req) => {
         } else if (permanentMediaUrl) {
           // URL already points to permanent storage (e.g. Supabase Storage for outbound audio)
           initialMediaDownloadStatus = "completed";
+        } else if (mediaType) {
+          initialMediaDownloadStatus = "failed";
         }
         
         const messageId = msg.id || `${Date.now()}`;

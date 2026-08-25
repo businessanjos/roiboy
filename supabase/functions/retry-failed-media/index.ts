@@ -63,6 +63,23 @@ Deno.serve(async (req) => {
       console.log(`[retry-failed-media] Abandoned ${reaped.length} stuck downloads`);
     }
 
+    const { data: unresolved } = await supabase
+      .from("zapp_messages")
+      .update({
+        media_download_status: "failed",
+        media_last_error: "URL de mídia não recebida do provedor",
+        updated_at: new Date().toISOString(),
+      })
+      .is("media_url", null)
+      .is("media_encrypted_url", null)
+      .not("media_type", "is", null)
+      .is("media_download_status", null)
+      .gte("created_at", new Date(Date.now() - 72 * 3600_000).toISOString())
+      .select("id");
+    if (unresolved?.length) {
+      console.log(`[retry-failed-media] Marked ${unresolved.length} unresolved media rows as failed`);
+    }
+
 
     // Puxa candidatos amplos (últimas 72h) e filtra em memória pelo backoff.
     const since = new Date(Date.now() - 72 * 3600_000).toISOString();

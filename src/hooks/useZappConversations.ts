@@ -462,18 +462,18 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     const allIds = pendingMediaMsgs.map((m) => m.id);
     console.log(`[ZappConversations] Auto-downloading ${allIds.length} pending media in batches of ${BATCH_SIZE}`);
 
-    supabase.functions.invoke("download-media", { body: { message_ids: allIds.slice(0, BATCH_SIZE) } })
+    supabase.functions.invoke("download-media", { body: { message_ids: allIds.slice(0, BATCH_SIZE), account_id: accountId } })
       .catch((err) => console.error("[ZappConversations] Auto-download error:", err));
 
     for (let i = BATCH_SIZE; i < allIds.length; i += BATCH_SIZE) {
       const batch = allIds.slice(i, i + BATCH_SIZE);
       const delay = Math.floor(i / BATCH_SIZE) * 2000;
       setTimeout(() => {
-        supabase.functions.invoke("download-media", { body: { message_ids: batch } })
+        supabase.functions.invoke("download-media", { body: { message_ids: batch, account_id: accountId } })
           .catch((err) => console.error("[ZappConversations] Auto-download batch error:", err));
       }, delay);
     }
-  }, []);
+  }, [accountId]);
 
   const fetchMessages = useCallback(async (zappConversationId: string) => {
     currentConversationIdRef.current = zappConversationId;
@@ -840,7 +840,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
             if (needsDownload) {
               console.log(`[ZappRT] Auto-downloading realtime media ${newMsg.id?.substring(0, 8)} (${newMsg.media_type})`);
               supabase.functions
-                .invoke("download-media", { body: { message_ids: [newMsg.id] } })
+                .invoke("download-media", { body: { message_ids: [newMsg.id], account_id: accountId } })
                 .catch((err) => console.error("[ZappRT] Realtime auto-download error:", err));
             }
           }
