@@ -321,6 +321,13 @@ export function useClientsPage() {
     loadAll();
   }, [fetchClients, fetchProducts, fetchCustomFields, fetchTeamUsers]);
 
+  // Reflete imediatamente mudanças de produto ativo/histórico feitas em outras telas
+  const handleProductsChanged = useCallback(() => {
+    fetchClients();
+  }, [fetchClients]);
+  useClientProductsChanged(handleProductsChanged);
+
+
   useEffect(() => {
     if (accountId || currentUser?.account_id) {
       fetchClientStages();
