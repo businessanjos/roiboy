@@ -792,10 +792,22 @@ Deno.serve(async (req) => {
 
       return {
         ...client,
+        // Somente produtos ativos alimentam badges/filtros
         products:
           client.client_products
-            ?.map((cp: any) => cp.products)
+            ?.filter((cp: any) => cp.is_active !== false)
+            .map((cp: any) => cp.products)
             .filter(Boolean) || [],
+        // Histórico completo (ativos + inativos) para tooltips/detalhes
+        products_history:
+          client.client_products
+            ?.filter((cp: any) => cp.products)
+            .map((cp: any) => ({
+              product_id: cp.product_id,
+              is_active: cp.is_active !== false,
+              products: cp.products,
+            })) || [],
+
         vnps: metrics.vnps || null,
         score: metrics.score || null,
         contract: contract,
