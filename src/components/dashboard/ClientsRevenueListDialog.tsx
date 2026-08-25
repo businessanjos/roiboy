@@ -140,6 +140,7 @@ export function ClientsRevenueListDialog({
             const { data } = await supabase
               .from("client_products")
               .select("client_id, product_id, products(name, color)")
+              .eq("is_active", true)
               .in("client_id", batch);
             return data || [];
           })()

@@ -115,8 +115,11 @@ export const ClientsTableRow = memo(function ClientsTableRow({
                       <>
                         <p className="mt-1 text-muted-foreground">Histórico</p>
                         {client.client_products.map((cp: any) => (
-                          <p key={cp.product_id}>{cp.products?.name}</p>
+                          <p key={cp.product_id} className={cp.is_active === false ? "line-through opacity-70" : ""}>
+                            {cp.products?.name}{cp.is_active === false ? " (histórico)" : ""}
+                          </p>
                         ))}
+
                       </>
                     )}
                     <p className="mt-1 text-primary">Clique para editar</p>

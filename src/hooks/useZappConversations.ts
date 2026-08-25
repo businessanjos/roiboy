@@ -240,6 +240,7 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       const { data: cpData } = await supabase
         .from("client_products")
         .select("client_id, product:products(id, name, color)")
+        .eq("is_active", true)
         .in("client_id", clientIds);
 
       if (cpData) {

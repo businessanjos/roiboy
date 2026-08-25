@@ -94,6 +94,7 @@ function useActiveClientsGeo() {
           const { data, error } = await supabase
             .from("client_products")
             .select("client_id, product_id")
+            .eq("is_active", true)
             .in("client_id", batch);
           if (error) throw error;
           for (const row of data || []) {

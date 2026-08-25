@@ -324,6 +324,7 @@ export default function Renewals() {
         const { data: cp } = await supabase
           .from("client_products")
           .select("client_id, product_id, created_at, products(name, color, price, cash_price, installment_price, renewal_discount_percent)")
+          .eq("is_active", true)
           .eq("account_id", currentUser.account_id)
           .in("client_id", fallbackClientIds)
           .order("created_at", { ascending: false });

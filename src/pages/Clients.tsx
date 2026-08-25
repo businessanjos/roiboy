@@ -586,11 +586,19 @@ export default function Clients() {
       // Transform enriched clients to match expected format
       const transformedClients = result.clients.map((c: any) => ({
         ...c,
-        client_products: c.products?.map((p: any) => ({
-          product_id: p.id,
-          products: p
-        })) || []
+        client_products: Array.isArray(c.products_history) && c.products_history.length > 0
+          ? c.products_history.map((h: any) => ({
+              product_id: h.product_id,
+              is_active: h.is_active !== false,
+              products: h.products,
+            }))
+          : c.products?.map((p: any) => ({
+              product_id: p.id,
+              is_active: true,
+              products: p
+            })) || []
       }));
+
       
       setClients(transformedClients);
       setTotalClients(result.total || 0);
@@ -2682,8 +2690,12 @@ export default function Clients() {
                                                 className="w-2 h-2 rounded-full" 
                                                 style={{ backgroundColor: cp.products?.color || '#6b7280' }}
                                               />
-                                              <span>{cp.products?.name}</span>
+                                              <span className={cp.is_active === false ? "line-through opacity-70" : ""}>
+                                                {cp.products?.name}
+                                                {cp.is_active === false ? " (histórico)" : ""}
+                                              </span>
                                             </div>
+
                                           ))}
                                         </>
                                       )}
@@ -3106,7 +3118,7 @@ export default function Clients() {
       ) : viewMode === "cards" ? (
         <div className="grid gap-3">
           {filtered.map((client) => {
-            const clientProductsData = client.client_products || [];
+            const clientProductsData = (client.client_products || []).filter((cp: any) => cp.is_active !== false);
             
             return (
               <Card key={client.id} className="shadow-card hover:shadow-elevated transition-shadow">
