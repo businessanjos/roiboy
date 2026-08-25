@@ -3089,21 +3089,27 @@ export type Database = {
           account_id: string
           client_id: string
           created_at: string
+          deactivated_at: string | null
           id: string
+          is_active: boolean
           product_id: string
         }
         Insert: {
           account_id: string
           client_id: string
           created_at?: string
+          deactivated_at?: string | null
           id?: string
+          is_active?: boolean
           product_id: string
         }
         Update: {
           account_id?: string
           client_id?: string
           created_at?: string
+          deactivated_at?: string | null
           id?: string
+          is_active?: boolean
           product_id?: string
         }
         Relationships: [
