@@ -776,8 +776,13 @@ export default function ClientDetail() {
 
       // Process client products
       const products = (clientProductsResult.data || [])
-        .map((cp: any) => cp.products)
-        .filter(Boolean) as ClientProduct[];
+        .filter((cp: any) => cp.products)
+        .map((cp: any) => ({
+          id: cp.products.id,
+          name: cp.products.name,
+          color: cp.products.color ?? null,
+          is_active: cp.is_active !== false,
+        })) as ClientProduct[];
       setClientProducts(products);
 
       // Process active contract
