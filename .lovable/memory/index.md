@@ -65,6 +65,7 @@
 - [Rykas Mentoring Vigência](mem://features/sales/rykas-mentoring-duration-pt) — Vigência sempre 6 meses para produtos Rykas Mentoring
 
 ### Clients & Contracts
+- [Produto ativo x histórico](mem://features/client/product-active-toggle-pt) — Toggle de produto ativo/histórico na ficha; filtros por produto ignoram histórico
 - [VIP Crown Indicator](mem://features/client/vip-crown-indicator-pt) — Coroa âmbar via `<VipBadge clientId>`
 - [Checkpoints & Contatos CS](mem://features/client/checkins-and-checkpoints-pt) — Cadência de 15 dias, `client_checkins`, painel /clients/checkpoints e resumo diário por IA do RoyZapp
 - [Timezone Detection](mem://features/client/timezone-detection-pt) — Cascata DDD > UF > DDI, override manual em `clients.timezone`

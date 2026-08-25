@@ -15,6 +15,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -174,6 +175,8 @@ interface Recommendation {
 interface ClientProduct {
   id: string;
   name: string;
+  color?: string | null;
+  is_active?: boolean;
 }
 
 interface AllProduct {
@@ -396,6 +399,23 @@ export default function ClientDetail() {
     );
   };
 
+  const toggleProductActive = async (productId: string, active: boolean) => {
+    if (!id) return;
+    const previous = clientProducts;
+    setClientProducts(prev => prev.map(p => (p.id === productId ? { ...p, is_active: active } : p)));
+    const { error } = await supabase
+      .from("client_products")
+      .update({ is_active: active, deactivated_at: active ? null : new Date().toISOString() })
+      .eq("client_id", id)
+      .eq("product_id", productId);
+    if (error) {
+      setClientProducts(previous);
+      toast.error("Erro ao atualizar o status do produto");
+      return;
+    }
+    toast.success(active ? "Produto marcado como ativo" : "Produto movido para histórico");
+  };
+
   const handleSaveProducts = async () => {
     if (!id) return;
     
@@ -412,15 +432,21 @@ export default function ClientDetail() {
     setSavingProducts(true);
 
     try {
-      // Delete existing client_products
-      await supabase
-        .from("client_products")
-        .delete()
-        .eq("client_id", id);
+      const existingIds = clientProducts.map((p) => p.id);
+      const removedIds = existingIds.filter((pid) => !selectedProductIds.includes(pid));
+      const addedIds = selectedProductIds.filter((pid) => !existingIds.includes(pid));
 
-      // Insert new client_products
-      if (selectedProductIds.length > 0) {
-        const newClientProducts = selectedProductIds.map(productId => ({
+      // Remove apenas os produtos desmarcados (preserva o status ativo/inativo dos demais)
+      if (removedIds.length > 0) {
+        await supabase
+          .from("client_products")
+          .delete()
+          .eq("client_id", id)
+          .in("product_id", removedIds);
+      }
+
+      if (addedIds.length > 0) {
+        const newClientProducts = addedIds.map(productId => ({
           account_id: currentUser.account_id,
           client_id: id,
           product_id: productId,
@@ -436,7 +462,12 @@ export default function ClientDetail() {
       // Update local state
       const newProducts = allProducts
         .filter(p => selectedProductIds.includes(p.id))
-        .map(p => ({ id: p.id, name: p.name }));
+        .map(p => ({
+          id: p.id,
+          name: p.name,
+          color: (p as any).color ?? null,
+          is_active: clientProducts.find((cp) => cp.id === p.id)?.is_active ?? true,
+        }));
       setClientProducts(newProducts);
 
       toast.success("Produtos atualizados!");
@@ -754,7 +785,7 @@ export default function ClientDetail() {
         allRiskResult,
         checkinsResult,
       ] = await Promise.all([
-        supabase.from("client_products").select("product_id, products(id, name)").eq("client_id", id),
+        supabase.from("client_products").select("product_id, is_active, products(id, name, color)").eq("client_id", id),
         supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("score_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("vnps_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
@@ -773,8 +804,13 @@ export default function ClientDetail() {
 
       // Process client products
       const products = (clientProductsResult.data || [])
-        .map((cp: any) => cp.products)
-        .filter(Boolean) as ClientProduct[];
+        .filter((cp: any) => cp.products)
+        .map((cp: any) => ({
+          id: cp.products.id,
+          name: cp.products.name,
+          color: cp.products.color ?? null,
+          is_active: cp.is_active !== false,
+        })) as ClientProduct[];
       setClientProducts(products);
 
       // Process active contract
@@ -2061,12 +2097,26 @@ export default function ClientDetail() {
             </div>
             <div className="flex items-center gap-2 flex-wrap mt-2">
               {clientProducts.length > 0 ? (
-                clientProducts.map((product) => (
-                  <Badge key={product.id} variant="secondary" className="text-xs">
-                    <Package className="h-3 w-3 mr-1" />
-                    {product.name}
-                  </Badge>
-                ))
+                clientProducts.map((product) => {
+                  const active = product.is_active !== false;
+                  const color = product.color || "#6b7280";
+                  return (
+                    <Badge
+                      key={product.id}
+                      variant="outline"
+                      className={`text-xs font-medium ${active ? "" : "opacity-60 line-through"}`}
+                      style={{
+                        backgroundColor: active ? `${color}20` : "transparent",
+                        borderColor: color,
+                        color: color,
+                      }}
+                    >
+                      <Package className="h-3 w-3 mr-1" />
+                      {product.name}
+                      {!active && <span className="ml-1 no-underline">(histórico)</span>}
+                    </Badge>
+                  );
+                })
               ) : (
                 <span className="text-sm text-muted-foreground">Nenhum produto</span>
               )}
@@ -2144,9 +2194,47 @@ export default function ClientDetail() {
             <DialogHeader>
               <DialogTitle>Editar Produtos</DialogTitle>
               <DialogDescription>
-                Selecione os produtos vinculados a este cliente
+                Selecione os produtos vinculados e marque quais estão ativos hoje
               </DialogDescription>
             </DialogHeader>
+            {clientProducts.length > 0 && (
+              <div className="rounded-lg border p-3 space-y-2">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Produtos deste cliente
+                </p>
+                {clientProducts.map((product) => {
+                  const active = product.is_active !== false;
+                  const color = product.color || "#6b7280";
+                  return (
+                    <div key={product.id} className="flex items-center justify-between gap-3">
+                      <Badge
+                        variant="outline"
+                        className={`text-xs font-medium ${active ? "" : "opacity-60"}`}
+                        style={{
+                          backgroundColor: active ? `${color}20` : "transparent",
+                          borderColor: color,
+                          color: color,
+                        }}
+                      >
+                        {product.name}
+                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs text-muted-foreground">
+                          {active ? "Ativo" : "Histórico"}
+                        </span>
+                        <Switch
+                          checked={active}
+                          onCheckedChange={(checked) => toggleProductActive(product.id, checked)}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+                <p className="text-[11px] text-muted-foreground">
+                  Produtos em histórico continuam visíveis na ficha, mas não contam como ativos nos filtros por produto.
+                </p>
+              </div>
+            )}
             <div className="py-4">
               {allProducts.length === 0 ? (
                 <p className="text-sm text-muted-foreground text-center py-4">
