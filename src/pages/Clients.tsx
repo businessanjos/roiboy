@@ -2690,8 +2690,12 @@ export default function Clients() {
                                                 className="w-2 h-2 rounded-full" 
                                                 style={{ backgroundColor: cp.products?.color || '#6b7280' }}
                                               />
-                                              <span>{cp.products?.name}</span>
+                                              <span className={cp.is_active === false ? "line-through opacity-70" : ""}>
+                                                {cp.products?.name}
+                                                {cp.is_active === false ? " (histórico)" : ""}
+                                              </span>
                                             </div>
+
                                           ))}
                                         </>
                                       )}
