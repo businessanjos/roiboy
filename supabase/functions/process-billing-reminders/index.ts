@@ -145,7 +145,7 @@ Deno.serve(async (req) => {
     // 1) Load active rules — either all or a single one for test.
     let rulesQ = supabase
       .from("billing_reminder_rules")
-      .select("id, account_id, name, days_offset, channels, subject, message, active");
+      .select("id, account_id, name, days_offset, channels, subject, message, active, active_since");
     if (body.rule_id) rulesQ = rulesQ.eq("id", body.rule_id);
     else rulesQ = rulesQ.eq("active", true);
     if (body.account_id) rulesQ = rulesQ.eq("account_id", body.account_id);
@@ -167,6 +167,30 @@ Deno.serve(async (req) => {
       const target = new Date(today);
       target.setUTCDate(target.getUTCDate() - rule.days_offset);
       const targetIso = target.toISOString().split("T")[0];
+
+      // TRAVA ANTI-RETROATIVA: só processa marcos de envio que ocorrem a partir
+      // do momento em que a regra foi ativada/publicada. Marcos passados (backlog)
+      // nunca são disparados, mesmo que a parcela continue em aberto.
+      if (!body.test_installment_id) {
+        if (!rule.active_since) {
+          console.log("[rule]", rule.id, "sem active_since — pulando (trava anti-retroativa)");
+          continue;
+        }
+        const activeSince = new Date(rule.active_since as string);
+        const activeSinceDay = new Date(
+          Date.UTC(
+            activeSince.getUTCFullYear(),
+            activeSince.getUTCMonth(),
+            activeSince.getUTCDate(),
+          ),
+        );
+        // O marco de envio desta rodada é sempre "hoje"; se a regra foi ativada
+        // depois do início do dia do marco, não dispara nada retroativo.
+        if (today.getTime() < activeSinceDay.getTime()) {
+          totalSkipped++;
+          continue;
+        }
+      }
 
       let instQ = supabase
         .from("installments")
@@ -194,6 +218,22 @@ Deno.serve(async (req) => {
       }
 
       for (const inst of (installments || []) as unknown as Installment[]) {
+        // Reforço: o marco de envio (due_date + days_offset) precisa ser hoje e
+        // não pode ser anterior à ativação da regra.
+        if (!body.test_installment_id) {
+          const due = new Date(`${inst.due_date}T00:00:00Z`);
+          const milestone = new Date(due);
+          milestone.setUTCDate(milestone.getUTCDate() + rule.days_offset);
+          const milestoneIso = milestone.toISOString().split("T")[0];
+          const todayIso = today.toISOString().split("T")[0];
+          const activeSinceIso = new Date(rule.active_since as string)
+            .toISOString()
+            .split("T")[0];
+          if (milestoneIso !== todayIso || milestoneIso < activeSinceIso) {
+            totalSkipped++;
+            continue;
+          }
+        }
         const client = inst.invoices?.clients;
         if (!client) {
           totalSkipped++;
