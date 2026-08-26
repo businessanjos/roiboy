@@ -91,7 +91,19 @@ export default function ClientCheckpoints() {
 
   const rows = useMemo(() => {
     return data
-      .map((r) => ({ ...r, state: getCheckpointState(r.last_checkpoint_at) }))
+      .map((r) => {
+        // Toda conversa com o cliente vale como checkpoint: usamos a última
+        // interação (checkpoint, contato registrado ou conversa no RoyZapp).
+        const interactionAt = r.last_interaction_at ?? r.last_checkpoint_at;
+        const days = daysSince(interactionAt);
+        return {
+          ...r,
+          interactionAt,
+          daysSinceInteraction: days,
+          silent: days === null || days >= SILENCE_DAYS,
+          state: getCheckpointState(interactionAt),
+        };
+      })
       .sort((a, b) => {
         const order: Record<CheckpointStatus, number> = {
           vencido: 0,
@@ -109,8 +121,14 @@ export default function ClientCheckpoints() {
     return c;
   }, [rows]);
 
+  const silentCount = useMemo(() => rows.filter((r) => r.silent).length, [rows]);
+
   const filtered = rows.filter((r) => {
-    if (filter !== "todos" && r.state.status !== filter) return false;
+    if (filter === "sem_interacao_15") {
+      if (!r.silent) return false;
+    } else if (filter !== "todos" && r.state.status !== filter) {
+      return false;
+    }
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
