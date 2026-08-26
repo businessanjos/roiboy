@@ -796,4 +796,106 @@
   .zapp-cs-theme [data-zapp-row]:hover [data-zapp-bubble] {
     box-shadow: 0 1px 2px hsl(27 53% 5% / 0.45), 0 0 0 1px hsl(var(--zapp-accent) / 0.22);
   }
+
+  /* ============================================================
+     Tema Ryka para gráficos (Recharts) — aplicado globalmente.
+     Substitui o visual antigo (grid pontilhado forte, tooltip branca
+     padrão, tipografia sem tabular-nums) pelo layout do
+     "Design Model - Ecossistema Ryka".
+     ============================================================ */
+
+  /* Grid: hairline contínuo e discreto */
+  .recharts-cartesian-grid line,
+  .recharts-polar-grid line,
+  .recharts-polar-grid circle,
+  .recharts-polar-grid path {
+    stroke: hsl(var(--hairline)) !important;
+    stroke-dasharray: none !important;
+    stroke-width: 1px;
+  }
+
+  /* Eixos: sem linha dura, ticks legíveis e numerais tabulares */
+  .recharts-cartesian-axis-line,
+  .recharts-cartesian-axis-tick-line {
+    stroke: hsl(var(--hairline)) !important;
+  }
+  .recharts-cartesian-axis-tick text,
+  .recharts-polar-angle-axis-tick text,
+  .recharts-polar-radius-axis-tick text,
+  .recharts-label,
+  .recharts-text {
+    fill: hsl(var(--muted-foreground));
+    font-size: 11px;
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: "tnum";
+    letter-spacing: -0.01em;
+  }
+  .recharts-label-list text {
+    fill: hsl(var(--foreground));
+  }
+
+  /* Cursor de hover: realce suave, não bloco cinza */
+  .recharts-rectangle.recharts-tooltip-cursor {
+    fill: hsl(var(--foreground) / 0.05) !important;
+  }
+  .recharts-curve.recharts-tooltip-cursor {
+    stroke: hsl(var(--hairline)) !important;
+    stroke-dasharray: none !important;
+  }
+
+  /* Tooltip: superfície glass do Ryka */
+  .recharts-default-tooltip,
+  .recharts-tooltip-wrapper > div {
+    background: hsl(var(--glass-bg-solid)) !important;
+    border: 1px solid hsl(var(--glass-border)) !important;
+    border-radius: 0.75rem !important;
+    box-shadow: var(--shadow-lift) !important;
+    color: hsl(var(--foreground)) !important;
+    font-size: 12px;
+    padding: 0.5rem 0.625rem !important;
+  }
+  .recharts-tooltip-label {
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 11px;
+    margin-bottom: 0.25rem !important;
+  }
+  .recharts-tooltip-item {
+    color: hsl(var(--foreground)) !important;
+    font-variant-numeric: tabular-nums;
+    padding: 0.0625rem 0 !important;
+  }
+  .recharts-tooltip-item-separator + .recharts-tooltip-item-value,
+  .recharts-tooltip-item-value {
+    color: hsl(var(--foreground)) !important;
+  }
+
+  /* Legenda: chips discretos e tipografia do sistema */
+  .recharts-legend-wrapper .recharts-legend-item {
+    margin-right: 1rem !important;
+  }
+  .recharts-legend-item-text {
+    color: hsl(var(--muted-foreground)) !important;
+    font-size: 12px;
+  }
+
+  /* Séries: cantos suaves e traços proporcionais */
+  .recharts-bar-rectangle path,
+  .recharts-rectangle.recharts-bar-rectangle {
+    rx: 6px;
+    ry: 6px;
+  }
+  .recharts-sector {
+    stroke: hsl(var(--card));
+    stroke-width: 2;
+  }
+  .recharts-line .recharts-curve,
+  .recharts-area .recharts-curve {
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  .recharts-active-dot circle {
+    stroke: hsl(var(--card));
+    stroke-width: 2;
+  }
 }
+
