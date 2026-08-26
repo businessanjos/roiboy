@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { AlertTriangle, Loader2, RefreshCw, CheckCircle2, QrCode } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInstanceStatus } from "@/lib/royZappStatus";
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 interface SectorInstance {
   id: string;
@@ -52,7 +52,7 @@ export function ZappDisconnectedQrBanner({ sectorId, integrationId, className }:
 
   const loadInstance = useCallback(async () => {
     if (!sectorId) return;
-    const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+    const { data, error } = await invokeUazapiManager<any>({
       body: { action: "list_sector_instances" },
     });
     if (error) {
@@ -73,7 +73,7 @@ export function ZappDisconnectedQrBanner({ sectorId, integrationId, className }:
       setLoadingQr(true);
       setQrError(null);
       try {
-        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+        const { data, error } = await invokeUazapiManager<any>({
           body: {
             action: "qrcode",
             instance_name: target.instance_name || target.config?.instance_name,

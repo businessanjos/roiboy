@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import {
   Select,
   SelectContent,
@@ -10,6 +9,7 @@ import {
 import { Smartphone, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { getInstanceStatus } from "@/lib/royZappStatus";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 interface Integration {
   id: string;
@@ -60,7 +60,7 @@ export function ZappInstanceSwitcher({
     setLoading(true);
 
     (async () => {
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+      const { data, error } = await invokeUazapiManager<any>({
         body: { action: "list_sector_instances" },
       });
 

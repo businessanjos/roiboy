@@ -77,6 +77,7 @@ import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles"
 import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { useZappConnectionAlerts } from "@/hooks/useZappConnectionAlerts";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
@@ -1211,7 +1212,7 @@ export default function RoyZapp() {
     try {
       const limit = parseInt(importLimit) || 50;
       
-      const response = await supabase.functions.invoke("uazapi-manager", {
+      const response = await invokeUazapiManager<any>({
         body: { 
           action: "import-conversations",
           limit: limit,
@@ -1244,7 +1245,7 @@ export default function RoyZapp() {
     
     setIsRefreshingMessages(true);
     try {
-      const response = await supabase.functions.invoke("uazapi-manager", {
+      const response = await invokeUazapiManager<any>({
         body: { 
           action: "sync-chat-history", 
           integration_id: selectedIntegrationId,
