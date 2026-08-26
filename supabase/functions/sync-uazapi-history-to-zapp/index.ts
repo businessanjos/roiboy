@@ -152,7 +152,11 @@ function extractContent(m: UazMessage): {
 
   const rawType = String(m.messageType || "").toLowerCase();
   let mediaType: string | null = null;
-  if (rawType.includes("image")) mediaType = "image";
+  if (c && typeof c.videoMessage === "object") mediaType = "video";
+  else if (c && typeof c.imageMessage === "object") mediaType = "image";
+  else if (c && typeof c.audioMessage === "object") mediaType = "audio";
+  else if (c && typeof c.documentMessage === "object") mediaType = "document";
+  else if (rawType.includes("image")) mediaType = "image";
   else if (rawType.includes("audio") || rawType.includes("ptt"))
     mediaType = "audio";
   else if (rawType.includes("video")) mediaType = "video";
@@ -484,18 +488,20 @@ Deno.serve(async (req) => {
                 const refreshedMediaKey = mediaKeyOf(m);
                 const refreshedMediaUrl = extracted.mediaUrl;
                 if (extracted.mediaType && refreshedMediaUrl && refreshedMediaKey && refreshedMediaUrl.includes("whatsapp.net")) {
+                  const refreshedMimetype = m.mimetype || (typedMediaMimetype(m) ?? null);
+                  const refreshPatch: Record<string, unknown> = {
+                    media_encrypted_url: refreshedMediaUrl,
+                    media_key: refreshedMediaKey,
+                    media_type: extracted.mediaType,
+                    media_download_status: "pending",
+                    media_download_attempts: 0,
+                    media_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  };
+                  if (refreshedMimetype) refreshPatch.media_mimetype = refreshedMimetype;
                   const { error: refreshError } = await supabase
                     .from("zapp_messages")
-                    .update({
-                      media_encrypted_url: refreshedMediaUrl,
-                      media_key: refreshedMediaKey,
-                      media_type: extracted.mediaType,
-                      media_mimetype: m.mimetype || null,
-                      media_download_status: "pending",
-                      media_download_attempts: 0,
-                      media_last_error: null,
-                      updated_at: new Date().toISOString(),
-                    })
+                    .update(refreshPatch)
                     .eq("zapp_conversation_id", conversationId)
                     .eq("external_message_id", externalId)
                     .is("media_url", null);
