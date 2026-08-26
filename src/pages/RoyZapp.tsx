@@ -1628,12 +1628,7 @@ export default function RoyZapp() {
 
 
   return (
-    <div
-      className={cn(
-        "flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg",
-        selectedSectorId === "operacoes" && "zapp-cs-theme",
-      )}
-    >
+    <div className="flex flex-row flex-1 min-h-0 w-full overflow-hidden bg-zapp-bg">
       {/* Left panel - Conversation list */}
       <div 
         className={cn(

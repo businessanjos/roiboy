@@ -152,21 +152,10 @@ export function AppLayout() {
     return <Navigate to="/setores" replace />;
   }
 
-  // ROY zAPP de Customer Success: o tema marrom vale para a tela inteira
-  // (header, sidebar e conteúdo), não apenas para o painel da conversa.
-  const isZappCsScreen =
-    location.pathname.startsWith("/roy-zapp") &&
-    new URLSearchParams(location.search).get("sector") === "operacoes";
-
   return (
     <PlanLimitsProvider>
       <NotificationsProvider>
-        <div
-          className={
-            "flex flex-col h-screen w-full bg-background overflow-hidden" +
-            (isZappCsScreen ? " zapp-cs-theme" : "")
-          }
-        >
+        <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
           <div className="hidden lg:block">
             <GlobalHeader />
           </div>
