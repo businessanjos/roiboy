@@ -124,6 +124,14 @@ export default function RoyZapp() {
   const [selectedSectorId, setSelectedSectorId] = useState<SectorId | null>(sectorFromUrl);
   const [selectedIntegrationId, setSelectedIntegrationId] = useState<string | undefined>(integrationFromUrl || undefined);
 
+  // Keep local state aligned when navigation changes only the query string.
+  // Without this, switching from CS to another sector updated the URL/shell,
+  // but the RoyZapp content could remain mounted with the CS theme and data.
+  useEffect(() => {
+    setSelectedSectorId(sectorFromUrl);
+    setSelectedIntegrationId(integrationFromUrl || undefined);
+  }, [sectorFromUrl, integrationFromUrl]);
+
   // Map of integration_id -> provider ('uazapi' | 'meta_official') for the account
   const [integrationProviders, setIntegrationProviders] = useState<Record<string, string>>({});
   const [templatesDialogOpen, setTemplatesDialogOpen] = useState(false);
