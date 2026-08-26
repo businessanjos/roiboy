@@ -256,19 +256,21 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("status", "connected")
       .maybeSingle();
 
+    const envAdminToken = (Deno.env.get("THREECPLUS_ADMIN_TOKEN") || "").trim();
     const adminToken: string | null =
       typeof integration?.config?.admin_api_token === "string" && integration.config.admin_api_token.trim()
         ? integration.config.admin_api_token.trim()
-        : null;
+        : envAdminToken || null;
+
 
     if (!integration?.config?.api_token && !adminToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
       return { error: "Integração 3C Plus não configurada", synced: 0 };
     }
-    const baseDomain = getBaseDomain(integration.config.domain || null);
+    const baseDomain = getBaseDomain(integration?.config?.domain || null);
 
     // Semeia o agente dono do token da conta, se ainda não existir
-    if (integration.config.api_token) {
+    if (integration?.config?.api_token) {
       await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
     }
 
