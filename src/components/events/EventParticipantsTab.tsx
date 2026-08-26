@@ -193,7 +193,7 @@ export default function EventParticipantsTab({
   };
 
   // Só clientes ativos: vínculo de produto ativo + status não cancelado/inativo
-  const ACTIVE_CLIENT_STATUSES = ["active", "paused", "churn_risk"];
+  const ACTIVE_CLIENT_STATUSES = ["active", "paused", "churn_risk"] as const;
 
   const fetchActiveClientIds = async (): Promise<string[]> => {
     const ids: string[] = [];
