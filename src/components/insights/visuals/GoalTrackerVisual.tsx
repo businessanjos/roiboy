@@ -431,7 +431,6 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
               name="Meta do período"
               stroke={colorMetaPeriodo}
               strokeWidth={2}
-              strokeDasharray="3 3"
               dot={false}
               activeDot={false}
               isAnimationActive={false}

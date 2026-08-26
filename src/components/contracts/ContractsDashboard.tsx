@@ -736,7 +736,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                         <stop offset="100%" stopColor="#475569" stopOpacity={0.8}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                    <CartesianGrid className="stroke-muted/20" vertical={false} stroke="hsl(var(--hairline))" />
                     <XAxis 
                       dataKey="month" 
                       className="text-xs" 
@@ -804,7 +804,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                         <stop offset="95%" stopColor="#64748b" stopOpacity={0.02}/>
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                    <CartesianGrid className="stroke-muted/20" vertical={false} stroke="hsl(var(--hairline))" />
                     <XAxis 
                       dataKey="month" 
                       className="text-xs" 
@@ -1098,7 +1098,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       </feMerge>
                     </filter>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                  <CartesianGrid className="stroke-muted/20" vertical={false} stroke="hsl(var(--hairline))" />
                   <XAxis 
                     dataKey="month" 
                     className="text-xs" 
@@ -1182,7 +1182,7 @@ export function ContractsDashboard({ contracts }: ContractsDashboardProps) {
                       <stop offset="100%" stopColor="#a855f7" stopOpacity={0.8}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted/20" vertical={false} />
+                  <CartesianGrid className="stroke-muted/20" vertical={false} stroke="hsl(var(--hairline))" />
                   <XAxis 
                     dataKey="label" 
                     className="text-xs" 

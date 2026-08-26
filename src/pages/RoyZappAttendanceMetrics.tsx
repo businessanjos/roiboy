@@ -302,7 +302,7 @@ export default function RoyZappAttendanceMetrics() {
           ) : (
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={daily}>
-                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <CartesianGrid stroke="hsl(var(--hairline))" />
                 <XAxis dataKey="date" stroke="hsl(var(--muted-foreground))" fontSize={12} />
                 <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} allowDecimals={false} />
                 <Tooltip

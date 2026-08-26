@@ -325,7 +325,6 @@ function ComparisonCard({
               }
             >
               <CartesianGrid
-                strokeDasharray="3 3"
                 stroke="hsl(var(--border))"
                 horizontal={horizontal}
                 vertical={!horizontal}

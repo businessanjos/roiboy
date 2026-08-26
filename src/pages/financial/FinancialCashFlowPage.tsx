@@ -281,7 +281,7 @@ export default function FinancialCashFlowPage() {
                           <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                         </linearGradient>
                       </defs>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatAxisBRL(v)} tick={{ fontSize: 11 }} width={70} />
                       <Tooltip
@@ -333,7 +333,7 @@ export default function FinancialCashFlowPage() {
                 <div className="h-[250px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 10, right: 20, left: 8, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                      <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="date" tick={{ fontSize: 11 }} />
                       <YAxis tickFormatter={(v) => formatAxisBRL(v)} tick={{ fontSize: 11 }} width={70} />
                       <Tooltip

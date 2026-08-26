@@ -1802,7 +1802,7 @@ function AICostsTab({ accounts }: { accounts: Account[] }) {
             <div className="h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <CartesianGrid className="stroke-muted" stroke="hsl(var(--hairline))" />
                   <XAxis dataKey="date" className="text-xs" />
                   <YAxis 
                     tickFormatter={(v) => `R$${v.toFixed(2)}`}

@@ -368,7 +368,7 @@ export default function FinancialDashboardPage() {
                 data={[...data.history, ...data.forecast]}
                 margin={{ top: 10, right: 10, left: 0, bottom: 0 }}
               >
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
                 <XAxis dataKey="label" tick={{ fontSize: 11 }} />
                 <YAxis tickFormatter={(v) => formatAxisBRL(v)} tick={{ fontSize: 11 }} width={70} />
                 <Tooltip

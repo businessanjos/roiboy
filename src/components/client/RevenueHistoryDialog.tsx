@@ -284,7 +284,7 @@ export function RevenueHistoryDialog({
                             <stop offset="100%" stopColor="hsl(var(--primary))" stopOpacity={0} />
                           </linearGradient>
                         </defs>
-                        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                        <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                         <XAxis dataKey="month" fontSize={11} />
                         <YAxis fontSize={11} tickFormatter={compact} />
                         <Tooltip
@@ -328,7 +328,7 @@ export function RevenueHistoryDialog({
                     <div className="h-48 w-full">
                       <ResponsiveContainer width="100%" height="100%">
                         <BarChart data={chartData.slice(1)}>
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                           <XAxis dataKey="month" fontSize={11} />
                           <YAxis fontSize={11} tickFormatter={(v) => `${Number(v).toFixed(0)}%`} />
                           <Tooltip
@@ -339,7 +339,7 @@ export function RevenueHistoryDialog({
                               borderRadius: 8,
                             }}
                           />
-                          <ReferenceLine y={0} stroke="hsl(var(--border))" />
+                          <ReferenceLine y={0} stroke="hsl(var(--hairline))" />
                           <Bar dataKey="delta" radius={[4, 4, 0, 0]}>
                             {chartData.slice(1).map((d, i) => (
                               <Cell

@@ -256,7 +256,6 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={chartData}>
                 <CartesianGrid 
-                  strokeDasharray="3 3" 
                   stroke="hsl(var(--border))" 
                   opacity={0.5}
                   vertical={false}
@@ -305,7 +304,6 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
             <ResponsiveContainer width="100%" height={280}>
               <LineChart data={chartData}>
                 <CartesianGrid 
-                  strokeDasharray="3 3" 
                   stroke="hsl(var(--border))" 
                   opacity={0.5}
                   vertical={false}
@@ -357,7 +355,6 @@ export function WeeklyAnalysisDashboard({ posts, isLoading }: WeeklyAnalysisDash
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={chartData}>
               <CartesianGrid 
-                strokeDasharray="3 3" 
                 stroke="hsl(var(--border))" 
                 opacity={0.5}
                 vertical={false}

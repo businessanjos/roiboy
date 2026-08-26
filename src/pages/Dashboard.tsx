@@ -1484,7 +1484,6 @@ export default function Dashboard() {
                     </linearGradient>
                   </defs>
                   <CartesianGrid 
-                    strokeDasharray="3 3" 
                     vertical={false} 
                     stroke="hsl(var(--border))" 
                     strokeOpacity={0.5}
@@ -1850,7 +1849,7 @@ export default function Dashboard() {
                         <stop offset="100%" stopColor="hsl(200 80% 40%)" stopOpacity={0.8} />
                       </linearGradient>
                     </defs>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+                    <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
                     <XAxis dataKey="month" tickLine={false} axisLine={false} tick={{ fontSize: 14, fill: 'hsl(var(--muted-foreground))' }} dy={10} />
                     <YAxis tickLine={false} axisLine={false} tick={{ fontSize: 14, fill: 'hsl(var(--muted-foreground))' }} allowDecimals={false} />
                     <ChartTooltip content={<ChartTooltipContent />} cursor={{ fill: 'hsl(var(--muted))', opacity: 0.3 }} />

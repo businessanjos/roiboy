@@ -353,7 +353,7 @@ export function ChurnRenewalBySegmentChart({ accountId, periodStart, periodEnd }
                   if (seg) setSelectedSegment(seg);
                 }}
               >
-                <CartesianGrid strokeDasharray="3 3" vertical={false} className="stroke-muted" />
+                <CartesianGrid vertical={false} className="stroke-muted" stroke="hsl(var(--hairline))" />
                 <XAxis
                   dataKey="segment"
                   tick={{ fontSize: 11 }}

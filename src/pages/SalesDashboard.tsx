@@ -1131,7 +1131,7 @@ export default function SalesDashboard() {
                     { name: "Perdidos", value: lostCount },
                   ]}
                 >
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                   <XAxis dataKey="name" />
                   <YAxis allowDecimals={false} />
                   <RechartsTooltip />

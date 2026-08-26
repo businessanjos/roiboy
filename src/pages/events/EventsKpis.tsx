@@ -191,7 +191,7 @@ export default function EventsKpis() {
               <div className="h-72">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthly}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                     <XAxis dataKey="mes" />
                     <YAxis />
                     <Tooltip />

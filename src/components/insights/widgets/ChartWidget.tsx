@@ -104,7 +104,7 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <CartesianGrid className="stroke-muted" stroke="hsl(var(--hairline))" />
           <XAxis
             dataKey={nameKey}
             tick={{ fontSize: 11 }}
@@ -136,7 +136,7 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
     return (
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <CartesianGrid className="stroke-muted" stroke="hsl(var(--hairline))" />
           <XAxis
             dataKey={nameKey}
             tick={{ fontSize: 11 }}

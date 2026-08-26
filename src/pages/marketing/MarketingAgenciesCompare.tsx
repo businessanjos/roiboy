@@ -60,7 +60,7 @@ function TimelineChart({ agencies, range, metric }: { agencies: any[]; range: an
   return (
     <ResponsiveContainer width="100%" height={300}>
       <LineChart data={merged}>
-        <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+        <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
         <XAxis dataKey="date" tick={{ fontSize: 11 }} />
         <YAxis tick={{ fontSize: 11 }} />
         <Tooltip />
