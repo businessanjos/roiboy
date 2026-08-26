@@ -50,7 +50,7 @@ interface Installment {
   invoices: {
     client_id: string | null;
     clients?: { id: string; full_name: string; phone_e164: string | null; emails: string[] | null } | null;
-    companies?: { name: string | null } | null;
+    companies?: { legal_name: string | null; trade_name: string | null } | null;
   } | null;
 }
 
