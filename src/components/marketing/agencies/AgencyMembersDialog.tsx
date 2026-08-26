@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { toast } from "sonner";
 import { Trash2 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -22,19 +23,7 @@ export function AgencyMembersDialog({ open, onOpenChange, agencyId }: Props) {
   const qc = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<string>("");
 
-  const usersQuery = useQuery({
-    queryKey: ["account-users-for-agency", accountId],
-    enabled: open && !!accountId,
-    queryFn: async () => {
-      const sb: any = supabase;
-      const { data } = await sb
-        .from("users")
-        .select("id, name, email, avatar_url")
-        .eq("account_id", accountId)
-        .order("name");
-      return (data || []) as any[];
-    },
-  });
+  const usersQuery = useMarketingTeamUsers();
 
   const membersQuery = useQuery({
     queryKey: ["agency-members", agencyId],
