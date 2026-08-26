@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 export interface UazapiServerHealth {
   online: boolean;
@@ -39,7 +40,7 @@ export function useUazapiServerHealth(options: Options): UazapiServerHealth & { 
     if (!enabled) return;
     if (!sectorId && !integrationId) return;
     try {
-      const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+      const { data, error } = await invokeUazapiManager<any>({
         body: {
           action: "server_health",
           sector_id: sectorId ?? undefined,

@@ -10,6 +10,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 
 import { supabase } from "@/integrations/supabase/client";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 import { cn } from "@/lib/utils";
 import { withRetry } from "@/lib/retryFetch";
 import { getInstanceStatus } from "@/lib/royZappStatus";
@@ -157,7 +158,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       try {
         const [integrations, sectorSettings, departments, conversations, lastEvents] = await withRetry(async () => {
           const [intRes, settingsRes, deptsRes, convsRes, lastRes] = await Promise.all([
-            supabase.functions.invoke("uazapi-manager", {
+            invokeUazapiManager<any>({
               body: { action: "list_sector_instances" },
             }),
             supabase

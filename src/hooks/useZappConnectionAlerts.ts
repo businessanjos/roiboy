@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getInstanceStatus } from "@/lib/royZappStatus";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 export interface ZappOfflineInstance {
   id: string;
@@ -44,7 +45,7 @@ export function useZappConnectionAlerts(options: {
   reconnectRef.current = onReconnect;
 
   const check = useCallback(async () => {
-    const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+    const { data, error } = await invokeUazapiManager<any>({
       body: { action: "list_sector_instances" },
     });
     if (error) return;

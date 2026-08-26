@@ -1,6 +1,7 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { ZappTag } from "@/components/royzapp";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 interface UseZappFiltersOptions {
   accountId?: string;
@@ -40,7 +41,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
 
   const checkWhatsAppStatus = useCallback(async (sectorId?: string, integrationId?: string) => {
     try {
-      const response = await supabase.functions.invoke("uazapi-manager", {
+      const response = await invokeUazapiManager<any>({
         body: { action: "status", sector_id: sectorId, integration_id: integrationId },
       });
 
@@ -78,7 +79,7 @@ export function useZappFilters(options: UseZappFiltersOptions) {
         setWhatsappConnected(false);
         toast.success("Recebimento em tempo real pausado para você");
       } else {
-        const statusResponse = await supabase.functions.invoke("uazapi-manager", {
+        const statusResponse = await invokeUazapiManager<any>({
           body: { action: "status", sector_id: sectorId, integration_id: integrationId },
         });
         const state = statusResponse.data?.state || statusResponse.data?.data?.state;
