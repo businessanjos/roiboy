@@ -152,6 +152,8 @@
 - [Pluggy Banking](mem://integrations/pluggy-banking-pt) — Open Finance via widget Pluggy + edge functions pluggy-* substituindo banco.mcp.ai
 - [Event Lifecycle](mem://features/events/lifecycle-and-status-locking) — Completed/Cancelled events lock UI
 - [Custom RSVP Forms](mem://features/events/customizable-rsvp-forms) — JSONB custom form fields
+- [Clientes ativos em Eventos](mem://features/events/active-clients-source-pt) — View `event_active_clients` + RPC `search_active_event_clients` como fonte única
+
 - [Typeform/n8n Ingestion](mem://integrations/n8n-typeform-api-endpoints) — Edge functions for lead creation
 - [Google Calendar No-Show Sync](mem://integrations/calendar/no-show-sync) — Auto-syncs red calendar events
 - [YouTube Analytics Sync](mem://features/marketing/youtube-integration-pt) — Tracking videos/shorts/lives
