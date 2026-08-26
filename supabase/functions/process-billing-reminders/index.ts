@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
            invoices!inner (
              client_id,
              clients ( id, full_name, phone_e164, emails ),
-             companies ( name )
+             companies ( legal_name, trade_name )
            )`,
         )
         .eq("account_id", rule.account_id)
