@@ -253,8 +253,8 @@ export function GoalTrackerVisual({ config }: { config: VisualConfig }) {
 
   const currency = isCurrencyMetric(goal.metric);
   const palette =
-    COLOR_PALETTES[(config.appearance?.colorPalette as keyof typeof COLOR_PALETTES) || "professional"] ||
-    COLOR_PALETTES.professional;
+    COLOR_PALETTES[(config.appearance?.colorPalette as keyof typeof COLOR_PALETTES) || "ryka"] ||
+    COLOR_PALETTES.ryka;
   const colorRealizado = palette[0];
   const colorAcumulado = palette[2] || palette[1];
   const colorMetaPeriodo = palette[4] || palette[1];

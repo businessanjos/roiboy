@@ -58,9 +58,9 @@ interface ConfigurableChartProps {
   onDrilldown?: (groupName?: string) => void;
 }
 
-function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
+function getChartColors(palette: AppearanceConfig['colorPalette'] = 'ryka'): string[] {
   // Extensão harmônica para nunca repetir a mesma cor em séries longas.
-  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.professional, 20);
+  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.ryka, 20);
 }
 
 /** Header label for the grouping field ("Ver por") of the current visual. */

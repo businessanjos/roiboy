@@ -32,9 +32,9 @@ interface StackedHorizontalBarChartProps {
 }
 
 
-function getChartColors(palette: AppearanceConfig['colorPalette'] = 'professional'): string[] {
+function getChartColors(palette: AppearanceConfig['colorPalette'] = 'ryka'): string[] {
   // Extensão harmônica: variações da própria paleta, sem cores fora do tema.
-  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.professional, 20);
+  return extendPalette(COLOR_PALETTES[palette] || COLOR_PALETTES.ryka, 20);
 }
 
 const CustomTooltip = ({ active, payload, label, formatting, singleSeries }: any) => {
