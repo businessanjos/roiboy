@@ -256,10 +256,12 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .eq("status", "connected")
       .maybeSingle();
 
+    const envAdminToken = (Deno.env.get("THREECPLUS_ADMIN_TOKEN") || "").trim();
     const adminToken: string | null =
       typeof integration?.config?.admin_api_token === "string" && integration.config.admin_api_token.trim()
         ? integration.config.admin_api_token.trim()
-        : null;
+        : envAdminToken || null;
+
 
     if (!integration?.config?.api_token && !adminToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
