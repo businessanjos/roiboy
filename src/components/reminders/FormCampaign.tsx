@@ -96,21 +96,22 @@ export default function FormCampaign() {
     },
   });
 
-  // Fetch clients
+  // Fetch clients (somente clientes ativos e não cancelados — fonte única no backend)
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ["clients-for-form-campaign"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("clients")
+        .from("event_active_clients" as any)
         .select("id, full_name, phone_e164, status, tags")
         .order("full_name");
       if (error) throw error;
-      return data.map(c => ({
+      return (data as any[]).map(c => ({
         ...c,
         tags: Array.isArray(c.tags) ? c.tags : [],
       })) as Client[];
     },
   });
+
 
   // Fetch products for filter
   const { data: products = [] } = useQuery({
