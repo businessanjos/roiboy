@@ -30,28 +30,17 @@ interface PeopleMultiSelectProps {
 
 export function PeopleMultiSelect({ value, onChange, placeholder = 'Selecione as pessoas...' }: PeopleMultiSelectProps) {
   const [open, setOpen] = useState(false);
-  const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(false);
+  const { data: marketingUsers = [], isLoading: loading } = useMarketingTeamUsers();
+  const users: User[] = marketingUsers.map((u) => ({
+    id: u.id,
+    name: u.name,
+    avatar_url: u.avatar_url,
+  }));
 
   const selectedNames = value
     ? value.split(',').map((s) => s.trim()).filter(Boolean)
     : [];
 
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      setLoading(true);
-      const { data } = await supabase
-        .from('users')
-        .select('id, name, avatar_url')
-        .order('name', { ascending: true });
-      if (!cancelled && data) setUsers(data as User[]);
-      setLoading(false);
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   const toggle = (name: string) => {
     const exists = selectedNames.includes(name);
