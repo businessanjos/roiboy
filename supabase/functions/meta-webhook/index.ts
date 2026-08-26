@@ -364,12 +364,16 @@ Deno.serve(async (req) => {
             }
 
             // Insert message
+            const mediaType = ["image", "video", "audio", "document", "sticker"].includes(messageType)
+              ? messageType
+              : null;
             const { error: msgErr } = await supabase.from("zapp_messages").insert({
               account_id: accountId,
               zapp_conversation_id: conversation.id,
               direction: "inbound",
               content: content || null,
               message_type: messageType,
+              media_type: mediaType,
               media_url: resolvedMediaUrl,
               media_mimetype: mediaMimetype,
               media_filename: mediaFilename,

@@ -534,8 +534,13 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             <div className="mb-2 rounded-lg overflow-hidden bg-black/20 flex flex-col items-center justify-center p-4 gap-2">
               <div className="flex items-center gap-2">
                 <AlertTriangle className="h-5 w-5 text-warning" />
-                <span className="text-xs text-zapp-text-muted">Mídia indisponível</span>
+                <span className="text-xs text-zapp-text-muted">
+                  {message.media_type === "video" ? "Vídeo indisponível" : "Mídia indisponível"}
+                </span>
               </div>
+              {message.media_filename && (
+                <span className="max-w-full truncate text-[10px] text-zapp-text-muted/80">{message.media_filename}</span>
+              )}
               {onRetryMediaDownload && (
                 <Button variant="ghost" size="sm" onClick={() => onRetryMediaDownload(message.id)} className="text-xs text-zapp-accent hover:text-zapp-accent/80">
                   <RefreshCw className="h-3 w-3 mr-1" />

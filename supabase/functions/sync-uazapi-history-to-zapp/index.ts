@@ -96,11 +96,50 @@ function normalizeUazTimestampMs(raw?: number | string | null): number {
 
 function mediaKeyOf(m: UazMessage): string | null {
   const anyMsg = m as unknown as Record<string, unknown>;
-  const c = (m.content && typeof m.content === "object" ? m.content : null) as
+  let c = (m.content && typeof m.content === "object" ? m.content : null) as
     | Record<string, unknown>
     | null;
-  const raw = anyMsg.mediaKey ?? anyMsg.mediakey ?? c?.mediaKey ?? c?.mediakey;
+  for (let depth = 0; c && depth < 5; depth++) {
+    const wrapped = (c.viewOnceMessageV2Extension ?? c.viewOnceMessageV2 ?? c.viewOnceMessage ?? c.ephemeralMessage ?? c.documentWithCaptionMessage) as Record<string, unknown> | undefined;
+    const nested = wrapped && typeof wrapped === "object"
+      ? ((wrapped.message as Record<string, unknown> | undefined) ?? wrapped)
+      : null;
+    if (!nested) break;
+    c = nested;
+  }
+  const typedMedia = c && typeof c.videoMessage === "object"
+    ? c.videoMessage as Record<string, unknown>
+    : c && typeof c.imageMessage === "object"
+      ? c.imageMessage as Record<string, unknown>
+      : c && typeof c.audioMessage === "object"
+        ? c.audioMessage as Record<string, unknown>
+        : c && typeof c.documentMessage === "object"
+          ? c.documentMessage as Record<string, unknown>
+          : null;
+  const raw = anyMsg.mediaKey ?? anyMsg.mediakey ?? c?.mediaKey ?? c?.mediakey ?? typedMedia?.mediaKey ?? typedMedia?.mediakey;
   return raw ? String(raw) : null;
+}
+
+function typedMediaMimetype(m: UazMessage): string | null {
+  let current = (m.content && typeof m.content === "object" ? m.content : null) as Record<string, unknown> | null;
+  for (let depth = 0; current && depth < 5; depth++) {
+    const wrapped = (current.viewOnceMessageV2Extension ?? current.viewOnceMessageV2 ?? current.viewOnceMessage ?? current.ephemeralMessage ?? current.documentWithCaptionMessage) as Record<string, unknown> | undefined;
+    const nested = wrapped && typeof wrapped === "object"
+      ? ((wrapped.message as Record<string, unknown> | undefined) ?? wrapped)
+      : null;
+    if (!nested) break;
+    current = nested;
+  }
+  const media = current && typeof current.videoMessage === "object"
+    ? current.videoMessage as Record<string, unknown>
+    : current && typeof current.imageMessage === "object"
+      ? current.imageMessage as Record<string, unknown>
+      : current && typeof current.audioMessage === "object"
+        ? current.audioMessage as Record<string, unknown>
+        : current && typeof current.documentMessage === "object"
+          ? current.documentMessage as Record<string, unknown>
+          : null;
+  return media?.mimetype ? String(media.mimetype) : null;
 }
 
 function extractContent(m: UazMessage): {
@@ -110,7 +149,24 @@ function extractContent(m: UazMessage): {
   mediaUrl: string | null;
   mediaType: string | null;
 } {
-  const c = m.content as Record<string, unknown> | null;
+  let c = m.content as Record<string, unknown> | null;
+  for (let depth = 0; c && depth < 5; depth++) {
+    const wrapped = (c.viewOnceMessageV2Extension ?? c.viewOnceMessageV2 ?? c.viewOnceMessage ?? c.ephemeralMessage ?? c.documentWithCaptionMessage) as Record<string, unknown> | undefined;
+    const nested = wrapped && typeof wrapped === "object"
+      ? ((wrapped.message as Record<string, unknown> | undefined) ?? wrapped)
+      : null;
+    if (!nested) break;
+    c = nested;
+  }
+  const typedMedia = c && typeof c.videoMessage === "object"
+    ? c.videoMessage as Record<string, unknown>
+    : c && typeof c.imageMessage === "object"
+      ? c.imageMessage as Record<string, unknown>
+      : c && typeof c.audioMessage === "object"
+        ? c.audioMessage as Record<string, unknown>
+        : c && typeof c.documentMessage === "object"
+          ? c.documentMessage as Record<string, unknown>
+          : null;
   let content = typeof m.text === "string" ? m.text : "";
   if (!content && typeof m.content === "string") content = m.content;
   if (!content && c && typeof c.text === "string") content = c.text;
@@ -118,7 +174,11 @@ function extractContent(m: UazMessage): {
 
   const rawType = String(m.messageType || "").toLowerCase();
   let mediaType: string | null = null;
-  if (rawType.includes("image")) mediaType = "image";
+  if (c && typeof c.videoMessage === "object") mediaType = "video";
+  else if (c && typeof c.imageMessage === "object") mediaType = "image";
+  else if (c && typeof c.audioMessage === "object") mediaType = "audio";
+  else if (c && typeof c.documentMessage === "object") mediaType = "document";
+  else if (rawType.includes("image")) mediaType = "image";
   else if (rawType.includes("audio") || rawType.includes("ptt"))
     mediaType = "audio";
   else if (rawType.includes("video")) mediaType = "video";
@@ -129,6 +189,7 @@ function extractContent(m: UazMessage): {
     m.fileURL ||
     (c && typeof c.URL === "string" ? c.URL : null) ||
     (c && typeof c.url === "string" ? c.url : null) ||
+    (typedMedia && typeof typedMedia.url === "string" ? typedMedia.url : null) ||
     null;
   if (!content && mediaType === "image") content = "📷 Imagem";
   if (!content && mediaType === "audio") content = "🎤 Áudio";
@@ -245,6 +306,7 @@ Deno.serve(async (req) => {
       chatsSynced: 0,
       messagesFetched: 0,
       messagesInserted: 0,
+      mediaMetadataRefreshed: 0,
       duplicates: 0,
       conversationsCreated: 0,
       assignmentsCreated: 0,
@@ -439,11 +501,38 @@ Deno.serve(async (req) => {
             const rows = [];
             for (const m of filtered.reverse()) {
               const externalId = String(m.id || `${m.chatid}:${m.messageid}`);
-              if (!externalId || existingSet.has(externalId)) {
+              if (!externalId) {
                 stats.duplicates++;
                 continue;
               }
               const extracted = extractContent(m);
+              if (existingSet.has(externalId)) {
+                const refreshedMediaKey = mediaKeyOf(m);
+                const refreshedMediaUrl = extracted.mediaUrl;
+                if (extracted.mediaType && refreshedMediaUrl && refreshedMediaKey && refreshedMediaUrl.includes("whatsapp.net")) {
+                  const refreshedMimetype = m.mimetype || (typedMediaMimetype(m) ?? null);
+                  const refreshPatch: Record<string, unknown> = {
+                    media_encrypted_url: refreshedMediaUrl,
+                    media_key: refreshedMediaKey,
+                    media_download_status: "pending",
+                    media_download_attempts: 0,
+                    media_last_error: null,
+                    updated_at: new Date().toISOString(),
+                  };
+                  if (refreshedMimetype) refreshPatch.media_mimetype = refreshedMimetype;
+                  const { error: refreshError } = await supabase
+                    .from("zapp_messages")
+                    .update(refreshPatch)
+                    .eq("zapp_conversation_id", conversationId)
+                    .eq("external_message_id", externalId)
+                    .is("media_url", null);
+                  if (refreshError) throw refreshError;
+                  stats.mediaMetadataRefreshed++;
+                } else {
+                  stats.duplicates++;
+                }
+                continue;
+              }
               if (!extracted.content) {
                 stats.skippedNoContent++;
                 continue;

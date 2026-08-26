@@ -429,7 +429,14 @@ export function useZappConversations(options: UseZappConversationsOptions) {
     created_at: m.sent_at,
     message_type: m.message_type || "text",
     media_url: m.media_url,
-    media_type: m.media_type,
+    media_type:
+      m.media_mimetype?.toLowerCase().startsWith("video/") ? "video" :
+      m.media_mimetype?.toLowerCase().startsWith("image/") ? "image" :
+      m.media_mimetype?.toLowerCase().startsWith("audio/") ? "audio" :
+      m.message_type === "video" ? "video" :
+      m.message_type === "image" ? "image" :
+      (m.message_type === "audio" || m.message_type === "ptt") ? "audio" :
+      m.media_type,
     media_mimetype: m.media_mimetype,
     media_filename: m.media_filename,
     audio_duration_sec: m.audio_duration_sec,
