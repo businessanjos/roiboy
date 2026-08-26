@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Check, ChevronsUpDown, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useMarketingTeamUsers } from '@/hooks/useMarketingTeamUsers';
+
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import {
