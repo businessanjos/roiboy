@@ -1,4 +1,4 @@
-import type { FunctionsHttpError, FunctionsInvokeOptions } from "@supabase/supabase-js";
+import type { FunctionsHttpError, FunctionInvokeOptions } from "@supabase/supabase-js";
 import { supabase } from "@/integrations/supabase/client";
 
 type InvokeResult<T> = {
@@ -15,7 +15,7 @@ const isUnauthorized = async (error: unknown): Promise<boolean> => {
 };
 
 export async function invokeUazapiManager<T = unknown>(
-  options: FunctionsInvokeOptions,
+  options: FunctionInvokeOptions,
 ): Promise<InvokeResult<T>> {
   const first = await supabase.functions.invoke<T>("uazapi-manager", options);
   if (!(await isUnauthorized(first.error))) return first;
