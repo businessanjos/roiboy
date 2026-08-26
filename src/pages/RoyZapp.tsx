@@ -1211,7 +1211,7 @@ export default function RoyZapp() {
     try {
       const limit = parseInt(importLimit) || 50;
       
-      const response = await supabase.functions.invoke("uazapi-manager", {
+      const response = await invokeUazapiManager<any>({
         body: { 
           action: "import-conversations",
           limit: limit,
@@ -1244,7 +1244,7 @@ export default function RoyZapp() {
     
     setIsRefreshingMessages(true);
     try {
-      const response = await supabase.functions.invoke("uazapi-manager", {
+      const response = await invokeUazapiManager<any>({
         body: { 
           action: "sync-chat-history", 
           integration_id: selectedIntegrationId,
