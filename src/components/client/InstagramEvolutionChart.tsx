@@ -106,7 +106,7 @@ export function InstagramEvolutionChart({
       <div className="h-52 w-full">
         <ResponsiveContainer>
           <LineChart data={chartData} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+            <CartesianGrid stroke="hsl(var(--hairline))" />
             <XAxis dataKey="date" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
             <YAxis
               yAxisId="left"

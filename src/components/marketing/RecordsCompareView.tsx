@@ -266,7 +266,7 @@ export function RecordsCompareView({ profiles, year, month }: Props) {
         <CardContent className="h-[320px]">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={chartData}>
-              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+              <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
               <XAxis dataKey="name" tickLine={false} axisLine={false} className="text-xs" />
               <YAxis tickFormatter={(v) => fmt(Number(v))} tickLine={false} axisLine={false} width={70} className="text-xs" />
               <Tooltip

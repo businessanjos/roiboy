@@ -160,7 +160,7 @@ export function StackedHorizontalBarChart({
           margin={{ top: showTotals ? 34 : 12, right: 12, left: 4, bottom: 4 }}
           barCategoryGap="18%"
         >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+          <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             dataKey="name"
             tick={{ fontSize: tickFont, fill: 'hsl(var(--muted-foreground))' }}
@@ -273,7 +273,7 @@ export function StackedHorizontalBarChart({
             margin={{ top: 4, right: 28, left: 0, bottom: 4 }}
             barCategoryGap="22%"
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" strokeOpacity={0.5} horizontal={false} />
+            <CartesianGrid stroke="hsl(var(--border))" strokeOpacity={0.5} horizontal={false} />
             <XAxis
               type="number"
               tickFormatter={(value) => formatValueCompact(value, safeFormatting.type)}

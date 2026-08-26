@@ -238,7 +238,7 @@ export function ClientsRevenueTotalCard({ accountId, clientIds, totalClients, pr
               <div className="h-56">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={stats.chart} margin={{ top: 8, right: 8, left: 8, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                    <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
                     <XAxis dataKey="label" tick={{ fontSize: 11 }} tickLine={false} axisLine={false} />
                     <YAxis
                       tick={{ fontSize: 11 }}

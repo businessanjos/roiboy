@@ -241,7 +241,7 @@ function BarChartView({
     <div ref={ref} className="h-full w-full">
       <ResponsiveContainer width="100%" height="100%">
         <BarChart data={data} margin={{ top: 22, right: 12, left: 4, bottom: 4 }} barCategoryGap="18%">
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+          <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             dataKey="name"
             tick={{ fontSize: tickFont, ...AXIS_TICK }}
@@ -347,7 +347,7 @@ function HorizontalBarChartView({
       <ResponsiveContainer width="100%" height={chartHeight}>
         <BarChart layout="vertical" data={rows} margin={{ top: 8, right: rightMargin, left: 4, bottom: 8 }} barCategoryGap="22%">
 
-          <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+          <CartesianGrid horizontal={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             type="number"
             tickFormatter={(value) => formatValueCompact(value, formatting.type)}
@@ -456,7 +456,7 @@ function LineChartView({
               <stop offset="100%" stopColor={primaryColor} stopOpacity={0} />
             </linearGradient>
           </defs>
-          <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
+          <CartesianGrid vertical={false} stroke="hsl(var(--border))" strokeOpacity={0.5} />
           <XAxis
             dataKey="name"
             tick={{ fontSize: tickFont, ...AXIS_TICK }}

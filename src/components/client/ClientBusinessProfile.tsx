@@ -855,7 +855,7 @@ export function ClientBusinessProfile({
             <div className="h-56 w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <LineChart data={chartData}>
-                  <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                  <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                   <XAxis dataKey="month" fontSize={11} />
                   <YAxis
                     fontSize={11}

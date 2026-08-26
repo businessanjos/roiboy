@@ -195,7 +195,7 @@ export function RecordsGoalsCharts({ weekly, goals, year, month }: Props) {
         <div className="h-[320px] w-full">
           <ResponsiveContainer width="100%" height="100%">
             <ComposedChart data={data} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={12} tickLine={false} axisLine={false} />
               <YAxis
                 stroke="hsl(var(--muted-foreground))"

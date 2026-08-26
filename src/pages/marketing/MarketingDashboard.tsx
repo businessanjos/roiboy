@@ -427,7 +427,7 @@ export default function MarketingDashboard() {
             <CardContent>
               <ResponsiveContainer width="100%" height={260}>
                 <LineChart data={data.monthlyHistory}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+                  <CartesianGrid className="stroke-muted" vertical={false} stroke="hsl(var(--hairline))" />
                   <XAxis dataKey="month" tick={{ fontSize: 11 }} />
                   <YAxis tick={{ fontSize: 11 }} width={40} />
                   <Tooltip
@@ -559,7 +559,7 @@ export default function MarketingDashboard() {
             <CardContent>
               <ResponsiveContainer width="100%" height={220}>
                 <BarChart data={data.topCampaigns} layout="vertical" margin={{ left: 80 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" horizontal={false} />
+                  <CartesianGrid className="stroke-muted" horizontal={false} stroke="hsl(var(--hairline))" />
                   <XAxis type="number" tick={{ fontSize: 11 }} />
                   <YAxis
                     dataKey="name"

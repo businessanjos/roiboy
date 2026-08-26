@@ -348,7 +348,7 @@ export default function RHDashboard() {
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={metrics.movSeries}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                    <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                     <XAxis dataKey="month" fontSize={11} />
                     <YAxis fontSize={11} allowDecimals={false} />
                     <Tooltip />
@@ -377,7 +377,7 @@ export default function RHDashboard() {
                 <CardContent className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={metrics.stageChart} layout="vertical">
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                       <XAxis type="number" fontSize={11} allowDecimals={false} />
                       <YAxis type="category" dataKey="name" fontSize={11} width={120} />
                       <Tooltip />

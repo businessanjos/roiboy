@@ -467,13 +467,13 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                           label: format(new Date(`${d.day}T12:00:00`), "dd/MM", { locale: ptBR }),
                         }))}
                       >
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                        <CartesianGrid vertical={false} stroke="hsl(var(--hairline))" />
                         <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                         <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" allowDecimals={false} />
                         <RTooltip />
                         <Legend />
-                        <Bar dataKey="new_by_client" stackId="n" name="Cliente chamou" fill="hsl(var(--primary))" radius={[0, 0, 0, 0]} />
-                        <Bar dataKey="new_by_team" stackId="n" name="Time chamou" fill="hsl(var(--chart-2, 142 71% 45%))" radius={[3, 3, 0, 0]} />
+                        <Bar dataKey="new_by_client" stackId="n" name="Cliente chamou" fill="hsl(var(--chart-1))" radius={[0, 0, 0, 0]} />
+                        <Bar dataKey="new_by_team" stackId="n" name="Time chamou" fill="hsl(var(--chart-2))" radius={[6, 6, 0, 0]} />
                       </BarChart>
                     </ResponsiveContainer>
                   )}
@@ -528,13 +528,13 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={dayData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <CartesianGrid vertical={false} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                       <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                       <RTooltip />
                       <Legend />
-                      <Line type="monotone" dataKey="inbound" name="Recebidas" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                      <Line type="monotone" dataKey="outbound" name="Enviadas" stroke="hsl(var(--chart-2, 142 71% 45%))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="inbound" name="Recebidas" stroke="hsl(var(--chart-1))" strokeWidth={2} dot={false} />
+                      <Line type="monotone" dataKey="outbound" name="Enviadas" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
                     </LineChart>
                   </ResponsiveContainer>
                 )}
@@ -550,12 +550,12 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 <CardContent className="h-[240px]">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={hourData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <CartesianGrid vertical={false} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="hour" tick={{ fontSize: 10 }} interval={1} stroke="hsl(var(--muted-foreground))" />
                       <YAxis tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
                       <RTooltip />
-                      <Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--primary))" radius={[3, 3, 0, 0]} />
-                      <Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--muted-foreground))" radius={[3, 3, 0, 0]} />
+                      <Bar dataKey="inbound" name="Recebidas" fill="hsl(var(--chart-1))" radius={[6, 6, 0, 0]} />
+                      <Bar dataKey="outbound" name="Enviadas" fill="hsl(var(--chart-3))" radius={[6, 6, 0, 0]} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>

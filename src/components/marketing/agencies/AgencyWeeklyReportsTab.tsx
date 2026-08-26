@@ -164,7 +164,7 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
                 <CardContent className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="week" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} />
@@ -182,7 +182,7 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
                 <CardContent className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={chartData}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                      <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="week" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="l" tick={{ fontSize: 11 }} />
                       <YAxis yAxisId="r" orientation="right" tick={{ fontSize: 11 }} />

@@ -93,7 +93,7 @@ export function AdSpendTrendCharts({ range }: { range?: { startDate: Date; endDa
         ) : (
           <ResponsiveContainer width="100%" height={320}>
             <ComposedChart data={series} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" vertical={false} />
+              <CartesianGrid stroke="hsl(var(--border))" vertical={false} />
               <XAxis dataKey="label" tick={{ fontSize: 11 }} stroke="hsl(var(--muted-foreground))" />
               <YAxis
                 yAxisId="left"

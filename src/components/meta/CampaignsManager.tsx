@@ -444,7 +444,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <LineChart data={series}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                      <CartesianGrid className="stroke-border/40" stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="date" fontSize={11} />
                       <YAxis yAxisId="left" fontSize={11} />
                       <YAxis yAxisId="right" orientation="right" fontSize={11} />
@@ -461,7 +461,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                 <CardContent className="h-72">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={filtered.slice(0, 10).map(c => ({ name: c.name.slice(0, 24), spend: c.insights?.spend || 0, leads: c.insights?.leads || 0 }))}>
-                      <CartesianGrid strokeDasharray="3 3" className="stroke-border/40" />
+                      <CartesianGrid className="stroke-border/40" stroke="hsl(var(--hairline))" />
                       <XAxis dataKey="name" fontSize={10} angle={-15} textAnchor="end" height={60} />
                       <YAxis yAxisId="left" fontSize={11} />
                       <YAxis yAxisId="right" orientation="right" fontSize={11} />
