@@ -53,7 +53,15 @@ import {
 } from "@/lib/cs/checkinsExport";
 
 
-type FilterKey = "todos" | CheckpointStatus;
+type FilterKey = "todos" | CheckpointStatus | "sem_interacao_15";
+
+const SILENCE_DAYS = 15;
+
+/** Dias desde a última interação (checkpoint, contato ou conversa no RoyZapp). */
+function daysSince(iso: string | null | undefined) {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
 
 export default function ClientCheckpoints() {
   const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
