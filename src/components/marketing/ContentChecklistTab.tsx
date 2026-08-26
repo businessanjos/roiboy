@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
+import { useMarketingTeamUsers } from '@/hooks/useMarketingTeamUsers';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -89,20 +90,8 @@ export function ContentChecklistTab() {
     },
   });
 
-  const { data: accountUsers = [] } = useQuery({
-    queryKey: ['content-checklist-users', currentUser?.account_id],
-    enabled: !!currentUser?.account_id,
-    queryFn: async (): Promise<AccountUser[]> => {
-      const { data, error } = await supabase
-        .from('users')
-        .select('id, name')
-        .eq('account_id', currentUser!.account_id)
-        .eq('is_active', true)
-        .order('name');
-      if (error) throw error;
-      return (data ?? []) as AccountUser[];
-    },
-  });
+  const { data: marketingUsers = [] } = useMarketingTeamUsers();
+  const accountUsers: AccountUser[] = marketingUsers.map((u) => ({ id: u.id, name: u.name }));
 
   const responsibleName =
     accountUsers.find((u) => u.id === draft.responsible_user_id)?.name ?? null;

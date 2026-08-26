@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useProjectStakeholders, type ProjectStakeholder } from "@/hooks/useMarketingProjects";
-import { useTeamUsers } from "@/hooks/useTeamUsers";
+import { useMarketingTeamUsersAuthIds as useTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

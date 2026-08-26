@@ -23,6 +23,7 @@ import { CalendarIcon, Loader2, Trash2 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useMarketingTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { useMarketingTasks, MarketingTask, MarketingTaskPriority, MarketingTaskStatus, MediaAttachment } from "@/hooks/useMarketingTasks";
 import { useMarketingTaskSections } from "@/hooks/useMarketingTaskSections";
 import { useMarketingTaskColumns } from "@/hooks/useMarketingTaskColumns";
@@ -82,17 +83,7 @@ export function MarketingTaskDialog({
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
 
   // Fetch team members
-  const { data: teamMembers = [] } = useQuery({
-    queryKey: ["team-members-list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, avatar_url")
-        .order("name");
-      if (error) throw error;
-      return data || [];
-    },
-  });
+  const { data: teamMembers = [] } = useMarketingTeamUsers();
 
   // Reset form when dialog opens
   useEffect(() => {
