@@ -514,7 +514,6 @@ Deno.serve(async (req) => {
                   const refreshPatch: Record<string, unknown> = {
                     media_encrypted_url: refreshedMediaUrl,
                     media_key: refreshedMediaKey,
-                    media_type: extracted.mediaType,
                     media_download_status: "pending",
                     media_download_attempts: 0,
                     media_last_error: null,

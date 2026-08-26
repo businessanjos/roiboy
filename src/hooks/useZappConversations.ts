@@ -433,6 +433,9 @@ export function useZappConversations(options: UseZappConversationsOptions) {
       m.media_mimetype?.toLowerCase().startsWith("video/") ? "video" :
       m.media_mimetype?.toLowerCase().startsWith("image/") ? "image" :
       m.media_mimetype?.toLowerCase().startsWith("audio/") ? "audio" :
+      m.message_type === "video" ? "video" :
+      m.message_type === "image" ? "image" :
+      (m.message_type === "audio" || m.message_type === "ptt") ? "audio" :
       m.media_type,
     media_mimetype: m.media_mimetype,
     media_filename: m.media_filename,
