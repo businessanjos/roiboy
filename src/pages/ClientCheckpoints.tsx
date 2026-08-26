@@ -296,7 +296,7 @@ export default function ClientCheckpoints() {
                   <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Consultor</TableHead>
-                    <TableHead>Último checkpoint</TableHead>
+                    <TableHead>Última interação</TableHead>
                     <TableHead>Próximo</TableHead>
                     <TableHead>Último contato</TableHead>
                     <TableHead>Status</TableHead>
@@ -313,9 +313,23 @@ export default function ClientCheckpoints() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{r.consultant_name || "—"}</TableCell>
                       <TableCell>
-                        {r.last_checkpoint_at
-                          ? format(new Date(r.last_checkpoint_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
+                        {r.interactionAt ? (
+                          <div className="text-sm">
+                            {format(new Date(r.interactionAt), "dd/MM/yyyy", { locale: ptBR })}
+                            <span
+                              className={cn(
+                                "ml-2 text-xs",
+                                r.silent ? "text-destructive" : "text-muted-foreground",
+                              )}
+                            >
+                              {r.daysSinceInteraction === 0
+                                ? "hoje"
+                                : `há ${r.daysSinceInteraction} dia(s)`}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-destructive text-sm">Sem interação</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {r.state.nextDueAt
