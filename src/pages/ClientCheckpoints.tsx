@@ -270,6 +270,7 @@ export default function ClientCheckpoints() {
                 <TabsTrigger value="sem_registro">Sem registro</TabsTrigger>
                 <TabsTrigger value="atencao">Em breve</TabsTrigger>
                 <TabsTrigger value="em_dia">Em dia</TabsTrigger>
+                <TabsTrigger value="sem_interacao_15">15+ dias sem interação</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
