@@ -163,7 +163,7 @@ export function AppLayout() {
           {/* O ROY zAPP tem cabeçalho e navegação próprios no mobile. */}
           {!location.pathname.startsWith("/roy-zapp") && <MobileAppHeader />}
 
-          <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden">
+          <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden gap-4">
             <Sidebar />
             <main
               className={
