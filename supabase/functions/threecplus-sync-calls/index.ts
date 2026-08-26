@@ -267,10 +267,10 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
       return { error: "Integração 3C Plus não configurada", synced: 0 };
     }
-    const baseDomain = getBaseDomain(integration.config.domain || null);
+    const baseDomain = getBaseDomain(integration?.config?.domain || null);
 
     // Semeia o agente dono do token da conta, se ainda não existir
-    if (integration.config.api_token) {
+    if (integration?.config?.api_token) {
       await seedAccountAgent(supabaseAdmin, accountId, baseDomain, integration.config.api_token);
     }
 
