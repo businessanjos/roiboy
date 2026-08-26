@@ -23,17 +23,13 @@ interface ChartWidgetProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
+  "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c43",
-  "#a05195",
 ];
+
 
 export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
   if (!data || data.length === 0) {
