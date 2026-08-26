@@ -134,7 +134,7 @@ Deno.serve(async (req) => {
     // Fetch ALL requested messages (no media_encrypted_url filter) to handle auto-correction
     let messagesQuery = supabase
       .from("zapp_messages")
-      .select("id, account_id, media_type, media_url, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, media_download_attempts, updated_at")
+      .select("id, account_id, message_type, media_type, media_url, media_encrypted_url, media_key, media_mimetype, zapp_conversation_id, media_download_status, media_download_attempts, updated_at")
       .in("id", idsToProcess);
     
     // SECURITY: If account_id provided, filter to prevent cross-account access
@@ -292,7 +292,15 @@ Deno.serve(async (req) => {
                 'sticker': 'WhatsApp Image Keys',
               };
               
-              const info = new TextEncoder().encode(mediaTypeInfo[msg.media_type] || 'WhatsApp Image Keys');
+              const normalizedMediaType = msg.media_type || (
+                ['image', 'video', 'audio', 'document', 'sticker'].includes(msg.message_type)
+                  ? msg.message_type
+                  : null
+              );
+              if (!normalizedMediaType) {
+                throw new Error('Media type missing; cannot derive the correct WhatsApp decryption key');
+              }
+              const info = new TextEncoder().encode(mediaTypeInfo[normalizedMediaType]);
               
               const importedKey = await crypto.subtle.importKey(
                 'raw',
