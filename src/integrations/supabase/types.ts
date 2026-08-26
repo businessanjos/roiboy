@@ -27626,6 +27626,16 @@ export type Database = {
         Args: { _data: Json; _token: string }
         Returns: Json
       }
+      search_active_event_clients: {
+        Args: { p_limit?: number; p_search?: string }
+        Returns: {
+          avatar_url: string
+          emails: Json
+          full_name: string
+          id: string
+          phone_e164: string
+        }[]
+      }
       seed_admission_signature_docs: {
         Args: { _admission_id: string; _template_ids?: string[] }
         Returns: number
