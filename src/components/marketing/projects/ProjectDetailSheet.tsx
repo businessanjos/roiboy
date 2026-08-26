@@ -25,7 +25,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Progress } from "@/components/ui/progress";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { useTeamUsers } from "@/hooks/useTeamUsers";
+import { useMarketingTeamUsersAuthIds as useTeamUsers } from "@/hooks/useMarketingTeamUsers";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery } from "@tanstack/react-query";
 import { useCurrentUser } from "@/hooks/useCurrentUser";

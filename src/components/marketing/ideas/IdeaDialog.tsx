@@ -10,7 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, X, Calendar as CalendarIcon } from "lucide-react";
 import { useMarketingIdeas, type MarketingIdea, type IdeaStatus, type IdeaFormat, type IdeaPlatform, type IdeaPriority, type AssigneeRole } from "@/hooks/useMarketingIdeas";
-import { useTeamUsers } from "@/hooks/useTeamUsers";
+import { useMarketingTeamUsersAuthIds as useTeamUsers } from "@/hooks/useMarketingTeamUsers";
 
 interface Props {
   open: boolean;

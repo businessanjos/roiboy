@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { MarketingProject, MarketingProjectStatus, PROJECT_STATUS_META } from "@/hooks/useMarketingProjects";
-import { useTeamUsers } from "@/hooks/useTeamUsers";
+import { useMarketingTeamUsersAuthIds as useTeamUsers } from "@/hooks/useMarketingTeamUsers";
 
 interface Props {
   open: boolean;
