@@ -192,30 +192,62 @@ export default function EventParticipantsTab({
     setLoading(false);
   };
 
+  // Só clientes ativos: vínculo de produto ativo + status não cancelado/inativo
+  const ACTIVE_CLIENT_STATUSES = ["active", "paused", "churn_risk"];
+
+  const fetchActiveClientIds = async (): Promise<string[]> => {
+    const ids: string[] = [];
+    let from = 0;
+    const pageSize = 1000;
+    // paginação para não perder vínculos além de 1000 linhas
+    while (true) {
+      const { data, error } = await supabase
+        .from("client_products")
+        .select("client_id")
+        .eq("is_active", true)
+        .range(from, from + pageSize - 1);
+      if (error || !data || data.length === 0) break;
+      ids.push(...data.map((r: any) => r.client_id));
+      if (data.length < pageSize) break;
+      from += pageSize;
+    }
+    return [...new Set(ids)];
+  };
+
   const searchClientsFromServer = async (searchTerm: string) => {
+    const activeIds = await fetchActiveClientIds();
+    if (activeIds.length === 0) {
+      setClients([]);
+      return;
+    }
+
     if (!searchTerm || searchTerm.length < 2) {
-      // Load first 50 clients if no search term
       const { data } = await supabase
         .from("clients")
         .select("id, full_name, phone_e164, avatar_url, emails")
+        .in("id", activeIds)
+        .in("status", ACTIVE_CLIENT_STATUSES)
         .order("full_name")
         .limit(50);
-      
+
       setClients((data || []) as Client[]);
       return;
     }
-    
+
     setSearchingClients(true);
     const { data } = await supabase
       .from("clients")
       .select("id, full_name, phone_e164, avatar_url, emails")
+      .in("id", activeIds)
+      .in("status", ACTIVE_CLIENT_STATUSES)
       .or(`full_name.ilike.%${searchTerm}%,phone_e164.ilike.%${searchTerm}%`)
       .order("full_name")
       .limit(50);
-    
+
     setClients((data || []) as Client[]);
     setSearchingClients(false);
   };
+
 
   const resetForm = () => {
     setInviteType("client");
