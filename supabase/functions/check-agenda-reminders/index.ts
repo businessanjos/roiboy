@@ -109,9 +109,9 @@ Deno.serve(async (req) => {
     // ==========================================
     const { data: todayTasks, error: todayTasksError } = await supabase
       .from("internal_tasks")
-      .select("id, title, assigned_to, created_by, client_id, account_id, status_id, clients(full_name)")
+      .select("id, title, assigned_to, created_by, client_id, account_id, custom_status_id, clients(full_name)")
       .eq("due_date", today)
-      .not("status_id", "is", null);
+      .not("custom_status_id", "is", null);
 
     if (todayTasksError) {
       console.error("Error fetching today tasks:", todayTasksError);
@@ -122,7 +122,7 @@ Deno.serve(async (req) => {
         const { data: statusData } = await supabase
           .from("task_statuses")
           .select("is_completed_status")
-          .eq("id", task.status_id)
+          .eq("id", task.custom_status_id)
           .single();
 
         if (statusData?.is_completed_status) {
@@ -169,9 +169,9 @@ Deno.serve(async (req) => {
     // ==========================================
     const { data: overdueTasks, error: overdueTasksError } = await supabase
       .from("internal_tasks")
-      .select("id, title, assigned_to, created_by, client_id, account_id, due_date, status_id, clients(full_name)")
+      .select("id, title, assigned_to, created_by, client_id, account_id, due_date, custom_status_id, clients(full_name)")
       .lt("due_date", today)
-      .not("status_id", "is", null);
+      .not("custom_status_id", "is", null);
 
     if (overdueTasksError) {
       console.error("Error fetching overdue tasks:", overdueTasksError);
@@ -181,7 +181,7 @@ Deno.serve(async (req) => {
         const { data: statusData } = await supabase
           .from("task_statuses")
           .select("is_completed_status")
-          .eq("id", task.status_id)
+          .eq("id", task.custom_status_id)
           .single();
 
         if (statusData?.is_completed_status) {
