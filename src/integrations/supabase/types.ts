@@ -27529,6 +27529,7 @@ export type Database = {
         Args: { p_chat_id: string; p_user_id: string }
         Returns: boolean
       }
+      is_hr_user: { Args: { _user_id?: string }; Returns: boolean }
       is_new_device: {
         Args: { p_device_fingerprint: string; p_user_id: string }
         Returns: boolean
