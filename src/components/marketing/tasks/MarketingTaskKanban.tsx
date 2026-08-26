@@ -74,7 +74,6 @@ export function MarketingTaskKanban({
   }, [tasks, columns, firstColumnId]);
 
   const handleDragStart = (e: DragStartEvent) => {
-    if (!onReorderTasks) return;
     const task = tasks.find((t) => t.id === e.active.id);
     if (task) setActiveTask(task);
   };
@@ -82,7 +81,7 @@ export function MarketingTaskKanban({
   const handleDragEnd = (e: DragEndEvent) => {
     const { active, over } = e;
     setActiveTask(null);
-    if (!over || !onReorderTasks) return;
+    if (!over) return;
 
     const taskId = active.id as string;
     const overId = over.id as string;
@@ -101,6 +100,7 @@ export function MarketingTaskKanban({
     if (!overTask) return;
 
     if (task.column_id === overTask.column_id) {
+      if (!onReorderTasks) return;
       const list = tasksByColumn[task.column_id || firstColumnId];
       const oldIdx = list.findIndex((t) => t.id === taskId);
       const newIdx = list.findIndex((t) => t.id === overId);

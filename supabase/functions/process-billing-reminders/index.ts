@@ -50,7 +50,7 @@ interface Installment {
   invoices: {
     client_id: string | null;
     clients?: { id: string; full_name: string; phone_e164: string | null; emails: string[] | null } | null;
-    companies?: { name: string | null } | null;
+    companies?: { legal_name: string | null; trade_name: string | null } | null;
   } | null;
 }
 
@@ -175,7 +175,7 @@ Deno.serve(async (req) => {
            invoices!inner (
              client_id,
              clients ( id, full_name, phone_e164, emails ),
-             companies ( name )
+             companies ( legal_name, trade_name )
            )`,
         )
         .eq("account_id", rule.account_id)
@@ -229,7 +229,10 @@ Deno.serve(async (req) => {
           dias_para_vencer: diffDays > 0 ? String(diffDays) : "0",
           dias_atraso: diffDays < 0 ? String(Math.abs(diffDays)) : "0",
           numero_parcela: String(inst.number),
-          empresa: inst.invoices?.companies?.name || "",
+          empresa:
+            inst.invoices?.companies?.trade_name ||
+            inst.invoices?.companies?.legal_name ||
+            "",
         };
         const messageText = renderTemplate(rule.message, vars);
         const subjectText = renderTemplate(rule.subject || rule.name, vars);

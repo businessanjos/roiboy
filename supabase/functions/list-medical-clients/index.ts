@@ -199,12 +199,21 @@ Deno.serve(async (req) => {
     const mentorshipClientIds = clientList.filter((c) => c.isMentorship).map((c) => c.id);
 
     // 2) Todos os campos personalizados preenchidos (sincronização completa)
-    const { data: fieldValues } = mentorshipClientIds.length
-      ? await supabase
+    const fieldValues: any[] = [];
+    if (mentorshipClientIds.length) {
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data: page, error: pageErr } = await supabase
           .from("client_field_values")
           .select("client_id, field_id, value_text, value_number, value_boolean, value_date, value_json, custom_fields(name)")
           .in("client_id", mentorshipClientIds)
-      : { data: [] };
+          .order("client_id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (pageErr) throw pageErr;
+        fieldValues.push(...(page ?? []));
+        if (!page || page.length < PAGE) break;
+      }
+    }
 
     const customByClient = new Map<string, { key: string; label: string; value: string }[]>();
     for (const fv of (fieldValues ?? []) as any[]) {
