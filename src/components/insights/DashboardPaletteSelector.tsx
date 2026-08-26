@@ -31,7 +31,7 @@ export function DashboardPaletteSelector({
     visuals.map(
       (v) =>
         (((v.config as any)?.appearance?.colorPalette ??
-          (v.config as any)?.colorPalette) as string) || "professional"
+          (v.config as any)?.colorPalette) as string) || "ryka"
     )
   );
   const currentPalette = palettes.size === 1 ? ([...palettes][0] as ColorPalette) : null;

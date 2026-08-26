@@ -23,17 +23,13 @@ interface ChartWidgetProps {
 }
 
 const COLORS = [
-  "hsl(var(--primary))",
+  "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
   "hsl(var(--chart-3))",
   "hsl(var(--chart-4))",
   "hsl(var(--chart-5))",
-  "#8884d8",
-  "#82ca9d",
-  "#ffc658",
-  "#ff7c43",
-  "#a05195",
 ];
+
 
 export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
   if (!data || data.length === 0) {
@@ -123,7 +119,7 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
           <Tooltip content={<CustomTooltip />} />
           <Bar
             dataKey={valueKey}
-            fill="hsl(var(--primary))"
+            fill="hsl(var(--chart-1))"
             radius={[4, 4, 0, 0]}
           />
         </BarChart>
@@ -156,9 +152,9 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
           <Line
             type="monotone"
             dataKey={valueKey}
-            stroke="hsl(var(--primary))"
+            stroke="hsl(var(--chart-1))"
             strokeWidth={2}
-            dot={{ fill: "hsl(var(--primary))", r: 4 }}
+            dot={{ fill: "hsl(var(--chart-1))", r: 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>

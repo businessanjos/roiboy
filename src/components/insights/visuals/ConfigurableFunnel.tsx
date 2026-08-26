@@ -29,7 +29,7 @@ export const ConfigurableFunnel = forwardRef<HTMLDivElement, ConfigurableFunnelP
   ref
 ) {
   const config = appearance || DEFAULT_APPEARANCE;
-  const colors = extendPalette(COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.professional, 20);
+  const colors = extendPalette(COLOR_PALETTES[config.colorPalette] || COLOR_PALETTES.ryka, 20);
   const tv = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[config.fontScale || 'normal'] * tv.scale;
   const { ref: sizeRef, height } = useChartSize();

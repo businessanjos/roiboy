@@ -40,8 +40,8 @@ const PODIUM_LAYOUT: Record<number, { height: number; order: number }> = {
 
 /** Ranking colours follow the dashboard palette so the visual never clashes. */
 function paletteColors(appearance?: AppearanceConfig): string[] {
-  const palette = COLOR_PALETTES[appearance?.colorPalette || 'professional'];
-  return extendPalette(palette?.length ? palette : COLOR_PALETTES.professional, 20);
+  const palette = COLOR_PALETTES[appearance?.colorPalette || 'ryka'];
+  return extendPalette(palette?.length ? palette : COLOR_PALETTES.ryka, 20);
 }
 
 

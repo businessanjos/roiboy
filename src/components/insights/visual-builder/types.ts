@@ -5,7 +5,7 @@ export type DateGrouping = 'day' | 'week' | 'month' | 'year';
 export type ChartType = 'bar' | 'bar_horizontal' | 'bar_stacked' | 'line' | 'pie' | 'number' | 'scorecard' | 'ranking' | 'call_commercial' | 'gauge' | 'indicator' | 'bubble_map' | 'funnel' | 'data_table' | 'daily_performance' | 'goal_tracker';
 export type GaugeSubType = 'days_elapsed' | 'revenue_vs_goal' | 'sales_leads';
 export type DateDisplayFormat = 'short' | 'monthYear' | 'full';
-export type ColorPalette = 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature' | 'gold' | 'midnight' | 'emerald' | 'ember' | 'slate' | 'ocean' | 'blush';
+export type ColorPalette = 'ryka' | 'professional' | 'modern' | 'vibrant' | 'alert' | 'nature' | 'gold' | 'midnight' | 'emerald' | 'ember' | 'slate' | 'ocean' | 'blush';
 export type DisplayScale = 'full' | 'auto' | 'thousands' | 'millions' | 'billions';
 export type FontScale = 'small' | 'normal' | 'large' | 'xlarge' | 'xxlarge';
 
@@ -498,6 +498,8 @@ export const DATE_DISPLAY_FORMAT_OPTIONS: { value: DateDisplayFormat; label: str
 
 // Color palette definitions
 export const COLOR_PALETTES: Record<ColorPalette, string[]> = {
+  // Paleta oficial Ryka (equivalente a --chart-1..5)
+  ryka: ['#af8e47', '#de5f74', '#2a9e68', '#dba341', '#497ed3'],
   professional: ['#2563eb', '#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe'],
   modern: ['#8b5cf6', '#a78bfa', '#14b8a6', '#2dd4bf', '#5eead4'],
   vibrant: ['#f43f5e', '#fb923c', '#facc15', '#4ade80', '#22d3ee'],
@@ -515,6 +517,7 @@ export const COLOR_PALETTES: Record<ColorPalette, string[]> = {
 
 // Color palette options for UI
 export const COLOR_PALETTE_OPTIONS: { value: ColorPalette; label: string }[] = [
+  { value: 'ryka', label: 'Ryka (padrão)' },
   { value: 'professional', label: 'Profissional' },
   { value: 'modern', label: 'Moderno' },
   { value: 'vibrant', label: 'Vibrante' },
@@ -564,7 +567,7 @@ export const FONT_SCALE_OPTIONS: { value: FontScale; label: string }[] = [
 export const DEFAULT_APPEARANCE: AppearanceConfig = {
   showDataLabels: false,
   dateDisplayFormat: 'monthYear',
-  colorPalette: 'professional',
+  colorPalette: 'ryka',
   fillEmptyDates: false,
   fontScale: 'normal',
 };

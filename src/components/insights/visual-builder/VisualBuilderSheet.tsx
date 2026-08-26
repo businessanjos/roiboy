@@ -283,7 +283,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
             goalPeriod: isGaugeRevenueLocal ? goalPeriod : undefined,
             ...(isGaugeRevenueLocal && Object.keys(goalsToSave).length > 0 ? { monthlyGoals: goalsToSave } : {}),
           },
-          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
+          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'ryka', fillEmptyDates: false },
         };
       } else if (isBubbleMap) {
         config = {
@@ -291,7 +291,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           measure: { field: 'value', aggregation: 'sum' },
           dimension: { field: 'won_at', type: 'date', dateGrouping: 'month' },
           formatting: { type: 'currency', decimals: 0 },
-          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
+          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'ryka', fillEmptyDates: false },
         };
       } else if (isTable) {
         config = {
@@ -299,7 +299,7 @@ export function VisualBuilderSheet({ open, onOpenChange }: VisualBuilderSheetPro
           measure: { field: '', aggregation: 'count' },
           dimension: { field: '_total', type: 'text' },
           formatting: { type: 'decimal', decimals: 0 },
-          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'professional', fillEmptyDates: false },
+          appearance: { showDataLabels: false, dateDisplayFormat: 'monthYear', colorPalette: 'ryka', fillEmptyDates: false },
           tableConfig: { columns: tableColumns },
         };
       } else {
