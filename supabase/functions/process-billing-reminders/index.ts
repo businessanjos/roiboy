@@ -229,7 +229,10 @@ Deno.serve(async (req) => {
           dias_para_vencer: diffDays > 0 ? String(diffDays) : "0",
           dias_atraso: diffDays < 0 ? String(Math.abs(diffDays)) : "0",
           numero_parcela: String(inst.number),
-          empresa: inst.invoices?.companies?.name || "",
+          empresa:
+            inst.invoices?.companies?.trade_name ||
+            inst.invoices?.companies?.legal_name ||
+            "",
         };
         const messageText = renderTemplate(rule.message, vars);
         const subjectText = renderTemplate(rule.subject || rule.name, vars);
