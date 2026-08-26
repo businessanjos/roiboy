@@ -287,12 +287,7 @@ export function ZappChatView({
 
   if (!selectedConversation) {
     return (
-      <div
-        className={cn(
-          "flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden",
-          sectorId === "operacoes" && "zapp-cs-theme",
-        )}
-      >
+      <div className="flex flex-col flex-1 min-h-0 w-full items-center justify-center bg-zapp-bg-dark relative overflow-hidden">
         <div className="relative z-10 text-center px-8 max-w-md">
           <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-zapp-accent/10 flex items-center justify-center">
             <MessageSquare className="h-12 w-12 text-zapp-accent" />
@@ -325,12 +320,7 @@ export function ZappChatView({
   const clientId = selectedConversation.zapp_conversation?.client_id || selectedConversation.conversation?.client?.id;
 
   return (
-    <div
-      className={cn(
-        "flex flex-col flex-1 min-h-0 w-full min-w-0 bg-zapp-bg overflow-hidden",
-        sectorId === "operacoes" && "zapp-cs-theme",
-      )}
-    >
+    <div className="flex flex-col flex-1 min-h-0 w-full min-w-0 bg-zapp-bg overflow-hidden">
       {/* Chat header */}
       <ZappChatHeader
         assignment={selectedConversation}
