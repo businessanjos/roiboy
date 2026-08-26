@@ -71,6 +71,8 @@ export interface CheckpointRow {
   last_checkpoint_at: string | null;
   last_contact_at: string | null;
   last_summary: string | null;
+  /** Última interação real: checkpoint, contato registrado ou conversa no RoyZapp. */
+  last_interaction_at: string | null;
 }
 
 /**
