@@ -211,11 +211,12 @@ export default function ClientCheckpoints() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
         <Kpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
         <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
         <Kpi label="Em dia" value={counts.em_dia} tone="text-success" />
+        <Kpi label="15+ dias sem interação" value={silentCount} tone="text-destructive" />
       </div>
 
       <Card className="shadow-card">
