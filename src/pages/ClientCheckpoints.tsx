@@ -53,7 +53,15 @@ import {
 } from "@/lib/cs/checkinsExport";
 
 
-type FilterKey = "todos" | CheckpointStatus;
+type FilterKey = "todos" | CheckpointStatus | "sem_interacao_15";
+
+const SILENCE_DAYS = 15;
+
+/** Dias desde a última interação (checkpoint, contato ou conversa no RoyZapp). */
+function daysSince(iso: string | null | undefined) {
+  if (!iso) return null;
+  return Math.floor((Date.now() - new Date(iso).getTime()) / 86_400_000);
+}
 
 export default function ClientCheckpoints() {
   const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
@@ -83,7 +91,19 @@ export default function ClientCheckpoints() {
 
   const rows = useMemo(() => {
     return data
-      .map((r) => ({ ...r, state: getCheckpointState(r.last_checkpoint_at) }))
+      .map((r) => {
+        // Toda conversa com o cliente vale como checkpoint: usamos a última
+        // interação (checkpoint, contato registrado ou conversa no RoyZapp).
+        const interactionAt = r.last_interaction_at ?? r.last_checkpoint_at;
+        const days = daysSince(interactionAt);
+        return {
+          ...r,
+          interactionAt,
+          daysSinceInteraction: days,
+          silent: days === null || days >= SILENCE_DAYS,
+          state: getCheckpointState(interactionAt),
+        };
+      })
       .sort((a, b) => {
         const order: Record<CheckpointStatus, number> = {
           vencido: 0,
@@ -101,8 +121,14 @@ export default function ClientCheckpoints() {
     return c;
   }, [rows]);
 
+  const silentCount = useMemo(() => rows.filter((r) => r.silent).length, [rows]);
+
   const filtered = rows.filter((r) => {
-    if (filter !== "todos" && r.state.status !== filter) return false;
+    if (filter === "sem_interacao_15") {
+      if (!r.silent) return false;
+    } else if (filter !== "todos" && r.state.status !== filter) {
+      return false;
+    }
     const q = search.trim().toLowerCase();
     if (!q) return true;
     return (
@@ -185,11 +211,12 @@ export default function ClientCheckpoints() {
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
         <Kpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
         <Kpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
         <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
         <Kpi label="Em dia" value={counts.em_dia} tone="text-success" />
+        <Kpi label="15+ dias sem interação" value={silentCount} tone="text-destructive" />
       </div>
 
       <Card className="shadow-card">
@@ -243,6 +270,7 @@ export default function ClientCheckpoints() {
                 <TabsTrigger value="sem_registro">Sem registro</TabsTrigger>
                 <TabsTrigger value="atencao">Em breve</TabsTrigger>
                 <TabsTrigger value="em_dia">Em dia</TabsTrigger>
+                <TabsTrigger value="sem_interacao_15">15+ dias sem interação</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -268,7 +296,7 @@ export default function ClientCheckpoints() {
                   <TableRow>
                     <TableHead>Cliente</TableHead>
                     <TableHead>Consultor</TableHead>
-                    <TableHead>Último checkpoint</TableHead>
+                    <TableHead>Última interação</TableHead>
                     <TableHead>Próximo</TableHead>
                     <TableHead>Último contato</TableHead>
                     <TableHead>Status</TableHead>
@@ -285,9 +313,23 @@ export default function ClientCheckpoints() {
                       </TableCell>
                       <TableCell className="text-muted-foreground">{r.consultant_name || "—"}</TableCell>
                       <TableCell>
-                        {r.last_checkpoint_at
-                          ? format(new Date(r.last_checkpoint_at), "dd/MM/yyyy", { locale: ptBR })
-                          : "—"}
+                        {r.interactionAt ? (
+                          <div className="text-sm">
+                            {format(new Date(r.interactionAt), "dd/MM/yyyy", { locale: ptBR })}
+                            <span
+                              className={cn(
+                                "ml-2 text-xs",
+                                r.silent ? "text-destructive" : "text-muted-foreground",
+                              )}
+                            >
+                              {r.daysSinceInteraction === 0
+                                ? "hoje"
+                                : `há ${r.daysSinceInteraction} dia(s)`}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-destructive text-sm">Sem interação</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         {r.state.nextDueAt

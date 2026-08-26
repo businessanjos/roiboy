@@ -71,6 +71,8 @@ export interface CheckpointRow {
   last_checkpoint_at: string | null;
   last_contact_at: string | null;
   last_summary: string | null;
+  /** Última interação real: checkpoint, contato registrado ou conversa no RoyZapp. */
+  last_interaction_at: string | null;
 }
 
 /**
@@ -138,15 +140,39 @@ export function useCheckpointsPanel() {
         }
       }
 
-      return (clients || []).map((c: any) => ({
-        client_id: c.id,
-        full_name: c.full_name,
-        consultant_name: c.consultant?.name ?? null,
-        status: c.status,
-        last_checkpoint_at: lastCheckpoint.get(c.id) ?? null,
-        last_contact_at: lastContact.get(c.id)?.at ?? null,
-        last_summary: lastContact.get(c.id)?.summary ?? null,
-      }));
+      // Última atividade viva (conversas do RoyZapp + check-ins): toda conversa
+      // com o cliente conta como interação/checkpoint.
+      const liveActivity = new Map<string, string>();
+      const { data: live, error: lErr } = await supabase.rpc("client_last_live_activity");
+      if (lErr) throw lErr;
+      for (const row of (live || []) as any[]) {
+        if (!row?.client_id || !row?.last_at) continue;
+        const at = String(row.last_at);
+        if (at.startsWith("1970")) continue;
+        liveActivity.set(row.client_id, at);
+      }
+
+      const maxDate = (...values: (string | null | undefined)[]) => {
+        const valid = values.filter(Boolean) as string[];
+        if (valid.length === 0) return null;
+        return valid.reduce((a, b) => (new Date(a) > new Date(b) ? a : b));
+      };
+
+      return (clients || []).map((c: any) => {
+        const contact = lastContact.get(c.id)?.at ?? null;
+        const live = liveActivity.get(c.id) ?? null;
+        const interaction = maxDate(lastCheckpoint.get(c.id) ?? null, contact, live);
+        return {
+          client_id: c.id,
+          full_name: c.full_name,
+          consultant_name: c.consultant?.name ?? null,
+          status: c.status,
+          last_checkpoint_at: lastCheckpoint.get(c.id) ?? null,
+          last_contact_at: contact,
+          last_summary: lastContact.get(c.id)?.summary ?? null,
+          last_interaction_at: interaction,
+        };
+      });
     },
   });
 }
