@@ -119,7 +119,7 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
           <Tooltip content={<CustomTooltip />} />
           <Bar
             dataKey={valueKey}
-            fill="hsl(var(--primary))"
+            fill="hsl(var(--chart-1))"
             radius={[4, 4, 0, 0]}
           />
         </BarChart>
@@ -152,9 +152,9 @@ export function ChartWidget({ type, data, metric, groupBy }: ChartWidgetProps) {
           <Line
             type="monotone"
             dataKey={valueKey}
-            stroke="hsl(var(--primary))"
+            stroke="hsl(var(--chart-1))"
             strokeWidth={2}
-            dot={{ fill: "hsl(var(--primary))", r: 4 }}
+            dot={{ fill: "hsl(var(--chart-1))", r: 4 }}
             activeDot={{ r: 6 }}
           />
         </LineChart>
