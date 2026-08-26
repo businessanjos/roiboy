@@ -120,6 +120,28 @@ function mediaKeyOf(m: UazMessage): string | null {
   return raw ? String(raw) : null;
 }
 
+function typedMediaMimetype(m: UazMessage): string | null {
+  let current = (m.content && typeof m.content === "object" ? m.content : null) as Record<string, unknown> | null;
+  for (let depth = 0; current && depth < 5; depth++) {
+    const wrapped = (current.viewOnceMessageV2Extension ?? current.viewOnceMessageV2 ?? current.viewOnceMessage ?? current.ephemeralMessage ?? current.documentWithCaptionMessage) as Record<string, unknown> | undefined;
+    const nested = wrapped && typeof wrapped === "object"
+      ? ((wrapped.message as Record<string, unknown> | undefined) ?? wrapped)
+      : null;
+    if (!nested) break;
+    current = nested;
+  }
+  const media = current && typeof current.videoMessage === "object"
+    ? current.videoMessage as Record<string, unknown>
+    : current && typeof current.imageMessage === "object"
+      ? current.imageMessage as Record<string, unknown>
+      : current && typeof current.audioMessage === "object"
+        ? current.audioMessage as Record<string, unknown>
+        : current && typeof current.documentMessage === "object"
+          ? current.documentMessage as Record<string, unknown>
+          : null;
+  return media?.mimetype ? String(media.mimetype) : null;
+}
+
 function extractContent(m: UazMessage): {
 
   content: string;
