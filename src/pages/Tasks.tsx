@@ -354,7 +354,7 @@ export default function Tasks() {
         if (filterUser === "mine" && currentUser?.id) {
           q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
         } else if (filterUser !== "all" && filterUser) {
-          q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
+          q = q.eq("assigned_to", filterUser);
         }
 
         // Busca incremental no servidor: procura em todo o histórico sem
@@ -420,7 +420,7 @@ export default function Tasks() {
       if (filterUser === "mine" && currentUser?.id) {
         q = q.or(`assigned_to.eq.${currentUser.id},created_by.eq.${currentUser.id}`);
       } else if (filterUser !== "all" && filterUser) {
-        q = q.or(`assigned_to.eq.${filterUser},created_by.eq.${filterUser}`);
+        q = q.eq("assigned_to", filterUser);
       }
       if (serverSearch) {
         const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
@@ -835,7 +835,7 @@ export default function Tasks() {
     
     // User filter
     const matchesUser = filterUser === "all" || 
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
 
     // Activity type filter
     const matchesActivityType = filterActivityType === "all" || 
@@ -900,7 +900,7 @@ export default function Tasks() {
   const baseFilteredTasksIgnoringDate = useMemo(() => tasks.filter((task) => {
     const matchesSearch = matchesTaskSearch(task);
     const matchesUser = filterUser === "all" ||
-      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
+      (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
     const matchesActivityType = filterActivityType === "all" ||
       task.activity_type?.id === filterActivityType;
     const activitySectorId = task.activity_type?.sector_id;
@@ -1979,7 +1979,7 @@ export default function Tasks() {
             const matchesSearch = matchesTaskSearch(task);
             
             const matchesUser = filterUser === "all" || 
-              (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser || task.created_by === filterUser));
+              (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
 
             const matchesActivityType = filterActivityType === "all" || 
               task.activity_type?.id === filterActivityType;
