@@ -77,6 +77,7 @@ import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles"
 import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
 import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { useZappConnectionAlerts } from "@/hooks/useZappConnectionAlerts";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: string }> = {
   triage: { label: "Triagem", color: "text-purple-600", bgColor: "bg-purple-500" },
