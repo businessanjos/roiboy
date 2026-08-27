@@ -97,39 +97,78 @@ export function useZappNotifications({
     return !document.hidden;
   }, []);
 
-  // Preload audio files
-  const getPopAudio = useCallback(() => {
-    if (!popAudioRef.current) {
-      popAudioRef.current = new Audio("/sounds/notification-pop.mp3");
-      popAudioRef.current.volume = 0.5;
+  // Web Audio: os arquivos mp3 estáticos estavam corrompidos (continham apenas
+  // uma data-URI em texto), então sintetizamos o som localmente.
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const getAudioContext = useCallback((): AudioContext | null => {
+    if (typeof window === "undefined") return null;
+    const Ctor = window.AudioContext || (window as any).webkitAudioContext;
+    if (!Ctor) return null;
+    if (!audioCtxRef.current) {
+      try {
+        audioCtxRef.current = new Ctor();
+      } catch {
+        return null;
+      }
     }
-    return popAudioRef.current;
+    return audioCtxRef.current;
   }, []);
 
-  const getDingAudio = useCallback(() => {
-    if (!dingAudioRef.current) {
-      dingAudioRef.current = new Audio("/sounds/notification-ding.mp3");
-      dingAudioRef.current.volume = 0.6;
-    }
-    return dingAudioRef.current;
-  }, []);
+  // Desbloqueia o contexto de áudio no primeiro gesto do usuário
+  useEffect(() => {
+    const unlock = () => {
+      const ctx = getAudioContext();
+      if (ctx && ctx.state === "suspended") ctx.resume().catch(() => {});
+    };
+    window.addEventListener("pointerdown", unlock);
+    window.addEventListener("keydown", unlock);
+    return () => {
+      window.removeEventListener("pointerdown", unlock);
+      window.removeEventListener("keydown", unlock);
+    };
+  }, [getAudioContext]);
 
   // Play notification sound
   const playNotificationSound = useCallback((isQueue: boolean) => {
     if (!soundEnabled) return;
-    
-    try {
-      const audio = isQueue ? getDingAudio() : getPopAudio();
-      // Reset audio to start if already playing
-      audio.currentTime = 0;
-      audio.play().catch((err) => {
-        // Ignore autoplay errors - browser may block until user interaction
-        console.log("[Notifications] Audio play blocked:", err.message);
+
+    const ctx = getAudioContext();
+    if (!ctx) return;
+
+    const start = () => {
+      const now = ctx.currentTime;
+      // Fila = dois toques ("ding"); Minhas = um toque curto ("pop")
+      const notes = isQueue
+        ? [{ freq: 880, at: 0, dur: 0.16 }, { freq: 1320, at: 0.18, dur: 0.22 }]
+        : [{ freq: 1046, at: 0, dur: 0.12 }];
+
+      notes.forEach(({ freq, at, dur }) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = "sine";
+        osc.frequency.setValueAtTime(freq, now + at);
+        gain.gain.setValueAtTime(0.0001, now + at);
+        gain.gain.exponentialRampToValueAtTime(0.25, now + at + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + at + dur);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + at);
+        osc.stop(now + at + dur + 0.02);
       });
+    };
+
+    try {
+      if (ctx.state === "suspended") {
+        ctx.resume().then(start).catch(() => {});
+      } else {
+        start();
+      }
     } catch (error) {
       console.error("[Notifications] Error playing sound:", error);
     }
-  }, [soundEnabled, getPopAudio, getDingAudio]);
+  }, [soundEnabled, getAudioContext]);
+
 
   // Show system notification (Web Notifications API)
   const showSystemNotification = useCallback((
