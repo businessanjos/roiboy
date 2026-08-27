@@ -14,6 +14,7 @@ import { ptBR } from "date-fns/locale";
 import { DealActivitiesDialog } from "./DealActivitiesDialog";
 import { VipBadge } from "@/components/client/VipBadge";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
+import { DealRulerButton } from "./DealRulerButton";
 
 interface DealCardProps {
   deal: Deal;
@@ -275,6 +276,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                 <MessageCircle className="h-3 w-3 text-success" />
               </Button>
             )}
+            {/* Régua de relacionamento */}
+            <DealRulerButton
+              contactName={contactName}
+              contactPhone={contactPhone}
+              clientId={deal.client_id}
+              leadId={deal.lead_id}
+            />
             {/* Activities */}
             <Button
               variant="ghost"

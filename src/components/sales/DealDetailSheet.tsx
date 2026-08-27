@@ -101,6 +101,7 @@ import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
 import { MergeDealDialog } from "./MergeDealDialog";
 import { ThreeCPlusCallButton } from "./ThreeCPlusCallButton";
+import { DealRulerButton } from "./DealRulerButton";
 import { useDealMerge } from "@/hooks/useDealMerge";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
 import { VipBadge } from "@/components/client/VipBadge";
@@ -1096,6 +1097,15 @@ export function DealDetailSheet({
               </div>
             </div>
             <div className="flex items-center gap-1.5 w-full sm:w-auto sm:mr-8">
+              <DealRulerButton
+                variant="button"
+                contactName={contactName}
+                contactPhone={contactPhone}
+                clientId={deal.client_id}
+                leadId={deal.lead_id}
+                className="h-8"
+              />
+
               {!isClosed && (
                 <>
                   <Button
