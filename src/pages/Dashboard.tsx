@@ -153,11 +153,6 @@ export default function Dashboard() {
     [productGroups, clients],
   );
 
-  const gestaoProductMemberIds = useMemo(
-    () => (gestaoProductFilterRef: string) =>
-      productGroups.find((g) => g.id === gestaoProductFilterRef)?.memberIds ?? [gestaoProductFilterRef],
-    [productGroups],
-  );
 
 
 
