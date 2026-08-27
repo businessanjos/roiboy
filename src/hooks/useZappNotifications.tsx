@@ -29,9 +29,8 @@ export function useZappNotifications({
   // Track last notification to prevent rapid duplicates
   const lastNotificationRef = useRef<{ conversationId: string; timestamp: number } | null>(null);
   
-  // Audio refs for preloading
-  const popAudioRef = useRef<HTMLAudioElement | null>(null);
-  const dingAudioRef = useRef<HTMLAudioElement | null>(null);
+
+
 
   // System notification permission state
   const [notificationPermission, setNotificationPermission] = useState<NotificationPermissionStatus>(() => {
