@@ -64,6 +64,16 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
 
+  // Mantém o estado de edição sincronizado com a lista atualizada,
+  // para que o drawer de detalhe abra sempre com os dados mais recentes.
+  useEffect(() => {
+    if (dialogOpen || !editing) return;
+    const fresh = templates.find((t) => t.id === editing.id);
+    if (fresh && fresh !== editing) {
+      setEditing(fresh);
+    }
+  }, [templates, dialogOpen, editing]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-zapp-text-muted">
