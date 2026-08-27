@@ -27,11 +27,16 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
+  // Qualquer contato registrado conta como toque com o cliente. Se não houver
+  // um checkpoint formal, usamos o último contato para não deixar o painel vazio.
   const lastCheckpoint = useMemo(
     () => checkins.find((c) => c.kind === "checkpoint")?.happened_at ?? null,
     [checkins]
   );
-  const state = getCheckpointState(lastCheckpoint);
+  const lastContact = useMemo(() => checkins[0]?.happened_at ?? null, [checkins]);
+  const referenceAt = lastCheckpoint ?? lastContact;
+  const state = getCheckpointState(referenceAt);
+
 
   return (
     <Card className="shadow-card">
@@ -64,9 +69,13 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
       </CardHeader>
       <CardContent className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-3 text-sm">
-          <Info label="Último checkpoint" value={lastCheckpoint ? format(new Date(lastCheckpoint), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
+          <Info
+            label={lastCheckpoint ? "Último checkpoint" : "Último contato"}
+            value={referenceAt ? format(new Date(referenceAt), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+          />
           <Info label="Próximo previsto" value={state.nextDueAt ? format(new Date(state.nextDueAt), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
-          <Info label="Situação" value={state.label} />
+          <Info label="Situação" value={state.status === "sem_registro" ? "Sem registro" : lastCheckpoint ? state.label : `${state.label} (contato avulso)`} />
+
         </div>
 
         {isLoading ? (

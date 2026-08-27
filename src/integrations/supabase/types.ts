@@ -1920,6 +1920,20 @@ export type Database = {
             referencedRelation: "event_active_clients"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "client_checkins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "client_checkins_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
         ]
       }
       client_churn_analyses: {
