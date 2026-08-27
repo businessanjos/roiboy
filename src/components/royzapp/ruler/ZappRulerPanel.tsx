@@ -259,7 +259,10 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
 
       <ZappRulerTemplateDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditing(null);
+        }}
         template={editing}
         onSave={saveTemplate}
       />
