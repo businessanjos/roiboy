@@ -269,9 +269,9 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                 if (!deleteTarget) return;
                 try {
                   await deleteTemplate(deleteTarget.id);
-                  toast.success("Régua excluída");
                 } catch (err: any) {
-                  toast.error(err?.message || "Erro ao excluir");
+                  // O hook já exibe o toast de erro/sucesso.
+                  console.error("[ZappRuler] delete failed", err);
                 } finally {
                   setDeleteTarget(null);
                 }

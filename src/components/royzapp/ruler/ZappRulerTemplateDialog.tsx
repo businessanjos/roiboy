@@ -108,11 +108,11 @@ export function ZappRulerTemplateDialog({
         stop_on_reply: stopOnReply,
         steps: cleaned,
       });
-      toast.success(template ? "Régua atualizada" : "Régua criada");
       onOpenChange(false);
     } catch (err: any) {
       console.error("[ZappRuler] save template failed", err);
-      toast.error(err?.message || "Erro ao salvar a régua");
+      // O hook já exibe toast de erro/sucesso; aqui só garantimos que o
+      // dialog permaneça aberto em caso de falha e libere o loading.
     } finally {
       setSaving(false);
     }
