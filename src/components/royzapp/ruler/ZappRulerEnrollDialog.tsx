@@ -137,7 +137,31 @@ export function ZappRulerEnrollDialog({
       const { error: touchError } = await supabase.from("zapp_ruler_touches").insert(rows);
       if (touchError) throw touchError;
 
-      toast.success(`Régua "${template.name}" iniciada com ${rows.length} toques.`);
+      // Cada toque vira uma atividade real na agenda (Tarefas), inclusive os "só atividade".
+      const taskRows = rows.map((r) => ({
+        account_id: currentUser.account_id,
+        client_id: clientId || null,
+        lead_id: leadId || null,
+        deal_id: dealId || null,
+        title: `[Régua] ${r.title}`,
+        description: r.is_task
+          ? `Atividade da régua "${template.name}" (D+${r.offset_days}).`
+          : `Toque da régua "${template.name}" (D+${r.offset_days}).\n\n${r.message}`,
+        due_date: r.scheduled_at,
+        priority: "medium" as const,
+        status: "pending" as const,
+        assigned_to: currentUser.id,
+        created_by: currentUser.id,
+      }));
+      const { error: taskError } = await supabase.from("internal_tasks").insert(taskRows);
+      if (taskError) {
+        console.error("[ZappRuler] task creation failed", taskError);
+        toast.error("Régua criada, mas não foi possível registrar as atividades.");
+      }
+
+      toast.success(
+        `Régua "${template.name}" iniciada com ${rows.length} toques e ${taskError ? 0 : taskRows.length} atividades.`,
+      );
       onOpenChange(false);
       onEnrolled?.();
     } catch (err: any) {
