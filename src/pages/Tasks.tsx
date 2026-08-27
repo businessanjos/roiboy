@@ -73,12 +73,14 @@ import {
   ChevronLeft,
   ChevronRight,
   Download,
+  CalendarClock,
 
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
+import { RulerQuickLaunchDialog } from "@/components/royzapp/ruler/RulerQuickLaunchDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
@@ -207,6 +209,7 @@ export default function Tasks() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
+  const [rulerLaunchOpen, setRulerLaunchOpen] = useState(false);
   const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
   const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
   const [filterStage, setFilterStage] = usePersistedFilter<string>("tasks", "filterStage", "all");
@@ -1700,6 +1703,16 @@ export default function Tasks() {
                 Exportar
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRulerLaunchOpen(true)}
+              className="h-9"
+            >
+              <CalendarClock className="h-4 w-4 mr-1.5" />
+              Régua
+            </Button>
+
             <Button 
               variant="outline"
               size="sm"
@@ -1709,6 +1722,7 @@ export default function Tasks() {
               <Settings className="h-4 w-4 mr-1.5" />
               Personalizar
             </Button>
+
 
             <Button 
               onClick={() => openNewTaskDialog()}
@@ -2208,6 +2222,10 @@ export default function Tasks() {
         open={statusManagerOpen} 
         onOpenChange={setStatusManagerOpen} 
       />
+
+      {/* Régua de relacionamento */}
+      <RulerQuickLaunchDialog open={rulerLaunchOpen} onOpenChange={setRulerLaunchOpen} />
+
       
       {/* Dialogs for WhatsApp instance selection and PIN */}
       {InstanceSelectorDialog}
