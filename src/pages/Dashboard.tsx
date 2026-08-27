@@ -80,6 +80,7 @@ import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
+import { buildProductGroups, clientInGroup } from "@/lib/dashboard/productGroups";
 
 
 
@@ -135,20 +136,25 @@ export default function Dashboard() {
   } = useDashboardData();
 
   // Hide renewal-only / deprecated products from "Clientes por Produto" cards
-  const HIDDEN_PRODUCT_NAMES = ["Ren. Rykas Mentoring", "Ren. Eternum Club", "Ren. Eternum Private", "Rykas Pass", "Consultoria Premium"];
+  const HIDDEN_PRODUCT_NAMES = ["Consultoria Premium"];
   const visibleProducts = useMemo(
     () => products.filter((p: any) => !HIDDEN_PRODUCT_NAMES.includes((p.name ?? "").trim())),
     [products],
   );
 
-  // Só exibe produtos que possuem clientes ativos (oculta zerados)
+  // Agrupa produtos equivalentes (renovações + nomes legados Rykas -> Eternum)
+  const productGroups = useMemo(() => buildProductGroups(visibleProducts as any[]), [visibleProducts]);
+
+  // Só exibe grupos que possuem clientes ativos (oculta zerados)
   const productsWithClients = useMemo(
     () =>
-      visibleProducts.filter((p: any) =>
-        clients.some((c: any) => c.product_ids?.includes(p.id)),
+      productGroups.filter((g) =>
+        clients.some((c: any) => clientInGroup(c.product_ids, g.memberIds)),
       ),
-    [visibleProducts, clients],
+    [productGroups, clients],
   );
+
+
 
 
   // Contract stats from RPC for accurate Gestão metrics
@@ -215,6 +221,14 @@ export default function Dashboard() {
   const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
+  // Ids equivalentes do produto selecionado (base + renovações + nomes legados)
+  const selectedProductMemberIds = useMemo(
+    () =>
+      gestaoProductFilter === "all"
+        ? []
+        : productGroups.find((g) => g.id === gestaoProductFilter)?.memberIds ?? [gestaoProductFilter],
+    [productGroups, gestaoProductFilter],
+  );
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("year");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
@@ -339,15 +353,15 @@ export default function Dashboard() {
 
       if (!startInPeriod && !exitInPeriod) return false;
 
-      // Filter by product
+      // Filter by product (grupo: inclui renovações e nomes legados)
       if (gestaoProductFilter !== "all") {
         const clientProducts = clientProductsMap[contract.client_id] || [];
-        if (!clientProducts.includes(gestaoProductFilter)) return false;
+        if (!clientInGroup(clientProducts, selectedProductMemberIds)) return false;
       }
 
       return true;
     });
-  }, [contractData, gestaoProductFilter, gestaoPeriodRange, clientProductsMap]);
+  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap]);
 
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
@@ -404,17 +418,17 @@ export default function Dashboard() {
   // Filter clients by gestaoProductFilter for status cards
   const gestaoFilteredClients = useMemo(() => {
     if (gestaoProductFilter === "all") return clients;
-    return clients.filter(c => c.product_ids?.includes(gestaoProductFilter));
-  }, [clients, gestaoProductFilter]);
+    return clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds));
+  }, [clients, gestaoProductFilter, selectedProductMemberIds]);
 
   // Filter CX upcoming events by product filter (shares same filter as Gestão)
   const filteredUpcomingEvents = useMemo(() => {
     if (gestaoProductFilter === "all") return upcomingEvents;
     return (upcomingEvents || []).filter((e: any) => {
       const clientProducts = clientProductsMap[e.client_id] || [];
-      return clientProducts.includes(gestaoProductFilter);
+      return clientInGroup(clientProducts, selectedProductMemberIds);
     });
-  }, [upcomingEvents, gestaoProductFilter, clientProductsMap]);
+  }, [upcomingEvents, gestaoProductFilter, selectedProductMemberIds, clientProductsMap]);
 
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
@@ -817,7 +831,7 @@ export default function Dashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os produtos</SelectItem>
-                {products.map((product) => (
+                {productGroups.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
                     {product.name}
                   </SelectItem>
@@ -1047,17 +1061,17 @@ export default function Dashboard() {
             clientIds={
               gestaoProductFilter === "all"
                 ? undefined
-                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).map((c: any) => c.id)
+                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).map((c: any) => c.id)
             }
             totalClients={
               gestaoProductFilter === "all"
                 ? clients.length
-                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).length
+                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).length
             }
             productLabel={
               gestaoProductFilter === "all"
                 ? undefined
-                : products.find((p: any) => p.id === gestaoProductFilter)?.name
+                : productGroups.find((p) => p.id === gestaoProductFilter)?.name
             }
             periodFilter={gestaoPeriodFilter}
             customRange={gestaoCustomDateRange}
@@ -1080,7 +1094,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {productsWithClients.map((product) => {
-                    const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
+                    const clientCount = clients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                     return (
                       <div
                         key={product.id}
@@ -1675,7 +1689,7 @@ export default function Dashboard() {
             {/* Clientes por Produto */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
               {productsWithClients.map((product) => {
-                const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
+                const clientCount = clients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                 return (
                   <Card key={product.id}>
                     <CardContent className="p-8">
