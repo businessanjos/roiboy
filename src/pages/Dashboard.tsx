@@ -135,20 +135,30 @@ export default function Dashboard() {
   } = useDashboardData();
 
   // Hide renewal-only / deprecated products from "Clientes por Produto" cards
-  const HIDDEN_PRODUCT_NAMES = ["Ren. Rykas Mentoring", "Ren. Eternum Club", "Ren. Eternum Private", "Rykas Pass", "Consultoria Premium"];
+  const HIDDEN_PRODUCT_NAMES = ["Consultoria Premium"];
   const visibleProducts = useMemo(
     () => products.filter((p: any) => !HIDDEN_PRODUCT_NAMES.includes((p.name ?? "").trim())),
     [products],
   );
 
-  // Só exibe produtos que possuem clientes ativos (oculta zerados)
+  // Agrupa produtos equivalentes (renovações + nomes legados Rykas -> Eternum)
+  const productGroups = useMemo(() => buildProductGroups(visibleProducts as any[]), [visibleProducts]);
+
+  // Só exibe grupos que possuem clientes ativos (oculta zerados)
   const productsWithClients = useMemo(
     () =>
-      visibleProducts.filter((p: any) =>
-        clients.some((c: any) => c.product_ids?.includes(p.id)),
+      productGroups.filter((g) =>
+        clients.some((c: any) => clientInGroup(c.product_ids, g.memberIds)),
       ),
-    [visibleProducts, clients],
+    [productGroups, clients],
   );
+
+  const gestaoProductMemberIds = useMemo(
+    () => (gestaoProductFilterRef: string) =>
+      productGroups.find((g) => g.id === gestaoProductFilterRef)?.memberIds ?? [gestaoProductFilterRef],
+    [productGroups],
+  );
+
 
 
   // Contract stats from RPC for accurate Gestão metrics
