@@ -1240,8 +1240,8 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">
                         {hasRenewalData
-                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} ${renewalData?.fallback ? "vencidos" : "resolv."}${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}${renewalData?.fallback ? " (estimado por contratos vencidos)" : ""}`
-                          : "Nenhum desfecho de renovação resolvido no período selecionado"}
+                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} contratos vencendo no período${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}${renewalData?.pending ? ` · ${renewalData.pending} em aberto` : ""}${renewalData?.fallback ? " (parte inferida por contrato sucessor)" : ""}`
+                          : "Nenhum contrato com vencimento no período selecionado"}
 
                       </span>
                       {hasRenewalData && (
