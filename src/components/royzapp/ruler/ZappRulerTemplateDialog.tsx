@@ -160,13 +160,13 @@ export function ZappRulerTemplateDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Nome</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Follow-up comercial" />
+                <Input value={name} onChange={(e) => updateName(e.target.value)} placeholder="Follow-up comercial" />
               </div>
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Input
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => updateDescription(e.target.value)}
                   placeholder="Quando usar esta cadência"
                 />
               </div>
@@ -195,14 +195,14 @@ export function ZappRulerTemplateDialog({
                   <p className="text-sm font-medium">Envio automático</p>
                   <p className="text-xs text-muted-foreground">Padrão ao aplicar a régua</p>
                 </div>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+                <Switch checked={autoSend} onCheckedChange={updateAutoSend} />
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">Parar ao responder</p>
                   <p className="text-xs text-muted-foreground">Cancela os toques restantes</p>
                 </div>
-                <Switch checked={stopOnReply} onCheckedChange={setStopOnReply} />
+                <Switch checked={stopOnReply} onCheckedChange={updateStopOnReply} />
               </div>
             </div>
 
@@ -214,7 +214,7 @@ export function ZappRulerTemplateDialog({
                   min={0}
                   max={23}
                   value={windowStart}
-                  onChange={(e) => setWindowStart(Number(e.target.value))}
+                  onChange={(e) => updateWindowStart(Number(e.target.value))}
                 />
               </div>
               <div className="space-y-2">
@@ -224,7 +224,7 @@ export function ZappRulerTemplateDialog({
                   min={1}
                   max={24}
                   value={windowEnd}
-                  onChange={(e) => setWindowEnd(Number(e.target.value))}
+                  onChange={(e) => updateWindowEnd(Number(e.target.value))}
                 />
               </div>
             </div>
@@ -236,7 +236,7 @@ export function ZappRulerTemplateDialog({
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setSteps((prev) => [...prev, emptyStep(prev.length)])}
+                  onClick={addStep}
                 >
                   <Plus className="h-4 w-4 mr-1" /> Adicionar
                 </Button>
@@ -265,7 +265,7 @@ export function ZappRulerTemplateDialog({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      onClick={() => setSteps((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() => removeStep(idx)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
