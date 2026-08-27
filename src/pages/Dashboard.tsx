@@ -345,15 +345,15 @@ export default function Dashboard() {
 
       if (!startInPeriod && !exitInPeriod) return false;
 
-      // Filter by product
+      // Filter by product (grupo: inclui renovações e nomes legados)
       if (gestaoProductFilter !== "all") {
         const clientProducts = clientProductsMap[contract.client_id] || [];
-        if (!clientProducts.includes(gestaoProductFilter)) return false;
+        if (!clientInGroup(clientProducts, selectedProductMemberIds)) return false;
       }
 
       return true;
     });
-  }, [contractData, gestaoProductFilter, gestaoPeriodRange, clientProductsMap]);
+  }, [contractData, gestaoProductFilter, selectedProductMemberIds, gestaoPeriodRange, clientProductsMap]);
 
   // Calculate monthly chart data including new clients
   const monthlyChartData = useMemo(() => {
