@@ -591,10 +591,12 @@ export default function Dashboard() {
   }, [monthlyChartData, contractStats, gestaoClientStats]);
 
 
-  // Renewal rate within filtered period: renewed / (renewed + lost)
+  // Taxa de renovação por COORTE DE VENCIMENTO: considera os contratos cujo
+  // vencimento (end_date) cai no período filtrado — e não a data em que alguém
+  // registrou o desfecho (resolved_at), que distorcia as taxas por período.
   const { data: renewalData } = useQuery({
     queryKey: [
-      "dashboard-renewal-rate",
+      "dashboard-renewal-rate-by-due-date",
       currentUser?.account_id,
       gestaoPeriodRange.periodStart.toISOString(),
       gestaoPeriodRange.periodEnd.toISOString(),
@@ -602,70 +604,77 @@ export default function Dashboard() {
     enabled: !!currentUser?.account_id,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("renewal_outcomes")
-        .select("outcome, resolved_at")
+      const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
+      const endStr = gestaoPeriodRange.periodEnd.toISOString().slice(0, 10);
+
+      // 1) Coorte: contratos que vencem dentro do período
+      const { data: expired, error: expErr } = await supabase
+        .from("client_contracts")
+        .select("id, client_id, product_id, end_date, status")
         .eq("account_id", currentUser!.account_id!)
-        .gte("resolved_at", gestaoPeriodRange.periodStart.toISOString())
-        .lte("resolved_at", gestaoPeriodRange.periodEnd.toISOString());
-      if (error) throw error;
-      let renewed = 0, lost = 0;
-      for (const row of (data ?? []) as any[]) {
-        if (row.outcome === "renewed") renewed++;
-        else if (row.outcome === "lost") lost++;
-      }
-      let total = renewed + lost;
-      let fallback = false;
+        .not("end_date", "is", null)
+        .gte("end_date", startStr)
+        .lte("end_date", endStr);
+      if (expErr) throw expErr;
 
-      // Fallback: sem desfechos registrados no período, usa contratos vencidos
-      // no período e detecta sucessor (mesmo cliente + produto começando após o fim).
-      if (total === 0) {
-        const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
-        const endStr = gestaoPeriodRange.periodEnd.toISOString().slice(0, 10);
-        const { data: expired, error: expErr } = await supabase
-          .from("client_contracts")
-          .select("id, client_id, product_id, end_date, status")
-          .eq("account_id", currentUser!.account_id!)
-          .not("end_date", "is", null)
-          .gte("end_date", startStr)
-          .lte("end_date", endStr);
-        if (expErr) throw expErr;
+      const cohort = (expired ?? []).filter(
+        (c: any) => !["draft", "cancelled"].includes(String(c.status ?? "").toLowerCase())
+      );
 
-        const expiredRows = (expired ?? []).filter(
-          (c: any) => !["draft", "cancelled"].includes(String(c.status ?? "").toLowerCase())
-        );
-
-        if (expiredRows.length > 0) {
-          const clientIds = Array.from(new Set(expiredRows.map((c: any) => c.client_id).filter(Boolean)));
-          const { data: allContracts, error: allErr } = await supabase
-            .from("client_contracts")
-            .select("id, client_id, product_id, start_date, end_date, status, parent_contract_id")
-            .eq("account_id", currentUser!.account_id!)
-            .in("client_id", clientIds as string[]);
-          if (allErr) throw allErr;
-
-          for (const c of expiredRows as any[]) {
-            const hasSuccessor = (allContracts ?? []).some((s: any) => {
-              if (s.id === c.id) return false;
-              if (["draft", "cancelled"].includes(String(s.status ?? "").toLowerCase())) return false;
-              if (s.parent_contract_id === c.id) return true;
-              if (s.client_id !== c.client_id) return false;
-              if (c.product_id && s.product_id && s.product_id !== c.product_id) return false;
-              return !!s.start_date && s.start_date >= c.end_date;
-            });
-            if (hasSuccessor) renewed++;
-            else lost++;
-          }
-          total = renewed + lost;
-          fallback = total > 0;
-        }
+      if (cohort.length === 0) {
+        return { rate: 0, renewed: 0, lost: 0, pending: 0, total: 0, fallback: false };
       }
 
+      const contractIds = cohort.map((c: any) => c.id);
+      const clientIds = Array.from(new Set(cohort.map((c: any) => c.client_id).filter(Boolean)));
+
+      // 2) Desfechos registrados manualmente para os contratos da coorte
+      const { data: outcomes, error: outErr } = await supabase
+        .from("renewal_outcomes")
+        .select("contract_id, outcome")
+        .eq("account_id", currentUser!.account_id!)
+        .in("contract_id", contractIds as string[]);
+      if (outErr) throw outErr;
+
+      const outcomeByContract = new Map<string, string>();
+      for (const row of (outcomes ?? []) as any[]) outcomeByContract.set(row.contract_id, row.outcome);
+
+      // 3) Detecção de sucessor para os contratos sem desfecho registrado
+      const { data: allContracts, error: allErr } = await supabase
+        .from("client_contracts")
+        .select("id, client_id, product_id, start_date, end_date, status, parent_contract_id")
+        .eq("account_id", currentUser!.account_id!)
+        .in("client_id", clientIds as string[]);
+      if (allErr) throw allErr;
+
+      let renewed = 0, lost = 0, pending = 0, inferred = 0;
+
+      for (const c of cohort as any[]) {
+        const outcome = outcomeByContract.get(c.id);
+        if (outcome === "renewed") { renewed++; continue; }
+        if (outcome === "lost") { lost++; continue; }
+        if (outcome === "pending" || outcome === "negotiating") { pending++; continue; }
+
+        const hasSuccessor = (allContracts ?? []).some((s: any) => {
+          if (s.id === c.id) return false;
+          if (["draft", "cancelled"].includes(String(s.status ?? "").toLowerCase())) return false;
+          if (s.parent_contract_id === c.id) return true;
+          if (s.client_id !== c.client_id) return false;
+          if (c.product_id && s.product_id && s.product_id !== c.product_id) return false;
+          return !!s.start_date && s.start_date >= c.end_date;
+        });
+        inferred++;
+        if (hasSuccessor) renewed++;
+        else lost++;
+      }
+
+      const total = renewed + lost;
       const rate = total > 0 ? (renewed / total) * 100 : 0;
-      return { rate, renewed, lost, total, fallback };
+      return { rate, renewed, lost, pending, total, fallback: inferred > 0 };
     },
 
   });
+
 
   // NPS from latest vNPS snapshot per client (within current account)
   const { data: npsData } = useQuery({
@@ -1231,8 +1240,8 @@ export default function Dashboard() {
                     <div className="flex items-center justify-between mt-3 text-xs">
                       <span className="text-muted-foreground">
                         {hasRenewalData
-                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} ${renewalData?.fallback ? "vencidos" : "resolv."}${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}${renewalData?.fallback ? " (estimado por contratos vencidos)" : ""}`
-                          : "Nenhum desfecho de renovação resolvido no período selecionado"}
+                          ? `${renewalData?.renewed ?? 0} renov. / ${renewalData?.total ?? 0} contratos vencendo no período${renewalData?.lost ? ` · ${renewalData.lost} perd.` : ""}${renewalData?.pending ? ` · ${renewalData.pending} em aberto` : ""}${renewalData?.fallback ? " (parte inferida por contrato sucessor)" : ""}`
+                          : "Nenhum contrato com vencimento no período selecionado"}
 
                       </span>
                       {hasRenewalData && (
