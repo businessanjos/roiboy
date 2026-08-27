@@ -129,20 +129,32 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                         {enrollment.template_name} · {touch.title} · venceu em {formatDateTime(touch.scheduled_at)}
                       </p>
                     </div>
-                    <Badge variant="secondary">D+{touch.offset_days}</Badge>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {touch.is_task && <Badge variant="outline">Atividade</Badge>}
+                      <Badge variant="secondary">D+{touch.offset_days}</Badge>
+                    </div>
                   </div>
-                  <p className="text-xs text-muted-foreground whitespace-pre-wrap">{touch.message}</p>
+                  {touch.is_task ? (
+                    <p className="text-xs text-muted-foreground">
+                      Tarefa interna — nenhuma mensagem será enviada.
+                    </p>
+                  ) : (
+                    <p className="text-xs text-muted-foreground whitespace-pre-wrap">{touch.message}</p>
+                  )}
                   <div className="flex gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => {
-                        navigator.clipboard?.writeText(touch.message);
-                        toast.success("Mensagem copiada");
-                      }}
-                    >
-                      Copiar
-                    </Button>
+                    {!touch.is_task && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => {
+                          navigator.clipboard?.writeText(touch.message);
+                          toast.success("Mensagem copiada");
+                        }}
+                      >
+                        Copiar
+                      </Button>
+                    )}
+
                     <Button size="sm" onClick={() => markTouchDone(touch.id)}>
                       <Check className="h-4 w-4 mr-1" /> Feito
                     </Button>

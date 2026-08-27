@@ -108,11 +108,13 @@ export function ZappRulerTemplateDialog({
       toast.error("Dê um nome para a régua");
       return;
     }
-    const cleaned = steps.filter((s) => s.message.trim());
+    // Toques só de atividade não precisam de mensagem.
+    const cleaned = steps.filter((s) => s.is_task || s.message.trim());
     if (cleaned.length === 0) {
-      toast.error("Adicione ao menos um toque com mensagem");
+      toast.error("Adicione ao menos um toque com mensagem ou marcado como atividade");
       return;
     }
+
     if (windowEnd <= windowStart) {
       toast.error("A janela de envio precisa terminar depois do início");
       return;
@@ -270,14 +272,31 @@ export function ZappRulerTemplateDialog({
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>
                   </div>
-                  <Textarea
-                    rows={3}
-                    value={step.message}
-                    onChange={(e) => updateStep(idx, { message: e.target.value })}
-                    placeholder="Mensagem enviada neste toque"
-                  />
+
+                  <div className="flex items-center justify-between rounded-md bg-muted/40 px-3 py-2">
+                    <div>
+                      <p className="text-xs font-medium">Só atividade (sem envio)</p>
+                      <p className="text-[11px] text-muted-foreground">
+                        Vira uma tarefa na fila, sem mensagem de WhatsApp.
+                      </p>
+                    </div>
+                    <Switch
+                      checked={!!step.is_task}
+                      onCheckedChange={(v) => updateStep(idx, { is_task: v })}
+                    />
+                  </div>
+
+                  {!step.is_task && (
+                    <Textarea
+                      rows={3}
+                      value={step.message}
+                      onChange={(e) => updateStep(idx, { message: e.target.value })}
+                      placeholder="Mensagem enviada neste toque"
+                    />
+                  )}
                 </div>
               ))}
+
             </div>
           </div>
         </ScrollArea>

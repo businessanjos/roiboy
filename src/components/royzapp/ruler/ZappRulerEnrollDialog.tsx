@@ -217,14 +217,18 @@ export function ZappRulerEnrollDialog({
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">D+{s.offset_days}</Badge>
+                        {s.is_task && <Badge variant="outline">Atividade</Badge>}
                         <span className="text-xs font-medium">{s.title}</span>
                         <span className="text-xs text-muted-foreground">
                           {computeTouchDate(startDate, s.offset_days, dueTime).toLocaleDateString("pt-BR")}
                         </span>
                       </div>
-                      <p className="text-xs text-muted-foreground line-clamp-2">{s.message}</p>
+                      <p className="text-xs text-muted-foreground line-clamp-2">
+                        {s.is_task ? "Tarefa interna, sem envio de mensagem." : s.message}
+                      </p>
                     </div>
                   ))}
+
                 </div>
               </ScrollArea>
             )}

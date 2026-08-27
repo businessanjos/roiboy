@@ -9,7 +9,10 @@ export interface RulerTemplateStep {
   title: string;
   message: string;
   sort_order: number;
+  /** Toque apenas de atividade (tarefa interna), sem envio de mensagem. */
+  is_task?: boolean;
 }
+
 
 export interface RulerTemplate {
   id: string;
@@ -34,6 +37,8 @@ export interface RulerTouch {
   message: string;
   scheduled_at: string;
   auto_send: boolean;
+  is_task?: boolean;
+
   status: string;
   attempts: number;
   last_error: string | null;
@@ -227,9 +232,11 @@ export function useZappRulers(sectorId?: string | null) {
           template_id: templateId!,
           offset_days: Number.isFinite(s.offset_days) ? s.offset_days : 0,
           title: s.title.trim() || `Toque ${idx + 1}`,
-          message: s.message,
+          message: s.is_task ? "" : s.message,
+          is_task: !!s.is_task,
           sort_order: idx,
         }));
+
         if (steps.length) {
           const { error } = await supabase.from("zapp_ruler_template_steps").insert(steps);
           if (error) throw error;

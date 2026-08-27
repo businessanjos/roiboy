@@ -27312,6 +27312,7 @@ export type Database = {
         Row: {
           created_at: string
           id: string
+          is_task: boolean
           message: string
           offset_days: number
           sort_order: number
@@ -27322,6 +27323,7 @@ export type Database = {
         Insert: {
           created_at?: string
           id?: string
+          is_task?: boolean
           message?: string
           offset_days?: number
           sort_order?: number
@@ -27332,6 +27334,7 @@ export type Database = {
         Update: {
           created_at?: string
           id?: string
+          is_task?: boolean
           message?: string
           offset_days?: number
           sort_order?: number
@@ -27407,6 +27410,7 @@ export type Database = {
           enrollment_id: string
           external_message_id: string | null
           id: string
+          is_task: boolean
           last_error: string | null
           message: string
           offset_days: number
@@ -27427,6 +27431,7 @@ export type Database = {
           enrollment_id: string
           external_message_id?: string | null
           id?: string
+          is_task?: boolean
           last_error?: string | null
           message?: string
           offset_days?: number
@@ -27447,6 +27452,7 @@ export type Database = {
           enrollment_id?: string
           external_message_id?: string | null
           id?: string
+          is_task?: boolean
           last_error?: string | null
           message?: string
           offset_days?: number
@@ -28003,6 +28009,7 @@ export type Database = {
           enrollment_id: string
           external_message_id: string | null
           id: string
+          is_task: boolean
           last_error: string | null
           message: string
           offset_days: number
