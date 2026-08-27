@@ -209,6 +209,7 @@ export default function Tasks() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [taskToDelete, setTaskToDelete] = useState<Task | null>(null);
   const [statusManagerOpen, setStatusManagerOpen] = useState(false);
+  const [rulerLaunchOpen, setRulerLaunchOpen] = useState(false);
   const [filterDateStart, setFilterDateStart] = usePersistedFilter<string>("tasks", "filterDateStart", "");
   const [filterDateEnd, setFilterDateEnd] = usePersistedFilter<string>("tasks", "filterDateEnd", "");
   const [filterStage, setFilterStage] = usePersistedFilter<string>("tasks", "filterStage", "all");
