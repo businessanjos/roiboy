@@ -6,6 +6,7 @@ import { useZappRulers } from "@/hooks/useZappRulers";
 import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
 
 interface DealRulerButtonProps {
+  dealId?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
   clientId?: string | null;
@@ -21,6 +22,7 @@ function RulerEnrollLoader(props: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   sectorId?: string | null;
+  dealId?: string | null;
   contactName?: string | null;
   contactPhone?: string | null;
   clientId?: string | null;
@@ -37,11 +39,13 @@ function RulerEnrollLoader(props: {
       contactPhone={props.contactPhone}
       clientId={props.clientId}
       leadId={props.leadId}
+      dealId={props.dealId}
     />
   );
 }
 
 export function DealRulerButton({
+  dealId,
   contactName,
   contactPhone,
   clientId,
@@ -90,6 +94,7 @@ export function DealRulerButton({
             contactPhone={contactPhone}
             clientId={clientId}
             leadId={leadId}
+            dealId={dealId}
           />
         </div>
       )}
