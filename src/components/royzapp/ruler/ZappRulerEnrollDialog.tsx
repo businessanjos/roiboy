@@ -53,6 +53,7 @@ export function ZappRulerEnrollDialog({
   contactPhone,
   clientId,
   leadId,
+  dealId,
   onEnrolled,
 }: ZappRulerEnrollDialogProps) {
   const { currentUser } = useCurrentUser();
