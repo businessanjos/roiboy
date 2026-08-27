@@ -35,16 +35,19 @@ export function buildTouchRows(params: {
   return params.steps.map((step, idx) => {
     let when = computeTouchDate(params.startDate, step.offset_days, params.dueTime);
     if (when.getTime() < now) when = new Date(now + 60 * 1000 * (idx + 1));
+    const isTask = !!step.is_task;
     return {
       enrollment_id: params.enrollmentId,
       account_id: params.accountId,
       offset_days: step.offset_days,
       sort_order: idx,
       title: step.title?.trim() || `Toque ${idx + 1}`,
-      message: step.message,
+      message: isTask ? "" : step.message,
+      is_task: isTask,
       scheduled_at: when.toISOString(),
-      auto_send: params.autoSend,
+      auto_send: isTask ? false : params.autoSend,
       status: "pending" as const,
     };
   });
 }
+
