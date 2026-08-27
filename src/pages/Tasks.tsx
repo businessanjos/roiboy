@@ -1700,6 +1700,16 @@ export default function Tasks() {
                 Exportar
               </Button>
             )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRulerLaunchOpen(true)}
+              className="h-9"
+            >
+              <CalendarClock className="h-4 w-4 mr-1.5" />
+              Régua
+            </Button>
+
             <Button 
               variant="outline"
               size="sm"
@@ -1709,6 +1719,7 @@ export default function Tasks() {
               <Settings className="h-4 w-4 mr-1.5" />
               Personalizar
             </Button>
+
 
             <Button 
               onClick={() => openNewTaskDialog()}
