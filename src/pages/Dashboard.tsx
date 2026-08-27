@@ -831,7 +831,7 @@ export default function Dashboard() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Todos os produtos</SelectItem>
-                {products.map((product) => (
+                {productGroups.map((product) => (
                   <SelectItem key={product.id} value={product.id}>
                     {product.name}
                   </SelectItem>
