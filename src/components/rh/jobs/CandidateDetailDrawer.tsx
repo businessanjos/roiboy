@@ -14,7 +14,7 @@ import { ptBR } from "date-fns/locale";
 import type { HRJobApplication, CandidateStage } from "@/types/job";
 import { CANDIDATE_STAGE_LABELS, KANBAN_STAGES } from "@/types/job";
 import { useUpdateCandidateStage } from "@/hooks/useHRJobs";
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeCandidateMatchAI } from "@/hooks/useHRJobStages";
@@ -52,12 +52,22 @@ interface Props {
   onOpenChange: (open: boolean) => void;
   candidate: HRJobApplication | null;
   jobId: string;
+  focusAnswers?: boolean;
 }
 
-export default function CandidateDetailDrawer({ open, onOpenChange, candidate, jobId }: Props) {
+export default function CandidateDetailDrawer({ open, onOpenChange, candidate, jobId, focusAnswers }: Props) {
   const updateStage = useUpdateCandidateStage();
   const [notes, setNotes] = useState("");
   const [savingNotes, setSavingNotes] = useState(false);
+  const answersRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    if (!open || !focusAnswers) return;
+    const t = setTimeout(() => {
+      answersRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 250);
+    return () => clearTimeout(t);
+  }, [open, focusAnswers, candidate?.id]);
 
   if (!candidate) return null;
 
@@ -225,7 +235,9 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
             )}
 
             {/* Screening Answers */}
-            <CandidateScreeningAnswers jobId={jobId} answers={(candidate as any).screening_answers} />
+            <div ref={answersRef} className="scroll-mt-4">
+              <CandidateScreeningAnswers jobId={jobId} answers={(candidate as any).screening_answers} />
+            </div>
 
             {/* Diversity */}
             {(candidate.candidate_gender || candidate.candidate_race || candidate.candidate_pcd) && (
