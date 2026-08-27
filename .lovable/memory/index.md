@@ -73,6 +73,7 @@
 - [Contract List Filter](mem://features/client/contract-filter-logic-pt) — Server-side logic for urgent/warning expirations
 - [Renewals Management](mem://features/operations/renewals-management-pt) — Semi-automated tracking of 90-day expiries
 - [Renewal Successor Detection](mem://features/operations/renewal-successor-detection-pt) — Auto-hides expired contracts when same client+product has active successor
+- [Dashboard Product Grouping](mem://features/dashboard/product-grouping-pt) — Dashboard CS agrupa REN. + rebranding Rykas/Eternum em um único produto
 - [Merge Clients & Deals](mem://features/client/record-merging-systems-v2-pt) — Consolidates duplicate profiles and negotiations
 - [Deep Client Linking](mem://features/client/deep-linking-shared-data-v1-pt) — Share timeline/deals/contracts via `sync_data` toggle
 - [Timeline Persistence](mem://features/client/timeline-history-persistence-pt) — Uncapped timeline history
