@@ -27212,6 +27212,262 @@ export type Database = {
         }
         Relationships: []
       }
+      zapp_ruler_enrollments: {
+        Row: {
+          account_id: string
+          assigned_to: string | null
+          auto_send: boolean
+          cancel_reason: string | null
+          client_id: string | null
+          contact_name: string | null
+          contact_phone: string
+          conversation_id: string | null
+          created_at: string
+          created_by: string | null
+          deal_id: string | null
+          due_time: string
+          id: string
+          integration_id: string | null
+          lead_id: string | null
+          sector_id: string | null
+          send_window_end: number
+          send_window_start: number
+          start_date: string
+          status: string
+          stop_on_reply: boolean
+          template_id: string | null
+          template_name: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          assigned_to?: string | null
+          auto_send?: boolean
+          cancel_reason?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          contact_phone: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_time?: string
+          id?: string
+          integration_id?: string | null
+          lead_id?: string | null
+          sector_id?: string | null
+          send_window_end?: number
+          send_window_start?: number
+          start_date?: string
+          status?: string
+          stop_on_reply?: boolean
+          template_id?: string | null
+          template_name?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          assigned_to?: string | null
+          auto_send?: boolean
+          cancel_reason?: string | null
+          client_id?: string | null
+          contact_name?: string | null
+          contact_phone?: string
+          conversation_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          deal_id?: string | null
+          due_time?: string
+          id?: string
+          integration_id?: string | null
+          lead_id?: string | null
+          sector_id?: string | null
+          send_window_end?: number
+          send_window_start?: number
+          start_date?: string
+          status?: string
+          stop_on_reply?: boolean
+          template_id?: string | null
+          template_name?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_ruler_enrollments_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_ruler_enrollments_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_ruler_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_ruler_template_steps: {
+        Row: {
+          created_at: string
+          id: string
+          message: string
+          offset_days: number
+          sort_order: number
+          template_id: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          message?: string
+          offset_days?: number
+          sort_order?: number
+          template_id: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          message?: string
+          offset_days?: number
+          sort_order?: number
+          template_id?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_ruler_template_steps_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_ruler_templates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      zapp_ruler_templates: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          default_auto_send: boolean
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          sector_id: string | null
+          send_window_end: number
+          send_window_start: number
+          stop_on_reply: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          default_auto_send?: boolean
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          sector_id?: string | null
+          send_window_end?: number
+          send_window_start?: number
+          stop_on_reply?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          default_auto_send?: boolean
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          sector_id?: string | null
+          send_window_end?: number
+          send_window_start?: number
+          stop_on_reply?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      zapp_ruler_touches: {
+        Row: {
+          account_id: string
+          attempts: number
+          auto_send: boolean
+          claimed_at: string | null
+          created_at: string
+          enrollment_id: string
+          external_message_id: string | null
+          id: string
+          last_error: string | null
+          message: string
+          offset_days: number
+          scheduled_at: string
+          sent_at: string | null
+          sent_by: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          auto_send?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          enrollment_id: string
+          external_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          message?: string
+          offset_days?: number
+          scheduled_at: string
+          sent_at?: string | null
+          sent_by?: string | null
+          sort_order?: number
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          auto_send?: boolean
+          claimed_at?: string | null
+          created_at?: string
+          enrollment_id?: string
+          external_message_id?: string | null
+          id?: string
+          last_error?: string | null
+          message?: string
+          offset_days?: number
+          scheduled_at?: string
+          sent_at?: string | null
+          sent_by?: string | null
+          sort_order?: number
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_ruler_touches_enrollment_id_fkey"
+            columns: ["enrollment_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_ruler_enrollments"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_tags: {
         Row: {
           account_id: string
@@ -27735,6 +27991,35 @@ export type Database = {
           p_window_seconds: number
         }
         Returns: boolean
+      }
+      claim_zapp_ruler_touches: {
+        Args: { p_limit?: number }
+        Returns: {
+          account_id: string
+          attempts: number
+          auto_send: boolean
+          claimed_at: string | null
+          created_at: string
+          enrollment_id: string
+          external_message_id: string | null
+          id: string
+          last_error: string | null
+          message: string
+          offset_days: number
+          scheduled_at: string
+          sent_at: string | null
+          sent_by: string | null
+          sort_order: number
+          status: string
+          title: string
+          updated_at: string
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "zapp_ruler_touches"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       cleanup_ai_analysis_queue: { Args: never; Returns: undefined }
       cleanup_old_login_attempts: { Args: never; Returns: undefined }
