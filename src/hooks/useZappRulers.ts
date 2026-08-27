@@ -178,64 +178,74 @@ export function useZappRulers(sectorId?: string | null) {
       steps: RulerTemplateStep[];
     }) => {
       if (!accountId) return null;
-      const base = {
-        name: input.name.trim(),
-        description: input.description?.trim() || null,
-        default_auto_send: input.default_auto_send,
-        send_window_start: input.send_window_start,
-        send_window_end: input.send_window_end,
-        stop_on_reply: input.stop_on_reply,
-        updated_at: new Date().toISOString(),
-      };
 
-      let templateId = input.id;
-      if (templateId) {
-        // Edição: nunca reatribuir account_id/sector_id/created_by — isso movia
-        // o modelo de setor e o fazia sumir da lista após salvar.
-        const { data, error } = await supabase
-          .from("zapp_ruler_templates")
-          .update(base)
-          .eq("id", templateId)
-          .select("id");
-        if (error) throw error;
-        if (!data || data.length === 0) {
-          throw new Error("Você não tem permissão para editar esta régua neste setor.");
+      try {
+        const base = {
+          name: input.name.trim(),
+          description: input.description?.trim() || null,
+          default_auto_send: input.default_auto_send,
+          send_window_start: input.send_window_start,
+          send_window_end: input.send_window_end,
+          stop_on_reply: input.stop_on_reply,
+          updated_at: new Date().toISOString(),
+        };
+
+        let templateId = input.id;
+        if (templateId) {
+          // Edição: nunca reatribuir account_id/sector_id/created_by — isso movia
+          // o modelo de setor e o fazia sumir da lista após salvar.
+          const { data, error } = await supabase
+            .from("zapp_ruler_templates")
+            .update(base)
+            .eq("id", templateId)
+            .select("id");
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error("Você não tem permissão para editar esta régua neste setor.");
+          }
+          const { error: delError } = await supabase
+            .from("zapp_ruler_template_steps")
+            .delete()
+            .eq("template_id", templateId);
+          if (delError) throw delError;
+        } else {
+          const { data, error } = await supabase
+            .from("zapp_ruler_templates")
+            .insert({
+              ...base,
+              account_id: accountId,
+              sector_id: sectorId || null,
+              created_by: currentUser?.id || null,
+            })
+            .select("id")
+            .single();
+          if (error) throw error;
+          templateId = data.id;
         }
-        const { error: delError } = await supabase
-          .from("zapp_ruler_template_steps")
-          .delete()
-          .eq("template_id", templateId);
-        if (delError) throw delError;
-      } else {
-        const { data, error } = await supabase
-          .from("zapp_ruler_templates")
-          .insert({
-            ...base,
-            account_id: accountId,
-            sector_id: sectorId || null,
-            created_by: currentUser?.id || null,
-          })
-          .select("id")
-          .single();
-        if (error) throw error;
-        templateId = data.id;
+
+        const steps = input.steps.map((s, idx) => ({
+          template_id: templateId!,
+          offset_days: Number.isFinite(s.offset_days) ? s.offset_days : 0,
+          title: s.title.trim() || `Toque ${idx + 1}`,
+          message: s.message,
+          sort_order: idx,
+        }));
+        if (steps.length) {
+          const { error } = await supabase.from("zapp_ruler_template_steps").insert(steps);
+          if (error) throw error;
+        }
+
+        await fetchAll();
+
+        const action = input.id ? "atualizada" : "criada";
+        toast.success(`Régua "${input.name.trim()}" ${action} com ${steps.length} toque${steps.length === 1 ? "" : "s"}.`);
+
+        return templateId;
+      } catch (err: any) {
+        console.error("[ZappRulers] save template failed", err);
+        toast.error(err?.message || "Erro ao salvar a régua de relacionamento");
+        throw err;
       }
-
-      const steps = input.steps.map((s, idx) => ({
-        template_id: templateId!,
-        offset_days: Number.isFinite(s.offset_days) ? s.offset_days : 0,
-        title: s.title.trim() || `Toque ${idx + 1}`,
-        message: s.message,
-        sort_order: idx,
-      }));
-      if (steps.length) {
-        const { error } = await supabase.from("zapp_ruler_template_steps").insert(steps);
-        if (error) throw error;
-      }
-
-      await fetchAll();
-      return templateId;
-
     },
     [accountId, sectorId, currentUser?.id, fetchAll],
   );
