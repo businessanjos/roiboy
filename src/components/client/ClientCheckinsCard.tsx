@@ -27,11 +27,16 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
+  // Qualquer contato registrado conta como toque com o cliente. Se não houver
+  // um checkpoint formal, usamos o último contato para não deixar o painel vazio.
   const lastCheckpoint = useMemo(
     () => checkins.find((c) => c.kind === "checkpoint")?.happened_at ?? null,
     [checkins]
   );
-  const state = getCheckpointState(lastCheckpoint);
+  const lastContact = useMemo(() => checkins[0]?.happened_at ?? null, [checkins]);
+  const referenceAt = lastCheckpoint ?? lastContact;
+  const state = getCheckpointState(referenceAt);
+
 
   return (
     <Card className="shadow-card">
