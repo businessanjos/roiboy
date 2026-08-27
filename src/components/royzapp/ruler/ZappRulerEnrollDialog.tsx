@@ -211,8 +211,8 @@ export function ZappRulerEnrollDialog({
             </div>
 
             {template && (
-              <ScrollArea className="max-h-48 rounded-lg border p-3">
-                <div className="space-y-3">
+              <ScrollArea className="h-48 rounded-lg border">
+                <div className="space-y-3 p-3 pr-4">
                   {template.steps.map((s, idx) => (
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-2">
