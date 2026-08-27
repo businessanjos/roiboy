@@ -18,6 +18,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { analyzeCandidateMatchAI } from "@/hooks/useHRJobStages";
+import CandidateScreeningAnswers from "./CandidateScreeningAnswers";
 import { Sparkles, Loader2 } from "lucide-react";
 
 const SENIORITY_LABELS: Record<string, string> = {
@@ -222,6 +223,9 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
                 </section>
               </>
             )}
+
+            {/* Screening Answers */}
+            <CandidateScreeningAnswers jobId={jobId} answers={(candidate as any).screening_answers} />
 
             {/* Diversity */}
             {(candidate.candidate_gender || candidate.candidate_race || candidate.candidate_pcd) && (
