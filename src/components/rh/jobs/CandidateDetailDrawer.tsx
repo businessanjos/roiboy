@@ -223,6 +223,10 @@ export default function CandidateDetailDrawer({ open, onOpenChange, candidate, j
               </>
             )}
 
+            {/* Screening Answers */}
+            <Separator />
+            <CandidateScreeningAnswers jobId={jobId} answers={(candidate as any).screening_answers} />
+
             {/* Diversity */}
             {(candidate.candidate_gender || candidate.candidate_race || candidate.candidate_pcd) && (
               <>
