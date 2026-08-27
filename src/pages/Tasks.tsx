@@ -80,6 +80,7 @@ import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
 import { TaskKanban } from "@/components/tasks/TaskKanban";
 import { TaskStatusManager } from "@/components/tasks/TaskStatusManager";
+import { RulerQuickLaunchDialog } from "@/components/royzapp/ruler/RulerQuickLaunchDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useTaskStatuses } from "@/hooks/useTaskStatuses";
