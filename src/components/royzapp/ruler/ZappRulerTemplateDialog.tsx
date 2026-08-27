@@ -94,6 +94,15 @@ export function ZappRulerTemplateDialog({
     setDirty(true);
   };
 
+  const updateName = (value: string) => { setName(value); setDirty(true); };
+  const updateDescription = (value: string) => { setDescription(value); setDirty(true); };
+  const updateAutoSend = (value: boolean) => { setAutoSend(value); setDirty(true); };
+  const updateStopOnReply = (value: boolean) => { setStopOnReply(value); setDirty(true); };
+  const updateWindowStart = (value: number) => { setWindowStart(value); setDirty(true); };
+  const updateWindowEnd = (value: number) => { setWindowEnd(value); setDirty(true); };
+  const addStep = () => { setSteps((prev) => [...prev, emptyStep(prev.length)]); setDirty(true); };
+  const removeStep = (index: number) => { setSteps((prev) => prev.filter((_, i) => i !== index)); setDirty(true); };
+
   const handleSave = async () => {
     if (!name.trim()) {
       toast.error("Dê um nome para a régua");
@@ -121,7 +130,12 @@ export function ZappRulerTemplateDialog({
         stop_on_reply: stopOnReply,
         steps: cleaned,
       });
-      onOpenChange(false);
+      setDirty(false);
+      // Em edição, mantém o diálogo aberto como detalhe e sincroniza com a
+      // versão recarregada; em criação, fecha para mostrar o novo card.
+      if (!template?.id) {
+        onOpenChange(false);
+      }
     } catch (err: any) {
       console.error("[ZappRuler] save template failed", err);
       // O hook já exibe toast de erro/sucesso; aqui só garantimos que o
