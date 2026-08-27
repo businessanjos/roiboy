@@ -58,9 +58,20 @@ export function ZappRulerTemplateDialog({
   const [windowEnd, setWindowEnd] = useState(20);
   const [steps, setSteps] = useState<RulerTemplateStep[]>([emptyStep(0)]);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const lastTemplateIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    const id = template?.id ?? null;
+    const idChanged = id !== lastTemplateIdRef.current;
+    if (idChanged) {
+      lastTemplateIdRef.current = id;
+      setDirty(false);
+    }
+    // Não sobrescreve edições em andamento quando o template for atualizado
+    // em segundo plano (ex.: fetchAll após salvar).
+    if (dirty && !idChanged) return;
     setName(template?.name || "");
     setDescription(template?.description || "");
     setAutoSend(template?.default_auto_send ?? true);
