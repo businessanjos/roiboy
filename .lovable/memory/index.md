@@ -92,6 +92,7 @@
 - [Auditoria diária de roteamento](mem://features/roy-zapp/routing-audit-job-pt) — Cron corrige conversas cujo prefixo de external_message_id pertence a outra instância (CS vs Comercial)
 - [RoyZapp Produtividade](mem://features/roy-zapp/productivity-dashboard-pt) — Aba analytics restrita a admins/Heads, métricas por área e menções de risco
 - [RoyZapp Playbook Multi-send](mem://features/roy-zapp/playbook-multi-send-pt) — Sequential sending of items with 1-300s delays
+- [Régua de Relacionamento](mem://features/roy-zapp/relationship-ruler-pt) — Cadências programadas de follow-up (modelos, presets, fila manual, dispatcher a cada 10min)
 - [WhatsApp Spam Prevention](mem://features/roy-zapp/spam-prevention-and-compliance-pt) — Limits on broadcast scale
 - [Meta Webhook Limitation](mem://integrations/whatsapp/meta-api-webhook-limitation-pt) — Single webhook URL limit bypass
 - [Meta Cloud API Strategy](mem://integrations/whatsapp/meta-cloud-api-strategy-pt) — Parallel routing layer
