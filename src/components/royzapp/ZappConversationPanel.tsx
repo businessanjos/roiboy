@@ -49,6 +49,7 @@ import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappAnalyticsPanel } from "./ZappAnalyticsPanel";
 import type { ZappView } from "@/lib/royZappRoutes";
 import { ZappPlaybookList } from "./ZappPlaybookList";
+import { ZappRulerPanel } from "./ruler/ZappRulerPanel";
 import { ZappMarketingList } from "./ZappMarketingList";
 import { ZappCRMPanel } from "./ZappCRMPanel";
 import { MeetingsPanel } from "@/components/sales/videocall/MeetingsPanel";
@@ -958,6 +959,9 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         )}
         {activeView === "playbook" && (
           <ZappPlaybookList sectorId={sectorId} />
+        )}
+        {activeView === "ruler" && (
+          <ZappRulerPanel sectorId={sectorId} />
         )}
         {activeView === "marketing" && (
           <ZappMarketingList sectorId={sectorId || undefined} />

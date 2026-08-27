@@ -1,5 +1,5 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug, BarChart3 } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug, BarChart3, CalendarClock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -89,6 +89,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
     ...(isAdmin ? [{ view: "whatsapp-admin" as NavView, icon: Plug, label: "Conexões WhatsApp" }] : []),
     { view: "tags", icon: Tags, label: "Tags" },
     { view: "playbook", icon: BookOpen, label: "Playbook" },
+    { view: "ruler", icon: CalendarClock, label: "Régua" },
     { view: "marketing", icon: Megaphone, label: "Eventos" },
     ...(showSectorButton ? [{ view: "sector" as NavView, icon: SectorIcon, label: getSectorLabel() }] : []),
     ...(sectorId === "vendas" ? [{ view: "meetings" as NavView, icon: Video, label: "Reuniões" }] : []),
@@ -104,7 +105,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   // sem exceção (inclusive admins e pickers).
   const isLeanSalesMenu = sectorId === "vendas";
   if (isLeanSalesMenu) {
-    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "sector", "meetings", ...(canSeeAnalytics ? ["analytics" as NavView] : [])];
+    const SALES_VIEWS: NavView[] = ["inbox", "tags", "playbook", "ruler", "sector", "meetings", ...(canSeeAnalytics ? ["analytics" as NavView] : [])];
     navItems = navItems.filter((item) => SALES_VIEWS.includes(item.view));
   }
 

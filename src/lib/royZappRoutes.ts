@@ -14,6 +14,7 @@ export const ZAPP_VIEWS = [
   "tags",
   "settings",
   "playbook",
+  "ruler",
   "marketing",
   "sector",
   "meetings",

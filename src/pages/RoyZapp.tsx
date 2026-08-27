@@ -72,6 +72,8 @@ import { ClientZappSheet } from "@/components/client/ClientZappSheet";
 import { PlaybookDialog, MultiSendPayload } from "@/components/sales/PlaybookDialog";
 import { usePlaybook, PlaybookItem } from "@/hooks/usePlaybook";
 import { extractPlaybookVariables } from "@/lib/playbook-variables";
+import { ZappRulerEnrollDialog } from "@/components/royzapp/ruler/ZappRulerEnrollDialog";
+import { useZappRulers } from "@/hooks/useZappRulers";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { resolveZappSectorRole, zappRoleCapabilities } from "@/lib/royZappRoles";
 import { canPickSector, ZAPP_WHATSAPP_SECTORS } from "@/lib/royZappAccess";
@@ -954,6 +956,8 @@ export default function RoyZapp() {
 
   // Playbook dialog state for chat
   const [playbookDialogOpen, setPlaybookDialogOpen] = useState(false);
+  const [rulerEnrollOpen, setRulerEnrollOpen] = useState(false);
+  const { templates: rulerTemplates, fetchAll: refetchRulers } = useZappRulers(selectedSectorId);
   const [multiSendInProgress, setMultiSendInProgress] = useState(false);
 
   // Monta o texto de itens que viram mensagem de texto (texto, link, lista, template)
@@ -1985,6 +1989,7 @@ export default function RoyZapp() {
             canTransfer={zappCaps.canTransfer}
             canReply={zappCaps.canReply}
             canClaim={zappCaps.canClaim}
+            onOpenRuler={() => setRulerEnrollOpen(true)}
             onOpenCreateDeal={() => {
               const conv = selectedConversation?.zapp_conversation;
               const hasContactRecord = !!conv?.lead_id || !!conv?.client_id;
@@ -2162,8 +2167,28 @@ export default function RoyZapp() {
         isLeadMode={selectedSectorId === "vendas"}
       />
 
+      {/* Régua de relacionamento */}
+      <ZappRulerEnrollDialog
+        open={rulerEnrollOpen}
+        onOpenChange={setRulerEnrollOpen}
+        templates={rulerTemplates}
+        sectorId={selectedSectorId}
+        integrationId={selectedConversation?.zapp_conversation?.integration_id || selectedIntegrationId}
+        conversationId={selectedConversation?.zapp_conversation?.id || selectedConversation?.zapp_conversation_id}
+        contactName={
+          selectedConversation?.zapp_conversation?.contact_name ||
+          selectedConversation?.zapp_conversation?.client?.full_name ||
+          selectedConversation?.zapp_conversation?.lead?.full_name
+        }
+        contactPhone={selectedConversation?.zapp_conversation?.phone_e164}
+        clientId={selectedConversation?.zapp_conversation?.client_id}
+        leadId={selectedConversation?.zapp_conversation?.lead_id}
+        onEnrolled={refetchRulers}
+      />
+
       {/* Playbook Dialog for Chat */}
       <PlaybookDialog
+
         open={playbookDialogOpen}
         onOpenChange={setPlaybookDialogOpen}
         sectorId={selectedSectorId}
