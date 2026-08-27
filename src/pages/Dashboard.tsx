@@ -1094,7 +1094,7 @@ export default function Dashboard() {
               ) : (
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                   {productsWithClients.map((product) => {
-                    const clientCount = clients.filter(c => c.product_ids?.includes(product.id)).length;
+                    const clientCount = clients.filter((c: any) => clientInGroup(c.product_ids, product.memberIds)).length;
                     return (
                       <div
                         key={product.id}
