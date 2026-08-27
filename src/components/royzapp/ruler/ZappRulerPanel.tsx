@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -63,6 +63,16 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
+
+  // Mantém o estado de edição sincronizado com a lista atualizada,
+  // para que o drawer de detalhe abra sempre com os dados mais recentes.
+  useEffect(() => {
+    if (dialogOpen || !editing) return;
+    const fresh = templates.find((t) => t.id === editing.id);
+    if (fresh && fresh !== editing) {
+      setEditing(fresh);
+    }
+  }, [templates, dialogOpen, editing]);
 
   if (loading) {
     return (
@@ -249,7 +259,10 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
 
       <ZappRulerTemplateDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open);
+          if (!open) setEditing(null);
+        }}
         template={editing}
         onSave={saveTemplate}
       />
