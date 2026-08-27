@@ -13,3 +13,4 @@ Régua de relacionamento inspirada na da Clínica Ryka, disponível em todos os 
 - **Presets fixos** em `RULER_PRESETS` (`src/hooks/useZappRulers.ts`): Curta, Padrão, Relacionamento CS, Longa. Sem sugestões de IA.
 - **Variáveis** nas mensagens: `{nome}` e `{primeiro_nome}`.
 - **Entrada**: botão CalendarClock no `ZappChatHeader` abre `ZappRulerEnrollDialog` para a conversa aberta.
+- **Toques só de atividade**: cada passo tem `is_task`. Marcado, o toque não envia nada (`auto_send=false`, `message=''`) e vira tarefa manual na "Fila de hoje". `claim_zapp_ruler_touches` ignora `is_task = true`. Envio de mensagem é opcional por toque.
