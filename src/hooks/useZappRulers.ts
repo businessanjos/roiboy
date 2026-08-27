@@ -9,7 +9,10 @@ export interface RulerTemplateStep {
   title: string;
   message: string;
   sort_order: number;
+  /** Toque apenas de atividade (tarefa interna), sem envio de mensagem. */
+  is_task?: boolean;
 }
+
 
 export interface RulerTemplate {
   id: string;
