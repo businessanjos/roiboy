@@ -117,9 +117,9 @@ export function useZappRulers(sectorId?: string | null) {
   const [enrollments, setEnrollments] = useState<RulerEnrollment[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const fetchAll = useCallback(async () => {
+  const fetchAll = useCallback(async (opts?: { silent?: boolean }) => {
     if (!accountId) return;
-    setLoading(true);
+    if (!opts?.silent) setLoading(true);
     try {
       const tplQuery = supabase
         .from("zapp_ruler_templates")
@@ -158,7 +158,7 @@ export function useZappRulers(sectorId?: string | null) {
       console.error("[ZappRulers] fetch failed", err);
       toast.error("Erro ao carregar as réguas de relacionamento");
     } finally {
-      setLoading(false);
+      if (!opts?.silent) setLoading(false);
     }
   }, [accountId, sectorId]);
 
