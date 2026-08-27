@@ -149,7 +149,13 @@ export function ZappRulerTemplateDialog({
               <Label>Começar de um preset</Label>
               <div className="flex flex-wrap gap-2">
                 {RULER_PRESETS.map((p) => (
-                  <Button key={p.id} type="button" size="sm" variant="outline" onClick={() => applyPreset(p.id)}>
+                  <Button
+                    key={p.id}
+                    type="button"
+                    variant="outline"
+                    className="rounded-full h-auto py-2 px-4 text-sm font-normal whitespace-normal text-left justify-start"
+                    onClick={() => applyPreset(p.id)}
+                  >
                     {p.label}
                   </Button>
                 ))}
