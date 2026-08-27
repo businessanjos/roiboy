@@ -296,7 +296,7 @@ export function useZappNotifications({
     }
     
     return true;
-  }, [selectedConversationId]);
+  }, [selectedConversationId, sectorId]);
 
   // Show notification for new message
   const notifyNewMessage = useCallback((data: NotificationData) => {
