@@ -271,10 +271,20 @@ export function useZappNotifications({
 
   // Check if we should notify for this conversation
   const shouldNotify = useCallback((conversationId: string): boolean => {
+    // Respeita as preferências do usuário: categoria "Novas mensagens (zAPP)"
+    if (!prefsRef.current.zappEnabled) return false;
+
+    // Respeita o filtro de setores das preferências (quando houver seleção)
+    const prefSectors = prefsRef.current.sectors;
+    if (sectorId && prefSectors.length > 0 && !prefSectors.includes(sectorId)) {
+      return false;
+    }
+
     // Don't notify if this is the currently selected conversation
     if (selectedConversationId === conversationId) {
       return false;
     }
+
     
     // Rate limit: don't notify same conversation within 2 seconds
     const now = Date.now();
