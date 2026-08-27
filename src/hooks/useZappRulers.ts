@@ -37,6 +37,8 @@ export interface RulerTouch {
   message: string;
   scheduled_at: string;
   auto_send: boolean;
+  is_task?: boolean;
+
   status: string;
   attempts: number;
   last_error: string | null;
