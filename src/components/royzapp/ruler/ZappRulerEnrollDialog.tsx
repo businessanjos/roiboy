@@ -147,7 +147,8 @@ export function ZappRulerEnrollDialog({
         description: r.is_task
           ? `Atividade da régua "${template.name}" (D+${r.offset_days}).`
           : `Toque da régua "${template.name}" (D+${r.offset_days}).\n\n${r.message}`,
-        due_date: r.scheduled_at,
+        due_date: r.scheduled_at.slice(0, 10),
+        due_time: dueTime,
         priority: "medium" as const,
         status: "pending" as const,
         assigned_to: currentUser.id,
