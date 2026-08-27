@@ -840,6 +840,8 @@ export default function RoyZapp() {
     soundEnabled,
     currentAgentId: currentAgent?.id,
     selectedConversationId: selectedConversation?.zapp_conversation_id || selectedConversation?.zapp_conversation?.id,
+    sectorId: selectedSectorId || undefined,
+
     onViewChat: handleNotificationViewChat,
   });
 
