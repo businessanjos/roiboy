@@ -85,11 +85,13 @@ export function ZappRulerTemplateDialog({
     const preset = RULER_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
     setSteps(preset.steps.map((s) => ({ ...s })));
+    setDirty(true);
     if (!name) setName(preset.label.split(" — ")[0]);
   };
 
   const updateStep = (index: number, patch: Partial<RulerTemplateStep>) => {
     setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    setDirty(true);
   };
 
   const handleSave = async () => {
