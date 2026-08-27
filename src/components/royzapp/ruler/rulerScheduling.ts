@@ -10,7 +10,10 @@ export interface ScheduleStepInput {
   title: string;
   message: string;
   sort_order: number;
+  /** Toque apenas de atividade: nunca envia mensagem, vira tarefa manual. */
+  is_task?: boolean;
 }
+
 
 export function computeTouchDate(startDate: string, offsetDays: number, dueTime: string): Date {
   const [h, m] = (dueTime || "09:00").split(":").map((v) => Number(v) || 0);
