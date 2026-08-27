@@ -68,7 +68,7 @@ function CandidateCard({ candidate, onClick, onAnswersClick, isDragging }: { can
 }
 
 function KanbanColumn({ stage, candidates, onCandidateClick, activeId }: {
-  stage: CandidateStage; candidates: HRJobApplication[]; onCandidateClick: (c: HRJobApplication) => void; activeId: string | null;
+  stage: CandidateStage; candidates: HRJobApplication[]; onCandidateClick: (c: HRJobApplication, focusAnswers?: boolean) => void; activeId: string | null;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: `column-${stage}`, data: { stage } });
   return (
