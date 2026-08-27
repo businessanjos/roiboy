@@ -219,6 +219,7 @@ export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas"
         contactPhone={selected?.phone}
         clientId={selected?.clientId}
         leadId={selected?.leadId}
+        dealId={selected?.id}
       />
     </>
   );
