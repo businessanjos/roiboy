@@ -80,6 +80,7 @@ import { DashboardMapTab } from "@/components/dashboard/DashboardMapTab";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 
 import { ChurnRenewalBySegmentChart } from "@/components/dashboard/ChurnRenewalBySegmentChart";
+import { buildProductGroups, clientInGroup } from "@/lib/dashboard/productGroups";
 
 
 
