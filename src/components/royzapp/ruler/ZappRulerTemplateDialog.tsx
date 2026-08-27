@@ -79,7 +79,7 @@ export function ZappRulerTemplateDialog({
     setWindowStart(template?.send_window_start ?? 9);
     setWindowEnd(template?.send_window_end ?? 20);
     setSteps(template?.steps?.length ? template.steps.map((s) => ({ ...s })) : [emptyStep(0)]);
-  }, [open, template]);
+  }, [open, template, dirty]);
 
   const applyPreset = (presetId: string) => {
     const preset = RULER_PRESETS.find((p) => p.id === presetId);
