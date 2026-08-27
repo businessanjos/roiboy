@@ -410,17 +410,17 @@ export default function Dashboard() {
   // Filter clients by gestaoProductFilter for status cards
   const gestaoFilteredClients = useMemo(() => {
     if (gestaoProductFilter === "all") return clients;
-    return clients.filter(c => c.product_ids?.includes(gestaoProductFilter));
-  }, [clients, gestaoProductFilter]);
+    return clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds));
+  }, [clients, gestaoProductFilter, selectedProductMemberIds]);
 
   // Filter CX upcoming events by product filter (shares same filter as Gestão)
   const filteredUpcomingEvents = useMemo(() => {
     if (gestaoProductFilter === "all") return upcomingEvents;
     return (upcomingEvents || []).filter((e: any) => {
       const clientProducts = clientProductsMap[e.client_id] || [];
-      return clientProducts.includes(gestaoProductFilter);
+      return clientInGroup(clientProducts, selectedProductMemberIds);
     });
-  }, [upcomingEvents, gestaoProductFilter, clientProductsMap]);
+  }, [upcomingEvents, gestaoProductFilter, selectedProductMemberIds, clientProductsMap]);
 
   const gestaoClientStats = useMemo(() => ({
     total: gestaoFilteredClients.length,
