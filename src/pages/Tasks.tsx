@@ -2219,6 +2219,10 @@ export default function Tasks() {
         open={statusManagerOpen} 
         onOpenChange={setStatusManagerOpen} 
       />
+
+      {/* Régua de relacionamento */}
+      <RulerQuickLaunchDialog open={rulerLaunchOpen} onOpenChange={setRulerLaunchOpen} />
+
       
       {/* Dialogs for WhatsApp instance selection and PIN */}
       {InstanceSelectorDialog}
