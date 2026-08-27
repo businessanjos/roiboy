@@ -221,6 +221,14 @@ export default function Dashboard() {
   const showCancellationAnalytics = canAccessCancellationAnalytics(currentUser?.id);
   
   const [gestaoProductFilter, setGestaoProductFilter] = useState<string>("all");
+  // Ids equivalentes do produto selecionado (base + renovações + nomes legados)
+  const selectedProductMemberIds = useMemo(
+    () =>
+      gestaoProductFilter === "all"
+        ? []
+        : productGroups.find((g) => g.id === gestaoProductFilter)?.memberIds ?? [gestaoProductFilter],
+    [productGroups, gestaoProductFilter],
+  );
   const [gestaoPeriodFilter, setGestaoPeriodFilter] = useState<string>("year");
   const [gestaoCustomDateRange, setGestaoCustomDateRange] = useState<DateRange | undefined>(undefined);
   const [gestaoDatePickerOpen, setGestaoDatePickerOpen] = useState(false);
