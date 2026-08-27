@@ -38,6 +38,7 @@ interface ZappRulerEnrollDialogProps {
   contactPhone?: string | null;
   clientId?: string | null;
   leadId?: string | null;
+  dealId?: string | null;
   onEnrolled?: () => void;
 }
 
