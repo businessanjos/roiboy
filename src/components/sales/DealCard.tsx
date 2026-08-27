@@ -276,6 +276,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                 <MessageCircle className="h-3 w-3 text-success" />
               </Button>
             )}
+            {/* Régua de relacionamento */}
+            <DealRulerButton
+              contactName={contactName}
+              contactPhone={contactPhone}
+              clientId={deal.client_id}
+              leadId={deal.lead_id}
+            />
             {/* Activities */}
             <Button
               variant="ghost"
