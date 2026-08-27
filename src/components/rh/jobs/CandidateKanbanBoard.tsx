@@ -10,9 +10,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { MessageSquareText, Users } from "lucide-react";
+import { ArrowDownWideNarrow, MessageSquareText, Search, Users, X } from "lucide-react";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { countScreeningAnswers } from "@/lib/hr/screeningAnswers";
+import { countScreeningAnswers, normalizeSearch, screeningAnswersLength, screeningAnswersText } from "@/lib/hr/screeningAnswers";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { useHRJobApplications, useUpdateCandidateStage } from "@/hooks/useHRJobs";
 import type { HRJobApplication, CandidateStage } from "@/types/job";
 import { CANDIDATE_STAGE_LABELS, KANBAN_STAGES } from "@/types/job";
@@ -99,6 +101,36 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
   const updateStage = useUpdateCandidateStage();
   const [drawerState, setDrawerState] = useState<{ open: boolean; candidate: HRJobApplication | null; focusAnswers: boolean }>({ open: false, candidate: null, focusAnswers: false });
   const [activeId, setActiveId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
+  const [sortByCompleteness, setSortByCompleteness] = useState(false);
+
+  const filteredCandidates = useMemo(() => {
+    const term = normalizeSearch(search.trim());
+    let list = candidates || [];
+    if (term) {
+      list = list.filter((c) => {
+        const haystack = normalizeSearch(
+          [c.candidate_name, c.candidate_email, screeningAnswersText((c as any).screening_answers)]
+            .filter(Boolean)
+            .join(" ")
+        );
+        return haystack.includes(term);
+      });
+    }
+    if (sortByCompleteness) {
+      list = [...list].sort((a, b) => {
+        const diff =
+          countScreeningAnswers((b as any).screening_answers) -
+          countScreeningAnswers((a as any).screening_answers);
+        if (diff !== 0) return diff;
+        return (
+          screeningAnswersLength((b as any).screening_answers) -
+          screeningAnswersLength((a as any).screening_answers)
+        );
+      });
+    }
+    return list;
+  }, [candidates, search, sortByCompleteness]);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
 
@@ -106,9 +138,9 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
     const result: Record<CandidateStage, HRJobApplication[]> = {
       applied: [], screening: [], interview: [], technical_test: [], offer: [], hired: [], rejected: [],
     };
-    (candidates || []).forEach(c => { if (result[c.stage]) result[c.stage].push(c); });
+    filteredCandidates.forEach(c => { if (result[c.stage]) result[c.stage].push(c); });
     return result;
-  }, [candidates]);
+  }, [filteredCandidates]);
 
   const activeCandidate = useMemo(() => candidates?.find(c => c.id === activeId) || null, [activeId, candidates]);
 
@@ -144,8 +176,41 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <Users className="h-5 w-5" />Seleção ({candidates?.length || 0} candidatos)
+            <Users className="h-5 w-5" />
+            Seleção ({filteredCandidates.length}
+            {search.trim() && candidates ? ` de ${candidates.length}` : ""} candidatos)
           </CardTitle>
+          <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Buscar por nome, e-mail ou conteúdo das respostas de triagem..."
+                className="pl-9 pr-9"
+              />
+              {search && (
+                <button
+                  type="button"
+                  onClick={() => setSearch("")}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  aria-label="Limpar busca"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+            <Button
+              type="button"
+              variant={sortByCompleteness ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSortByCompleteness((v) => !v)}
+              className="gap-2 whitespace-nowrap"
+            >
+              <ArrowDownWideNarrow className="h-4 w-4" />
+              Mais completos
+            </Button>
+          </div>
         </CardHeader>
         <CardContent>
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={e => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
