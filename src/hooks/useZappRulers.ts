@@ -242,8 +242,15 @@ export function useZappRulers(sectorId?: string | null) {
 
   const deleteTemplate = useCallback(
     async (id: string) => {
-      const { error } = await supabase.from("zapp_ruler_templates").delete().eq("id", id);
+      const { data, error } = await supabase
+        .from("zapp_ruler_templates")
+        .delete()
+        .eq("id", id)
+        .select("id");
       if (error) throw error;
+      if (!data || data.length === 0) {
+        throw new Error("Você não tem permissão para excluir esta régua neste setor.");
+      }
       await fetchAll();
     },
     [fetchAll],
