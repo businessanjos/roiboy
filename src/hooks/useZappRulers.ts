@@ -235,7 +235,35 @@ export function useZappRulers(sectorId?: string | null) {
           if (error) throw error;
         }
 
-        await fetchAll();
+        // Atualização otimista: reflete a alteração instantaneamente na lista
+        // e no detalhe antes do fetchAll finalizar (sem overlay de loading).
+        setTemplates((prev) => {
+          const existing = prev.find((t) => t.id === templateId);
+          const optimistic: RulerTemplate = {
+            ...(existing || {
+              account_id: accountId,
+              sector_id: sectorId || null,
+              created_at: new Date().toISOString(),
+              is_active: true,
+            }),
+            id: templateId!,
+            name: base.name,
+            description: base.description,
+            default_auto_send: base.default_auto_send,
+            send_window_start: base.send_window_start,
+            send_window_end: base.send_window_end,
+            stop_on_reply: base.stop_on_reply,
+            steps: input.steps.map((s, idx) => ({
+              ...s,
+              template_id: templateId!,
+              sort_order: idx,
+            })),
+          };
+          const next = prev.filter((t) => t.id !== templateId);
+          return [optimistic, ...next];
+        });
+
+        await fetchAll({ silent: true });
 
         const action = input.id ? "atualizada" : "criada";
         toast.success(`Régua "${input.name.trim()}" ${action} com ${steps.length} toque${steps.length === 1 ? "" : "s"}.`);
