@@ -1061,17 +1061,17 @@ export default function Dashboard() {
             clientIds={
               gestaoProductFilter === "all"
                 ? undefined
-                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).map((c: any) => c.id)
+                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).map((c: any) => c.id)
             }
             totalClients={
               gestaoProductFilter === "all"
                 ? clients.length
-                : clients.filter((c: any) => c.product_ids?.includes(gestaoProductFilter)).length
+                : clients.filter((c: any) => clientInGroup(c.product_ids, selectedProductMemberIds)).length
             }
             productLabel={
               gestaoProductFilter === "all"
                 ? undefined
-                : products.find((p: any) => p.id === gestaoProductFilter)?.name
+                : productGroups.find((p) => p.id === gestaoProductFilter)?.name
             }
             periodFilter={gestaoPeriodFilter}
             customRange={gestaoCustomDateRange}
