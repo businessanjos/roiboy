@@ -278,6 +278,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
             )}
             {/* Régua de relacionamento */}
             <DealRulerButton
+              dealId={deal.id}
               contactName={contactName}
               contactPhone={contactPhone}
               clientId={deal.client_id}

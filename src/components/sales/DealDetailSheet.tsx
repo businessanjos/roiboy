@@ -1098,6 +1098,7 @@ export function DealDetailSheet({
             </div>
             <div className="flex items-center gap-1.5 w-full sm:w-auto sm:mr-8">
               <DealRulerButton
+                dealId={deal.id}
                 variant="button"
                 contactName={contactName}
                 contactPhone={contactPhone}
