@@ -1,6 +1,7 @@
 import { useCallback, useRef, useState, useEffect } from "react";
 import { toast } from "sonner";
 import { ZappNotificationToast } from "@/components/royzapp/ZappNotificationToast";
+import { supabase } from "@/integrations/supabase/client";
 
 interface NotificationData {
   conversationId: string;
@@ -15,6 +16,8 @@ interface UseZappNotificationsOptions {
   soundEnabled: boolean;
   currentAgentId?: string;
   selectedConversationId?: string | null;
+  /** Setor atual (slug: operacoes, vendas, ...) para respeitar o filtro de setores das preferências */
+  sectorId?: string | null;
   onViewChat: (conversationId: string) => void;
 }
 
@@ -24,10 +27,64 @@ export function useZappNotifications({
   soundEnabled,
   currentAgentId,
   selectedConversationId,
+  sectorId,
   onViewChat,
 }: UseZappNotificationsOptions) {
   // Track last notification to prevent rapid duplicates
   const lastNotificationRef = useRef<{ conversationId: string; timestamp: number } | null>(null);
+
+  // Preferências de notificação definidas pelo usuário (Notificações > Preferências)
+  const prefsRef = useRef<{ zappEnabled: boolean; sectors: string[] }>({
+    zappEnabled: true,
+    sectors: [],
+  });
+
+  const loadPreferences = useCallback(async () => {
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const authUserId = authData.user?.id;
+      if (!authUserId) return;
+
+      const { data: userRow } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", authUserId)
+        .maybeSingle();
+      if (!userRow?.id) return;
+
+      const { data } = await supabase
+        .from("push_notification_preferences" as any)
+        .select("notify_zapp_messages, notify_sectors")
+        .eq("user_id", userRow.id)
+        .maybeSingle();
+
+      if (data) {
+        const rawSectors = (data as any).notify_sectors;
+        prefsRef.current = {
+          zappEnabled: (data as any).notify_zapp_messages !== false,
+          sectors: Array.isArray(rawSectors) ? rawSectors : [],
+        };
+      } else {
+        prefsRef.current = { zappEnabled: true, sectors: [] };
+      }
+    } catch (error) {
+      console.error("[Notifications] Erro ao carregar preferências:", error);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadPreferences();
+    const onFocus = () => {
+      if (!document.hidden) loadPreferences();
+    };
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onFocus);
+    return () => {
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onFocus);
+    };
+  }, [loadPreferences]);
+
   
 
 
@@ -214,10 +271,20 @@ export function useZappNotifications({
 
   // Check if we should notify for this conversation
   const shouldNotify = useCallback((conversationId: string): boolean => {
+    // Respeita as preferências do usuário: categoria "Novas mensagens (zAPP)"
+    if (!prefsRef.current.zappEnabled) return false;
+
+    // Respeita o filtro de setores das preferências (quando houver seleção)
+    const prefSectors = prefsRef.current.sectors;
+    if (sectorId && prefSectors.length > 0 && !prefSectors.includes(sectorId)) {
+      return false;
+    }
+
     // Don't notify if this is the currently selected conversation
     if (selectedConversationId === conversationId) {
       return false;
     }
+
     
     // Rate limit: don't notify same conversation within 2 seconds
     const now = Date.now();
@@ -229,7 +296,7 @@ export function useZappNotifications({
     }
     
     return true;
-  }, [selectedConversationId]);
+  }, [selectedConversationId, sectorId]);
 
   // Show notification for new message
   const notifyNewMessage = useCallback((data: NotificationData) => {
