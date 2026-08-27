@@ -108,11 +108,13 @@ export function ZappRulerTemplateDialog({
       toast.error("Dê um nome para a régua");
       return;
     }
-    const cleaned = steps.filter((s) => s.message.trim());
+    // Toques só de atividade não precisam de mensagem.
+    const cleaned = steps.filter((s) => s.is_task || s.message.trim());
     if (cleaned.length === 0) {
-      toast.error("Adicione ao menos um toque com mensagem");
+      toast.error("Adicione ao menos um toque com mensagem ou marcado como atividade");
       return;
     }
+
     if (windowEnd <= windowStart) {
       toast.error("A janela de envio precisa terminar depois do início");
       return;
