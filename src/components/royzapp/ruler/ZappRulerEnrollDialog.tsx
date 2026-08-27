@@ -148,7 +148,7 @@ export function ZappRulerEnrollDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg">
+      <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <CalendarClock className="h-4 w-4" />
@@ -211,8 +211,8 @@ export function ZappRulerEnrollDialog({
             </div>
 
             {template && (
-              <ScrollArea className="max-h-48 rounded-lg border p-3">
-                <div className="space-y-3">
+              <ScrollArea className="h-48 rounded-lg border">
+                <div className="space-y-3 p-3 pr-4">
                   {template.steps.map((s, idx) => (
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-2">
