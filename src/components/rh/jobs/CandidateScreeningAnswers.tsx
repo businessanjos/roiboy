@@ -73,7 +73,7 @@ export default function CandidateScreeningAnswers({ jobId, answers }: Props) {
   if (rows.length === 0) return null;
 
   return (
-    <section>
+    <section className="border-t border-border pt-6">
       <div className="flex items-center justify-between mb-3 gap-2">
         <h4 className="text-xs font-semibold uppercase text-muted-foreground flex items-center gap-1.5">
           <MessageSquareQuote className="h-3.5 w-3.5" />
