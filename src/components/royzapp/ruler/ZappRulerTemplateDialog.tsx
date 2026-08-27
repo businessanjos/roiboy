@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import {
   Dialog,
@@ -58,9 +58,20 @@ export function ZappRulerTemplateDialog({
   const [windowEnd, setWindowEnd] = useState(20);
   const [steps, setSteps] = useState<RulerTemplateStep[]>([emptyStep(0)]);
   const [saving, setSaving] = useState(false);
+  const [dirty, setDirty] = useState(false);
+  const lastTemplateIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
+    const id = template?.id ?? null;
+    const idChanged = id !== lastTemplateIdRef.current;
+    if (idChanged) {
+      lastTemplateIdRef.current = id;
+      setDirty(false);
+    }
+    // Não sobrescreve edições em andamento quando o template for atualizado
+    // em segundo plano (ex.: fetchAll após salvar).
+    if (dirty && !idChanged) return;
     setName(template?.name || "");
     setDescription(template?.description || "");
     setAutoSend(template?.default_auto_send ?? true);
@@ -68,18 +79,29 @@ export function ZappRulerTemplateDialog({
     setWindowStart(template?.send_window_start ?? 9);
     setWindowEnd(template?.send_window_end ?? 20);
     setSteps(template?.steps?.length ? template.steps.map((s) => ({ ...s })) : [emptyStep(0)]);
-  }, [open, template]);
+  }, [open, template, dirty]);
 
   const applyPreset = (presetId: string) => {
     const preset = RULER_PRESETS.find((p) => p.id === presetId);
     if (!preset) return;
     setSteps(preset.steps.map((s) => ({ ...s })));
+    setDirty(true);
     if (!name) setName(preset.label.split(" — ")[0]);
   };
 
   const updateStep = (index: number, patch: Partial<RulerTemplateStep>) => {
     setSteps((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+    setDirty(true);
   };
+
+  const updateName = (value: string) => { setName(value); setDirty(true); };
+  const updateDescription = (value: string) => { setDescription(value); setDirty(true); };
+  const updateAutoSend = (value: boolean) => { setAutoSend(value); setDirty(true); };
+  const updateStopOnReply = (value: boolean) => { setStopOnReply(value); setDirty(true); };
+  const updateWindowStart = (value: number) => { setWindowStart(value); setDirty(true); };
+  const updateWindowEnd = (value: number) => { setWindowEnd(value); setDirty(true); };
+  const addStep = () => { setSteps((prev) => [...prev, emptyStep(prev.length)]); setDirty(true); };
+  const removeStep = (index: number) => { setSteps((prev) => prev.filter((_, i) => i !== index)); setDirty(true); };
 
   const handleSave = async () => {
     if (!name.trim()) {
@@ -108,7 +130,12 @@ export function ZappRulerTemplateDialog({
         stop_on_reply: stopOnReply,
         steps: cleaned,
       });
-      onOpenChange(false);
+      setDirty(false);
+      // Em edição, mantém o diálogo aberto como detalhe e sincroniza com a
+      // versão recarregada; em criação, fecha para mostrar o novo card.
+      if (!template?.id) {
+        onOpenChange(false);
+      }
     } catch (err: any) {
       console.error("[ZappRuler] save template failed", err);
       // O hook já exibe toast de erro/sucesso; aqui só garantimos que o
@@ -133,13 +160,13 @@ export function ZappRulerTemplateDialog({
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Nome</Label>
-                <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Follow-up comercial" />
+                <Input value={name} onChange={(e) => updateName(e.target.value)} placeholder="Follow-up comercial" />
               </div>
               <div className="space-y-2">
                 <Label>Descrição</Label>
                 <Input
                   value={description}
-                  onChange={(e) => setDescription(e.target.value)}
+                  onChange={(e) => updateDescription(e.target.value)}
                   placeholder="Quando usar esta cadência"
                 />
               </div>
@@ -168,14 +195,14 @@ export function ZappRulerTemplateDialog({
                   <p className="text-sm font-medium">Envio automático</p>
                   <p className="text-xs text-muted-foreground">Padrão ao aplicar a régua</p>
                 </div>
-                <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+                <Switch checked={autoSend} onCheckedChange={updateAutoSend} />
               </div>
               <div className="flex items-center justify-between rounded-lg border p-3">
                 <div>
                   <p className="text-sm font-medium">Parar ao responder</p>
                   <p className="text-xs text-muted-foreground">Cancela os toques restantes</p>
                 </div>
-                <Switch checked={stopOnReply} onCheckedChange={setStopOnReply} />
+                <Switch checked={stopOnReply} onCheckedChange={updateStopOnReply} />
               </div>
             </div>
 
@@ -187,7 +214,7 @@ export function ZappRulerTemplateDialog({
                   min={0}
                   max={23}
                   value={windowStart}
-                  onChange={(e) => setWindowStart(Number(e.target.value))}
+                  onChange={(e) => updateWindowStart(Number(e.target.value))}
                 />
               </div>
               <div className="space-y-2">
@@ -197,7 +224,7 @@ export function ZappRulerTemplateDialog({
                   min={1}
                   max={24}
                   value={windowEnd}
-                  onChange={(e) => setWindowEnd(Number(e.target.value))}
+                  onChange={(e) => updateWindowEnd(Number(e.target.value))}
                 />
               </div>
             </div>
@@ -209,7 +236,7 @@ export function ZappRulerTemplateDialog({
                   type="button"
                   size="sm"
                   variant="outline"
-                  onClick={() => setSteps((prev) => [...prev, emptyStep(prev.length)])}
+                  onClick={addStep}
                 >
                   <Plus className="h-4 w-4 mr-1" /> Adicionar
                 </Button>
@@ -238,7 +265,7 @@ export function ZappRulerTemplateDialog({
                       type="button"
                       size="icon"
                       variant="ghost"
-                      onClick={() => setSteps((prev) => prev.filter((_, i) => i !== idx))}
+                      onClick={() => removeStep(idx)}
                     >
                       <Trash2 className="h-4 w-4 text-destructive" />
                     </Button>

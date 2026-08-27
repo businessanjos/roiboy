@@ -65,14 +65,14 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
 
   // Mantém o estado de edição sincronizado com a lista atualizada,
-  // para que o drawer de detalhe abra sempre com os dados mais recentes.
+  // mesmo quando o diálogo de detalhe está aberto.
   useEffect(() => {
-    if (dialogOpen || !editing) return;
+    if (!editing) return;
     const fresh = templates.find((t) => t.id === editing.id);
     if (fresh && fresh !== editing) {
       setEditing(fresh);
     }
-  }, [templates, dialogOpen, editing]);
+  }, [templates, editing]);
 
   if (loading) {
     return (
