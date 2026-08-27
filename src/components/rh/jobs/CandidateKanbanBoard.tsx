@@ -10,7 +10,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Users } from "lucide-react";
+import { MessageSquareText, Users } from "lucide-react";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { countScreeningAnswers } from "@/lib/hr/screeningAnswers";
 import { useHRJobApplications, useUpdateCandidateStage } from "@/hooks/useHRJobs";
 import type { HRJobApplication, CandidateStage } from "@/types/job";
 import { CANDIDATE_STAGE_LABELS, KANBAN_STAGES } from "@/types/job";
@@ -23,9 +25,10 @@ const getScoreColor = (score: number | null) => {
   return "outline";
 };
 
-function CandidateCard({ candidate, onClick, isDragging }: { candidate: HRJobApplication; onClick: () => void; isDragging?: boolean }) {
+function CandidateCard({ candidate, onClick, onAnswersClick, isDragging }: { candidate: HRJobApplication; onClick: () => void; onAnswersClick: () => void; isDragging?: boolean }) {
   const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: candidate.id });
   const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const answersCount = countScreeningAnswers((candidate as any).screening_answers);
 
   return (
     <div ref={setNodeRef} style={style} {...attributes} {...listeners}
@@ -42,6 +45,24 @@ function CandidateCard({ candidate, onClick, isDragging }: { candidate: HRJobApp
           <Badge variant={getScoreColor(candidate.ai_score)} className="text-xs font-semibold">{candidate.ai_score}</Badge>
         )}
       </div>
+      {answersCount > 0 && (
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <button
+                type="button"
+                onPointerDown={(e) => e.stopPropagation()}
+                onClick={(e) => { e.stopPropagation(); onAnswersClick(); }}
+                className="mt-2 inline-flex items-center gap-1 rounded-full border border-border bg-muted/60 px-2 py-0.5 text-[11px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+              >
+                <MessageSquareText className="h-3 w-3" />
+                {answersCount} {answersCount === 1 ? "resposta" : "respostas"}
+              </button>
+            </TooltipTrigger>
+            <TooltipContent>Ver respostas de triagem</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      )}
     </div>
   );
 }
@@ -61,7 +82,7 @@ function KanbanColumn({ stage, candidates, onCandidateClick, activeId }: {
           <SortableContext items={candidates.map(c => c.id)} strategy={verticalListSortingStrategy}>
             <div className="space-y-2 min-h-[200px]">
               {candidates.map(c => (
-                <CandidateCard key={c.id} candidate={c} onClick={() => onCandidateClick(c)} isDragging={activeId === c.id} />
+                <CandidateCard key={c.id} candidate={c} onClick={() => onCandidateClick(c)} onAnswersClick={() => onCandidateClick(c, true)} isDragging={activeId === c.id} />
               ))}
               {candidates.length === 0 && <div className="text-center py-8 text-muted-foreground text-sm">Nenhum candidato</div>}
             </div>
@@ -76,7 +97,7 @@ function KanbanColumn({ stage, candidates, onCandidateClick, activeId }: {
 export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { jobId: string; jobTitle?: string }) {
   const { data: candidates, isLoading } = useHRJobApplications(jobId);
   const updateStage = useUpdateCandidateStage();
-  const [drawerState, setDrawerState] = useState<{ open: boolean; candidate: HRJobApplication | null }>({ open: false, candidate: null });
+  const [drawerState, setDrawerState] = useState<{ open: boolean; candidate: HRJobApplication | null; focusAnswers: boolean }>({ open: false, candidate: null, focusAnswers: false });
   const [activeId, setActiveId] = useState<string | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }), useSensor(KeyboardSensor));
@@ -130,7 +151,7 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
           <DndContext sensors={sensors} collisionDetection={closestCorners} onDragStart={e => setActiveId(e.active.id as string)} onDragEnd={handleDragEnd}>
             <div className="flex gap-4 overflow-x-auto pb-4">
               {KANBAN_STAGES.map(stage => (
-                <KanbanColumn key={stage} stage={stage} candidates={candidatesByStage[stage]} onCandidateClick={c => setDrawerState({ open: true, candidate: c })} activeId={activeId} />
+                <KanbanColumn key={stage} stage={stage} candidates={candidatesByStage[stage]} onCandidateClick={(c, focusAnswers) => setDrawerState({ open: true, candidate: c, focusAnswers: !!focusAnswers })} activeId={activeId} />
               ))}
             </div>
             <DragOverlay>
@@ -143,7 +164,7 @@ export default function CandidateKanbanBoard({ jobId, jobTitle = "Vaga" }: { job
           </DndContext>
         </CardContent>
       </Card>
-      <CandidateDetailDrawer open={drawerState.open} onOpenChange={o => setDrawerState({ ...drawerState, open: o })} candidate={drawerState.candidate} jobId={jobId} />
+      <CandidateDetailDrawer open={drawerState.open} onOpenChange={o => setDrawerState({ ...drawerState, open: o })} candidate={drawerState.candidate} jobId={jobId} focusAnswers={drawerState.focusAnswers} />
     </>
   );
 }
