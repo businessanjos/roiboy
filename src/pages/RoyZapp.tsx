@@ -843,12 +843,19 @@ export default function RoyZapp() {
     onViewChat: handleNotificationViewChat,
   });
 
+  // Refs para manter o canal realtime estável (evita re-subscribe a cada
+  // mudança de `assignments`, o que fazia notificações serem perdidas).
+  const assignmentsRef = useRef(assignments);
+  useEffect(() => { assignmentsRef.current = assignments; }, [assignments]);
+  const notifyNewMessageRef = useRef(notifyNewMessage);
+  useEffect(() => { notifyNewMessageRef.current = notifyNewMessage; }, [notifyNewMessage]);
+
   // Realtime subscription for notifications (all inbound messages in sector)
   useEffect(() => {
-    if (!currentUser?.account_id || !selectedSectorId) return;
+    if (!currentUser?.account_id) return;
 
     const notificationChannel = supabase
-      .channel(`zapp-notifications-${selectedSectorId}`)
+      .channel(`zapp-notifications-${currentUser.account_id}`)
       .on(
         'postgres_changes',
         {
@@ -857,33 +864,34 @@ export default function RoyZapp() {
           table: 'zapp_messages',
           filter: `account_id=eq.${currentUser.account_id}`
         },
-        (payload) => {
+        async (payload) => {
           const newMsg = payload.new as any;
-          
+
           // Only notify for inbound messages
           if (newMsg?.direction !== 'inbound') return;
-          
-          // Find the conversation in assignments
+
           const conversationId = newMsg.zapp_conversation_id;
-          const assignment = assignments.find(
+          if (!conversationId) return;
+
+          const messagePreview = newMsg.content
+            || (newMsg.message_type === 'audio' ? '🎤 Áudio' : '')
+            || (newMsg.message_type === 'image' ? '📷 Imagem' : '')
+            || (newMsg.message_type === 'video' ? '🎥 Vídeo' : '')
+            || (newMsg.message_type === 'document' ? '📄 Documento' : '')
+            || 'Nova mensagem';
+
+          const assignment = assignmentsRef.current.find(
             a => a.zapp_conversation_id === conversationId || a.zapp_conversation?.id === conversationId
           );
-          
+
           if (assignment) {
-            const contactName = assignment.zapp_conversation?.contact_name 
-              || assignment.zapp_conversation?.client?.full_name 
-              || assignment.zapp_conversation?.lead?.full_name 
-              || assignment.zapp_conversation?.phone_e164 
+            const contactName = assignment.zapp_conversation?.contact_name
+              || assignment.zapp_conversation?.client?.full_name
+              || assignment.zapp_conversation?.lead?.full_name
+              || assignment.zapp_conversation?.phone_e164
               || "Contato";
-            
-            const messagePreview = newMsg.content 
-              || (newMsg.message_type === 'audio' ? '🎤 Áudio' : '')
-              || (newMsg.message_type === 'image' ? '📷 Imagem' : '')
-              || (newMsg.message_type === 'video' ? '🎥 Vídeo' : '')
-              || (newMsg.message_type === 'document' ? '📄 Documento' : '')
-              || 'Nova mensagem';
-            
-            notifyNewMessage({
+
+            notifyNewMessageRef.current({
               conversationId,
               contactName,
               messagePreview,
@@ -891,7 +899,26 @@ export default function RoyZapp() {
               agentId: assignment.agent_id,
               isGroup: assignment.zapp_conversation?.is_group || false,
             });
+            return;
           }
+
+          // Conversa ainda não carregada na lista: busca o mínimo para notificar
+          const { data: conv } = await supabase
+            .from("zapp_conversations")
+            .select("id, contact_name, phone_e164, avatar_url, is_group")
+            .eq("id", conversationId)
+            .maybeSingle();
+
+          if (!conv) return;
+
+          notifyNewMessageRef.current({
+            conversationId,
+            contactName: conv.contact_name || conv.phone_e164 || "Contato",
+            messagePreview,
+            avatarUrl: (conv as any).avatar_url,
+            agentId: null,
+            isGroup: conv.is_group || false,
+          });
         }
       )
       .subscribe();
@@ -899,7 +926,8 @@ export default function RoyZapp() {
     return () => {
       supabase.removeChannel(notificationChannel);
     };
-  }, [currentUser?.account_id, selectedSectorId, assignments, notifyNewMessage]);
+  }, [currentUser?.account_id]);
+
 
   // Import conversations state
   const [importingConversations, setImportingConversations] = useState(false);
