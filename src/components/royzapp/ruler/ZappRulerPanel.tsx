@@ -64,6 +64,7 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
+  const [deleteEnrollTarget, setDeleteEnrollTarget] = useState<RulerEnrollment | null>(null);
 
   // Mantém o estado de edição sincronizado com a lista atualizada,
   // mesmo quando o diálogo de detalhe está aberto.
