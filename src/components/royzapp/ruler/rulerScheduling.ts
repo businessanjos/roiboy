@@ -15,13 +15,9 @@ export interface ScheduleStepInput {
 }
 
 
-/** Empurra sábado/domingo para a próxima segunda-feira. */
+/** Empurra sábado/domingo/feriado nacional para o próximo dia útil. */
 export function shiftToWeekday(date: Date): Date {
-  const r = new Date(date);
-  const dow = r.getDay();
-  if (dow === 6) r.setDate(r.getDate() + 2); // sábado -> segunda
-  else if (dow === 0) r.setDate(r.getDate() + 1); // domingo -> segunda
-  return r;
+  return nextBusinessDay(date);
 }
 
 export function computeTouchDate(
@@ -36,6 +32,7 @@ export function computeTouchDate(
   date.setDate(date.getDate() + offsetDays);
   return skipWeekends ? shiftToWeekday(date) : date;
 }
+
 
 export function buildTouchRows(params: {
   enrollmentId: string;
