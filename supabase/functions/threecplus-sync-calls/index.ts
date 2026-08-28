@@ -411,8 +411,9 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       }
 
       if (!adminError) {
-        for (let i = 0; i < rows.length; i += 200) {
-          const chunk = rows.slice(i, i + 200);
+        const dedupedRows = dedupeRows(rows);
+        for (let i = 0; i < dedupedRows.length; i += 200) {
+          const chunk = dedupedRows.slice(i, i + 200);
           const { error } = await supabaseAdmin
             .from("threecplus_call_logs")
             .upsert(chunk, { onConflict: "account_id,call_id" });
