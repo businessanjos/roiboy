@@ -219,7 +219,7 @@ export function ZappRulerEnrollDialog({
       if (touchError) throw touchError;
 
       const responsibleId = assigneeId || currentUser.id;
-      const who = contactName?.trim();
+      const who = resolvedName?.trim() || contactName?.trim();
       // Cada toque vira uma atividade real na agenda (Tarefas), inclusive os "só atividade".
       const taskRows = rows.map((r) => ({
         account_id: currentUser.account_id,
