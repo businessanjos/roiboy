@@ -55,6 +55,7 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
     pendingManualTouches,
     saveTemplate,
     deleteTemplate,
+    deleteEnrollment,
     cancelEnrollment,
     markTouchDone,
     skipTouch,
