@@ -319,6 +319,40 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteEnrollTarget}
+        onOpenChange={(o) => !o && setDeleteEnrollTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir régua de {deleteEnrollTarget?.contact_name || deleteEnrollTarget?.contact_phone}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Todos os toques agendados deste contato serão apagados. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteEnrollTarget) return;
+                try {
+                  await deleteEnrollment(deleteEnrollTarget.id);
+                } catch (err) {
+                  console.error("[ZappRuler] delete enrollment failed", err);
+                } finally {
+                  setDeleteEnrollTarget(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }
