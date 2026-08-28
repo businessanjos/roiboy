@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { CalendarClock, Loader2 } from "lucide-react";
 import type { RulerTemplate } from "@/hooks/useZappRulers";
+import { useSectorUsers } from "@/hooks/useSectorUsers";
+import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { buildTouchRows, computeTouchDate } from "./rulerScheduling";
 
 interface ZappRulerEnrollDialogProps {
