@@ -114,17 +114,47 @@ export function ZappRulerEnrollDialog({
     });
   }, [open, activityTypes]);
 
+  // Negócio vinculado: quando aberto pelo RoyZapp não recebemos dealId,
+  // então resolvemos o negócio aberto mais recente do cliente/lead.
+  const [resolvedDealId, setResolvedDealId] = useState<string | null>(null);
+  const effectiveDealId = dealId || resolvedDealId;
+
+  useEffect(() => {
+    if (!open) return;
+    if (dealId || (!clientId && !leadId)) {
+      setResolvedDealId(null);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      let query = supabase
+        .from("deals")
+        .select("id, status, created_at")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(5);
+      query = clientId ? query.eq("client_id", clientId) : query.eq("lead_id", leadId!);
+      const { data } = await query;
+      const list = (data || []) as Array<{ id: string; status: string | null }>;
+      const open_ = list.find((d) => !["won", "lost"].includes(String(d.status || "")));
+      if (!cancelled) setResolvedDealId((open_ || list[0])?.id || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, dealId, clientId, leadId]);
+
   // Responsável padrão: dono do negócio, senão o usuário atual.
   useEffect(() => {
     if (!open) return;
     let cancelled = false;
     (async () => {
       let defaultId = currentUser?.id || "";
-      if (dealId) {
+      if (effectiveDealId) {
         const { data } = await supabase
           .from("deals")
           .select("responsible_user_id, sales_user_id")
-          .eq("id", dealId)
+          .eq("id", effectiveDealId)
           .maybeSingle();
         defaultId = (data as any)?.responsible_user_id || (data as any)?.sales_user_id || defaultId;
       }
@@ -133,7 +163,8 @@ export function ZappRulerEnrollDialog({
     return () => {
       cancelled = true;
     };
-  }, [open, dealId, currentUser?.id]);
+  }, [open, effectiveDealId, currentUser?.id]);
+
 
   // Nome real do cliente/lead para compor o título da atividade.
   useEffect(() => {
