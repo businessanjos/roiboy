@@ -131,6 +131,35 @@ export function ZappRulerEnrollDialog({
     };
   }, [open, dealId, currentUser?.id]);
 
+  // Nome real do cliente/lead para compor o título da atividade.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      let name: string | null = null;
+      if (clientId) {
+        const { data } = await supabase
+          .from("clients")
+          .select("full_name")
+          .eq("id", clientId)
+          .maybeSingle();
+        name = (data as any)?.full_name || null;
+      } else if (leadId) {
+        const { data } = await supabase
+          .from("leads")
+          .select("full_name")
+          .eq("id", leadId)
+          .maybeSingle();
+        name = (data as any)?.full_name || null;
+      }
+      if (!cancelled) setResolvedName(name || contactName?.trim() || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, clientId, leadId, contactName]);
+
+
 
   const handleTemplateChange = (id: string) => {
     setTemplateId(id);
