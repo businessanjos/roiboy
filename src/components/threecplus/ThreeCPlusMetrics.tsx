@@ -152,14 +152,19 @@ export function ThreeCPlusMetrics() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("today");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const customReady = dateRange !== "custom" || !!customRange.from;
 
   // Fetch data
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const { start, end } = getDateRange(dateRange);
+      const { start, end } = getDateRange(dateRange, customRange);
+
 
       const [logsRes, sessionsRes, usersRes] = await Promise.all([
         supabase
