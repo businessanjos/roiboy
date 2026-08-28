@@ -24,7 +24,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useZappRulers, type RulerTemplate } from "@/hooks/useZappRulers";
+import { useZappRulers, type RulerTemplate, type RulerEnrollment } from "@/hooks/useZappRulers";
 import { ZappRulerTemplateDialog } from "./ZappRulerTemplateDialog";
 
 interface ZappRulerPanelProps {
