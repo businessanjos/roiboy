@@ -162,7 +162,7 @@ export function ZappRulerEnrollDialog({
           lead_id: leadId || null,
           contact_name: contactName || null,
           contact_phone: phone,
-          assigned_to: currentUser.id,
+          assigned_to: assigneeId || currentUser.id,
           start_date: startDate,
           due_time: dueTime,
           auto_send: autoSend,
@@ -187,13 +187,16 @@ export function ZappRulerEnrollDialog({
       const { error: touchError } = await supabase.from("zapp_ruler_touches").insert(rows);
       if (touchError) throw touchError;
 
+      const responsibleId = assigneeId || currentUser.id;
+      const who = contactName?.trim();
       // Cada toque vira uma atividade real na agenda (Tarefas), inclusive os "só atividade".
       const taskRows = rows.map((r) => ({
         account_id: currentUser.account_id,
         client_id: clientId || null,
         lead_id: leadId || null,
         deal_id: dealId || null,
-        title: `[Régua] ${r.title}`,
+        activity_type_id: activityTypeId || null,
+        title: who ? `${r.title} · ${who}` : r.title,
         description: r.is_task
           ? `Atividade da régua "${template.name}" (D+${r.offset_days}).`
           : `Toque da régua "${template.name}" (D+${r.offset_days}).\n\n${r.message}`,
@@ -204,7 +207,7 @@ export function ZappRulerEnrollDialog({
         due_time: dueTime,
         priority: "medium" as const,
         status: "pending" as const,
-        assigned_to: currentUser.id,
+        assigned_to: responsibleId,
         created_by: currentUser.id,
       }));
       const { error: taskError } = await supabase.from("internal_tasks").insert(taskRows);
@@ -213,9 +216,25 @@ export function ZappRulerEnrollDialog({
         toast.error("Régua criada, mas não foi possível registrar as atividades.");
       }
 
+      // Registro na timeline do negócio (card do pipeline).
+      if (dealId) {
+        const { error: timelineError } = await supabase.from("deal_activities").insert({
+          account_id: currentUser.account_id,
+          deal_id: dealId,
+          type: "note",
+          title: `Régua de follow up: ${template.name}`,
+          content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")} às ${dueTime}. Responsável: ${
+            assigneeOptions.find((u) => u.id === responsibleId)?.name || "—"
+          }.`,
+          user_id: currentUser.id,
+        });
+        if (timelineError) console.error("[ZappRuler] timeline entry failed", timelineError);
+      }
+
       toast.success(
         `Régua "${template.name}" iniciada com ${rows.length} toques e ${taskError ? 0 : taskRows.length} atividades.`,
       );
+
       onOpenChange(false);
       onEnrolled?.();
     } catch (err: any) {
