@@ -261,7 +261,7 @@ export function ZappRulerEnrollDialog({
         account_id: currentUser.account_id,
         client_id: clientId || null,
         lead_id: leadId || null,
-        deal_id: dealId || null,
+        deal_id: effectiveDealId || null,
         activity_type_id: activityTypeId || null,
         title: who ? `${r.title} · ${who}` : r.title,
         description: r.is_task
@@ -284,10 +284,10 @@ export function ZappRulerEnrollDialog({
       }
 
       // Registro na timeline do negócio (card do pipeline).
-      if (dealId) {
+      if (effectiveDealId) {
         const { error: timelineError } = await supabase.from("deal_activities").insert({
           account_id: currentUser.account_id,
-          deal_id: dealId,
+          deal_id: effectiveDealId,
           type: "note",
           title: `Régua de follow up: ${template.name}`,
           content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")} às ${dueTime}. Responsável: ${
