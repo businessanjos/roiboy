@@ -72,6 +72,15 @@ function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+function dedupeRows(rows: any[]): any[] {
+  const seen = new Map<string, any>();
+  for (const row of rows) {
+    const key = `${row.account_id}::${row.call_id}`;
+    seen.set(key, row);
+  }
+  return Array.from(seen.values());
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
