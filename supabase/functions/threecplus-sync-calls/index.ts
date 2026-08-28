@@ -72,6 +72,15 @@ function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+function dedupeRows(rows: any[]): any[] {
+  const seen = new Map<string, any>();
+  for (const row of rows) {
+    const key = `${row.account_id}::${row.call_id}`;
+    seen.set(key, row);
+  }
+  return Array.from(seen.values());
+}
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -402,8 +411,9 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       }
 
       if (!adminError) {
-        for (let i = 0; i < rows.length; i += 200) {
-          const chunk = rows.slice(i, i + 200);
+        const dedupedRows = dedupeRows(rows);
+        for (let i = 0; i < dedupedRows.length; i += 200) {
+          const chunk = dedupedRows.slice(i, i + 200);
           const { error } = await supabaseAdmin
             .from("threecplus_call_logs")
             .upsert(chunk, { onConflict: "account_id,call_id" });
@@ -495,8 +505,9 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       }
 
       let agentSynced = 0;
-      for (let i = 0; i < rows.length; i += 200) {
-        const chunk = rows.slice(i, i + 200);
+      const dedupedRows = dedupeRows(rows);
+      for (let i = 0; i < dedupedRows.length; i += 200) {
+        const chunk = dedupedRows.slice(i, i + 200);
         const { error } = await supabaseAdmin
           .from("threecplus_call_logs")
           .upsert(chunk, { onConflict: "account_id,call_id" });
