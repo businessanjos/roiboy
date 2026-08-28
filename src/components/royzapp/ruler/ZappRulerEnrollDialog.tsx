@@ -65,6 +65,20 @@ export function ZappRulerEnrollDialog({
   const [autoSend, setAutoSend] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [assigneeId, setAssigneeId] = useState<string>("");
+  const [activityTypeId, setActivityTypeId] = useState<string>("");
+
+  const effectiveSector = sectorId || "vendas";
+  const { users: sectorUsers } = useSectorUsers({ sectorId: effectiveSector });
+  const { activityTypes } = useActivityTypes(effectiveSector);
+
+  const assigneeOptions = useMemo(() => {
+    const list = sectorUsers.map((u) => ({ id: u.id, name: u.name }));
+    if (currentUser?.id && !list.some((u) => u.id === currentUser.id)) {
+      list.unshift({ id: currentUser.id, name: currentUser.name || "Eu" });
+    }
+    return list;
+  }, [sectorUsers, currentUser?.id, currentUser?.name]);
 
   const activeTemplates = useMemo(
     () => templates.filter((t) => t.is_active && t.steps.length > 0),
@@ -81,6 +95,40 @@ export function ZappRulerEnrollDialog({
     setStartDate(new Date().toISOString().slice(0, 10));
     setDueTime("09:00");
   }, [open, activeTemplates]);
+
+  // Tipo de atividade padrão: "Follow Up" do setor.
+  useEffect(() => {
+    if (!open || activityTypes.length === 0) return;
+    setActivityTypeId((prev) => {
+      if (prev && activityTypes.some((t) => t.id === prev)) return prev;
+      const followUp = activityTypes.find((t) =>
+        t.name.toLowerCase().replace(/[\s-]/g, "").includes("followup"),
+      );
+      return followUp?.id || activityTypes[0].id;
+    });
+  }, [open, activityTypes]);
+
+  // Responsável padrão: dono do negócio, senão o usuário atual.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      let defaultId = currentUser?.id || "";
+      if (dealId) {
+        const { data } = await supabase
+          .from("deals")
+          .select("responsible_user_id, sales_user_id")
+          .eq("id", dealId)
+          .maybeSingle();
+        defaultId = (data as any)?.responsible_user_id || (data as any)?.sales_user_id || defaultId;
+      }
+      if (!cancelled) setAssigneeId(defaultId);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, dealId, currentUser?.id]);
+
 
   const handleTemplateChange = (id: string) => {
     setTemplateId(id);
