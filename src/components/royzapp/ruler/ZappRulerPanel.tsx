@@ -24,7 +24,7 @@ import {
   Trash2,
   XCircle,
 } from "lucide-react";
-import { useZappRulers, type RulerTemplate } from "@/hooks/useZappRulers";
+import { useZappRulers, type RulerTemplate, type RulerEnrollment } from "@/hooks/useZappRulers";
 import { ZappRulerTemplateDialog } from "./ZappRulerTemplateDialog";
 
 interface ZappRulerPanelProps {
@@ -55,6 +55,7 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
     pendingManualTouches,
     saveTemplate,
     deleteTemplate,
+    deleteEnrollment,
     cancelEnrollment,
     markTouchDone,
     skipTouch,
@@ -63,6 +64,7 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
+  const [deleteEnrollTarget, setDeleteEnrollTarget] = useState<RulerEnrollment | null>(null);
 
   // Mantém o estado de edição sincronizado com a lista atualizada,
   // mesmo quando o diálogo de detalhe está aberto.
@@ -202,15 +204,25 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                     {enrollment.cancel_reason && (
                       <p className="text-xs text-muted-foreground">Motivo: {enrollment.cancel_reason}</p>
                     )}
-                    {enrollment.status === "active" && (
+                    <div className="flex gap-2">
+                      {enrollment.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => cancelEnrollment(enrollment.id)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" /> Encerrar régua
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => cancelEnrollment(enrollment.id)}
+                        variant="ghost"
+                        onClick={() => setDeleteEnrollTarget(enrollment)}
                       >
-                        <XCircle className="h-4 w-4 mr-1" /> Encerrar régua
+                        <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Excluir
                       </Button>
-                    )}
+                    </div>
+
                   </CardContent>
                 </Card>
               );
@@ -307,6 +319,40 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <AlertDialog
+        open={!!deleteEnrollTarget}
+        onOpenChange={(o) => !o && setDeleteEnrollTarget(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Excluir régua de {deleteEnrollTarget?.contact_name || deleteEnrollTarget?.contact_phone}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Todos os toques agendados deste contato serão apagados. Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteEnrollTarget) return;
+                try {
+                  await deleteEnrollment(deleteEnrollTarget.id);
+                } catch (err) {
+                  console.error("[ZappRuler] delete enrollment failed", err);
+                } finally {
+                  setDeleteEnrollTarget(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
+
   );
 }

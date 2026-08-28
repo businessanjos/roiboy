@@ -308,6 +308,32 @@ export function useZappRulers(sectorId?: string | null) {
     [fetchAll],
   );
 
+  const deleteEnrollment = useCallback(
+    async (id: string) => {
+      try {
+        await supabase.from("zapp_ruler_touches").delete().eq("enrollment_id", id);
+        const { data, error } = await supabase
+          .from("zapp_ruler_enrollments")
+          .delete()
+          .eq("id", id)
+          .select("id");
+        if (error) throw error;
+        if (!data || data.length === 0) {
+          throw new Error("Você não tem permissão para excluir esta régua em andamento.");
+        }
+        setEnrollments((prev) => prev.filter((e) => e.id !== id));
+        await fetchAll({ silent: true });
+        toast.success("Régua removida do contato");
+      } catch (err: any) {
+        console.error("[ZappRulers] delete enrollment failed", err);
+        toast.error(err?.message || "Erro ao excluir a régua do contato");
+        throw err;
+      }
+    },
+    [fetchAll],
+  );
+
+
   const cancelEnrollment = useCallback(
     async (id: string, reason = "cancelada manualmente") => {
       await supabase
@@ -380,6 +406,7 @@ export function useZappRulers(sectorId?: string | null) {
     saveTemplate,
     deleteTemplate,
     cancelEnrollment,
+    deleteEnrollment,
     markTouchDone,
     skipTouch,
   };
