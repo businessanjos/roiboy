@@ -282,6 +282,40 @@ export function ZappRulerEnrollDialog({
 
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
+                <Label>Responsável</Label>
+                <Select value={assigneeId} onValueChange={setAssigneeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Quem vai executar" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {assigneeOptions.map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        {u.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label>Tipo de atividade</Label>
+                <Select value={activityTypeId} onValueChange={setActivityTypeId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {activityTypes.map((t) => (
+                      <SelectItem key={t.id} value={t.id}>
+                        {t.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
                 <Label>Início</Label>
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
