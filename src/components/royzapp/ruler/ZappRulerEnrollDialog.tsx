@@ -379,9 +379,9 @@ export function ZappRulerEnrollDialog({
 
             <div className="flex items-center justify-between rounded-lg border p-3">
               <div>
-                <p className="text-sm font-medium">Pular fim de semana</p>
+                <p className="text-sm font-medium">Pular fim de semana e feriados</p>
                 <p className="text-xs text-muted-foreground">
-                  Toques que caírem no sábado ou domingo vão para a segunda seguinte.
+                  Toques em sábado, domingo ou feriado nacional vão para o próximo dia útil.
                 </p>
               </div>
               <Switch checked={skipWeekends} onCheckedChange={setSkipWeekends} />
@@ -390,16 +390,21 @@ export function ZappRulerEnrollDialog({
             {template && (
               <ScrollArea className="h-48 rounded-lg border">
                 <div className="space-y-3 p-3 pr-4">
-                  {template.steps.map((s, idx) => (
+                  {template.steps.map((s, idx) => {
+                    const touchDate = computeTouchDate(startDate, s.offset_days, dueTime, skipWeekends);
+                    const holiday = getHolidayName(touchDate);
+                    return (
                     <div key={idx} className="space-y-1">
                       <div className="flex items-center gap-2">
                         <Badge variant="secondary">D+{s.offset_days}</Badge>
                         {s.is_task && <Badge variant="outline">Atividade</Badge>}
                         <span className="text-xs font-medium">{s.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {computeTouchDate(startDate, s.offset_days, dueTime, skipWeekends).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
+                          {touchDate.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                         </span>
+                        {holiday && <Badge variant="outline" className="text-[10px]">{holiday}</Badge>}
                       </div>
+
                       <p className="text-xs text-muted-foreground line-clamp-2">
                         {s.is_task ? "Tarefa interna, sem envio de mensagem." : s.message}
                       </p>
