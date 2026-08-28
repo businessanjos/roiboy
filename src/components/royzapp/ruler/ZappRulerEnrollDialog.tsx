@@ -28,6 +28,8 @@ import type { RulerTemplate } from "@/hooks/useZappRulers";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
 import { buildTouchRows, computeTouchDate } from "./rulerScheduling";
+import { getHolidayName } from "@/lib/brazilianHolidays";
+
 
 interface ZappRulerEnrollDialogProps {
   open: boolean;
