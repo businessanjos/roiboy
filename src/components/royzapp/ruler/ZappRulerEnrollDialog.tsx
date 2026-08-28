@@ -70,7 +70,9 @@ export function ZappRulerEnrollDialog({
 
   const effectiveSector = sectorId || "vendas";
   const { users: sectorUsers } = useSectorUsers({ sectorId: effectiveSector });
-  const { activityTypes } = useActivityTypes(effectiveSector);
+  // Todos os tipos de atividade (sem restrição de setor).
+  const { activityTypes } = useActivityTypes();
+  const [resolvedName, setResolvedName] = useState<string | null>(null);
 
   const assigneeOptions = useMemo(() => {
     const list = sectorUsers.map((u) => ({ id: u.id, name: u.name }));
