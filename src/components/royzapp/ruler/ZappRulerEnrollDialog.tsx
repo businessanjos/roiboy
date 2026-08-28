@@ -70,7 +70,9 @@ export function ZappRulerEnrollDialog({
 
   const effectiveSector = sectorId || "vendas";
   const { users: sectorUsers } = useSectorUsers({ sectorId: effectiveSector });
-  const { activityTypes } = useActivityTypes(effectiveSector);
+  // Todos os tipos de atividade (sem restrição de setor).
+  const { activityTypes } = useActivityTypes();
+  const [resolvedName, setResolvedName] = useState<string | null>(null);
 
   const assigneeOptions = useMemo(() => {
     const list = sectorUsers.map((u) => ({ id: u.id, name: u.name }));
@@ -128,6 +130,35 @@ export function ZappRulerEnrollDialog({
       cancelled = true;
     };
   }, [open, dealId, currentUser?.id]);
+
+  // Nome real do cliente/lead para compor o título da atividade.
+  useEffect(() => {
+    if (!open) return;
+    let cancelled = false;
+    (async () => {
+      let name: string | null = null;
+      if (clientId) {
+        const { data } = await supabase
+          .from("clients")
+          .select("full_name")
+          .eq("id", clientId)
+          .maybeSingle();
+        name = (data as any)?.full_name || null;
+      } else if (leadId) {
+        const { data } = await supabase
+          .from("leads")
+          .select("full_name")
+          .eq("id", leadId)
+          .maybeSingle();
+        name = (data as any)?.full_name || null;
+      }
+      if (!cancelled) setResolvedName(name || contactName?.trim() || null);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [open, clientId, leadId, contactName]);
+
 
 
   const handleTemplateChange = (id: string) => {
@@ -188,7 +219,7 @@ export function ZappRulerEnrollDialog({
       if (touchError) throw touchError;
 
       const responsibleId = assigneeId || currentUser.id;
-      const who = contactName?.trim();
+      const who = resolvedName?.trim() || contactName?.trim();
       // Cada toque vira uma atividade real na agenda (Tarefas), inclusive os "só atividade".
       const taskRows = rows.map((r) => ({
         account_id: currentUser.account_id,
