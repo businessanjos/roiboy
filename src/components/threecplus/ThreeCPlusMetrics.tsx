@@ -324,8 +324,39 @@ export function ThreeCPlusMetrics() {
             <SelectItem value="30d">Últimos 30 dias</SelectItem>
             <SelectItem value="this_month">Este mês</SelectItem>
             <SelectItem value="last_month">Mês passado</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
           </SelectContent>
         </Select>
+
+        {dateRange === "custom" && (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start font-normal">
+                <Calendar className="h-4 w-4 mr-2" />
+                {customRange.from
+                  ? customRange.to
+                    ? `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} - ${format(customRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                    : format(customRange.from, "dd/MM/yyyy", { locale: ptBR })
+                  : "Selecionar período"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarPicker
+                mode="range"
+                locale={ptBR}
+                numberOfMonths={2}
+                defaultMonth={customRange.from}
+                selected={{ from: customRange.from, to: customRange.to } as DayPickerRange}
+                onSelect={(range: DayPickerRange | undefined) => {
+                  setCustomRange({ from: range?.from, to: range?.to });
+                  if (range?.from && range?.to) setCalendarOpen(false);
+                }}
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
 
         <Select value={selectedUser} onValueChange={setSelectedUser}>
           <SelectTrigger className="w-[200px]">
