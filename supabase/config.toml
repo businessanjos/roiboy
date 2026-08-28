@@ -53,5 +53,11 @@ verify_jwt = false
 [functions.nfse-webhook]
 verify_jwt = false
 
+[functions.threecplus-admin-token-check]
+verify_jwt = false
+
+
+
+
 
 
