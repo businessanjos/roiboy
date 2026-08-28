@@ -33,6 +33,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Calendar as CalendarPicker } from "@/components/ui/calendar";
+import type { DateRange as DayPickerRange } from "react-day-picker";
 import { ThreeCPlusSyncPanel } from "./ThreeCPlusSyncPanel";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -98,9 +101,12 @@ function agentKeyOf(log: { user_id: string | null; agent_name: string | null }):
   return log.user_id || `name:${(log.agent_name || "desconhecido").toLowerCase()}`;
 }
 
-type DateRange = "today" | "yesterday" | "7d" | "30d" | "this_month" | "last_month";
+type DateRange = "today" | "yesterday" | "7d" | "30d" | "this_month" | "last_month" | "custom";
 
-function getDateRange(range: DateRange): { start: Date; end: Date } {
+function getDateRange(
+  range: DateRange,
+  custom?: { from?: Date; to?: Date }
+): { start: Date; end: Date } {
   const now = new Date();
   switch (range) {
     case "today":
@@ -119,8 +125,14 @@ function getDateRange(range: DateRange): { start: Date; end: Date } {
       const lm = subMonths(now, 1);
       return { start: startOfMonth(lm), end: endOfMonth(lm) };
     }
+    case "custom": {
+      const from = custom?.from ? startOfDay(custom.from) : startOfDay(now);
+      const to = custom?.to ? endOfDay(custom.to) : endOfDay(custom?.from ?? now);
+      return { start: from, end: to };
+    }
   }
 }
+
 
 function getStatusLabel(status: string) {
   const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -143,14 +155,19 @@ export function ThreeCPlusMetrics() {
   const [users, setUsers] = useState<UserInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState<DateRange>("today");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [calendarOpen, setCalendarOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<string>("all");
   const [refreshKey, setRefreshKey] = useState(0);
+
+  const customReady = dateRange !== "custom" || !!customRange.from;
 
   // Fetch data
   useEffect(() => {
     async function fetchData() {
       setLoading(true);
-      const { start, end } = getDateRange(dateRange);
+      const { start, end } = getDateRange(dateRange, customRange);
+
 
       const [logsRes, sessionsRes, usersRes] = await Promise.all([
         supabase
@@ -179,8 +196,16 @@ export function ThreeCPlusMetrics() {
       setLoading(false);
     }
 
-    if (currentUser?.account_id) fetchData();
-  }, [dateRange, currentUser?.account_id, refreshKey]);
+    if (currentUser?.account_id && customReady) fetchData();
+  }, [
+    dateRange,
+    customRange.from?.getTime(),
+    customRange.to?.getTime(),
+    customReady,
+    currentUser?.account_id,
+    refreshKey,
+  ]);
+
 
   // Filter by user
   const filteredLogs = useMemo(
@@ -302,8 +327,39 @@ export function ThreeCPlusMetrics() {
             <SelectItem value="30d">Últimos 30 dias</SelectItem>
             <SelectItem value="this_month">Este mês</SelectItem>
             <SelectItem value="last_month">Mês passado</SelectItem>
+            <SelectItem value="custom">Personalizado</SelectItem>
           </SelectContent>
         </Select>
+
+        {dateRange === "custom" && (
+          <Popover open={calendarOpen} onOpenChange={setCalendarOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="justify-start font-normal">
+                <Calendar className="h-4 w-4 mr-2" />
+                {customRange.from
+                  ? customRange.to
+                    ? `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} - ${format(customRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                    : format(customRange.from, "dd/MM/yyyy", { locale: ptBR })
+                  : "Selecionar período"}
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-auto p-0" align="start">
+              <CalendarPicker
+                mode="range"
+                locale={ptBR}
+                numberOfMonths={2}
+                defaultMonth={customRange.from}
+                selected={{ from: customRange.from, to: customRange.to } as DayPickerRange}
+                onSelect={(range: DayPickerRange | undefined) => {
+                  setCustomRange({ from: range?.from, to: range?.to });
+                  if (range?.from && range?.to) setCalendarOpen(false);
+                }}
+                className="pointer-events-auto"
+              />
+            </PopoverContent>
+          </Popover>
+        )}
+
 
         <Select value={selectedUser} onValueChange={setSelectedUser}>
           <SelectTrigger className="w-[200px]">
