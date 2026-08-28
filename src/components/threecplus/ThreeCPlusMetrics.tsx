@@ -98,9 +98,12 @@ function agentKeyOf(log: { user_id: string | null; agent_name: string | null }):
   return log.user_id || `name:${(log.agent_name || "desconhecido").toLowerCase()}`;
 }
 
-type DateRange = "today" | "yesterday" | "7d" | "30d" | "this_month" | "last_month";
+type DateRange = "today" | "yesterday" | "7d" | "30d" | "this_month" | "last_month" | "custom";
 
-function getDateRange(range: DateRange): { start: Date; end: Date } {
+function getDateRange(
+  range: DateRange,
+  custom?: { from?: Date; to?: Date }
+): { start: Date; end: Date } {
   const now = new Date();
   switch (range) {
     case "today":
@@ -119,8 +122,14 @@ function getDateRange(range: DateRange): { start: Date; end: Date } {
       const lm = subMonths(now, 1);
       return { start: startOfMonth(lm), end: endOfMonth(lm) };
     }
+    case "custom": {
+      const from = custom?.from ? startOfDay(custom.from) : startOfDay(now);
+      const to = custom?.to ? endOfDay(custom.to) : endOfDay(custom?.from ?? now);
+      return { start: from, end: to };
+    }
   }
 }
+
 
 function getStatusLabel(status: string) {
   const map: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
