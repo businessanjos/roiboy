@@ -119,18 +119,61 @@ export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas"
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="flex items-center justify-between rounded-lg border p-3">
-              <div>
-                <p className="text-sm font-medium">Modelos disponíveis</p>
-                <p className="text-xs text-muted-foreground">
-                  {activeTemplates.length} modelo(s) ativo(s) neste setor.
-                </p>
+            <div className="rounded-lg border">
+              <div className="flex items-center justify-between p-3">
+                <div>
+                  <p className="text-sm font-medium">Modelos disponíveis</p>
+                  <p className="text-xs text-muted-foreground">
+                    {activeTemplates.length} modelo(s) ativo(s) neste setor.
+                  </p>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setEditingTemplate(null);
+                    setTemplateOpen(true);
+                  }}
+                >
+                  <Plus className="h-3.5 w-3.5 mr-1.5" />
+                  Novo modelo
+                </Button>
               </div>
-              <Button variant="outline" size="sm" onClick={() => setTemplateOpen(true)}>
-                <Plus className="h-3.5 w-3.5 mr-1.5" />
-                Novo modelo
-              </Button>
+              {templates.length > 0 && (
+                <div className="border-t divide-y max-h-40 overflow-y-auto">
+                  {templates.map((t) => (
+                    <div key={t.id} className="flex items-center gap-2 px-3 py-2">
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm truncate">{t.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {t.steps.length} toque(s)
+                        </p>
+                      </div>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => {
+                          setEditingTemplate(t);
+                          setTemplateOpen(true);
+                        }}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8"
+                        onClick={() => setDeleteTarget(t)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
+
 
             <div className="space-y-2">
               <Label>Para quem?</Label>
