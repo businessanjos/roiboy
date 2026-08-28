@@ -409,7 +409,8 @@ export function ZappRulerEnrollDialog({
                         {s.is_task ? "Tarefa interna, sem envio de mensagem." : s.message}
                       </p>
                     </div>
-                  ))}
+                  );})}
+
 
                 </div>
               </ScrollArea>
