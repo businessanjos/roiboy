@@ -406,6 +406,7 @@ export function useZappRulers(sectorId?: string | null) {
     saveTemplate,
     deleteTemplate,
     cancelEnrollment,
+    deleteEnrollment,
     markTouchDone,
     skipTouch,
   };
