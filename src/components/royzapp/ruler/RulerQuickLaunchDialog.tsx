@@ -14,11 +14,21 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { CalendarClock, Loader2, Plus, Search } from "lucide-react";
+import { CalendarClock, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useZappRulers } from "@/hooks/useZappRulers";
+import { useZappRulers, type RulerTemplate } from "@/hooks/useZappRulers";
 import { ZappRulerEnrollDialog } from "./ZappRulerEnrollDialog";
 import { ZappRulerTemplateDialog } from "./ZappRulerTemplateDialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface RulerQuickLaunchDialogProps {
   open: boolean;
@@ -37,7 +47,7 @@ interface DealOption {
 
 export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas" }: RulerQuickLaunchDialogProps) {
   const { currentUser } = useCurrentUser();
-  const { templates, saveTemplate } = useZappRulers(sectorId);
+  const { templates, saveTemplate, deleteTemplate } = useZappRulers(sectorId);
 
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
@@ -45,6 +55,8 @@ export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas"
   const [selected, setSelected] = useState<DealOption | null>(null);
   const [enrollOpen, setEnrollOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<RulerTemplate | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
 
   useEffect(() => {
     if (!open) {
@@ -245,10 +257,41 @@ export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas"
 
       <ZappRulerTemplateDialog
         open={templateOpen}
-        onOpenChange={setTemplateOpen}
-        template={null}
+        onOpenChange={(o) => {
+          setTemplateOpen(o);
+          if (!o) setEditingTemplate(null);
+        }}
+        template={editingTemplate}
         onSave={saveTemplate}
       />
+
+      <AlertDialog open={!!deleteTarget} onOpenChange={(o) => !o && setDeleteTarget(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir régua "{deleteTarget?.name}"?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Contatos já em andamento continuam com os toques agendados.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={async () => {
+                if (!deleteTarget) return;
+                try {
+                  await deleteTemplate(deleteTarget.id);
+                } catch (err) {
+                  console.error("[RulerQuickLaunch] delete failed", err);
+                } finally {
+                  setDeleteTarget(null);
+                }
+              }}
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <ZappRulerEnrollDialog
         open={enrollOpen}
