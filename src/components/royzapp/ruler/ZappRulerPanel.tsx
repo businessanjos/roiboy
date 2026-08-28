@@ -203,15 +203,25 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                     {enrollment.cancel_reason && (
                       <p className="text-xs text-muted-foreground">Motivo: {enrollment.cancel_reason}</p>
                     )}
-                    {enrollment.status === "active" && (
+                    <div className="flex gap-2">
+                      {enrollment.status === "active" && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => cancelEnrollment(enrollment.id)}
+                        >
+                          <XCircle className="h-4 w-4 mr-1" /> Encerrar régua
+                        </Button>
+                      )}
                       <Button
                         size="sm"
-                        variant="outline"
-                        onClick={() => cancelEnrollment(enrollment.id)}
+                        variant="ghost"
+                        onClick={() => setDeleteEnrollTarget(enrollment)}
                       >
-                        <XCircle className="h-4 w-4 mr-1" /> Encerrar régua
+                        <Trash2 className="h-4 w-4 mr-1 text-destructive" /> Excluir
                       </Button>
-                    )}
+                    </div>
+
                   </CardContent>
                 </Card>
               );
