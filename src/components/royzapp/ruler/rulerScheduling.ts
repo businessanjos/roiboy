@@ -15,12 +15,26 @@ export interface ScheduleStepInput {
 }
 
 
-export function computeTouchDate(startDate: string, offsetDays: number, dueTime: string): Date {
+/** Empurra sábado/domingo para a próxima segunda-feira. */
+export function shiftToWeekday(date: Date): Date {
+  const r = new Date(date);
+  const dow = r.getDay();
+  if (dow === 6) r.setDate(r.getDate() + 2); // sábado -> segunda
+  else if (dow === 0) r.setDate(r.getDate() + 1); // domingo -> segunda
+  return r;
+}
+
+export function computeTouchDate(
+  startDate: string,
+  offsetDays: number,
+  dueTime: string,
+  skipWeekends = false,
+): Date {
   const [h, m] = (dueTime || "09:00").split(":").map((v) => Number(v) || 0);
   const [y, mo, d] = startDate.split("-").map(Number);
   const date = new Date(y, (mo || 1) - 1, d || 1, h, m, 0, 0);
   date.setDate(date.getDate() + offsetDays);
-  return date;
+  return skipWeekends ? shiftToWeekday(date) : date;
 }
 
 export function buildTouchRows(params: {
@@ -30,11 +44,16 @@ export function buildTouchRows(params: {
   startDate: string;
   dueTime: string;
   autoSend: boolean;
+  /** Se true, toques que caírem no fim de semana vão para a segunda seguinte. */
+  skipWeekends?: boolean;
 }) {
   const now = Date.now();
   return params.steps.map((step, idx) => {
-    let when = computeTouchDate(params.startDate, step.offset_days, params.dueTime);
-    if (when.getTime() < now) when = new Date(now + 60 * 1000 * (idx + 1));
+    let when = computeTouchDate(params.startDate, step.offset_days, params.dueTime, params.skipWeekends);
+    if (when.getTime() < now) {
+      when = new Date(now + 60 * 1000 * (idx + 1));
+      if (params.skipWeekends) when = shiftToWeekday(when);
+    }
     const isTask = !!step.is_task;
     return {
       enrollment_id: params.enrollmentId,

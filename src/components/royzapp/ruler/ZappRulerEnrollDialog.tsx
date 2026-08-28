@@ -64,6 +64,7 @@ export function ZappRulerEnrollDialog({
   const [dueTime, setDueTime] = useState("09:00");
   const [autoSend, setAutoSend] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(true);
+  const [skipWeekends, setSkipWeekends] = useState(true);
   const [saving, setSaving] = useState(false);
   const [assigneeId, setAssigneeId] = useState<string>("");
   const [activityTypeId, setActivityTypeId] = useState<string>("");
@@ -96,6 +97,7 @@ export function ZappRulerEnrollDialog({
     setStopOnReply(first?.stop_on_reply ?? true);
     setStartDate(new Date().toISOString().slice(0, 10));
     setDueTime("09:00");
+    setSkipWeekends(true);
   }, [open, activeTemplates]);
 
   // Tipo de atividade padrão: "Follow Up" do setor.
@@ -214,6 +216,7 @@ export function ZappRulerEnrollDialog({
         startDate,
         dueTime,
         autoSend,
+        skipWeekends,
       });
       const { error: touchError } = await supabase.from("zapp_ruler_touches").insert(rows);
       if (touchError) throw touchError;
@@ -374,6 +377,16 @@ export function ZappRulerEnrollDialog({
               <Switch checked={stopOnReply} onCheckedChange={setStopOnReply} />
             </div>
 
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <p className="text-sm font-medium">Pular fim de semana</p>
+                <p className="text-xs text-muted-foreground">
+                  Toques que caírem no sábado ou domingo vão para a segunda seguinte.
+                </p>
+              </div>
+              <Switch checked={skipWeekends} onCheckedChange={setSkipWeekends} />
+            </div>
+
             {template && (
               <ScrollArea className="h-48 rounded-lg border">
                 <div className="space-y-3 p-3 pr-4">
@@ -384,7 +397,7 @@ export function ZappRulerEnrollDialog({
                         {s.is_task && <Badge variant="outline">Atividade</Badge>}
                         <span className="text-xs font-medium">{s.title}</span>
                         <span className="text-xs text-muted-foreground">
-                          {computeTouchDate(startDate, s.offset_days, dueTime).toLocaleDateString("pt-BR")}
+                          {computeTouchDate(startDate, s.offset_days, dueTime, skipWeekends).toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" })}
                         </span>
                       </div>
                       <p className="text-xs text-muted-foreground line-clamp-2">
