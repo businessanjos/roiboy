@@ -193,8 +193,16 @@ export function ThreeCPlusMetrics() {
       setLoading(false);
     }
 
-    if (currentUser?.account_id) fetchData();
-  }, [dateRange, currentUser?.account_id, refreshKey]);
+    if (currentUser?.account_id && customReady) fetchData();
+  }, [
+    dateRange,
+    customRange.from?.getTime(),
+    customRange.to?.getTime(),
+    customReady,
+    currentUser?.account_id,
+    refreshKey,
+  ]);
+
 
   // Filter by user
   const filteredLogs = useMemo(
