@@ -47,13 +47,38 @@ export function buildTouchRows(params: {
   skipWeekends?: boolean;
 }) {
   const now = Date.now();
+
+  // Se a data de início já passou, deslocamos a cadência INTEIRA em dias inteiros,
+  // preservando o espaçamento entre os toques (D+1 e D+2 nunca caem no mesmo dia).
+  let shiftDays = 0;
+  for (const step of params.steps) {
+    const base = computeTouchDate(params.startDate, step.offset_days, params.dueTime, false);
+    if (base.getTime() >= now) continue;
+    const diffMs = now - base.getTime();
+    const needed = Math.ceil(diffMs / 86_400_000);
+    if (needed > shiftDays) shiftDays = needed;
+  }
+
+  // Garante um dia distinto por toque: se o ajuste de fim de semana/feriado
+  // empurrar dois toques para o mesmo dia, o seguinte vai para o próximo dia útil.
+  const dayStart = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+  let lastDay = 0;
+
   return params.steps.map((step, idx) => {
-    let when = computeTouchDate(params.startDate, step.offset_days, params.dueTime, params.skipWeekends);
-    if (when.getTime() < now) {
-      when = new Date(now + 60 * 1000 * (idx + 1));
+    let when = computeTouchDate(
+      params.startDate,
+      step.offset_days + shiftDays,
+      params.dueTime,
+      params.skipWeekends,
+    );
+    while (lastDay && dayStart(when) <= lastDay) {
+      when = new Date(when.getTime() + 86_400_000);
       if (params.skipWeekends) when = shiftToWeekday(when);
     }
+    lastDay = dayStart(when);
+
     const isTask = !!step.is_task;
+
     return {
       enrollment_id: params.enrollmentId,
       account_id: params.accountId,
@@ -68,4 +93,5 @@ export function buildTouchRows(params: {
     };
   });
 }
+
 
