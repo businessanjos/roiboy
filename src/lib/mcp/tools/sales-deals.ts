@@ -20,8 +20,9 @@ export default defineTool({
     let query = supabase
       .from("deals")
       .select(
-        "id, title, status, value:entry_value, received_value, contact_name, contact_email, contact_phone, source, is_renewal, probability, expected_close_date, lost_at, lost_reason, loss_notes, stage_changed_at, created_at, updated_at, stage_id, pipeline_id, responsible_user_id, sdr_user_id, client_id, deal_stages(name), pipelines(name)",
+        "id, title, status, value, entry_value, received_value, contact_name, contact_email, contact_phone, source, is_renewal, probability, expected_close_date, won_at, lost_at, lost_reason, loss_notes, stage_changed_at, created_at, updated_at, stage_id, pipeline_id, responsible_user_id, sdr_user_id, client_id, deal_stages(name), pipelines(name)",
       )
+
       .is("deleted_at", null)
       .order("created_at", { ascending: false })
       .limit(limit);
