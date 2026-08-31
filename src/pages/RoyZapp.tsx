@@ -1648,14 +1648,20 @@ export default function RoyZapp() {
   // dados de WhatsApps diferentes.
   if (!selectedSectorId) {
     return <ZappSectorSelector onSelectSector={(sectorId, integrationId) => {
+      // Preserva a tela pedida (ex.: Produtividade) — só cai em Conversas
+      // quando não havia view na URL.
+      const targetView: ZappView = ZAPP_VIEWS.has(viewFromUrl as ZappView)
+        ? (viewFromUrl as ZappView)
+        : "inbox";
       setSelectedSectorId(sectorId);
       setSelectedIntegrationId(integrationId);
-      setActiveView("inbox");
+      setActiveView(targetView);
+      lastHandledViewParamRef.current = targetView;
       replaceSearchParams((next) => {
         next.set("sector", sectorId);
         if (integrationId) next.set("integrationId", integrationId);
         else next.delete("integrationId");
-        next.set("view", "inbox");
+        next.set("view", targetView);
       });
     }} />;
   }
