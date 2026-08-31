@@ -368,12 +368,19 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             {" · "}
             {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
             {" · "}mensagens apagadas ignoradas
+            {(data.duplicates_ignored ?? 0) > 0
+              ? ` · ${data.duplicates_ignored} mensagens duplicadas descartadas`
+              : ""}
+            {(data.messages_from_history ?? 0) > 0
+              ? ` · ${data.messages_from_history} mensagens vieram da importação de histórico (sem atendente identificável)`
+              : ""}
             {(data.new_conversations_from_history ?? 0) > 0
               ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como novas`
               : ""}
-            {(data.messages_out_unattributed ?? 0) > 0
-              ? ` · ${data.messages_out_unattributed} envios sem atendente identificado (fora do ranking por pessoa)`
+            {(data.messages_out_unattributed ?? 0) > 0 && data.messages_out > 0
+              ? ` · ${data.messages_out_unattributed} envios (${Math.round((data.messages_out_unattributed! / data.messages_out) * 100)}%) sem atendente identificado — enviados pelo celular, fora do ranking por pessoa`
               : ""}
+            {" · "}base de clientes = contratos ativos
           </p>
         )}
 
