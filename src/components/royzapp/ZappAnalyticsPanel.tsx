@@ -11,6 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+
 import {
   Select,
   SelectContent,
@@ -119,12 +122,14 @@ interface Metrics {
 }
 
 
-type PeriodKey = "current_month" | "last_7" | "last_30" | "last_month";
+type PeriodKey = "today" | "current_month" | "last_7" | "last_30" | "last_month" | "custom";
 
-function periodRange(key: PeriodKey): { from: Date; to: Date } {
+function periodRange(key: PeriodKey, custom?: { from?: Date; to?: Date }): { from: Date; to: Date } {
   const now = new Date();
   const to = new Date(now.getTime() + 60_000);
   switch (key) {
+    case "today":
+      return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to };
     case "last_7":
       return { from: new Date(now.getTime() - 7 * 86400000), to };
     case "last_30":
@@ -133,11 +138,21 @@ function periodRange(key: PeriodKey): { from: Date; to: Date } {
       const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       return { from, to: new Date(now.getFullYear(), now.getMonth(), 1) };
     }
+    case "custom": {
+      if (custom?.from) {
+        const f = new Date(custom.from.getFullYear(), custom.from.getMonth(), custom.from.getDate());
+        const end = custom.to ?? custom.from;
+        const t = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+        return { from: f, to: t > to ? to : t };
+      }
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to };
+    }
     case "current_month":
     default:
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to };
   }
 }
+
 
 function fmtDuration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return "—";
@@ -215,17 +230,31 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
     (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
   );
   const [period, setPeriod] = useState<PeriodKey>("current_month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [customOpen, setCustomOpen] = useState(false);
   const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
   const [includeGroups, setIncludeGroups] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const range = useMemo(() => periodRange(period), [period]);
+  const range = useMemo(
+    () => periodRange(period, customRange),
+    [period, customRange.from?.getTime(), customRange.to?.getTime()]
+  );
   const effectiveSector = sector === "all" ? null : sector;
   const effectiveIntegration = scope === "instance" ? (integrationId || null) : null;
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
-    queryKey: ["zapp-productivity", effectiveSector, period, effectiveIntegration, includeGroups],
+    queryKey: [
+      "zapp-productivity",
+      effectiveSector,
+      period,
+      range.from.toISOString().slice(0, 13),
+      range.to.toISOString().slice(0, 13),
+      effectiveIntegration,
+      includeGroups,
+    ],
+
     enabled: allowed,
     staleTime: 60_000,
     queryFn: async (): Promise<Metrics> => {
@@ -274,6 +303,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
         body: {
           sector: effectiveSector,
           period,
+          period_from: range.from.toISOString(),
+          period_to: range.to.toISOString(),
+
           metrics: {
             messages_in: data.messages_in,
             messages_out: data.messages_out,
@@ -323,17 +355,54 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               ))}
             </SelectContent>
           </Select>
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+          <Select
+            value={period}
+            onValueChange={(v) => {
+              setPeriod(v as PeriodKey);
+              if (v === "custom") setCustomOpen(true);
+            }}
+          >
             <SelectTrigger className="w-[160px] bg-zapp-panel border-zapp-border text-zapp-text">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
               <SelectItem value="current_month">Mês atual</SelectItem>
               <SelectItem value="last_7">Últimos 7 dias</SelectItem>
               <SelectItem value="last_30">Últimos 30 dias</SelectItem>
               <SelectItem value="last_month">Mês passado</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
             </SelectContent>
           </Select>
+          {period === "custom" && (
+            <Popover open={customOpen} onOpenChange={setCustomOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2 bg-zapp-panel border-zapp-border text-zapp-text">
+                  <CalendarDays className="h-4 w-4" />
+                  {customRange.from
+                    ? `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} - ${format(customRange.to ?? customRange.from, "dd/MM/yy", { locale: ptBR })}`
+                    : "Escolher datas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  locale={ptBR}
+                  numberOfMonths={2}
+                  defaultMonth={customRange.from}
+                  selected={{ from: customRange.from, to: customRange.to }}
+                  onSelect={(r: any) => {
+                    setCustomRange({ from: r?.from, to: r?.to });
+                    if (r?.from && r?.to) setCustomOpen(false);
+                  }}
+                  disabled={{ after: new Date() }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+
           {integrationId && (
             <Select value={scope} onValueChange={(v) => setScope(v as any)}>
               <SelectTrigger className="w-[210px] bg-zapp-panel border-zapp-border text-zapp-text">
