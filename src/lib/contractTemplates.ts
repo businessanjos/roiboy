@@ -505,6 +505,27 @@ const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; tota
     total: 80400,
     totalWords: "oitenta mil e quatrocentos reais",
   },
+  // Eternum Mentoring Low (EML) — sem consultor
+  EML_A_VISTA: {
+    label: "À vista — R$ 45.000,00 (10% de desconto)",
+    total: 45000,
+    totalWords: "quarenta e cinco mil reais",
+  },
+  EML_CARTAO_12X: {
+    label: "Cartão de crédito 12x — R$ 50.000,00",
+    total: 50000,
+    totalWords: "cinquenta mil reais",
+  },
+  EML_BOLETO_1_11: {
+    label: "Boleto 1+11 — R$ 50.000,00",
+    total: 50000,
+    totalWords: "cinquenta mil reais",
+  },
+  EML_CHEQUE_1_11: {
+    label: "Cheque 1+11 — R$ 50.000,00",
+    total: 50000,
+    totalWords: "cinquenta mil reais",
+  },
 };
 
 const formatPlainBRLWords = (value: any): string => {
