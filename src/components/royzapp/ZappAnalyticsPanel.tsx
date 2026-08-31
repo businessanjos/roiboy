@@ -854,7 +854,23 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             </Card>
           </>
         ) : null}
+
+        {contactsDialog && (
+          <ZappContactsBreakdownDialog
+            open={!!contactsDialog}
+            onOpenChange={(o) => !o && setContactsDialog(null)}
+            direction={contactsDialog}
+            sectorId={effectiveSector}
+            integrationId={effectiveIntegration}
+            includeGroups={includeGroups}
+            agentUserId={effectiveAgent}
+            from={range.from}
+            to={range.to}
+            periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
+          />
+        )}
       </div>
     </ScrollArea>
   );
 }
+
