@@ -21,7 +21,7 @@ export default defineTool({
       .select(
         "id, direction, content, transcription, message_type, media_type, sender_name, sender_phone, sender_user_id, delivery_status, sent_at",
       )
-      .eq("conversation_id", conversation_id)
+      .eq("zapp_conversation_id", conversation_id)
       .is("deleted_at", null)
       .order("sent_at", { ascending: true })
       .limit(limit);
