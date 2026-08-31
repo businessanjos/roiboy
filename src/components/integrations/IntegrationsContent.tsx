@@ -41,6 +41,7 @@ const integrations_list = [
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
+  { id: "mcp", name: "Assistente IA no Claude", description: "Conecte o Claude Desktop aos dados do ROY", icon: Bot },
 ];
 
 export function IntegrationsContent() {
