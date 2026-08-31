@@ -177,12 +177,14 @@ function Kpi({
   value,
   hint,
   tone,
+  onClick,
 }: {
   icon: typeof MessageSquare;
   label: string;
   value: string;
   hint?: string;
   tone?: "danger" | "warning" | "success";
+  onClick?: () => void;
 }) {
   const toneClass =
     tone === "danger"
@@ -193,7 +195,16 @@ function Kpi({
           ? "text-success"
           : "text-zapp-text";
   return (
-    <Card className="bg-zapp-panel border-zapp-border">
+    <Card
+      className={cn(
+        "bg-zapp-panel border-zapp-border",
+        onClick && "cursor-pointer transition-colors hover:border-zapp-accent/60 hover:bg-zapp-bg/40"
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-zapp-bg shrink-0">
@@ -203,12 +214,14 @@ function Kpi({
             <p className="text-[11px] uppercase tracking-wide text-zapp-text-muted font-medium">{label}</p>
             <p className={cn("text-2xl font-semibold leading-tight", toneClass)}>{value}</p>
             {hint && <p className="text-[11px] text-zapp-text-muted mt-0.5">{hint}</p>}
+            {onClick && <p className="text-[11px] text-zapp-accent mt-1">Clique para ver quem atendeu quem</p>}
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
 
 export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
   const { currentUser } = useCurrentUser();
