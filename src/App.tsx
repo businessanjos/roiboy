@@ -263,6 +263,8 @@ const App = () => (
                             <Route path="/" element={<Navigate to="/setores" replace />} />
                           
                           <Route path="/auth" element={<Auth />} />
+                          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
                           <Route path="/f/:formId" element={<PublicForm />} />
                           <Route path="/c/:slug" element={<PublicCampaignForm />} />
                           <Route path="/rsvp/:token" element={<PublicRSVP />} />
