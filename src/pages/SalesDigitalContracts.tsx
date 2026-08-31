@@ -517,6 +517,13 @@ export default function SalesDigitalContracts() {
                       {statusLabels[contract.status] ?? contract.status}
                     </Badge>
                   </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <DealIdBadge dealId={contract.deal_id} title={contract.deal_id ? dealTitleMap[contract.deal_id] : null} />
+                    <ProductBadge product={contract.product_id ? productMap[contract.product_id] : undefined} />
+                    {contract.payment_method ? (
+                      <span className="text-[11px] text-muted-foreground truncate">{contract.payment_method}</span>
+                    ) : null}
+                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-sm font-semibold">{formatCurrency(contract.total_value)}</div>
                     <ContractRowActions
@@ -538,6 +545,9 @@ export default function SalesDigitalContracts() {
                   <TableRow>
                     <TableHead>Contrato</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Negócio (ID)</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Pagamento</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Atualizado</TableHead>
@@ -556,6 +566,20 @@ export default function SalesDigitalContracts() {
                         ) : null}
                       </TableCell>
                       <TableCell>{contract.client_name}</TableCell>
+                      <TableCell>
+                        <DealIdBadge
+                          dealId={contract.deal_id}
+                          title={contract.deal_id ? dealTitleMap[contract.deal_id] : null}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <ProductBadge product={contract.product_id ? productMap[contract.product_id] : undefined} />
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {contract.payment_method ?? "—"}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={statusVariants[contract.status] ?? "outline"}>
                           {statusLabels[contract.status] ?? contract.status}
