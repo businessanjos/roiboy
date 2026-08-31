@@ -495,8 +495,8 @@ export const DigitalContractTab = ({
                   .select("name")
                   .eq("id", resolvedProductId)
                   .maybeSingle();
-                // Rykas Mentoring sempre tem vigência de 6 meses (regra de negócio fixa)
-                if (!cancelled && prod?.name && /ryka.*mentoring/i.test(prod.name)) {
+                // Rykas / Eternum Mentoring sempre tem vigência de 6 meses (regra de negócio fixa)
+                if (!cancelled && prod?.name && /(ryka|eternum).*mentoring/i.test(prod.name)) {
                   setData((prev) => ({ ...prev, contract_duration_months: 6 }));
                 }
                 const { data: tpls } = await supabase

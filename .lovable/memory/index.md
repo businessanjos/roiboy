@@ -59,6 +59,7 @@
 - [Commission System](mem://features/sales/commission/system-v10-pt) — Distinct Closer vs SDR models, clearing records pre-calculation for data consistency
 - [TV View Sales Ranking](mem://features/sales/ranking-presentation-mode-v2-pt) — Brand colors, dashboards, privacy blur modes for presentation screens
 - [Contract Templates by Product](mem://features/sales/contract-templates-pt) — Per-product templates with `{{KEY}}` placeholders, autofill from client/deal/company
+- [Contrato Eternum Mentoring Low](mem://features/sales/eternum-mentoring-low-contract-pt) — Template EML sem consultor, PF/PJ, 4 formas de pagamento (à vista 45k / demais 50k)
 - [Fixed Contratada Data](mem://features/sales/contract-fixed-contratada-data-pt) — Eternum Mentoring Club Ltda, hardcoded no template
 - [Contract Wizard Autofill](mem://features/sales/contract-autofill-pt) — Autofill no wizard com produto como default e deal sobrescrevendo
 - [Roulette Async Approval](mem://features/sales/roulette-async-approval-pt) — Vendedor solicita giro, gestor aprova/rejeita em /sales-team/spiffs
