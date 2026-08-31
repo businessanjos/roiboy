@@ -502,6 +502,10 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               ? ` · ${data.messages_out_unattributed} envios (${Math.round((data.messages_out_unattributed! / data.messages_out) * 100)}%) sem atendente identificado — enviados pelo celular, fora do ranking por pessoa`
               : ""}
             {" · "}base de clientes = contratos ativos
+            {effectiveAgent
+              ? ` · filtrado por ${selectedAgentName ?? "pessoa selecionada"}: apenas conversas em que ela enviou mensagem no período; envios de outros atendentes ficam de fora (as recebidas do cliente continuam contando)`
+              : ""}
+
           </p>
         )}
 
