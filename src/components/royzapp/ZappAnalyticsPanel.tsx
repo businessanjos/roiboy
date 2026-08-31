@@ -102,6 +102,9 @@ interface Metrics {
   unanswered_over_24h: number;
   silent_conversations: number;
   clients_never_messaged: number;
+  clients_active_base?: number;
+  clients_no_conversation?: number;
+  duplicates_ignored?: number;
   risk_mentions: number;
   risk_conversations?: number;
   messages_out_unattributed?: number;
