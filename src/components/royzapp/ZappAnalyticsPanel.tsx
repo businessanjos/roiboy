@@ -66,6 +66,8 @@ interface AgentRow {
   conversations: number;
   avg_conversations_per_day?: number | null;
   new_started?: number | null;
+  responses_count?: number | null;
+  median_response_seconds?: number | null;
   avg_response_seconds: number | null;
 }
 
