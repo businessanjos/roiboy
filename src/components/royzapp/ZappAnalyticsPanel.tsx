@@ -119,12 +119,14 @@ interface Metrics {
 }
 
 
-type PeriodKey = "current_month" | "last_7" | "last_30" | "last_month";
+type PeriodKey = "today" | "current_month" | "last_7" | "last_30" | "last_month" | "custom";
 
-function periodRange(key: PeriodKey): { from: Date; to: Date } {
+function periodRange(key: PeriodKey, custom?: { from?: Date; to?: Date }): { from: Date; to: Date } {
   const now = new Date();
   const to = new Date(now.getTime() + 60_000);
   switch (key) {
+    case "today":
+      return { from: new Date(now.getFullYear(), now.getMonth(), now.getDate()), to };
     case "last_7":
       return { from: new Date(now.getTime() - 7 * 86400000), to };
     case "last_30":
@@ -133,11 +135,21 @@ function periodRange(key: PeriodKey): { from: Date; to: Date } {
       const from = new Date(now.getFullYear(), now.getMonth() - 1, 1);
       return { from, to: new Date(now.getFullYear(), now.getMonth(), 1) };
     }
+    case "custom": {
+      if (custom?.from) {
+        const f = new Date(custom.from.getFullYear(), custom.from.getMonth(), custom.from.getDate());
+        const end = custom.to ?? custom.from;
+        const t = new Date(end.getFullYear(), end.getMonth(), end.getDate(), 23, 59, 59, 999);
+        return { from: f, to: t > to ? to : t };
+      }
+      return { from: new Date(now.getFullYear(), now.getMonth(), 1), to };
+    }
     case "current_month":
     default:
       return { from: new Date(now.getFullYear(), now.getMonth(), 1), to };
   }
 }
+
 
 function fmtDuration(seconds: number | null | undefined): string {
   if (seconds === null || seconds === undefined) return "—";
