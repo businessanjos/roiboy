@@ -110,6 +110,9 @@ export default function SalesDigitalContracts() {
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [editorDeal, setEditorDeal] = useState<{ id: string | null; clientId: string | null; clientName: string; value: number | null; contractId?: string | null } | null>(null);
 
+  const [productMap, setProductMap] = useState<Record<string, { name: string; color: string | null }>>({});
+  const [dealTitleMap, setDealTitleMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     async function loadContracts() {
       if (!currentUser?.account_id) return;
@@ -119,13 +122,33 @@ export default function SalesDigitalContracts() {
         const { data, error } = await supabase
           .from("digital_contracts")
           .select(
-            "id, deal_id, client_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
+            "id, deal_id, client_id, product_id, payment_method, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
           )
           .eq("account_id", currentUser.account_id)
           .order("updated_at", { ascending: false });
 
         if (error) throw error;
-        setContracts((data ?? []) as DigitalContractListItem[]);
+        const rows = (data ?? []) as DigitalContractListItem[];
+        setContracts(rows);
+
+        const productIds = Array.from(new Set(rows.map((r) => r.product_id).filter(Boolean))) as string[];
+        const dealIds = Array.from(new Set(rows.map((r) => r.deal_id).filter(Boolean))) as string[];
+
+        const [{ data: products }, { data: dealRows }] = await Promise.all([
+          productIds.length
+            ? supabase.from("products").select("id, name, color").in("id", productIds)
+            : Promise.resolve({ data: [] as any[] }),
+          dealIds.length
+            ? supabase.from("deals").select("id, title").in("id", dealIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        setProductMap(
+          Object.fromEntries(
+            (products ?? []).map((p: any) => [p.id, { name: p.name as string, color: (p.color as string) ?? null }]),
+          ),
+        );
+        setDealTitleMap(Object.fromEntries((dealRows ?? []).map((d: any) => [d.id, d.title as string])));
       } catch (error: unknown) {
         console.error("[SalesDigitalContracts] load error:", error);
         toast.error(error instanceof Error ? error.message : "Erro ao carregar contratos digitais");
@@ -136,6 +159,7 @@ export default function SalesDigitalContracts() {
 
     loadContracts();
   }, [currentUser?.account_id]);
+
 
   useEffect(() => {
     async function loadDealsForContract() {
