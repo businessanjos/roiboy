@@ -227,17 +227,31 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
     (sectorId as ZappWhatsAppSector) || availableSectors[0] || "operacoes"
   );
   const [period, setPeriod] = useState<PeriodKey>("current_month");
+  const [customRange, setCustomRange] = useState<{ from?: Date; to?: Date }>({});
+  const [customOpen, setCustomOpen] = useState(false);
   const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
   const [includeGroups, setIncludeGroups] = useState(false);
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
-  const range = useMemo(() => periodRange(period), [period]);
+  const range = useMemo(
+    () => periodRange(period, customRange),
+    [period, customRange.from?.getTime(), customRange.to?.getTime()]
+  );
   const effectiveSector = sector === "all" ? null : sector;
   const effectiveIntegration = scope === "instance" ? (integrationId || null) : null;
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
-    queryKey: ["zapp-productivity", effectiveSector, period, effectiveIntegration, includeGroups],
+    queryKey: [
+      "zapp-productivity",
+      effectiveSector,
+      period,
+      range.from.toISOString().slice(0, 13),
+      range.to.toISOString().slice(0, 13),
+      effectiveIntegration,
+      includeGroups,
+    ],
+
     enabled: allowed,
     staleTime: 60_000,
     queryFn: async (): Promise<Metrics> => {
