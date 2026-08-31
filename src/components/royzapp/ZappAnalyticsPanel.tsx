@@ -101,6 +101,10 @@ interface Metrics {
   p90_response_seconds: number | null;
   responses_under_5min_pct: number | null;
   conversations_with_inbound: number;
+  contacts_reached_by_team?: number;
+  contacts_that_messaged?: number;
+  clients_reached_by_team?: number;
+  clients_that_messaged?: number;
   unanswered_conversations: number;
   unanswered_over_24h: number;
   silent_conversations: number;
