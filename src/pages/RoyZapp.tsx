@@ -130,6 +130,9 @@ export default function RoyZapp() {
   // Without this, switching from CS to another sector updated the URL/shell,
   // but the RoyZapp content could remain mounted with the CS theme and data.
   useEffect(() => {
+    // Link do menu lateral (ex.: ?view=analytics) não carrega o setor. Nesse caso
+    // mantemos o setor já escolhido em vez de voltar ao seletor.
+    if (!sectorFromUrl) return;
     setSelectedSectorId(sectorFromUrl);
     setSelectedIntegrationId(integrationFromUrl || undefined);
   }, [sectorFromUrl, integrationFromUrl]);
@@ -480,6 +483,14 @@ export default function RoyZapp() {
       replaceSearchParams((next) => next.set("view", activeView));
     }
   }, [activeView, viewFromUrl, replaceSearchParams]);
+
+  // Setor ativo sempre refletido na URL (links do menu não trazem ?sector=).
+  useEffect(() => {
+    if (!selectedSectorId || sectorFromUrl === selectedSectorId) return;
+    replaceSearchParams((next) => next.set("sector", selectedSectorId));
+  }, [selectedSectorId, sectorFromUrl, replaceSearchParams]);
+
+
 
   // Troca de menu: estado e URL sempre juntos, na mesma ação do usuário.
   const changeView = useCallback((view: ZappView) => {
@@ -1645,14 +1656,20 @@ export default function RoyZapp() {
   // dados de WhatsApps diferentes.
   if (!selectedSectorId) {
     return <ZappSectorSelector onSelectSector={(sectorId, integrationId) => {
+      // Preserva a tela pedida (ex.: Produtividade) — só cai em Conversas
+      // quando não havia view na URL.
+      const targetView: ZappView = ZAPP_VIEWS.has(viewFromUrl as ZappView)
+        ? (viewFromUrl as ZappView)
+        : "inbox";
       setSelectedSectorId(sectorId);
       setSelectedIntegrationId(integrationId);
-      setActiveView("inbox");
+      setActiveView(targetView);
+      lastHandledViewParamRef.current = targetView;
       replaceSearchParams((next) => {
         next.set("sector", sectorId);
         if (integrationId) next.set("integrationId", integrationId);
         else next.delete("integrationId");
-        next.set("view", "inbox");
+        next.set("view", targetView);
       });
     }} />;
   }
