@@ -66,6 +66,8 @@ interface AgentRow {
   conversations: number;
   avg_conversations_per_day?: number | null;
   new_started?: number | null;
+  responses_count?: number | null;
+  median_response_seconds?: number | null;
   avg_response_seconds: number | null;
 }
 
@@ -100,6 +102,9 @@ interface Metrics {
   unanswered_over_24h: number;
   silent_conversations: number;
   clients_never_messaged: number;
+  clients_active_base?: number;
+  clients_no_conversation?: number;
+  duplicates_ignored?: number;
   risk_mentions: number;
   risk_conversations?: number;
   messages_out_unattributed?: number;
@@ -363,12 +368,19 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             {" · "}
             {effectiveIntegration ? "somente a conexão selecionada" : "todas as conexões da área"}
             {" · "}mensagens apagadas ignoradas
+            {(data.duplicates_ignored ?? 0) > 0
+              ? ` · ${data.duplicates_ignored} mensagens duplicadas descartadas`
+              : ""}
+            {(data.messages_from_history ?? 0) > 0
+              ? ` · ${data.messages_from_history} mensagens vieram da importação de histórico (sem atendente identificável)`
+              : ""}
             {(data.new_conversations_from_history ?? 0) > 0
               ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como novas`
               : ""}
-            {(data.messages_out_unattributed ?? 0) > 0
-              ? ` · ${data.messages_out_unattributed} envios sem atendente identificado (fora do ranking por pessoa)`
+            {(data.messages_out_unattributed ?? 0) > 0 && data.messages_out > 0
+              ? ` · ${data.messages_out_unattributed} envios (${Math.round((data.messages_out_unattributed! / data.messages_out) * 100)}%) sem atendente identificado — enviados pelo celular, fora do ranking por pessoa`
               : ""}
+            {" · "}base de clientes = contratos ativos
           </p>
         )}
 
@@ -403,10 +415,28 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               />
               <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`com mensagem no período · ${data.total_conversations.toLocaleString("pt-BR")} conversas no escopo`} />
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
-              <Kpi icon={Clock} label="Tempo médio de resposta" value={fmtDuration(data.avg_response_seconds)} hint={`mediana ${fmtDuration(data.median_response_seconds)} · p90 ${fmtDuration(data.p90_response_seconds)} · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas`} />
+              <Kpi
+                icon={Clock}
+                label="Tempo de resposta (mediana)"
+                value={fmtDuration(data.median_response_seconds)}
+                hint={`p90 ${fmtDuration(data.p90_response_seconds)} · média ${fmtDuration(data.avg_response_seconds)} (distorcida por respostas no dia seguinte) · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas medidas`}
+              />
               <Kpi icon={Timer} label="Respostas em até 5 min" value={data.responses_under_5min_pct === null ? "—" : `${data.responses_under_5min_pct}%`} tone={(data.responses_under_5min_pct ?? 0) < 50 ? "warning" : "success"} />
               <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
-              <Kpi icon={UserX} label="Nunca escreveram" value={data.clients_never_messaged.toLocaleString("pt-BR")} hint={`clientes ativos, histórico total · ${data.silent_conversations} conversas só com envio nosso no período`} tone={data.clients_never_messaged > 0 ? "warning" : undefined} />
+              <Kpi
+                icon={UserX}
+                label="Nunca escreveram"
+                value={data.clients_never_messaged.toLocaleString("pt-BR")}
+                hint={`de ${(data.clients_active_base ?? 0).toLocaleString("pt-BR")} clientes com contrato ativo que têm conversa nesta área · ${data.silent_conversations} conversas só com envio nosso no período`}
+                tone={data.clients_never_messaged > 0 ? "warning" : undefined}
+              />
+              <Kpi
+                icon={Users}
+                label="Sem WhatsApp vinculado"
+                value={(data.clients_no_conversation ?? 0).toLocaleString("pt-BR")}
+                hint="clientes com contrato ativo sem nenhuma conversa nesta área — cobertura, não produtividade"
+                tone={(data.clients_no_conversation ?? 0) > 0 ? "warning" : undefined}
+              />
             </div>
 
             {/* Conversas novas e média diária */}
@@ -577,29 +607,42 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         <TableHead className="text-right">Conversas</TableHead>
                         <TableHead className="text-right">Média/dia</TableHead>
                         <TableHead className="text-right">Novas iniciadas</TableHead>
-                        <TableHead className="text-right">Resposta média</TableHead>
-
+                        <TableHead className="text-right">Respostas</TableHead>
+                        <TableHead className="text-right">Resposta (mediana)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(data.by_agent || []).length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-sm text-zapp-text-muted py-6">
+                          <TableCell colSpan={7} className="text-center text-sm text-zapp-text-muted py-6">
                             Nenhum envio identificado no período.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        data.by_agent.map((a) => (
-                          <TableRow key={a.user_id || a.name}>
-                            <TableCell className="font-medium">{a.name}</TableCell>
-                            <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
-                            <TableCell className="text-right">{a.conversations}</TableCell>
-                            <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
-                            <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
-                            <TableCell className="text-right">{fmtDuration(a.avg_response_seconds)}</TableCell>
-
-                          </TableRow>
-                        ))
+                        <>
+                          {data.by_agent.map((a) => (
+                            <TableRow key={a.user_id || a.name}>
+                              <TableCell className="font-medium">{a.name}</TableCell>
+                              <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right">{a.conversations}</TableCell>
+                              <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
+                              <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
+                              <TableCell className="text-right">{(a.responses_count ?? 0).toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right">{fmtDuration(a.median_response_seconds ?? a.avg_response_seconds)}</TableCell>
+                            </TableRow>
+                          ))}
+                          {(data.messages_out_unattributed ?? 0) > 0 && (
+                            <TableRow className="opacity-70">
+                              <TableCell className="font-medium">Sem atendente identificado</TableCell>
+                              <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right" colSpan={5}>
+                                <span className="text-xs text-zapp-text-muted">
+                                  envios feitos direto pelo celular/WhatsApp Web ou importados do histórico
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       )}
                     </TableBody>
                   </Table>
