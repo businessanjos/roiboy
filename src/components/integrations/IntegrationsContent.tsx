@@ -493,6 +493,10 @@ export function IntegrationsContent() {
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
             </TabsTrigger>
+            <TabsTrigger value="mcp" className="gap-2 px-3 py-2">
+              <Bot className="h-4 w-4" />
+              <span>Assistente IA</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
