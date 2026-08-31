@@ -607,29 +607,42 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                         <TableHead className="text-right">Conversas</TableHead>
                         <TableHead className="text-right">Média/dia</TableHead>
                         <TableHead className="text-right">Novas iniciadas</TableHead>
-                        <TableHead className="text-right">Resposta média</TableHead>
-
+                        <TableHead className="text-right">Respostas</TableHead>
+                        <TableHead className="text-right">Resposta (mediana)</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(data.by_agent || []).length === 0 ? (
                         <TableRow>
-                          <TableCell colSpan={6} className="text-center text-sm text-zapp-text-muted py-6">
+                          <TableCell colSpan={7} className="text-center text-sm text-zapp-text-muted py-6">
                             Nenhum envio identificado no período.
                           </TableCell>
                         </TableRow>
                       ) : (
-                        data.by_agent.map((a) => (
-                          <TableRow key={a.user_id || a.name}>
-                            <TableCell className="font-medium">{a.name}</TableCell>
-                            <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
-                            <TableCell className="text-right">{a.conversations}</TableCell>
-                            <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
-                            <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
-                            <TableCell className="text-right">{fmtDuration(a.avg_response_seconds)}</TableCell>
-
-                          </TableRow>
-                        ))
+                        <>
+                          {data.by_agent.map((a) => (
+                            <TableRow key={a.user_id || a.name}>
+                              <TableCell className="font-medium">{a.name}</TableCell>
+                              <TableCell className="text-right">{a.messages_sent.toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right">{a.conversations}</TableCell>
+                              <TableCell className="text-right">{a.avg_conversations_per_day ?? "—"}</TableCell>
+                              <TableCell className="text-right">{a.new_started ?? 0}</TableCell>
+                              <TableCell className="text-right">{(a.responses_count ?? 0).toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right">{fmtDuration(a.median_response_seconds ?? a.avg_response_seconds)}</TableCell>
+                            </TableRow>
+                          ))}
+                          {(data.messages_out_unattributed ?? 0) > 0 && (
+                            <TableRow className="opacity-70">
+                              <TableCell className="font-medium">Sem atendente identificado</TableCell>
+                              <TableCell className="text-right">{(data.messages_out_unattributed ?? 0).toLocaleString("pt-BR")}</TableCell>
+                              <TableCell className="text-right" colSpan={5}>
+                                <span className="text-xs text-zapp-text-muted">
+                                  envios feitos direto pelo celular/WhatsApp Web ou importados do histórico
+                                </span>
+                              </TableCell>
+                            </TableRow>
+                          )}
+                        </>
                       )}
                     </TableBody>
                   </Table>
