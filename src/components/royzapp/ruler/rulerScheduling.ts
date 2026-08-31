@@ -59,14 +59,25 @@ export function buildTouchRows(params: {
     if (needed > shiftDays) shiftDays = needed;
   }
 
+  // Garante um dia distinto por toque: se o ajuste de fim de semana/feriado
+  // empurrar dois toques para o mesmo dia, o seguinte vai para o próximo dia útil.
+  let lastKey = "";
+
   return params.steps.map((step, idx) => {
-    const when = computeTouchDate(
+    let when = computeTouchDate(
       params.startDate,
       step.offset_days + shiftDays,
       params.dueTime,
       params.skipWeekends,
     );
+    const dayKey = (d: Date) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+    while (lastKey && dayKey(when) <= lastKey === false ? false : lastKey && dayKey(when) === lastKey) {
+      when = new Date(when.getTime() + 86_400_000);
+      if (params.skipWeekends) when = shiftToWeekday(when);
+    }
+    lastKey = dayKey(when);
     const isTask = !!step.is_task;
+
     return {
       enrollment_id: params.enrollmentId,
       account_id: params.accountId,
