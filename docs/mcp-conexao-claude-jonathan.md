@@ -1,63 +1,57 @@
-# Conectar o Claude Desktop do Jonathan ao ROY (MCP)
+# Conectar o Claude Desktop ao ROY (MCP)
 
-> Passo a passo simples. Se alguma tela não aparecer exatamente igual, procure os mesmos nomes em inglês — o ROY está em português, mas o Lovable/Claude podem mostrar labels em inglês.
+> Caminho no ROY: **Configurações → Integrações → Assistente IA no Claude**
 
-## 1. Publique o ROY
+Cada gestor conecta o seu próprio Claude Desktop usando a conta do ROY. O Claude enxerga apenas os dados que o usuário já tem permissão no sistema.
 
-Sem o publish, o endpoint MCP não fica no ar.
+## O que dá para fazer
 
-- No editor do Lovable, clique no **ícone de publicar** (canto superior direito, símbolo de globo/aviao de papel).
-- Aguarde o build terminar.
+- Consultar ligações da 3C Plus (`telephony_calls`)
+- Ver pipeline e negócios (`sales_deals`)
+- Analisar metas e comissões (`sales_goals_commissions`)
+- Ler conversas do RoyZapp (`zapp_conversations`)
+- Ver mensagens de uma conversa do RoyZapp (`zapp_messages`)
 
-## 2. Pegue o link MCP do app
+Tudo é **somente leitura** e respeita as permissões do usuário conectado.
 
-- No editor do ROY, abra **Mais → Integrações de Agente** (`More → Agent integrations`).
-- Procure o card **"Seu link MCP"** (`Your MCP link`).
-- Clique em copiar. O link termina com `/functions/v1/mcp`.
+## Passo a passo simples
 
-Se o card não aparecer, republique o app e espere o build.
+1. **Abra no ROY**
+   - Vá em **Configurações → Integrações → Assistente IA no Claude**.
 
-## 3. Configure no Claude Desktop
+2. **Copie o link MCP**
+   - Clique em **Copiar link**. O link termina com `/functions/v1/mcp`.
+   - Se o link estiver vazio, o app ainda precisa ser publicado.
 
-1. Abra o **Claude Desktop**.
-2. Vá em **Configurações → Desenvolvedor → Editar configuração** (`Settings → Developer → Edit config`).
-3. Isso abre o arquivo `claude_desktop_config.json`.
-4. Adicione um servidor MCP com o link copiado:
+3. **Configure no Claude Desktop**
+   - Abra o Claude Desktop.
+   - Vá em **Settings → Developer → Edit config**.
+   - Cole o link copiado dentro do arquivo `claude_desktop_config.json`:
 
-```json
-{
-  "mcpServers": {
-    "roy-eternum": {
-      "url": "COLE_AQUI_O_LINK_MCP_COPIADO_NO_PASSO_2"
-    }
-  }
-}
-```
+     ```json
+     {
+       "mcpServers": {
+         "roy-eternum": {
+           "url": "COLE_AQUI_O_LINK_MCP_COPIADO_NO_PASSO_2"
+         }
+       }
+     }
+     ```
 
-5. Salve o arquivo.
-6. Feche e abra novamente o Claude Desktop.
+4. **Reinicie o Claude Desktop**
+   - Feche e abra novamente.
 
-## 4. Faça login com a conta do Jonathan
+5. **Autorize**
+   - Quando o Claude pedir, faça login com a conta do ROY.
+   - Na tela de consentimento, clique em **Autorizar**.
 
-- No Claude, quando ele tentar usar as ferramentas do ROY, uma janela de login vai aparecer.
-- Entre com a conta do Jonathan no ROY.
-- Na tela de consentimento que aparecer (`Conectar [aplicativo] ao ROY`), clique em **Autorizar**.
-
-Pronto. O Claude do Jonathan agora pode consultar:
-
-- Ligações da 3C Plus (`telephony_calls`)
-- Pipeline e negócios (`sales_deals`)
-- Metas e comissões (`sales_goals_commissions`)
-- Conversas do RoyZapp (`zapp_conversations`)
-- Mensagens de uma conversa do RoyZapp (`zapp_messages`)
-
-Tudo respeita as permissões dele no ROY — cada gestor que quiser conectar faz o mesmo com a própria conta.
+Pronto. O Claude agora pode responder perguntas sobre os dados do ROY usando a sua conta.
 
 ## Problemas comuns
 
 | Sintoma | O que fazer |
 |---|---|
-| Card MCP não aparece | Republique o app e aguarde o build. |
-| Claude diz que não achou ferramentas | Feche e abra o Claude Desktop. |
-| Login recusado / sem permissão | Confirme que a conta do Jonathan existe no ROY e tem acesso às áreas de Vendas/RoyZapp. |
+| Link MCP vazio | Publique o ROY e aguarde o build terminar. |
+| Claude não acha as ferramentas | Feche e abra o Claude Desktop. |
+| Login recusado | Confirme que a conta existe no ROY e tem acesso às áreas de Vendas/RoyZapp. |
 | Link não responde | Verifique se o app foi publicado depois que o MCP foi ativado. |

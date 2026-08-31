@@ -912,6 +912,11 @@ export function IntegrationsContent() {
         <TabsContent value="gdrive" className="space-y-4">
           <GoogleDriveCard />
         </TabsContent>
+
+        {/* MCP / Claude Tab */}
+        <TabsContent value="mcp" className="space-y-4">
+          <McpConnectionTab />
+        </TabsContent>
       </Tabs>
     </div>
   );
