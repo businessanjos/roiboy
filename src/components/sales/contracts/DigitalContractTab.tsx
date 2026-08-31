@@ -648,6 +648,8 @@ export const DigitalContractTab = ({
     setSaving(true);
     try {
       const templatePayload = {
+        ...(dealId ? { deal_id: dealId } : {}),
+        payment_method: effectivePaymentMethod,
         template_id: templateId,
         product_id: productId,
         template_html: templateHtml,
