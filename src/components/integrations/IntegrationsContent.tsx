@@ -10,7 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot } from "lucide-react";
+import { McpConnectionTab } from "./McpConnectionTab";
 import {
   Dialog,
   DialogContent,
@@ -41,6 +42,7 @@ const integrations_list = [
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
+  { id: "mcp", name: "Assistente IA no Claude", description: "Conecte o Claude Desktop aos dados do ROY", icon: Bot },
 ];
 
 export function IntegrationsContent() {
@@ -493,6 +495,10 @@ export function IntegrationsContent() {
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
             </TabsTrigger>
+            <TabsTrigger value="mcp" className="gap-2 px-3 py-2">
+              <Bot className="h-4 w-4" />
+              <span>Assistente IA</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -911,6 +917,11 @@ export function IntegrationsContent() {
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">
           <GoogleDriveCard />
+        </TabsContent>
+
+        {/* MCP / Claude Tab */}
+        <TabsContent value="mcp" className="space-y-4">
+          <McpConnectionTab />
         </TabsContent>
       </Tabs>
     </div>
