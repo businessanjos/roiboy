@@ -349,17 +349,54 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               ))}
             </SelectContent>
           </Select>
-          <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+          <Select
+            value={period}
+            onValueChange={(v) => {
+              setPeriod(v as PeriodKey);
+              if (v === "custom") setCustomOpen(true);
+            }}
+          >
             <SelectTrigger className="w-[160px] bg-zapp-panel border-zapp-border text-zapp-text">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
               <SelectItem value="current_month">Mês atual</SelectItem>
               <SelectItem value="last_7">Últimos 7 dias</SelectItem>
               <SelectItem value="last_30">Últimos 30 dias</SelectItem>
               <SelectItem value="last_month">Mês passado</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
             </SelectContent>
           </Select>
+          {period === "custom" && (
+            <Popover open={customOpen} onOpenChange={setCustomOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" className="gap-2 bg-zapp-panel border-zapp-border text-zapp-text">
+                  <CalendarDays className="h-4 w-4" />
+                  {customRange.from
+                    ? `${format(customRange.from, "dd/MM/yy", { locale: ptBR })} - ${format(customRange.to ?? customRange.from, "dd/MM/yy", { locale: ptBR })}`
+                    : "Escolher datas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  locale={ptBR}
+                  numberOfMonths={2}
+                  defaultMonth={customRange.from}
+                  selected={{ from: customRange.from, to: customRange.to }}
+                  onSelect={(r: any) => {
+                    setCustomRange({ from: r?.from, to: r?.to });
+                    if (r?.from && r?.to) setCustomOpen(false);
+                  }}
+                  disabled={{ after: new Date() }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
+
           {integrationId && (
             <Select value={scope} onValueChange={(v) => setScope(v as any)}>
               <SelectTrigger className="w-[210px] bg-zapp-panel border-zapp-border text-zapp-text">
