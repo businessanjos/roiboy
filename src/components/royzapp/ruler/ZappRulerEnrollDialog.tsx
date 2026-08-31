@@ -64,6 +64,8 @@ export function ZappRulerEnrollDialog({
   const [templateId, setTemplateId] = useState<string>("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueTime, setDueTime] = useState("09:00");
+  /** Horário é opcional: sem valor, usamos 09:00 como padrão. */
+  const effectiveDueTime = dueTime?.trim() ? dueTime : "09:00";
   const [autoSend, setAutoSend] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(true);
   const [skipWeekends, setSkipWeekends] = useState(true);
@@ -230,7 +232,7 @@ export function ZappRulerEnrollDialog({
           contact_phone: phone,
           assigned_to: assigneeId || currentUser.id,
           start_date: startDate,
-          due_time: dueTime,
+          due_time: effectiveDueTime,
           auto_send: autoSend,
           send_window_start: template.send_window_start,
           send_window_end: template.send_window_end,
@@ -247,7 +249,7 @@ export function ZappRulerEnrollDialog({
         accountId: currentUser.account_id,
         steps: template.steps,
         startDate,
-        dueTime,
+        dueTime: effectiveDueTime,
         autoSend,
         skipWeekends,
       });
@@ -271,7 +273,7 @@ export function ZappRulerEnrollDialog({
           const d = new Date(r.scheduled_at);
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
         })(),
-        due_time: dueTime,
+        due_time: effectiveDueTime,
         priority: "medium" as const,
         status: "pending" as const,
         assigned_to: responsibleId,
@@ -290,7 +292,7 @@ export function ZappRulerEnrollDialog({
           deal_id: effectiveDealId,
           type: "note",
           title: `Régua de follow up: ${template.name}`,
-          content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")} às ${dueTime}. Responsável: ${
+          content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")} às ${effectiveDueTime}. Responsável: ${
             assigneeOptions.find((u) => u.id === responsibleId)?.name || "—"
           }.`,
           user_id: currentUser.id,
@@ -387,7 +389,7 @@ export function ZappRulerEnrollDialog({
                 <Input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
               </div>
               <div className="space-y-2">
-                <Label>Horário</Label>
+                <Label>Horário <span className="text-xs font-normal text-muted-foreground">(opcional)</span></Label>
                 <Input type="time" value={dueTime} onChange={(e) => setDueTime(e.target.value)} />
               </div>
             </div>
@@ -424,7 +426,7 @@ export function ZappRulerEnrollDialog({
               <ScrollArea className="h-48 rounded-lg border">
                 <div className="space-y-3 p-3 pr-4">
                   {template.steps.map((s, idx) => {
-                    const touchDate = computeTouchDate(startDate, s.offset_days, dueTime, skipWeekends);
+                    const touchDate = computeTouchDate(startDate, s.offset_days, effectiveDueTime, skipWeekends);
                     const holiday = getHolidayName(touchDate);
                     return (
                     <div key={idx} className="space-y-1">
