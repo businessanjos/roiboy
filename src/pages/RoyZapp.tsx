@@ -130,6 +130,9 @@ export default function RoyZapp() {
   // Without this, switching from CS to another sector updated the URL/shell,
   // but the RoyZapp content could remain mounted with the CS theme and data.
   useEffect(() => {
+    // Link do menu lateral (ex.: ?view=analytics) não carrega o setor. Nesse caso
+    // mantemos o setor já escolhido em vez de voltar ao seletor.
+    if (!sectorFromUrl) return;
     setSelectedSectorId(sectorFromUrl);
     setSelectedIntegrationId(integrationFromUrl || undefined);
   }, [sectorFromUrl, integrationFromUrl]);
