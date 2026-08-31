@@ -589,7 +589,21 @@ export const DigitalContractTab = ({
     };
   }, [productId]);
 
+  // Forma de pagamento efetiva: o preset escolhido no wizard é a fonte de
+  // verdade; só cai no campo manual quando não houver preset.
+  const effectivePaymentMethod = useMemo(() => {
+    const v: any = resolvedPlaceholderValues ?? {};
+    return (
+      getPaymentPresetLabel(v.FORMA_PAGAMENTO_RYKAS) ||
+      (typeof v.FORMA_PAGAMENTO_RYKAS_LABEL === "string" && v.FORMA_PAGAMENTO_RYKAS_LABEL) ||
+      (typeof v.FORMA_PAGAMENTO === "string" && v.FORMA_PAGAMENTO) ||
+      data.payment_method ||
+      null
+    );
+  }, [resolvedPlaceholderValues, data.payment_method]);
+
   // Autosave (debounced) — persiste alterações dos campos do wizard sem
+
   // exigir clique em "Salvar". Só roda quando o contrato já existe e
   // está em rascunho (não toca em contratos enviados/assinados).
   const autosaveSkipRef = useRef(true);
