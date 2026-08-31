@@ -28619,6 +28619,7 @@ export type Database = {
       }
       zapp_productivity_metrics: {
         Args: {
+          _agent_user_id?: string
           _from: string
           _include_groups?: boolean
           _integration_id?: string
