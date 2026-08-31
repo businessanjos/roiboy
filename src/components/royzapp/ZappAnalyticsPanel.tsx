@@ -59,6 +59,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -177,12 +178,14 @@ function Kpi({
   value,
   hint,
   tone,
+  onClick,
 }: {
   icon: typeof MessageSquare;
   label: string;
   value: string;
   hint?: string;
   tone?: "danger" | "warning" | "success";
+  onClick?: () => void;
 }) {
   const toneClass =
     tone === "danger"
@@ -193,7 +196,16 @@ function Kpi({
           ? "text-success"
           : "text-zapp-text";
   return (
-    <Card className="bg-zapp-panel border-zapp-border">
+    <Card
+      className={cn(
+        "bg-zapp-panel border-zapp-border",
+        onClick && "cursor-pointer transition-colors hover:border-zapp-accent/60 hover:bg-zapp-bg/40"
+      )}
+      onClick={onClick}
+      role={onClick ? "button" : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); onClick(); } } : undefined}
+    >
       <CardContent className="p-4">
         <div className="flex items-start gap-3">
           <div className="p-2 rounded-lg bg-zapp-bg shrink-0">
@@ -203,12 +215,14 @@ function Kpi({
             <p className="text-[11px] uppercase tracking-wide text-zapp-text-muted font-medium">{label}</p>
             <p className={cn("text-2xl font-semibold leading-tight", toneClass)}>{value}</p>
             {hint && <p className="text-[11px] text-zapp-text-muted mt-0.5">{hint}</p>}
+            {onClick && <p className="text-[11px] text-zapp-accent mt-1">Clique para ver quem atendeu quem</p>}
           </div>
         </div>
       </CardContent>
     </Card>
   );
 }
+
 
 export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: string | null; integrationId?: string | null }) {
   const { currentUser } = useCurrentUser();
@@ -240,7 +254,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [includeGroups, setIncludeGroups] = useState(false);
   const [agentId, setAgentId] = useState<string>("all");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
 
   const range = useMemo(
     () => periodRange(period, customRange),
@@ -551,13 +567,16 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 value={(data.contacts_reached_by_team ?? 0).toLocaleString("pt-BR")}
                 hint={`contatos distintos que receberam ao menos uma mensagem nossa no período · ${(data.clients_reached_by_team ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
                 tone="success"
+                onClick={() => setContactsDialog("outbound")}
               />
               <Kpi
                 icon={Inbox}
                 label="Contatos que nos chamaram"
                 value={(data.contacts_that_messaged ?? 0).toLocaleString("pt-BR")}
                 hint={`contatos distintos que escreveram no período · ${(data.clients_that_messaged ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
+                onClick={() => setContactsDialog("inbound")}
               />
+
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
               <Kpi
                 icon={Clock}
@@ -838,7 +857,23 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             </Card>
           </>
         ) : null}
+
+        {contactsDialog && (
+          <ZappContactsBreakdownDialog
+            open={!!contactsDialog}
+            onOpenChange={(o) => !o && setContactsDialog(null)}
+            direction={contactsDialog}
+            sectorId={effectiveSector}
+            integrationId={effectiveIntegration}
+            includeGroups={includeGroups}
+            agentUserId={effectiveAgent}
+            from={range.from}
+            to={range.to}
+            periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
+          />
+        )}
       </div>
     </ScrollArea>
   );
 }
+
