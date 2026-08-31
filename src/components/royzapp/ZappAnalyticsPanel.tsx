@@ -234,6 +234,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [customOpen, setCustomOpen] = useState(false);
   const [scope, setScope] = useState<"instance" | "sector">(integrationId ? "instance" : "sector");
   const [includeGroups, setIncludeGroups] = useState(false);
+  const [agentId, setAgentId] = useState<string>("all");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
@@ -243,6 +244,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   );
   const effectiveSector = sector === "all" ? null : sector;
   const effectiveIntegration = scope === "instance" ? (integrationId || null) : null;
+  const effectiveAgent = agentId === "all" ? null : agentId;
 
   const { data, isLoading, isFetching, refetch, error } = useQuery({
     queryKey: [
@@ -253,6 +255,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
       range.to.toISOString().slice(0, 13),
       effectiveIntegration,
       includeGroups,
+      effectiveAgent,
     ],
 
     enabled: allowed,
@@ -264,11 +267,46 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
         _to: range.to.toISOString(),
         _integration_id: effectiveIntegration,
         _include_groups: includeGroups,
+        _agent_user_id: effectiveAgent,
       });
       if (error) throw error;
       return data as Metrics;
     },
   });
+
+  // Lista de pessoas: pega os atendentes do resultado sem filtro (por área/período)
+  const { data: agentOptions } = useQuery({
+    queryKey: [
+      "zapp-productivity-agents",
+      effectiveSector,
+      period,
+      range.from.toISOString().slice(0, 13),
+      range.to.toISOString().slice(0, 13),
+      effectiveIntegration,
+      includeGroups,
+    ],
+    enabled: allowed,
+    staleTime: 300_000,
+    queryFn: async (): Promise<{ id: string; name: string }[]> => {
+      const { data, error } = await (supabase as any).rpc("zapp_productivity_metrics", {
+        _sector_id: effectiveSector,
+        _from: range.from.toISOString(),
+        _to: range.to.toISOString(),
+        _integration_id: effectiveIntegration,
+        _include_groups: includeGroups,
+        _agent_user_id: null,
+      });
+      if (error) throw error;
+      return ((data as Metrics)?.by_agent || [])
+        .filter((a) => !!a.user_id)
+        .map((a) => ({ id: a.user_id as string, name: a.name }))
+        .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+    },
+  });
+
+  const selectedAgentName =
+    agentOptions?.find((a) => a.id === agentId)?.name ?? null;
+
 
   if (!allowed) {
     return (
