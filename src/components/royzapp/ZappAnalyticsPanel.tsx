@@ -564,13 +564,16 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 value={(data.contacts_reached_by_team ?? 0).toLocaleString("pt-BR")}
                 hint={`contatos distintos que receberam ao menos uma mensagem nossa no período · ${(data.clients_reached_by_team ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
                 tone="success"
+                onClick={() => setContactsDialog("outbound")}
               />
               <Kpi
                 icon={Inbox}
                 label="Contatos que nos chamaram"
                 value={(data.contacts_that_messaged ?? 0).toLocaleString("pt-BR")}
                 hint={`contatos distintos que escreveram no período · ${(data.clients_that_messaged ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
+                onClick={() => setContactsDialog("inbound")}
               />
+
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
               <Kpi
                 icon={Clock}
