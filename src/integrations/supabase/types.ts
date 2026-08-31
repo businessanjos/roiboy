@@ -27017,6 +27017,33 @@ export type Database = {
           },
         ]
       }
+      zapp_internal_contacts: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          label: string | null
+          phone_e164: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          phone_e164: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          label?: string | null
+          phone_e164?: string
+        }
+        Relationships: []
+      }
       zapp_messages: {
         Row: {
           account_id: string
@@ -28610,6 +28637,10 @@ export type Database = {
       zapp_can_write_any: { Args: { _auth_user_id: string }; Returns: boolean }
       zapp_can_write_sector: {
         Args: { _auth_user_id: string; _sector_id: string }
+        Returns: boolean
+      }
+      zapp_is_internal_contact: {
+        Args: { _account: string; _phone: string }
         Returns: boolean
       }
       zapp_is_sales_only_user: { Args: { _user_id: string }; Returns: boolean }
