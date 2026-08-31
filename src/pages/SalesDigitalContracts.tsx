@@ -33,6 +33,8 @@ interface DigitalContractListItem {
   id: string;
   deal_id: string | null;
   client_id: string | null;
+  product_id: string | null;
+  payment_method: string | null;
   contract_number: string | null;
   status: string;
   client_name: string;
@@ -44,6 +46,9 @@ interface DigitalContractListItem {
   updated_at: string;
   created_at: string;
 }
+
+const shortDealId = (id: string) => id.slice(0, 8).toUpperCase();
+
 
 interface DealOption {
   id: string;
