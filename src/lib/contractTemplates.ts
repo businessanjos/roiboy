@@ -539,12 +539,14 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
   const rykas = out.FORMA_PAGAMENTO_RYKAS;
   if (rykas && RYKAS_PAYMENT_PRESETS[String(rykas)]) {
     const preset = RYKAS_PAYMENT_PRESETS[String(rykas)];
-    const explicitTotal = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
-    const explicitTotalNum = parseMoneyLike(explicitTotal);
-    const finalTotal = explicitTotalNum ?? preset.total;
+    // A condição de pagamento escolhida é a fonte de verdade do valor total:
+    // o valor do negócio (deal.value) não pode sobrescrever o preset.
+    const finalTotal = preset.total;
+    out.TOTAL_VALUE = finalTotal;
+    out.VALOR_TOTAL = finalTotal;
     if (!out.FORMA_PAGAMENTO_RYKAS_LABEL) out.FORMA_PAGAMENTO_RYKAS_LABEL = preset.label;
-    if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(finalTotal);
-    if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = explicitTotalNum === null ? preset.totalWords : formatPlainBRLWords(finalTotal);
+    out.VALOR_TOTAL_RYKAS = formatBRL(finalTotal);
+    out.VALOR_TOTAL_RYKAS_EXTENSO = preset.totalWords;
     if (!out.__MODALIDADE_PAGAMENTO_UI__) {
       const key = String(rykas).toUpperCase();
       out.__MODALIDADE_PAGAMENTO_UI__ = key.includes("CHEQUE")
