@@ -71,6 +71,8 @@ function lazyRetry<P extends object>(
 
 // Eager loaded pages (critical for UX - auth, initial route and 404)
 import Auth from "./pages/Auth";
+import OAuthConsent from "./pages/OAuthConsent";
+
 import Sectors from "./pages/Sectors";
 import NotFound from "./pages/NotFound";
 import SalesTeam from "./pages/SalesTeam";
@@ -261,6 +263,8 @@ const App = () => (
                             <Route path="/" element={<Navigate to="/setores" replace />} />
                           
                           <Route path="/auth" element={<Auth />} />
+                          <Route path="/.lovable/oauth/consent" element={<OAuthConsent />} />
+
                           <Route path="/f/:formId" element={<PublicForm />} />
                           <Route path="/c/:slug" element={<PublicCampaignForm />} />
                           <Route path="/rsvp/:token" element={<PublicRSVP />} />

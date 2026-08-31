@@ -1,0 +1,298 @@
+{
+  "version": 1,
+  "sdk_version": "0.28.0",
+  "path": "/functions/v1/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://mtzoavtbtqflufyccern.supabase.co/auth/v1",
+    "accepted_audiences": [
+      "authenticated"
+    ]
+  },
+  "mcp": {
+    "server": {
+      "name": "roy-eternum",
+      "version": "0.1.0",
+      "title": "ROY ETERNUM"
+    },
+    "tools": [
+      {
+        "name": "telephony_calls",
+        "title": "Ligações 3C Plus",
+        "description": "Lista e resume as ligações da 3C Plus (volume, duração, status, qualificação) por período, vendedor, campanha ou telefone.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "agent_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Filtra por nome do vendedor/agente (busca parcial). Use null para todos."
+            },
+            "campaign_name": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Filtra por campanha (busca parcial). Use null para todas."
+            },
+            "direction": {
+              "type": "string",
+              "enum": [
+                "inbound",
+                "outbound",
+                "all"
+              ],
+              "description": "Direção das ligações."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Quantidade máxima de ligações detalhadas retornadas (ex.: 100)."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "agent_name",
+            "campaign_name",
+            "direction",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sales_deals",
+        "title": "Negócios do pipeline",
+        "description": "Lista negócios do pipeline comercial com estágio, valor, responsável, status (aberto/ganho/perdido) e motivo de perda, com resumo agregado.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data inicial de criação (YYYY-MM-DD). null = sem limite."
+            },
+            "end_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data final de criação (YYYY-MM-DD). null = sem limite."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "open",
+                "won",
+                "lost",
+                "all"
+              ],
+              "description": "Status dos negócios."
+            },
+            "search": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Busca parcial no título ou nome do contato. null = sem busca."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Máximo de negócios retornados (ex.: 100)."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "status",
+            "search",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "sales_goals_commissions",
+        "title": "Metas e comissões",
+        "description": "Retorna metas comerciais do período e os lançamentos de comissão por negócio (valor, percentual, status de aprovação e pagamento).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "include_goals": {
+              "type": "boolean",
+              "description": "Incluir metas de vendas do período."
+            },
+            "include_commissions": {
+              "type": "boolean",
+              "description": "Incluir lançamentos de comissão do período."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Máximo de registros por bloco (ex.: 200)."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "include_goals",
+            "include_commissions",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "zapp_conversations",
+        "title": "Conversas do RoyZapp",
+        "description": "Lista conversas do RoyZapp (WhatsApp) com contato, setor, última mensagem e volume, filtrando por período ou busca.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data inicial da última mensagem (YYYY-MM-DD). null = sem limite."
+            },
+            "end_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data final da última mensagem (YYYY-MM-DD). null = sem limite."
+            },
+            "search": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Busca parcial por nome do contato ou telefone. null = sem busca."
+            },
+            "include_groups": {
+              "type": "boolean",
+              "description": "Incluir grupos além de conversas individuais."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Máximo de conversas retornadas (ex.: 50)."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "search",
+            "include_groups",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "zapp_messages",
+        "title": "Mensagens de uma conversa",
+        "description": "Retorna as mensagens de uma conversa do RoyZapp (texto e transcrição de áudio) em ordem cronológica, para análise de atendimento.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "conversation_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID da conversa (obtido em zapp_conversations)."
+            },
+            "start_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data inicial (YYYY-MM-DD). null = sem limite."
+            },
+            "end_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Data final (YYYY-MM-DD). null = sem limite."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 500,
+              "description": "Máximo de mensagens retornadas (ex.: 200)."
+            }
+          },
+          "required": [
+            "conversation_id",
+            "start_date",
+            "end_date",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}
