@@ -8,7 +8,7 @@ interface AuthContextType {
   session: Session | null;
   loading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
-  signInWithGoogle: () => Promise<{ error?: Error; redirected?: boolean }>;
+  signInWithGoogle: (redirectPath?: string) => Promise<{ error?: Error; redirected?: boolean }>;
   signUp: (email: string, password: string, name: string, phone?: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<{ error: Error | null }>;
