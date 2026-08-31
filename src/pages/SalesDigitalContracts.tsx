@@ -211,11 +211,20 @@ export default function SalesDigitalContracts() {
     if (!term) return contracts;
 
     return contracts.filter((contract) =>
-      [contract.contract_number, contract.client_name, statusLabels[contract.status] ?? contract.status]
+      [
+        contract.contract_number,
+        contract.client_name,
+        statusLabels[contract.status] ?? contract.status,
+        contract.deal_id,
+        contract.deal_id ? shortDealId(contract.deal_id) : null,
+        contract.deal_id ? dealTitleMap[contract.deal_id] : null,
+        contract.product_id ? productMap[contract.product_id]?.name : null,
+        contract.payment_method,
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term)),
     );
-  }, [contracts, search]);
+  }, [contracts, search, dealTitleMap, productMap]);
 
   const totals = useMemo(() => {
     return contracts.reduce(
