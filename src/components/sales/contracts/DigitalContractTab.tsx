@@ -29,7 +29,7 @@ import { ContractDocument, type DigitalContractData, type Deliverable } from "./
 import { ContractEditor } from "./ContractEditor";
 import { TemplatedContractPreview } from "./TemplatedContractSection";
 import { ContractWizard } from "./ContractWizard";
-import { mergeContractorPlaceholders, type TemplateVariableDef } from "@/lib/contractTemplates";
+import { mergeContractorPlaceholders, getPaymentPresetLabel, type TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { buildPublicContractUrl } from "@/lib/publicLink";
