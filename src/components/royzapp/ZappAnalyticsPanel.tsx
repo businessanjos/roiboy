@@ -545,6 +545,19 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 }
               />
               <Kpi icon={MessageSquare} label="Conversas ativas" value={data.active_conversations.toLocaleString("pt-BR")} hint={`com mensagem no período · ${data.total_conversations.toLocaleString("pt-BR")} conversas no escopo`} />
+              <Kpi
+                icon={Send}
+                label="Contatos que o time chamou"
+                value={(data.contacts_reached_by_team ?? 0).toLocaleString("pt-BR")}
+                hint={`contatos distintos que receberam ao menos uma mensagem nossa no período · ${(data.clients_reached_by_team ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
+                tone="success"
+              />
+              <Kpi
+                icon={Inbox}
+                label="Contatos que nos chamaram"
+                value={(data.contacts_that_messaged ?? 0).toLocaleString("pt-BR")}
+                hint={`contatos distintos que escreveram no período · ${(data.clients_that_messaged ?? 0).toLocaleString("pt-BR")} são clientes cadastrados`}
+              />
               <Kpi icon={TrendingUp} label="Engajamento" value={engagement === null ? "—" : `${engagement}%`} hint="conversas com resposta do cliente" tone={engagement !== null && engagement < 50 ? "warning" : "success"} />
               <Kpi
                 icon={Clock}
