@@ -452,7 +452,21 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               </SelectContent>
             </Select>
           )}
+          <Select value={agentId} onValueChange={setAgentId}>
+            <SelectTrigger className="w-[200px] bg-zapp-panel border-zapp-border text-zapp-text">
+              <SelectValue placeholder="Todas as pessoas" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas as pessoas</SelectItem>
+              {(agentOptions || []).map((a) => (
+                <SelectItem key={a.id} value={a.id}>
+                  {a.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <Select value={includeGroups ? "yes" : "no"} onValueChange={(v) => setIncludeGroups(v === "yes")}>
+
             <SelectTrigger className="w-[175px] bg-zapp-panel border-zapp-border text-zapp-text">
               <SelectValue />
             </SelectTrigger>
