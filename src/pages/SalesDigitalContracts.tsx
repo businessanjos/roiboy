@@ -702,6 +702,43 @@ export default function SalesDigitalContracts() {
     </div>
   );
 }
+
+function DealIdBadge({ dealId, title }: { dealId: string | null; title?: string | null }) {
+  if (!dealId) {
+    return <span className="text-xs text-muted-foreground">Sem negócio</span>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(dealId);
+        toast.success("ID do negócio copiado");
+      }}
+      className="text-left"
+      title={`${title ?? "Negócio"} — clique para copiar o ID completo`}
+    >
+      <Badge variant="outline" className="font-mono text-[10px]">
+        #{shortDealId(dealId)}
+      </Badge>
+      {title ? <p className="mt-0.5 max-w-[180px] truncate text-[11px] text-muted-foreground">{title}</p> : null}
+    </button>
+  );
+}
+
+function ProductBadge({ product }: { product?: { name: string; color: string | null } }) {
+  if (!product) return <span className="text-xs text-muted-foreground">—</span>;
+  const color = product.color || "#6b7280";
+  return (
+    <Badge
+      variant="outline"
+      className="text-[10px]"
+      style={{ borderColor: color, color, backgroundColor: `${color}1a` }}
+    >
+      {product.name}
+    </Badge>
+  );
+}
+
 function ContractRowActions({
   contract,
   onCopy,
