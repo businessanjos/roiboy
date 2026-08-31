@@ -484,6 +484,14 @@ export default function RoyZapp() {
     }
   }, [activeView, viewFromUrl, replaceSearchParams]);
 
+  // Setor ativo sempre refletido na URL (links do menu não trazem ?sector=).
+  useEffect(() => {
+    if (!selectedSectorId || sectorFromUrl === selectedSectorId) return;
+    replaceSearchParams((next) => next.set("sector", selectedSectorId));
+  }, [selectedSectorId, sectorFromUrl, replaceSearchParams]);
+
+
+
   // Troca de menu: estado e URL sempre juntos, na mesma ação do usuário.
   const changeView = useCallback((view: ZappView) => {
     lastHandledViewParamRef.current = view;
