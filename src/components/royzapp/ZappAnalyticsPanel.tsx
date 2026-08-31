@@ -343,6 +343,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
           period,
           period_from: range.from.toISOString(),
           period_to: range.to.toISOString(),
+          agent_filter: selectedAgentName,
+
 
           metrics: {
             messages_in: data.messages_in,
