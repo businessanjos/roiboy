@@ -528,6 +528,14 @@ const RYKAS_PAYMENT_PRESETS: Record<string, { label: string; total: number; tota
   },
 };
 
+/** Rótulo humano da condição de pagamento escolhida (preset), se houver. */
+export const getPaymentPresetLabel = (key: any): string | null => {
+  const k = String(key ?? "").trim();
+  if (!k) return null;
+  return RYKAS_PAYMENT_PRESETS[k]?.label ?? null;
+};
+
+
 const formatPlainBRLWords = (value: any): string => {
   const num = parseMoneyLike(value);
   return num === null ? "" : numberToBRLExtenso(num);

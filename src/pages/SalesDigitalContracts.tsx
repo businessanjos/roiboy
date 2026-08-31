@@ -33,6 +33,8 @@ interface DigitalContractListItem {
   id: string;
   deal_id: string | null;
   client_id: string | null;
+  product_id: string | null;
+  payment_method: string | null;
   contract_number: string | null;
   status: string;
   client_name: string;
@@ -44,6 +46,9 @@ interface DigitalContractListItem {
   updated_at: string;
   created_at: string;
 }
+
+const shortDealId = (id: string) => id.slice(0, 8).toUpperCase();
+
 
 interface DealOption {
   id: string;
@@ -105,6 +110,9 @@ export default function SalesDigitalContracts() {
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [editorDeal, setEditorDeal] = useState<{ id: string | null; clientId: string | null; clientName: string; value: number | null; contractId?: string | null } | null>(null);
 
+  const [productMap, setProductMap] = useState<Record<string, { name: string; color: string | null }>>({});
+  const [dealTitleMap, setDealTitleMap] = useState<Record<string, string>>({});
+
   useEffect(() => {
     async function loadContracts() {
       if (!currentUser?.account_id) return;
@@ -114,13 +122,33 @@ export default function SalesDigitalContracts() {
         const { data, error } = await supabase
           .from("digital_contracts")
           .select(
-            "id, deal_id, client_id, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
+            "id, deal_id, client_id, product_id, payment_method, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
           )
           .eq("account_id", currentUser.account_id)
           .order("updated_at", { ascending: false });
 
         if (error) throw error;
-        setContracts((data ?? []) as DigitalContractListItem[]);
+        const rows = (data ?? []) as DigitalContractListItem[];
+        setContracts(rows);
+
+        const productIds = Array.from(new Set(rows.map((r) => r.product_id).filter(Boolean))) as string[];
+        const dealIds = Array.from(new Set(rows.map((r) => r.deal_id).filter(Boolean))) as string[];
+
+        const [{ data: products }, { data: dealRows }] = await Promise.all([
+          productIds.length
+            ? supabase.from("products").select("id, name, color").in("id", productIds)
+            : Promise.resolve({ data: [] as any[] }),
+          dealIds.length
+            ? supabase.from("deals").select("id, title").in("id", dealIds)
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        setProductMap(
+          Object.fromEntries(
+            (products ?? []).map((p: any) => [p.id, { name: p.name as string, color: (p.color as string) ?? null }]),
+          ),
+        );
+        setDealTitleMap(Object.fromEntries((dealRows ?? []).map((d: any) => [d.id, d.title as string])));
       } catch (error: unknown) {
         console.error("[SalesDigitalContracts] load error:", error);
         toast.error(error instanceof Error ? error.message : "Erro ao carregar contratos digitais");
@@ -131,6 +159,7 @@ export default function SalesDigitalContracts() {
 
     loadContracts();
   }, [currentUser?.account_id]);
+
 
   useEffect(() => {
     async function loadDealsForContract() {
@@ -182,11 +211,20 @@ export default function SalesDigitalContracts() {
     if (!term) return contracts;
 
     return contracts.filter((contract) =>
-      [contract.contract_number, contract.client_name, statusLabels[contract.status] ?? contract.status]
+      [
+        contract.contract_number,
+        contract.client_name,
+        statusLabels[contract.status] ?? contract.status,
+        contract.deal_id,
+        contract.deal_id ? shortDealId(contract.deal_id) : null,
+        contract.deal_id ? dealTitleMap[contract.deal_id] : null,
+        contract.product_id ? productMap[contract.product_id]?.name : null,
+        contract.payment_method,
+      ]
         .filter(Boolean)
         .some((value) => String(value).toLowerCase().includes(term)),
     );
-  }, [contracts, search]);
+  }, [contracts, search, dealTitleMap, productMap]);
 
   const totals = useMemo(() => {
     return contracts.reduce(
@@ -479,6 +517,13 @@ export default function SalesDigitalContracts() {
                       {statusLabels[contract.status] ?? contract.status}
                     </Badge>
                   </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <DealIdBadge dealId={contract.deal_id} title={contract.deal_id ? dealTitleMap[contract.deal_id] : null} />
+                    <ProductBadge product={contract.product_id ? productMap[contract.product_id] : undefined} />
+                    {contract.payment_method ? (
+                      <span className="text-[11px] text-muted-foreground truncate">{contract.payment_method}</span>
+                    ) : null}
+                  </div>
                   <div className="flex items-center justify-between gap-2">
                     <div className="text-sm font-semibold">{formatCurrency(contract.total_value)}</div>
                     <ContractRowActions
@@ -500,6 +545,9 @@ export default function SalesDigitalContracts() {
                   <TableRow>
                     <TableHead>Contrato</TableHead>
                     <TableHead>Cliente</TableHead>
+                    <TableHead>Negócio (ID)</TableHead>
+                    <TableHead>Produto</TableHead>
+                    <TableHead>Pagamento</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Valor</TableHead>
                     <TableHead>Atualizado</TableHead>
@@ -518,6 +566,20 @@ export default function SalesDigitalContracts() {
                         ) : null}
                       </TableCell>
                       <TableCell>{contract.client_name}</TableCell>
+                      <TableCell>
+                        <DealIdBadge
+                          dealId={contract.deal_id}
+                          title={contract.deal_id ? dealTitleMap[contract.deal_id] : null}
+                        />
+                      </TableCell>
+                      <TableCell>
+                        <ProductBadge product={contract.product_id ? productMap[contract.product_id] : undefined} />
+                      </TableCell>
+                      <TableCell className="max-w-[220px]">
+                        <span className="text-xs text-muted-foreground line-clamp-2">
+                          {contract.payment_method ?? "—"}
+                        </span>
+                      </TableCell>
                       <TableCell>
                         <Badge variant={statusVariants[contract.status] ?? "outline"}>
                           {statusLabels[contract.status] ?? contract.status}
@@ -640,6 +702,43 @@ export default function SalesDigitalContracts() {
     </div>
   );
 }
+
+function DealIdBadge({ dealId, title }: { dealId: string | null; title?: string | null }) {
+  if (!dealId) {
+    return <span className="text-xs text-muted-foreground">Sem negócio</span>;
+  }
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        navigator.clipboard.writeText(dealId);
+        toast.success("ID do negócio copiado");
+      }}
+      className="text-left"
+      title={`${title ?? "Negócio"} — clique para copiar o ID completo`}
+    >
+      <Badge variant="outline" className="font-mono text-[10px]">
+        #{shortDealId(dealId)}
+      </Badge>
+      {title ? <p className="mt-0.5 max-w-[180px] truncate text-[11px] text-muted-foreground">{title}</p> : null}
+    </button>
+  );
+}
+
+function ProductBadge({ product }: { product?: { name: string; color: string | null } }) {
+  if (!product) return <span className="text-xs text-muted-foreground">—</span>;
+  const color = product.color || "#6b7280";
+  return (
+    <Badge
+      variant="outline"
+      className="text-[10px]"
+      style={{ borderColor: color, color, backgroundColor: `${color}1a` }}
+    >
+      {product.name}
+    </Badge>
+  );
+}
+
 function ContractRowActions({
   contract,
   onCopy,

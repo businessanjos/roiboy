@@ -29,7 +29,7 @@ import { ContractDocument, type DigitalContractData, type Deliverable } from "./
 import { ContractEditor } from "./ContractEditor";
 import { TemplatedContractPreview } from "./TemplatedContractSection";
 import { ContractWizard } from "./ContractWizard";
-import { mergeContractorPlaceholders, type TemplateVariableDef } from "@/lib/contractTemplates";
+import { mergeContractorPlaceholders, getPaymentPresetLabel, type TemplateVariableDef } from "@/lib/contractTemplates";
 import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { buildPublicContractUrl } from "@/lib/publicLink";
@@ -589,7 +589,21 @@ export const DigitalContractTab = ({
     };
   }, [productId]);
 
+  // Forma de pagamento efetiva: o preset escolhido no wizard é a fonte de
+  // verdade; só cai no campo manual quando não houver preset.
+  const effectivePaymentMethod = useMemo(() => {
+    const v: any = resolvedPlaceholderValues ?? {};
+    return (
+      getPaymentPresetLabel(v.FORMA_PAGAMENTO_RYKAS) ||
+      (typeof v.FORMA_PAGAMENTO_RYKAS_LABEL === "string" && v.FORMA_PAGAMENTO_RYKAS_LABEL) ||
+      (typeof v.FORMA_PAGAMENTO === "string" && v.FORMA_PAGAMENTO) ||
+      data.payment_method ||
+      null
+    );
+  }, [resolvedPlaceholderValues, data.payment_method]);
+
   // Autosave (debounced) — persiste alterações dos campos do wizard sem
+
   // exigir clique em "Salvar". Só roda quando o contrato já existe e
   // está em rascunho (não toca em contratos enviados/assinados).
   const autosaveSkipRef = useRef(true);
@@ -607,6 +621,8 @@ export const DigitalContractTab = ({
           .from("digital_contracts")
           .update({
             ...dataToRow(data),
+            ...(dealId ? { deal_id: dealId } : {}),
+            payment_method: effectivePaymentMethod,
             template_id: templateId,
             product_id: productId,
             template_html: templateHtml,
@@ -619,7 +635,7 @@ export const DigitalContractTab = ({
       }
     }, 800);
     return () => clearTimeout(handle);
-  }, [contract?.id, contract?.status, data, templateId, productId, templateHtml, templateVariables, resolvedPlaceholderValues, loading, saving]);
+  }, [contract?.id, contract?.status, data, dealId, effectivePaymentMethod, templateId, productId, templateHtml, templateVariables, resolvedPlaceholderValues, loading, saving]);
 
   // Reset do guard de autosave quando o contrato carregado muda
   useEffect(() => {
@@ -632,6 +648,8 @@ export const DigitalContractTab = ({
     setSaving(true);
     try {
       const templatePayload = {
+        ...(dealId ? { deal_id: dealId } : {}),
+        payment_method: effectivePaymentMethod,
         template_id: templateId,
         product_id: productId,
         template_html: templateHtml,
@@ -715,6 +733,7 @@ export const DigitalContractTab = ({
         status: "draft",
         created_by: currentUser?.auth_user_id ?? null,
         ...dataToRow({ ...data, contract_number: newNumber }),
+        payment_method: effectivePaymentMethod,
         template_id: templateId,
         product_id: productId,
         template_html: templateHtml,
