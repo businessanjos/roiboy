@@ -1,5 +1,8 @@
 # Project Memory
 
+- [Servidor MCP do ROY](mem://integrations/mcp-server-pt) — MCP `roy-eternum` com OAuth por usuário (3C Plus, pipeline, metas/comissões, RoyZapp)
+
+
 ## Core
 - UI: Vertical sidebar for complex navigation (no horizontal tabs). Global header has avatar (name only), gear, notifications.
 - Data Access: Use `useCurrentUser` for user auth context (avoids RLS errors). Use `auth_user_id` for DB audit fields.
