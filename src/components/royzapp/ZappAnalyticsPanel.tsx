@@ -59,6 +59,7 @@ import {
   Users,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
