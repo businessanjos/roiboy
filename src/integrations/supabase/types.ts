@@ -28648,6 +28648,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      zapp_phone_core: { Args: { _phone: string }; Returns: string }
       zapp_productivity_contacts: {
         Args: {
           _agent_user_id?: string
@@ -28675,6 +28676,10 @@ export type Database = {
       zapp_sector_role: {
         Args: { _auth_user_id: string; _sector_id: string }
         Returns: string
+      }
+      zapp_should_exclude_contact: {
+        Args: { _account: string; _client_id: string; _phone: string }
+        Returns: boolean
       }
       zapp_user_can_use_view: {
         Args: { _sector: string; _user_id: string; _view: string }

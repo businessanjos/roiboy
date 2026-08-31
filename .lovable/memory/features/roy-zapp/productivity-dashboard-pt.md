@@ -18,3 +18,10 @@ Tempo de resposta = intervalo entre a última mensagem do cliente e a primeira r
 Menções de risco: palavras-chave (cancelar, pausar, trancar, desistir, reembolso, estorno, rescisão, insatisfação) + botão "Analisar com IA" → edge function `zapp-analytics-ai` (Lovable AI, gemini-2.5-flash) que classifica risco real vs falso positivo.
 
 Período padrão: mês atual.
+
+## Regras de fidedignidade (auditoria 31/08/2026)
+- Contatos são deduplicados por `zapp_phone_core(phone)` = DDD + 8 últimos dígitos (resolve variantes com/sem nono dígito e com/sem DDI). Chave de contato = `client_id` senão `pcore`.
+- Contato interno: `zapp_is_internal_contact` compara DDD+8 (não só 8 dígitos). A exclusão só vale via `zapp_should_exclude_contact`, que NUNCA exclui um contato ligado a cliente com contrato ativo.
+- "Conversas só com envio nosso" conta apenas conversas com movimento no período filtrado.
+- Base de clientes ativos reconhece conversa por `client_id` OU por telefone (pcore).
+- Mensagens duplicadas (mesmo `external_message_id`, inclusive em conversas duplicadas) são descartadas via DISTINCT ON.
