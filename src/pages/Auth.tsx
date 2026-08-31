@@ -86,9 +86,15 @@ export default function Auth() {
     return <LoadingScreen message="Carregando..." />;
   }
 
+  // Destino pós-login preservado (ex.: /.lovable/oauth/consent?...). Somente
+  // caminhos relativos same-origin são aceitos.
+  const rawNext = searchParams.get("next") ?? "";
+  const nextPath = rawNext.startsWith("/") && !rawNext.startsWith("//") ? rawNext : null;
+
   if (user && view !== "reset") {
-    return <Navigate to="/dashboard" replace />;
+    return <Navigate to={nextPath ?? "/dashboard"} replace />;
   }
+
 
   const handleLogin = async (data: LoginFormData) => {
     setError(null);
