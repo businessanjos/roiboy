@@ -2,6 +2,7 @@ import { defineConfig, type Plugin } from "vite";
 import react from "@vitejs/plugin-react-swc";
 import path from "path";
 import { componentTagger } from "lovable-tagger";
+import { mcpPlugin } from "@lovable.dev/mcp-js/stacks/supabase/vite";
 
 /**
  * Emits `version.json` into the build output so the running app can poll it
@@ -42,6 +43,7 @@ export default defineConfig(({ mode }) => ({
     react(),
     mode === "development" && componentTagger(),
     versionJsonPlugin(APP_BUILD_VERSION),
+    mcpPlugin(),
   ].filter(Boolean),
   resolve: {
     alias: [
