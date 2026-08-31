@@ -13,3 +13,6 @@ Produto **EML l Eternum Mentoring Low** (`311124ee-a8ee-4695-b26d-972742eb751b`)
 - Modalidade da UI é derivada do nome da chave (contém CHEQUE / A_VISTA / senão parcelado).
 - Vigência fixa de 6 meses: regex em `DigitalContractTab.tsx` é `/(ryka|eternum).*mentoring/i`.
 - A versão "com consultor" continua existindo separadamente.
+
+- A condição de pagamento escolhida é a **fonte de verdade do valor total**: o preset sobrescreve
+  `TOTAL_VALUE`/`VALOR_TOTAL` vindos do negócio (evita contrato de 12x sair com valor à vista).
