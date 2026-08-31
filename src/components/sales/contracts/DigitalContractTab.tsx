@@ -621,6 +621,8 @@ export const DigitalContractTab = ({
           .from("digital_contracts")
           .update({
             ...dataToRow(data),
+            ...(dealId ? { deal_id: dealId } : {}),
+            payment_method: effectivePaymentMethod,
             template_id: templateId,
             product_id: productId,
             template_html: templateHtml,
@@ -633,7 +635,7 @@ export const DigitalContractTab = ({
       }
     }, 800);
     return () => clearTimeout(handle);
-  }, [contract?.id, contract?.status, data, templateId, productId, templateHtml, templateVariables, resolvedPlaceholderValues, loading, saving]);
+  }, [contract?.id, contract?.status, data, dealId, effectivePaymentMethod, templateId, productId, templateHtml, templateVariables, resolvedPlaceholderValues, loading, saving]);
 
   // Reset do guard de autosave quando o contrato carregado muda
   useEffect(() => {
