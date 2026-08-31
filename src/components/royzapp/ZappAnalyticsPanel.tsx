@@ -253,7 +253,9 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [includeGroups, setIncludeGroups] = useState(false);
   const [agentId, setAgentId] = useState<string>("all");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
+
 
   const range = useMemo(
     () => periodRange(period, customRange),
