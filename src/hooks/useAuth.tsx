@@ -166,9 +166,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null };
   };
 
-  const signInWithGoogle = async () => {
+  const signInWithGoogle = async (redirectPath?: string) => {
+    // `redirectPath` preserva destinos internos (ex.: tela de consentimento OAuth)
+    // para que o usuário volte exatamente onde estava após o Google.
+    const safePath = redirectPath && redirectPath.startsWith("/") && !redirectPath.startsWith("//")
+      ? redirectPath
+      : null;
     const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: window.location.origin,
+      redirect_uri: safePath ? `${window.location.origin}${safePath}` : window.location.origin,
+
       extraParams: {
         prompt: "select_account",
       },
