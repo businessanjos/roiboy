@@ -546,7 +546,12 @@ const withDerivedPaymentValues = (values: Record<string, any>): Record<string, a
     if (!out.VALOR_TOTAL_RYKAS) out.VALOR_TOTAL_RYKAS = formatBRL(finalTotal);
     if (!out.VALOR_TOTAL_RYKAS_EXTENSO) out.VALOR_TOTAL_RYKAS_EXTENSO = explicitTotalNum === null ? preset.totalWords : formatPlainBRLWords(finalTotal);
     if (!out.__MODALIDADE_PAGAMENTO_UI__) {
-      out.__MODALIDADE_PAGAMENTO_UI__ = String(rykas) === "A_VISTA" ? "a_vista" : String(rykas) === "CHEQUE_1_11" ? "cheque" : "parcelado";
+      const key = String(rykas).toUpperCase();
+      out.__MODALIDADE_PAGAMENTO_UI__ = key.includes("CHEQUE")
+        ? "cheque"
+        : key.includes("A_VISTA")
+          ? "a_vista"
+          : "parcelado";
     }
   } else {
     const total = resolveValueByKey("TOTAL_VALUE", out).value ?? resolveValueByKey("VALOR_TOTAL", out).value;
