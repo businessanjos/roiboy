@@ -733,6 +733,7 @@ export const DigitalContractTab = ({
         status: "draft",
         created_by: currentUser?.auth_user_id ?? null,
         ...dataToRow({ ...data, contract_number: newNumber }),
+        payment_method: effectivePaymentMethod,
         template_id: templateId,
         product_id: productId,
         template_html: templateHtml,
