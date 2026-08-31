@@ -184,7 +184,7 @@ export default function Auth() {
     setError(null);
     setIsSubmitting(true);
 
-    const { error } = await signInWithGoogle();
+    const { error } = await signInWithGoogle(nextPath ?? undefined);
 
     if (error) {
       setError("Erro ao entrar com Google. Tente novamente.");
