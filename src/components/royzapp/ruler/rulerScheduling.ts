@@ -47,12 +47,25 @@ export function buildTouchRows(params: {
   skipWeekends?: boolean;
 }) {
   const now = Date.now();
+
+  // Se a data de início já passou, deslocamos a cadência INTEIRA em dias inteiros,
+  // preservando o espaçamento entre os toques (D+1 e D+2 nunca caem no mesmo dia).
+  let shiftDays = 0;
+  for (const step of params.steps) {
+    const base = computeTouchDate(params.startDate, step.offset_days, params.dueTime, false);
+    if (base.getTime() >= now) continue;
+    const diffMs = now - base.getTime();
+    const needed = Math.ceil(diffMs / 86_400_000);
+    if (needed > shiftDays) shiftDays = needed;
+  }
+
   return params.steps.map((step, idx) => {
-    let when = computeTouchDate(params.startDate, step.offset_days, params.dueTime, params.skipWeekends);
-    if (when.getTime() < now) {
-      when = new Date(now + 60 * 1000 * (idx + 1));
-      if (params.skipWeekends) when = shiftToWeekday(when);
-    }
+    const when = computeTouchDate(
+      params.startDate,
+      step.offset_days + shiftDays,
+      params.dueTime,
+      params.skipWeekends,
+    );
     const isTask = !!step.is_task;
     return {
       enrollment_id: params.enrollmentId,
@@ -68,4 +81,5 @@ export function buildTouchRows(params: {
     };
   });
 }
+
 
