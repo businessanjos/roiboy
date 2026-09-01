@@ -28762,6 +28762,8 @@ export type Database = {
         | "movimento"
         | "viagem"
         | "autoridade"
+        | "reuniao"
+        | "alinhamento"
       hr_ai_analysis_status: "pending" | "processing" | "completed" | "failed"
       hr_candidate_stage:
         | "applied"
@@ -29113,6 +29115,8 @@ export const Constants = {
         "movimento",
         "viagem",
         "autoridade",
+        "reuniao",
+        "alinhamento",
       ],
       hr_ai_analysis_status: ["pending", "processing", "completed", "failed"],
       hr_candidate_stage: [
