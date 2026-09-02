@@ -295,28 +295,136 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     return date < today;
   };
 
-  const pendingTasks = tasks.filter(t => !t.custom_status?.is_completed_status && !t.completed_at);
-  const completedTasks = tasks.filter(t => t.custom_status?.is_completed_status || t.completed_at);
+  const pendingTasks = useMemo(
+    () => sortTasks(tasks.filter(t => !t.custom_status?.is_completed_status && !t.completed_at), sortMode),
+    [tasks, sortMode],
+  );
+  const completedTasks = useMemo(
+    () =>
+      tasks
+        .filter(t => t.custom_status?.is_completed_status || t.completed_at)
+        .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime()),
+    [tasks],
+  );
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const visibleCompleted = showAllCompleted ? completedTasks : completedTasks.slice(0, 5);
+  const selectableIds = [...pendingTasks, ...visibleCompleted].map(t => t.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setDeleting(true);
+    const { error } = await supabase.from("internal_tasks").delete().in("id", ids);
+    setDeleting(false);
+    setConfirmDeleteOpen(false);
+
+    if (error) {
+      console.error("Error deleting tasks:", error);
+      toast.error("Não foi possível excluir as atividades");
+      return;
+    }
+
+    toast.success(`${ids.length} atividade${ids.length > 1 ? "s" : ""} excluída${ids.length > 1 ? "s" : ""}`);
+    exitSelection();
+    await fetchTasks();
+    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
+    queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h4 className="font-medium text-sm flex items-center gap-1.5 text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" />
           Atividades ({pendingTasks.length} pendentes)
         </h4>
-        <Button
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => {
-            setEditingTask(null);
-            setTaskDialogOpen(true);
-          }}
-        >
-          <Plus className="h-3 w-3 mr-1" />
-          Nova Atividade
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="h-7 text-[11px] w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
+                <SelectItem key={mode} value={mode} className="text-xs">
+                  {SORT_LABELS[mode]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {tasks.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => (selectionMode ? exitSelection() : setSelectionMode(true))}
+            >
+              {selectionMode ? (
+                <><X className="h-3 w-3 mr-1" />Cancelar</>
+              ) : (
+                <><CheckSquare className="h-3 w-3 mr-1" />Selecionar</>
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setEditingTask(null);
+              setTaskDialogOpen(true);
+            }}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Nova Atividade
+          </Button>
+        </div>
       </div>
+
+      {selectionMode && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 px-2.5 py-1.5 flex-wrap">
+          <span className="text-xs text-muted-foreground">
+            {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-[11px]"
+              onClick={() =>
+                setSelectedIds(allSelected ? new Set() : new Set(selectableIds))
+              }
+            >
+              {allSelected ? "Limpar" : "Marcar todas"}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-6 text-[11px]"
+              disabled={selectedIds.size === 0}
+              onClick={() => setConfirmDeleteOpen(true)}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Excluir selecionadas
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       {loading ? (
         <div className="flex items-center justify-center py-6">
