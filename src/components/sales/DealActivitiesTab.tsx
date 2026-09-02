@@ -69,6 +69,7 @@ interface Task {
   contact_channel?: string | null;
   meeting_url: string | null;
   meeting_platform: string | null;
+  created_at?: string | null;
   assigned_user?: {
     id: string;
     name: string;
