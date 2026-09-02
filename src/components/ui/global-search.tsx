@@ -341,12 +341,12 @@ export function SearchTrigger({ onClick, className }: { onClick?: () => void; cl
       variant="outline"
       onClick={onClick || openGlobalSearch}
       className={cn(
-        "relative h-9 justify-start text-sm text-muted-foreground sm:pr-12 w-40 lg:w-64",
+        "relative h-10 justify-start text-sm text-muted-foreground sm:pr-12 w-56 lg:w-96",
         className,
       )}
     >
       <Search className="mr-2 h-4 w-4" />
-      <span className="hidden lg:inline-flex">Buscar no sistema...</span>
+      <span className="hidden lg:inline-flex">Buscar páginas, clientes, negócios...</span>
       <span className="inline-flex lg:hidden">Buscar</span>
       <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
         <Command className="h-3 w-3" />K
