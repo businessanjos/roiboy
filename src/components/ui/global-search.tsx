@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Search, X, ArrowRight, Command, Users, Briefcase, CornerDownLeft } from "lucide-react";
+import {
+  Search,
+  X,
+  ArrowRight,
+  Command,
+  Users,
+  Briefcase,
+  CornerDownLeft,
+  UserPlus,
+  CalendarDays,
+  IdCard,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +25,7 @@ import { Button } from "./button";
 import { sectors } from "@/config/sectors";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { PERMISSIONS } from "@/lib/access/permissions";
 
@@ -21,6 +34,17 @@ export const GLOBAL_SEARCH_EVENT = "roy:open-global-search";
 export function openGlobalSearch() {
   window.dispatchEvent(new CustomEvent(GLOBAL_SEARCH_EVENT));
 }
+
+/** RH é restrito por allowlist de e-mail (mesma regra de /rh). */
+const RH_ALLOWED_EMAILS = [
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com",
+];
 
 interface SearchResult {
   id: string;
@@ -37,6 +61,13 @@ const normalize = (value: string) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
+/** Remove caracteres que quebram o parser do filtro `or` do PostgREST. */
+const sanitize = (value: string) => value.replace(/[,()%*\\]/g, " ").trim();
+
+/** Cache simples em memória — respostas repetidas saem instantâneas. */
+const resultCache = new Map<string, SearchResult[]>();
+
+
 interface GlobalSearchProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -46,11 +77,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [remote, setRemote] = useState<SearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
+  const requestRef = useRef(0);
 
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { hasSectorAccess, isLoading: sectorLoading } = useSectorAccess();
+  const { currentUser } = useCurrentUser();
+
+  const userEmail = (currentUser?.email || "").toLowerCase();
+  const canSeeRh = RH_ALLOWED_EMAILS.includes(userEmail);
 
   // Páginas visíveis: apenas setores liberados + itens cuja permissão o usuário tem.
   const pages = useMemo<SearchResult[]>(() => {
@@ -58,6 +95,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     const items: SearchResult[] = [];
     for (const sector of sectors) {
       if (sector.comingSoon) continue;
+      if (sector.id === "rh" && !canSeeRh) continue;
       if (!hasSectorAccess(sector.id)) continue;
       for (const nav of sector.navItems) {
         if (nav.comingSoon) continue;
@@ -80,10 +118,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       seen.add(item.href);
       return true;
     });
-  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading]);
+  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh]);
 
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
-  const canViewDeals = hasSectorAccess("vendas");
+  const canViewSales = hasSectorAccess("vendas");
+  const canViewLeads = canViewSales && canViewClients;
+  const canViewEvents = hasSectorAccess("eventos") && hasPermission(PERMISSIONS.EVENTS_VIEW);
+  const canViewCollaborators = canSeeRh && hasSectorAccess("rh");
 
   const filteredPages = useMemo(() => {
     if (!query.trim()) return pages.slice(0, 8);
@@ -94,65 +135,193 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           normalize(item.title).includes(q) ||
           normalize(item.description || "").includes(q),
       )
-      .slice(0, 12);
+      .slice(0, 8);
   }, [pages, query]);
 
-  // Busca de registros (clientes/negócios). O RLS do banco garante que só
-  // retorna aquilo que o usuário pode enxergar.
+  // Busca de registros (clientes, leads, negócios, eventos, colaboradores).
+  // As consultas rodam em paralelo e o RLS do banco garante que só volta
+  // aquilo que o usuário pode enxergar.
   useEffect(() => {
-    const term = query.trim();
+    const raw = query.trim();
+    const term = sanitize(raw);
     if (term.length < 2) {
       setRemote([]);
+      setSearching(false);
       return;
     }
-    let cancelled = false;
+
+    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}`;
+    const cached = resultCache.get(cacheKey);
+    if (cached) {
+      setRemote(cached);
+      setSearching(false);
+      return;
+    }
+
+    const reqId = ++requestRef.current;
+    setSearching(true);
+
     const timer = setTimeout(async () => {
-      const results: SearchResult[] = [];
+      const like = `%${term}%`;
+      const digits = term.replace(/\D/g, "");
+      const phoneLike = digits.length >= 4 ? `%${digits}%` : null;
+
+      const tasks: PromiseLike<SearchResult[]>[] = [];
 
       if (canViewClients) {
-        const { data } = await supabase
-          .from("clients")
-          .select("id, full_name, company_name")
-          .ilike("full_name", `%${term}%`)
-          .limit(5);
-        for (const c of data || []) {
-          results.push({
-            id: `client:${c.id}`,
-            title: c.full_name,
-            description: c.company_name || "Cliente",
-            group: "Clientes",
-            href: `/clients/${c.id}`,
-            icon: <Users className="h-4 w-4" />,
-          });
-        }
+        const filters = [
+          `full_name.ilike.${like}`,
+          `company_name.ilike.${like}`,
+          `instagram.ilike.${like}`,
+        ];
+        if (phoneLike) filters.push(`phone_e164.ilike.${phoneLike}`, `cpf.ilike.${phoneLike}`);
+        tasks.push(
+          supabase
+            .from("clients")
+            .select("id, full_name, company_name, city, state")
+            .or(filters.join(","))
+            .limit(6)
+            .then(({ data }) =>
+              (data || []).map((c) => ({
+                id: `client:${c.id}`,
+                title: c.full_name,
+                description:
+                  [c.company_name, [c.city, c.state].filter(Boolean).join("/")]
+                    .filter(Boolean)
+                    .join(" · ") || "Cliente",
+                group: "Clientes",
+                href: `/clients/${c.id}`,
+                icon: <Users className="h-4 w-4" />,
+              })),
+            ),
+        );
       }
 
-      if (canViewDeals) {
-        const { data } = await supabase
-          .from("deals")
-          .select("id, title")
-          .ilike("title", `%${term}%`)
-          .limit(5);
-        for (const d of data || []) {
-          results.push({
-            id: `deal:${d.id}`,
-            title: d.title,
-            description: "Negócio",
-            group: "Negócios",
-            href: `/pipeline?deal=${d.id}`,
-            icon: <Briefcase className="h-4 w-4" />,
-          });
-        }
+      if (canViewLeads) {
+        const filters = [
+          `full_name.ilike.${like}`,
+          `company_name.ilike.${like}`,
+          `email.ilike.${like}`,
+          `instagram.ilike.${like}`,
+        ];
+        if (phoneLike) filters.push(`phone.ilike.${phoneLike}`, `cpf.ilike.${phoneLike}`);
+        tasks.push(
+          supabase
+            .from("leads")
+            .select("id, full_name, company_name, status, city, state")
+            .or(filters.join(","))
+            .limit(6)
+            .then(({ data }) =>
+              (data || []).map((l) => ({
+                id: `lead:${l.id}`,
+                title: l.full_name,
+                description:
+                  [l.company_name, l.status, [l.city, l.state].filter(Boolean).join("/")]
+                    .filter(Boolean)
+                    .join(" · ") || "Lead",
+                group: "Leads",
+                href: `/leads?lead=${l.id}`,
+                icon: <UserPlus className="h-4 w-4" />,
+              })),
+            ),
+        );
       }
 
-      if (!cancelled) setRemote(results);
-    }, 250);
+      if (canViewSales) {
+        const filters = [
+          `title.ilike.${like}`,
+          `contact_name.ilike.${like}`,
+          `contact_email.ilike.${like}`,
+        ];
+        if (phoneLike) filters.push(`contact_phone.ilike.${phoneLike}`);
+        tasks.push(
+          supabase
+            .from("deals")
+            .select("id, title, contact_name, status, value")
+            .is("deleted_at", null)
+            .or(filters.join(","))
+            .limit(6)
+            .then(({ data }) =>
+              (data || []).map((d) => ({
+                id: `deal:${d.id}`,
+                title: d.title,
+                description: [d.contact_name, d.status].filter(Boolean).join(" · ") || "Negócio",
+                group: "Negócios",
+                href: `/pipeline?deal=${d.id}`,
+                icon: <Briefcase className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewEvents) {
+        tasks.push(
+          supabase
+            .from("events")
+            .select("id, title, scheduled_at, status")
+            .ilike("title", like)
+            .order("scheduled_at", { ascending: false })
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((e) => ({
+                id: `event:${e.id}`,
+                title: e.title,
+                description: [
+                  e.scheduled_at
+                    ? new Date(e.scheduled_at).toLocaleDateString("pt-BR")
+                    : null,
+                  e.status,
+                ]
+                  .filter(Boolean)
+                  .join(" · "),
+                group: "Eventos",
+                href: `/events/${e.id}`,
+                icon: <CalendarDays className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewCollaborators) {
+        tasks.push(
+          supabase
+            .from("hr_collaborators")
+            .select("id, full_name, position, department")
+            .or(`full_name.ilike.${like},email.ilike.${like},position.ilike.${like}`)
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((c) => ({
+                id: `collab:${c.id}`,
+                title: c.full_name,
+                description:
+                  [c.position, c.department].filter(Boolean).join(" · ") || "Colaborador",
+                group: "Colaboradores",
+                href: `/rh/collaborators/${c.id}`,
+                icon: <IdCard className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      const settled = await Promise.all(
+        tasks.map((t) => Promise.resolve(t).catch(() => [] as SearchResult[])),
+      );
+      const results = settled.flat();
+
+      if (requestRef.current !== reqId) return;
+      resultCache.set(cacheKey, results);
+      if (resultCache.size > 80) {
+        resultCache.delete(resultCache.keys().next().value as string);
+      }
+      setRemote(results);
+      setSearching(false);
+    }, 160);
 
     return () => {
-      cancelled = true;
       clearTimeout(timer);
     };
-  }, [query, canViewClients, canViewDeals]);
+  }, [query, canViewClients, canViewLeads, canViewSales, canViewEvents, canViewCollaborators]);
+
 
   const filteredResults = useMemo(
     () => [...filteredPages, ...remote],
@@ -232,11 +401,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar páginas, clientes, negócios..."
+            placeholder="Buscar páginas, clientes, leads, negócios..."
             className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-3 py-4"
           />
+          {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           {query && (
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setQuery("")}>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => setQuery("")}>
               <X className="h-3 w-3" />
             </Button>
           )}
@@ -245,10 +415,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         <div className="max-h-[360px] overflow-y-auto p-2">
           {filteredResults.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhum resultado encontrado</p>
+              {searching ? (
+                <Loader2 className="h-6 w-6 mx-auto mb-2 animate-spin opacity-70" />
+              ) : (
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              )}
+              <p className="text-sm">
+                {searching ? "Buscando..." : "Nenhum resultado encontrado"}
+              </p>
             </div>
           ) : (
+
             <div className="space-y-3">
               {grouped.map(([group, entries]) => (
                 <div key={group} className="space-y-1">
