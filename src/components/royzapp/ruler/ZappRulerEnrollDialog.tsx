@@ -64,8 +64,12 @@ export function ZappRulerEnrollDialog({
   const [templateId, setTemplateId] = useState<string>("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueTime, setDueTime] = useState("09:00");
-  /** Horário é opcional: sem valor, usamos 09:00 como padrão. */
-  const effectiveDueTime = dueTime?.trim() ? dueTime : "09:00";
+  /**
+   * Horário é opcional. Se o usuário limpar o campo, as atividades ficam SEM horário
+   * (dia inteiro); 09:00 é usado apenas internamente para agendar os toques automáticos.
+   */
+  const hasDueTime = !!dueTime?.trim();
+  const effectiveDueTime = hasDueTime ? dueTime : "09:00";
   const [autoSend, setAutoSend] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(true);
   const [skipWeekends, setSkipWeekends] = useState(true);
@@ -273,7 +277,7 @@ export function ZappRulerEnrollDialog({
           const d = new Date(r.scheduled_at);
           return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
         })(),
-        due_time: effectiveDueTime,
+        due_time: hasDueTime ? effectiveDueTime : null,
         priority: "medium" as const,
         status: "pending" as const,
         assigned_to: responsibleId,
@@ -292,7 +296,7 @@ export function ZappRulerEnrollDialog({
           deal_id: effectiveDealId,
           type: "note",
           title: `Régua de follow up: ${template.name}`,
-          content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")} às ${effectiveDueTime}. Responsável: ${
+          content: `${rows.length} toques programados a partir de ${new Date(startDate + "T00:00:00").toLocaleDateString("pt-BR")}${hasDueTime ? ` às ${effectiveDueTime}` : ""}. Responsável: ${
             assigneeOptions.find((u) => u.id === responsibleId)?.name || "—"
           }.`,
           user_id: currentUser.id,
