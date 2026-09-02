@@ -166,7 +166,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       const digits = term.replace(/\D/g, "");
       const phoneLike = digits.length >= 4 ? `%${digits}%` : null;
 
-      const tasks: Promise<SearchResult[]>[] = [];
+      const tasks: PromiseLike<SearchResult[]>[] = [];
 
       if (canViewClients) {
         const filters = [
@@ -304,7 +304,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       }
 
       const settled = await Promise.all(
-        tasks.map((t) => t.catch(() => [] as SearchResult[])),
+        tasks.map((t) => Promise.resolve(t).catch(() => [] as SearchResult[])),
       );
       const results = settled.flat();
 
