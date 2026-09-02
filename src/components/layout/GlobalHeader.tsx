@@ -31,6 +31,8 @@ import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 
 import { FailedZappSendsAlert } from "@/components/royzapp/FailedZappSendsAlert";
 import { CompanySelector } from "@/components/companies/CompanySelector";
+import { SearchTrigger } from "@/components/ui/global-search";
+
 
 export function GlobalHeader() {
   const { currentUser } = useCurrentUser();
