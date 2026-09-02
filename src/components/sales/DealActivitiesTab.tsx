@@ -121,6 +121,37 @@ const getComputedStatus = (task: Task): "pending" | "overdue" | "done" => {
   return "pending";
 };
 
+/** Timestamp do vencimento (data + hora). Null quando não há data. */
+const dueTimestamp = (task: Task): number | null => {
+  if (!task.due_date) return null;
+  const date = parseLocalDate(task.due_date);
+  if (!date) return null;
+  const [h, m] = (task.due_time || "00:00").split(":").map((v) => Number(v) || 0);
+  date.setHours(h, m, 0, 0);
+  return date.getTime();
+};
+
+const sortTasks = (list: Task[], mode: SortMode): Task[] => {
+  const copy = [...list];
+  if (mode === "created_desc") {
+    return copy.sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
+    );
+  }
+  return copy.sort((a, b) => {
+    const da = dueTimestamp(a);
+    const db = dueTimestamp(b);
+    // Sem data de vencimento vai sempre para o fim
+    if (da === null && db === null) {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return mode === "due_asc" ? da - db : db - da;
+  });
+};
+
+
 export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const queryClient = useQueryClient();
   const [tasks, setTasks] = useState<Task[]>([]);
