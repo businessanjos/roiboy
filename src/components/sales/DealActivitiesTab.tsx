@@ -591,6 +591,32 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
           setTaskDialogOpen(true);
         }}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir atividades?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedIds.size} atividade{selectedIds.size === 1 ? "" : "s"} sera
+              {selectedIds.size === 1 ? "" : "o"} excluída{selectedIds.size === 1 ? "" : "s"} definitivamente.
+              Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleBulkDelete();
+              }}
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
