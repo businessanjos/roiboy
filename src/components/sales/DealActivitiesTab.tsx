@@ -522,16 +522,32 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                 Concluídas ({completedTasks.length})
               </p>
               <div className="rounded-lg border bg-muted/20 divide-y opacity-70">
-                {completedTasks.slice(0, showAllCompleted ? completedTasks.length : 5).map((task) => (
+                {visibleCompleted.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/30"
+                    className={cn(
+                      "flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/30",
+                      selectionMode && selectedIds.has(task.id) && "bg-primary/5",
+                    )}
                     onClick={() => {
+                      if (selectionMode) {
+                        toggleSelected(task.id);
+                        return;
+                      }
                       setEditingTask(task);
                       setTaskDialogOpen(true);
                     }}
                   >
-                    <Checkbox checked className="mt-0" />
+                    <Checkbox
+                      checked={selectionMode ? selectedIds.has(task.id) : true}
+                      onClick={(e) => {
+                        if (selectionMode) {
+                          e.stopPropagation();
+                          toggleSelected(task.id);
+                        }
+                      }}
+                      className="mt-0"
+                    />
                     <span className="text-xs line-through text-muted-foreground truncate flex-1">
                       {task.activity_type?.name || task.title}
                     </span>
