@@ -225,6 +225,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         contact_channel,
         meeting_url,
         meeting_platform,
+        created_at,
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url),
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
         activity_type:activity_types!internal_tasks_activity_type_id_fkey(id, name, color)
