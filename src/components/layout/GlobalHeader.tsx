@@ -61,20 +61,24 @@ export function GlobalHeader() {
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
   return (
-    <header className="flex items-center justify-between h-14 px-4 md:px-6 border-b border-border bg-card shrink-0">
+    <header className="grid grid-cols-[1fr_auto_1fr] items-center h-14 px-4 md:px-6 border-b border-border bg-card shrink-0">
       {/* Logo */}
-      <button onClick={() => { clearSector(); navigate("/setores"); }} className="flex items-center gap-2">
-        <RoyLogo size="md" />
-        <span className="font-semibold text-lg tracking-tight text-foreground hidden sm:inline">
-          ROY APP
-        </span>
-      </button>
+      <div className="flex items-center">
+        <button onClick={() => { clearSector(); navigate("/setores"); }} className="flex items-center gap-2">
+          <RoyLogo size="md" />
+          <span className="font-semibold text-lg tracking-tight text-foreground hidden sm:inline">
+            ROY APP
+          </span>
+        </button>
+      </div>
+
+      {/* Busca global - centralizada */}
+      <div className="flex items-center justify-center">
+        <SearchTrigger className="hidden md:flex" />
+      </div>
 
       {/* Right controls */}
-      <div className="flex items-center gap-1 md:gap-2">
-
-        {/* Busca global */}
-        <SearchTrigger className="hidden md:flex" />
+      <div className="flex items-center justify-end gap-1 md:gap-2">
 
         {/* Empresa (CNPJ) */}
         <CompanySelector className="hidden md:flex w-[190px] h-9" />
