@@ -159,6 +159,24 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    if (typeof window === "undefined") return "due_asc";
+    const saved = window.localStorage.getItem(SORT_STORAGE_KEY) as SortMode | null;
+    return saved && saved in SORT_LABELS ? saved : "due_asc";
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SORT_STORAGE_KEY, sortMode);
+    } catch {
+      // ignora indisponibilidade do localStorage
+    }
+  }, [sortMode]);
+
 
   useEffect(() => {
     fetchTasks();
