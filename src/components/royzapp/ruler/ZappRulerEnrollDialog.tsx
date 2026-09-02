@@ -64,8 +64,12 @@ export function ZappRulerEnrollDialog({
   const [templateId, setTemplateId] = useState<string>("");
   const [startDate, setStartDate] = useState(() => new Date().toISOString().slice(0, 10));
   const [dueTime, setDueTime] = useState("09:00");
-  /** Horário é opcional: sem valor, usamos 09:00 como padrão. */
-  const effectiveDueTime = dueTime?.trim() ? dueTime : "09:00";
+  /**
+   * Horário é opcional. Se o usuário limpar o campo, as atividades ficam SEM horário
+   * (dia inteiro); 09:00 é usado apenas internamente para agendar os toques automáticos.
+   */
+  const hasDueTime = !!dueTime?.trim();
+  const effectiveDueTime = hasDueTime ? dueTime : "09:00";
   const [autoSend, setAutoSend] = useState(true);
   const [stopOnReply, setStopOnReply] = useState(true);
   const [skipWeekends, setSkipWeekends] = useState(true);
