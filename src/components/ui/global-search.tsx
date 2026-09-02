@@ -401,11 +401,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar páginas, clientes, negócios..."
+            placeholder="Buscar páginas, clientes, leads, negócios..."
             className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-3 py-4"
           />
+          {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           {query && (
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setQuery("")}>
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => setQuery("")}>
               <X className="h-3 w-3" />
             </Button>
           )}
@@ -414,10 +415,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         <div className="max-h-[360px] overflow-y-auto p-2">
           {filteredResults.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
-              <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
-              <p className="text-sm">Nenhum resultado encontrado</p>
+              {searching ? (
+                <Loader2 className="h-6 w-6 mx-auto mb-2 animate-spin opacity-70" />
+              ) : (
+                <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              )}
+              <p className="text-sm">
+                {searching ? "Buscando..." : "Nenhum resultado encontrado"}
+              </p>
             </div>
           ) : (
+
             <div className="space-y-3">
               {grouped.map(([group, entries]) => (
                 <div key={group} className="space-y-1">
