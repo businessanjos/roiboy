@@ -448,17 +448,25 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                 return (
                   <div
                     key={task.id}
-                    className="flex items-start gap-2 p-2.5 hover:bg-muted/50 cursor-pointer"
+                    className={cn(
+                      "flex items-start gap-2 p-2.5 hover:bg-muted/50 cursor-pointer",
+                      selectionMode && selectedIds.has(task.id) && "bg-primary/5",
+                    )}
                     onClick={() => {
+                      if (selectionMode) {
+                        toggleSelected(task.id);
+                        return;
+                      }
                       setEditingTask(task);
                       setTaskDialogOpen(true);
                     }}
                   >
                     <Checkbox
-                      checked={false}
+                      checked={selectionMode ? selectedIds.has(task.id) : false}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleComplete(task);
+                        if (selectionMode) toggleSelected(task.id);
+                        else handleToggleComplete(task);
                       }}
                       className="mt-0.5"
                     />
@@ -475,6 +483,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                           <span className={cn("flex items-center gap-0.5", overdue && "text-danger")}>
                             <Calendar className="h-2.5 w-2.5" />
                             {formatLocalDate(task.due_date)}
+                            {task.due_time && ` ${task.due_time.slice(0, 5)}`}
                           </span>
                         )}
                         {(() => {
