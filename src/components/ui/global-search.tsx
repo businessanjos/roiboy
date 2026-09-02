@@ -1,5 +1,5 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
-import { Search, X, FileText, Users, Calendar, Package, Settings, ArrowRight, Command } from "lucide-react";
+import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
+import { Search, X, ArrowRight, Command, Users, Briefcase, CornerDownLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -10,31 +10,32 @@ import {
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { Input } from "./input";
 import { Button } from "./button";
+import { sectors } from "@/config/sectors";
+import { usePermissions } from "@/hooks/usePermissions";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { supabase } from "@/integrations/supabase/client";
+import { PERMISSIONS } from "@/lib/access/permissions";
+
+/** Evento global para abrir a busca a partir de qualquer botão do app. */
+export const GLOBAL_SEARCH_EVENT = "roy:open-global-search";
+export function openGlobalSearch() {
+  window.dispatchEvent(new CustomEvent(GLOBAL_SEARCH_EVENT));
+}
 
 interface SearchResult {
   id: string;
   title: string;
   description?: string;
-  type: "page" | "client" | "event" | "product" | "action";
-  href?: string;
-  action?: () => void;
+  group: string;
+  href: string;
   icon?: React.ReactNode;
 }
 
-// Predefined navigation items
-const navigationItems: SearchResult[] = [
-  { id: "dashboard", title: "Dashboard", type: "page", href: "/dashboard", icon: <FileText className="h-4 w-4" /> },
-  { id: "clients", title: "Clientes", type: "page", href: "/clients", icon: <Users className="h-4 w-4" /> },
-  { id: "events", title: "Eventos", type: "page", href: "/events", icon: <Calendar className="h-4 w-4" /> },
-  { id: "tasks", title: "Tarefas", type: "page", href: "/tasks", icon: <FileText className="h-4 w-4" /> },
-  { id: "products", title: "Produtos", type: "page", href: "/products", icon: <Package className="h-4 w-4" /> },
-  { id: "forms", title: "Formulários", type: "page", href: "/forms", icon: <FileText className="h-4 w-4" /> },
-  { id: "team", title: "Equipe", type: "page", href: "/team", icon: <Users className="h-4 w-4" /> },
-  { id: "integrations", title: "Integrações", type: "page", href: "/integrations", icon: <Package className="h-4 w-4" /> },
-  { id: "settings", title: "Configurações", type: "page", href: "/settings", icon: <Settings className="h-4 w-4" /> },
-  { id: "new-client", title: "Novo Cliente", description: "Criar um novo cliente", type: "action", href: "/clients/new", icon: <Users className="h-4 w-4" /> },
-  { id: "new-event", title: "Novo Evento", description: "Criar um novo evento", type: "action", href: "/events?new=true", icon: <Calendar className="h-4 w-4" /> },
-];
+const normalize = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
 interface GlobalSearchProps {
   open: boolean;
@@ -44,71 +45,183 @@ interface GlobalSearchProps {
 export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const [query, setQuery] = useState("");
   const [selectedIndex, setSelectedIndex] = useState(0);
+  const [remote, setRemote] = useState<SearchResult[]>([]);
   const navigate = useNavigate();
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Filter results based on query
-  const filteredResults = query.length > 0
-    ? navigationItems.filter(
-        item =>
-          item.title.toLowerCase().includes(query.toLowerCase()) ||
-          item.description?.toLowerCase().includes(query.toLowerCase())
-      )
-    : navigationItems.slice(0, 6); // Show first 6 items when no query
+  const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { hasSectorAccess, isLoading: sectorLoading } = useSectorAccess();
 
-  // Reset state when dialog opens
+  // Páginas visíveis: apenas setores liberados + itens cuja permissão o usuário tem.
+  const pages = useMemo<SearchResult[]>(() => {
+    if (permissionsLoading || sectorLoading) return [];
+    const items: SearchResult[] = [];
+    for (const sector of sectors) {
+      if (sector.comingSoon) continue;
+      if (!hasSectorAccess(sector.id)) continue;
+      for (const nav of sector.navItems) {
+        if (nav.comingSoon) continue;
+        if (nav.permission && !hasPermission(nav.permission)) continue;
+        const Icon = nav.icon;
+        items.push({
+          id: `${sector.id}:${nav.to}`,
+          title: nav.label,
+          description: nav.group ? `${sector.name} · ${nav.group}` : sector.name,
+          group: sector.name,
+          href: nav.to,
+          icon: <Icon className="h-4 w-4" />,
+        });
+      }
+    }
+    // Remove duplicatas de rota mantendo o primeiro setor encontrado.
+    const seen = new Set<string>();
+    return items.filter((item) => {
+      if (seen.has(item.href)) return false;
+      seen.add(item.href);
+      return true;
+    });
+  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading]);
+
+  const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
+  const canViewDeals = hasSectorAccess("vendas");
+
+  const filteredPages = useMemo(() => {
+    if (!query.trim()) return pages.slice(0, 8);
+    const q = normalize(query.trim());
+    return pages
+      .filter(
+        (item) =>
+          normalize(item.title).includes(q) ||
+          normalize(item.description || "").includes(q),
+      )
+      .slice(0, 12);
+  }, [pages, query]);
+
+  // Busca de registros (clientes/negócios). O RLS do banco garante que só
+  // retorna aquilo que o usuário pode enxergar.
+  useEffect(() => {
+    const term = query.trim();
+    if (term.length < 2) {
+      setRemote([]);
+      return;
+    }
+    let cancelled = false;
+    const timer = setTimeout(async () => {
+      const results: SearchResult[] = [];
+
+      if (canViewClients) {
+        const { data } = await supabase
+          .from("clients")
+          .select("id, name, company")
+          .ilike("name", `%${term}%`)
+          .limit(5);
+        for (const c of data || []) {
+          results.push({
+            id: `client:${c.id}`,
+            title: c.name,
+            description: (c as { company?: string | null }).company || "Cliente",
+            group: "Clientes",
+            href: `/clients/${c.id}`,
+            icon: <Users className="h-4 w-4" />,
+          });
+        }
+      }
+
+      if (canViewDeals) {
+        const { data } = await supabase
+          .from("deals")
+          .select("id, title")
+          .ilike("title", `%${term}%`)
+          .limit(5);
+        for (const d of data || []) {
+          results.push({
+            id: `deal:${d.id}`,
+            title: d.title,
+            description: "Negócio",
+            group: "Negócios",
+            href: `/sales/pipeline?deal=${d.id}`,
+            icon: <Briefcase className="h-4 w-4" />,
+          });
+        }
+      }
+
+      if (!cancelled) setRemote(results);
+    }, 250);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [query, canViewClients, canViewDeals]);
+
+  const filteredResults = useMemo(
+    () => [...filteredPages, ...remote],
+    [filteredPages, remote],
+  );
+
+  const grouped = useMemo(() => {
+    const map = new Map<string, { result: SearchResult; index: number }[]>();
+    filteredResults.forEach((result, index) => {
+      const list = map.get(result.group) || [];
+      list.push({ result, index });
+      map.set(result.group, list);
+    });
+    return Array.from(map.entries());
+  }, [filteredResults]);
+
   useEffect(() => {
     if (open) {
       setQuery("");
       setSelectedIndex(0);
+      setRemote([]);
       setTimeout(() => inputRef.current?.focus(), 100);
     }
   }, [open]);
 
-  // Handle keyboard navigation
+  useEffect(() => {
+    setSelectedIndex(0);
+  }, [query]);
+
+  const handleSelect = useCallback(
+    (result: SearchResult) => {
+      navigate(result.href);
+      onOpenChange(false);
+    },
+    [navigate, onOpenChange],
+  );
+
   const handleKeyDown = useCallback(
     (e: React.KeyboardEvent) => {
+      if (filteredResults.length === 0) {
+        if (e.key === "Escape") onOpenChange(false);
+        return;
+      }
       switch (e.key) {
         case "ArrowDown":
           e.preventDefault();
-          setSelectedIndex(i => (i + 1) % filteredResults.length);
+          setSelectedIndex((i) => (i + 1) % filteredResults.length);
           break;
         case "ArrowUp":
           e.preventDefault();
-          setSelectedIndex(i => (i - 1 + filteredResults.length) % filteredResults.length);
+          setSelectedIndex((i) => (i - 1 + filteredResults.length) % filteredResults.length);
           break;
-        case "Enter":
+        case "Enter": {
           e.preventDefault();
           const selected = filteredResults[selectedIndex];
-          if (selected) {
-            if (selected.action) {
-              selected.action();
-            } else if (selected.href) {
-              navigate(selected.href);
-            }
-            onOpenChange(false);
-          }
+          if (selected) handleSelect(selected);
           break;
+        }
         case "Escape":
           onOpenChange(false);
           break;
       }
     },
-    [filteredResults, selectedIndex, navigate, onOpenChange]
+    [filteredResults, selectedIndex, handleSelect, onOpenChange],
   );
-
-  const handleSelect = (result: SearchResult) => {
-    if (result.action) {
-      result.action();
-    } else if (result.href) {
-      navigate(result.href);
-    }
-    onOpenChange(false);
-  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg p-0 overflow-hidden" aria-describedby={undefined}>
+      <DialogContent className="max-w-xl p-0 overflow-hidden" aria-describedby={undefined}>
         <VisuallyHidden>
           <DialogTitle>Busca global</DialogTitle>
         </VisuallyHidden>
@@ -117,64 +230,58 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           <Input
             ref={inputRef}
             value={query}
-            onChange={(e) => {
-              setQuery(e.target.value);
-              setSelectedIndex(0);
-            }}
+            onChange={(e) => setQuery(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Buscar páginas, clientes, ações..."
+            placeholder="Buscar páginas, clientes, negócios..."
             className="border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-3 py-4"
           />
           {query && (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-6 w-6 p-0"
-              onClick={() => setQuery("")}
-            >
+            <Button variant="ghost" size="sm" className="h-6 w-6 p-0" onClick={() => setQuery("")}>
               <X className="h-3 w-3" />
             </Button>
           )}
         </div>
 
-        <div className="max-h-[300px] overflow-y-auto p-2">
+        <div className="max-h-[360px] overflow-y-auto p-2">
           {filteredResults.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               <Search className="h-8 w-8 mx-auto mb-2 opacity-50" />
               <p className="text-sm">Nenhum resultado encontrado</p>
             </div>
           ) : (
-            <div className="space-y-1">
-              {filteredResults.map((result, index) => (
-                <button
-                  key={result.id}
-                  onClick={() => handleSelect(result)}
-                  onMouseEnter={() => setSelectedIndex(index)}
-                  className={cn(
-                    "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
-                    index === selectedIndex
-                      ? "bg-primary/10 text-foreground"
-                      : "hover:bg-muted text-muted-foreground hover:text-foreground"
-                  )}
-                >
-                  <span className={cn(
-                    "flex-shrink-0",
-                    index === selectedIndex ? "text-primary" : ""
-                  )}>
-                    {result.icon}
-                  </span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{result.title}</p>
-                    {result.description && (
-                      <p className="text-xs text-muted-foreground truncate">
-                        {result.description}
-                      </p>
-                    )}
-                  </div>
-                  {index === selectedIndex && (
-                    <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
-                  )}
-                </button>
+            <div className="space-y-3">
+              {grouped.map(([group, entries]) => (
+                <div key={group} className="space-y-1">
+                  <p className="px-3 text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
+                    {group}
+                  </p>
+                  {entries.map(({ result, index }) => (
+                    <button
+                      key={result.id}
+                      onClick={() => handleSelect(result)}
+                      onMouseEnter={() => setSelectedIndex(index)}
+                      className={cn(
+                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
+                        index === selectedIndex
+                          ? "bg-primary/10 text-foreground"
+                          : "hover:bg-muted text-muted-foreground hover:text-foreground",
+                      )}
+                    >
+                      <span className={cn("flex-shrink-0", index === selectedIndex && "text-primary")}>
+                        {result.icon}
+                      </span>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{result.title}</p>
+                        {result.description && (
+                          <p className="text-xs text-muted-foreground truncate">{result.description}</p>
+                        )}
+                      </div>
+                      {index === selectedIndex && (
+                        <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
+                      )}
+                    </button>
+                  ))}
+                </div>
               ))}
             </div>
           )}
@@ -187,7 +294,9 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
               navegar
             </span>
             <span className="flex items-center gap-1">
-              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">↵</kbd>
+              <kbd className="px-1.5 py-0.5 rounded bg-muted border text-[10px]">
+                <CornerDownLeft className="h-2.5 w-2.5" />
+              </kbd>
               selecionar
             </span>
             <span className="flex items-center gap-1">
@@ -207,30 +316,37 @@ export function useGlobalSearch() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K
-      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "k") {
         e.preventDefault();
         setOpen(true);
       }
     };
+    const handleOpen = () => setOpen(true);
 
     document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener(GLOBAL_SEARCH_EVENT, handleOpen);
+    return () => {
+      document.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener(GLOBAL_SEARCH_EVENT, handleOpen);
+    };
   }, []);
 
   return { open, setOpen };
 }
 
 // Search Trigger Button
-export function SearchTrigger({ onClick }: { onClick: () => void }) {
+export function SearchTrigger({ onClick, className }: { onClick?: () => void; className?: string }) {
   return (
     <Button
       variant="outline"
-      onClick={onClick}
-      className="relative h-9 w-full justify-start text-sm text-muted-foreground sm:pr-12 md:w-40 lg:w-64"
+      onClick={onClick || openGlobalSearch}
+      className={cn(
+        "relative h-9 justify-start text-sm text-muted-foreground sm:pr-12 w-40 lg:w-64",
+        className,
+      )}
     >
       <Search className="mr-2 h-4 w-4" />
-      <span className="hidden lg:inline-flex">Buscar...</span>
+      <span className="hidden lg:inline-flex">Buscar no sistema...</span>
       <span className="inline-flex lg:hidden">Buscar</span>
       <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
         <Command className="h-3 w-3" />K
