@@ -1,13 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   Loader2,
@@ -17,8 +35,21 @@ import {
   AlertTriangle,
   Calendar,
   ListTodo,
+  Trash2,
+  X,
+  CheckSquare,
 } from "lucide-react";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+
+type SortMode = "due_asc" | "due_desc" | "created_desc";
+
+const SORT_STORAGE_KEY = "deal-activities-sort";
+
+const SORT_LABELS: Record<SortMode, string> = {
+  due_asc: "Vencimento (mais antiga)",
+  due_desc: "Vencimento (mais recente)",
+  created_desc: "Criação (mais recente)",
+};
 
 interface Task {
   id: string;
@@ -38,6 +69,7 @@ interface Task {
   contact_channel?: string | null;
   meeting_url: string | null;
   meeting_platform: string | null;
+  created_at?: string | null;
   assigned_user?: {
     id: string;
     name: string;
@@ -89,6 +121,37 @@ const getComputedStatus = (task: Task): "pending" | "overdue" | "done" => {
   return "pending";
 };
 
+/** Timestamp do vencimento (data + hora). Null quando não há data. */
+const dueTimestamp = (task: Task): number | null => {
+  if (!task.due_date) return null;
+  const date = parseLocalDate(task.due_date);
+  if (!date) return null;
+  const [h, m] = (task.due_time || "00:00").split(":").map((v) => Number(v) || 0);
+  date.setHours(h, m, 0, 0);
+  return date.getTime();
+};
+
+const sortTasks = (list: Task[], mode: SortMode): Task[] => {
+  const copy = [...list];
+  if (mode === "created_desc") {
+    return copy.sort(
+      (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime(),
+    );
+  }
+  return copy.sort((a, b) => {
+    const da = dueTimestamp(a);
+    const db = dueTimestamp(b);
+    // Sem data de vencimento vai sempre para o fim
+    if (da === null && db === null) {
+      return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+    }
+    if (da === null) return 1;
+    if (db === null) return -1;
+    return mode === "due_asc" ? da - db : db - da;
+  });
+};
+
+
 export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const queryClient = useQueryClient();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -96,6 +159,24 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
   const [taskDialogOpen, setTaskDialogOpen] = useState(false);
   const [editingTask, setEditingTask] = useState<Task | null>(null);
   const [showAllCompleted, setShowAllCompleted] = useState(false);
+  const [selectionMode, setSelectionMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+  const [sortMode, setSortMode] = useState<SortMode>(() => {
+    if (typeof window === "undefined") return "due_asc";
+    const saved = window.localStorage.getItem(SORT_STORAGE_KEY) as SortMode | null;
+    return saved && saved in SORT_LABELS ? saved : "due_asc";
+  });
+
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(SORT_STORAGE_KEY, sortMode);
+    } catch {
+      // ignora indisponibilidade do localStorage
+    }
+  }, [sortMode]);
+
 
   useEffect(() => {
     fetchTasks();
@@ -144,6 +225,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
         contact_channel,
         meeting_url,
         meeting_platform,
+        created_at,
         assigned_user:users!internal_tasks_assigned_to_fkey(id, name, avatar_url),
         custom_status:task_statuses!internal_tasks_custom_status_id_fkey(id, name, color, is_completed_status),
         activity_type:activity_types!internal_tasks_activity_type_id_fkey(id, name, color)
@@ -213,28 +295,136 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
     return date < today;
   };
 
-  const pendingTasks = tasks.filter(t => !t.custom_status?.is_completed_status && !t.completed_at);
-  const completedTasks = tasks.filter(t => t.custom_status?.is_completed_status || t.completed_at);
+  const pendingTasks = useMemo(
+    () => sortTasks(tasks.filter(t => !t.custom_status?.is_completed_status && !t.completed_at), sortMode),
+    [tasks, sortMode],
+  );
+  const completedTasks = useMemo(
+    () =>
+      tasks
+        .filter(t => t.custom_status?.is_completed_status || t.completed_at)
+        .sort((a, b) => new Date(b.completed_at || 0).getTime() - new Date(a.completed_at || 0).getTime()),
+    [tasks],
+  );
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const visibleCompleted = showAllCompleted ? completedTasks : completedTasks.slice(0, 5);
+  const selectableIds = [...pendingTasks, ...visibleCompleted].map(t => t.id);
+  const allSelected = selectableIds.length > 0 && selectableIds.every(id => selectedIds.has(id));
+
+  const exitSelection = () => {
+    setSelectionMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    if (ids.length === 0) return;
+    setDeleting(true);
+    const { error } = await supabase.from("internal_tasks").delete().in("id", ids);
+    setDeleting(false);
+    setConfirmDeleteOpen(false);
+
+    if (error) {
+      console.error("Error deleting tasks:", error);
+      toast.error("Não foi possível excluir as atividades");
+      return;
+    }
+
+    toast.success(`${ids.length} atividade${ids.length > 1 ? "s" : ""} excluída${ids.length > 1 ? "s" : ""}`);
+    exitSelection();
+    await fetchTasks();
+    queryClient.invalidateQueries({ queryKey: ["internal-tasks"] });
+    queryClient.invalidateQueries({ queryKey: ["batch-deal-activity-status"] });
+    queryClient.invalidateQueries({ queryKey: ["deal-activity-status", dealId] });
+  };
 
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2 flex-wrap">
         <h4 className="font-medium text-sm flex items-center gap-1.5 text-muted-foreground">
           <ListTodo className="h-3.5 w-3.5" />
           Atividades ({pendingTasks.length} pendentes)
         </h4>
-        <Button
-          size="sm"
-          className="h-7 text-xs"
-          onClick={() => {
-            setEditingTask(null);
-            setTaskDialogOpen(true);
-          }}
-        >
-          <Plus className="h-3 w-3 mr-1" />
-          Nova Atividade
-        </Button>
+        <div className="flex items-center gap-1.5">
+          <Select value={sortMode} onValueChange={(v) => setSortMode(v as SortMode)}>
+            <SelectTrigger className="h-7 text-[11px] w-[170px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(Object.keys(SORT_LABELS) as SortMode[]).map((mode) => (
+                <SelectItem key={mode} value={mode} className="text-xs">
+                  {SORT_LABELS[mode]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          {tasks.length > 0 && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-7 text-xs"
+              onClick={() => (selectionMode ? exitSelection() : setSelectionMode(true))}
+            >
+              {selectionMode ? (
+                <><X className="h-3 w-3 mr-1" />Cancelar</>
+              ) : (
+                <><CheckSquare className="h-3 w-3 mr-1" />Selecionar</>
+              )}
+            </Button>
+          )}
+          <Button
+            size="sm"
+            className="h-7 text-xs"
+            onClick={() => {
+              setEditingTask(null);
+              setTaskDialogOpen(true);
+            }}
+          >
+            <Plus className="h-3 w-3 mr-1" />
+            Nova Atividade
+          </Button>
+        </div>
       </div>
+
+      {selectionMode && (
+        <div className="flex items-center justify-between gap-2 rounded-lg border bg-muted/40 px-2.5 py-1.5 flex-wrap">
+          <span className="text-xs text-muted-foreground">
+            {selectedIds.size} selecionada{selectedIds.size === 1 ? "" : "s"}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              size="sm"
+              variant="ghost"
+              className="h-6 text-[11px]"
+              onClick={() =>
+                setSelectedIds(allSelected ? new Set() : new Set(selectableIds))
+              }
+            >
+              {allSelected ? "Limpar" : "Marcar todas"}
+            </Button>
+            <Button
+              size="sm"
+              variant="destructive"
+              className="h-6 text-[11px]"
+              disabled={selectedIds.size === 0}
+              onClick={() => setConfirmDeleteOpen(true)}
+            >
+              <Trash2 className="h-3 w-3 mr-1" />
+              Excluir selecionadas
+            </Button>
+          </div>
+        </div>
+      )}
+
 
       {loading ? (
         <div className="flex items-center justify-center py-6">
@@ -258,17 +448,25 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                 return (
                   <div
                     key={task.id}
-                    className="flex items-start gap-2 p-2.5 hover:bg-muted/50 cursor-pointer"
+                    className={cn(
+                      "flex items-start gap-2 p-2.5 hover:bg-muted/50 cursor-pointer",
+                      selectionMode && selectedIds.has(task.id) && "bg-primary/5",
+                    )}
                     onClick={() => {
+                      if (selectionMode) {
+                        toggleSelected(task.id);
+                        return;
+                      }
                       setEditingTask(task);
                       setTaskDialogOpen(true);
                     }}
                   >
                     <Checkbox
-                      checked={false}
+                      checked={selectionMode ? selectedIds.has(task.id) : false}
                       onClick={(e) => {
                         e.stopPropagation();
-                        handleToggleComplete(task);
+                        if (selectionMode) toggleSelected(task.id);
+                        else handleToggleComplete(task);
                       }}
                       className="mt-0.5"
                     />
@@ -285,6 +483,7 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                           <span className={cn("flex items-center gap-0.5", overdue && "text-danger")}>
                             <Calendar className="h-2.5 w-2.5" />
                             {formatLocalDate(task.due_date)}
+                            {task.due_time && ` ${task.due_time.slice(0, 5)}`}
                           </span>
                         )}
                         {(() => {
@@ -323,16 +522,32 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
                 Concluídas ({completedTasks.length})
               </p>
               <div className="rounded-lg border bg-muted/20 divide-y opacity-70">
-                {completedTasks.slice(0, showAllCompleted ? completedTasks.length : 5).map((task) => (
+                {visibleCompleted.map((task) => (
                   <div
                     key={task.id}
-                    className="flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/30"
+                    className={cn(
+                      "flex items-center gap-2 p-2 cursor-pointer hover:bg-muted/30",
+                      selectionMode && selectedIds.has(task.id) && "bg-primary/5",
+                    )}
                     onClick={() => {
+                      if (selectionMode) {
+                        toggleSelected(task.id);
+                        return;
+                      }
                       setEditingTask(task);
                       setTaskDialogOpen(true);
                     }}
                   >
-                    <Checkbox checked className="mt-0" />
+                    <Checkbox
+                      checked={selectionMode ? selectedIds.has(task.id) : true}
+                      onClick={(e) => {
+                        if (selectionMode) {
+                          e.stopPropagation();
+                          toggleSelected(task.id);
+                        }
+                      }}
+                      className="mt-0"
+                    />
                     <span className="text-xs line-through text-muted-foreground truncate flex-1">
                       {task.activity_type?.name || task.title}
                     </span>
@@ -376,6 +591,32 @@ export function DealActivitiesTab({ dealId, leadId }: DealActivitiesTabProps) {
           setTaskDialogOpen(true);
         }}
       />
+
+      <AlertDialog open={confirmDeleteOpen} onOpenChange={setConfirmDeleteOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir atividades?</AlertDialogTitle>
+            <AlertDialogDescription>
+              {selectedIds.size} atividade{selectedIds.size === 1 ? "" : "s"} sera
+              {selectedIds.size === 1 ? "" : "o"} excluída{selectedIds.size === 1 ? "" : "s"} definitivamente.
+              Essa ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              disabled={deleting}
+              onClick={(e) => {
+                e.preventDefault();
+                handleBulkDelete();
+              }}
+            >
+              {deleting && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
