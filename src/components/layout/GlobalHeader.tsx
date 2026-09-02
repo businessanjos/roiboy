@@ -71,8 +71,12 @@ export function GlobalHeader() {
       {/* Right controls */}
       <div className="flex items-center gap-1 md:gap-2">
 
+        {/* Busca global */}
+        <SearchTrigger className="hidden md:flex" />
+
         {/* Empresa (CNPJ) */}
         <CompanySelector className="hidden md:flex w-[190px] h-9" />
+
 
 
 
