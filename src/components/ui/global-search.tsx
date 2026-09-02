@@ -112,14 +112,14 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       if (canViewClients) {
         const { data } = await supabase
           .from("clients")
-          .select("id, name, company")
-          .ilike("name", `%${term}%`)
+          .select("id, full_name, company_name")
+          .ilike("full_name", `%${term}%`)
           .limit(5);
         for (const c of data || []) {
           results.push({
             id: `client:${c.id}`,
-            title: c.name,
-            description: (c as { company?: string | null }).company || "Cliente",
+            title: c.full_name,
+            description: c.company_name || "Cliente",
             group: "Clientes",
             href: `/clients/${c.id}`,
             icon: <Users className="h-4 w-4" />,
@@ -139,7 +139,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
             title: d.title,
             description: "Negócio",
             group: "Negócios",
-            href: `/sales/pipeline?deal=${d.id}`,
+            href: `/pipeline?deal=${d.id}`,
             icon: <Briefcase className="h-4 w-4" />,
           });
         }
