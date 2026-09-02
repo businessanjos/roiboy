@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bell, ChevronLeft } from "lucide-react";
+import { Bell, ChevronLeft, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { useSector } from "@/contexts/SectorContext";
@@ -10,6 +10,7 @@ import { useNotifications } from "@/hooks/useNotifications";
 import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
+import { openGlobalSearch } from "@/components/ui/global-search";
 
 /**
  * Header compacto estilo app para telas pequenas: título da tela atual,
@@ -75,6 +76,16 @@ export function MobileAppHeader() {
             </p>
           )}
         </div>
+
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-9 w-9 shrink-0"
+          onClick={openGlobalSearch}
+          aria-label="Buscar"
+        >
+          <Search className="h-5 w-5" />
+        </Button>
 
         <Button
           variant="ghost"
