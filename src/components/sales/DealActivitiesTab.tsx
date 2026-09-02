@@ -1,13 +1,31 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { cn } from "@/lib/utils";
 import {
   Loader2,
@@ -17,8 +35,21 @@ import {
   AlertTriangle,
   Calendar,
   ListTodo,
+  Trash2,
+  X,
+  CheckSquare,
 } from "lucide-react";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
+
+type SortMode = "due_asc" | "due_desc" | "created_desc";
+
+const SORT_STORAGE_KEY = "deal-activities-sort";
+
+const SORT_LABELS: Record<SortMode, string> = {
+  due_asc: "Vencimento (mais antiga)",
+  due_desc: "Vencimento (mais recente)",
+  created_desc: "Criação (mais recente)",
+};
 
 interface Task {
   id: string;
