@@ -1,5 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from "react";
-import { Search, X, ArrowRight, Command, Users, Briefcase, CornerDownLeft } from "lucide-react";
+import {
+  Search,
+  X,
+  ArrowRight,
+  Command,
+  Users,
+  Briefcase,
+  CornerDownLeft,
+  UserPlus,
+  CalendarDays,
+  IdCard,
+  Loader2,
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -13,6 +25,7 @@ import { Button } from "./button";
 import { sectors } from "@/config/sectors";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { PERMISSIONS } from "@/lib/access/permissions";
 
@@ -21,6 +34,17 @@ export const GLOBAL_SEARCH_EVENT = "roy:open-global-search";
 export function openGlobalSearch() {
   window.dispatchEvent(new CustomEvent(GLOBAL_SEARCH_EVENT));
 }
+
+/** RH é restrito por allowlist de e-mail (mesma regra de /rh). */
+const RH_ALLOWED_EMAILS = [
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com",
+];
 
 interface SearchResult {
   id: string;
@@ -36,6 +60,13 @@ const normalize = (value: string) =>
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
+
+/** Remove caracteres que quebram o parser do filtro `or` do PostgREST. */
+const sanitize = (value: string) => value.replace(/[,()%*\\]/g, " ").trim();
+
+/** Cache simples em memória — respostas repetidas saem instantâneas. */
+const resultCache = new Map<string, SearchResult[]>();
+
 
 interface GlobalSearchProps {
   open: boolean;
