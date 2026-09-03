@@ -1,0 +1,1 @@
+UPDATE public.company_goals SET annual_goal = 41000000 WHERE year = 2026 AND goal_type = 'revenue';
