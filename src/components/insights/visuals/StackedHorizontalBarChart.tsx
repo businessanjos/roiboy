@@ -199,7 +199,8 @@ export function StackedHorizontalBarChart({
               height={legendHeight}
               wrapperStyle={{ paddingBottom: 6 }}
               content={(props: any) => (
-                <ChartLegendContent payload={props?.payload} fontSize={tickFont} />
+                <ChartLegendContent payload={props?.payload} fontSize={legendFont} />
+
               )}
             />
           )}
