@@ -45,6 +45,7 @@ export function InsightsMainContent() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [focusZoom, setFocusZoom] = useState(100);
   const [tvFit, setTvFit] = useState(true);
+  const [tvRequiredHeight, setTvRequiredHeight] = useState(0);
   const focusModeRef = useRef<HTMLDivElement>(null);
   const [selectedMonth, setSelectedMonth] = useState<number | null>(null);
   const [mobileActionsSlot, setMobileActionsSlot] = useState<HTMLElement | null>(null);
