@@ -263,7 +263,7 @@ function ResponsiveRow({ row, containerWidth, onUpdateVisual, onRemoveVisual, re
               flex: `${row.weight} 1 0%`,
               // Piso de altura: sem ele, linhas de scorecard podem ficar tão
               // baixas que o número estoura o card e cobre o título.
-              minHeight: row.isAllScorecards ? 132 : row.isAllCompact ? 200 : 220,
+              minHeight: row.isAllScorecards ? 150 : row.isAllCompact ? 220 : 240,
               gridAutoRows: "1fr",
             }
           : {}),

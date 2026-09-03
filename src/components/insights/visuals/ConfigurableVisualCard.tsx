@@ -304,7 +304,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                 isScorecard && "text-sm",
                 tv.tv && "font-semibold tracking-tight text-muted-foreground",
               )}
-              style={tv.tv ? { fontSize: isScorecard ? 18 : 22 } : undefined}
+              style={tv.tv ? { fontSize: Math.round((isScorecard ? 15 : 18) * tv.scale) } : undefined}
             >
               <div className="flex items-center gap-1.5 min-w-0">
                 {!readOnly && <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab widget-drag-handle flex-shrink-0" />}
@@ -463,7 +463,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
             {summary && (
               <div
                 className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
-                style={tv.tv ? { fontSize: 15 } : undefined}
+                style={tv.tv ? { fontSize: Math.round(12 * tv.scale) } : undefined}
               >
                 {summary.showTotal && (
                   <span>
