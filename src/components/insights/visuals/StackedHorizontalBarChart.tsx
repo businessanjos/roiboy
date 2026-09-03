@@ -161,8 +161,8 @@ export function StackedHorizontalBarChart({
 
     // Legenda multi-linha: reserva altura suficiente para não invadir o gráfico.
     const legendChars = seriesKeys.reduce((s, k) => s + k.length + 6, 0);
-    const legendLines = Math.max(1, Math.ceil((legendChars * tickFont * 0.55) / Math.max(width - 16, 200)));
-    const legendHeight = Math.round(legendLines * (tickFont + 9) + 8);
+    const legendLines = Math.max(1, Math.ceil((legendChars * legendFont * 0.55) / Math.max(width - 16, 200)));
+    const legendHeight = Math.round(legendLines * (legendFont + 6) + 4);
 
     return (
       <div ref={sizeRef} className="h-full w-full">
