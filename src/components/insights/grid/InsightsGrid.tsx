@@ -432,7 +432,7 @@ function visualToLayoutItem(visual: InsightsVisual, index: number): LayoutItem {
 
 const FREE_LAYOUT_KEY = "insights:free-layout-mode";
 
-export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight, toolbarSlotId }: InsightsGridProps) {
+export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpdateVisual, onRemoveVisual, minCardWidths, fitHeight, onRequiredHeight, toolbarSlotId }: InsightsGridProps) {
   const [toolbarSlot, setToolbarSlot] = useState<HTMLElement | null>(null);
   useEffect(() => {
     if (!toolbarSlotId) {
