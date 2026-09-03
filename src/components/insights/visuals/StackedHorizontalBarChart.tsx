@@ -127,7 +127,10 @@ export function StackedHorizontalBarChart({
   if (isVertical) {
     const width = containerWidth || 0;
     const narrow = width > 0 && width < 520;
-    const tickFont = Math.round((narrow ? 9 : 11) * m);
+    // Rótulos de eixo (datas, siglas) não precisam crescer tanto quanto os
+    // números: no modo TV limitamos para sobrar altura útil às barras.
+    const tickFont = Math.min(Math.round((narrow ? 9 : 11) * m), tvMode.tv ? 14 : 999);
+    const legendFont = Math.min(Math.round(12 * m), tvMode.tv ? 15 : 999);
     // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
     const totals = data.map((d) =>
       seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
@@ -158,8 +161,8 @@ export function StackedHorizontalBarChart({
 
     // Legenda multi-linha: reserva altura suficiente para não invadir o gráfico.
     const legendChars = seriesKeys.reduce((s, k) => s + k.length + 6, 0);
-    const legendLines = Math.max(1, Math.ceil((legendChars * tickFont * 0.55) / Math.max(width - 16, 200)));
-    const legendHeight = Math.round(legendLines * (tickFont + 9) + 8);
+    const legendLines = Math.max(1, Math.ceil((legendChars * legendFont * 0.55) / Math.max(width - 16, 200)));
+    const legendHeight = Math.round(legendLines * (legendFont + 6) + 4);
 
     return (
       <div ref={sizeRef} className="h-full w-full">
@@ -196,7 +199,8 @@ export function StackedHorizontalBarChart({
               height={legendHeight}
               wrapperStyle={{ paddingBottom: 6 }}
               content={(props: any) => (
-                <ChartLegendContent payload={props?.payload} fontSize={tickFont} />
+                <ChartLegendContent payload={props?.payload} fontSize={legendFont} />
+
               )}
             />
           )}

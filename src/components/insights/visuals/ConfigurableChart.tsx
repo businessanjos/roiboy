@@ -217,7 +217,10 @@ function BarChartView({
   const m = FONT_SCALE_MULTIPLIERS[appearance.fontScale || 'normal'] * tv.scale;
   const { ref, width, height } = useChartSize();
 
-  const tickFont = Math.round(10 * m);
+  // Em TV os rótulos de categoria não precisam crescer tanto: acima disso
+  // eles engolem a altura das barras e o gráfico fica desproporcional.
+  const tickFont = Math.min(Math.round(10 * m), tv.tv ? 14 : 999);
+  const valueFont = Math.min(Math.round(11 * m), tv.tv ? 15 : 999);
   const longest = data.reduce((a, d) => Math.max(a, String(d.name ?? '').length), 0);
 
   // Espaço por categoria: define se os rótulos cabem na horizontal
@@ -245,7 +248,7 @@ function BarChartView({
   );
   const barSlot = data.length ? Math.max(width - 100, 1) / data.length : 0;
   const labelStep = Math.max(1, Math.ceil(48 / Math.max(barSlot, 1)));
-  const yWidth = yAxisWidth(data, formatting, Math.round(11 * m));
+  const yWidth = yAxisWidth(data, formatting, valueFont);
 
   return (
     <div ref={ref} className="h-full w-full">
@@ -266,7 +269,7 @@ function BarChartView({
           />
           <YAxis
             tickFormatter={(value) => formatValueCompact(value, formatting.type)}
-            tick={{ fontSize: Math.round(11 * m), ...AXIS_TICK }}
+            tick={{ fontSize: valueFont, ...AXIS_TICK }}
             tickLine={false}
             axisLine={false}
             width={yWidth}
@@ -290,7 +293,7 @@ function BarChartView({
                   const centerX = (x as number) + (barWidth as number) / 2;
                   return (
                     <text x={centerX} y={Math.max((y as number) - 8, 10)} textAnchor="middle"
-                      style={{ fontSize: tickFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}>
+                      style={{ fontSize: valueFont, fill: 'hsl(var(--foreground))', fontVariantNumeric: 'tabular-nums' }}>
                       {text}
                     </text>
                   );
