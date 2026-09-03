@@ -33,6 +33,8 @@ interface InsightsGridProps {
   minCardWidths?: Partial<MinCardWidths>;
   /** TV mode: fit every visual inside the available height (no page scroll). */
   fitHeight?: boolean;
+  /** TV mode: informa a altura mínima confortável do painel (px) para o palco escalar. */
+  onRequiredHeight?: (px: number) => void;
   /** Optional DOM element id to portal the "Ajustar layout" toggle into (e.g. the filters row). */
   toolbarSlotId?: string;
 }
