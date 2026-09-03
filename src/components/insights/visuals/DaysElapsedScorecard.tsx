@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { Calendar, Briefcase, TrendingUp } from "lucide-react";
+import { useChartSize } from "./useChartSize";
 
 interface DaysElapsedScorecardProps {
   fontScale?: string;
