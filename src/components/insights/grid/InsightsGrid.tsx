@@ -586,6 +586,7 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
           readOnly
           minCardWidths={minCardWidths}
           fitHeight
+          onRequiredHeight={onRequiredHeight}
         />
       </div>
     );
