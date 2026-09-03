@@ -3,7 +3,7 @@ import { formatValueWithScale } from "@/lib/formula-evaluator";
 import { FormatType, DisplayScale, FONT_SCALE_MULTIPLIERS } from "../visual-builder/types";
 import { VisualConfig } from "../visual-builder/types";
 import { useInsightsFilters } from "@/hooks/useInsightsFilters";
-import { sumGoalsInRange } from "@/lib/monthRange";
+import { prorateGoalsInRange } from "@/lib/monthRange";
 import { useTvMode } from "../TvModeContext";
 
 
@@ -26,7 +26,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   
   // Sum all values for scorecard
   const totalValue = isMetaScorecard
-    ? sumGoalsInRange(config?.gaugeConfig?.monthlyGoals, filters.startDate, filters.endDate)
+    ? prorateGoalsInRange(config?.gaugeConfig?.monthlyGoals, filters.startDate, filters.endDate)
     : data.reduce((acc, item) => acc + item.value, 0);
   const totalCount = data.reduce((acc, item) => acc + (item.count || 0), 0);
   
