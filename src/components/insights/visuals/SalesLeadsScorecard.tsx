@@ -96,9 +96,9 @@ export function SalesLeadsScorecard({ fontScale = "normal", valueColor, config }
       const dealFieldFilters = mergeGlobalDealFilter(getDealFilters(config as any), filters.globalFieldFilter);
       const unifiedFilters = selectUnmirroredFilters(config?.filters);
 
-      const applyAll = async (rows: DealRow[]) => {
+      const applyAll = async (rows: DealRow[], includeFieldFilters = true) => {
         let result = rows;
-        if (dealFieldFilters.length) {
+        if (includeFieldFilters && dealFieldFilters.length) {
           result = (await filterByDealFields(result as any, accountId, dealFieldFilters)) as DealRow[];
         }
         if (unifiedFilters.length) {
@@ -112,7 +112,9 @@ export function SalesLeadsScorecard({ fontScale = "normal", valueColor, config }
         fetchAllDeals(accountId, filters, pipelineId, "won_at"),
       ]);
 
-      const [leadsFiltered, wonFiltered] = await Promise.all([applyAll(leadRows), applyAll(wonRows)]);
+      // Vendas ganhas contam sempre (não são filtradas por campos como MQL),
+      // pois uma venda fechada é uma venda independente da qualificação do lead.
+      const [leadsFiltered, wonFiltered] = await Promise.all([applyAll(leadRows), applyAll(wonRows, false)]);
 
       return { leads: leadsFiltered.length, won: wonFiltered.length };
     },
