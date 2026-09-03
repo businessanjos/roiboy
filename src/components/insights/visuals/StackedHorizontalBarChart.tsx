@@ -127,7 +127,10 @@ export function StackedHorizontalBarChart({
   if (isVertical) {
     const width = containerWidth || 0;
     const narrow = width > 0 && width < 520;
-    const tickFont = Math.round((narrow ? 9 : 11) * m);
+    // Rótulos de eixo (datas, siglas) não precisam crescer tanto quanto os
+    // números: no modo TV limitamos para sobrar altura útil às barras.
+    const tickFont = Math.min(Math.round((narrow ? 9 : 11) * m), tvMode.tv ? 14 : 999);
+    const legendFont = Math.min(Math.round(12 * m), tvMode.tv ? 15 : 999);
     // Largura do eixo de valores baseada no maior rótulo (evita corte tipo "0.000")
     const totals = data.map((d) =>
       seriesKeys.reduce((sum, k) => sum + (Number((d as any)[k]) || 0), 0)
