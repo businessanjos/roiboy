@@ -266,12 +266,13 @@ export function InsightsMainContent() {
           {tvFit ? (
             <div className="flex-1 min-h-0 overflow-hidden p-1 bg-gradient-to-b from-background to-muted/20">
               {hasVisuals && (
-                <TvFitStage>
+                <TvFitStage requiredHeight={tvRequiredHeight}>
                   <InsightsGrid
                     visuals={filteredVisuals}
                     onLayoutChange={() => {}}
                     readOnly
                     fitHeight
+                    onRequiredHeight={setTvRequiredHeight}
                     onUpdateVisual={updateVisual}
                     onRemoveVisual={removeVisual}
                   />
