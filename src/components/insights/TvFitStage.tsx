@@ -64,7 +64,9 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
         const target =
           needed > available + 4
             ? Math.max(0.6, prev * (available / needed))
-            : Math.min(1, prev * 1.02);
+            : prev < 1 && needed < available * 0.92
+              ? Math.min(1, prev * 1.03)
+              : prev;
         return Math.abs(target - prev) < 0.01 ? prev : target;
       });
     };
