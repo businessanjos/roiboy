@@ -111,7 +111,7 @@ export function StackedHorizontalBarChart({
   const tvMode = useTvMode();
   const m = FONT_SCALE_MULTIPLIERS[safeAppearance.fontScale || 'normal'] * tvMode.scale;
   // Largura real do container: permite adaptar eixos/legenda em telas estreitas (mobile).
-  const { ref: sizeRef, width: containerWidth } = useChartSize();
+  const { ref: sizeRef, width: containerWidth, height: containerHeight } = useChartSize();
 
 
   if (!data || data.length === 0 || seriesKeys.length === 0) {
