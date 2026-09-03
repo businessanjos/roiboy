@@ -222,17 +222,27 @@ function BarChartView({
 
   // Espaço por categoria: define se os rótulos cabem na horizontal
   const slot = data.length ? Math.max(width - 100, 80) / data.length : 80;
-  const flat = approxTextWidth('x'.repeat(longest), tickFont) <= slot - 6;
+  const labelWidth = approxTextWidth('x'.repeat(longest), tickFont);
+  // Rótulos curtos (datas, siglas) ficam sempre na horizontal: em vez de girar
+  // o texto — o que rouba metade da altura do gráfico — pulamos rótulos.
+  const shortLabels = longest <= 8;
+  const flat = shortLabels || labelWidth <= slot - 6;
   const maxChars = flat
     ? longest
     : Math.max(6, Math.floor(Math.min(120, (height || 240) * 0.42) / (tickFont * 0.62)));
 
+  // O eixo nunca pode consumir mais que ~26% da altura do card.
+  const axisCap = Math.max(28, Math.round((height || 240) * 0.26));
   const axisHeight = flat
     ? Math.round(tickFont * 2.2)
-    : Math.min(112, Math.round(approxTextWidth('x'.repeat(maxChars), tickFont) * 0.72) + 12);
+    : Math.min(axisCap, Math.round(approxTextWidth('x'.repeat(maxChars), tickFont) * 0.72) + 12);
 
   // Evita rótulos de eixo colados quando há muitas categorias
-  const tickInterval = flat ? 0 : Math.max(0, Math.ceil((data.length * (tickFont + 6)) / Math.max(width - 100, 1)) - 1);
+  const tickSpacing = flat ? labelWidth + 14 : tickFont + 6;
+  const tickInterval = Math.max(
+    0,
+    Math.ceil((data.length * tickSpacing) / Math.max(width - 100, 1)) - 1
+  );
   const barSlot = data.length ? Math.max(width - 100, 1) / data.length : 0;
   const labelStep = Math.max(1, Math.ceil(48 / Math.max(barSlot, 1)));
   const yWidth = yAxisWidth(data, formatting, Math.round(11 * m));
