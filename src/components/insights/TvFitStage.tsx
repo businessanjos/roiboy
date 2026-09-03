@@ -1,8 +1,7 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { TvModeProvider } from "./TvModeContext";
 
-
-/** Canvas nominal de uma TV 42" Full HD (16:9). */
+/** Canvas nominal de uma TV 42" Full HD (16:9) — mantido por compatibilidade. */
 export const TV_STAGE_WIDTH = 1920;
 export const TV_STAGE_HEIGHT = 1080;
 
@@ -15,14 +14,14 @@ interface TvFitStageProps {
 }
 
 /**
- * Renderiza o conteúdo dentro de um palco fixo de 1920x1080 (16:9) e escala
- * proporcionalmente para caber no espaço disponível — o que aparece aqui é
- * exatamente o que aparece na TV, sem cortes nem barras de rolagem.
+ * O palco ocupa exatamente o espaço disponível (sem downscale). Antes o conteúdo
+ * era renderizado num canvas fixo de 1920x1080 e reduzido por transform — em
+ * telas menores que Full HD isso deixava todos os textos minúsculos.
+ * Agora usamos o tamanho real e ampliamos as fontes conforme a área disponível.
  */
 export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
   const wrapperRef = useRef<HTMLDivElement>(null);
-  const [scale, setScale] = useState(1);
-  const [stageWidth, setStageWidth] = useState(TV_STAGE_WIDTH);
+  const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
     const el = wrapperRef.current;
@@ -30,17 +29,11 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
 
     const update = () => {
       const { width, height } = el.getBoundingClientRect();
-      if (!width || !height) return;
-      // O palco mantém a altura nominal de 1080 e adapta a largura ao formato
-      // real da janela — assim não sobram faixas laterais vazias em telas
-      // mais largas que 16:9 (ultrawide, janelas baixas, etc).
-      const aspect = width / height;
-      const nextWidth = Math.round(
-        Math.min(Math.max(TV_STAGE_HEIGHT * aspect, TV_STAGE_WIDTH), TV_STAGE_HEIGHT * 3)
+      setSize((prev) =>
+        Math.abs(prev.width - width) < 2 && Math.abs(prev.height - height) < 2
+          ? prev
+          : { width, height }
       );
-      const next = Math.min(width / nextWidth, height / TV_STAGE_HEIGHT);
-      setStageWidth((prev) => (Math.abs(prev - nextWidth) < 2 ? prev : nextWidth));
-      setScale((prev) => (Math.abs(prev - next) < 0.001 ? prev : next));
     };
 
     update();
@@ -49,44 +42,30 @@ export function TvFitStage({ children, title, subtitle }: TvFitStageProps) {
     return () => ro.disconnect();
   }, []);
 
-  // Largura real (em px de tela) que o palco ocupa depois da escala.
-  // Abaixo de ~1100px os rótulos ficam pequenos demais: entramos em modo compacto
-  // (fontes levemente maiores e menos categorias) automaticamente.
-  const renderedWidth = stageWidth * scale;
-  const compact = renderedWidth > 0 && renderedWidth < 1100;
+  // Escala tipográfica: quanto maior a tela (TV), maiores os números e rótulos.
+  // Notebooks (~1300px) ficam em 1.1; Full HD em ~1.3; 4K/TVs grandes até 1.6.
+  const { width } = size;
+  const scale = width
+    ? Math.min(1.6, Math.max(1.05, 1.05 + (width - 1200) / 1600))
+    : 1.15;
 
   return (
-    <div ref={wrapperRef} className="w-full h-full flex items-center justify-center overflow-hidden">
-      <div
-        style={{
-          width: stageWidth,
-          height: TV_STAGE_HEIGHT,
-          transform: `scale(${scale})`,
-          transformOrigin: "center center",
-        }}
-        className="shrink-0"
-      >
-
-        <div className="w-full h-full flex flex-col rounded-2xl border border-border/60 bg-card/40 shadow-2xl overflow-hidden">
-          {(title || subtitle) && (
-            <div className="flex items-baseline justify-between gap-6 px-8 pt-6 pb-4 shrink-0">
-              <h2 className="text-4xl font-bold tracking-tight text-foreground truncate">{title}</h2>
-              {subtitle && (
-                <span className="text-xl text-muted-foreground tabular-nums shrink-0">{subtitle}</span>
-              )}
-            </div>
-          )}
-          <div className="flex-1 min-h-0 px-6 pb-6">
-            {/* Palco 1920x1080. Em telas amplas os visuais renderizam exatamente
-                como fora do modo TV; quando o palco encolhe muito, ativamos o
-                modo compacto para manter tudo legível. */}
-            <TvModeProvider enabled={compact} compact scale={1.2} maxCategories={8}>
-              {children}
-            </TvModeProvider>
+    <div ref={wrapperRef} className="w-full h-full overflow-hidden">
+      <div className="w-full h-full flex flex-col rounded-2xl border border-border/60 bg-card/40 shadow-2xl overflow-hidden">
+        {(title || subtitle) && (
+          <div className="flex items-baseline justify-between gap-6 px-6 pt-4 pb-2 shrink-0">
+            <h2 className="text-3xl font-bold tracking-tight text-foreground truncate">{title}</h2>
+            {subtitle && (
+              <span className="text-lg text-muted-foreground tabular-nums shrink-0">{subtitle}</span>
+            )}
           </div>
+        )}
+        <div className="flex-1 min-h-0 px-3 py-3">
+          <TvModeProvider enabled scale={scale} maxCategories={10}>
+            {children}
+          </TvModeProvider>
         </div>
       </div>
     </div>
   );
 }
-
