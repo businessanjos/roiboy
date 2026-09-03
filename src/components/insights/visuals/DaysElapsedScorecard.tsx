@@ -105,63 +105,73 @@ export function DaysElapsedScorecard({ fontScale = "normal" }: DaysElapsedScorec
     };
   }, []);
 
-  const valueSize = Math.round(28 * m);
-  const labelSize = Math.round(11 * m);
-  const headerSize = Math.round(12 * m);
+  // Ajuste ao espaço real do card: evita que o mês/rótulos sejam cortados e
+  // mantém as três métricas centralizadas vertical e horizontalmente.
+  const { ref, height } = useChartSize();
+  const h = height || 120;
+  const fit = Math.max(0.7, Math.min(1.25, h / 130));
+  const valueSize = Math.round(28 * m * fit);
+  const labelSize = Math.round(11 * m * fit);
+  const headerSize = Math.round(12 * m * fit);
+  const subSize = Math.round(14 * m * fit);
+  const iconSize = Math.round(16 * m * fit);
+  const showMonth = h >= 110;
+
+  const items = [
+    {
+      Icon: Calendar,
+      value: String(stats.currentDay),
+      suffix: `/${stats.totalDays}`,
+      label: "dias corridos",
+    },
+    {
+      Icon: Briefcase,
+      value: String(stats.elapsedBusinessDays),
+      suffix: `/${stats.totalBusinessDays}`,
+      label: "dias úteis",
+    },
+    {
+      Icon: TrendingUp,
+      value: `${stats.percentElapsed}%`,
+      suffix: "",
+      label: "do mês",
+    },
+  ];
 
   return (
-    <div className="flex flex-col items-center justify-center h-full w-full gap-3 py-2">
-      {/* Month label */}
-      <p className="text-muted-foreground font-medium capitalize" style={{ fontSize: `${headerSize}px` }}>
-        {stats.monthName}
-      </p>
+    <div ref={ref} className="flex h-full w-full flex-col items-center justify-center gap-2 overflow-hidden">
+      {showMonth && (
+        <p
+          className="text-muted-foreground font-medium capitalize leading-none"
+          style={{ fontSize: `${headerSize}px` }}
+        >
+          {stats.monthName}
+        </p>
+      )}
 
-      {/* Three metrics row */}
-      <div className="flex items-stretch justify-center gap-4 w-full px-2">
-        {/* Days elapsed */}
-        <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-          <Calendar className="h-4 w-4 text-primary opacity-70" />
-          <p className="font-bold text-foreground leading-none" style={{ fontSize: `${valueSize}px` }}>
-            {stats.currentDay}
-            <span className="font-normal text-muted-foreground" style={{ fontSize: `${Math.round(14 * m)}px` }}>
-              /{stats.totalDays}
-            </span>
-          </p>
-          <p className="text-muted-foreground text-center" style={{ fontSize: `${labelSize}px` }}>
-            dias corridos
-          </p>
-        </div>
-
-        {/* Separator */}
-        <div className="w-px bg-border self-stretch" />
-
-        {/* Business days */}
-        <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-          <Briefcase className="h-4 w-4 text-primary opacity-70" />
-          <p className="font-bold text-foreground leading-none" style={{ fontSize: `${valueSize}px` }}>
-            {stats.elapsedBusinessDays}
-            <span className="font-normal text-muted-foreground" style={{ fontSize: `${Math.round(14 * m)}px` }}>
-              /{stats.totalBusinessDays}
-            </span>
-          </p>
-          <p className="text-muted-foreground text-center" style={{ fontSize: `${labelSize}px` }}>
-            dias úteis
-          </p>
-        </div>
-
-        {/* Separator */}
-        <div className="w-px bg-border self-stretch" />
-
-        {/* Percentage */}
-        <div className="flex flex-col items-center gap-1 flex-1 min-w-0">
-          <TrendingUp className="h-4 w-4 text-primary opacity-70" />
-          <p className="font-bold text-foreground leading-none" style={{ fontSize: `${valueSize}px` }}>
-            {stats.percentElapsed}%
-          </p>
-          <p className="text-muted-foreground text-center" style={{ fontSize: `${labelSize}px` }}>
-            do mês
-          </p>
-        </div>
+      <div className="grid w-full grid-cols-3 items-center divide-x divide-border">
+        {items.map(({ Icon, value, suffix, label }) => (
+          <div key={label} className="flex min-w-0 flex-col items-center justify-center gap-1 px-2">
+            <Icon
+              className="text-primary opacity-70"
+              style={{ width: iconSize, height: iconSize }}
+            />
+            <p className="font-bold text-foreground leading-none" style={{ fontSize: `${valueSize}px` }}>
+              {value}
+              {suffix && (
+                <span className="font-normal text-muted-foreground" style={{ fontSize: `${subSize}px` }}>
+                  {suffix}
+                </span>
+              )}
+            </p>
+            <p
+              className="text-muted-foreground text-center leading-tight"
+              style={{ fontSize: `${labelSize}px` }}
+            >
+              {label}
+            </p>
+          </div>
+        ))}
       </div>
     </div>
   );
