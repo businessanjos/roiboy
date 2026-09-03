@@ -463,7 +463,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
             {summary && (
               <div
                 className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground"
-                style={tv.tv ? { fontSize: 15 } : undefined}
+                style={tv.tv ? { fontSize: Math.round(12 * tv.scale) } : undefined}
               >
                 {summary.showTotal && (
                   <span>
