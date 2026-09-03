@@ -187,7 +187,16 @@ function getRowMinWidth(row: VisualRow, mins: MinCardWidths): number {
   return mins.default;
 }
 
-function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly, minCardWidths, fitHeight }: {
+/** Altura mínima confortável (px) de uma linha no modo TV. */
+function getRowMinHeight(row: VisualRow): number {
+  if (row.isAllScorecards) return 150;
+  if (row.isAllCompact) return 230;
+  return 300;
+}
+
+const TV_ROW_GAP = 16;
+
+function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, containerWidth, readOnly, minCardWidths, fitHeight, onRequiredHeight }: {
   visuals: InsightsVisual[];
   onUpdateVisual?: (id: string, updates: any) => Promise<void>;
   onRemoveVisual?: (id: string) => Promise<void>;
@@ -195,9 +204,21 @@ function ResponsiveInsightsGrid({ visuals, onUpdateVisual, onRemoveVisual, conta
   readOnly?: boolean;
   minCardWidths?: Partial<MinCardWidths>;
   fitHeight?: boolean;
+  onRequiredHeight?: (px: number) => void;
 }) {
   const rows = useMemo(() => groupVisualsIntoRows(visuals), [visuals]);
   const mins = useMemo(() => ({ ...DEFAULT_MIN_CARD_WIDTHS, ...(minCardWidths || {}) }), [minCardWidths]);
+
+  const requiredHeight = useMemo(
+    () =>
+      rows.reduce((sum, row) => sum + getRowMinHeight(row), 0) +
+      Math.max(0, rows.length - 1) * TV_ROW_GAP,
+    [rows]
+  );
+
+  useEffect(() => {
+    if (fitHeight) onRequiredHeight?.(requiredHeight);
+  }, [fitHeight, requiredHeight, onRequiredHeight]);
 
   return (
     <div className={fitHeight ? "flex flex-col gap-4 h-full min-h-0" : "flex flex-col gap-3"}>
