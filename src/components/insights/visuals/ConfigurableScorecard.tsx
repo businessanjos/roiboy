@@ -26,7 +26,7 @@ export function ConfigurableScorecard({ data, formatting, title, config }: Confi
   
   // Sum all values for scorecard
   const totalValue = isMetaScorecard
-    ? sumGoalsInRange(config?.gaugeConfig?.monthlyGoals, filters.startDate, filters.endDate)
+    ? prorateGoalsInRange(config?.gaugeConfig?.monthlyGoals, filters.startDate, filters.endDate)
     : data.reduce((acc, item) => acc + item.value, 0);
   const totalCount = data.reduce((acc, item) => acc + (item.count || 0), 0);
   
