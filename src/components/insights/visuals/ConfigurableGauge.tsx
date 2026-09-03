@@ -200,20 +200,8 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
 
   const totalRevenue = periodRevenue ?? 0;
 
-  // Compute goal for the selected period
-  const annualGoal = Number(companyGoal?.annual_goal) || 0;
+  // Compute goal for the selected period (sempre a partir das metas mensais)
   const goal = useMemo(() => {
-    if (goalPeriod === 'annual') {
-      // Usa a Meta Anual cadastrada; se não houver, soma os meses
-      if (annualGoal > 0) return annualGoal;
-      if (!monthlyGoals) return 0;
-      let sum = 0;
-      for (let i = 1; i <= 12; i++) {
-        sum += monthlyGoals[String(i).padStart(2, '0')] || 0;
-      }
-      return sum;
-    }
-
     if (!monthlyGoals) return 0;
 
     if (goalPeriod === 'monthly') {
@@ -221,15 +209,22 @@ function RevenueVsGoalGauge({ data, visualConfig, fontScale = 1 }: GaugeWrapperP
       return monthlyGoals[key] || 0;
     }
 
-    // quarterly
-    const quarterStart = Math.floor(currentMonth / 3) * 3; // 0,3,6,9
+    if (goalPeriod === 'quarterly') {
+      const quarterStart = Math.floor(currentMonth / 3) * 3; // 0,3,6,9
+      let sum = 0;
+      for (let i = quarterStart; i < quarterStart + 3; i++) {
+        sum += monthlyGoals[String(i + 1).padStart(2, '0')] || 0;
+      }
+      return sum;
+    }
+
+    // annual
     let sum = 0;
-    for (let i = quarterStart; i < quarterStart + 3; i++) {
-      const key = String(i + 1).padStart(2, '0');
-      sum += monthlyGoals[key] || 0;
+    for (let i = 1; i <= 12; i++) {
+      sum += monthlyGoals[String(i).padStart(2, '0')] || 0;
     }
     return sum;
-  }, [monthlyGoals, annualGoal, goalPeriod, currentMonth]);
+  }, [monthlyGoals, goalPeriod, currentMonth]);
 
 
   const formatCurrency = (v: number) => {
