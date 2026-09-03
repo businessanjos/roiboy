@@ -143,9 +143,18 @@ export function StackedHorizontalBarChart({
     const plotWidth = Math.max(width - yWidth - 24, 1);
     const slot = data.length ? plotWidth / data.length : plotWidth;
     const longestName = data.reduce((max, d) => Math.max(max, String(d.name ?? '').length), 0);
-    const fitsFlat = longestName * tickFont * 0.6 <= slot - 4;
-    const xInterval = fitsFlat ? 0 : Math.max(0, Math.ceil((data.length * (tickFont + 6)) / plotWidth) - 1);
-    const xHeight = fitsFlat ? 24 : Math.min(78, Math.round(longestName * tickFont * 0.5) + 14);
+    const nameWidth = longestName * tickFont * 0.6;
+    // Rótulos curtos (datas 01/09, siglas) ficam sempre na horizontal: girar o
+    // texto rouba metade da altura útil do gráfico. Em vez disso, pulamos rótulos.
+    const fitsFlat = longestName <= 8 || nameWidth <= slot - 4;
+    const xInterval = Math.max(
+      0,
+      Math.ceil((data.length * (fitsFlat ? nameWidth + 14 : tickFont + 6)) / plotWidth) - 1
+    );
+    const xAxisCap = Math.max(26, Math.round((containerHeight || 240) * 0.24));
+    const xHeight = fitsFlat
+      ? Math.round(tickFont * 2.2)
+      : Math.min(xAxisCap, Math.round(longestName * tickFont * 0.5) + 14);
 
     // Legenda multi-linha: reserva altura suficiente para não invadir o gráfico.
     const legendChars = seriesKeys.reduce((s, k) => s + k.length + 6, 0);
