@@ -277,8 +277,16 @@ async function processQueue(admin: any) {
     }
 
     const origins = originByDeal.get(d.deal_id) ?? [];
+    if (!isTrafficOrigin(origins)) {
+      await admin
+        .from("traffic_hub_deliveries")
+        .update({ status: "skipped", last_error: "Origem fora de tráfego" })
+        .eq("id", d.id);
+      continue;
+    }
     const stage = stageById.get(d.stage_id ?? deal.stage_id ?? "") ?? null;
     const pipeline = pipelineById.get(deal.pipeline_id ?? stage?.pipeline_id ?? "") ?? null;
+
 
     const payload = d.event_type === "stage"
       ? {
