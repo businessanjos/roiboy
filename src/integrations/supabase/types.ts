@@ -24990,12 +24990,14 @@ export type Database = {
           attempts: number
           created_at: string
           deal_id: string
+          event_type: string
           id: string
           last_error: string | null
           last_status_code: number | null
           next_attempt_at: string
           payload: Json | null
           sent_at: string | null
+          stage_id: string | null
           status: string
           updated_at: string
         }
@@ -25004,12 +25006,14 @@ export type Database = {
           attempts?: number
           created_at?: string
           deal_id: string
+          event_type?: string
           id?: string
           last_error?: string | null
           last_status_code?: number | null
           next_attempt_at?: string
           payload?: Json | null
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -25018,12 +25022,14 @@ export type Database = {
           attempts?: number
           created_at?: string
           deal_id?: string
+          event_type?: string
           id?: string
           last_error?: string | null
           last_status_code?: number | null
           next_attempt_at?: string
           payload?: Json | null
           sent_at?: string | null
+          stage_id?: string | null
           status?: string
           updated_at?: string
         }
@@ -25031,7 +25037,7 @@ export type Database = {
           {
             foreignKeyName: "traffic_hub_deliveries_deal_id_fkey"
             columns: ["deal_id"]
-            isOneToOne: true
+            isOneToOne: false
             referencedRelation: "deals"
             referencedColumns: ["id"]
           },
