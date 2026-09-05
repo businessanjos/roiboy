@@ -361,13 +361,13 @@ async function processQueue(admin: any) {
   let sent = 0;
   let failed = 0;
 
-  for (const d of deliveries) {
+  const sendOne = async (d: Delivery) => {
     const settings = settingsByAccount.get(d.account_id);
     const deal = dealById.get(d.deal_id);
 
     if (!settings) {
       failed++;
-      continue; // sem endpoint configurado: fica pendente para quando configurar
+      return; // sem endpoint configurado: fica pendente para quando configurar
     }
     if (!deal) {
       await admin
@@ -375,7 +375,7 @@ async function processQueue(admin: any) {
         .update({ status: "failed", last_error: "Negócio não encontrado" })
         .eq("id", d.id);
       failed++;
-      continue;
+      return;
     }
 
     const origins = originByDeal.get(d.deal_id) ?? [];
@@ -384,7 +384,7 @@ async function processQueue(admin: any) {
         .from("traffic_hub_deliveries")
         .update({ status: "skipped", last_error: "Origem fora de tráfego" })
         .eq("id", d.id);
-      continue;
+      return;
     }
     const stage = stageById.get(d.stage_id ?? deal.stage_id ?? "") ?? null;
     const pipeline = pipelineById.get(deal.pipeline_id ?? stage?.pipeline_id ?? "") ?? null;
@@ -486,6 +486,11 @@ async function processQueue(admin: any) {
       await markRetry(admin, d, (e as Error).message, null, payload);
       failed++;
     }
+  };
+
+  // Envia em pequenos grupos paralelos para não estourar o tempo da função
+  for (let i = 0; i < deliveries.length; i += CONCURRENCY) {
+    await Promise.all(deliveries.slice(i, i + CONCURRENCY).map((d) => sendOne(d)));
   }
 
   return { sent, failed, processed: deliveries.length };
