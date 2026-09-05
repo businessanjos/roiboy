@@ -91,6 +91,49 @@ Deno.serve(async (req) => {
   }
 });
 
+// Somente negócios de tráfego: [TRAF-STUDIO-EC] e [TRAF-IMP-EC]
+const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC"];
+
+function isTrafficOrigin(origins: string[]) {
+  return origins.some((o) => TRAFFIC_TAGS.some((t) => String(o).toUpperCase().includes(t)));
+}
+
+/** Valores (opt_ids) das opções de origem que representam tráfego. */
+async function getTrafficOptionValues(admin: any): Promise<string[]> {
+  const { data: fields } = await admin
+    .from("custom_fields")
+    .select("id, options")
+    .eq("name", "Origem da Venda")
+    .eq("show_in_deals", true);
+  const values: string[] = [];
+  for (const f of fields ?? []) {
+    for (const o of (f.options ?? []) as any[]) {
+      const label = String(o?.label ?? "").toUpperCase();
+      if (TRAFFIC_TAGS.some((t) => label.includes(t)) && o?.value) values.push(String(o.value));
+    }
+  }
+  return values;
+}
+
+/** Filtra ids de negócios que têm alguma origem de tráfego. */
+async function filterTrafficDeals(admin: any, dealIds: string[], optValues: string[]) {
+  if (!dealIds.length || !optValues.length) return new Set<string>();
+  const { data } = await admin
+    .from("deal_field_values")
+    .select("deal_id, value_text, value_json")
+    .in("deal_id", dealIds);
+  const set = new Set<string>();
+  for (const v of data ?? []) {
+    const raw: string[] = Array.isArray(v.value_json)
+      ? (v.value_json as any[]).map(String)
+      : v.value_text
+        ? [String(v.value_text)]
+        : [];
+    if (raw.some((r) => optValues.includes(r))) set.add(v.deal_id);
+  }
+  return set;
+}
+
 async function enqueueBatch(
   admin: any,
   accountId: string,
@@ -99,6 +142,7 @@ async function enqueueBatch(
 ) {
   let from = 0;
   let queued = 0;
+  const optValues = await getTrafficOptionValues(admin);
   while (true) {
     const { data: deals, error } = await admin
       .from("deals")
@@ -110,8 +154,14 @@ async function enqueueBatch(
     if (error) throw error;
     if (!deals?.length) break;
 
+    const trafficIds = await filterTrafficDeals(
+      admin,
+      deals.map((d: any) => d.id),
+      optValues,
+    );
+
     const rows = deals
-      .filter((d: any) => eventType === "sale" || !!d.stage_id)
+      .filter((d: any) => trafficIds.has(d.id) && (eventType === "sale" || !!d.stage_id))
       .map((d: any) => ({
         account_id: accountId,
         deal_id: d.id,
@@ -122,6 +172,7 @@ async function enqueueBatch(
         next_attempt_at: new Date().toISOString(),
         last_error: null,
       }));
+
     if (rows.length) {
       const { error: upErr } = await admin
         .from("traffic_hub_deliveries")
