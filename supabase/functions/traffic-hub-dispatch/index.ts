@@ -184,7 +184,7 @@ async function processQueue(admin: any) {
   const dealIds = deliveries.map((d) => d.deal_id);
   const { data: deals } = await admin
     .from("deals")
-    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, created_at, updated_at, stage_id, stage_changed_at, status")
+    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, created_at, updated_at, stage_id, stage_changed_at, status, pipeline_id")
     .in("id", dealIds);
   const dealById = new Map<string, any>((deals ?? []).map((d: any) => [d.id, d]));
 
@@ -204,6 +204,24 @@ async function processQueue(admin: any) {
       .select("id, name, display_order, pipeline_id")
       .in("id", stageIds);
     for (const s of stages ?? []) stageById.set(s.id, s);
+  }
+
+  // Funis (pipelines)
+  const pipelineIds = [
+    ...new Set(
+      (deals ?? [])
+        .map((d: any) => d.pipeline_id)
+        .concat([...stageById.values()].map((s: any) => s.pipeline_id))
+        .filter(Boolean) as string[],
+    ),
+  ];
+  const pipelineById = new Map<string, any>();
+  if (pipelineIds.length) {
+    const { data: pipes } = await admin
+      .from("pipelines")
+      .select("id, name")
+      .in("id", pipelineIds);
+    for (const p of pipes ?? []) pipelineById.set(p.id, p);
   }
 
   // Origem da venda (campo personalizado multi-select)
@@ -260,6 +278,7 @@ async function processQueue(admin: any) {
 
     const origins = originByDeal.get(d.deal_id) ?? [];
     const stage = stageById.get(d.stage_id ?? deal.stage_id ?? "") ?? null;
+    const pipeline = pipelineById.get(deal.pipeline_id ?? stage?.pipeline_id ?? "") ?? null;
 
     const payload = d.event_type === "stage"
       ? {
@@ -275,6 +294,8 @@ async function processQueue(admin: any) {
         stage: stage?.name ?? null,
         stage_id: stage?.id ?? null,
         stage_order: stage?.display_order ?? null,
+        pipeline_id: pipeline?.id ?? deal.pipeline_id ?? null,
+        pipeline: pipeline?.name ?? null,
         deal_status: deal.status ?? null,
         changed_at: deal.stage_changed_at ?? deal.updated_at ?? deal.created_at,
         origin: origins.join(" | ") || null,
@@ -292,6 +313,10 @@ async function processQueue(admin: any) {
       phone: deal.contact_phone ?? null,
       value: deal.value != null ? Number(deal.value) : null,
       currency: "BRL",
+      pipeline_id: pipeline?.id ?? deal.pipeline_id ?? null,
+      pipeline: pipeline?.name ?? null,
+      stage: stage?.name ?? null,
+      stage_id: stage?.id ?? null,
       sold_at: deal.won_at ?? deal.updated_at ?? deal.created_at,
       origin: origins.join(" | ") || null,
       origin_values: origins,
