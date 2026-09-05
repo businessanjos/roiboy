@@ -11,6 +11,8 @@ type Delivery = {
   account_id: string;
   deal_id: string;
   attempts: number;
+  event_type: string;
+  stage_id: string | null;
 };
 
 function backoffMinutes(attempts: number) {
@@ -71,35 +73,10 @@ Deno.serve(async (req) => {
       }
 
       // Enfileira todas as vendas ganhas do histórico
-      let from = 0;
       let queued = 0;
-      while (true) {
-        const { data: deals, error } = await admin
-          .from("deals")
-          .select("id")
-          .eq("account_id", accountId)
-          .eq("status", "won")
-          .is("deleted_at", null)
-          .range(from, from + 499);
-        if (error) throw error;
-        if (!deals?.length) break;
-
-        const rows = deals.map((d) => ({
-          account_id: accountId,
-          deal_id: d.id,
-          status: "pending",
-          attempts: 0,
-          next_attempt_at: new Date().toISOString(),
-          last_error: null,
-        }));
-        const { error: upErr } = await admin
-          .from("traffic_hub_deliveries")
-          .upsert(rows, { onConflict: "deal_id" });
-        if (upErr) throw upErr;
-        queued += rows.length;
-        if (deals.length < 500) break;
-        from += 500;
-      }
+      queued += await enqueueBatch(admin, accountId, "won", "sale");
+      // Enfileira a etapa atual de todos os negócios abertos
+      queued += await enqueueBatch(admin, accountId, "open", "stage");
 
       const processed = await processQueue(admin);
       return json({ queued, ...processed });
@@ -113,6 +90,50 @@ Deno.serve(async (req) => {
     return json({ error: (e as Error).message }, 500);
   }
 });
+
+async function enqueueBatch(
+  admin: any,
+  accountId: string,
+  dealStatus: string,
+  eventType: "sale" | "stage",
+) {
+  let from = 0;
+  let queued = 0;
+  while (true) {
+    const { data: deals, error } = await admin
+      .from("deals")
+      .select("id, stage_id")
+      .eq("account_id", accountId)
+      .eq("status", dealStatus)
+      .is("deleted_at", null)
+      .range(from, from + 499);
+    if (error) throw error;
+    if (!deals?.length) break;
+
+    const rows = deals
+      .filter((d: any) => eventType === "sale" || !!d.stage_id)
+      .map((d: any) => ({
+        account_id: accountId,
+        deal_id: d.id,
+        event_type: eventType,
+        stage_id: eventType === "stage" ? d.stage_id : null,
+        status: "pending",
+        attempts: 0,
+        next_attempt_at: new Date().toISOString(),
+        last_error: null,
+      }));
+    if (rows.length) {
+      const { error: upErr } = await admin
+        .from("traffic_hub_deliveries")
+        .upsert(rows, { onConflict: "deal_id,event_type,stage_id" });
+      if (upErr) throw upErr;
+      queued += rows.length;
+    }
+    if (deals.length < 500) break;
+    from += 500;
+  }
+  return queued;
+}
 
 async function getSettings(admin: any, accountId: string) {
   const { data } = await admin
@@ -145,7 +166,7 @@ async function postToHub(
 async function processQueue(admin: any) {
   const { data: pending, error } = await admin
     .from("traffic_hub_deliveries")
-    .select("id, account_id, deal_id, attempts")
+    .select("id, account_id, deal_id, attempts, event_type, stage_id")
     .eq("status", "pending")
     .lte("next_attempt_at", new Date().toISOString())
     .order("next_attempt_at", { ascending: true })
@@ -163,9 +184,27 @@ async function processQueue(admin: any) {
   const dealIds = deliveries.map((d) => d.deal_id);
   const { data: deals } = await admin
     .from("deals")
-    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, created_at, updated_at")
+    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, created_at, updated_at, stage_id, stage_changed_at, status")
     .in("id", dealIds);
   const dealById = new Map<string, any>((deals ?? []).map((d: any) => [d.id, d]));
+
+  // Nomes das etapas do pipeline
+  const stageIds = [
+    ...new Set(
+      deliveries
+        .map((d) => d.stage_id)
+        .concat((deals ?? []).map((d: any) => d.stage_id))
+        .filter(Boolean) as string[],
+    ),
+  ];
+  const stageById = new Map<string, any>();
+  if (stageIds.length) {
+    const { data: stages } = await admin
+      .from("deal_stages")
+      .select("id, name, display_order, pipeline_id")
+      .in("id", stageIds);
+    for (const s of stages ?? []) stageById.set(s.id, s);
+  }
 
   // Origem da venda (campo personalizado multi-select)
   const { data: originFields } = await admin
@@ -220,8 +259,31 @@ async function processQueue(admin: any) {
     }
 
     const origins = originByDeal.get(d.deal_id) ?? [];
-    const payload = {
+    const stage = stageById.get(d.stage_id ?? deal.stage_id ?? "") ?? null;
+
+    const payload = d.event_type === "stage"
+      ? {
+        event: "stage",
+        type: "stage",
+        source: "roy",
+        deal_id: deal.id,
+        sale_id: deal.id,
+        external_id: deal.id,
+        name: deal.contact_name ?? deal.title ?? null,
+        email: deal.contact_email ?? null,
+        phone: deal.contact_phone ?? null,
+        stage: stage?.name ?? null,
+        stage_id: stage?.id ?? null,
+        stage_order: stage?.display_order ?? null,
+        deal_status: deal.status ?? null,
+        changed_at: deal.stage_changed_at ?? deal.updated_at ?? deal.created_at,
+        origin: origins.join(" | ") || null,
+        origin_values: origins,
+        deal_title: deal.title ?? null,
+      }
+      : {
       event: "sale.won",
+      type: "sale",
       source: "roy",
       sale_id: deal.id,
       external_id: deal.id,
