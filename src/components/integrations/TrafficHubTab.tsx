@@ -42,18 +42,23 @@ export function TrafficHubTab() {
       setAuthToken(data.auth_token ?? "");
       setIsActive(data.is_active ?? true);
     }
-    const { data: rows } = await sb
-      .from("traffic_hub_deliveries")
-      .select("status")
-      .eq("account_id", accountId);
-    const next: Stats = { pending: 0, sent: 0, failed: 0 };
-    for (const r of rows ?? []) {
-      if (r.status === "sent") next.sent++;
-      else if (r.status === "failed") next.failed++;
-      else next.pending++;
-    }
-    setStats(next);
+    const countFor = async (status: string) => {
+      const { count } = await sb
+        .from("traffic_hub_deliveries")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId)
+        .eq("status", status);
+      return count ?? 0;
+    };
+    const [sent, failed, pending, processing] = await Promise.all([
+      countFor("sent"),
+      countFor("failed"),
+      countFor("pending"),
+      countFor("processing"),
+    ]);
+    setStats({ sent, failed, pending: pending + processing });
     setLoading(false);
+
   };
 
   useEffect(() => {
