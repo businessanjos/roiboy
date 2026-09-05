@@ -77,6 +77,8 @@ Deno.serve(async (req) => {
       queued += await enqueueBatch(admin, accountId, "won", "sale");
       // Enfileira a etapa atual de todos os negócios abertos
       queued += await enqueueBatch(admin, accountId, "open", "stage");
+      // Enfileira os negócios perdidos
+      queued += await enqueueBatch(admin, accountId, "lost", "lost");
 
       const processed = await processQueue(admin);
       return json({ queued, ...processed });
@@ -138,7 +140,7 @@ async function enqueueBatch(
   admin: any,
   accountId: string,
   dealStatus: string,
-  eventType: "sale" | "stage",
+  eventType: "sale" | "stage" | "lost",
 ) {
   let from = 0;
   let queued = 0;
@@ -161,7 +163,7 @@ async function enqueueBatch(
     );
 
     const rows = deals
-      .filter((d: any) => trafficIds.has(d.id) && (eventType === "sale" || !!d.stage_id))
+      .filter((d: any) => trafficIds.has(d.id) && (eventType !== "stage" || !!d.stage_id))
       .map((d: any) => ({
         account_id: accountId,
         deal_id: d.id,
@@ -235,7 +237,7 @@ async function processQueue(admin: any) {
   const dealIds = deliveries.map((d) => d.deal_id);
   const { data: deals } = await admin
     .from("deals")
-    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, created_at, updated_at, stage_id, stage_changed_at, status, pipeline_id")
+    .select("id, account_id, title, contact_name, contact_email, contact_phone, value, won_at, lost_at, loss_reason_id, loss_sub_reason_id, loss_notes, lost_reason, created_at, updated_at, stage_id, stage_changed_at, status, pipeline_id")
     .in("id", dealIds);
   const dealById = new Map<string, any>((deals ?? []).map((d: any) => [d.id, d]));
 
@@ -273,6 +275,19 @@ async function processQueue(admin: any) {
       .select("id, name")
       .in("id", pipelineIds);
     for (const p of pipes ?? []) pipelineById.set(p.id, p);
+  }
+
+  // Motivos de perda
+  const lossReasonIds = [
+    ...new Set((deals ?? []).map((d: any) => d.loss_reason_id).filter(Boolean) as string[]),
+  ];
+  const lossReasonById = new Map<string, string>();
+  if (lossReasonIds.length) {
+    const { data: reasons } = await admin
+      .from("deal_loss_reasons")
+      .select("id, name")
+      .in("id", lossReasonIds);
+    for (const r of reasons ?? []) lossReasonById.set(r.id, r.name);
   }
 
   // Origem da venda (campo personalizado multi-select)
@@ -339,7 +354,37 @@ async function processQueue(admin: any) {
     const pipeline = pipelineById.get(deal.pipeline_id ?? stage?.pipeline_id ?? "") ?? null;
 
 
-    const payload = d.event_type === "stage"
+    const lossReason =
+      (deal.loss_reason_id ? lossReasonById.get(deal.loss_reason_id) : null) ??
+      deal.lost_reason ??
+      null;
+
+    const payload = d.event_type === "lost"
+      ? {
+        event: "lost",
+        type: "lost",
+        source: "roy",
+        deal_id: deal.id,
+        sale_id: deal.id,
+        external_id: deal.id,
+        name: deal.contact_name ?? deal.title ?? null,
+        email: deal.contact_email ?? null,
+        phone: deal.contact_phone ?? null,
+        pipeline_id: pipeline?.id ?? deal.pipeline_id ?? null,
+        pipeline: pipeline?.name ?? null,
+        stage: stage?.name ?? null,
+        stage_id: stage?.id ?? null,
+        stage_order: stage?.display_order ?? null,
+        loss_reason: lossReason,
+        loss_notes: deal.loss_notes ?? null,
+        value: deal.value != null ? Number(deal.value) : null,
+        currency: "BRL",
+        lost_at: deal.lost_at ?? deal.updated_at ?? deal.created_at,
+        origin: origins.join(" | ") || null,
+        origin_values: origins,
+        deal_title: deal.title ?? null,
+      }
+      : d.event_type === "stage"
       ? {
         event: "stage",
         type: "stage",
