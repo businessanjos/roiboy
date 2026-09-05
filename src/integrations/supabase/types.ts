@@ -24984,6 +24984,89 @@ export type Database = {
           },
         ]
       }
+      traffic_hub_deliveries: {
+        Row: {
+          account_id: string
+          attempts: number
+          created_at: string
+          deal_id: string
+          id: string
+          last_error: string | null
+          last_status_code: number | null
+          next_attempt_at: string
+          payload: Json | null
+          sent_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          created_at?: string
+          deal_id: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          created_at?: string
+          deal_id?: string
+          id?: string
+          last_error?: string | null
+          last_status_code?: number | null
+          next_attempt_at?: string
+          payload?: Json | null
+          sent_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "traffic_hub_deliveries_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: true
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      traffic_hub_settings: {
+        Row: {
+          account_id: string
+          auth_token: string | null
+          created_at: string
+          endpoint_url: string | null
+          id: string
+          is_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          auth_token?: string | null
+          created_at?: string
+          endpoint_url?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          auth_token?: string | null
+          created_at?: string
+          endpoint_url?: string | null
+          id?: string
+          is_active?: boolean
+          updated_at?: string
+        }
+        Relationships: []
+      }
       typeform_form_stats: {
         Row: {
           account_id: string

@@ -10,8 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send } from "lucide-react";
 import { McpConnectionTab } from "./McpConnectionTab";
+import { TrafficHubTab } from "./TrafficHubTab";
 import {
   Dialog,
   DialogContent,
@@ -499,6 +500,10 @@ export function IntegrationsContent() {
               <Bot className="h-4 w-4" />
               <span>Assistente IA</span>
             </TabsTrigger>
+            <TabsTrigger value="traffic-hub" className="gap-2 px-3 py-2">
+              <Send className="h-4 w-4" />
+              <span>Central de Tráfego</span>
+            </TabsTrigger>
           </TabsList>
         </div>
 
@@ -922,6 +927,11 @@ export function IntegrationsContent() {
         {/* MCP / Claude Tab */}
         <TabsContent value="mcp" className="space-y-4">
           <McpConnectionTab />
+        </TabsContent>
+
+        {/* Central de Tráfego */}
+        <TabsContent value="traffic-hub" className="space-y-4">
+          <TrafficHubTab />
         </TabsContent>
       </Tabs>
     </div>
