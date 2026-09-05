@@ -4,7 +4,9 @@ import { corsHeaders } from "npm:@supabase/supabase-js@2/cors";
 const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
 const SERVICE_ROLE = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const MAX_ATTEMPTS = 6;
-const BATCH = 100;
+const BATCH = 40;
+const CONCURRENCY = 5;
+const MAX_CHAIN = 200;
 
 type Delivery = {
   id: string;
@@ -72,26 +74,59 @@ Deno.serve(async (req) => {
         return json({ ok: res.ok, status: res.status, response: res.text.slice(0, 500) });
       }
 
-      // Enfileira todas as vendas ganhas do histórico
-      let queued = 0;
-      queued += await enqueueBatch(admin, accountId, "won", "sale");
-      // Enfileira a etapa atual de todos os negócios abertos
-      queued += await enqueueBatch(admin, accountId, "open", "stage");
-      // Enfileira os negócios perdidos
-      queued += await enqueueBatch(admin, accountId, "lost", "lost");
+      // Enfileira tudo de uma vez (vendas ganhas, abertos e perdidos) via SQL
+      const { data: queued, error: qErr } = await admin.rpc("traffic_hub_enqueue_backfill", {
+        _account_id: accountId,
+      });
+      if (qErr) throw qErr;
 
       const processed = await processQueue(admin);
-      return json({ queued, ...processed });
+      const remaining = await countPending(admin);
+      if (remaining > 0) chainNext(0);
+      return json({ queued: queued ?? 0, ...processed, remaining });
     }
 
-    // ---- Processamento da fila (trigger / cron) ----
+    // ---- Processamento da fila (trigger / cron / encadeamento) ----
+    const depth = Number(body.depth ?? 0);
     const result = await processQueue(admin);
-    return json(result);
+    const remaining = await countPending(admin);
+    if (remaining > 0 && depth < MAX_CHAIN && (result as any).sent > 0) chainNext(depth + 1);
+    return json({ ...result, remaining });
   } catch (e) {
     console.error("traffic-hub-dispatch error", e);
     return json({ error: (e as Error).message }, 500);
   }
 });
+
+async function countPending(admin: any) {
+  const { count } = await admin
+    .from("traffic_hub_deliveries")
+    .select("id", { count: "exact", head: true })
+    .eq("status", "pending")
+    .lte("next_attempt_at", new Date().toISOString());
+  return count ?? 0;
+}
+
+/** Re-invoca a própria função em segundo plano, com pausa curta, até esvaziar a fila. */
+function chainNext(depth: number) {
+  const task = (async () => {
+    await new Promise((r) => setTimeout(r, 1500));
+    try {
+      await fetch(`${SUPABASE_URL}/functions/v1/traffic-hub-dispatch`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${SERVICE_ROLE}`,
+        },
+        body: JSON.stringify({ action: "process", depth }),
+      });
+    } catch (e) {
+      console.error("chainNext failed", e);
+    }
+  })();
+  // @ts-ignore EdgeRuntime existe no runtime do Supabase
+  if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(task);
+}
 
 // Somente negócios de tráfego: [TRAF-STUDIO-EC] e [TRAF-IMP-EC]
 const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC"];
@@ -211,6 +246,7 @@ async function postToHub(
     method: "POST",
     headers,
     body: JSON.stringify(payload),
+    signal: AbortSignal.timeout(15_000),
   });
   const text = await res.text().catch(() => "");
   return { ok: res.ok, status: res.status, text };
@@ -325,13 +361,13 @@ async function processQueue(admin: any) {
   let sent = 0;
   let failed = 0;
 
-  for (const d of deliveries) {
+  const sendOne = async (d: Delivery) => {
     const settings = settingsByAccount.get(d.account_id);
     const deal = dealById.get(d.deal_id);
 
     if (!settings) {
       failed++;
-      continue; // sem endpoint configurado: fica pendente para quando configurar
+      return; // sem endpoint configurado: fica pendente para quando configurar
     }
     if (!deal) {
       await admin
@@ -339,7 +375,7 @@ async function processQueue(admin: any) {
         .update({ status: "failed", last_error: "Negócio não encontrado" })
         .eq("id", d.id);
       failed++;
-      continue;
+      return;
     }
 
     const origins = originByDeal.get(d.deal_id) ?? [];
@@ -348,7 +384,7 @@ async function processQueue(admin: any) {
         .from("traffic_hub_deliveries")
         .update({ status: "skipped", last_error: "Origem fora de tráfego" })
         .eq("id", d.id);
-      continue;
+      return;
     }
     const stage = stageById.get(d.stage_id ?? deal.stage_id ?? "") ?? null;
     const pipeline = pipelineById.get(deal.pipeline_id ?? stage?.pipeline_id ?? "") ?? null;
@@ -450,6 +486,11 @@ async function processQueue(admin: any) {
       await markRetry(admin, d, (e as Error).message, null, payload);
       failed++;
     }
+  };
+
+  // Envia em pequenos grupos paralelos para não estourar o tempo da função
+  for (let i = 0; i < deliveries.length; i += CONCURRENCY) {
+    await Promise.all(deliveries.slice(i, i + CONCURRENCY).map((d) => sendOne(d)));
   }
 
   return { sent, failed, processed: deliveries.length };
