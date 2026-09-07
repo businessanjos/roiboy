@@ -269,16 +269,22 @@ export async function createLeadCore(
           fieldInserts.find((f: any) => f.field_id === MQL_FIELD_ID_LOCAL)?.value_text ||
           (payload.mql?.trim() || null);
         const isMql = resolvedMql === "opt_1" || /^sim\b/i.test(resolvedMql || "");
-        const targetName = isMql ? "Closer" : "TP - Eternum Pass";
-        const { data: routedPipe } = await supabase
-          .from("pipelines")
-          .select("id")
-          .eq("account_id", accountId)
-          .ilike("name", targetName)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
-        pipelineId = routedPipe?.id || null;
+        // O funil de não-MQL já foi renomeado (TP - Eternum Pass → E-Pass /
+        // Clinica Ryka); tentamos todos os nomes conhecidos antes de desistir.
+        const candidates = isMql
+          ? ["Closer"]
+          : ["TP - Eternum Pass", "E-Pass / Clinica Ryka", "%E-Pass%", "%Eternum Pass%"];
+        for (const cand of candidates) {
+          const { data: routedPipe } = await supabase
+            .from("pipelines")
+            .select("id")
+            .eq("account_id", accountId)
+            .ilike("name", cand)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (routedPipe?.id) { pipelineId = routedPipe.id; break; }
+        }
         if (pipelineId) {
           console.log(`[create-lead-core] Auto-routed by MQL=${resolvedMql} → pipeline ${isMql ? "Closer" : "TP - Eternum Pass"} (${pipelineId})`);
         }
