@@ -435,15 +435,24 @@ Deno.serve(async (req) => {
 
       if (!hasActive) {
         const isMql = mqlOption === "opt_1";
-        const targetName = isMql ? "Closer" : "TP - Eternum Pass";
-        const { data: pipe } = await supabase
-          .from("pipelines")
-          .select("id")
-          .eq("account_id", accountId)
-          .ilike("name", targetName)
-          .order("created_at", { ascending: true })
-          .limit(1)
-          .maybeSingle();
+        // Nomes alternativos: o funil de não-MQL já foi renomeado algumas vezes
+        // (TP - Eternum Pass → E-Pass / Clinica Ryka). Tentamos todos.
+        const candidates = isMql
+          ? ["Closer"]
+          : ["TP - Eternum Pass", "E-Pass / Clinica Ryka", "%E-Pass%", "%Eternum Pass%"];
+        const targetName = candidates[0];
+        let pipe: { id: string } | null = null;
+        for (const cand of candidates) {
+          const { data } = await supabase
+            .from("pipelines")
+            .select("id")
+            .eq("account_id", accountId)
+            .ilike("name", cand)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (data?.id) { pipe = data; break; }
+        }
         if (!pipe?.id) {
           noteFailure(`Pipeline "${targetName}" não encontrado para roteamento do lead existente`);
         } else {
