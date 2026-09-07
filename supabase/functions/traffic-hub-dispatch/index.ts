@@ -67,12 +67,28 @@ Deno.serve(async (req) => {
       if (!settings) return json({ error: "Configure o endereço da Central antes." }, 400);
 
       if (action === "test") {
+        const testId = `roy-test-${Date.now()}`;
         const res = await postToHub(settings, {
           test: true,
+          event: "test",
+          type: "test",
+          source: "roy",
+          deal_id: testId,
+          sale_id: testId,
+          external_id: testId,
+          id: testId,
+          name: "Teste de conexão ROY",
+          email: null,
+          phone: null,
+          value: 0,
+          currency: "BRL",
+          origin: "[TRAF-STUDIO-EC]",
+          origin_values: ["[TRAF-STUDIO-EC]"],
           sent_at: new Date().toISOString(),
         });
         return json({ ok: res.ok, status: res.status, response: res.text.slice(0, 500) });
       }
+
 
       // Enfileira tudo de uma vez (vendas ganhas, abertos e perdidos) via SQL
       const { data: queued, error: qErr } = await admin.rpc("traffic_hub_enqueue_backfill", {
