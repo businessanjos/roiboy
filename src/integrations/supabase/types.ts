@@ -28094,6 +28094,10 @@ export type Database = {
         }[]
       }
       apply_agency_rules: { Args: { p_account_id: string }; Returns: number }
+      attach_typeform_ficha_to_deal: {
+        Args: { _deal_id: string }
+        Returns: boolean
+      }
       audit_zapp_conversation_routing: {
         Args: {
           p_dry_run?: boolean
@@ -28105,6 +28109,10 @@ export type Database = {
       }
       auto_heal_inactive_assignments: { Args: never; Returns: Json }
       autocomplete_past_events: { Args: never; Returns: number }
+      build_typeform_ficha_text: {
+        Args: { _answers: Json; _form_title: string; _submitted_at: string }
+        Returns: string
+      }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
