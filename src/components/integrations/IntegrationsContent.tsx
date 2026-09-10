@@ -50,6 +50,7 @@ const integrations_list = [
 
 export function IntegrationsContent() {
   const { user } = useAuth();
+  const { currentUser } = useCurrentUser();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
