@@ -45,7 +45,7 @@ export function McpConnectionTab() {
                 <Bot className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <CardTitle>Assistente IA no Claude</CardTitle>
+                <CardTitle>MCP do ROY</CardTitle>
                 <CardDescription>
                   Conecte o Claude ou o ChatGPT ao ROY para analisar as áreas liberadas para sua conta.
                 </CardDescription>
