@@ -138,7 +138,8 @@ async function fetchAdminCallsPage(
   const url =
     `${baseDomain}/api/v1/calls?start_date=${encodeURIComponent(start)}` +
     `&end_date=${encodeURIComponent(end)}&page=${page}&per_page=${PER_PAGE}`;
-  const res = await fetch3c(url, {
+  // Rota de gestor: nunca enviar X-Agent-Id
+  const res = await fetch(url, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
   const text = await res.text();
