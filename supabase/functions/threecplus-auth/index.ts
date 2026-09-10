@@ -1,11 +1,8 @@
 import {
   fetchAgentIdFromApi,
-  findAgentByExtensionOrEmail,
+  getBaseDomain,
   loadAccountIntegration,
-  persistAgentLink,
   registerAgentId,
-  resolveAgentAuth,
-  setContextAgentId,
   with3cContext,
 } from "../_shared/threecplus.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
@@ -15,17 +12,6 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://eternumentoringclub1.3c.plus";
-  let base = domain.trim();
-  base = base.replace(/\/login\/?$/, "");
-  base = base.replace(/\/agent\/?.*$/, "");
-  base = base.replace(/\/supervisor\/?.*$/, "");
-  base = base.replace(/\/$/, "");
-  if (!base.startsWith("http")) base = "https://" + base;
-  return base;
-}
 
 Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
@@ -180,10 +166,10 @@ Deno.serve((req) => with3cContext(async () => {
     const userName = profile.name;
     const userEmail = profile.email;
 
-    // Upsert into account-level integrations table
+    // Upsert into account-level integrations table (preserva o token de serviço)
     const { data: existing } = await supabaseAdmin
       .from("integrations")
-      .select("id")
+      .select("id, config")
       .eq("account_id", userData.account_id)
       .eq("type", "3cplus")
       .maybeSingle();
@@ -193,7 +179,7 @@ Deno.serve((req) => with3cContext(async () => {
         .from("integrations")
         .update({
           status: "connected",
-          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
+          config: { ...((existing?.config as Record<string, unknown>) || {}), api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
           display_name: userName || userEmail || "3C Plus",
         })
         .eq("id", existing.id);
@@ -204,7 +190,7 @@ Deno.serve((req) => with3cContext(async () => {
           account_id: userData.account_id,
           type: "3cplus",
           status: "connected",
-          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
+          config: { ...((existing?.config as Record<string, unknown>) || {}), api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
           display_name: userName || userEmail || "3C Plus",
         });
     }
