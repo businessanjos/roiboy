@@ -10,6 +10,37 @@ export function requireUser(ctx: ToolContext) {
   return supabaseForUser(ctx);
 }
 
+/** Confirma o mesmo acesso setorial usado pela navegação do ROY. */
+export async function requireSector(ctx: ToolContext, sectorId: string) {
+  const supabase = requireUser(ctx);
+  const userId = ctx.getUserId?.();
+  if (!userId) throw new ToolError("Não autenticado. Reconecte o conector para renovar o acesso.");
+  const { data, error } = await supabase.rpc("user_has_sector_access", {
+    _auth_user_id: userId,
+    _sector_id: sectorId,
+  });
+  failIf(error);
+  if (data !== true) throw new ToolError(`Sem permissão para consultar a área ${sectorId}.`);
+  return supabase;
+}
+
+const RH_ALLOWED_EMAILS = new Set([
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com",
+]);
+
+/** Replica a proteção adicional por usuário aplicada às telas de RH. */
+export async function requireRhAccess(ctx: ToolContext) {
+  const email = (ctx.getUserEmail?.() ?? "").toLowerCase();
+  if (!RH_ALLOWED_EMAILS.has(email)) throw new ToolError("Sem permissão para consultar a área de RH.");
+  return requireSector(ctx, "rh");
+}
+
 /** Resposta padrão: JSON legível + structuredContent. */
 export function jsonResult(payload: unknown) {
   return {

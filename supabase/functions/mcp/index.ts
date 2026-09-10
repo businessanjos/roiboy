@@ -451,6 +451,32 @@ function requireUser(ctx) {
   }
   return supabaseForUser(ctx);
 }
+async function requireSector(ctx, sectorId) {
+  const supabase = requireUser(ctx);
+  const userId = ctx.getUserId?.();
+  if (!userId) throw new ToolError("N\xE3o autenticado. Reconecte o conector para renovar o acesso.");
+  const { data, error } = await supabase.rpc("user_has_sector_access", {
+    _auth_user_id: userId,
+    _sector_id: sectorId
+  });
+  failIf(error);
+  if (data !== true) throw new ToolError(`Sem permiss\xE3o para consultar a \xE1rea ${sectorId}.`);
+  return supabase;
+}
+var RH_ALLOWED_EMAILS = /* @__PURE__ */ new Set([
+  "m.quintana@me.com",
+  "coachevertonsantos@gmail.com",
+  "rh@anjosbusiness.com.br",
+  "diessica@consultoria-luma.com",
+  "jaqueline@consultoria-luma.com",
+  "brualmeida.est@hotmail.com",
+  "arthur.mudri@hotmail.com"
+]);
+async function requireRhAccess(ctx) {
+  const email = (ctx.getUserEmail?.() ?? "").toLowerCase();
+  if (!RH_ALLOWED_EMAILS.has(email)) throw new ToolError("Sem permiss\xE3o para consultar a \xE1rea de RH.");
+  return requireSector(ctx, "rh");
+}
 function jsonResult(payload) {
   return {
     content: [{ type: "text", text: JSON.stringify(payload, null, 2) }],
@@ -490,7 +516,7 @@ var telephony_calls_default = defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, agent_name, campaign_name, direction, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "vendas");
     let query = supabase.from("threecplus_call_logs").select(
       "id, agent_name, agent_email, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, wait_seconds, acw_seconds, started_at, connected_at, ended_at"
     ).gte("started_at", toIso(start_date)).lte("started_at", toIso(end_date, true)).order("started_at", { ascending: false }).limit(limit);
@@ -543,7 +569,7 @@ var sales_deals_default = defineTool2({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, status, search, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "vendas");
     let query = supabase.from("deals").select(
       "id, title, status, value, entry_value, received_value, contact_name, contact_email, contact_phone, source, is_renewal, probability, expected_close_date, won_at, lost_at, lost_reason, loss_notes, stage_changed_at, created_at, updated_at, stage_id, pipeline_id, responsible_user_id, sdr_user_id, client_id, deal_stages(name), pipelines(name)"
     ).is("deleted_at", null).order("created_at", { ascending: false }).limit(limit);
@@ -599,7 +625,7 @@ var sales_goals_commissions_default = defineTool3({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, include_goals, include_commissions, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "vendas");
     const startIso = toIso(start_date);
     const endIso = toIso(end_date, true);
     const payload = { periodo: { inicio: start_date, fim: end_date } };
@@ -645,7 +671,7 @@ var zapp_conversations_default = defineTool4({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, search, include_groups, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "royzapp");
     let query = supabase.from("zapp_conversations").select(
       "id, contact_name, phone_e164, channel, sector_id, client_id, deal_id, lead_id, is_group, unread_count, last_message_at, last_message_preview, created_at"
     ).order("last_message_at", { ascending: false, nullsFirst: false }).limit(limit);
@@ -676,7 +702,7 @@ var zapp_messages_default = defineTool5({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ conversation_id, start_date, end_date, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "royzapp");
     let query = supabase.from("zapp_messages").select(
       "id, direction, content, transcription, message_type, media_type, sender_name, sender_phone, sender_user_id, delivery_status, sent_at"
     ).eq("zapp_conversation_id", conversation_id).is("deleted_at", null).order("sent_at", { ascending: true }).limit(limit);
@@ -697,18 +723,398 @@ var zapp_messages_default = defineTool5({
   }
 });
 
+// src/lib/mcp/tools/clients-portfolio.ts
+import { defineTool as defineTool6 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z6 } from "npm:zod@^3.25.76";
+var clients_portfolio_default = defineTool6({
+  name: "clients_portfolio",
+  title: "Carteira de clientes e contratos",
+  description: "Analisa clientes, contratos, produtos, vencimentos e renova\xE7\xF5es da carteira de CS permitida ao usu\xE1rio.",
+  inputSchema: {
+    status: z6.enum(["active", "paused", "churn_risk", "churned", "no_contract", "all"]).describe("Status do cliente."),
+    search: z6.string().nullable().describe("Busca pelo nome do cliente ou empresa; null para todos."),
+    expiring_before: z6.string().nullable().describe("Listar contratos vencendo at\xE9 YYYY-MM-DD; null para n\xE3o filtrar."),
+    limit: z6.number().int().min(1).max(300).describe("M\xE1ximo de clientes retornados.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ status, search, expiring_before, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "operacoes");
+    let clientsQuery = supabase.from("clients").select("id, full_name, company_name, status, responsible_user_id, stage_id, business_segment, mls_level, contract_start_date, contract_end_date, recent_activity_at, created_at").order("full_name").limit(limit);
+    if (status !== "all") clientsQuery = clientsQuery.eq("status", status);
+    if (search) clientsQuery = clientsQuery.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+    const { data: clients, error: clientsError } = await clientsQuery;
+    failIf(clientsError);
+    const ids = (clients ?? []).map((client) => client.id);
+    let contracts = [];
+    if (ids.length) {
+      let contractQuery = supabase.from("client_contracts").select("id, client_id, product_id, status, value, currency, start_date, end_date, contract_type, payment_status, installments_count").in("client_id", ids).order("end_date", { ascending: true });
+      if (expiring_before) contractQuery = contractQuery.lte("end_date", expiring_before);
+      const result = await contractQuery.limit(600);
+      failIf(result.error);
+      contracts = result.data ?? [];
+    }
+    const productIds = [...new Set(contracts.map((c) => c.product_id).filter(Boolean))];
+    let products = [];
+    if (productIds.length) {
+      const result = await supabase.from("products").select("id, name, billing_period, is_active, color").in("id", productIds);
+      failIf(result.error);
+      products = result.data ?? [];
+    }
+    const productMap = new Map(products.map((p) => [p.id, p]));
+    const rows = (clients ?? []).map((client) => ({
+      ...client,
+      contratos: contracts.filter((c) => c.client_id === client.id).map((c) => ({ ...c, produto: productMap.get(c.product_id) ?? null }))
+    }));
+    return jsonResult({
+      resumo: {
+        clientes: rows.length,
+        contratos: contracts.length,
+        contratos_ativos: contracts.filter((c) => c.status === "active").length,
+        valor_contratos: contracts.reduce((sum, c) => sum + Number(c.value ?? 0), 0)
+      },
+      clientes: rows,
+      observacao: rows.length === limit ? `Resultado limitado a ${limit} clientes; refine os filtros para continuar.` : null
+    });
+  }
+});
+
+// src/lib/mcp/tools/client-success-activity.ts
+import { defineTool as defineTool7 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z7 } from "npm:zod@^3.25.76";
+var client_success_activity_default = defineTool7({
+  name: "client_success_activity",
+  title: "Atividades de Customer Success",
+  description: "Resume check-ins e acompanhamentos de clientes por per\xEDodo, canal e tipo, dentro do acesso de Opera\xE7\xF5es.",
+  inputSchema: {
+    start_date: z7.string().describe("In\xEDcio do per\xEDodo (YYYY-MM-DD)."),
+    end_date: z7.string().describe("Fim do per\xEDodo (YYYY-MM-DD)."),
+    client_id: z7.string().uuid().nullable().describe("Cliente espec\xEDfico; null para toda a carteira permitida."),
+    limit: z7.number().int().min(1).max(300).describe("M\xE1ximo de registros de cada tipo.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, client_id, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "operacoes");
+    const start = toIso(start_date) ?? start_date;
+    const end = toIso(end_date, true) ?? end_date;
+    let checkinsQuery = supabase.from("client_checkins").select("id, client_id, user_id, happened_at, initiated_by, channel, kind, summary, source, message_count").gte("happened_at", start).lte("happened_at", end).order("happened_at", { ascending: false }).limit(limit);
+    let followupsQuery = supabase.from("client_followups").select("id, client_id, user_id, type, title, content, created_at").gte("created_at", start).lte("created_at", end).order("created_at", { ascending: false }).limit(limit);
+    if (client_id) {
+      checkinsQuery = checkinsQuery.eq("client_id", client_id);
+      followupsQuery = followupsQuery.eq("client_id", client_id);
+    }
+    const [checkinsResult, followupsResult] = await Promise.all([checkinsQuery, followupsQuery]);
+    failIf(checkinsResult.error);
+    failIf(followupsResult.error);
+    const checkins = checkinsResult.data ?? [];
+    const followups = followupsResult.data ?? [];
+    const porCanal = /* @__PURE__ */ new Map();
+    checkins.forEach((row) => porCanal.set(row.channel ?? "n\xE3o informado", (porCanal.get(row.channel ?? "n\xE3o informado") ?? 0) + 1));
+    return jsonResult({
+      periodo: { inicio: start_date, fim: end_date },
+      resumo: { checkins: checkins.length, acompanhamentos: followups.length, por_canal: Object.fromEntries(porCanal) },
+      checkins,
+      acompanhamentos: followups,
+      observacao: checkins.length === limit || followups.length === limit ? "Resultado limitado; reduza o per\xEDodo ou informe um cliente." : null
+    });
+  }
+});
+
+// src/lib/mcp/tools/financial-overview.ts
+import { defineTool as defineTool8 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z8 } from "npm:zod@^3.25.76";
+var financial_overview_default = defineTool8({
+  name: "financial_overview",
+  title: "Vis\xE3o financeira",
+  description: "Analisa fluxo de caixa, contas a pagar e receber e inadimpl\xEAncia sem expor anexos, dados banc\xE1rios ou credenciais.",
+  inputSchema: {
+    start_date: z8.string().describe("In\xEDcio do per\xEDodo por vencimento (YYYY-MM-DD)."),
+    end_date: z8.string().describe("Fim do per\xEDodo por vencimento (YYYY-MM-DD)."),
+    entry_type: z8.enum(["receivable", "payable", "all"]).describe("Tipo de lan\xE7amento."),
+    status: z8.enum(["pending", "paid", "overdue", "partially_paid", "cancelled", "all"]).describe("Status financeiro."),
+    include_entries: z8.boolean().describe("Incluir lista resumida dos lan\xE7amentos."),
+    limit: z8.number().int().min(1).max(300).describe("M\xE1ximo de lan\xE7amentos detalhados.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, entry_type, status, include_entries, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "financeiro");
+    let query = supabase.from("financial_entries").select("id, entry_type, description, amount, currency, due_date, payment_date, status, category_id, client_id, supplier_id, installment_number, total_installments, is_conciliated").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit);
+    if (entry_type !== "all") query = query.eq("entry_type", entry_type);
+    if (status !== "all") query = query.eq("status", status);
+    const { data, error } = await query;
+    failIf(error);
+    const entries = data ?? [];
+    const total = (rows) => rows.reduce((sum, row) => sum + Number(row.amount ?? 0), 0);
+    const receivables = entries.filter((row) => row.entry_type === "receivable");
+    const payables = entries.filter((row) => row.entry_type === "payable");
+    const byStatus = /* @__PURE__ */ new Map();
+    entries.forEach((row) => {
+      const key = row.status ?? "n\xE3o informado";
+      const current = byStatus.get(key) ?? { quantidade: 0, valor: 0 };
+      current.quantidade += 1;
+      current.valor += Number(row.amount ?? 0);
+      byStatus.set(key, current);
+    });
+    return jsonResult({
+      periodo: { inicio: start_date, fim: end_date },
+      resumo: { lancamentos: entries.length, a_receber: total(receivables), a_pagar: total(payables), saldo_previsto: total(receivables) - total(payables), conciliados: entries.filter((e) => e.is_conciliated).length },
+      por_status: [...byStatus.entries()].map(([nome, values]) => ({ status: nome, ...values })),
+      lancamentos: include_entries ? entries : void 0,
+      observacao: entries.length === limit ? `An\xE1lise limitada aos primeiros ${limit} lan\xE7amentos do filtro.` : null
+    });
+  }
+});
+
+// src/lib/mcp/tools/hr-overview.ts
+import { defineTool as defineTool9 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z9 } from "npm:zod@^3.25.76";
+var hr_overview_default = defineTool9({
+  name: "hr_overview",
+  title: "Indicadores de RH",
+  description: "Retorna quadro de pessoas, admiss\xF5es, desligamentos e f\xE9rias sem sal\xE1rios, documentos ou dados pessoais sens\xEDveis.",
+  inputSchema: {
+    status: z9.enum(["active", "inactive", "all"]).describe("Status dos colaboradores."),
+    department: z9.string().nullable().describe("Departamento exato; null para todos."),
+    include_people: z9.boolean().describe("Incluir lista profissional resumida de colaboradores."),
+    limit: z9.number().int().min(1).max(300).describe("M\xE1ximo de registros por bloco.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ status, department, include_people, limit }, ctx) => {
+    const supabase = await requireRhAccess(ctx);
+    let peopleQuery = supabase.from("hr_collaborators").select("id, full_name, department, position, hire_date, termination_date, employment_type, status, work_model, unit").order("full_name").limit(limit);
+    if (status !== "all") peopleQuery = peopleQuery.eq("status", status);
+    if (department) peopleQuery = peopleQuery.eq("department", department);
+    const [peopleResult, vacationsResult, admissionsResult, offboardingsResult] = await Promise.all([
+      peopleQuery,
+      supabase.from("hr_vacation_requests").select("id, collaborator_id, request_type, start_date, end_date, days_count, status").order("start_date", { ascending: false }).limit(limit),
+      supabase.from("hr_admissions").select("id, candidate_name, position_title, department, contract_type, start_date, stage, admitted_at").order("start_date", { ascending: false }).limit(limit),
+      supabase.from("hr_offboardings").select("id, collaborator_id, termination_type, last_day_worked, termination_date, notice_type, stage, will_replace, completed_at").order("termination_date", { ascending: false }).limit(limit)
+    ]);
+    failIf(peopleResult.error);
+    failIf(vacationsResult.error);
+    failIf(admissionsResult.error);
+    failIf(offboardingsResult.error);
+    const people = peopleResult.data ?? [];
+    const departments = /* @__PURE__ */ new Map();
+    people.forEach((person) => departments.set(person.department ?? "N\xE3o informado", (departments.get(person.department ?? "N\xE3o informado") ?? 0) + 1));
+    return jsonResult({
+      resumo: { colaboradores: people.length, ativos: people.filter((p) => p.status === "active").length, por_departamento: Object.fromEntries(departments), ferias: vacationsResult.data?.length ?? 0, admissoes: admissionsResult.data?.length ?? 0, desligamentos: offboardingsResult.data?.length ?? 0 },
+      colaboradores: include_people ? people : void 0,
+      ferias: vacationsResult.data ?? [],
+      admissoes: admissionsResult.data ?? [],
+      desligamentos: offboardingsResult.data ?? [],
+      privacidade: "Sal\xE1rios, documentos, CPF, RG, endere\xE7o, dados m\xE9dicos e contatos pessoais n\xE3o s\xE3o disponibilizados."
+    });
+  }
+});
+
+// src/lib/mcp/tools/marketing-overview.ts
+import { defineTool as defineTool10 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z10 } from "npm:zod@^3.25.76";
+var marketing_overview_default = defineTool10({
+  name: "marketing_overview",
+  title: "Projetos e conte\xFAdo de Marketing",
+  description: "Analisa projetos, tarefas e calend\xE1rio de conte\xFAdo de Marketing dentro das permiss\xF5es do usu\xE1rio.",
+  inputSchema: {
+    start_date: z10.string().describe("In\xEDcio do per\xEDodo (YYYY-MM-DD)."),
+    end_date: z10.string().describe("Fim do per\xEDodo (YYYY-MM-DD)."),
+    project_status: z10.string().nullable().describe("Status de projeto; null para todos."),
+    limit: z10.number().int().min(1).max(300).describe("M\xE1ximo de registros por bloco.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, project_status, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "marketing");
+    let projectsQuery = supabase.from("marketing_projects").select("id, name, description, status, start_date, target_date, budget_planned, budget_actual, owner_user_id").lte("start_date", end_date).order("target_date").limit(limit);
+    if (project_status) projectsQuery = projectsQuery.eq("status", project_status);
+    const [projectsResult, tasksResult, contentResult] = await Promise.all([
+      projectsQuery,
+      supabase.from("marketing_tasks").select("id, title, description, priority, status, due_date, is_completed, completed_at, assignee_id").gte("due_date", start_date).lte("due_date", end_date).order("due_date").limit(limit),
+      supabase.from("content_pieces").select("id, title, platform, format, scheduled_date, status, hook, cta, published_url, talent_id, pillar_id").gte("scheduled_date", start_date).lte("scheduled_date", end_date).order("scheduled_date").limit(limit)
+    ]);
+    failIf(projectsResult.error);
+    failIf(tasksResult.error);
+    failIf(contentResult.error);
+    const projects = projectsResult.data ?? [];
+    const tasks = tasksResult.data ?? [];
+    const content = contentResult.data ?? [];
+    return jsonResult({
+      periodo: { inicio: start_date, fim: end_date },
+      resumo: { projetos: projects.length, orcamento_planejado: projects.reduce((s, p) => s + Number(p.budget_planned ?? 0), 0), orcamento_realizado: projects.reduce((s, p) => s + Number(p.budget_actual ?? 0), 0), tarefas: tasks.length, tarefas_concluidas: tasks.filter((t) => t.is_completed).length, conteudos: content.length, conteudos_publicados: content.filter((c) => c.status === "published").length },
+      projetos: projects,
+      tarefas: tasks,
+      conteudos: content,
+      observacao: projects.length === limit || tasks.length === limit || content.length === limit ? "Resultado limitado; reduza o per\xEDodo para continuar." : null
+    });
+  }
+});
+
+// src/lib/mcp/tools/events-overview.ts
+import { defineTool as defineTool11 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z11 } from "npm:zod@^3.25.76";
+var events_overview_default = defineTool11({
+  name: "events_overview",
+  title: "Vis\xE3o de eventos",
+  description: "Analisa agenda, confirma\xE7\xF5es, presen\xE7a, capacidade, or\xE7amento e custos dos eventos permitidos ao usu\xE1rio.",
+  inputSchema: {
+    start_date: z11.string().describe("In\xEDcio do per\xEDodo (YYYY-MM-DD)."),
+    end_date: z11.string().describe("Fim do per\xEDodo (YYYY-MM-DD)."),
+    status: z11.string().nullable().describe("Status do evento; null para todos."),
+    limit: z11.number().int().min(1).max(200).describe("M\xE1ximo de eventos retornados.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, status, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "eventos");
+    let query = supabase.from("events").select("id, title, description, event_type, scheduled_at, ends_at, duration_minutes, modality, address, status, budget, expected_attendees, max_capacity, category, goals").gte("scheduled_at", toIso(start_date) ?? start_date).lte("scheduled_at", toIso(end_date, true) ?? end_date).order("scheduled_at").limit(limit);
+    if (status) query = query.eq("status", status);
+    const eventsResult = await query;
+    failIf(eventsResult.error);
+    const events = eventsResult.data ?? [];
+    const ids = events.map((event) => event.id);
+    let participants = [];
+    let costs = [];
+    if (ids.length) {
+      const [participantsResult, costsResult] = await Promise.all([
+        supabase.from("event_participants").select("id, event_id, guest_name, rsvp_status, invited_at, rsvp_responded_at").in("event_id", ids).limit(1e3),
+        supabase.from("event_costs").select("id, event_id, description, category, estimated_value, actual_value, status, supplier, due_date, paid_at").in("event_id", ids).limit(1e3)
+      ]);
+      failIf(participantsResult.error);
+      failIf(costsResult.error);
+      participants = participantsResult.data ?? [];
+      costs = costsResult.data ?? [];
+    }
+    const rows = events.map((event) => {
+      const eventParticipants = participants.filter((p) => p.event_id === event.id);
+      const eventCosts = costs.filter((c) => c.event_id === event.id);
+      return { ...event, participantes: { total: eventParticipants.length, confirmados: eventParticipants.filter((p) => ["confirmed", "attended"].includes(p.rsvp_status)).length, presentes: eventParticipants.filter((p) => p.rsvp_status === "attended").length, lista: eventParticipants }, custos: { estimado: eventCosts.reduce((s, c) => s + Number(c.estimated_value ?? 0), 0), realizado: eventCosts.reduce((s, c) => s + Number(c.actual_value ?? 0), 0), itens: eventCosts } };
+    });
+    return jsonResult({ periodo: { inicio: start_date, fim: end_date }, resumo: { eventos: rows.length, participantes: participants.length, custo_realizado: costs.reduce((s, c) => s + Number(c.actual_value ?? 0), 0) }, eventos: rows, observacao: events.length === limit ? `Resultado limitado a ${limit} eventos.` : null });
+  }
+});
+
+// src/lib/mcp/tools/tasks-overview.ts
+import { defineTool as defineTool12 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z12 } from "npm:zod@^3.25.76";
+var tasks_overview_default = defineTool12({
+  name: "tasks_overview",
+  title: "Atividades e pend\xEAncias",
+  description: "Lista e resume atividades internas permitidas ao usu\xE1rio, com respons\xE1veis, prazos, prioridades e v\xEDnculos.",
+  inputSchema: {
+    start_date: z12.string().nullable().describe("Prazo inicial (YYYY-MM-DD); null sem limite."),
+    end_date: z12.string().nullable().describe("Prazo final (YYYY-MM-DD); null sem limite."),
+    status: z12.enum(["pending", "in_progress", "done", "overdue", "cancelled", "all"]).describe("Status da atividade."),
+    assigned_to: z12.string().uuid().nullable().describe("Respons\xE1vel espec\xEDfico; null para todos os permitidos."),
+    limit: z12.number().int().min(1).max(300).describe("M\xE1ximo de atividades.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, status, assigned_to, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "operacoes");
+    let query = supabase.from("internal_tasks").select("id, title, description, status, priority, due_date, due_time, assigned_to, client_id, deal_id, lead_id, activity_type_id, completed_at, created_at, contact_channel").order("due_date", { ascending: true, nullsFirst: false }).limit(limit);
+    if (start_date) query = query.gte("due_date", start_date);
+    if (end_date) query = query.lte("due_date", end_date);
+    if (status !== "all") query = query.eq("status", status);
+    if (assigned_to) query = query.eq("assigned_to", assigned_to);
+    const { data, error } = await query;
+    failIf(error);
+    const tasks = data ?? [];
+    const today = (/* @__PURE__ */ new Date()).toISOString().slice(0, 10);
+    return jsonResult({ resumo: { atividades: tasks.length, concluidas: tasks.filter((t) => t.status === "done").length, vencidas: tasks.filter((t) => t.status !== "done" && t.status !== "cancelled" && t.due_date && t.due_date < today).length }, atividades: tasks, observacao: tasks.length === limit ? `Resultado limitado a ${limit} atividades.` : null });
+  }
+});
+
+// src/lib/mcp/tools/products-overview.ts
+import { defineTool as defineTool13 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z13 } from "npm:zod@^3.25.76";
+var products_overview_default = defineTool13({
+  name: "products_overview",
+  title: "Produtos e base contratada",
+  description: "Analisa o cat\xE1logo de produtos e sua presen\xE7a em clientes e contratos ativos.",
+  inputSchema: {
+    include_inactive: z13.boolean().describe("Incluir produtos inativos."),
+    limit: z13.number().int().min(1).max(200).describe("M\xE1ximo de produtos.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ include_inactive, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "operacoes");
+    let productsQuery = supabase.from("products").select("id, name, description, price, cash_price, installment_price, billing_period, is_active, is_renewal, color").order("name").limit(limit);
+    if (!include_inactive) productsQuery = productsQuery.eq("is_active", true);
+    const productsResult = await productsQuery;
+    failIf(productsResult.error);
+    const products = productsResult.data ?? [];
+    const ids = products.map((product) => product.id);
+    let clientProducts = [];
+    let contracts = [];
+    if (ids.length) {
+      const [cpResult, contractResult] = await Promise.all([
+        supabase.from("client_products").select("client_id, product_id, is_active").in("product_id", ids).limit(1e3),
+        supabase.from("client_contracts").select("id, client_id, product_id, status, value, start_date, end_date").in("product_id", ids).limit(1e3)
+      ]);
+      failIf(cpResult.error);
+      failIf(contractResult.error);
+      clientProducts = cpResult.data ?? [];
+      contracts = contractResult.data ?? [];
+    }
+    return jsonResult({ produtos: products.map((product) => {
+      const related = contracts.filter((c) => c.product_id === product.id);
+      return { ...product, clientes_ativos: clientProducts.filter((cp) => cp.product_id === product.id && cp.is_active).length, contratos_ativos: related.filter((c) => c.status === "active").length, valor_contratado_ativo: related.filter((c) => c.status === "active").reduce((s, c) => s + Number(c.value ?? 0), 0) };
+    }), observacao: products.length === limit ? `Resultado limitado a ${limit} produtos.` : null });
+  }
+});
+
+// src/lib/mcp/tools/audit-overview.ts
+import { defineTool as defineTool14 } from "npm:@lovable.dev/mcp-js@0.28.0";
+import { z as z14 } from "npm:zod@^3.25.76";
+var audit_overview_default = defineTool14({
+  name: "audit_overview",
+  title: "Auditoria gerencial",
+  description: "Consulta movimenta\xE7\xF5es operacionais auditadas sem expor endere\xE7os de rede, dispositivos ou credenciais.",
+  inputSchema: {
+    start_date: z14.string().describe("In\xEDcio do per\xEDodo (YYYY-MM-DD)."),
+    end_date: z14.string().describe("Fim do per\xEDodo (YYYY-MM-DD)."),
+    entity_type: z14.string().nullable().describe("Tipo de registro; null para todos."),
+    action: z14.string().nullable().describe("A\xE7\xE3o auditada; null para todas."),
+    limit: z14.number().int().min(1).max(300).describe("M\xE1ximo de movimenta\xE7\xF5es.")
+  },
+  annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  handler: async ({ start_date, end_date, entity_type, action, limit }, ctx) => {
+    const supabase = await requireSector(ctx, "configuracoes");
+    let query = supabase.from("audit_logs").select("id, user_id, user_name, action, entity_type, entity_id, entity_name, created_at").gte("created_at", toIso(start_date) ?? start_date).lte("created_at", toIso(end_date, true) ?? end_date).order("created_at", { ascending: false }).limit(limit);
+    if (entity_type) query = query.eq("entity_type", entity_type);
+    if (action) query = query.eq("action", action);
+    const { data, error } = await query;
+    failIf(error);
+    const logs = data ?? [];
+    const byAction = /* @__PURE__ */ new Map();
+    logs.forEach((row) => byAction.set(row.action, (byAction.get(row.action) ?? 0) + 1));
+    return jsonResult({ periodo: { inicio: start_date, fim: end_date }, resumo: { movimentacoes: logs.length, por_acao: Object.fromEntries(byAction) }, movimentacoes: logs, privacidade: "Detalhes livres, e-mail, endere\xE7o de rede e identifica\xE7\xE3o do dispositivo foram omitidos.", observacao: logs.length === limit ? `Resultado limitado a ${limit} movimenta\xE7\xF5es.` : null });
+  }
+});
+
 // src/lib/mcp/index.ts
 var projectRef = "mtzoavtbtqflufyccern";
 var mcp_default = defineMcp({
   name: "roy-eternum",
   title: "ROY ETERNUM",
-  version: "0.1.0",
-  instructions: "Ferramentas de an\xE1lise comercial do ROY ETERNUM. Use `telephony_calls` para liga\xE7\xF5es da 3C Plus, `sales_deals` para o pipeline de neg\xF3cios, `sales_goals_commissions` para metas e comiss\xF5es, e `zapp_conversations` + `zapp_messages` para o atendimento no RoyZapp. Todas as ferramentas s\xE3o somente leitura e respeitam as permiss\xF5es do usu\xE1rio conectado. Datas no formato YYYY-MM-DD.",
+  version: "1.0.0",
+  instructions: "Ferramentas de an\xE1lise de todas as \xE1reas do ROY ETERNUM: vendas, telefonia, RoyZapp, clientes e contratos, Customer Success, financeiro, RH, marketing, eventos, produtos, tarefas e auditoria gerencial. Todas s\xE3o estritamente somente leitura, usam a identidade do usu\xE1rio conectado e respeitam RLS, conta e acesso setorial. N\xE3o solicite dados fora da permiss\xE3o do usu\xE1rio. Datas no formato YYYY-MM-DD.",
   auth: auth.oauth.issuer({
     issuer: `https://${projectRef}.supabase.co/auth/v1`,
     acceptedAudiences: "authenticated"
   }),
-  tools: [telephony_calls_default, sales_deals_default, sales_goals_commissions_default, zapp_conversations_default, zapp_messages_default]
+  tools: [
+    telephony_calls_default,
+    sales_deals_default,
+    sales_goals_commissions_default,
+    zapp_conversations_default,
+    zapp_messages_default,
+    clients_portfolio_default,
+    client_success_activity_default,
+    financial_overview_default,
+    hr_overview_default,
+    marketing_overview_default,
+    events_overview_default,
+    tasks_overview_default,
+    products_overview_default,
+    audit_overview_default
+  ]
 });
 
 // lovable-mcp-supabase-entry.ts

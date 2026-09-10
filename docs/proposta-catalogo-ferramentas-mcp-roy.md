@@ -1,6 +1,6 @@
 # Proposta: Catálogo de Ferramentas MCP para Análises Amplas do ROY no Claude
 
-> Status: proposta (nenhuma alteração de código/schema foi feita). Objetivo: ampliar o conector MCP existente (`supabase/functions/mcp`, definido em `src/lib/mcp/`) para cobrir mais domínios do ROY, mantendo os princípios já adotados: **somente leitura**, **execução com o token do usuário conectado** (`supabaseForUser`, RLS do Postgres aplica-se integralmente) e **sem SQL livre**.
+> Status: implementado em 10/09/2026, com 14 ferramentas somente leitura. Objetivo: ampliar o conector MCP existente (`supabase/functions/mcp`, definido em `src/lib/mcp/`) para cobrir mais domínios do ROY, mantendo os princípios já adotados: **somente leitura**, **execução com o token do usuário conectado** (`supabaseForUser`, RLS do Postgres aplica-se integralmente) e **sem SQL livre**.
 
 ## Princípios de design (mantidos do padrão atual)
 
@@ -88,3 +88,8 @@
 2. Confirmar RLS de `deals`, `commission_deal_entries`, `zapp_messages` e tabelas de RH quanto a escopo hierárquico antes de implementar as ferramentas de "team performance"/"incentive summary".
 3. Implementar por domínio, reaproveitando `helpers.ts`/`supabase.ts` atuais, seguindo o padrão de `defineTool` já validado.
 4. Adicionar testes de contrato (schema de saída) e um teste manual por ferramenta com usuário de baixo privilégio para confirmar que a RLS filtra corretamente (sem vazamento cross-conta).
+
+
+## Implementação concluída
+
+O servidor MCP v1.0.0 publica 14 ferramentas cobrindo vendas, telefonia, RoyZapp, clientes e contratos, Customer Success, financeiro, RH, marketing, eventos, produtos, tarefas e auditoria. Ferramentas sensíveis validam acesso setorial; RH também replica a allowlist da interface. O manifesto foi regenerado com sucesso.

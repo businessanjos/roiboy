@@ -1,6 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { failIf, jsonResult, requireUser, secondsToHuman, toIso } from "../helpers";
+import { failIf, jsonResult, requireSector, secondsToHuman, toIso } from "../helpers";
 
 export default defineTool({
   name: "telephony_calls",
@@ -17,7 +17,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, agent_name, campaign_name, direction, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "vendas");
     let query = supabase
       .from("threecplus_call_logs")
       .select(
