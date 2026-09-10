@@ -8,6 +8,7 @@
 //
 // Chamada pelo app (JWT) ou por cron (header x-cron-secret).
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fetch3c, registerAgentId } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -98,7 +99,7 @@ async function fetchAgentCallsPage(
   const url =
     `${baseDomain}/api/v1/agent/calls?start_date=${encodeURIComponent(start)}` +
     `&end_date=${encodeURIComponent(end)}&page=${page}&per_page=${PER_PAGE}`;
-  const res = await fetch(url, {
+  const res = await fetch3c(url, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
   const text = await res.text();
@@ -128,7 +129,7 @@ async function fetchAdminCallsPage(
   const url =
     `${baseDomain}/api/v1/calls?start_date=${encodeURIComponent(start)}` +
     `&end_date=${encodeURIComponent(end)}&page=${page}&per_page=${PER_PAGE}`;
-  const res = await fetch(url, {
+  const res = await fetch3c(url, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
   const text = await res.text();
@@ -152,7 +153,7 @@ async function fetchAdminCallsPage(
 
 async function fetchMe(baseDomain: string, apiToken: string) {
 
-  const res = await fetch(`${baseDomain}/api/v1/me`, {
+  const res = await fetch3c(`${baseDomain}/api/v1/me`, {
     headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
   });
   if (!res.ok) return null;
@@ -447,6 +448,8 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
     let maxStarted: string | null = null;
 
     for (const agent of withToken) {
+      // Token de agente exige o header X-Agent-Id
+      registerAgentId(agent.api_token, agent.external_agent_id);
       let userId = agent.user_id ?? matchUser(agent.external_email, agent.external_name);
       const rows: any[] = [];
       let page = 1;

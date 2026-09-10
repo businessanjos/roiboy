@@ -1,22 +1,18 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  AGENT_ID_REQUIRED_MESSAGE,
+  fetch3c,
+  getBaseDomain,
+  mentionsAgentIdHeader,
+  resolveUserAgentId,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
-  let base = domain.trim();
-  base = base.replace(/\/login\/?$/, "");
-  base = base.replace(/\/agent\/?.*$/, "");
-  base = base.replace(/\/supervisor\/?.*$/, "");
-  base = base.replace(/\/$/, "");
-  if (!base.startsWith("http")) base = "https://" + base;
-  return base;
-}
 
 function extractApiMessage(text: string, fallback = ""): string {
   try {
@@ -52,7 +48,7 @@ async function postToAgentEndpoint(
   path: string,
   body?: Record<string, unknown>,
 ) {
-  return fetch(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
+  return fetch3c(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -67,7 +63,7 @@ async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
   };
 
   try {
-    const agentRes = await fetch(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
+    const agentRes = await fetch3c(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -80,7 +76,7 @@ async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
   }
 
   try {
-    const campaignRes = await fetch(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
+    const campaignRes = await fetch3c(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -229,6 +225,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // A 3C exige o header X-Agent-Id em tokens de agente
+    const resolvedAgentId = await resolveUserAgentId(supabaseAdmin, {
+      userId: userData.id,
+      accountId: userData.account_id,
+      apiToken: agentApiToken,
+      baseDomain,
+      metadata,
+    });
+    if (resolvedAgentId && String(metadata?.agent_id || "") !== resolvedAgentId) {
+      await supabaseAdmin
+        .from("user_integrations")
+        .update({ metadata: { ...(metadata ?? {}), agent_id: resolvedAgentId } })
+        .eq("user_id", userData.id)
+        .eq("provider", "3cplus");
+    }
+    if (!resolvedAgentId) {
+      console.warn("[threecplus-call] Sem X-Agent-Id para o usuário", userData.id);
+    }
+
+
+
     // Ensure agent is connected first (idempotent)
     try {
       const connectRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/connect");
@@ -258,7 +275,7 @@ Deno.serve(async (req) => {
     // If click2call failed because agent not idle, try webphone login + retry
     if (isAgentNotIdle(click2callRes.status, click2callText) && userExtension) {
       try {
-        const campaignsRes = await fetch(
+        const campaignsRes = await fetch3c(
           `${baseDomain}/api/v1/agent/campaigns?api_token=${agentApiToken}`,
           { method: "GET", headers: { Accept: "application/json" } }
         );
@@ -355,13 +372,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const agentIdIssue = mentionsAgentIdHeader(click2callText, postCleanupClick2CallText, lastEnterMessage);
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: agentNotIdle
+        error: agentIdIssue
+          ? AGENT_ID_REQUIRED_MESSAGE
+          : agentNotIdle
           ? "O agente ainda está preso em outro estado no 3C Plus. Feche chamadas/pausas pendentes no painel WebRTC e tente novamente."
           : lastEnterMessage || "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.",
-        code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
+        code: agentIdIssue ? "AGENT_ID_REQUIRED" : agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
         fallback_url: baseDomain,
         runtime,
       }),

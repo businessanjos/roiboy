@@ -13,11 +13,12 @@ export function ThreeCPlusAgentConfig() {
   const [extension, setExtension] = useState("");
   const [password, setPassword] = useState("");
   const [agentToken, setAgentToken] = useState("");
+  const [agentId, setAgentId] = useState("");
+  const [needsAgentId, setNeedsAgentId] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showAgentToken, setShowAgentToken] = useState(false);
   const [saving, setSaving] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [existingId, setExistingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (currentUser?.id) loadConfig();
@@ -33,10 +34,10 @@ export function ThreeCPlusAgentConfig() {
       .maybeSingle();
 
     if (data) {
-      setExistingId(data.id);
       const meta = data.metadata as Record<string, unknown> | null;
       setExtension((meta?.extension as string) || "");
       setPassword((meta?.extension_password as string) || "");
+      setAgentId(meta?.agent_id ? String(meta.agent_id) : "");
       setAgentToken(data.access_token && data.access_token !== "account_level" ? data.access_token : "");
     }
 
@@ -49,6 +50,7 @@ export function ThreeCPlusAgentConfig() {
     const trimmedExt = extension.trim();
     const trimmedPass = password.trim();
     const trimmedAgentToken = agentToken.trim();
+    const trimmedAgentId = agentId.trim();
 
     if (!trimmedExt) {
       toast.error("Informe o número do ramal.");
@@ -62,38 +64,31 @@ export function ThreeCPlusAgentConfig() {
 
     setSaving(true);
     try {
-      const metadata = {
-        extension: trimmedExt,
-        extension_password: trimmedPass || null,
-      };
+      const { data, error } = await supabase.functions.invoke("threecplus-register-agent", {
+        body: {
+          action: "save_extension",
+          api_token: trimmedAgentToken,
+          extension: trimmedExt,
+          extension_password: trimmedPass || null,
+          agent_id: trimmedAgentId || null,
+        },
+      });
 
-      const payload = {
-        access_token: trimmedAgentToken,
-        metadata,
-      };
+      if (error) throw error;
 
-      if (existingId) {
-        const { error } = await supabase
-          .from("user_integrations")
-          .update(payload as any)
-          .eq("id", existingId);
-        if (error) throw error;
-      } else {
-        const { data, error } = await supabase
-          .from("user_integrations")
-          .insert({
-            user_id: currentUser.id,
-            provider: "3cplus",
-            ...payload,
-          } as any)
-          .select("id")
-          .single();
-        if (error) throw error;
-        setExistingId(data.id);
+      if (!data?.success) {
+        setNeedsAgentId(Boolean(data?.needs_agent_id) || needsAgentId);
+        toast.error("Não foi possível validar seu token na 3C Plus", {
+          description: data?.error || "Confira o token e tente novamente.",
+        });
+        return;
       }
 
+      if (data.agent_id) setAgentId(String(data.agent_id));
+      setNeedsAgentId(false);
+
       toast.success("Ramal salvo com sucesso!", {
-        description: `Ramal ${trimmedExt} configurado com o token individual do agente.`,
+        description: `Ramal ${trimmedExt} vinculado ao agente ${data.agent_id} na 3C Plus.`,
       });
     } catch (err: any) {
       console.error("[ThreeCPlusAgentConfig] Save error:", err);
@@ -195,6 +190,25 @@ export function ThreeCPlusAgentConfig() {
             Esse token é obrigatório para autenticar o ramal do próprio agente no 3C Plus.
           </p>
         </div>
+
+        {(needsAgentId || agentId) && (
+          <div className="space-y-2">
+            <Label htmlFor="agent-id">ID do agente na 3C {needsAgentId ? "(obrigatório)" : "(opcional)"}</Label>
+            <Input
+              id="agent-id"
+              placeholder="Ex: 56400"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value.replace(/\D/g, ""))}
+              maxLength={20}
+            />
+            <p className="text-xs text-muted-foreground">
+              Normalmente o ROY descobre esse número sozinho. Se a 3C pedir, pegue em Configurações &gt; Usuários no
+              painel da 3C Plus: é o número que aparece no endereço ao abrir o seu usuário.
+            </p>
+          </div>
+        )}
+
+
 
         <div className="flex items-center justify-between gap-4">
           <p className="max-w-md text-xs text-muted-foreground">

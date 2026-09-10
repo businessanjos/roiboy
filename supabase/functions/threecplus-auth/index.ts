@@ -1,3 +1,4 @@
+import { fetchAgentIdFromApi, registerAgentId } from "../_shared/threecplus.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 
 function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
+  if (!domain) return "https://eternumentoringclub1.3c.plus";
   let base = domain.trim();
   base = base.replace(/\/login\/?$/, "");
   base = base.replace(/\/agent\/?.*$/, "");
@@ -63,7 +64,7 @@ Deno.serve(async (req) => {
       });
     }
 
-    const { api_token, domain } = await req.json();
+    const { api_token, domain, agent_id: req_agent_id } = await req.json();
 
     if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
@@ -74,29 +75,27 @@ Deno.serve(async (req) => {
     const baseDomain = getBaseDomain(domain || null);
     console.log("[threecplus-auth] Validating token against domain:", baseDomain);
 
-    // Validate token
-    const apiResponse = await fetch(`${baseDomain}/api/v1/me`, {
-      headers: { Authorization: `Bearer ${api_token.trim()}`, Accept: "application/json" },
-    });
+    // Validate token (a 3C pode exigir o header X-Agent-Id em tokens de agente)
+    const requestedAgentId = req_agent_id ? String(req_agent_id).trim() : null;
+    const profile = await fetchAgentIdFromApi(baseDomain, api_token.trim(), requestedAgentId);
 
-    if (!apiResponse.ok) {
-      const status = apiResponse.status;
-      const body = await apiResponse.text();
-      console.error("3C Plus API error:", { status, body, domain: baseDomain });
+    if (!profile.id) {
+      console.error("3C Plus API error:", { status: profile.status, body: profile.body, domain: baseDomain });
       return new Response(
         JSON.stringify({
           success: false,
-          error: status === 401 || status === 403
-            ? "Token inválido. Verifique seu token da API 3C Plus."
-            : `Erro ao validar token (status ${status}). Tente novamente.`,
+          needs_agent_id: /x-?agent-?id/i.test(profile.body || ""),
+          error: profile.status === 401 || profile.status === 403
+            ? "Token inválido, ou a 3C exigiu o ID do agente. Verifique o token e informe o ID do agente na 3C."
+            : `Erro ao validar token (status ${profile.status}). Tente novamente.`,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const apiUser = await apiResponse.json();
-    const userName = apiUser.name || apiUser.full_name || apiUser.username || null;
-    const userEmail = apiUser.email || null;
+    registerAgentId(api_token.trim(), profile.id);
+    const userName = profile.name;
+    const userEmail = profile.email;
 
     // Upsert into account-level integrations table
     const { data: existing } = await supabaseAdmin
@@ -111,7 +110,7 @@ Deno.serve(async (req) => {
         .from("integrations")
         .update({
           status: "connected",
-          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail },
+          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
           display_name: userName || userEmail || "3C Plus",
         })
         .eq("id", existing.id);
@@ -122,7 +121,7 @@ Deno.serve(async (req) => {
           account_id: userData.account_id,
           type: "3cplus",
           status: "connected",
-          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail },
+          config: { api_token: api_token.trim(), domain: domain || null, user_name: userName, user_email: userEmail, agent_id: profile.id },
           display_name: userName || userEmail || "3C Plus",
         });
     }
