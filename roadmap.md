@@ -12,4 +12,4 @@
 - [x] Atualizar status do agente a cada 30 segundos
 - [x] Abrir painel 3C em drawer persistente e permitir ocultar com X
 - [x] Abrir drawer e orientar no erro AGENT_NOT_IDLE
-- [ ] Validar interface e função publicada
+- [x] Validar interface e função publicada
