@@ -296,7 +296,7 @@
       {
         "name": "clients_portfolio",
         "title": "Carteira de clientes e contratos",
-        "description": "Analisa clientes, contratos, produtos, vencimentos e renovações da carteira de CS permitida ao usuário.",
+        "description": "Analisa clientes, contratos, produtos, vencimentos e renovações da carteira de CS permitida ao usuário. Suporta paginação (offset) e modo resumo para analisar a base inteira.",
         "annotations": {
           "readOnlyHint": true,
           "idempotentHint": true,
@@ -334,15 +334,31 @@
             "limit": {
               "type": "integer",
               "minimum": 1,
-              "maximum": 300,
-              "description": "Máximo de clientes retornados."
+              "maximum": 1000,
+              "description": "Máximo de clientes por página (até 1000)."
+            },
+            "offset": {
+              "type": "integer",
+              "minimum": 0,
+              "description": "Quantos clientes pular (paginação). Comece em 0 e some o limit a cada página."
+            },
+            "summary_only": {
+              "type": "boolean",
+              "description": "true = devolve só os totais da base inteira (sem listar clientes), ideal para visão macro antes de paginar."
+            },
+            "include_contracts": {
+              "type": "boolean",
+              "description": "true = inclui os contratos de cada cliente da página."
             }
           },
           "required": [
             "status",
             "search",
             "expiring_before",
-            "limit"
+            "limit",
+            "offset",
+            "summary_only",
+            "include_contracts"
           ],
           "additionalProperties": false,
           "$schema": "http://json-schema.org/draft-07/schema#"
