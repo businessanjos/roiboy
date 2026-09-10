@@ -145,7 +145,7 @@ function chainNext(depth: number) {
 }
 
 // Somente negócios de tráfego: [TRAF-STUDIO-EC] e [TRAF-IMP-EC]
-const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC"];
+const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC", "ORG-EC"];
 
 function isTrafficOrigin(origins: string[]) {
   return origins.some((o) => TRAFFIC_TAGS.some((t) => String(o).toUpperCase().includes(t)));
@@ -459,8 +459,9 @@ async function processQueue(admin: any) {
         deal_title: deal.title ?? null,
       }
       : {
-      event: "sale.won",
+      event: "sale",
       type: "sale",
+      event_alias: "sale.won",
       source: "roy",
       sale_id: deal.id,
       external_id: deal.id,
