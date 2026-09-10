@@ -498,7 +498,7 @@ export function IntegrationsContent() {
             </TabsTrigger>
             <TabsTrigger value="mcp" className="gap-2 px-3 py-2">
               <Bot className="h-4 w-4" />
-              <span>Assistente IA</span>
+              <span>MCP</span>
             </TabsTrigger>
             <TabsTrigger value="traffic-hub" className="gap-2 px-3 py-2">
               <Send className="h-4 w-4" />
@@ -924,7 +924,7 @@ export function IntegrationsContent() {
           <GoogleDriveCard />
         </TabsContent>
 
-        {/* MCP / Claude Tab */}
+        {/* MCP Tab */}
         <TabsContent value="mcp" className="space-y-4">
           <McpConnectionTab />
         </TabsContent>

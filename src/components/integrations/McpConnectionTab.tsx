@@ -3,8 +3,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, CheckCircle2, Copy, Info, LockKeyhole, SearchCheck } from "lucide-react";
+import { Bot, CheckCircle2, Copy, Info, LockKeyhole, MessageSquare, SearchCheck } from "lucide-react";
 
 const MCP_AREAS = [
   "Vendas e metas",
@@ -46,7 +47,7 @@ export function McpConnectionTab() {
               <div>
                 <CardTitle>Assistente IA no Claude</CardTitle>
                 <CardDescription>
-                  Conecte seu Claude ao ROY para analisar todas as áreas que sua conta pode acessar.
+                  Conecte o Claude ou o ChatGPT ao ROY para analisar as áreas liberadas para sua conta.
                 </CardDescription>
               </div>
             </div>
@@ -89,40 +90,51 @@ export function McpConnectionTab() {
               </Button>
             </div>
             <p className="text-xs text-muted-foreground">
-              Esse link é único do app. Cole ele no Claude Desktop.
+              Use este mesmo endereço no Claude ou no ChatGPT.
             </p>
           </div>
 
-          <div className="space-y-3">
-            <p className="text-sm font-medium">Passo a passo</p>
-            <ol className="space-y-3 text-sm text-muted-foreground">
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">1</span>
-                <span>Clique em <strong>Copiar link</strong> acima.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">2</span>
-                <span>No Claude Desktop, vá em <strong>Settings → Developer → Edit config</strong>.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">3</span>
-                <span>Cole o link dentro de <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">mcpServers</code>.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">4</span>
-                <span>Feche e abra o Claude Desktop.</span>
-              </li>
-              <li className="flex gap-3">
-                <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">5</span>
-                <span>Faça login com sua conta do ROY e clique em <strong>Autorizar</strong>.</span>
-              </li>
-            </ol>
-          </div>
+          <Tabs defaultValue="claude" className="space-y-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 sm:w-[360px]">
+              <TabsTrigger value="claude" className="gap-2">
+                <Bot className="h-4 w-4" /> Claude
+              </TabsTrigger>
+              <TabsTrigger value="chatgpt" className="gap-2">
+                <MessageSquare className="h-4 w-4" /> ChatGPT
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="claude" className="rounded-lg border border-border p-4">
+              <ConnectionSteps
+                title="Conectar no Claude"
+                steps={[
+                  <>Clique em <strong>Copiar link</strong> acima.</>,
+                  <>No Claude, abra <strong>Configurações → Conectores</strong>.</>,
+                  <>Escolha <strong>Adicionar conector personalizado</strong> e cole o link do ROY.</>,
+                  <>Faça login com sua conta do ROY e clique em <strong>Autorizar</strong>.</>,
+                  <>Abra uma nova conversa e confirme que as ferramentas do ROY estão habilitadas.</>,
+                ]}
+              />
+            </TabsContent>
+
+            <TabsContent value="chatgpt" className="rounded-lg border border-border p-4">
+              <ConnectionSteps
+                title="Conectar no ChatGPT"
+                steps={[
+                  <>Clique em <strong>Copiar link</strong> acima.</>,
+                  <>No ChatGPT, abra <strong>Configurações → Conectores</strong>.</>,
+                  <>Ative o <strong>Modo de desenvolvedor</strong> e escolha <strong>Criar</strong>.</>,
+                  <>Informe o nome <strong>ROY ETERNUM</strong>, cole o link e conclua a autenticação.</>,
+                  <>Em uma nova conversa, abra as ferramentas e selecione o conector do ROY.</>,
+                ]}
+              />
+            </TabsContent>
+          </Tabs>
 
           <div className="grid gap-3 sm:grid-cols-2">
             <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
               <LockKeyhole className="h-5 w-5 shrink-0 text-primary" />
-              <p>Cada pessoa conecta sua própria conta. O Claude só enxerga setores e dados já liberados para ela no ROY.</p>
+              <p>Cada pessoa conecta sua própria conta. Claude e ChatGPT só enxergam os dados já liberados para ela no ROY.</p>
             </div>
             <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
               <Info className="h-5 w-5 shrink-0 text-primary" />
@@ -131,6 +143,24 @@ export function McpConnectionTab() {
           </div>
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+function ConnectionSteps({ title, steps }: { title: string; steps: React.ReactNode[] }) {
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium">{title}</p>
+      <ol className="space-y-3 text-sm text-muted-foreground">
+        {steps.map((step, index) => (
+          <li key={index} className="flex gap-3">
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-xs font-semibold text-primary">
+              {index + 1}
+            </span>
+            <span>{step}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
