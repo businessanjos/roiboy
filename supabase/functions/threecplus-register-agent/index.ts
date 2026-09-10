@@ -2,7 +2,16 @@
 // Valida um token de API da 3C Plus e cadastra/atualiza o agente correspondente
 // em `threecplus_agents`, permitindo sincronizar as ligações daquela pessoa.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetchAgentIdFromApi, registerAgentId } from "../_shared/threecplus.ts";
+import {
+  fetchAgentIdFromApi,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  registerAgentId,
+  resolveAgentAuth,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +27,7 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const json = (body: unknown, status = 200) =>
@@ -59,7 +68,12 @@ Deno.serve(async (req) => {
         .eq("type", "3cplus")
         .maybeSingle();
       const token = (integration?.config as Record<string, unknown> | null)?.admin_api_token;
-      return json({ success: true, admin_token_configured: typeof token === "string" && token.trim().length > 0 });
+      const serviceToken = (integration?.config as Record<string, unknown> | null)?.service_token;
+      return json({
+        success: true,
+        admin_token_configured: typeof token === "string" && token.trim().length > 0,
+        service_token_configured: typeof serviceToken === "string" && serviceToken.trim().length > 0,
+      });
     }
 
     if (action === "delete") {
@@ -130,11 +144,141 @@ Deno.serve(async (req) => {
       return json({ success: true, admin_token_configured: true });
     }
 
+    const account = await loadAccountIntegration(supabaseAdmin, me.account_id);
 
-    // "save_extension": o próprio usuário salva ramal + token em Meu Ramal
-    const isSaveExtension = action === "save_extension";
+    // Vínculos ramal/agente da conta (tela de Equipe, admin)
+    if (action === "list_links") {
+      const { data: agents } = await supabaseAdmin
+        .from("threecplus_agents")
+        .select("id, external_agent_id, external_name, external_email, user_id")
+        .eq("account_id", me.account_id);
+
+      const { data: accountUsers } = await supabaseAdmin
+        .from("users")
+        .select("id")
+        .eq("account_id", me.account_id);
+
+      const userIds = (accountUsers || []).map((u: any) => u.id);
+      const { data: userInts } = await supabaseAdmin
+        .from("user_integrations")
+        .select("user_id, metadata")
+        .eq("provider", "3cplus")
+        .in("user_id", userIds.length ? userIds : ["00000000-0000-0000-0000-000000000000"]);
+
+      const links = (userInts || []).map((row: any) => ({
+        user_id: row.user_id,
+        agent_id: row.metadata?.agent_id ? String(row.metadata.agent_id) : null,
+        extension: row.metadata?.extension ? String(row.metadata.extension) : null,
+        has_password: Boolean(row.metadata?.extension_password),
+      }));
+
+      return json({
+        success: true,
+        service_token_configured: Boolean(account.serviceToken),
+        agents: agents || [],
+        links,
+      });
+    }
+
+    // "save_extension": o usuário salva o próprio ramal; admin pode salvar de outra pessoa
+    const isSaveExtension = action === "save_extension" || action === "admin_save_extension";
+
+    if (isSaveExtension) {
+      let targetUserId = me.id;
+
+      if (action === "admin_save_extension") {
+        const { data: meRole } = await supabaseAdmin
+          .from("users")
+          .select("role, is_also_admin")
+          .eq("id", me.id)
+          .maybeSingle();
+        const isAdmin = meRole?.role === "admin" || meRole?.role === "super_admin" || meRole?.is_also_admin === true;
+        if (!isAdmin) return json({ error: "Apenas administradores podem configurar o ramal de outra pessoa." }, 403);
+        if (!body?.user_id) return json({ error: "Informe o usuário" }, 400);
+        targetUserId = String(body.user_id);
+      }
+
+      const { data: targetUser } = await supabaseAdmin
+        .from("users")
+        .select("id, name, email, account_id")
+        .eq("id", targetUserId)
+        .eq("account_id", me.account_id)
+        .maybeSingle();
+      if (!targetUser) return json({ error: "Usuário não encontrado nesta conta" }, 404);
+
+      const extension = body?.extension ? String(body.extension).trim() : null;
+      const extensionPassword = body?.extension_password ? String(body.extension_password).trim() : null;
+      const personalToken = body?.api_token ? String(body.api_token).trim() : null;
+      const manualId = body?.agent_id ? String(body.agent_id).trim() : null;
+
+      if (!extension) return json({ error: "Informe o número do ramal" }, 400);
+      if (!account.serviceToken && !personalToken) {
+        return json({
+          success: false,
+          error:
+            "Ainda não há token de serviço configurado na conta. Peça ao administrador para cadastrar em Integrações > 3C Plus, ou informe seu token individual.",
+        });
+      }
+
+      let agentId = manualId;
+      let agentName: string | null = targetUser.name ?? null;
+      let agentEmail: string | null = targetUser.email ?? null;
+
+      if (!agentId && account.serviceToken) {
+        const found = await findAgentByExtensionOrEmail(account.baseDomain, account.serviceToken, {
+          extension,
+          email: targetUser.email,
+          name: targetUser.name,
+        });
+        if (found) {
+          agentId = found.id;
+          agentName = found.name ?? agentName;
+          agentEmail = found.email ?? agentEmail;
+        }
+      }
+
+      if (!agentId && personalToken) {
+        const profile = await fetchAgentIdFromApi(account.baseDomain, personalToken);
+        if (profile.id) {
+          agentId = profile.id;
+          agentName = profile.name ?? agentName;
+          agentEmail = profile.email ?? agentEmail;
+        }
+      }
+
+      if (!agentId) {
+        return json({
+          success: false,
+          needs_agent_id: true,
+          error:
+            "Não encontramos esse ramal na 3C Plus. Confira o número do ramal ou informe o ID do agente na 3C.",
+        });
+      }
+
+      setContextAgentId(agentId);
+      registerAgentId(account.serviceToken, agentId);
+      registerAgentId(personalToken, agentId);
+
+      await persistAgentLink(supabaseAdmin, {
+        accountId: me.account_id,
+        userId: targetUser.id,
+        agentId,
+        name: agentName,
+        email: agentEmail,
+        apiToken: personalToken ?? account.serviceToken,
+        extension,
+        extensionPassword,
+      });
+
+      return json({
+        success: true,
+        agent_id: String(agentId),
+        service_token_configured: Boolean(account.serviceToken),
+      });
+    }
+
     const apiToken = String(body?.api_token || "").trim();
-    const linkUserId: string | null = isSaveExtension ? me.id : body?.user_id || null;
+    const linkUserId: string | null = body?.user_id || null;
     if (!apiToken) return json({ error: "Informe o token da API 3C Plus do agente" }, 400);
 
     const { data: integration } = await supabaseAdmin
@@ -144,7 +288,7 @@ Deno.serve(async (req) => {
       .eq("type", "3cplus")
       .maybeSingle();
 
-    const baseDomain = getBaseDomain(integration?.config?.domain || null);
+    const baseDomain = account.baseDomain;
 
     // A 3C pode exigir o header X-Agent-Id inclusive no /me: aceitamos um id manual como fallback
     const manualAgentId = body?.agent_id ? String(body.agent_id).trim() : null;
@@ -200,28 +344,9 @@ Deno.serve(async (req) => {
 
     if (error) return json({ success: false, error: error.message });
 
-    if (isSaveExtension) {
-      const extension = body?.extension ? String(body.extension).trim() : null;
-      const extensionPassword = body?.extension_password ? String(body.extension_password).trim() : null;
-      const { error: uiError } = await supabaseAdmin.from("user_integrations").upsert(
-        {
-          user_id: me.id,
-          provider: "3cplus",
-          access_token: apiToken,
-          metadata: {
-            extension,
-            extension_password: extensionPassword,
-            agent_id: String(profile.id),
-          },
-        },
-        { onConflict: "user_id,provider" },
-      );
-      if (uiError) return json({ success: false, error: uiError.message });
-    }
-
     return json({ success: true, agent: saved, agent_id: String(profile.id) });
   } catch (err) {
     console.error("[threecplus-register-agent]", err);
     return json({ success: false, error: String(err?.message || err) });
   }
-});
+}));

@@ -400,6 +400,16 @@ export function ThreeCPlusPanel() {
                   )}
                 </div>
               )}
+              {connectionInfo?.uses_service_token && (
+                <p className="text-xs text-muted-foreground">
+                  Token de serviço configurado — suas ligações usam a conexão da empresa.
+                </p>
+              )}
+              {connectionInfo && !connectionInfo.uses_service_token && (
+                <p className="text-xs text-warning">
+                  Usando tokens individuais (descontinuados em 01/10/2026).
+                </p>
+              )}
               {connectionInfo && !connectionInfo.has_agent_token && (
                 <p className="text-xs text-destructive">
                   Configure o Token de API do agente em Integrações &gt; 3C Plus &gt; Meu Ramal para usar o discador.

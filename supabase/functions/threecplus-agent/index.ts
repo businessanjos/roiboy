@@ -1,11 +1,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
+  SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
   mentionsAgentIdHeader,
-  registerAgentId,
-  resolveAgentIdByToken,
-  resolveUserAgentId,
+  resolveAgentAuth,
+  with3cContext,
 } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
@@ -708,7 +708,7 @@ async function logCallToDb(
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -737,7 +737,7 @@ Deno.serve(async (req) => {
 
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("id, account_id")
+      .select("id, account_id, name, email")
       .eq("auth_user_id", authUserId)
       .single();
 
@@ -800,44 +800,33 @@ Deno.serve(async (req) => {
       );
     }
 
-    // All other actions need the account-level integration
-    const integration = await getAccountIntegration(supabaseAdmin, userData.account_id);
-    if (!integration) {
+    // Autenticação: token de serviço da conta + X-Agent-Id, com fallback ao token individual
+    const auth = await resolveAgentAuth(supabaseAdmin, {
+      userId: userData.id,
+      accountId: userData.account_id,
+      userEmail: userData.email,
+      userName: userData.name,
+    });
+
+    if (!auth.apiToken) {
       return new Response(
         JSON.stringify({ success: false, code: "NO_INTEGRATION", error: "3C Plus não configurado. Peça ao administrador para configurar em Configurações > Integrações." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    const { apiToken, baseDomain } = integration;
-    const apiBase = `${baseDomain}/api/v1`;
-    const { data: userIntegration } = await supabaseAdmin
-      .from("user_integrations")
-      .select("access_token")
-      .eq("user_id", userData.id)
-      .eq("provider", "3cplus")
-      .maybeSingle();
-    const agentApiToken = getValidUserApiToken(userIntegration?.access_token);
-    const effectiveApiToken = agentApiToken ?? apiToken;
-
-    // A 3C exige o header X-Agent-Id em requisições com token de agente
-    if (agentApiToken) {
-      const { data: userIntMeta } = await supabaseAdmin
-        .from("user_integrations")
-        .select("metadata")
-        .eq("user_id", userData.id)
-        .eq("provider", "3cplus")
-        .maybeSingle();
-      await resolveUserAgentId(supabaseAdmin, {
-        userId: userData.id,
-        accountId: userData.account_id,
-        apiToken: agentApiToken,
-        baseDomain,
-        metadata: asRecord(userIntMeta?.metadata),
-      });
-    } else {
-      await resolveAgentIdByToken(supabaseAdmin, userData.account_id, apiToken, baseDomain);
+    if (auth.usingServiceToken && !auth.agentId) {
+      return new Response(
+        JSON.stringify({ success: false, code: "AGENT_ID_REQUIRED", error: SERVICE_TOKEN_MISSING_AGENT_MESSAGE }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
     }
+
+    const baseDomain = auth.baseDomain;
+    const apiToken = auth.accountToken ?? auth.apiToken;
+    const apiBase = `${baseDomain}/api/v1`;
+    const agentApiToken = auth.personalToken;
+    const effectiveApiToken = auth.apiToken;
 
     // Return connection info
     if (action === "get_connection_info") {
@@ -845,10 +834,13 @@ Deno.serve(async (req) => {
         JSON.stringify({
           success: true,
           domain: baseDomain,
-          api_token: effectiveApiToken,
-          extension_url: `${baseDomain}/extension?api_token=${effectiveApiToken}`,
+          // Nunca devolvemos o token de serviço ao navegador
+          api_token: agentApiToken,
+          extension_url: agentApiToken ? `${baseDomain}/extension?api_token=${agentApiToken}` : null,
+          uses_service_token: auth.usingServiceToken,
+          agent_id: auth.agentId,
           socket_url: "https://socket.3c.plus",
-          has_agent_token: Boolean(agentApiToken),
+          has_agent_token: Boolean(agentApiToken) || auth.usingServiceToken,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
@@ -1452,4 +1444,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

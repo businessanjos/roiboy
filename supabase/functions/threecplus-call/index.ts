@@ -2,10 +2,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
+  SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
-  getBaseDomain,
   mentionsAgentIdHeader,
-  resolveUserAgentId,
+  persistAgentLink,
+  resolveAgentAuth,
+  with3cContext,
 } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
@@ -139,7 +141,7 @@ async function logCall(
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -168,7 +170,7 @@ Deno.serve(async (req) => {
 
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("id, account_id")
+      .select("id, account_id, name, email")
       .eq("auth_user_id", authUserId)
       .single();
 
@@ -183,38 +185,35 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get account-level 3C Plus integration
-    const { data: integration } = await supabaseAdmin
-      .from("integrations")
-      .select("config")
-      .eq("account_id", userData.account_id)
-      .eq("type", "3cplus")
-      .eq("status", "connected")
-      .maybeSingle();
+    // Token de serviço da conta + X-Agent-Id (com fallback para o token individual)
+    const auth = await resolveAgentAuth(supabaseAdmin, {
+      userId: userData.id,
+      accountId: userData.account_id,
+      userEmail: userData.email,
+      userName: userData.name,
+    });
 
-    if (!integration?.config) {
+    if (!auth.serviceToken && !auth.personalToken && !auth.accountToken) {
       return new Response(JSON.stringify({ success: false, error: "Integração 3C Plus não configurada.", code: "NO_INTEGRATION" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const config = integration.config as Record<string, unknown>;
-    const baseDomain = getBaseDomain(config.domain as string | null);
+    const baseDomain = auth.baseDomain;
     const cleanPhone = phone.replace(/\D/g, "");
+    const agentApiToken = auth.apiToken as string;
+    const userExtension = auth.extension;
+    const userPassword = auth.extensionPassword;
+    const resolvedAgentId = auth.agentId;
 
-    // Get user's extension and password from user_integrations
-    const { data: userInt } = await supabaseAdmin
-      .from("user_integrations")
-      .select("access_token, metadata")
-      .eq("user_id", userData.id)
-      .eq("provider", "3cplus")
-      .maybeSingle();
+    if (auth.usingServiceToken && !resolvedAgentId) {
+      return new Response(JSON.stringify({
+        success: false,
+        code: "AGENT_ID_REQUIRED",
+        error: SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
+      }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
-    const metadata = userInt?.metadata as Record<string, unknown> | null;
-    const agentApiToken = getValidUserApiToken(userInt?.access_token);
-    const userExtension = metadata?.extension as string | null;
-    const userPassword = metadata?.extension_password as string | null;
-
-    if (!agentApiToken) {
+    if (!auth.usingServiceToken && !auth.personalToken) {
       return new Response(JSON.stringify({
         success: false,
         code: "NO_AGENT_TOKEN",
@@ -225,24 +224,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    // A 3C exige o header X-Agent-Id em tokens de agente
-    const resolvedAgentId = await resolveUserAgentId(supabaseAdmin, {
-      userId: userData.id,
-      accountId: userData.account_id,
-      apiToken: agentApiToken,
-      baseDomain,
-      metadata,
-    });
-    if (resolvedAgentId && String(metadata?.agent_id || "") !== resolvedAgentId) {
-      await supabaseAdmin
-        .from("user_integrations")
-        .update({ metadata: { ...(metadata ?? {}), agent_id: resolvedAgentId } })
-        .eq("user_id", userData.id)
-        .eq("provider", "3cplus");
+    if (resolvedAgentId) {
+      await persistAgentLink(supabaseAdmin, {
+        accountId: userData.account_id,
+        userId: userData.id,
+        agentId: resolvedAgentId,
+        name: userData.name,
+        email: userData.email,
+      });
     }
-    if (!resolvedAgentId) {
-      console.warn("[threecplus-call] Sem X-Agent-Id para o usuário", userData.id);
-    }
+
 
 
 
@@ -393,4 +384,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: false, error: "Erro interno do servidor." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}));

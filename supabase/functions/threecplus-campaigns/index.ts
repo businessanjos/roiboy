@@ -1,5 +1,9 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetch3c, resolveAgentIdByToken } from "../_shared/threecplus.ts";
+import {
+  fetch3c,
+  resolveAgentAuth,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +60,7 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
   return { campaigns: allCampaigns };
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -84,7 +88,7 @@ Deno.serve(async (req) => {
 
     const { data: userData } = await supabaseAdmin
       .from("users")
-      .select("id, account_id")
+      .select("id, account_id, name, email")
       .eq("auth_user_id", user.id)
       .single();
 
@@ -93,36 +97,27 @@ Deno.serve(async (req) => {
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Get account-level 3C Plus integration
-    const { data: integration } = await supabaseAdmin
-      .from("integrations")
-      .select("config")
-      .eq("account_id", userData.account_id)
-      .eq("type", "3cplus")
-      .eq("status", "connected")
-      .maybeSingle();
+    // Token de serviço + X-Agent-Id, com fallback ao token individual/da conta
+    const auth = await resolveAgentAuth(supabaseAdmin, {
+      userId: userData.id,
+      accountId: userData.account_id,
+      userEmail: userData.email,
+      userName: userData.name,
+    });
 
-    if (!integration?.config) {
+    if (!auth.apiToken) {
       return new Response(JSON.stringify({ success: false, code: "NO_INTEGRATION", error: "3C Plus não configurado." }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const config = integration.config as Record<string, unknown>;
-    const apiToken = config.api_token as string;
-    const domain = config.domain as string | null;
-    if (!apiToken) {
-      return new Response(JSON.stringify({ success: false, error: "Token da API não configurado." }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    const baseDomain = getBaseDomain(domain);
-    await resolveAgentIdByToken(supabaseAdmin, userData.account_id, apiToken, baseDomain);
+    const apiToken = auth.apiToken;
+    const baseDomain = auth.baseDomain;
     console.log("[threecplus-campaigns] Account:", userData.account_id, "Domain:", baseDomain);
 
     const result = await fetchCampaignsFromDomain(baseDomain, apiToken);
 
     // Fallback to default domain
-    const defaultDomain = "https://app.3c.fluxoti.com";
+    const defaultDomain = "https://eternumentoringclub1.3c.plus";
     if (result.campaigns.length === 0 && baseDomain !== defaultDomain) {
       const fallbackResult = await fetchCampaignsFromDomain(defaultDomain, apiToken);
       if (fallbackResult.campaigns.length > 0) {
@@ -144,4 +139,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: false, error: "Erro interno do servidor." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}));

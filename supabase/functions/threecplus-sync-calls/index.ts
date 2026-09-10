@@ -8,7 +8,16 @@
 //
 // Chamada pelo app (JWT) ou por cron (header x-cron-secret).
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetch3c, registerAgentId } from "../_shared/threecplus.ts";
+import {
+  fetch3c,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  registerAgentId,
+  resolveAgentAuth,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,7 +170,7 @@ async function fetchMe(baseDomain: string, apiToken: string) {
   return body?.data ?? null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseAdmin = createClient(
@@ -221,7 +230,7 @@ Deno.serve(async (req) => {
     console.error("[threecplus-sync-calls] fatal:", err);
     return json({ success: false, error: String(err?.message || err) });
   }
-});
+}));
 
 async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) {
   const now = new Date();
@@ -273,7 +282,12 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
         : envAdminToken || null;
 
 
-    if (!integration?.config?.api_token && !adminToken) {
+    const serviceToken: string | null =
+      typeof integration?.config?.service_token === "string" && integration.config.service_token.trim()
+        ? integration.config.service_token.trim()
+        : null;
+
+    if (!integration?.config?.api_token && !adminToken && !serviceToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
       return { error: "Integração 3C Plus não configurada", synced: 0 };
     }
@@ -289,7 +303,9 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .select("id, external_agent_id, external_name, external_email, user_id, api_token, is_tracked")
       .eq("account_id", accountId);
 
-    const withToken = (agents || []).filter((a: any) => a.is_tracked && a.api_token);
+    const withToken = (agents || [])
+      .filter((a: any) => a.is_tracked && (a.api_token || (serviceToken && a.external_agent_id)))
+      .map((a: any) => ({ ...a, effective_token: a.api_token || serviceToken }));
     if (withToken.length === 0 && !adminToken) {
       await finish({
         status: "error",
@@ -449,14 +465,15 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
 
     for (const agent of withToken) {
       // Token de agente exige o header X-Agent-Id
-      registerAgentId(agent.api_token, agent.external_agent_id);
+      registerAgentId(agent.effective_token, agent.external_agent_id);
+      setContextAgentId(agent.external_agent_id);
       let userId = agent.user_id ?? matchUser(agent.external_email, agent.external_name);
       const rows: any[] = [];
       let page = 1;
       let agentError: string | null = null;
 
       while (page <= MAX_PAGES_PER_AGENT) {
-        const res = await fetchAgentCallsPage(baseDomain, agent.api_token, startStr, endStr, page);
+        const res = await fetchAgentCallsPage(baseDomain, agent.effective_token, startStr, endStr, page);
         if (!res.ok) {
           agentError =
             res.status === 401 || res.status === 403

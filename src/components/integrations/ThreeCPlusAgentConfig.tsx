@@ -18,6 +18,7 @@ export function ThreeCPlusAgentConfig() {
   const [showPassword, setShowPassword] = useState(false);
   const [showAgentToken, setShowAgentToken] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [serviceTokenConfigured, setServiceTokenConfigured] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -41,6 +42,11 @@ export function ThreeCPlusAgentConfig() {
       setAgentToken(data.access_token && data.access_token !== "account_level" ? data.access_token : "");
     }
 
+    const { data: status } = await supabase.functions.invoke("threecplus-register-agent", {
+      body: { action: "status" },
+    });
+    setServiceTokenConfigured(Boolean(status?.service_token_configured));
+
     setLoading(false);
   };
 
@@ -57,17 +63,12 @@ export function ThreeCPlusAgentConfig() {
       return;
     }
 
-    if (!trimmedAgentToken) {
-      toast.error("Informe o Token de API do agente.");
-      return;
-    }
-
     setSaving(true);
     try {
       const { data, error } = await supabase.functions.invoke("threecplus-register-agent", {
         body: {
           action: "save_extension",
-          api_token: trimmedAgentToken,
+          api_token: trimmedAgentToken || null,
           extension: trimmedExt,
           extension_password: trimmedPass || null,
           agent_id: trimmedAgentId || null,
@@ -120,7 +121,7 @@ export function ThreeCPlusAgentConfig() {
           <div>
             <CardTitle className="text-base">Meu Ramal — Click-to-Call</CardTitle>
             <CardDescription>
-              Configure ramal, senha e o token individual do agente para o discador e as ligações diretas
+              Informe ramal e senha para discar. O ROY encontra seu agente na 3C automaticamente.
             </CardDescription>
           </div>
         </div>
@@ -166,7 +167,7 @@ export function ThreeCPlusAgentConfig() {
         <div className="space-y-2">
           <Label htmlFor="agent-token">
             <KeyRound className="mr-1.5 inline h-3.5 w-3.5" />
-            Token de API do Agente
+            Token de API do Agente {serviceTokenConfigured ? "(opcional)" : ""}
           </Label>
           <div className="relative">
             <Input
@@ -187,7 +188,9 @@ export function ThreeCPlusAgentConfig() {
             </button>
           </div>
           <p className="text-xs text-muted-foreground">
-            Esse token é obrigatório para autenticar o ramal do próprio agente no 3C Plus.
+            {serviceTokenConfigured
+              ? "Opcional. A conta já usa o token de serviço; deixe em branco."
+              : "Enquanto a conta não tiver token de serviço, informe seu token individual (descontinuado em 01/10/2026)."}
           </p>
         </div>
 

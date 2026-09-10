@@ -42,6 +42,8 @@ interface ConnectionInfo {
   extension_url: string;
   socket_url?: string;
   has_agent_token?: boolean;
+  uses_service_token?: boolean;
+  agent_id?: string | null;
 }
 
 interface AgentRuntimeState {
