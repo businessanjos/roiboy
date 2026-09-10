@@ -35,22 +35,46 @@ function tokenFromRequest(url: string, init?: RequestInit): string | null {
   return null;
 }
 
-/** fetch com o header `X-Agent-Id` quando conhecemos o agente daquele token. */
+/**
+ * fetch para a 3C Plus:
+ * - sempre envia o token no header `Authorization: Bearer` (nunca na query string);
+ * - injeta `X-Agent-Id` quando conhecemos o agente daquele token/contexto.
+ */
 export async function fetch3c(url: string, init?: RequestInit): Promise<Response> {
   const token = tokenFromRequest(url, init);
   const agentId = contextAgentId() ?? agentIdForToken(token);
-  if (!agentId) return fetch(url, init);
 
-  return fetch(url, {
-    ...init,
-    headers: { ...((init?.headers ?? {}) as Record<string, string>), "X-Agent-Id": agentId },
-  });
+  // move api_token da query para o header Authorization
+  let finalUrl = url;
+  const headers: Record<string, string> = { ...((init?.headers ?? {}) as Record<string, string>) };
+  if (/[?&]api_token=/.test(url)) {
+    finalUrl = url.replace(/([?&])api_token=[^&]*&?/, "$1").replace(/[?&]$/, "");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  if (agentId) headers["X-Agent-Id"] = agentId;
+
+  return fetch(finalUrl, { ...init, headers });
 }
 
 /** Detecta erros da 3C que reclamam do header X-Agent-Id. */
 export function mentionsAgentIdHeader(...parts: Array<unknown>): boolean {
   return parts.some((part) => typeof part === "string" && /x-?agent-?id/i.test(part));
 }
+
+/** Traduz o status devolvido pela 3C para uma mensagem clara no ROY. */
+export function threeCErrorMessage(status: number, body?: string): string {
+  if (status === 400) {
+    return "A 3C não reconheceu o agente desta ação (ID ausente ou inválido). Abra Integrações > 3C Plus e clique em \"Sincronizar agentes da 3C\".";
+  }
+  if (status === 401) {
+    return "Token da 3C inválido ou revogado. Gere um novo em Config. > Integração > Tokens de serviço.";
+  }
+  if (status === 403) {
+    return "O papel deste token da 3C não permite esta ação (use o token de Gestor para relatórios e o de Agente para ligações).";
+  }
+  return `A 3C respondeu com erro (status ${status}).${body ? ` ${String(body).slice(0, 160)}` : ""}`;
+}
+
 
 export function getBaseDomain(domain: string | null | undefined): string {
   if (!domain) return "https://eternumentoringclub1.3c.plus";
@@ -212,10 +236,29 @@ export const SERVICE_TOKEN_MISSING_AGENT_MESSAGE =
 export type ThreeCConfig = Record<string, unknown>;
 
 /** Lê a integração da conta (config completo, nunca devolvido ao browser). */
+export function isServiceToken(value: unknown): boolean {
+  return typeof value === "string" && value.trim().startsWith("3cs_");
+}
+
+function pickToken(...values: unknown[]): string | null {
+  for (const v of values) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
 export async function loadAccountIntegration(
   supabaseAdmin: any,
   accountId: string,
-): Promise<{ id: string | null; config: ThreeCConfig; baseDomain: string; serviceToken: string | null; accountToken: string | null }> {
+): Promise<{
+  id: string | null;
+  config: ThreeCConfig;
+  baseDomain: string;
+  serviceToken: string | null;
+  agentServiceToken: string | null;
+  managerServiceToken: string | null;
+  accountToken: string | null;
+}> {
   const { data } = await supabaseAdmin
     .from("integrations")
     .select("id, config")
@@ -224,9 +267,19 @@ export async function loadAccountIntegration(
     .maybeSingle();
 
   const config = (data?.config as ThreeCConfig) || {};
-  const serviceToken = typeof config.service_token === "string" && config.service_token.trim()
-    ? config.service_token.trim()
-    : null;
+
+  // Token de papel AGENTE (click2call, manual_call, webphone, /agent/*)
+  const agentServiceToken = pickToken(
+    config.service_token_agent,
+    isServiceToken(config.service_token) ? config.service_token : null,
+  );
+
+  // Token de papel GESTOR (listar agentes/usuários, relatório global /api/v1/calls)
+  const managerServiceToken = pickToken(
+    config.service_token_manager,
+    isServiceToken(config.admin_api_token) ? config.admin_api_token : null,
+  );
+
   const accountToken = typeof config.api_token === "string" && config.api_token.trim()
     ? config.api_token.trim()
     : null;
@@ -235,10 +288,65 @@ export async function loadAccountIntegration(
     id: data?.id ?? null,
     config,
     baseDomain: getBaseDomain((config.domain as string) || null),
-    serviceToken,
+    serviceToken: agentServiceToken ?? managerServiceToken,
+    agentServiceToken,
+    managerServiceToken,
     accountToken,
   };
 }
+
+/** Lista agentes/usuários da 3C usando o token de papel Gestor. */
+export async function listThreeCAgents(
+  baseDomain: string,
+  managerToken: string,
+): Promise<Array<{ id: string; name: string | null; email: string | null; extension: string | null; active: boolean }>> {
+  const out: Array<{ id: string; name: string | null; email: string | null; extension: string | null; active: boolean }> = [];
+  const seen = new Set<string>();
+
+  for (const endpoint of ["/api/v1/agents", "/api/v1/users"]) {
+    for (let page = 1; page <= 20; page++) {
+      let res: Response;
+      try {
+        res = await fetch(`${baseDomain}${endpoint}?page=${page}&per_page=100`, {
+          headers: { Accept: "application/json", Authorization: `Bearer ${managerToken}` },
+        });
+      } catch {
+        break;
+      }
+      if (!res.ok) break;
+
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(await res.text());
+      } catch {
+        break;
+      }
+
+      const rows: any[] = Array.isArray(parsed) ? parsed : parsed?.data ?? [];
+      if (!Array.isArray(rows) || rows.length === 0) break;
+
+      for (const row of rows) {
+        if (row?.id == null || seen.has(String(row.id))) continue;
+        seen.add(String(row.id));
+        const ext = row?.extension?.extension_number ?? row?.extension_number ?? row?.extension ?? null;
+        out.push({
+          id: String(row.id),
+          name: row?.name ?? row?.full_name ?? null,
+          email: row?.email ?? null,
+          extension: ext != null ? String(ext).replace(/\D/g, "") : null,
+          active: row?.active !== false && row?.status !== "inactive" && row?.is_active !== false,
+        });
+      }
+
+      const lastPage = parsed?.last_page ?? parsed?.meta?.last_page ?? page;
+      if (page >= Number(lastPage)) break;
+    }
+    if (out.length) break;
+  }
+
+  return out;
+}
+
 
 /** Busca o agente na 3C pela lista de usuários, casando por ramal, e-mail ou nome. */
 export async function findAgentByExtensionOrEmail(
@@ -311,6 +419,7 @@ export type AgentAuth = {
   usingServiceToken: boolean;
   baseDomain: string;
   serviceToken: string | null;
+  managerServiceToken?: string | null;
   accountToken: string | null;
   extension: string | null;
   extensionPassword: string | null;
@@ -353,8 +462,8 @@ export async function resolveAgentAuth(
     if (agentRow?.external_agent_id) agentId = String(agentRow.external_agent_id);
   }
 
-  if (!agentId && account.serviceToken) {
-    const found = await findAgentByExtensionOrEmail(account.baseDomain, account.serviceToken, {
+  if (!agentId && account.managerServiceToken) {
+    const found = await findAgentByExtensionOrEmail(account.baseDomain, account.managerServiceToken, {
       extension,
       email: opts.userEmail ?? null,
       name: opts.userName ?? null,
@@ -369,18 +478,20 @@ export async function resolveAgentAuth(
 
   if (agentId) {
     setContextAgentId(agentId);
-    registerAgentId(account.serviceToken, agentId);
+    registerAgentId(account.agentServiceToken, agentId);
     registerAgentId(personalToken, agentId);
   }
 
-  const apiToken = account.serviceToken ?? personalToken ?? account.accountToken;
+  // Ações de agente usam o token de papel Agente (sempre com X-Agent-Id).
+  const apiToken = (agentId ? account.agentServiceToken : null) ?? personalToken ?? account.agentServiceToken ?? account.accountToken;
 
   return {
     apiToken,
     agentId,
-    usingServiceToken: Boolean(account.serviceToken),
+    usingServiceToken: Boolean(account.agentServiceToken && agentId),
     baseDomain: account.baseDomain,
-    serviceToken: account.serviceToken,
+    serviceToken: account.agentServiceToken,
+    managerServiceToken: account.managerServiceToken,
     accountToken: account.accountToken,
     extension,
     extensionPassword,
@@ -388,6 +499,7 @@ export async function resolveAgentAuth(
     config: account.config,
   };
 }
+
 
 /** Grava o vínculo do usuário com o agente da 3C nas duas tabelas. */
 export async function persistAgentLink(

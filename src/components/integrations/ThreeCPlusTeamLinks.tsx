@@ -21,7 +21,29 @@ interface Row {
 export function ThreeCPlusTeamLinks() {
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(true);
+  const [syncing, setSyncing] = useState(false);
   const [savingId, setSavingId] = useState<string | null>(null);
+
+  const syncAgents = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-register-agent", {
+        body: { action: "sync_agents" },
+      });
+      if (error) throw error;
+      if (!data?.success) {
+        toast.error("Não foi possível sincronizar", { description: data?.error });
+        return;
+      }
+      toast.success(`${data.linked} pessoa(s) vinculada(s) de ${data.agents_found} agente(s) na 3C.`);
+      await load();
+    } catch (err: any) {
+      toast.error("Erro ao sincronizar agentes", { description: err?.message });
+    } finally {
+      setSyncing(false);
+    }
+  };
+
 
   const load = async () => {
     setLoading(true);
@@ -112,9 +134,15 @@ export function ThreeCPlusTeamLinks() {
               </CardDescription>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={syncAgents} disabled={syncing || loading}>
+              {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Sincronizar agentes da 3C
+            </Button>
+            <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+              Atualizar
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>

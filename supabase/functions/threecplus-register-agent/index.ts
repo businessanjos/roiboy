@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   fetchAgentIdFromApi,
   findAgentByExtensionOrEmail,
+  listThreeCAgents,
   loadAccountIntegration,
   persistAgentLink,
   registerAgentId,
@@ -174,11 +175,75 @@ Deno.serve((req) => with3cContext(async () => {
 
       return json({
         success: true,
-        service_token_configured: Boolean(account.serviceToken),
+        service_token_configured: Boolean(account.agentServiceToken || account.managerServiceToken),
+        agent_token_configured: Boolean(account.agentServiceToken),
+        manager_token_configured: Boolean(account.managerServiceToken),
         agents: agents || [],
         links,
       });
     }
+
+    // Sincroniza a lista de agentes da 3C e vincula automaticamente por ramal/e-mail
+    if (action === "sync_agents") {
+      const { data: meRole } = await supabaseAdmin
+        .from("users")
+        .select("role, is_also_admin")
+        .eq("id", me.id)
+        .maybeSingle();
+      const isAdmin = meRole?.role === "admin" || meRole?.role === "super_admin" || meRole?.is_also_admin === true;
+      if (!isAdmin) return json({ error: "Apenas administradores podem sincronizar os agentes." }, 403);
+
+      if (!account.managerServiceToken) {
+        return json({
+          success: false,
+          error: "Cadastre o token de serviço com papel Gestor para listar os agentes da 3C.",
+        });
+      }
+
+      const remoteAgents = await listThreeCAgents(account.baseDomain, account.managerServiceToken);
+      if (!remoteAgents.length) {
+        return json({ success: false, error: "A 3C não devolveu nenhum agente com esse token de Gestor." });
+      }
+
+      const { data: accountUsers } = await supabaseAdmin
+        .from("users")
+        .select("id, name, email")
+        .eq("account_id", me.account_id);
+
+      const { data: userInts } = await supabaseAdmin
+        .from("user_integrations")
+        .select("user_id, metadata")
+        .eq("provider", "3cplus")
+        .in("user_id", (accountUsers || []).map((u: any) => u.id).concat("00000000-0000-0000-0000-000000000000"));
+
+      const extByUser = new Map<string, string>();
+      for (const row of userInts || []) {
+        if (row.metadata?.extension) extByUser.set(row.user_id, String(row.metadata.extension).replace(/\D/g, ""));
+      }
+
+      let linked = 0;
+      for (const user of accountUsers || []) {
+        const ext = extByUser.get(user.id) || null;
+        const email = user.email ? String(user.email).toLowerCase() : null;
+        const match = remoteAgents.find(
+          (a) => (ext && a.extension && a.extension === ext) || (email && a.email && a.email.toLowerCase() === email),
+        );
+        if (!match) continue;
+
+        await persistAgentLink(supabaseAdmin, {
+          accountId: me.account_id,
+          userId: user.id,
+          agentId: match.id,
+          name: match.name ?? user.name,
+          email: match.email ?? user.email,
+          extension: ext ?? match.extension,
+        });
+        linked++;
+      }
+
+      return json({ success: true, agents_found: remoteAgents.length, linked });
+    }
+
 
     // "save_extension": o usuário salva o próprio ramal; admin pode salvar de outra pessoa
     const isSaveExtension = action === "save_extension" || action === "admin_save_extension";
@@ -212,7 +277,7 @@ Deno.serve((req) => with3cContext(async () => {
       const manualId = body?.agent_id ? String(body.agent_id).trim() : null;
 
       if (!extension) return json({ error: "Informe o número do ramal" }, 400);
-      if (!account.serviceToken && !personalToken) {
+      if (!account.agentServiceToken && !account.managerServiceToken && !personalToken) {
         return json({
           success: false,
           error:
@@ -224,8 +289,8 @@ Deno.serve((req) => with3cContext(async () => {
       let agentName: string | null = targetUser.name ?? null;
       let agentEmail: string | null = targetUser.email ?? null;
 
-      if (!agentId && account.serviceToken) {
-        const found = await findAgentByExtensionOrEmail(account.baseDomain, account.serviceToken, {
+      if (!agentId && (account.managerServiceToken || account.agentServiceToken)) {
+        const found = await findAgentByExtensionOrEmail(account.baseDomain, (account.managerServiceToken || account.agentServiceToken)!, {
           extension,
           email: targetUser.email,
           name: targetUser.name,
@@ -256,7 +321,7 @@ Deno.serve((req) => with3cContext(async () => {
       }
 
       setContextAgentId(agentId);
-      registerAgentId(account.serviceToken, agentId);
+      registerAgentId(account.agentServiceToken, agentId);
       registerAgentId(personalToken, agentId);
 
       await persistAgentLink(supabaseAdmin, {
@@ -265,7 +330,7 @@ Deno.serve((req) => with3cContext(async () => {
         agentId,
         name: agentName,
         email: agentEmail,
-        apiToken: personalToken ?? account.serviceToken,
+        apiToken: personalToken ?? null,
         extension,
         extensionPassword,
       });
@@ -273,7 +338,7 @@ Deno.serve((req) => with3cContext(async () => {
       return json({
         success: true,
         agent_id: String(agentId),
-        service_token_configured: Boolean(account.serviceToken),
+        service_token_configured: Boolean(account.agentServiceToken || account.managerServiceToken),
       });
     }
 
