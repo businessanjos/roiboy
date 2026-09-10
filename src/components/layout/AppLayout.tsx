@@ -34,7 +34,6 @@ export function AppLayout() {
   const [forceRender, setForceRender] = useState(false);
   const { currentSector } = useSector();
   const location = useLocation();
-  const isInVendas = currentSector?.id === "vendas";
   const { currentUser } = useCurrentUser();
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
@@ -140,6 +139,7 @@ export function AppLayout() {
       ? currentSector
       : getSectorByRoute(location.pathname)
     : null;
+  const showThreeCPlus = routeSector?.id === "vendas" || location.pathname.startsWith("/roy-zapp");
   const skipSectorGuard = isSkippedRoute(location.pathname);
   if (!sectorAccessLoading && routeSector && !skipSectorGuard && !hasSectorAccess(routeSector.id)) {
     return <Navigate to="/setores" replace />;
@@ -187,8 +187,7 @@ export function AppLayout() {
 
           {/* Aviso de nova versão é renderizado globalmente em App.tsx */}
 
-          {/* 3C Plus Embedded Panel — oculto temporariamente a pedido do usuário */}
-          {/* {isInVendas && <ThreeCPlusPanel />} */}
+          {showThreeCPlus && <ThreeCPlusPanel />}
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>

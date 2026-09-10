@@ -280,6 +280,11 @@ export function ZappChatView({
         toast.success("Chamada iniciada no 3C Plus", { description: `Ligando para ${contactInfo.name}...` });
         return;
       }
+      if (data?.code === "AGENT_NOT_IDLE") {
+        window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
+        toast.error("Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo");
+        return;
+      }
       toast.error("Erro", { description: data?.error || "Erro desconhecido" });
     } catch (err) {
       console.error("[ZappChatView] 3C Plus call error:", err);

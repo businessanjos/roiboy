@@ -834,9 +834,8 @@ Deno.serve((req) => with3cContext(async () => {
         JSON.stringify({
           success: true,
           domain: baseDomain,
-          // Nunca devolvemos o token de serviço ao navegador
-          api_token: agentApiToken,
-          extension_url: agentApiToken ? `${baseDomain}/extension?api_token=${agentApiToken}` : null,
+          // Tokens nunca são devolvidos ao navegador. O painel usa a sessão da própria 3C.
+          extension_url: `${baseDomain}/agent`,
           uses_service_token: auth.usingServiceToken,
           agent_id: auth.agentId,
           socket_url: "https://socket.3c.plus",
@@ -1147,8 +1146,9 @@ Deno.serve((req) => with3cContext(async () => {
         JSON.stringify({
           success: false,
           error: agentNotIdle
-            ? "O agente ainda não ficou ocioso no 3C Plus. Aguarde o carregamento completo do ramal WebRTC e tente novamente."
+            ? "Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo"
             : extractApiMessage(enterText, "Não foi possível iniciar a chamada manual."),
+          code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
           extension_resolved: Boolean(extension),
           runtime: latestRuntime,
         }),
