@@ -230,7 +230,7 @@ Deno.serve((req) => with3cContext(async () => {
     console.error("[threecplus-sync-calls] fatal:", err);
     return json({ success: false, error: String(err?.message || err) });
   }
-});
+}));
 
 async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) {
   const now = new Date();
