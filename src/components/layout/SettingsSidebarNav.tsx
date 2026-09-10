@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Shield, Book, Plug, Users, UserCircle, Target, User,
-  CreditCard, Video, Key, ArrowLeft, Activity, Building2, Bot,
+  CreditCard, Video, Key, ArrowLeft, Activity, Building2,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
@@ -36,7 +36,6 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
         items: [
           { id: "profile", label: "Meu Perfil", icon: User },
           { id: "meetings", label: "Reuniões", icon: Video },
-          { id: "mcp", label: "MCP (Claude / ChatGPT)", icon: Bot },
         ],
       },
     ];
