@@ -131,8 +131,10 @@ Deno.serve(async (req) => {
     }
 
 
+    // "save_extension": o próprio usuário salva ramal + token em Meu Ramal
+    const isSaveExtension = action === "save_extension";
     const apiToken = String(body?.api_token || "").trim();
-    const linkUserId: string | null = body?.user_id || null;
+    const linkUserId: string | null = isSaveExtension ? me.id : body?.user_id || null;
     if (!apiToken) return json({ error: "Informe o token da API 3C Plus do agente" }, 400);
 
     const { data: integration } = await supabaseAdmin
