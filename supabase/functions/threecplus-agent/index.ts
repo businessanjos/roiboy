@@ -834,12 +834,13 @@ Deno.serve((req) => with3cContext(async () => {
         JSON.stringify({
           success: true,
           domain: baseDomain,
-          api_token: auth.usingServiceToken ? null : effectiveApiToken,
-          extension_url: auth.usingServiceToken ? null : `${baseDomain}/extension?api_token=${effectiveApiToken}`,
+          // Nunca devolvemos o token de serviço ao navegador
+          api_token: agentApiToken,
+          extension_url: agentApiToken ? `${baseDomain}/extension?api_token=${agentApiToken}` : null,
           uses_service_token: auth.usingServiceToken,
           agent_id: auth.agentId,
           socket_url: "https://socket.3c.plus",
-          has_agent_token: Boolean(agentApiToken),
+          has_agent_token: Boolean(agentApiToken) || auth.usingServiceToken,
         }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
