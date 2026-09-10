@@ -11,6 +11,8 @@ import {
   registerAgentId,
   resolveAgentAuth,
   setContextAgentId,
+  threeCErrorMessage,
+  SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   with3cContext,
 } from "../_shared/threecplus.ts";
 
@@ -147,6 +149,63 @@ Deno.serve((req) => with3cContext(async () => {
 
     const account = await loadAccountIntegration(supabaseAdmin, me.account_id);
 
+    const isAccountAdmin = async () => {
+      const { data: meRole } = await supabaseAdmin
+        .from("users")
+        .select("role, is_also_admin")
+        .eq("id", me.id)
+        .maybeSingle();
+      return meRole?.role === "admin" || meRole?.role === "super_admin" || meRole?.is_also_admin === true;
+    };
+
+    // Testa a autenticação do agente na 3C (/api/v1/me com X-Agent-Id)
+    if (action === "test_agent") {
+      let targetUserId = me.id;
+      if (body?.user_id && String(body.user_id) !== me.id) {
+        if (!(await isAccountAdmin())) return json({ error: "Apenas administradores podem testar outra pessoa." }, 403);
+        targetUserId = String(body.user_id);
+      }
+
+      const { data: targetUser } = await supabaseAdmin
+        .from("users")
+        .select("id, name, email")
+        .eq("id", targetUserId)
+        .eq("account_id", me.account_id)
+        .maybeSingle();
+      if (!targetUser) return json({ error: "Usuário não encontrado nesta conta" }, 404);
+
+      const auth = await resolveAgentAuth(supabaseAdmin, {
+        userId: targetUser.id,
+        accountId: me.account_id,
+        userEmail: targetUser.email,
+        userName: targetUser.name,
+      });
+
+      if (!auth.apiToken) return json({ success: false, error: "Nenhum token da 3C disponível para esta pessoa." });
+      if (!auth.agentId) return json({ success: false, error: SERVICE_TOKEN_MISSING_AGENT_MESSAGE });
+
+      const probe = await fetchAgentIdFromApi(auth.baseDomain, auth.apiToken, auth.agentId);
+      if (!probe.id) {
+        return json({ success: false, error: threeCErrorMessage(probe.status, probe.body) });
+      }
+      return json({ success: true, agent_id: String(probe.id), name: probe.name, email: probe.email });
+    }
+
+    // Remove o vínculo de uma pessoa com a 3C
+    if (action === "remove_link") {
+      const targetUserId = String(body?.user_id || me.id);
+      if (targetUserId !== me.id && !(await isAccountAdmin())) {
+        return json({ error: "Apenas administradores podem remover o vínculo de outra pessoa." }, 403);
+      }
+      await supabaseAdmin.from("user_integrations").delete().eq("user_id", targetUserId).eq("provider", "3cplus");
+      await supabaseAdmin
+        .from("threecplus_agents")
+        .update({ user_id: null })
+        .eq("account_id", me.account_id)
+        .eq("user_id", targetUserId);
+      return json({ success: true });
+    }
+
     // Vínculos ramal/agente da conta (tela de Equipe, admin)
     if (action === "list_links") {
       const { data: agents } = await supabaseAdmin
@@ -156,7 +215,7 @@ Deno.serve((req) => with3cContext(async () => {
 
       const { data: accountUsers } = await supabaseAdmin
         .from("users")
-        .select("id")
+        .select("id, name, email, is_active")
         .eq("account_id", me.account_id);
 
       const userIds = (accountUsers || []).map((u: any) => u.id);
@@ -175,9 +234,12 @@ Deno.serve((req) => with3cContext(async () => {
 
       return json({
         success: true,
+        me_user_id: me.id,
+        is_admin: await isAccountAdmin(),
         service_token_configured: Boolean(account.agentServiceToken || account.managerServiceToken),
         agent_token_configured: Boolean(account.agentServiceToken),
         manager_token_configured: Boolean(account.managerServiceToken),
+        users: (accountUsers || []).filter((u: any) => u.is_active !== false),
         agents: agents || [],
         links,
       });
