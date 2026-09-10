@@ -73,7 +73,81 @@ Deno.serve((req) => with3cContext(async () => {
       });
     }
 
-    const { api_token, domain, agent_id: req_agent_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const { api_token, domain, agent_id: req_agent_id } = body;
+    const action = String(body?.action || "connect");
+
+    // ---- Token de serviço da conta (modelo novo da 3C) ----
+    if (action === "status" || action === "set_service_token" || action === "clear_service_token") {
+      const account = await loadAccountIntegration(supabaseAdmin, userData.account_id);
+
+      if (action === "status") {
+        return new Response(
+          JSON.stringify({
+            success: true,
+            service_token_configured: Boolean(account.serviceToken),
+            domain: account.baseDomain,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      if (action === "clear_service_token") {
+        if (account.id) {
+          await supabaseAdmin
+            .from("integrations")
+            .update({ config: { ...account.config, service_token: null } })
+            .eq("id", account.id);
+        }
+        return new Response(JSON.stringify({ success: true, service_token_configured: false }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const serviceToken = String(body?.service_token || "").trim();
+      if (!serviceToken) {
+        return new Response(JSON.stringify({ success: false, error: "Informe o token de serviço." }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      const serviceDomain = domain ? getBaseDomain(domain) : account.baseDomain;
+      const probe = await fetch(`${serviceDomain}/api/v1/users?page=1&per_page=1`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${serviceToken}` },
+      });
+
+      if (!probe.ok) {
+        const probeBody = await probe.text();
+        console.error("[threecplus-auth] service token invalid:", probe.status, probeBody.slice(0, 300));
+        return new Response(
+          JSON.stringify({
+            success: false,
+            error: probe.status === 401 || probe.status === 403
+              ? "Token de serviço inválido ou sem permissão. Gere um novo em Config. > Integração > Tokens de serviço na 3C Plus."
+              : `Não foi possível validar o token de serviço (status ${probe.status}).`,
+          }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const newConfig = { ...account.config, service_token: serviceToken, domain: domain || account.config.domain || null };
+
+      if (account.id) {
+        await supabaseAdmin
+          .from("integrations")
+          .update({ config: newConfig, status: "connected" })
+          .eq("id", account.id);
+      } else {
+        await supabaseAdmin.from("integrations").insert({
+          account_id: userData.account_id,
+          type: "3cplus",
+          status: "connected",
+          display_name: "3C Plus",
+          config: newConfig,
+        });
+      }
+
+      return new Response(JSON.stringify({ success: true, service_token_configured: true }),
+        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+    }
 
     if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
