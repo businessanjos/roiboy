@@ -3,6 +3,7 @@ import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 
 import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
+import { McpConnectionTab } from "@/components/integrations/McpConnectionTab";
 import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessManager";
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
