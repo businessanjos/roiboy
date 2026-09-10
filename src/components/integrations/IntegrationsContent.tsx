@@ -23,6 +23,8 @@ import {
 } from "@/components/ui/dialog";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
+import { ThreeCPlusServiceToken } from "./ThreeCPlusServiceToken";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
 
@@ -348,6 +350,8 @@ export function IntegrationsContent() {
   const googleUserIntegration = getUserIntegration("google");
   const zoomUserIntegration = getUserIntegration("zoom");
   const threeCPlusIntegration = getIntegration("3cplus");
+  const is3CAdmin =
+    currentUser?.role === "admin" || currentUser?.role === "super_admin" || currentUser?.is_also_admin === true;
 
   const handleSaveDomain = async () => {
     if (!threeCPlusIntegration) return;
@@ -910,6 +914,10 @@ export function IntegrationsContent() {
               )}
             </CardContent>
           </Card>
+
+          {is3CAdmin && (
+            <ThreeCPlusServiceToken domain={threeCPlusDomain || null} onChanged={fetchIntegrations} />
+          )}
 
           {/* Agent Extension Config - visible when 3C Plus is connected */}
           {threeCPlusIntegration?.status === "connected" && (
