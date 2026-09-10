@@ -236,10 +236,29 @@ export const SERVICE_TOKEN_MISSING_AGENT_MESSAGE =
 export type ThreeCConfig = Record<string, unknown>;
 
 /** Lê a integração da conta (config completo, nunca devolvido ao browser). */
+export function isServiceToken(value: unknown): boolean {
+  return typeof value === "string" && value.trim().startsWith("3cs_");
+}
+
+function pickToken(...values: unknown[]): string | null {
+  for (const v of values) {
+    if (typeof v === "string" && v.trim()) return v.trim();
+  }
+  return null;
+}
+
 export async function loadAccountIntegration(
   supabaseAdmin: any,
   accountId: string,
-): Promise<{ id: string | null; config: ThreeCConfig; baseDomain: string; serviceToken: string | null; accountToken: string | null }> {
+): Promise<{
+  id: string | null;
+  config: ThreeCConfig;
+  baseDomain: string;
+  serviceToken: string | null;
+  agentServiceToken: string | null;
+  managerServiceToken: string | null;
+  accountToken: string | null;
+}> {
   const { data } = await supabaseAdmin
     .from("integrations")
     .select("id, config")
@@ -248,9 +267,19 @@ export async function loadAccountIntegration(
     .maybeSingle();
 
   const config = (data?.config as ThreeCConfig) || {};
-  const serviceToken = typeof config.service_token === "string" && config.service_token.trim()
-    ? config.service_token.trim()
-    : null;
+
+  // Token de papel AGENTE (click2call, manual_call, webphone, /agent/*)
+  const agentServiceToken = pickToken(
+    config.service_token_agent,
+    isServiceToken(config.service_token) ? config.service_token : null,
+  );
+
+  // Token de papel GESTOR (listar agentes/usuários, relatório global /api/v1/calls)
+  const managerServiceToken = pickToken(
+    config.service_token_manager,
+    isServiceToken(config.admin_api_token) ? config.admin_api_token : null,
+  );
+
   const accountToken = typeof config.api_token === "string" && config.api_token.trim()
     ? config.api_token.trim()
     : null;
@@ -259,10 +288,65 @@ export async function loadAccountIntegration(
     id: data?.id ?? null,
     config,
     baseDomain: getBaseDomain((config.domain as string) || null),
-    serviceToken,
+    serviceToken: agentServiceToken ?? managerServiceToken,
+    agentServiceToken,
+    managerServiceToken,
     accountToken,
   };
 }
+
+/** Lista agentes/usuários da 3C usando o token de papel Gestor. */
+export async function listThreeCAgents(
+  baseDomain: string,
+  managerToken: string,
+): Promise<Array<{ id: string; name: string | null; email: string | null; extension: string | null; active: boolean }>> {
+  const out: Array<{ id: string; name: string | null; email: string | null; extension: string | null; active: boolean }> = [];
+  const seen = new Set<string>();
+
+  for (const endpoint of ["/api/v1/agents", "/api/v1/users"]) {
+    for (let page = 1; page <= 20; page++) {
+      let res: Response;
+      try {
+        res = await fetch(`${baseDomain}${endpoint}?page=${page}&per_page=100`, {
+          headers: { Accept: "application/json", Authorization: `Bearer ${managerToken}` },
+        });
+      } catch {
+        break;
+      }
+      if (!res.ok) break;
+
+      let parsed: any = null;
+      try {
+        parsed = JSON.parse(await res.text());
+      } catch {
+        break;
+      }
+
+      const rows: any[] = Array.isArray(parsed) ? parsed : parsed?.data ?? [];
+      if (!Array.isArray(rows) || rows.length === 0) break;
+
+      for (const row of rows) {
+        if (row?.id == null || seen.has(String(row.id))) continue;
+        seen.add(String(row.id));
+        const ext = row?.extension?.extension_number ?? row?.extension_number ?? row?.extension ?? null;
+        out.push({
+          id: String(row.id),
+          name: row?.name ?? row?.full_name ?? null,
+          email: row?.email ?? null,
+          extension: ext != null ? String(ext).replace(/\D/g, "") : null,
+          active: row?.active !== false && row?.status !== "inactive" && row?.is_active !== false,
+        });
+      }
+
+      const lastPage = parsed?.last_page ?? parsed?.meta?.last_page ?? page;
+      if (page >= Number(lastPage)) break;
+    }
+    if (out.length) break;
+  }
+
+  return out;
+}
+
 
 /** Busca o agente na 3C pela lista de usuários, casando por ramal, e-mail ou nome. */
 export async function findAgentByExtensionOrEmail(
