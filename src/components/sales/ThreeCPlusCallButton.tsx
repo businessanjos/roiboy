@@ -63,9 +63,9 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
         return;
       }
 
-      if (data?.code === "AGENT_NOT_IDLE") {
+      if (["AGENT_NOT_IDLE", "AGENT_OFFLINE", "AGENT_ON_BREAK"].includes(data?.code)) {
         window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
-        toast.error("Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo");
+        toast.error(data?.error || "Abra o Discador 3C e verifique seu estado antes de tentar novamente.");
         return;
       }
 

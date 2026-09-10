@@ -4,6 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   fetchAgentIdFromApi,
+  fetch3c,
   findAgentByExtensionOrEmail,
   listThreeCAgents,
   loadAccountIntegration,
@@ -28,6 +29,16 @@ function getBaseDomain(domain: string | null): string {
   base = base.replace(/\/$/, "");
   if (!base.startsWith("http")) base = "https://" + base;
   return base;
+}
+
+function classifyAgentStatus(payload: unknown, responseOk: boolean) {
+  if (!responseOk) return "offline";
+  const normalized = JSON.stringify(payload ?? {}).toLowerCase();
+  if (/call|chamada|talking|in_call|em chamada/.test(normalized)) return "on_call";
+  if (/intervalo|break|pause|pausa|acw|tpa/.test(normalized)) return "break";
+  if (/offline|logged_out|desconectado|disconnected/.test(normalized)) return "offline";
+  if (/idle|ocioso|available|dispon[ií]vel|ready/.test(normalized)) return "idle";
+  return "offline";
 }
 
 Deno.serve((req) => with3cContext(async () => {
@@ -189,6 +200,40 @@ Deno.serve((req) => with3cContext(async () => {
         return json({ success: false, error: threeCErrorMessage(probe.status, probe.body) });
       }
       return json({ success: true, agent_id: String(probe.id), name: probe.name, email: probe.email });
+    }
+
+    if (action === "agent_statuses") {
+      const admin = await isAccountAdmin();
+      const { data: targetUsers } = await supabaseAdmin
+        .from("users")
+        .select("id, name, email")
+        .eq("account_id", me.account_id);
+      const visibleUsers = admin ? (targetUsers || []) : (targetUsers || []).filter((user: any) => user.id === me.id);
+      const statuses: Record<string, string> = {};
+
+      for (const target of visibleUsers) {
+        const auth = await resolveAgentAuth(supabaseAdmin, {
+          userId: target.id,
+          accountId: me.account_id,
+          userEmail: target.email,
+          userName: target.name,
+        });
+        if (!auth.apiToken || !auth.agentId) continue;
+        setContextAgentId(auth.agentId);
+        try {
+          const response = await fetch3c(`${auth.baseDomain}/api/v1/agent?api_token=${auth.apiToken}`, {
+            method: "GET",
+            headers: { Accept: "application/json" },
+          });
+          const text = await response.text();
+          let payload: unknown = text;
+          try { payload = JSON.parse(text); } catch { /* resposta textual da 3C */ }
+          statuses[target.id] = classifyAgentStatus(payload, response.ok);
+        } catch {
+          statuses[target.id] = "offline";
+        }
+      }
+      return json({ success: true, statuses });
     }
 
     // Remove o vínculo de uma pessoa com a 3C
