@@ -3,6 +3,7 @@ import { SessionsManager } from "@/components/settings/SessionsManager";
 import { SecurityAuditViewer } from "@/components/settings/SecurityAuditViewer";
 
 import { IntegrationsContent } from "@/components/integrations/IntegrationsContent";
+import { McpConnectionTab } from "@/components/integrations/McpConnectionTab";
 import { UserSectorAccessManager } from "@/components/settings/UserSectorAccessManager";
 import { TeamManager } from "@/components/settings/TeamManager";
 import { ActivityTypesManager } from "@/components/sales";
@@ -37,6 +38,8 @@ export default function Settings() {
         return <ProfileContent />;
       case "meetings":
         return <MeetingPreferencesCard />;
+      case "mcp":
+        return <McpConnectionTab />;
       case "plan":
         return canViewSettings ? (
           <div className="space-y-6">
