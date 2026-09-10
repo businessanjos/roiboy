@@ -1,4 +1,5 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fetch3c, resolveAgentIdByToken } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -7,7 +8,7 @@ const corsHeaders = {
 };
 
 function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
+  if (!domain) return "https://eternumentoringclub1.3c.plus";
   let base = domain.trim();
   base = base.replace(/\/login\/?$/, "");
   base = base.replace(/\/agent\/?.*$/, "");
@@ -115,6 +116,7 @@ Deno.serve(async (req) => {
     }
 
     const baseDomain = getBaseDomain(domain);
+    await resolveAgentIdByToken(supabaseAdmin, userData.account_id, apiToken, baseDomain);
     console.log("[threecplus-campaigns] Account:", userData.account_id, "Domain:", baseDomain);
 
     const result = await fetchCampaignsFromDomain(baseDomain, apiToken);

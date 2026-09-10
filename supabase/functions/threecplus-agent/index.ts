@@ -1,4 +1,12 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  AGENT_ID_REQUIRED_MESSAGE,
+  fetch3c,
+  mentionsAgentIdHeader,
+  registerAgentId,
+  resolveAgentIdByToken,
+  resolveUserAgentId,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -19,7 +27,7 @@ function getValidUserApiToken(value: unknown): string | null {
 }
 
 function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
+  if (!domain) return "https://eternumentoringclub1.3c.plus";
   let base = domain.trim();
   base = base.replace(/\/login\/?$/, "");
   base = base.replace(/\/agent\/?.*$/, "");
@@ -811,6 +819,25 @@ Deno.serve(async (req) => {
       .maybeSingle();
     const agentApiToken = getValidUserApiToken(userIntegration?.access_token);
     const effectiveApiToken = agentApiToken ?? apiToken;
+
+    // A 3C exige o header X-Agent-Id em requisições com token de agente
+    if (agentApiToken) {
+      const { data: userIntMeta } = await supabaseAdmin
+        .from("user_integrations")
+        .select("metadata")
+        .eq("user_id", userData.id)
+        .eq("provider", "3cplus")
+        .maybeSingle();
+      await resolveUserAgentId(supabaseAdmin, {
+        userId: userData.id,
+        accountId: userData.account_id,
+        apiToken: agentApiToken,
+        baseDomain,
+        metadata: asRecord(userIntMeta?.metadata),
+      });
+    } else {
+      await resolveAgentIdByToken(supabaseAdmin, userData.account_id, apiToken, baseDomain);
+    }
 
     // Return connection info
     if (action === "get_connection_info") {
