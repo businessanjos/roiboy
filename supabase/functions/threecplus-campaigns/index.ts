@@ -1,5 +1,14 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetch3c, resolveAgentIdByToken } from "../_shared/threecplus.ts";
+import {
+  fetch3c,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  resolveAgentAuth,
+  resolveAgentIdByToken,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -56,7 +65,7 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
   return { campaigns: allCampaigns };
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -144,4 +153,4 @@ Deno.serve(async (req) => {
     return new Response(JSON.stringify({ success: false, error: "Erro interno do servidor." }),
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
-});
+}));

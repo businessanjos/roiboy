@@ -2,10 +2,16 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
   fetch3c,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
   mentionsAgentIdHeader,
+  persistAgentLink,
   registerAgentId,
+  resolveAgentAuth,
   resolveAgentIdByToken,
   resolveUserAgentId,
+  setContextAgentId,
+  with3cContext,
 } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
@@ -708,7 +714,7 @@ async function logCallToDb(
   }
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -1452,4 +1458,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

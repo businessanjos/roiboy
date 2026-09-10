@@ -1,4 +1,13 @@
-import { fetchAgentIdFromApi, registerAgentId } from "../_shared/threecplus.ts";
+import {
+  fetchAgentIdFromApi,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  registerAgentId,
+  resolveAgentAuth,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -18,7 +27,7 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
@@ -140,4 +149,4 @@ Deno.serve(async (req) => {
       { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
-});
+}));

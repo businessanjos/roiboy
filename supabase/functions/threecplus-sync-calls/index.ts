@@ -8,7 +8,16 @@
 //
 // Chamada pelo app (JWT) ou por cron (header x-cron-secret).
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetch3c, registerAgentId } from "../_shared/threecplus.ts";
+import {
+  fetch3c,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  registerAgentId,
+  resolveAgentAuth,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -161,7 +170,7 @@ async function fetchMe(baseDomain: string, apiToken: string) {
   return body?.data ?? null;
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const supabaseAdmin = createClient(
@@ -589,5 +598,5 @@ async function seedAccountAgent(
     external_email: me.email ?? null,
     api_token: apiToken,
     token_status: "ok",
-  });
+  }));
 }

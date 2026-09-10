@@ -2,7 +2,16 @@
 // Valida um token de API da 3C Plus e cadastra/atualiza o agente correspondente
 // em `threecplus_agents`, permitindo sincronizar as ligações daquela pessoa.
 import { createClient } from "npm:@supabase/supabase-js@2";
-import { fetchAgentIdFromApi, registerAgentId } from "../_shared/threecplus.ts";
+import {
+  fetchAgentIdFromApi,
+  findAgentByExtensionOrEmail,
+  loadAccountIntegration,
+  persistAgentLink,
+  registerAgentId,
+  resolveAgentAuth,
+  setContextAgentId,
+  with3cContext,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -18,7 +27,7 @@ function getBaseDomain(domain: string | null): string {
   return base;
 }
 
-Deno.serve(async (req) => {
+Deno.serve((req) => with3cContext(async () => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   const json = (body: unknown, status = 200) =>
@@ -224,4 +233,4 @@ Deno.serve(async (req) => {
     console.error("[threecplus-register-agent]", err);
     return json({ success: false, error: String(err?.message || err) });
   }
-});
+}));
