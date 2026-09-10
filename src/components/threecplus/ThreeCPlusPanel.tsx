@@ -22,7 +22,7 @@ const STATUS_INFO: Record<DialerStatus, { label: string; dot: string; icon: type
   offline: { label: "Offline", dot: "bg-muted-foreground", icon: Headphones },
   idle: { label: "Ocioso", dot: "bg-success", icon: Headphones },
   on_call: { label: "Em chamada", dot: "bg-destructive", icon: PhoneCall },
-  pause: { label: "Pausa", dot: "bg-warning", icon: Headphones },
+  pause: { label: "Intervalo", dot: "bg-warning", icon: Headphones },
 };
 
 function normalizeDomain(value?: string) {

@@ -13,3 +13,8 @@
 - [x] Abrir painel 3C em drawer persistente e permitir ocultar com X
 - [x] Abrir drawer e orientar no erro AGENT_NOT_IDLE
 - [x] Validar interface e função publicada
+# Estados reais e proteção de campanha 3C
+- [x] Remover logout automático do tratamento de falhas
+- [x] Bloquear chamada em Offline e Intervalo com orientação e abertura do Discador
+- [x] Atualizar estados reais no botão e na tabela a cada 30 segundos
+- [x] Publicar funções e validar compilação

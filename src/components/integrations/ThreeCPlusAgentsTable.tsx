@@ -28,6 +28,7 @@ interface Row extends AccountUser {
   hasPassword: boolean;
   agentId: string;
   agentName: string | null;
+  runtimeStatus?: "offline" | "idle" | "on_call" | "break";
 }
 
 export function ThreeCPlusAgentsTable() {
@@ -90,6 +91,29 @@ export function ThreeCPlusAgentsTable() {
   useEffect(() => {
     load();
   }, []);
+
+  const linkedRowIds = useMemo(() => rows.map((row) => row.id).sort().join(","), [rows]);
+
+  useEffect(() => {
+    if (!linkedRowIds) return;
+    let active = true;
+    const refreshStatuses = async () => {
+      const { data } = await supabase.functions.invoke("threecplus-register-agent", {
+        body: { action: "agent_statuses" },
+      });
+      if (!active || !data?.success) return;
+      setRows((previous) => previous.map((row) => ({
+        ...row,
+        runtimeStatus: data.statuses?.[row.id] || "offline",
+      })));
+    };
+    void refreshStatuses();
+    const timer = window.setInterval(() => { void refreshStatuses(); }, 30_000);
+    return () => {
+      active = false;
+      window.clearInterval(timer);
+    };
+  }, [linkedRowIds]);
 
   const availableUsers = useMemo(
     () => users.filter((u) => !rows.some((r) => r.id === u.id)),
@@ -202,8 +226,10 @@ export function ThreeCPlusAgentsTable() {
 
   const statusBadge = (row: Row) => {
     if (!row.agentId) return <Badge variant="secondary">Não vinculado</Badge>;
-    if (!row.hasPassword && !row.password.trim()) return <Badge variant="outline">Falta senha</Badge>;
-    return <Badge variant="default">Pronto</Badge>;
+    const labels = { offline: "Offline", idle: "Ocioso", on_call: "Em chamada", break: "Intervalo" };
+    const variants = { offline: "secondary", idle: "default", on_call: "destructive", break: "outline" } as const;
+    const state = row.runtimeStatus || "offline";
+    return <Badge variant={variants[state]}>{labels[state]}</Badge>;
   };
 
   return (
