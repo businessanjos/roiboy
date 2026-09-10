@@ -372,13 +372,17 @@ Deno.serve(async (req) => {
       }
     }
 
+    const agentIdIssue = mentionsAgentIdHeader(click2callText, postCleanupClick2CallText, lastEnterMessage);
+
     return new Response(
       JSON.stringify({
         success: false,
-        error: agentNotIdle
+        error: agentIdIssue
+          ? AGENT_ID_REQUIRED_MESSAGE
+          : agentNotIdle
           ? "O agente ainda está preso em outro estado no 3C Plus. Feche chamadas/pausas pendentes no painel WebRTC e tente novamente."
           : lastEnterMessage || "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.",
-        code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
+        code: agentIdIssue ? "AGENT_ID_REQUIRED" : agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
         fallback_url: baseDomain,
         runtime,
       }),
