@@ -68,7 +68,12 @@ Deno.serve((req) => with3cContext(async () => {
         .eq("type", "3cplus")
         .maybeSingle();
       const token = (integration?.config as Record<string, unknown> | null)?.admin_api_token;
-      return json({ success: true, admin_token_configured: typeof token === "string" && token.trim().length > 0 });
+      const serviceToken = (integration?.config as Record<string, unknown> | null)?.service_token;
+      return json({
+        success: true,
+        admin_token_configured: typeof token === "string" && token.trim().length > 0,
+        service_token_configured: typeof serviceToken === "string" && serviceToken.trim().length > 0,
+      });
     }
 
     if (action === "delete") {
@@ -283,7 +288,7 @@ Deno.serve((req) => with3cContext(async () => {
       .eq("type", "3cplus")
       .maybeSingle();
 
-    const baseDomain = getBaseDomain(integration?.config?.domain || null);
+    const baseDomain = account.baseDomain;
 
     // A 3C pode exigir o header X-Agent-Id inclusive no /me: aceitamos um id manual como fallback
     const manualAgentId = body?.agent_id ? String(body.agent_id).trim() : null;
@@ -338,25 +343,6 @@ Deno.serve((req) => with3cContext(async () => {
       .single();
 
     if (error) return json({ success: false, error: error.message });
-
-    if (isSaveExtension) {
-      const extension = body?.extension ? String(body.extension).trim() : null;
-      const extensionPassword = body?.extension_password ? String(body.extension_password).trim() : null;
-      const { error: uiError } = await supabaseAdmin.from("user_integrations").upsert(
-        {
-          user_id: me.id,
-          provider: "3cplus",
-          access_token: apiToken,
-          metadata: {
-            extension,
-            extension_password: extensionPassword,
-            agent_id: String(profile.id),
-          },
-        },
-        { onConflict: "user_id,provider" },
-      );
-      if (uiError) return json({ success: false, error: uiError.message });
-    }
 
     return json({ success: true, agent: saved, agent_id: String(profile.id) });
   } catch (err) {
