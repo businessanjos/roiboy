@@ -459,8 +459,9 @@ async function processQueue(admin: any) {
         deal_title: deal.title ?? null,
       }
       : {
-      event: "sale.won",
+      event: "sale",
       type: "sale",
+      event_alias: "sale.won",
       source: "roy",
       sale_id: deal.id,
       external_id: deal.id,
