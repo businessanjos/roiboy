@@ -223,7 +223,6 @@ export function ThreeCPlusAgentsTable() {
 
   const statusBadge = (row: Row) => {
     if (!row.agentId) return <Badge variant="secondary">Não vinculado</Badge>;
-    if (!row.hasPassword && !row.password.trim()) return <Badge variant="outline">Falta senha</Badge>;
     const labels = { offline: "Offline", idle: "Ocioso", on_call: "Em chamada", break: "Intervalo" };
     const variants = { offline: "secondary", idle: "default", on_call: "destructive", break: "outline" } as const;
     const state = row.runtimeStatus || "offline";

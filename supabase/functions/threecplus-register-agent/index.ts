@@ -33,8 +33,21 @@ function getBaseDomain(domain: string | null): string {
 
 function classifyAgentStatus(payload: unknown, responseOk: boolean) {
   if (!responseOk) return "offline";
-  const normalized = JSON.stringify(payload ?? {}).toLowerCase();
-  if (/call|chamada|talking|in_call|em chamada/.test(normalized)) return "on_call";
+  const extractState = (value: unknown, depth = 0): string | null => {
+    if (depth > 4 || !value || typeof value !== "object") return null;
+    const record = value as Record<string, unknown>;
+    for (const key of ["status", "state", "agent_status", "agentStatus", "mode"]) {
+      const current = record[key];
+      if (typeof current === "string" && current.trim()) return current.trim().toLowerCase();
+    }
+    for (const key of ["data", "agent", "call"]) {
+      const nested = extractState(record[key], depth + 1);
+      if (nested) return nested;
+    }
+    return null;
+  };
+  const normalized = extractState(payload) || "";
+  if (/in_call|on_call|talking|chamada|em chamada/.test(normalized)) return "on_call";
   if (/intervalo|break|pause|pausa|acw|tpa/.test(normalized)) return "break";
   if (/offline|logged_out|desconectado|disconnected/.test(normalized)) return "offline";
   if (/idle|ocioso|available|dispon[ií]vel|ready/.test(normalized)) return "idle";

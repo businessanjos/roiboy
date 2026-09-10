@@ -44,6 +44,20 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
+function extractAgentState(value: unknown, depth = 0): string | null {
+  if (depth > 4 || !value || typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  for (const key of ["status", "state", "agent_status", "agentStatus", "mode"]) {
+    const current = record[key];
+    if (typeof current === "string" && current.trim()) return current.trim().toLowerCase();
+  }
+  for (const key of ["data", "agent", "call"]) {
+    const nested = extractAgentState(record[key], depth + 1);
+    if (nested) return nested;
+  }
+  return null;
+}
+
 async function postToAgentEndpoint(
   baseDomain: string,
   agentApiToken: string,
@@ -71,10 +85,11 @@ async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
       headers: { Accept: "application/json" },
     });
     const agentText = await agentRes.text();
-    const agentMessage = extractApiMessage(agentText, "").toLowerCase();
-    const normalized = agentText.toLowerCase();
-    runtime.hasActiveCall = /call|chamada|talking|in_call|em chamada/.test(normalized);
-    runtime.manualMode = /manual/.test(agentMessage) || /manual/.test(normalized);
+    let agentPayload: unknown = agentText;
+    try { agentPayload = JSON.parse(agentText); } catch { /* resposta textual */ }
+    const normalized = extractAgentState(agentPayload) || extractApiMessage(agentText, "").toLowerCase();
+    runtime.hasActiveCall = /in_call|on_call|talking|chamada|em chamada/.test(normalized);
+    runtime.manualMode = /manual/.test(normalized);
     if (agentRes.ok) {
       if (runtime.hasActiveCall) runtime.status = "on_call";
       else if (/intervalo|break|pause|pausa|acw|tpa/.test(normalized)) runtime.status = "break";
@@ -260,7 +275,7 @@ Deno.serve((req) => with3cContext(async () => {
         runtime,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (runtime.status === "on_call") {
+    if (runtime.status === "on_call" || runtime.status === "unknown") {
       return new Response(JSON.stringify({
         success: false,
         code: "AGENT_NOT_IDLE",
@@ -281,55 +296,6 @@ Deno.serve((req) => with3cContext(async () => {
 
     if (click2callRes.ok || click2callRes.status === 204) {
       // Log call to threecplus_call_logs
-      await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
-      return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
-        { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-    }
-
-    // If click2call failed because agent not idle, try webphone login + retry
-    if (isAgentNotIdle(click2callRes.status, click2callText) && userExtension) {
-      try {
-        const campaignsRes = await fetch3c(
-          `${baseDomain}/api/v1/agent/campaigns?api_token=${agentApiToken}`,
-          { method: "GET", headers: { Accept: "application/json" } }
-        );
-        if (campaignsRes.ok) {
-          const campsData = JSON.parse(await campaignsRes.text());
-          const campsList = campsData?.data || campsData || [];
-          const firstCamp = Array.isArray(campsList) ? campsList[0] : null;
-          if (firstCamp?.id) {
-            console.log("[threecplus-call] Trying webphone login with campaign:", firstCamp.id);
-            const wpRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/webphone/login", { campaign: firstCamp.id });
-            console.log("[threecplus-call] webphone/login:", wpRes.status, await wpRes.text());
-
-            if (wpRes.ok || wpRes.status === 204) {
-              await new Promise(r => setTimeout(r, 2000));
-              // Retry click2call
-              const retryRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/click2call", click2callPayload);
-              const retryText = await retryRes.text();
-              console.log("[threecplus-call] click2call retry:", retryRes.status, retryText);
-              if (retryRes.ok || retryRes.status === 204) {
-                await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
-                return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
-                  { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-              }
-            }
-          }
-        }
-      } catch (wpErr) {
-        console.warn("[threecplus-call] webphone login attempt failed:", wpErr);
-      }
-    }
-
-    // Cleanup stale state and retry before falling back
-    runtime = await cleanupAgentState(baseDomain, agentApiToken);
-    await new Promise((resolve) => setTimeout(resolve, 1200));
-
-    const postCleanupClick2CallRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/click2call", click2callPayload);
-    const postCleanupClick2CallText = await postCleanupClick2CallRes.text();
-    console.log("[threecplus-call] click2call after cleanup:", postCleanupClick2CallRes.status, postCleanupClick2CallText);
-
-    if (postCleanupClick2CallRes.ok || postCleanupClick2CallRes.status === 204) {
       await logCall(supabaseAdmin, userData, cleanPhone, contactName, "manual", leadId, clientId, dealId);
       return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
@@ -386,7 +352,7 @@ Deno.serve((req) => with3cContext(async () => {
       }
     }
 
-    const agentIdIssue = mentionsAgentIdHeader(click2callText, postCleanupClick2CallText, lastEnterMessage);
+    const agentIdIssue = mentionsAgentIdHeader(click2callText, lastEnterMessage);
 
     return new Response(
       JSON.stringify({
