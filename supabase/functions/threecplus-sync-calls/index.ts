@@ -606,5 +606,5 @@ async function seedAccountAgent(
     external_email: me.email ?? null,
     api_token: apiToken,
     token_status: "ok",
-  }));
+  });
 }
