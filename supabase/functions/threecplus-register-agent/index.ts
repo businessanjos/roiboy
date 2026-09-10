@@ -5,6 +5,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   fetchAgentIdFromApi,
   findAgentByExtensionOrEmail,
+  listThreeCAgents,
   loadAccountIntegration,
   persistAgentLink,
   registerAgentId,
@@ -276,7 +277,7 @@ Deno.serve((req) => with3cContext(async () => {
       const manualId = body?.agent_id ? String(body.agent_id).trim() : null;
 
       if (!extension) return json({ error: "Informe o número do ramal" }, 400);
-      if (!account.serviceToken && !personalToken) {
+      if (!account.agentServiceToken && !account.managerServiceToken && !personalToken) {
         return json({
           success: false,
           error:
@@ -288,8 +289,8 @@ Deno.serve((req) => with3cContext(async () => {
       let agentName: string | null = targetUser.name ?? null;
       let agentEmail: string | null = targetUser.email ?? null;
 
-      if (!agentId && account.serviceToken) {
-        const found = await findAgentByExtensionOrEmail(account.baseDomain, account.serviceToken, {
+      if (!agentId && (account.managerServiceToken || account.agentServiceToken)) {
+        const found = await findAgentByExtensionOrEmail(account.baseDomain, (account.managerServiceToken || account.agentServiceToken)!, {
           extension,
           email: targetUser.email,
           name: targetUser.name,
@@ -320,7 +321,7 @@ Deno.serve((req) => with3cContext(async () => {
       }
 
       setContextAgentId(agentId);
-      registerAgentId(account.serviceToken, agentId);
+      registerAgentId(account.agentServiceToken, agentId);
       registerAgentId(personalToken, agentId);
 
       await persistAgentLink(supabaseAdmin, {
@@ -329,7 +330,7 @@ Deno.serve((req) => with3cContext(async () => {
         agentId,
         name: agentName,
         email: agentEmail,
-        apiToken: personalToken ?? account.serviceToken,
+        apiToken: personalToken ?? null,
         extension,
         extensionPassword,
       });
@@ -337,7 +338,7 @@ Deno.serve((req) => with3cContext(async () => {
       return json({
         success: true,
         agent_id: String(agentId),
-        service_token_configured: Boolean(account.serviceToken),
+        service_token_configured: Boolean(account.agentServiceToken || account.managerServiceToken),
       });
     }
 
