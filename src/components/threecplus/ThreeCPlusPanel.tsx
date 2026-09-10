@@ -1,830 +1,203 @@
-import { useState, useEffect, useCallback } from "react";
-import {
-  Phone,
-  PhoneOff,
-  Pause,
-  Play,
-  LogIn,
-  LogOut,
-  Loader2,
-  ChevronDown,
-  ChevronUp,
-  Minimize2,
-  Maximize2,
-  X,
-  Wifi,
-  WifiOff,
-  Coffee,
-  PhoneCall,
-  PhoneForwarded,
-  Clock,
-  Headphones,
-  Settings,
-} from "lucide-react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { Headphones, Loader2, Phone, PhoneCall, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
-import { useThreeCPlus, AgentStatus } from "@/hooks/useThreeCPlus";
+import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
-import { toast } from "sonner";
 
-function formatTime(seconds: number): string {
-  const m = Math.floor(seconds / 60);
-  const s = seconds % 60;
-  return `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
+type DialerStatus = "offline" | "idle" | "on_call" | "pause";
+
+interface AgentRuntime {
+  logged_campaign?: boolean;
+  has_active_call?: boolean;
+  manual_mode?: boolean;
+  agent_status?: string | null;
 }
 
-function getStatusInfo(status: AgentStatus) {
-  switch (status) {
-    case "idle":
-      return { label: "Ocioso", color: "bg-success", icon: Headphones };
-    case "on_call":
-      return { label: "Em chamada", color: "bg-danger", icon: PhoneCall };
-    case "manual_mode":
-      return { label: "Modo manual", color: "bg-info", icon: PhoneForwarded };
-    case "manual_call_connected":
-      return { label: "Chamada manual", color: "bg-danger", icon: PhoneCall };
-    case "acw":
-      return { label: "TPA", color: "bg-warning", icon: Clock };
-    case "on_break":
-      return { label: "Intervalo", color: "bg-warning", icon: Coffee };
-    case "connecting":
-      return { label: "Conectando...", color: "bg-info", icon: Loader2 };
-    default:
-      return { label: "Offline", color: "bg-muted", icon: WifiOff };
-  }
+interface ConnectionInfo {
+  success?: boolean;
+  domain?: string;
+}
+
+const STATUS_INFO: Record<DialerStatus, { label: string; dot: string; icon: typeof Phone }> = {
+  offline: { label: "Offline", dot: "bg-muted-foreground", icon: Headphones },
+  idle: { label: "Ocioso", dot: "bg-success", icon: Headphones },
+  on_call: { label: "Em chamada", dot: "bg-destructive", icon: PhoneCall },
+  pause: { label: "Pausa", dot: "bg-warning", icon: Headphones },
+};
+
+function normalizeDomain(value?: string) {
+  const fallback = "https://eternumentoringclub1.3c.plus";
+  return (value || fallback)
+    .trim()
+    .replace(/\/login\/?$/, "")
+    .replace(/\/agent\/?(?:.*)?$/, "")
+    .replace(/\/$/, "");
+}
+
+function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
+  if (runtime?.has_active_call) return "on_call";
+
+  const raw = (runtime?.agent_status || "").toLowerCase();
+  if (/call|chamada|talk|dialing|discando/.test(raw)) return "on_call";
+  if (/break|pause|pausa|intervalo|acw|tpa/.test(raw)) return "pause";
+  if (/idle|ocioso|available|dispon[ií]vel/.test(raw)) return "idle";
+  if (runtime?.logged_campaign && !runtime?.manual_mode) return "idle";
+  return "offline";
 }
 
 export function ThreeCPlusPanel() {
-  const {
-    agentStatus,
-    currentCall,
-    campaigns,
-    workBreaks,
-    selectedCampaign,
-    connectionInfo,
-    isConnected,
-    loading,
-    callTimer,
-    savedExtension,
-    savedExtensionPassword,
-    connect,
-    connectSocket,
-    fetchCampaigns,
-    loginCampaign,
-    logout,
-    manualCall,
-    hangup,
-    qualify,
-    enterPause,
-    exitPause,
-    exitManualMode,
-    saveExtension,
-    loadExtension,
-  } = useThreeCPlus();
-
   const [isOpen, setIsOpen] = useState(false);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [showExtension, setShowExtension] = useState(false);
-  const [manualPhone, setManualPhone] = useState("");
-  const [initialized, setInitialized] = useState(false);
-  const [extensionLoaded, setExtensionLoaded] = useState(false);
-  const [extensionInput, setExtensionInput] = useState("");
-  const [extensionPasswordInput, setExtensionPasswordInput] = useState("");
-  const [showCampaignSection, setShowCampaignSection] = useState(false);
+  const [launcherHidden, setLauncherHidden] = useState(false);
+  const [hasExtension, setHasExtension] = useState(false);
+  const [domain, setDomain] = useState("https://eternumentoringclub1.3c.plus");
+  const [status, setStatus] = useState<DialerStatus>("offline");
+  const [loadingStatus, setLoadingStatus] = useState(true);
 
-  // Initialize connection
-  const handleInit = useCallback(async () => {
-    const ok = initialized ? true : await connect();
+  const invokeAgent = useCallback(async (action: string) => {
+    const { data, error } = await supabase.functions.invoke("threecplus-agent", { body: { action } });
+    if (error) throw error;
+    return data;
+  }, []);
 
-    if (ok && !initialized) {
-      setInitialized(true);
-      loadExtension();
+  const refreshStatus = useCallback(async () => {
+    try {
+      const data = await invokeAgent("get_runtime");
+      if (data?.success) setStatus(mapRuntimeStatus(data.runtime));
+      else setStatus("offline");
+    } catch (error) {
+      console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
+      setStatus("offline");
+    } finally {
+      setLoadingStatus(false);
     }
-
-    if (ok && campaigns.length === 0) {
-      await fetchCampaigns();
-    }
-  }, [campaigns.length, connect, fetchCampaigns, initialized, loadExtension]);
-
-  // Sync saved extension to input
-  useEffect(() => {
-    if (savedExtension && !extensionInput) {
-      setExtensionInput(savedExtension);
-    }
-  }, [savedExtension, extensionInput]);
-
-  // Open panel
-  const handleOpen = useCallback(async () => {
-    setIsOpen(true);
-    setIsMinimized(false);
-    await handleInit();
-  }, [handleInit]);
+  }, [invokeAgent]);
 
   useEffect(() => {
-    setExtensionLoaded(false);
-  }, [connectionInfo?.extension_url]);
+    let active = true;
 
-  // Connect Socket.io to the client's own domain (not a generic socket server)
-  useEffect(() => {
-    if (connectionInfo && !isConnected) {
-      connectSocket(connectionInfo.socket_url || connectionInfo.domain, connectionInfo.api_token);
-      setShowExtension(true);
-    }
-  }, [connectionInfo, isConnected, connectSocket]);
-
-  useEffect(() => {
-    const handleDialRequest = async (event: Event) => {
-      const customEvent = event as CustomEvent<{ phone?: string }>;
-      const phone = customEvent.detail?.phone?.trim();
-      if (!phone) return;
-
-      setIsOpen(true);
-      setIsMinimized(false);
-      setShowExtension(true);
-      setShowCampaignSection(true);
-      setManualPhone(phone);
-
-      await handleInit();
-
-      if (!connectionInfo?.has_agent_token) {
-        toast.error("Configure o token do agente", {
-          description: "Sem o token do agente, a 3C Plus não libera o WebRTC nem o login da campanha.",
-        });
-        return;
+    const initialize = async () => {
+      try {
+        const [extensionData, connectionData] = await Promise.all([
+          invokeAgent("get_extension"),
+          invokeAgent("get_connection_info") as Promise<ConnectionInfo>,
+        ]);
+        if (!active) return;
+        setHasExtension(Boolean(extensionData?.success && extensionData?.extension));
+        if (connectionData?.success) setDomain(normalizeDomain(connectionData.domain));
+        if (extensionData?.success && extensionData?.extension) await refreshStatus();
+        else setLoadingStatus(false);
+      } catch (error) {
+        console.warn("[ThreeCPlusPanel] Discador indisponível:", error);
+        if (active) setLoadingStatus(false);
       }
-
-      if (!extensionLoaded || !isConnected) {
-        toast.info("Discador aberto", {
-          description: "Aguarde o ramal carregar e o socket conectar antes de entrar na campanha.",
-        });
-        return;
-      }
-
-      if (!selectedCampaign) {
-        toast.info("Selecione uma campanha", {
-          description: "Depois que o agente ficar ocioso, a discagem será liberada.",
-        });
-        return;
-      }
-
-      if (agentStatus === "idle" || agentStatus === "manual_mode") {
-        await manualCall(phone);
-        return;
-      }
-
-      toast.info("Discador preparado", {
-        description: "Aguarde o status Ocioso para concluir a ligação.",
-      });
     };
 
-    window.addEventListener("threecplus:dial-request", handleDialRequest as EventListener);
+    void initialize();
+    return () => { active = false; };
+  }, [invokeAgent, refreshStatus]);
+
+  useEffect(() => {
+    if (!hasExtension) return;
+    const timer = window.setInterval(() => { void refreshStatus(); }, 30_000);
+    const onFocus = () => { void refreshStatus(); };
+    window.addEventListener("focus", onFocus);
     return () => {
-      window.removeEventListener("threecplus:dial-request", handleDialRequest as EventListener);
+      window.clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
     };
-  }, [agentStatus, connectionInfo?.has_agent_token, extensionLoaded, handleInit, isConnected, manualCall, selectedCampaign]);
+  }, [hasExtension, refreshStatus]);
 
-  // Login to selected campaign
-  const handleLogin = useCallback(
-    async (campaignId: string) => {
-      if (!extensionLoaded || !isConnected || !connectionInfo?.has_agent_token) return;
+  useEffect(() => {
+    const openDrawer = () => {
+      setLauncherHidden(false);
+      setIsOpen(true);
+      void refreshStatus();
+    };
+    window.addEventListener("threecplus:open-drawer", openDrawer);
+    window.addEventListener("threecplus:dial-request", openDrawer);
+    return () => {
+      window.removeEventListener("threecplus:open-drawer", openDrawer);
+      window.removeEventListener("threecplus:dial-request", openDrawer);
+    };
+  }, [refreshStatus]);
 
-      const campaign = campaigns.find((c) => String(c.id) === campaignId);
-      if (campaign) {
-        await loginCampaign(campaign);
-      }
-    },
-    [campaigns, connectionInfo?.has_agent_token, extensionLoaded, isConnected, loginCampaign]
-  );
+  const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
+  const StatusIcon = statusInfo.icon;
 
-  // Make manual call
-  const handleManualCall = useCallback(async () => {
-    if (!manualPhone.trim()) return;
-    const ok = await manualCall(manualPhone.trim());
-    if (ok) setManualPhone("");
-  }, [manualCall, manualPhone]);
-
-  const statusInfo = getStatusInfo(agentStatus);
-  const isInCall = agentStatus === "on_call" || agentStatus === "manual_call_connected";
-  const hasCallTarget = Boolean(currentCall?.phone || currentCall?.contact_name);
-  const hasCallActivity = isInCall || hasCallTarget;
-  const isDialing = hasCallTarget && !isInCall;
-  const callDisplayName = currentCall?.contact_name || currentCall?.phone || "Ligação em andamento";
-  const callDisplaySubtitle =
-    currentCall?.phone && currentCall?.contact_name
-      ? currentCall.phone
-      : isInCall
-        ? "Chamada conectada"
-        : agentStatus === "manual_mode"
-          ? "Aguardando conexão da chamada no 3C Plus"
-          : agentStatus === "connecting"
-            ? "Preparando o agente para discagem"
-            : "Aguardando atualização do status da ligação";
-  const canLogin = !loading && extensionLoaded && isConnected;
-  const canDialManually =
-    !loading &&
-    extensionLoaded &&
-    isConnected;
-  const showDialSection =
-    extensionLoaded &&
-    isConnected &&
-    !hasCallActivity;
-  const defaultStatusInfo =
-    agentStatus !== "offline"
-      ? statusInfo
-      : extensionLoaded
-        ? isConnected
-          ? { label: "Ramal carregado", color: "bg-success", icon: Wifi }
-          : { label: "WebRTC carregando", color: "bg-warning", icon: Loader2 }
-        : connectionInfo || loading
-          ? { label: "Conectando...", color: "bg-info", icon: Loader2 }
-          : statusInfo;
-  const liveStatusInfo = hasCallActivity
-    ? {
-        label: isInCall ? "Em chamada" : "Discando...",
-        color: isInCall ? "bg-destructive" : "bg-primary",
-        icon: isInCall ? PhoneCall : PhoneForwarded,
-      }
-    : defaultStatusInfo;
-
-  // Floating button when panel is closed
-  if (!isOpen) {
-    return (
-      <button
-        onClick={handleOpen}
-        className={cn(
-          "fixed bottom-20 right-6 z-50 flex items-center gap-2 rounded-full px-4 py-3 shadow-lg transition-all hover:scale-105",
-          hasCallActivity
-            ? "bg-destructive text-destructive-foreground animate-pulse"
-            : "bg-primary text-primary-foreground"
-        )}
-      >
-        <Phone className="h-5 w-5" />
-        <span className="text-sm font-medium">3C Plus</span>
-        {(agentStatus !== "offline" || connectionInfo || loading || hasCallActivity) && (
-          <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
-        )}
-      </button>
-    );
-  }
-
-  // Minimized bar
-  if (isMinimized) {
-    return (
-      <div
-        className={cn(
-          "fixed bottom-0 right-6 z-50 flex items-center gap-3 rounded-t-lg px-4 py-2 shadow-lg",
-          "bg-card border border-b-0 border-border"
-        )}
-      >
-        <span className={cn("h-2.5 w-2.5 rounded-full", liveStatusInfo.color)} />
-        <span className="text-sm font-medium">{liveStatusInfo.label}</span>
-        {hasCallActivity && (
-          <span className="max-w-[120px] truncate text-xs text-muted-foreground">{callDisplayName}</span>
-        )}
-        {(callTimer > 0 || isInCall) && (
-          <Badge variant="destructive" className="text-xs">
-            {formatTime(callTimer)}
-          </Badge>
-        )}
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(false)}>
-          <Maximize2 className="h-3.5 w-3.5" />
-        </Button>
-        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsOpen(false)}>
-          <X className="h-3.5 w-3.5" />
-        </Button>
-      </div>
-    );
-  }
+  if (!hasExtension) return null;
 
   return (
-    <div
-      className={cn(
-        "fixed bottom-0 right-6 z-50 flex flex-col w-[380px] rounded-t-xl shadow-2xl",
-        "bg-card border border-b-0 border-border",
-        "max-h-[calc(100vh-5rem)]"
-      )}
-    >
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-muted/50 rounded-t-xl">
-        <div className="flex items-center gap-2">
-          <Phone className="h-4 w-4 text-primary" />
-          <span className="font-semibold text-sm">3C Plus</span>
-          {isConnected ? (
-            <Wifi className="h-3.5 w-3.5 text-success" />
-          ) : (
-            <WifiOff className="h-3.5 w-3.5 text-muted-foreground" />
-          )}
-        </div>
-        <div className="flex items-center gap-1">
-          <Badge
-            variant="outline"
-            className={cn(
-              "text-xs gap-1",
-              hasCallActivity && (isInCall ? "border-destructive text-destructive" : "border-primary text-primary")
-            )}
+    <>
+      {!isOpen && !launcherHidden && (
+        <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
+          <Button
+            type="button"
+            variant="ghost"
+            className="h-11 gap-2 rounded-r-none px-3"
+            onClick={() => {
+              setIsOpen(true);
+              void refreshStatus();
+            }}
+            aria-label={`Abrir Discador 3C. Status: ${statusInfo.label}`}
           >
-            <span className={cn("h-1.5 w-1.5 rounded-full", liveStatusInfo.color)} />
-            {liveStatusInfo.label}
-          </Badge>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsMinimized(true)}>
-            <Minimize2 className="h-3.5 w-3.5" />
+            <Phone className="h-4 w-4 text-primary" />
+            <span>Discador 3C</span>
+            {loadingStatus ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground" />
+            ) : (
+              <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+                <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
+                {statusInfo.label}
+              </span>
+            )}
           </Button>
-          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setIsOpen(false)}>
-            <X className="h-3.5 w-3.5" />
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-11 w-9 rounded-l-none border-l border-border text-muted-foreground"
+            onClick={() => setLauncherHidden(true)}
+            aria-label="Ocultar Discador 3C"
+            title="Ocultar Discador 3C"
+          >
+            <X className="h-4 w-4" />
           </Button>
         </div>
-      </div>
+      )}
 
-      <ScrollArea className="flex-1 overflow-auto">
-        <div className="p-4 space-y-4">
-
-          {/* ===== PRIMARY: Manual Dial (no campaign required) ===== */}
-          {showDialSection && (
-            <div className="space-y-2">
-              <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                Discar
-              </label>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="(11) 99999-9999"
-                  value={manualPhone}
-                  onChange={(e) => setManualPhone(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && handleManualCall()}
-                  className="text-sm"
-                  autoFocus
-                />
-                <Button
-                  size="icon"
-                  onClick={handleManualCall}
-                  disabled={!manualPhone.trim() || loading || !canDialManually}
-                  title={!canDialManually ? "Entre em uma campanha e aguarde o status Ocioso" : "Discar"}
-                >
-                  {loading ? (
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                  ) : (
-                    <Phone className="h-4 w-4" />
-                  )}
-                </Button>
-              </div>
-              {!savedExtension && !extensionLoaded && (
-                <p className="text-xs text-warning">
-                  ⚠️ Configure seu ramal abaixo para fazer ligações.
-                </p>
-              )}
-              {savedExtension && (
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Headphones className="h-3 w-3" />
-                  <span>Ramal: <strong>{savedExtension}</strong></span>
-                  {savedExtensionPassword && (
-                    <span className="text-success">• Senha OK</span>
-                  )}
-                </div>
-              )}
-              {connectionInfo?.uses_service_token && (
-                <p className="text-xs text-muted-foreground">
-                  Token de serviço configurado — suas ligações usam a conexão da empresa.
-                </p>
-              )}
-              {connectionInfo && !connectionInfo.uses_service_token && (
-                <p className="text-xs text-warning">
-                  Usando tokens individuais (descontinuados em 01/10/2026).
-                </p>
-              )}
-              {connectionInfo && !connectionInfo.has_agent_token && (
-                <p className="text-xs text-destructive">
-                  Configure o Token de API do agente em Integrações &gt; 3C Plus &gt; Meu Ramal para usar o discador.
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* ===== Ramal Config (when not configured) ===== */}
-          {extensionLoaded && !savedExtension && !hasCallActivity && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
-              <div className="flex items-center gap-2">
-                <Settings className="h-4 w-4 text-warning" />
-                <p className="text-sm font-medium">Configure seu ramal</p>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Informe o número do seu ramal e a senha na 3C Plus para fazer ligações diretas sem campanha.
-              </p>
-              <div className="space-y-2">
-                <Input
-                  placeholder="Ramal (ex: 1001)"
-                  value={extensionInput}
-                  onChange={(e) => setExtensionInput(e.target.value)}
-                  className="text-sm"
-                />
-                <Input
-                  type="password"
-                  placeholder="Senha do ramal"
-                  value={extensionPasswordInput}
-                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
-                  onKeyDown={(e) => e.key === "Enter" && extensionInput.trim() && extensionPasswordInput.trim() && saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
-                  className="text-sm"
-                />
-                <Button
-                  size="sm"
-                  className="w-full"
-                  onClick={() => saveExtension(extensionInput.trim(), extensionPasswordInput.trim())}
-                  disabled={!extensionInput.trim() || !extensionPasswordInput.trim() || loading}
-                >
-                  Salvar
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ===== Saved Extension display with edit ===== */}
-          {savedExtension && !hasCallActivity && (
-            <div className="space-y-2 bg-muted/50 rounded-lg px-3 py-2">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Headphones className="h-3.5 w-3.5 text-muted-foreground" />
-                  <span className="text-xs text-muted-foreground">Ramal: <strong>{savedExtension}</strong></span>
-                  {savedExtensionPassword && (
-                    <span className="text-xs text-success">• Senha configurada</span>
-                  )}
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Novo ramal"
-                  value={extensionInput !== savedExtension ? extensionInput : ""}
-                  onChange={(e) => setExtensionInput(e.target.value)}
-                  className="text-xs h-6 flex-1"
-                />
-                <Input
-                  type="password"
-                  placeholder="Nova senha"
-                  value={extensionPasswordInput}
-                  onChange={(e) => setExtensionPasswordInput(e.target.value)}
-                  className="text-xs h-6 flex-1"
-                />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6"
-                  onClick={() => {
-                    const newExt = extensionInput.trim() && extensionInput !== savedExtension ? extensionInput.trim() : savedExtension;
-                    const newPwd = extensionPasswordInput.trim() || savedExtensionPassword || "";
-                    saveExtension(newExt, newPwd);
-                  }}
-                  disabled={(!extensionInput.trim() || extensionInput === savedExtension) && !extensionPasswordInput.trim()}
-                >
-                  <Settings className="h-3 w-3" />
-                </Button>
-              </div>
-            </div>
-          )}
-
-          {/* ===== Call Activity Display ===== */}
-          {hasCallActivity && (
-            <div
-              className={cn(
-                "rounded-lg border p-4 space-y-3",
-                isInCall ? "border-destructive/30 bg-destructive/5" : "border-primary/20 bg-primary/5"
-              )}
-            >
-              <div className="flex items-start justify-between gap-3">
-                <div className="flex min-w-0 items-start gap-3">
-                  <div
-                    className={cn(
-                      "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-full",
-                      isInCall ? "bg-destructive/15" : "bg-primary/15"
-                    )}
-                  >
-                    {isInCall ? (
-                      <PhoneCall className="h-4 w-4 text-destructive animate-pulse" />
-                    ) : (
-                      <PhoneForwarded className="h-4 w-4 text-primary animate-pulse" />
-                    )}
-                  </div>
-
-                  <div className="min-w-0 space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="text-sm font-semibold">
-                        {isInCall ? "Chamada ativa" : isDialing ? "Ligando agora" : "Ligação em andamento"}
-                      </p>
-                      <Badge variant={isInCall ? "destructive" : "secondary"} className="text-[11px]">
-                        {isInCall ? "Ao vivo" : liveStatusInfo.label}
-                      </Badge>
-                    </div>
-
-                    <p className="truncate text-sm font-medium">{callDisplayName}</p>
-                    <p className="text-xs text-muted-foreground">{callDisplaySubtitle}</p>
-                  </div>
-                </div>
-
-                {(callTimer > 0 || isInCall) && (
-                  <Badge variant={isInCall ? "destructive" : "outline"} className="shrink-0 font-mono text-sm">
-                    {formatTime(callTimer)}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="grid gap-2">
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  className="w-full"
-                  onClick={hangup}
-                  disabled={loading}
-                >
-                  <PhoneOff className="h-4 w-4 mr-2" />
-                  {currentCall?.id
-                    ? "Desligar"
-                    : agentStatus === "manual_mode"
-                      ? "Cancelar tentativa de ligação"
-                      : "Aguardando conexão da chamada"}
-                </Button>
-
-                {agentStatus === "manual_mode" && !isInCall && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="w-full"
-                    onClick={exitManualMode}
-                    disabled={loading}
-                  >
-                    <Play className="h-3.5 w-3.5 mr-2" />
-                    Voltar ao discador
-                  </Button>
-                )}
-              </div>
-
-              {!currentCall?.id && (
-                <p className="text-xs text-muted-foreground">
-                  {agentStatus === "manual_mode"
-                    ? "Se a chamada ainda estiver só em discagem, você pode cancelar por aqui antes da conexão completa."
-                    : "Assim que a 3C Plus confirmar a ligação, o botão de desligar fica disponível aqui com o número em destaque."}
-                </p>
-              )}
-
-              {isInCall && currentCall?.qualifications && currentCall.qualifications.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Qualificar
-                      <ChevronDown className="h-3.5 w-3.5 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                    {currentCall.qualifications.map((q) => (
-                      <DropdownMenuItem key={String(q.id)} onClick={() => qualify(q.id)}>
-                        {q.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          )}
-
-          {/* Emergency hangup */}
-          {agentStatus !== "offline" && agentStatus !== "idle" && agentStatus !== "on_break" && agentStatus !== "acw" && agentStatus !== "connecting" && agentStatus !== "manual_mode" && !isInCall && !hasCallTarget && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-3">
-              <Button
-                variant="outline"
-                size="sm"
-                className="w-full text-destructive hover:text-destructive"
-                onClick={hangup}
-                disabled={loading}
-              >
-                <PhoneOff className="h-4 w-4 mr-2" />
-                Forçar desligamento
-              </Button>
-            </div>
-          )}
-
-          {/* TPA (After Call Work) */}
-          {agentStatus === "acw" && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Clock className="h-5 w-5 text-warning" />
-                <div>
-                  <p className="text-sm font-medium">Pós-atendimento (TPA)</p>
-                  <p className="text-xs text-muted-foreground">Qualifique a chamada para continuar</p>
-                </div>
-              </div>
-              {currentCall?.qualifications && currentCall.qualifications.length > 0 && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="outline" size="sm" className="w-full">
-                      Qualificar
-                      <ChevronDown className="h-3.5 w-3.5 ml-2" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                    {currentCall.qualifications.map((q) => (
-                      <DropdownMenuItem key={String(q.id)} onClick={() => qualify(q.id)}>
-                        {q.name}
-                      </DropdownMenuItem>
-                    ))}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
-          )}
-
-          {/* Exit manual mode button */}
-          {agentStatus === "manual_mode" && !hasCallActivity && (
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full"
-              onClick={exitManualMode}
-              disabled={loading}
-            >
-              <Play className="h-3.5 w-3.5 mr-2" />
-              Voltar ao discador
-            </Button>
-          )}
-
-          {/* ===== SECONDARY: Campaign Section (collapsible) ===== */}
-          {!hasCallActivity && (
-            <Collapsible open={showCampaignSection} onOpenChange={setShowCampaignSection}>
-              <CollapsibleTrigger asChild>
-                <button className="flex items-center justify-between w-full text-xs text-muted-foreground hover:text-foreground transition-colors py-1">
-                  <span className="uppercase tracking-wider font-medium">
-                    {selectedCampaign ? `Campanha: ${selectedCampaign.name}` : "Campanha (opcional)"}
-                  </span>
-                  {showCampaignSection ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </button>
-              </CollapsibleTrigger>
-              <CollapsibleContent className="space-y-3 pt-2">
-                {/* Active campaign */}
-                {agentStatus !== "offline" && selectedCampaign && (
-                  <div className="flex items-center justify-between bg-muted/50 rounded-lg p-3">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Campanha ativa</p>
-                      <p className="text-sm font-medium truncate max-w-[200px]">
-                        {selectedCampaign.name}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="text-destructive hover:text-destructive"
-                      onClick={logout}
-                      disabled={loading}
-                    >
-                      <LogOut className="h-3.5 w-3.5 mr-1" />
-                      Sair
-                    </Button>
-                  </div>
-                )}
-
-                {/* Campaign selector */}
-                {(agentStatus === "offline" || (!selectedCampaign && !hasCallActivity)) && (
-                  <>
-                    {campaigns.length === 0 ? (
-                      <div className="text-sm text-muted-foreground text-center py-2">
-                        {loading ? (
-                          <div className="flex items-center justify-center gap-2">
-                            <Loader2 className="h-4 w-4 animate-spin" />
-                            Carregando...
-                          </div>
-                        ) : (
-                          <p className="text-xs">Nenhuma campanha disponível</p>
-                        )}
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <Select onValueChange={handleLogin} disabled={!canLogin}>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione uma campanha" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {campaigns.map((c) => (
-                              <SelectItem key={String(c.id)} value={String(c.id)}>
-                                {c.name || `Campanha ${c.id}`}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <p className="text-[11px] text-muted-foreground">
-                          Se não houver campanha ativa, o sistema tenta entrar automaticamente em uma campanha disponível do agente.
-                        </p>
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {selectedCampaign && agentStatus === "connecting" && !hasCallActivity && (
-                  <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
-                    <div className="flex items-center gap-2 text-sm font-medium">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Aguardando agente ficar ocioso
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      A 3C Plus ainda está finalizando o login do agente. Aguarde o status Ocioso para liberar a discagem.
-                    </p>
-                  </div>
-                )}
-              </CollapsibleContent>
-            </Collapsible>
-          )}
-
-          {/* Pause Controls */}
-          {agentStatus === "idle" && workBreaks.length > 0 && (
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="outline" size="sm" className="w-full">
-                  <Coffee className="h-3.5 w-3.5 mr-2" />
-                  Intervalo
-                  <ChevronDown className="h-3.5 w-3.5 ml-auto" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent>
-                {workBreaks.map((wb) => (
-                  <DropdownMenuItem key={String(wb.id)} onClick={() => enterPause(wb.id)}>
-                    {wb.name}
-                    {wb.time_limit && (
-                      <span className="ml-auto text-xs text-muted-foreground">
-                        {wb.time_limit} min
-                      </span>
-                    )}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-          )}
-
-          {/* On Break */}
-          {agentStatus === "on_break" && (
-            <div className="rounded-lg border border-warning/30 bg-warning/5 p-4 space-y-3">
-              <div className="flex items-center gap-2">
-                <Coffee className="h-5 w-5 text-warning" />
-                <p className="text-sm font-medium">Em intervalo</p>
-              </div>
-              <Button variant="outline" size="sm" className="w-full" onClick={exitPause}>
-                <Play className="h-3.5 w-3.5 mr-2" />
-                Encerrar intervalo
-              </Button>
-            </div>
-          )}
-
-          {/* WebRTC Extension iframe */}
-          {showExtension && connectionInfo && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between">
-                <label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                  Ramal WebRTC
-                </label>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-5 w-5"
-                  onClick={() => setShowExtension((p) => !p)}
-                >
-                  {showExtension ? (
-                    <ChevronUp className="h-3 w-3" />
-                  ) : (
-                    <ChevronDown className="h-3 w-3" />
-                  )}
-                </Button>
-              </div>
-              <div className="rounded-lg overflow-hidden border border-border bg-background">
-                <iframe
-                  src={connectionInfo.extension_url}
-                  allow="microphone"
-                  className="w-full h-[120px] border-0"
-                  title="3C Plus Extension"
-                  onLoad={() => setExtensionLoaded(true)}
-                />
-              </div>
-              <p className="text-[10px] text-muted-foreground text-center">
-                “Ramal carregado” só confirma que o WebRTC abriu; a discagem só libera quando a 3C Plus marcar o agente como ocioso.
-              </p>
-            </div>
-          )}
+      <aside
+        className={cn(
+          "fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
+          isOpen ? "translate-x-0" : "translate-x-full"
+        )}
+        aria-hidden={!isOpen}
+      >
+        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+          <div className="flex min-w-0 items-center gap-2">
+            <StatusIcon className="h-4 w-4 text-primary" />
+            <span className="font-semibold">Discador 3C</span>
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
+              {statusInfo.label}
+            </span>
+          </div>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            onClick={() => setIsOpen(false)}
+            aria-label="Fechar Discador 3C"
+          >
+            <X className="h-4 w-4" />
+          </Button>
         </div>
-      </ScrollArea>
-    </div>
+        <iframe
+          src={`${domain}/agent`}
+          title="Painel do agente 3C Plus"
+          allow="microphone; autoplay"
+          className="min-h-0 flex-1 border-0 bg-background"
+        />
+      </aside>
+    </>
   );
 }

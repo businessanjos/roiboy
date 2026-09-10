@@ -8,8 +8,8 @@
 - [x] Adicionar instruções separadas para Claude e ChatGPT
 - [x] Validar interface e compilação
 # Discador 3C persistente
-- [ ] Exibir nas telas de Vendas e RoyZapp somente para usuários com ramal
-- [ ] Atualizar status do agente a cada 30 segundos
-- [ ] Abrir painel 3C em drawer persistente e permitir ocultar com X
-- [ ] Abrir drawer e orientar no erro AGENT_NOT_IDLE
+- [x] Exibir nas telas de Vendas e RoyZapp somente para usuários com ramal
+- [x] Atualizar status do agente a cada 30 segundos
+- [x] Abrir painel 3C em drawer persistente e permitir ocultar com X
+- [x] Abrir drawer e orientar no erro AGENT_NOT_IDLE
 - [ ] Validar interface e função publicada
