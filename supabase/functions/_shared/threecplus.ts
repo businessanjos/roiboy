@@ -419,6 +419,7 @@ export type AgentAuth = {
   usingServiceToken: boolean;
   baseDomain: string;
   serviceToken: string | null;
+  managerServiceToken?: string | null;
   accountToken: string | null;
   extension: string | null;
   extensionPassword: string | null;
