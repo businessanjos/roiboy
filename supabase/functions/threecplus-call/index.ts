@@ -1,22 +1,18 @@
 // @ts-nocheck
 import { createClient } from "npm:@supabase/supabase-js@2";
+import {
+  AGENT_ID_REQUIRED_MESSAGE,
+  fetch3c,
+  getBaseDomain,
+  mentionsAgentIdHeader,
+  resolveUserAgentId,
+} from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
-
-function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
-  let base = domain.trim();
-  base = base.replace(/\/login\/?$/, "");
-  base = base.replace(/\/agent\/?.*$/, "");
-  base = base.replace(/\/supervisor\/?.*$/, "");
-  base = base.replace(/\/$/, "");
-  if (!base.startsWith("http")) base = "https://" + base;
-  return base;
-}
 
 function extractApiMessage(text: string, fallback = ""): string {
   try {
