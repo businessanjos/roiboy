@@ -276,16 +276,24 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       .maybeSingle();
 
     const envAdminToken = (Deno.env.get("THREECPLUS_ADMIN_TOKEN") || "").trim();
-    const adminToken: string | null =
-      typeof integration?.config?.admin_api_token === "string" && integration.config.admin_api_token.trim()
-        ? integration.config.admin_api_token.trim()
-        : envAdminToken || null;
+    const cfg = (integration?.config || {}) as Record<string, any>;
 
+    // Token de papel GESTOR: relatório global /api/v1/calls
+    const managerToken: string | null =
+      (typeof cfg.service_token_manager === "string" && cfg.service_token_manager.trim()) ||
+      (typeof cfg.admin_api_token === "string" && cfg.admin_api_token.trim()) ||
+      envAdminToken ||
+      null;
+    const adminToken: string | null = managerToken;
 
+    // Token de papel AGENTE: /api/v1/agent/calls (sempre com X-Agent-Id)
     const serviceToken: string | null =
-      typeof integration?.config?.service_token === "string" && integration.config.service_token.trim()
-        ? integration.config.service_token.trim()
-        : null;
+      (typeof cfg.service_token_agent === "string" && cfg.service_token_agent.trim()) ||
+      (typeof cfg.service_token === "string" && cfg.service_token.trim() && String(cfg.service_token).startsWith("3cs_")
+        ? String(cfg.service_token).trim()
+        : null) ||
+      null;
+
 
     if (!integration?.config?.api_token && !adminToken && !serviceToken) {
       await finish({ status: "error", last_error: "Integração 3C Plus não configurada" });
