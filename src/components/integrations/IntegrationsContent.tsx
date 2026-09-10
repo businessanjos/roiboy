@@ -22,9 +22,9 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { WebhooksTab } from "./webhooks/WebhooksTab";
-import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
-import { ThreeCPlusServiceToken } from "./ThreeCPlusServiceToken";
-import { ThreeCPlusTeamLinks } from "./ThreeCPlusTeamLinks";
+import { ThreeCPlusConnectionCard } from "./ThreeCPlusConnectionCard";
+import { ThreeCPlusAgentsTable } from "./ThreeCPlusAgentsTable";
+import { ThreeCPlusCallsSyncCard } from "./ThreeCPlusCallsSyncCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
@@ -807,126 +807,15 @@ export function IntegrationsContent() {
 
         {/* 3C Plus Tab */}
         <TabsContent value="3cplus" className="space-y-4">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <Phone className="h-6 w-6 text-primary" />
-                  </div>
-                  <div>
-                    <CardTitle>Conexão 3C Plus</CardTitle>
-                    <CardDescription>
-                      Configure a integração 3C Plus para toda a conta. Agentes logam pelo painel com ramal e senha.
-                    </CardDescription>
-                  </div>
-                </div>
-                <Badge variant={threeCPlusIntegration?.status === "connected" ? "default" : "secondary"}>
-                  {threeCPlusIntegration?.status === "connected" ? (
-                    <><CheckCircle2 className="h-3 w-3 mr-1" /> Conectado</>
-                  ) : (
-                    <><XCircle className="h-3 w-3 mr-1" /> Desconectado</>
-                  )}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {threeCPlusIntegration?.status === "connected" ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg">
-                    <CheckCircle2 className="h-5 w-5 text-success" />
-                    <div className="flex-1">
-                      <p className="font-medium">Conectado</p>
-                      <p className="text-sm text-muted-foreground">
-                        {(threeCPlusIntegration.config as any)?.user_email || (threeCPlusIntegration.config as any)?.user_name || "Conta 3C Plus"}
-                      </p>
-                    </div>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={handle3CPlusDisconnect}
-                    >
-                      <LogOut className="h-4 w-4 mr-2" />
-                      Desconectar
-                    </Button>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="3cplus-domain-connected">Domínio</Label>
-                    <Input
-                      id="3cplus-domain-connected"
-                      type="url"
-                      placeholder="https://suaempresa.3c.plus/login"
-                      value={threeCPlusDomain}
-                      onChange={(e) => setThreeCPlusDomain(e.target.value)}
-                      className="font-mono text-sm"
-                    />
-                  </div>
-                  <Button variant="outline" size="sm" onClick={handleSaveDomain} disabled={connecting3CPlus}>
-                    {connecting3CPlus ? <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvando...</> : "Salvar domínio"}
-                  </Button>
-                  <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1">
-                    <p className="text-sm font-medium">Como os agentes usam?</p>
-                    <p className="text-xs text-muted-foreground">
-                      Cada agente abre o painel 3C Plus (botão flutuante) e loga com seu <strong>ramal e senha</strong> direto no iframe — igual ao login na plataforma 3C Plus.
-                    </p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Configure o token de API da conta 3C Plus. Apenas o administrador precisa fazer isso uma vez.
-                    Os agentes logam pelo painel com ramal e senha.
-                  </p>
-                  <div className="space-y-2">
-                    <Label htmlFor="3cplus-token">Token da API (admin/supervisor)</Label>
-                    <Input
-                      id="3cplus-token"
-                      type="password"
-                      placeholder="Cole aqui o token da API 3C Plus"
-                      value={threeCPlusToken}
-                      onChange={(e) => setThreeCPlusToken(e.target.value)}
-                      className="font-mono text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Use um token de supervisor ou admin da 3C Plus. Encontre em Configurações da sua conta 3C Plus.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="3cplus-domain">Domínio</Label>
-                    <Input
-                      id="3cplus-domain"
-                      type="url"
-                      placeholder="https://suaempresa.3c.plus/login"
-                      value={threeCPlusDomain}
-                      onChange={(e) => setThreeCPlusDomain(e.target.value)}
-                      className="font-mono text-sm"
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      URL de login do seu domínio 3C Plus (ex: https://anjosbusiness.3c.plus/login)
-                    </p>
-                  </div>
-                  <Button onClick={handle3CPlusConnect} disabled={connecting3CPlus || !threeCPlusToken.trim()}>
-                    {connecting3CPlus ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Conectando...</>
-                    ) : (
-                      <><ExternalLink className="h-4 w-4 mr-2" /> Conectar</>
-                    )}
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          <ThreeCPlusConnectionCard
+            integration={(threeCPlusIntegration as any) || null}
+            isAdmin={is3CAdmin}
+            onChanged={fetchIntegrations}
+          />
 
-          {is3CAdmin && (
-            <ThreeCPlusServiceToken domain={threeCPlusDomain || null} onChanged={fetchIntegrations} />
-          )}
+          {threeCPlusIntegration?.status === "connected" && <ThreeCPlusAgentsTable />}
 
-          {is3CAdmin && <ThreeCPlusTeamLinks />}
-
-          {/* Agent Extension Config - visible when 3C Plus is connected */}
-          {threeCPlusIntegration?.status === "connected" && (
-            <ThreeCPlusAgentConfig />
-          )}
+          {threeCPlusIntegration?.status === "connected" && is3CAdmin && <ThreeCPlusCallsSyncCard />}
         </TabsContent>
 
 
