@@ -200,7 +200,26 @@ Deno.serve(async (req) => {
 
     if (error) return json({ success: false, error: error.message });
 
-    return json({ success: true, agent: saved });
+    if (isSaveExtension) {
+      const extension = body?.extension ? String(body.extension).trim() : null;
+      const extensionPassword = body?.extension_password ? String(body.extension_password).trim() : null;
+      const { error: uiError } = await supabaseAdmin.from("user_integrations").upsert(
+        {
+          user_id: me.id,
+          provider: "3cplus",
+          access_token: apiToken,
+          metadata: {
+            extension,
+            extension_password: extensionPassword,
+            agent_id: String(profile.id),
+          },
+        },
+        { onConflict: "user_id,provider" },
+      );
+      if (uiError) return json({ success: false, error: uiError.message });
+    }
+
+    return json({ success: true, agent: saved, agent_id: String(profile.id) });
   } catch (err) {
     console.error("[threecplus-register-agent]", err);
     return json({ success: false, error: String(err?.message || err) });
