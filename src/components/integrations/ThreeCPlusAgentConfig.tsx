@@ -191,6 +191,25 @@ export function ThreeCPlusAgentConfig() {
           </p>
         </div>
 
+        {(needsAgentId || agentId) && (
+          <div className="space-y-2">
+            <Label htmlFor="agent-id">ID do agente na 3C {needsAgentId ? "(obrigatório)" : "(opcional)"}</Label>
+            <Input
+              id="agent-id"
+              placeholder="Ex: 56400"
+              value={agentId}
+              onChange={(e) => setAgentId(e.target.value.replace(/\D/g, ""))}
+              maxLength={20}
+            />
+            <p className="text-xs text-muted-foreground">
+              Normalmente o ROY descobre esse número sozinho. Se a 3C pedir, pegue em Configurações &gt; Usuários no
+              painel da 3C Plus: é o número que aparece no endereço ao abrir o seu usuário.
+            </p>
+          </div>
+        )}
+
+
+
         <div className="flex items-center justify-between gap-4">
           <p className="max-w-md text-xs text-muted-foreground">
             Esses dados são usados pelo botão flutuante e pelos botões de ligação para discar com o seu usuário da 3C Plus.
