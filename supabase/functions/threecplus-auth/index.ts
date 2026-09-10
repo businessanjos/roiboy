@@ -52,7 +52,7 @@ Deno.serve((req) => with3cContext(async () => {
     }
 
     // Only admins can configure the account-level 3C Plus integration
-    const isAdmin = userData.role === "admin" || userData.is_also_admin === true;
+    const isAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
     if (!isAdmin) {
       return new Response(JSON.stringify({ error: "Apenas administradores podem configurar a integração 3C Plus." }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
