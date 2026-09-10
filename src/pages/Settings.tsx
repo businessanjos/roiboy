@@ -37,6 +37,8 @@ export default function Settings() {
         return <ProfileContent />;
       case "meetings":
         return <MeetingPreferencesCard />;
+      case "mcp":
+        return <McpConnectionTab />;
       case "plan":
         return canViewSettings ? (
           <div className="space-y-6">
