@@ -190,7 +190,7 @@ async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
   };
 
   try {
-    const agentRes = await fetch(`${apiBase}/agent?api_token=${apiToken}`, {
+    const agentRes = await fetch3c(`${apiBase}/agent?api_token=${apiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -213,7 +213,7 @@ async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
   }
 
   try {
-    const campaignRes = await fetch(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
+    const campaignRes = await fetch3c(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -282,7 +282,7 @@ function isDialReadyRuntime(runtime: {
 }
 
 async function fetchAvailableAgentCampaigns(apiBase: string, apiToken: string) {
-  const response = await fetch(`${apiBase}/agent/campaigns?api_token=${apiToken}`, {
+  const response = await fetch3c(`${apiBase}/agent/campaigns?api_token=${apiToken}`, {
     method: "GET",
     headers: { Accept: "application/json" },
   });
@@ -314,7 +314,7 @@ function pickAgentCampaign(campaigns: Array<Record<string, unknown>>, preferredC
 
 async function connectAgentSession(apiBase: string, apiToken: string) {
   try {
-    const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${apiToken}`, {
+    const connectRes = await fetch3c(`${apiBase}/agent/connect?api_token=${apiToken}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Accept: "application/json" },
     });
@@ -335,7 +335,7 @@ async function postToAgentEndpoint(
 ) {
   const encodedBody = body ? encodeFormBody(body) : null;
 
-  return fetch(`${apiBase}${path}?api_token=${apiToken}`, {
+  return fetch3c(`${apiBase}${path}?api_token=${apiToken}`, {
     method: "POST",
     headers: {
       Accept: "application/json",
@@ -347,7 +347,7 @@ async function postToAgentEndpoint(
 
 async function fetchLoggedCampaignState(apiBase: string, apiToken: string) {
   try {
-    const response = await fetch(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
+    const response = await fetch3c(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -491,7 +491,7 @@ async function ensureAgentReadyForDial(
 
   if (runtime.manual_mode && !runtime.has_active_call) {
     try {
-      const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
+      const exitRes = await fetch3c(`${apiBase}/agent/manual_call/exit?api_token=${apiToken}`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
@@ -606,7 +606,7 @@ async function fetchAgentProfile(baseDomain: string, apiToken: string) {
   ];
   for (const attempt of attempts) {
     try {
-      const response = await fetch(attempt.url, attempt.init);
+      const response = await fetch3c(attempt.url, attempt.init);
       const text = await response.text();
       if (!response.ok) continue;
       return text ? JSON.parse(text) : null;
@@ -871,13 +871,13 @@ Deno.serve(async (req) => {
 
     // Logout
     if (action === "logout") {
-      const manualExitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
+      const manualExitRes = await fetch3c(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const manualExitText = await manualExitRes.text();
       console.log("[threecplus-agent] logout manual_call_exit:", manualExitRes.status, manualExitText);
 
-      const res = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -912,7 +912,7 @@ Deno.serve(async (req) => {
 
     // Enter manual call mode
     if (action === "manual_call_enter") {
-      const res = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/manual_call/enter?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -966,7 +966,7 @@ Deno.serve(async (req) => {
       let flowApiToken = effectiveApiToken;
 
       try {
-        const connectRes = await fetch(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
+        const connectRes = await fetch3c(`${apiBase}/agent/connect?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const connectText = await connectRes.text();
@@ -1069,7 +1069,7 @@ Deno.serve(async (req) => {
       const maxEnterAttempts = 6;
 
       for (let attempt = 1; attempt <= maxEnterAttempts; attempt++) {
-        enterRes = await fetch(`${apiBase}/agent/manual_call/enter?api_token=${flowApiToken}`, {
+        enterRes = await fetch3c(`${apiBase}/agent/manual_call/enter?api_token=${flowApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         enterText = await enterRes.text();
@@ -1139,7 +1139,7 @@ Deno.serve(async (req) => {
 
     // Exit manual call mode
     if (action === "manual_call_exit") {
-      const res = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -1182,7 +1182,7 @@ Deno.serve(async (req) => {
 
       if (!resolvedCallId) {
         console.log("[threecplus-agent] hangup: trying manual_call/exit fallback");
-        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
+        const exitRes = await fetch3c(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const exitText = await exitRes.text();
@@ -1198,7 +1198,7 @@ Deno.serve(async (req) => {
         }
 
         console.log("[threecplus-agent] hangup: trying logout as last resort");
-        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
+        const logoutRes = await fetch3c(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const logoutText = await logoutRes.text();
@@ -1217,7 +1217,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const res = await fetch(`${apiBase}/agent/call/${resolvedCallId}/hangup?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/call/${resolvedCallId}/hangup?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       const text = await res.text();
@@ -1228,7 +1228,7 @@ Deno.serve(async (req) => {
 
       if (!success) {
         console.log("[threecplus-agent] hangup failed, trying manual_call/exit fallback after call_id attempt");
-        const exitRes = await fetch(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
+        const exitRes = await fetch3c(`${apiBase}/agent/manual_call/exit?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const exitText = await exitRes.text();
@@ -1244,7 +1244,7 @@ Deno.serve(async (req) => {
       // Last resort: logout to force-clear the call
       if (!success) {
         console.log("[threecplus-agent] hangup: trying logout as last resort after call_id attempt");
-        const logoutRes = await fetch(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
+        const logoutRes = await fetch3c(`${apiBase}/agent/logout?api_token=${effectiveApiToken}`, {
           method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         });
         const logoutText = await logoutRes.text();
@@ -1342,7 +1342,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "call_id e qualification_id são obrigatórios" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const res = await fetch(`${apiBase}/agent/call/${call_id}/qualify?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/call/${call_id}/qualify?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
         body: JSON.stringify({ qualification: qualification_id }),
       });
@@ -1358,7 +1358,7 @@ Deno.serve(async (req) => {
         return new Response(JSON.stringify({ success: false, error: "work_break_id é obrigatório" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-      const res = await fetch(`${apiBase}/agent/work_break/${work_break_id}/enter?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/work_break/${work_break_id}/enter?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] pause_enter:", res.status);
@@ -1368,7 +1368,7 @@ Deno.serve(async (req) => {
 
     // Exit work break
     if (action === "pause_exit") {
-      const res = await fetch(`${apiBase}/agent/work_break_exit?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/work_break_exit?api_token=${effectiveApiToken}`, {
         method: "POST", headers: { "Content-Type": "application/json", Accept: "application/json" },
       });
       console.log("[threecplus-agent] pause_exit:", res.status);
@@ -1378,7 +1378,7 @@ Deno.serve(async (req) => {
 
     // Get logged campaign info
     if (action === "get_logged_campaign") {
-      const res = await fetch(`${apiBase}/agent/loggedCampaign?api_token=${effectiveApiToken}`, {
+      const res = await fetch3c(`${apiBase}/agent/loggedCampaign?api_token=${effectiveApiToken}`, {
         method: "GET", headers: { Accept: "application/json" },
       });
       const text = await res.text();
@@ -1404,7 +1404,7 @@ Deno.serve(async (req) => {
       if (end_date) params.set("end_date", end_date);
       if (page) params.set("page", String(page));
       params.set("per_page", "100");
-      const res = await fetch(`${apiBase}/calls?${params}`, { method: "GET", headers: { Accept: "application/json" } });
+      const res = await fetch3c(`${apiBase}/calls?${params}`, { method: "GET", headers: { Accept: "application/json" } });
       if (!res.ok) {
         return new Response(JSON.stringify({ success: false, error: "Erro ao buscar histórico de chamadas" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });

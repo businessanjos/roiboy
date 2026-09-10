@@ -23,7 +23,7 @@ async function fetchCampaignsFromDomain(domain: string, apiToken: string): Promi
   let hasMore = true;
 
   while (hasMore) {
-    const apiResponse = await fetch(
+    const apiResponse = await fetch3c(
       `${domain}/api/v1/agent/campaigns?api_token=${apiToken}&per_page=100&page=${currentPage}`,
       { method: "GET", headers: { Accept: "application/json" } }
     );

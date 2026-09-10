@@ -52,7 +52,7 @@ async function postToAgentEndpoint(
   path: string,
   body?: Record<string, unknown>,
 ) {
-  return fetch(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
+  return fetch3c(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
     ...(body ? { body: JSON.stringify(body) } : {}),
@@ -67,7 +67,7 @@ async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
   };
 
   try {
-    const agentRes = await fetch(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
+    const agentRes = await fetch3c(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -80,7 +80,7 @@ async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
   }
 
   try {
-    const campaignRes = await fetch(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
+    const campaignRes = await fetch3c(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
       method: "GET",
       headers: { Accept: "application/json" },
     });
@@ -258,7 +258,7 @@ Deno.serve(async (req) => {
     // If click2call failed because agent not idle, try webphone login + retry
     if (isAgentNotIdle(click2callRes.status, click2callText) && userExtension) {
       try {
-        const campaignsRes = await fetch(
+        const campaignsRes = await fetch3c(
           `${baseDomain}/api/v1/agent/campaigns?api_token=${agentApiToken}`,
           { method: "GET", headers: { Accept: "application/json" } }
         );
