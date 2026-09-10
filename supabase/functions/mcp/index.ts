@@ -729,27 +729,75 @@ import { z as z6 } from "npm:zod@^3.25.76";
 var clients_portfolio_default = defineTool6({
   name: "clients_portfolio",
   title: "Carteira de clientes e contratos",
-  description: "Analisa clientes, contratos, produtos, vencimentos e renova\xE7\xF5es da carteira de CS permitida ao usu\xE1rio.",
+  description: "Analisa clientes, contratos, produtos, vencimentos e renova\xE7\xF5es da carteira de CS permitida ao usu\xE1rio. Suporta pagina\xE7\xE3o (offset) e modo resumo para analisar a base inteira.",
   inputSchema: {
     status: z6.enum(["active", "paused", "churn_risk", "churned", "no_contract", "all"]).describe("Status do cliente."),
     search: z6.string().nullable().describe("Busca pelo nome do cliente ou empresa; null para todos."),
     expiring_before: z6.string().nullable().describe("Listar contratos vencendo at\xE9 YYYY-MM-DD; null para n\xE3o filtrar."),
-    limit: z6.number().int().min(1).max(300).describe("M\xE1ximo de clientes retornados.")
+    limit: z6.number().int().min(1).max(1e3).describe("M\xE1ximo de clientes por p\xE1gina (at\xE9 1000)."),
+    offset: z6.number().int().min(0).describe("Quantos clientes pular (pagina\xE7\xE3o). Comece em 0 e some o limit a cada p\xE1gina."),
+    summary_only: z6.boolean().describe("true = devolve s\xF3 os totais da base inteira (sem listar clientes), ideal para vis\xE3o macro antes de paginar."),
+    include_contracts: z6.boolean().describe("true = inclui os contratos de cada cliente da p\xE1gina.")
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
-  handler: async ({ status, search, expiring_before, limit }, ctx) => {
+  handler: async ({ status, search, expiring_before, limit, offset, summary_only, include_contracts }, ctx) => {
     const supabase = await requireSector(ctx, "operacoes");
-    let clientsQuery = supabase.from("clients").select("id, full_name, company_name, status, responsible_user_id, stage_id, business_segment, mls_level, contract_start_date, contract_end_date, recent_activity_at, created_at").order("full_name").limit(limit);
-    if (status !== "all") clientsQuery = clientsQuery.eq("status", status);
-    if (search) clientsQuery = clientsQuery.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
-    const { data: clients, error: clientsError } = await clientsQuery;
-    failIf(clientsError);
-    const ids = (clients ?? []).map((client) => client.id);
+    const applyClientFilters = (query) => {
+      let q = query;
+      if (status !== "all") q = q.eq("status", status);
+      if (search) q = q.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+      return q;
+    };
+    const countResult = await applyClientFilters(
+      supabase.from("clients").select("id", { count: "exact", head: true })
+    );
+    failIf(countResult.error);
+    const totalClientes = countResult.count ?? 0;
+    const statusCounts = {};
+    if (summary_only || offset === 0) {
+      const statuses = ["active", "paused", "churn_risk", "churned", "no_contract"];
+      const results = await Promise.all(
+        statuses.map(async (s) => {
+          let q = supabase.from("clients").select("id", { count: "exact", head: true }).eq("status", s);
+          if (search) q = q.or(`full_name.ilike.%${search}%,company_name.ilike.%${search}%`);
+          const r = await q;
+          return [s, r.error ? 0 : r.count ?? 0];
+        })
+      );
+      results.forEach(([s, c]) => {
+        statusCounts[s] = c;
+      });
+    }
+    if (summary_only) {
+      const contractsCount = await supabase.from("client_contracts").select("id", { count: "exact", head: true }).eq("status", "active");
+      failIf(contractsCount.error);
+      return jsonResult({
+        resumo: {
+          clientes_total: totalClientes,
+          clientes_por_status: statusCounts,
+          contratos_ativos: contractsCount.count ?? 0
+        },
+        paginacao: {
+          modo: "summary_only",
+          proximo_passo: `Chame novamente com summary_only=false, limit=1000 e offset=0, depois offset=1000, 2000... at\xE9 cobrir ${totalClientes} clientes.`
+        }
+      });
+    }
+    const clientsResult = await applyClientFilters(
+      supabase.from("clients").select(
+        "id, full_name, company_name, status, responsible_user_id, stage_id, business_segment, mls_level, contract_start_date, contract_end_date, recent_activity_at, created_at"
+      ).order("full_name").range(offset, offset + limit - 1)
+    );
+    failIf(clientsResult.error);
+    const clients = clientsResult.data ?? [];
+    const ids = clients.map((client) => client.id);
     let contracts = [];
-    if (ids.length) {
-      let contractQuery = supabase.from("client_contracts").select("id, client_id, product_id, status, value, currency, start_date, end_date, contract_type, payment_status, installments_count").in("client_id", ids).order("end_date", { ascending: true });
+    if (include_contracts && ids.length) {
+      let contractQuery = supabase.from("client_contracts").select(
+        "id, client_id, product_id, status, value, currency, start_date, end_date, contract_type, payment_status, installments_count"
+      ).in("client_id", ids).order("end_date", { ascending: true });
       if (expiring_before) contractQuery = contractQuery.lte("end_date", expiring_before);
-      const result = await contractQuery.limit(600);
+      const result = await contractQuery.limit(3e3);
       failIf(result.error);
       contracts = result.data ?? [];
     }
@@ -761,19 +809,29 @@ var clients_portfolio_default = defineTool6({
       products = result.data ?? [];
     }
     const productMap = new Map(products.map((p) => [p.id, p]));
-    const rows = (clients ?? []).map((client) => ({
+    const rows = clients.map((client) => ({
       ...client,
-      contratos: contracts.filter((c) => c.client_id === client.id).map((c) => ({ ...c, produto: productMap.get(c.product_id) ?? null }))
+      contratos: include_contracts ? contracts.filter((c) => c.client_id === client.id).map((c) => ({ ...c, produto: productMap.get(c.product_id) ?? null })) : void 0
     }));
+    const nextOffset = offset + clients.length;
+    const hasMore = nextOffset < totalClientes;
     return jsonResult({
       resumo: {
-        clientes: rows.length,
-        contratos: contracts.length,
-        contratos_ativos: contracts.filter((c) => c.status === "active").length,
-        valor_contratos: contracts.reduce((sum, c) => sum + Number(c.value ?? 0), 0)
+        clientes_total: totalClientes,
+        clientes_nesta_pagina: rows.length,
+        clientes_por_status: offset === 0 ? statusCounts : void 0,
+        contratos_nesta_pagina: contracts.length,
+        contratos_ativos_nesta_pagina: contracts.filter((c) => c.status === "active").length,
+        valor_contratos_nesta_pagina: contracts.reduce((sum, c) => sum + Number(c.value ?? 0), 0)
       },
-      clientes: rows,
-      observacao: rows.length === limit ? `Resultado limitado a ${limit} clientes; refine os filtros para continuar.` : null
+      paginacao: {
+        offset,
+        limit,
+        proximo_offset: hasMore ? nextOffset : null,
+        tem_mais: hasMore,
+        instrucao: hasMore ? `Ainda faltam ${totalClientes - nextOffset} clientes. Chame de novo com offset=${nextOffset} e o mesmo limit.` : "Base completa percorrida."
+      },
+      clientes: rows
     });
   }
 });
