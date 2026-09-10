@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 declare global {
   interface WindowEventMap {
     "threecplus:dial-request": CustomEvent<{ phone: string; contactName?: string }>;
+    "threecplus:open-drawer": CustomEvent;
   }
 }
 
@@ -59,6 +60,12 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
         toast.success("Chamada iniciada no 3C Plus", {
           description: `Ligando para ${contactName || contactPhone}...`,
         });
+        return;
+      }
+
+      if (data?.code === "AGENT_NOT_IDLE") {
+        window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
+        toast.error("Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo");
         return;
       }
 

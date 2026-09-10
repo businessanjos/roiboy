@@ -1147,8 +1147,9 @@ Deno.serve((req) => with3cContext(async () => {
         JSON.stringify({
           success: false,
           error: agentNotIdle
-            ? "O agente ainda não ficou ocioso no 3C Plus. Aguarde o carregamento completo do ramal WebRTC e tente novamente."
+            ? "Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo"
             : extractApiMessage(enterText, "Não foi possível iniciar a chamada manual."),
+          code: agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
           extension_resolved: Boolean(extension),
           runtime: latestRuntime,
         }),

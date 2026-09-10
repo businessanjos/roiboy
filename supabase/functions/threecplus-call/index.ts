@@ -371,7 +371,7 @@ Deno.serve((req) => with3cContext(async () => {
         error: agentIdIssue
           ? AGENT_ID_REQUIRED_MESSAGE
           : agentNotIdle
-          ? "O agente ainda está preso em outro estado no 3C Plus. Feche chamadas/pausas pendentes no painel WebRTC e tente novamente."
+          ? "Entre em uma campanha no Discador 3C (botão no canto da tela) e tente de novo"
           : lastEnterMessage || "Não foi possível iniciar a chamada. Verifique se o ramal e senha estão configurados no painel 3C Plus.",
         code: agentIdIssue ? "AGENT_ID_REQUIRED" : agentNotIdle ? "AGENT_NOT_IDLE" : "API_CALL_FAILED",
         fallback_url: baseDomain,
