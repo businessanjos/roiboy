@@ -2,6 +2,7 @@
 // Valida um token de API da 3C Plus e cadastra/atualiza o agente correspondente
 // em `threecplus_agents`, permitindo sincronizar as ligações daquela pessoa.
 import { createClient } from "npm:@supabase/supabase-js@2";
+import { fetchAgentIdFromApi, registerAgentId } from "../_shared/threecplus.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,7 +10,7 @@ const corsHeaders = {
 };
 
 function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://app.3c.fluxoti.com";
+  if (!domain) return "https://eternumentoringclub1.3c.plus";
   let base = String(domain).trim();
   base = base.replace(/\/login\/?$/, "").replace(/\/agent\/?.*$/, "").replace(/\/supervisor\/?.*$/, "");
   base = base.replace(/\/$/, "");
@@ -143,20 +144,39 @@ Deno.serve(async (req) => {
 
     const baseDomain = getBaseDomain(integration?.config?.domain || null);
 
-    const res = await fetch(`${baseDomain}/api/v1/me`, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${apiToken}` },
-    });
-    if (!res.ok) {
-      return json({
-        success: false,
-        error:
-          res.status === 401 || res.status === 403
-            ? "Token inválido para esta conta 3C Plus."
-            : `Não foi possível validar o token (status ${res.status}).`,
-      });
+    // A 3C pode exigir o header X-Agent-Id inclusive no /me: aceitamos um id manual como fallback
+    const manualAgentId = body?.agent_id ? String(body.agent_id).trim() : null;
+    let profile = await fetchAgentIdFromApi(baseDomain, apiToken, manualAgentId);
+    if (!profile.id && !manualAgentId) {
+      const { data: known } = await supabaseAdmin
+        .from("threecplus_agents")
+        .select("external_agent_id")
+        .eq("account_id", me.account_id)
+        .eq("api_token", apiToken)
+        .maybeSingle();
+      if (known?.external_agent_id) {
+        profile = await fetchAgentIdFromApi(baseDomain, apiToken, String(known.external_agent_id));
+      }
     }
-    const agent = (await res.json().catch(() => null))?.data;
-    if (!agent?.id) return json({ success: false, error: "Resposta inesperada da 3C Plus." });
+
+    if (!profile.id) {
+      if (manualAgentId) {
+        // Não conseguimos ler o perfil, mas o usuário informou o id manualmente
+        profile = { ...profile, id: manualAgentId };
+      } else {
+        return json({
+          success: false,
+          needs_agent_id: /x-?agent-?id/i.test(profile.body || ""),
+          error:
+            profile.status === 401 || profile.status === 403
+              ? "Token inválido para esta conta 3C Plus, ou a 3C exigiu o ID do agente. Informe o ID do agente na 3C e tente de novo."
+              : `Não foi possível validar o token (status ${profile.status}).`,
+        });
+      }
+    }
+
+    registerAgentId(apiToken, profile.id);
+    const agent = { id: profile.id, name: profile.name, email: profile.email };
 
     const { data: saved, error } = await supabaseAdmin
       .from("threecplus_agents")
