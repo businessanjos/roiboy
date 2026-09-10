@@ -35,22 +35,46 @@ function tokenFromRequest(url: string, init?: RequestInit): string | null {
   return null;
 }
 
-/** fetch com o header `X-Agent-Id` quando conhecemos o agente daquele token. */
+/**
+ * fetch para a 3C Plus:
+ * - sempre envia o token no header `Authorization: Bearer` (nunca na query string);
+ * - injeta `X-Agent-Id` quando conhecemos o agente daquele token/contexto.
+ */
 export async function fetch3c(url: string, init?: RequestInit): Promise<Response> {
   const token = tokenFromRequest(url, init);
   const agentId = contextAgentId() ?? agentIdForToken(token);
-  if (!agentId) return fetch(url, init);
 
-  return fetch(url, {
-    ...init,
-    headers: { ...((init?.headers ?? {}) as Record<string, string>), "X-Agent-Id": agentId },
-  });
+  // move api_token da query para o header Authorization
+  let finalUrl = url;
+  const headers: Record<string, string> = { ...((init?.headers ?? {}) as Record<string, string>) };
+  if (/[?&]api_token=/.test(url)) {
+    finalUrl = url.replace(/([?&])api_token=[^&]*&?/, "$1").replace(/[?&]$/, "");
+    if (token) headers.Authorization = `Bearer ${token}`;
+  }
+  if (agentId) headers["X-Agent-Id"] = agentId;
+
+  return fetch(finalUrl, { ...init, headers });
 }
 
 /** Detecta erros da 3C que reclamam do header X-Agent-Id. */
 export function mentionsAgentIdHeader(...parts: Array<unknown>): boolean {
   return parts.some((part) => typeof part === "string" && /x-?agent-?id/i.test(part));
 }
+
+/** Traduz o status devolvido pela 3C para uma mensagem clara no ROY. */
+export function threeCErrorMessage(status: number, body?: string): string {
+  if (status === 400) {
+    return "A 3C não reconheceu o agente desta ação (ID ausente ou inválido). Abra Integrações > 3C Plus e clique em \"Sincronizar agentes da 3C\".";
+  }
+  if (status === 401) {
+    return "Token da 3C inválido ou revogado. Gere um novo em Config. > Integração > Tokens de serviço.";
+  }
+  if (status === 403) {
+    return "O papel deste token da 3C não permite esta ação (use o token de Gestor para relatórios e o de Agente para ligações).";
+  }
+  return `A 3C respondeu com erro (status ${status}).${body ? ` ${String(body).slice(0, 160)}` : ""}`;
+}
+
 
 export function getBaseDomain(domain: string | null | undefined): string {
   if (!domain) return "https://eternumentoringclub1.3c.plus";
