@@ -24,6 +24,7 @@ import {
 import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusAgentConfig } from "./ThreeCPlusAgentConfig";
 import { ThreeCPlusServiceToken } from "./ThreeCPlusServiceToken";
+import { ThreeCPlusTeamLinks } from "./ThreeCPlusTeamLinks";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
@@ -919,6 +920,8 @@ export function IntegrationsContent() {
           {is3CAdmin && (
             <ThreeCPlusServiceToken domain={threeCPlusDomain || null} onChanged={fetchIntegrations} />
           )}
+
+          {is3CAdmin && <ThreeCPlusTeamLinks />}
 
           {/* Agent Extension Config - visible when 3C Plus is connected */}
           {threeCPlusIntegration?.status === "connected" && (
