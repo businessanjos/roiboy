@@ -63,29 +63,38 @@ Deno.serve((req) => with3cContext(async () => {
     const { api_token, domain, agent_id: req_agent_id } = body;
     const action = String(body?.action || "connect");
 
-    // ---- Token de serviço da conta (modelo novo da 3C) ----
+    // ---- Tokens de serviço da conta (modelo novo da 3C: papéis Agente e Gestor) ----
     if (action === "status" || action === "set_service_token" || action === "clear_service_token") {
       const account = await loadAccountIntegration(supabaseAdmin, userData.account_id);
+      const role = String(body?.role || "agent") === "manager" ? "manager" : "agent";
+      const configKey = role === "manager" ? "service_token_manager" : "service_token_agent";
+
+      const statusPayload = (extra: Record<string, unknown> = {}) => ({
+        success: true,
+        agent_token_configured: Boolean(account.agentServiceToken),
+        manager_token_configured: Boolean(account.managerServiceToken),
+        service_token_configured: Boolean(account.agentServiceToken || account.managerServiceToken),
+        domain: account.baseDomain,
+        ...extra,
+      });
 
       if (action === "status") {
-        return new Response(
-          JSON.stringify({
-            success: true,
-            service_token_configured: Boolean(account.serviceToken),
-            domain: account.baseDomain,
-          }),
-          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
+        return new Response(JSON.stringify(statusPayload()), {
+          status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
       }
 
       if (action === "clear_service_token") {
         if (account.id) {
-          await supabaseAdmin
-            .from("integrations")
-            .update({ config: { ...account.config, service_token: null } })
-            .eq("id", account.id);
+          const cleared: Record<string, unknown> = { ...account.config, [configKey]: null };
+          if (role === "agent" && account.config.service_token) cleared.service_token = null;
+          if (role === "manager" && typeof account.config.admin_api_token === "string" &&
+              account.config.admin_api_token.startsWith("3cs_")) {
+            cleared.admin_api_token = null;
+          }
+          await supabaseAdmin.from("integrations").update({ config: cleared }).eq("id", account.id);
         }
-        return new Response(JSON.stringify({ success: true, service_token_configured: false }),
+        return new Response(JSON.stringify({ success: true, role, configured: false }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
@@ -94,61 +103,88 @@ Deno.serve((req) => with3cContext(async () => {
         return new Response(JSON.stringify({ success: false, error: "Informe o token de serviço." }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
-
-      const serviceDomain = domain ? getBaseDomain(domain) : account.baseDomain;
-
-      // A 3C aceita o token de serviço de formas diferentes conforme o endpoint.
-      // Tentamos algumas combinações antes de recusar.
-      const probeTargets = [
-        `${serviceDomain}/api/v1/users?page=1&per_page=1`,
-        `${serviceDomain}/api/v1/campaigns?page=1&per_page=1`,
-        `${serviceDomain}/api/v1/agents?page=1&per_page=1`,
-      ];
-
-      let validated = false;
-      let lastStatus = 0;
-      let lastBody = "";
-      let sawAuthError = false;
-
-      for (const url of probeTargets) {
-        for (const mode of ["bearer", "query"] as const) {
-          const target = mode === "query"
-            ? `${url}&api_token=${encodeURIComponent(serviceToken)}`
-            : url;
-          const headers: Record<string, string> = { Accept: "application/json" };
-          if (mode === "bearer") headers.Authorization = `Bearer ${serviceToken}`;
-
-          try {
-            const probe = await fetch(target, { headers });
-            if (probe.ok) {
-              validated = true;
-              break;
-            }
-            lastStatus = probe.status;
-            lastBody = (await probe.text()).slice(0, 300);
-            if (probe.status === 401 || probe.status === 403) sawAuthError = true;
-          } catch (e) {
-            lastBody = String(e).slice(0, 300);
-          }
-        }
-        if (validated) break;
-      }
-
-      if (!validated) {
-        console.error("[threecplus-auth] service token probe failed:", lastStatus, lastBody);
+      if (!serviceToken.startsWith("3cs_")) {
         return new Response(
-          JSON.stringify({
-            success: false,
-            error: sawAuthError
-              ? "Token de serviço inválido ou sem permissão. Gere um novo em Config. > Integração > Tokens de serviço na 3C Plus."
-              : `A 3C Plus não confirmou o token (status ${lastStatus}). Confira o endereço do painel (${serviceDomain}) e tente novamente.`,
-          }),
+          JSON.stringify({ success: false, error: "Token de serviço inválido: ele começa com \"3cs_\". Gere em Config. > Integração > Tokens de serviço." }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
+      const serviceDomain = domain ? getBaseDomain(domain) : account.baseDomain;
+      let warning: string | null = null;
 
-      const newConfig = { ...account.config, service_token: serviceToken, domain: domain || account.config.domain || null };
+      if (role === "manager") {
+        let ok = false;
+        let lastStatus = 0;
+        let lastBody = "";
+        for (const path of ["/api/v1/campaigns?page=1&per_page=1", "/api/v1/agents?page=1&per_page=1"]) {
+          try {
+            const probe = await fetch(`${serviceDomain}${path}`, {
+              headers: { Accept: "application/json", Authorization: `Bearer ${serviceToken}` },
+            });
+            if (probe.ok) { ok = true; break; }
+            lastStatus = probe.status;
+            lastBody = (await probe.text()).slice(0, 200);
+          } catch (e) {
+            lastBody = String(e).slice(0, 200);
+          }
+        }
+        if (!ok) {
+          console.error("[threecplus-auth] manager token probe failed:", lastStatus, lastBody);
+          return new Response(
+            JSON.stringify({ success: false, error: threeCErrorMessage(lastStatus, lastBody) }),
+            { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
+        }
+      } else {
+        // Token de papel AGENTE: só pode ser validado com X-Agent-Id de um agente ativo.
+        let probeAgentId: string | null = null;
+
+        const managerToken = String(body?.manager_token || "").trim() || account.managerServiceToken;
+        if (managerToken) {
+          const agents = await listThreeCAgents(serviceDomain, managerToken);
+          probeAgentId = agents.find((a) => a.active)?.id ?? agents[0]?.id ?? null;
+        }
+
+        if (!probeAgentId) {
+          const { data: known } = await supabaseAdmin
+            .from("threecplus_agents")
+            .select("external_agent_id")
+            .eq("account_id", userData.account_id)
+            .not("external_agent_id", "is", null)
+            .limit(1)
+            .maybeSingle();
+          if (known?.external_agent_id) probeAgentId = String(known.external_agent_id);
+        }
+
+        if (probeAgentId) {
+          const probe = await fetch(`${serviceDomain}/api/v1/me`, {
+            headers: {
+              Accept: "application/json",
+              Authorization: `Bearer ${serviceToken}`,
+              "X-Agent-Id": probeAgentId,
+            },
+          });
+          if (!probe.ok) {
+            const probeBody = (await probe.text()).slice(0, 200);
+            console.error("[threecplus-auth] agent token probe failed:", probe.status, probeBody);
+            return new Response(
+              JSON.stringify({ success: false, error: threeCErrorMessage(probe.status, probeBody) }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
+        } else {
+          warning =
+            "Token salvo pelo formato. Ainda não há agente vinculado para testar — ele será validado na primeira ligação. Cadastre o token de Gestor e clique em \"Sincronizar agentes da 3C\".";
+        }
+      }
+
+      const newConfig: Record<string, unknown> = {
+        ...account.config,
+        [configKey]: serviceToken,
+        domain: domain || account.config.domain || null,
+      };
+      if (role === "manager") newConfig.admin_api_token = serviceToken;
 
       if (account.id) {
         await supabaseAdmin
@@ -165,9 +201,10 @@ Deno.serve((req) => with3cContext(async () => {
         });
       }
 
-      return new Response(JSON.stringify({ success: true, service_token_configured: true }),
+      return new Response(JSON.stringify({ success: true, role, configured: true, warning }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
+
 
     if (!api_token || typeof api_token !== "string" || api_token.trim().length === 0) {
       return new Response(JSON.stringify({ error: "Token da API é obrigatório" }), {
