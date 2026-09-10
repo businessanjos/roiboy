@@ -96,23 +96,57 @@ Deno.serve((req) => with3cContext(async () => {
       }
 
       const serviceDomain = domain ? getBaseDomain(domain) : account.baseDomain;
-      const probe = await fetch(`${serviceDomain}/api/v1/users?page=1&per_page=1`, {
-        headers: { Accept: "application/json", Authorization: `Bearer ${serviceToken}` },
-      });
 
-      if (!probe.ok) {
-        const probeBody = await probe.text();
-        console.error("[threecplus-auth] service token invalid:", probe.status, probeBody.slice(0, 300));
+      // A 3C aceita o token de serviço de formas diferentes conforme o endpoint.
+      // Tentamos algumas combinações antes de recusar.
+      const probeTargets = [
+        `${serviceDomain}/api/v1/users?page=1&per_page=1`,
+        `${serviceDomain}/api/v1/campaigns?page=1&per_page=1`,
+        `${serviceDomain}/api/v1/agents?page=1&per_page=1`,
+      ];
+
+      let validated = false;
+      let lastStatus = 0;
+      let lastBody = "";
+      let sawAuthError = false;
+
+      for (const url of probeTargets) {
+        for (const mode of ["bearer", "query"] as const) {
+          const target = mode === "query"
+            ? `${url}&api_token=${encodeURIComponent(serviceToken)}`
+            : url;
+          const headers: Record<string, string> = { Accept: "application/json" };
+          if (mode === "bearer") headers.Authorization = `Bearer ${serviceToken}`;
+
+          try {
+            const probe = await fetch(target, { headers });
+            if (probe.ok) {
+              validated = true;
+              break;
+            }
+            lastStatus = probe.status;
+            lastBody = (await probe.text()).slice(0, 300);
+            if (probe.status === 401 || probe.status === 403) sawAuthError = true;
+          } catch (e) {
+            lastBody = String(e).slice(0, 300);
+          }
+        }
+        if (validated) break;
+      }
+
+      if (!validated) {
+        console.error("[threecplus-auth] service token probe failed:", lastStatus, lastBody);
         return new Response(
           JSON.stringify({
             success: false,
-            error: probe.status === 401 || probe.status === 403
+            error: sawAuthError
               ? "Token de serviço inválido ou sem permissão. Gere um novo em Config. > Integração > Tokens de serviço na 3C Plus."
-              : `Não foi possível validar o token de serviço (status ${probe.status}).`,
+              : `A 3C Plus não confirmou o token (status ${lastStatus}). Confira o endereço do painel (${serviceDomain}) e tente novamente.`,
           }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
+
 
       const newConfig = { ...account.config, service_token: serviceToken, domain: domain || account.config.domain || null };
 
