@@ -225,6 +225,27 @@ Deno.serve(async (req) => {
       });
     }
 
+    // A 3C exige o header X-Agent-Id em tokens de agente
+    const resolvedAgentId = await resolveUserAgentId(supabaseAdmin, {
+      userId: userData.id,
+      accountId: userData.account_id,
+      apiToken: agentApiToken,
+      baseDomain,
+      metadata,
+    });
+    if (resolvedAgentId && String(metadata?.agent_id || "") !== resolvedAgentId) {
+      await supabaseAdmin
+        .from("user_integrations")
+        .update({ metadata: { ...(metadata ?? {}), agent_id: resolvedAgentId } })
+        .eq("user_id", userData.id)
+        .eq("provider", "3cplus");
+    }
+    if (!resolvedAgentId) {
+      console.warn("[threecplus-call] Sem X-Agent-Id para o usuário", userData.id);
+    }
+
+
+
     // Ensure agent is connected first (idempotent)
     try {
       const connectRes = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/connect");
