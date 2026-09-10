@@ -461,8 +461,8 @@ export async function resolveAgentAuth(
     if (agentRow?.external_agent_id) agentId = String(agentRow.external_agent_id);
   }
 
-  if (!agentId && account.serviceToken) {
-    const found = await findAgentByExtensionOrEmail(account.baseDomain, account.serviceToken, {
+  if (!agentId && account.managerServiceToken) {
+    const found = await findAgentByExtensionOrEmail(account.baseDomain, account.managerServiceToken, {
       extension,
       email: opts.userEmail ?? null,
       name: opts.userName ?? null,
@@ -477,18 +477,20 @@ export async function resolveAgentAuth(
 
   if (agentId) {
     setContextAgentId(agentId);
-    registerAgentId(account.serviceToken, agentId);
+    registerAgentId(account.agentServiceToken, agentId);
     registerAgentId(personalToken, agentId);
   }
 
-  const apiToken = account.serviceToken ?? personalToken ?? account.accountToken;
+  // Ações de agente usam o token de papel Agente (sempre com X-Agent-Id).
+  const apiToken = (agentId ? account.agentServiceToken : null) ?? personalToken ?? account.agentServiceToken ?? account.accountToken;
 
   return {
     apiToken,
     agentId,
-    usingServiceToken: Boolean(account.serviceToken),
+    usingServiceToken: Boolean(account.agentServiceToken && agentId),
     baseDomain: account.baseDomain,
-    serviceToken: account.serviceToken,
+    serviceToken: account.agentServiceToken,
+    managerServiceToken: account.managerServiceToken,
     accountToken: account.accountToken,
     extension,
     extensionPassword,
@@ -496,6 +498,7 @@ export async function resolveAgentAuth(
     config: account.config,
   };
 }
+
 
 /** Grava o vínculo do usuário com o agente da 3C nas duas tabelas. */
 export async function persistAgentLink(
