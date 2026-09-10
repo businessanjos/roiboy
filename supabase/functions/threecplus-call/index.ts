@@ -2,15 +2,11 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
+  SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
-  findAgentByExtensionOrEmail,
-  getBaseDomain,
-  loadAccountIntegration,
   mentionsAgentIdHeader,
   persistAgentLink,
   resolveAgentAuth,
-  resolveUserAgentId,
-  setContextAgentId,
   with3cContext,
 } from "../_shared/threecplus.ts";
 
