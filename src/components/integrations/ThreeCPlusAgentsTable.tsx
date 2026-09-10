@@ -92,7 +92,10 @@ export function ThreeCPlusAgentsTable() {
     load();
   }, []);
 
+  const linkedRowIds = useMemo(() => rows.map((row) => row.id).sort().join(","), [rows]);
+
   useEffect(() => {
+    if (!linkedRowIds) return;
     let active = true;
     const refreshStatuses = async () => {
       const { data } = await supabase.functions.invoke("threecplus-register-agent", {
@@ -110,7 +113,7 @@ export function ThreeCPlusAgentsTable() {
       active = false;
       window.clearInterval(timer);
     };
-  }, []);
+  }, [linkedRowIds]);
 
   const availableUsers = useMemo(
     () => users.filter((u) => !rows.some((r) => r.id === u.id)),

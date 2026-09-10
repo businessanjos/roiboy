@@ -217,11 +217,19 @@ Deno.serve((req) => with3cContext(async () => {
 
     if (action === "agent_statuses") {
       const admin = await isAccountAdmin();
+      const { data: linkedAgents } = await supabaseAdmin
+        .from("threecplus_agents")
+        .select("user_id")
+        .eq("account_id", me.account_id)
+        .not("user_id", "is", null);
+      const linkedUserIds = new Set((linkedAgents || []).map((agent: any) => String(agent.user_id)));
       const { data: targetUsers } = await supabaseAdmin
         .from("users")
         .select("id, name, email")
         .eq("account_id", me.account_id);
-      const visibleUsers = admin ? (targetUsers || []) : (targetUsers || []).filter((user: any) => user.id === me.id);
+      const visibleUsers = (targetUsers || []).filter(
+        (user: any) => linkedUserIds.has(String(user.id)) && (admin || user.id === me.id),
+      );
       const statuses: Record<string, string> = {};
 
       for (const target of visibleUsers) {
