@@ -112,9 +112,15 @@ export function ThreeCPlusTeamLinks() {
               </CardDescription>
             </div>
           </div>
-          <Button variant="outline" size="sm" onClick={load} disabled={loading}>
-            <RefreshCw className="mr-2 h-4 w-4" /> Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" size="sm" onClick={syncAgents} disabled={syncing || loading}>
+              {syncing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <RefreshCw className="mr-2 h-4 w-4" />}
+              Sincronizar agentes da 3C
+            </Button>
+            <Button variant="ghost" size="sm" onClick={load} disabled={loading}>
+              Atualizar
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
