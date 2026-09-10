@@ -36,6 +36,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
         items: [
           { id: "profile", label: "Meu Perfil", icon: User },
           { id: "meetings", label: "Reuniões", icon: Video },
+          { id: "mcp", label: "MCP (Claude / ChatGPT)", icon: Bot },
         ],
       },
     ];
