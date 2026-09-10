@@ -1,6 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { failIf, jsonResult, requireUser, toIso } from "../helpers";
+import { failIf, jsonResult, requireSector, toIso } from "../helpers";
 
 export default defineTool({
   name: "sales_goals_commissions",
@@ -16,7 +16,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, include_goals, include_commissions, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "vendas");
     const startIso = toIso(start_date)!;
     const endIso = toIso(end_date, true)!;
 

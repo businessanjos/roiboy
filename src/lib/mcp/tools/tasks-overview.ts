@@ -1,6 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { failIf, jsonResult, requireUser } from "../helpers";
+import { failIf, jsonResult, requireSector } from "../helpers";
 
 export default defineTool({
   name: "tasks_overview",
@@ -15,7 +15,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, status, assigned_to, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "operacoes");
     let query = supabase.from("internal_tasks")
       .select("id, title, description, status, priority, due_date, due_time, assigned_to, client_id, deal_id, lead_id, activity_type_id, completed_at, created_at, contact_channel")
       .order("due_date", { ascending: true, nullsFirst: false }).limit(limit);

@@ -1,6 +1,6 @@
 import { defineTool } from "@lovable.dev/mcp-js";
 import { z } from "zod";
-import { failIf, jsonResult, requireUser, toIso } from "../helpers";
+import { failIf, jsonResult, requireSector, toIso } from "../helpers";
 
 export default defineTool({
   name: "zapp_conversations",
@@ -16,7 +16,7 @@ export default defineTool({
   },
   annotations: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
   handler: async ({ start_date, end_date, search, include_groups, limit }, ctx) => {
-    const supabase = requireUser(ctx);
+    const supabase = await requireSector(ctx, "royzapp");
     let query = supabase
       .from("zapp_conversations")
       .select(

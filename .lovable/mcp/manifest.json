@@ -12,7 +12,7 @@
   "mcp": {
     "server": {
       "name": "roy-eternum",
-      "version": "0.1.0",
+      "version": "1.0.0",
       "title": "ROY ETERNUM"
     },
     "tools": [
@@ -286,6 +286,471 @@
             "conversation_id",
             "start_date",
             "end_date",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "clients_portfolio",
+        "title": "Carteira de clientes e contratos",
+        "description": "Analisa clientes, contratos, produtos, vencimentos e renovações da carteira de CS permitida ao usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "paused",
+                "churn_risk",
+                "churned",
+                "no_contract",
+                "all"
+              ],
+              "description": "Status do cliente."
+            },
+            "search": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Busca pelo nome do cliente ou empresa; null para todos."
+            },
+            "expiring_before": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Listar contratos vencendo até YYYY-MM-DD; null para não filtrar."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de clientes retornados."
+            }
+          },
+          "required": [
+            "status",
+            "search",
+            "expiring_before",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "client_success_activity",
+        "title": "Atividades de Customer Success",
+        "description": "Resume check-ins e acompanhamentos de clientes por período, canal e tipo, dentro do acesso de Operações.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "client_id": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Cliente específico; null para toda a carteira permitida."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de registros de cada tipo."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "client_id",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "financial_overview",
+        "title": "Visão financeira",
+        "description": "Analisa fluxo de caixa, contas a pagar e receber e inadimplência sem expor anexos, dados bancários ou credenciais.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período por vencimento (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período por vencimento (YYYY-MM-DD)."
+            },
+            "entry_type": {
+              "type": "string",
+              "enum": [
+                "receivable",
+                "payable",
+                "all"
+              ],
+              "description": "Tipo de lançamento."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "paid",
+                "overdue",
+                "partially_paid",
+                "cancelled",
+                "all"
+              ],
+              "description": "Status financeiro."
+            },
+            "include_entries": {
+              "type": "boolean",
+              "description": "Incluir lista resumida dos lançamentos."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de lançamentos detalhados."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "entry_type",
+            "status",
+            "include_entries",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "hr_overview",
+        "title": "Indicadores de RH",
+        "description": "Retorna quadro de pessoas, admissões, desligamentos e férias sem salários, documentos ou dados pessoais sensíveis.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "status": {
+              "type": "string",
+              "enum": [
+                "active",
+                "inactive",
+                "all"
+              ],
+              "description": "Status dos colaboradores."
+            },
+            "department": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Departamento exato; null para todos."
+            },
+            "include_people": {
+              "type": "boolean",
+              "description": "Incluir lista profissional resumida de colaboradores."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de registros por bloco."
+            }
+          },
+          "required": [
+            "status",
+            "department",
+            "include_people",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "marketing_overview",
+        "title": "Projetos e conteúdo de Marketing",
+        "description": "Analisa projetos, tarefas e calendário de conteúdo de Marketing dentro das permissões do usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "project_status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Status de projeto; null para todos."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de registros por bloco."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "project_status",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "events_overview",
+        "title": "Visão de eventos",
+        "description": "Analisa agenda, confirmações, presença, capacidade, orçamento e custos dos eventos permitidos ao usuário.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "status": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Status do evento; null para todos."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Máximo de eventos retornados."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "status",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "tasks_overview",
+        "title": "Atividades e pendências",
+        "description": "Lista e resume atividades internas permitidas ao usuário, com responsáveis, prazos, prioridades e vínculos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Prazo inicial (YYYY-MM-DD); null sem limite."
+            },
+            "end_date": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Prazo final (YYYY-MM-DD); null sem limite."
+            },
+            "status": {
+              "type": "string",
+              "enum": [
+                "pending",
+                "in_progress",
+                "done",
+                "overdue",
+                "cancelled",
+                "all"
+              ],
+              "description": "Status da atividade."
+            },
+            "assigned_to": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "format": "uuid"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "description": "Responsável específico; null para todos os permitidos."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de atividades."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "status",
+            "assigned_to",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "products_overview",
+        "title": "Produtos e base contratada",
+        "description": "Analisa o catálogo de produtos e sua presença em clientes e contratos ativos.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "include_inactive": {
+              "type": "boolean",
+              "description": "Incluir produtos inativos."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 200,
+              "description": "Máximo de produtos."
+            }
+          },
+          "required": [
+            "include_inactive",
+            "limit"
+          ],
+          "additionalProperties": false,
+          "$schema": "http://json-schema.org/draft-07/schema#"
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "audit_overview",
+        "title": "Auditoria gerencial",
+        "description": "Consulta movimentações operacionais auditadas sem expor endereços de rede, dispositivos ou credenciais.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "type": "object",
+          "properties": {
+            "start_date": {
+              "type": "string",
+              "description": "Início do período (YYYY-MM-DD)."
+            },
+            "end_date": {
+              "type": "string",
+              "description": "Fim do período (YYYY-MM-DD)."
+            },
+            "entity_type": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Tipo de registro; null para todos."
+            },
+            "action": {
+              "type": [
+                "string",
+                "null"
+              ],
+              "description": "Ação auditada; null para todas."
+            },
+            "limit": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 300,
+              "description": "Máximo de movimentações."
+            }
+          },
+          "required": [
+            "start_date",
+            "end_date",
+            "entity_type",
+            "action",
             "limit"
           ],
           "additionalProperties": false,

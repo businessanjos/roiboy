@@ -4,7 +4,21 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Bot, CheckCircle2, Copy, Info } from "lucide-react";
+import { Bot, CheckCircle2, Copy, Info, LockKeyhole, SearchCheck } from "lucide-react";
+
+const MCP_AREAS = [
+  "Vendas e metas",
+  "Telefonia",
+  "RoyZapp",
+  "Clientes e contratos",
+  "Customer Success",
+  "Financeiro",
+  "RH",
+  "Marketing",
+  "Eventos",
+  "Produtos e atividades",
+  "Auditoria gerencial",
+];
 
 export function McpConnectionTab() {
   const { toast } = useToast();
@@ -32,7 +46,7 @@ export function McpConnectionTab() {
               <div>
                 <CardTitle>Assistente IA no Claude</CardTitle>
                 <CardDescription>
-                  Conecte o Claude Desktop ao ROY para consultar vendas, ligações, metas e RoyZapp com IA.
+                  Conecte seu Claude ao ROY para analisar todas as áreas que sua conta pode acessar.
                 </CardDescription>
               </div>
             </div>
@@ -40,6 +54,18 @@ export function McpConnectionTab() {
               <CheckCircle2 className="h-3 w-3" />
               Pronto
             </Badge>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center gap-2">
+              <SearchCheck className="h-4 w-4 text-primary" />
+              <p className="text-sm font-medium">Áreas disponíveis para análise</p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {MCP_AREAS.map((area) => (
+                <Badge key={area} variant="secondary" className="font-normal">{area}</Badge>
+              ))}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
@@ -93,11 +119,15 @@ export function McpConnectionTab() {
             </ol>
           </div>
 
-          <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
-            <Info className="h-5 w-5 shrink-0 text-primary" />
-            <p>
-              Cada gestor conecta com sua própria conta. O Claude enxerga apenas os dados que você já tem permissão no ROY: vendas, ligações da 3C Plus, metas/comissões e RoyZapp.
-            </p>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              <LockKeyhole className="h-5 w-5 shrink-0 text-primary" />
+              <p>Cada pessoa conecta sua própria conta. O Claude só enxerga setores e dados já liberados para ela no ROY.</p>
+            </div>
+            <div className="flex items-start gap-3 rounded-lg border border-border bg-muted/30 p-3 text-sm text-muted-foreground">
+              <Info className="h-5 w-5 shrink-0 text-primary" />
+              <p>O acesso é somente para consulta e análise. O Claude não cria, altera ou exclui nenhum registro.</p>
+            </div>
           </div>
         </CardContent>
       </Card>
