@@ -83,10 +83,21 @@ async function runtimeProofKey(): Promise<CryptoKey> {
   );
 }
 
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
 export async function createThreeCRuntimeProof(agentId: string, runtime: ThreeCAgentRuntime) {
   const payload = JSON.stringify({ agent_id: agentId, polled_at: new Date().toISOString(), runtime });
-  const signature = await crypto.subtle.sign("HMAC", await runtimeProofKey(), new TextEncoder().encode(payload));
-  return `${btoa(payload)}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
+  const payloadBytes = new TextEncoder().encode(payload);
+  const signature = await crypto.subtle.sign("HMAC", await runtimeProofKey(), payloadBytes);
+  return `${bytesToBase64(payloadBytes)}.${bytesToBase64(new Uint8Array(signature))}`;
 }
 
 export async function verifyThreeCRuntimeProof(proof: unknown, expectedAgentId: string | null) {
@@ -94,10 +105,11 @@ export async function verifyThreeCRuntimeProof(proof: unknown, expectedAgentId: 
   const [payloadPart, signaturePart] = proof.split(".");
   if (!payloadPart || !signaturePart) return null;
   try {
-    const payload = atob(payloadPart);
-    const signature = Uint8Array.from(atob(signaturePart), (char) => char.charCodeAt(0));
-    const valid = await crypto.subtle.verify("HMAC", await runtimeProofKey(), signature, new TextEncoder().encode(payload));
+    const payloadBytes = base64ToBytes(payloadPart);
+    const signature = base64ToBytes(signaturePart);
+    const valid = await crypto.subtle.verify("HMAC", await runtimeProofKey(), signature, payloadBytes);
     if (!valid) return null;
+    const payload = new TextDecoder().decode(payloadBytes);
     const parsed = JSON.parse(payload);
     if (String(parsed.agent_id || "") !== expectedAgentId) return null;
     const age = Date.now() - new Date(parsed.polled_at).getTime();
