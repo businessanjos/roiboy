@@ -196,6 +196,7 @@ export function ZappChatView({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [callInProgress, setCallInProgress] = useState(false);
 
   // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
   const oldestMessageAt = useMemo(() => {
@@ -288,6 +289,7 @@ export function ZappChatView({
       user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
       recording_url: null,
     }}));
+    setCallInProgress(true);
     try {
       const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
@@ -295,7 +297,7 @@ export function ZappChatView({
           phone: dialPhone,
           contact_name: contactInfo.name,
           runtime_snapshot: cached && Date.now() - cached.polledAt < 20_000
-            ? { ...cached.runtime, polled_at: new Date(cached.polledAt).toISOString() }
+            ? { ...cached.runtime, agent_id: cached.agentId, polled_at: new Date(cached.polledAt).toISOString() }
             : null,
         },
       });
@@ -320,6 +322,8 @@ export function ZappChatView({
     } catch (err) {
       console.error("[ZappChatView] 3C Plus call error:", err);
       toast.error("Erro ao iniciar chamada");
+    } finally {
+      setCallInProgress(false);
     }
   }, [contactInfo.phone, contactInfo.name]);
 
@@ -384,6 +388,7 @@ export function ZappChatView({
         onOpenEditGroup={onOpenEditGroup}
         accountId={accountId}
         onCall={handleCall}
+        callInProgress={callInProgress}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
         onOpenCreateDeal={onOpenCreateDeal}

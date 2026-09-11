@@ -19,7 +19,7 @@ interface AgentRuntime {
 
 declare global {
   interface Window {
-    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number };
+    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number; agentId: string };
   }
 }
 
@@ -63,6 +63,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [domain, setDomain] = useState("https://eternumentoringclub1.3c.plus");
   const [status, setStatus] = useState<DialerStatus>("offline");
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
     const { data, error } = await supabase.functions.invoke("threecplus-agent", { body: { action } });
@@ -75,7 +76,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
         setStatus(mapRuntimeStatus(data.runtime));
-        window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now() };
+        if (agentIdRef.current) {
+          window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), agentId: agentIdRef.current };
+        }
       }
       else setStatus("offline");
     } catch (error) {
@@ -97,6 +100,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         ]);
         if (!active) return;
         setHasExtension(Boolean(extensionData?.success && extensionData?.extension));
+        agentIdRef.current = typeof (connectionData as ConnectionInfo & { agent_id?: string }).agent_id === "string"
+          ? (connectionData as ConnectionInfo & { agent_id?: string }).agent_id ?? null
+          : null;
         if (connectionData?.success) setDomain(normalizeDomain(connectionData.domain));
         if (extensionData?.success && extensionData?.extension) await refreshStatus();
         else setLoadingStatus(false);

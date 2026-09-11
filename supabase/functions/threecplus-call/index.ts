@@ -51,11 +51,12 @@ function sanitizeResponse(text: string): string {
   return String(text || "").replace(/3cs_[A-Za-z0-9._-]+/g, "[token]").slice(0, 2000);
 }
 
-function validRuntimeSnapshot(value: unknown) {
+function validRuntimeSnapshot(value: unknown, expectedAgentId: string | null) {
   if (!value || typeof value !== "object") return null;
   const runtime = value as Record<string, unknown>;
   const polledAt = typeof runtime.polled_at === "string" ? new Date(runtime.polled_at).getTime() : NaN;
   if (!Number.isFinite(polledAt) || Math.abs(Date.now() - polledAt) > 20_000) return null;
+  if (!expectedAgentId || String(runtime.agent_id || "") !== expectedAgentId) return null;
   const normalized = String(runtime.normalized_status || "");
   if (!["offline", "idle", "on_call", "break", "manual", "unknown"].includes(normalized)) return null;
   return {
@@ -191,7 +192,7 @@ Deno.serve((req) => with3cContext(async () => {
         .catch((error) => console.warn("[threecplus-call] background agent/connect failed:", error)));
     }
 
-    const runtime = validRuntimeSnapshot(body.runtime_snapshot) ?? await fetchThreeCAgentRuntimeForUser(
+    const runtime = validRuntimeSnapshot(body.runtime_snapshot, auth.agentId) ?? await fetchThreeCAgentRuntimeForUser(
       auth.baseDomain,
       auth.apiToken,
       { managerToken: auth.managerServiceToken, agentId: auth.agentId },

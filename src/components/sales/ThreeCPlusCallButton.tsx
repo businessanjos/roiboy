@@ -55,7 +55,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
           phone: dialPhone,
           contact_name: contactName,
           runtime_snapshot: cached && Date.now() - cached.polledAt < 20_000
-            ? { ...cached.runtime, polled_at: new Date(cached.polledAt).toISOString() }
+            ? { ...cached.runtime, agent_id: cached.agentId, polled_at: new Date(cached.polledAt).toISOString() }
             : null,
         },
       });
@@ -109,7 +109,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
           </Button>
         </TooltipTrigger>
         <TooltipContent>
-          <p>Ligar via 3C Plus</p>
+          <p>{calling ? "Discando…" : "Ligar via 3C Plus"}</p>
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
