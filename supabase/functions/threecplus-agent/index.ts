@@ -3,8 +3,11 @@ import {
   AGENT_ID_REQUIRED_MESSAGE,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
+  fetchThreeCAgentRuntimeForUser,
+  getBaseDomain,
   mentionsAgentIdHeader,
   resolveAgentAuth,
+  setContextManagerToken,
   with3cContext,
 } from "../_shared/threecplus.ts";
 
@@ -24,17 +27,6 @@ function getValidUserApiToken(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "account_level") return null;
   return trimmed;
-}
-
-function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://eternumentoringclub1.3c.plus";
-  let base = domain.trim();
-  base = base.replace(/\/login\/?$/, "");
-  base = base.replace(/\/agent\/?.*$/, "");
-  base = base.replace(/\/supervisor\/?.*$/, "");
-  base = base.replace(/\/$/, "");
-  if (!base.startsWith("http")) base = "https://" + base;
-  return base;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -57,22 +49,6 @@ function safeJsonParse(text: string): unknown | null {
   } catch {
     return null;
   }
-}
-
-function parseBooleanish(value: unknown): boolean | null {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value !== "string") return null;
-
-  const normalized = value.trim().toLowerCase();
-  if (["true", "1", "yes", "sim", "registered", "connected", "online"].includes(normalized)) {
-    return true;
-  }
-  if (["false", "0", "no", "nao", "não", "unregistered", "disconnected", "offline"].includes(normalized)) {
-    return false;
-  }
-
-  return null;
 }
 
 function normalizePhone(value: unknown): string | null {
@@ -133,104 +109,12 @@ function extractCallDetails(value: unknown): { id?: string | number; phone?: str
   };
 }
 
-function extractWebphoneRegistered(value: unknown, depth = 0): boolean | null {
-  if (!value || depth > 4) return null;
-  const record = asRecord(value);
-  if (!record) return null;
-
-  const directKeys = [
-    "webphone",
-    "webphone_registered",
-    "web_phone",
-    "webrtc_registered",
-    "extension_registered",
-    "registered",
-  ];
-
-  for (const key of directKeys) {
-    const parsed = parseBooleanish(record[key]);
-    if (parsed !== null) return parsed;
-  }
-
-  const nestedKeys = ["data", "agent", "extension", "webrtc", "webphone"];
-  for (const key of nestedKeys) {
-    const nested = extractWebphoneRegistered(record[key], depth + 1);
-    if (nested !== null) return nested;
-  }
-
-  return null;
-}
-
 function getWebphoneNotReadyMessage() {
   return "O ramal WebRTC abriu, mas ainda não foi registrado na 3C Plus. Aguarde alguns segundos e tente novamente.";
 }
 
-function extractAgentStatus(value: unknown, depth = 0): string | null {
-  if (!value || depth > 4) return null;
-  const record = asRecord(value);
-  if (!record) return null;
-
-  const directKeys = ["status", "state", "agent_status", "agentStatus", "mode"];
-  for (const key of directKeys) {
-    const currentValue = record[key];
-    if (typeof currentValue === "string" && currentValue.trim()) {
-      return currentValue.trim().toLowerCase();
-    }
-  }
-
-  const nestedKeys = ["data", "agent", "call"];
-  for (const key of nestedKeys) {
-    const nestedStatus = extractAgentStatus(record[key], depth + 1);
-    if (nestedStatus) return nestedStatus;
-  }
-
-  return null;
-}
-
 async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
-  const runtime = {
-    logged_campaign: false,
-    has_active_call: false,
-    manual_mode: false,
-    call_id: null as string | number | null,
-    agent_status: null as string | null,
-    webphone_registered: false,
-  };
-
-  try {
-    const agentRes = await fetch3c(`${apiBase}/agent?api_token=${apiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    const agentText = await agentRes.text();
-
-    if (agentRes.ok) {
-      const agentPayload = safeJsonParse(agentText);
-      const callDetails = extractCallDetails(agentPayload);
-      const agentStatus = extractAgentStatus(agentPayload);
-      const webphoneRegistered = extractWebphoneRegistered(agentPayload);
-
-      runtime.has_active_call = Boolean(callDetails?.id || callDetails?.phone);
-      runtime.call_id = callDetails?.id ?? null;
-      runtime.agent_status = agentStatus;
-      runtime.manual_mode = Boolean(agentStatus && /manual/i.test(agentStatus));
-      runtime.webphone_registered = webphoneRegistered ?? false;
-    }
-  } catch (error) {
-    console.error("[threecplus-agent] fetchAgentRuntimeState agent error:", error);
-  }
-
-  try {
-    const campaignRes = await fetch3c(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    runtime.logged_campaign = campaignRes.ok;
-  } catch (error) {
-    console.error("[threecplus-agent] fetchAgentRuntimeState campaign error:", error);
-  }
-
-  return runtime;
+  return fetchThreeCAgentRuntimeForUser(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken);
 }
 
 async function waitForWebphoneRegistration(apiBase: string, apiToken: string, timeoutMs = 12000) {
@@ -827,6 +711,7 @@ Deno.serve((req) => with3cContext(async () => {
     const apiBase = `${baseDomain}/api/v1`;
     const agentApiToken = auth.personalToken;
     const effectiveApiToken = auth.apiToken;
+    setContextManagerToken(auth.managerServiceToken);
 
     // Return connection info
     if (action === "get_connection_info") {

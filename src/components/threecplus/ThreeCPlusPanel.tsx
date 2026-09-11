@@ -11,6 +11,7 @@ interface AgentRuntime {
   has_active_call?: boolean;
   manual_mode?: boolean;
   agent_status?: string | null;
+  normalized_status?: "offline" | "idle" | "on_call" | "break" | "manual" | "unknown";
 }
 
 interface ConnectionInfo {
@@ -35,17 +36,13 @@ function normalizeDomain(value?: string) {
 }
 
 function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
-  if (runtime?.has_active_call) return "on_call";
-
-  const raw = (runtime?.agent_status || "").toLowerCase();
-  if (/call|chamada|talk|dialing|discando/.test(raw)) return "on_call";
-  if (/break|pause|pausa|intervalo|acw|tpa/.test(raw)) return "pause";
-  if (/idle|ocioso|available|dispon[ií]vel/.test(raw)) return "idle";
-  if (runtime?.logged_campaign && !runtime?.manual_mode) return "idle";
+  if (runtime?.normalized_status === "on_call") return "on_call";
+  if (runtime?.normalized_status === "break") return "pause";
+  if (runtime?.normalized_status === "idle" || runtime?.normalized_status === "manual") return "idle";
   return "offline";
 }
 
-export function ThreeCPlusPanel() {
+export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
   const [launcherHidden, setLauncherHidden] = useState(false);
   const [hasExtension, setHasExtension] = useState(false);
@@ -124,11 +121,9 @@ export function ThreeCPlusPanel() {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
 
-  if (!hasExtension) return null;
-
   return (
     <>
-      {!isOpen && !launcherHidden && (
+      {visible && hasExtension && !isOpen && !launcherHidden && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button
             type="button"
@@ -168,7 +163,7 @@ export function ThreeCPlusPanel() {
       <aside
         className={cn(
           "fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
-          isOpen ? "translate-x-0" : "translate-x-full"
+          visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!isOpen}
       >

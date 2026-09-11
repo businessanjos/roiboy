@@ -187,7 +187,7 @@ export function AppLayout() {
 
           {/* Aviso de nova versão é renderizado globalmente em App.tsx */}
 
-          {showThreeCPlus && <ThreeCPlusPanel />}
+          <ThreeCPlusPanel visible={showThreeCPlus} />
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>

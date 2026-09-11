@@ -18,3 +18,9 @@
 - [x] Bloquear chamada em Offline e Intervalo com orientação e abertura do Discador
 - [x] Atualizar estados reais no botão e na tabela a cada 30 segundos
 - [x] Publicar funções e validar compilação
+# Estado unificado e campanha manual 3C
+- [x] Centralizar leitura do estado real em helper compartilhado
+- [x] Mapear fallback de campanha logada e registrar resposta bruta da 3C
+- [x] Tratar campanha sem discagem manual com MANUAL_NOT_ALLOWED
+- [x] Manter iframe montado ao fechar e navegar
+- [x] Publicar e validar funções e interface
