@@ -237,8 +237,10 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
         method: "GET",
         headers: { Accept: "application/json" },
       });
+      const text = await response.text();
+      const payload = parseJsonBody(text);
       runtime.campaign_http_status = response.status;
-      console.log("[threecplus-runtime] GET logged campaign:", JSON.stringify({ path, status: response.status }));
+      console.log("[threecplus-runtime] GET logged campaign:", JSON.stringify({ path, status: response.status, json: payload }));
       if (response.ok) {
         runtime.logged_campaign = true;
         const campaign = asObject(payload);

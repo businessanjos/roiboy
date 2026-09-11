@@ -41,13 +41,6 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
     }
 
     setCalling(true);
-    window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
-      id: `optimistic-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
-      contact_name: contactName || null, direction: "outbound", status: "dialing",
-      duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
-      user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
-      recording_url: null,
-    }}));
     try {
       const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
@@ -71,6 +64,13 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
       }
 
       if (data?.success) {
+        window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
+          id: data.call_log_id || `accepted-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
+          contact_name: contactName || null, direction: "outbound", status: "dialing",
+          duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
+          user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
+          recording_url: null,
+        }}));
         toast.success("Discando…", {
           description: `Ligando para ${contactName || contactPhone}...`,
         });

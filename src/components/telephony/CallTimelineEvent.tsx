@@ -21,6 +21,7 @@ export interface CallTranscript {
   last_error: string | null;
   recording_url: string | null;
   metadata?: Record<string, unknown> | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface ConversationCall {

@@ -282,13 +282,6 @@ export function ZappChatView({
       toast.error(`Número inválido: ${phone || "vazio"}`);
       return;
     }
-    window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
-      id: `optimistic-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
-      contact_name: contactInfo.name || null, direction: "outbound", status: "dialing",
-      duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
-      user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
-      recording_url: null,
-    }}));
     setCallInProgress(true);
     try {
       const cached = window.__threeCPlusRuntime;
@@ -308,6 +301,13 @@ export function ZappChatView({
         return;
       }
       if (data?.success) {
+        window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
+          id: data.call_log_id || `accepted-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
+          contact_name: contactInfo.name || null, direction: "outbound", status: "dialing",
+          duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
+          user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
+          recording_url: null,
+        }}));
         toast.success("Discando…", { description: `Ligando para ${contactInfo.name}...` });
         return;
       }
