@@ -303,10 +303,12 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
         await supabase.from("lead_timeline").insert({
           account_id: accountId,
           lead_id: lead.id,
-          type: "call",
+          event_type: "call",
+          title: answered ? "Ligação atendida (3C)" : `Ligação ${outcome} (3C)`,
           description: `Ligação ${outcome} (${fmtDuration(call.duration_seconds || 0)})`,
           user_id: userId,
-        }).select("id").maybeSingle().then(() => {}, () => {});
+          metadata: { call_id: call.call_id, source: "3cplus" },
+        });
       }
     }
 
