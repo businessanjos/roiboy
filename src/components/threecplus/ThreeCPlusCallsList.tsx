@@ -51,6 +51,7 @@ interface CallRow {
   deal_id: string | null;
   client_id: string | null;
   recording_url: string | null;
+  metadata: Record<string, any> | null;
   threecplus_call_transcripts: TranscriptRow[] | null;
 }
 

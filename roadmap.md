@@ -16,5 +16,6 @@
 # Regressão de permissão no click-to-call
 - [x] Corrigir leitura da campanha que desviava para click2call sem permissão
 - [x] Criar evento somente depois de a 3C aceitar a discagem
-- [ ] Marcar e ocultar placeholders órfãos de hoje
-- [ ] Publicar e validar chamada real com o agente 58219
+- [x] Marcar e ocultar placeholders órfãos de hoje
+- [x] Publicar e validar falha segura sem criar registro
+- [ ] Validar enter/dial real quando o agente 58219 estiver online em Prospecção Manual
