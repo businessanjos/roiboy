@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
 import { dedupeCalls } from "@/components/telephony/CallTimelineEvent";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -100,6 +102,32 @@ export function ThreeCPlusCallsList() {
   const [engine, setEngine] = useState("all");
   const [selected, setSelected] = useState<CallRow | null>(null);
   const [working, setWorking] = useState<string | null>(null);
+  const [autoTasks, setAutoTasks] = useState(true);
+
+  useEffect(() => {
+    if (!currentUser?.account_id) return;
+    supabase
+      .from("account_settings")
+      .select("calls_auto_tasks")
+      .eq("account_id", currentUser.account_id)
+      .maybeSingle()
+      .then(({ data }) => setAutoTasks(data?.calls_auto_tasks !== false));
+  }, [currentUser?.account_id]);
+
+  const saveAutoTasks = async (value: boolean) => {
+    if (!currentUser?.account_id) return;
+    setAutoTasks(value);
+    const { error } = await supabase
+      .from("account_settings")
+      .upsert(
+        { account_id: currentUser.account_id, calls_auto_tasks: value },
+        { onConflict: "account_id" },
+      );
+    if (error) {
+      setAutoTasks(!value);
+      toast.error("Não foi possível salvar a opção", { description: error.message });
+    }
+  };
 
   const load = useCallback(async () => {
     if (!currentUser?.account_id) return;
