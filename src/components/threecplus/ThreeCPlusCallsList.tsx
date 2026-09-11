@@ -213,7 +213,8 @@ export function ThreeCPlusCallsList() {
           {[
             { label: "Atendidas", value: counters.answered },
             { label: "Transcritas", value: counters.transcribed },
-            { label: "Na fila", value: counters.pending },
+            { label: "3C Plus", value: counters.threeC },
+            { label: "Call Ryka", value: counters.ryka },
             { label: "Sem contato", value: counters.unlinked },
           ].map((c) => (
             <div key={c.label} className="rounded-lg border border-border px-3 py-2">
