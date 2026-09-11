@@ -166,7 +166,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           type="button"
           size="icon"
           variant="secondary"
-          className="fixed bottom-20 right-4 z-50 h-10 w-10 rounded-full border border-border shadow-lg lg:bottom-6 lg:right-6"
+          className="fixed right-0 top-1/2 z-50 h-9 w-7 -translate-y-1/2 translate-x-1 rounded-l-md rounded-r-none border border-r-0 border-border opacity-40 shadow-sm transition-all hover:translate-x-0 hover:opacity-100"
           onClick={() => {
             setLauncherHidden(false);
             setIsOpen(true);
