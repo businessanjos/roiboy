@@ -209,6 +209,23 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
+const CLIENT_SECTION_TITLES: Record<string, string> = {
+  "churn-signals": "Sinais de Churn",
+  agenda: "Agenda",
+  deals: "Negócios",
+  contracts: "Contratos",
+  subscriptions: "Financeiro",
+  negocio: "Perfil do Negócio",
+  fichas: "Fichas (Formulário)",
+  briefing: "Briefing Comercial",
+  campos: "Campos",
+  sales: "Metas & Vendas",
+  cx: "Momentos CX",
+  instagram: "Instagram",
+  vinculos: "Vínculos",
+  roi: "ROI",
+};
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, loading: userLoading } = useCurrentUser();
