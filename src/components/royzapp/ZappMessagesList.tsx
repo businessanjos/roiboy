@@ -47,6 +47,8 @@ interface ZappMessagesListProps {
   isLoadingOlderMessages?: boolean;
   /** Carrega o bloco anterior do histórico. */
   onLoadOlderMessages?: () => void;
+  /** Ligações da 3C do contato, intercaladas cronologicamente no histórico. */
+  calls?: ConversationCall[];
 }
 
 // Build a fallback mention map from sender_phone data in group messages
