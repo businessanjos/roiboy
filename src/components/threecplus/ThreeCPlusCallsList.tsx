@@ -51,9 +51,15 @@ interface CallRow {
   deal_id: string | null;
   client_id: string | null;
   recording_url: string | null;
+  engine?: string | null;
   metadata: Record<string, any> | null;
   threecplus_call_transcripts: TranscriptRow[] | null;
 }
+
+const ENGINE_LABELS: Record<string, string> = {
+  "3cplus": "3C Plus",
+  ryka_call: "Call Ryka",
+};
 
 const PERIODS = [
   { value: "7", label: "Últimos 7 dias" },
@@ -102,7 +108,7 @@ export function ThreeCPlusCallsList() {
       supabase
         .from("threecplus_call_logs")
         .select(
-          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
         )
         .eq("account_id", currentUser.account_id)
         .gte("started_at", since)
