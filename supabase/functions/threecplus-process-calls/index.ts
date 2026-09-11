@@ -152,39 +152,38 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
   if (!calls?.length) return { processed: 0, linked: 0, activities: 0, queued: 0 };
 
   // Índice de telefones -> lead / cliente
-  const coreKeys = new Set<string>();
-  for (const c of calls) {
-    const key = phoneCoreKey(c.phone);
-    if (key) coreKeys.add(key);
-  }
-  const allVariants: string[] = [];
-  for (const c of calls) allVariants.push(...phoneVariants(c.phone));
+  const allVariants = new Set<string>();
+  for (const c of calls) for (const v of phoneVariants(c.phone)) allVariants.add(v);
 
   const leadIndex = new Map<string, any>();
   const clientIndex = new Map<string, any>();
 
-  if (allVariants.length) {
-    const uniqueVariants = Array.from(new Set(allVariants)).slice(0, 3000);
-    const { data: leads } = await supabase
-      .from("leads")
-      .select("id, full_name, phone")
-      .eq("account_id", accountId)
-      .in("phone", uniqueVariants);
+  const variantList = Array.from(allVariants);
+  const CHUNK = 400;
+  for (let i = 0; i < variantList.length; i += CHUNK) {
+    const chunk = variantList.slice(i, i + CHUNK);
+    const [{ data: leads }, { data: clients }] = await Promise.all([
+      supabase
+        .from("leads")
+        .select("id, full_name, phone")
+        .eq("account_id", accountId)
+        .in("phone", chunk),
+      supabase
+        .from("clients")
+        .select("id, name, phone_e164")
+        .eq("account_id", accountId)
+        .in("phone_e164", chunk),
+    ]);
     for (const l of leads || []) {
       const key = phoneCoreKey(l.phone);
       if (key && !leadIndex.has(key)) leadIndex.set(key, l);
     }
-
-    const { data: clients } = await supabase
-      .from("clients")
-      .select("id, name, phone_e164")
-      .eq("account_id", accountId)
-      .in("phone_e164", uniqueVariants);
     for (const cl of clients || []) {
       const key = phoneCoreKey(cl.phone_e164);
       if (key && !clientIndex.has(key)) clientIndex.set(key, cl);
     }
   }
+
 
   // Última negociação de cada lead encontrado
   const leadIds = Array.from(new Set(Array.from(leadIndex.values()).map((l) => l.id)));
