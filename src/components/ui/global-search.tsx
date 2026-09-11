@@ -553,7 +553,21 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     return () => {
       clearTimeout(timer);
     };
-  }, [query, canViewClients, canViewLeads, canViewSales, canViewEvents, canViewCollaborators]);
+  }, [
+    query,
+    canViewClients,
+    canViewLeads,
+    canViewSales,
+    canViewEvents,
+    canViewCollaborators,
+    canViewRh,
+    canViewTasks,
+    canViewProducts,
+    canViewFinancial,
+    canViewMarketing,
+    canViewTeam,
+    canViewContracts,
+  ]);
 
 
   const filteredResults = useMemo(
