@@ -82,6 +82,70 @@ function stripAccents(s: string): string {
   return s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 }
 
+function phoneKey(phone: any): string {
+  const digits = String(phone || "").replace(/\D/g, "");
+  return digits.length >= 8 ? digits.slice(-8) : "";
+}
+
+/**
+ * Casa as ligações vindas da 3C com o registro local criado pelo click2call
+ * (metadata.source = click2call_api, ainda sem call_id) e promove esse registro
+ * a ligação definitiva — evita duplicidade na timeline.
+ * Depois disso, o upsert por (account_id, call_id) atualiza a MESMA linha.
+ */
+async function claimLocalPlaceholders(supabaseAdmin: any, accountId: string, rows: any[]) {
+  const outbound = rows.filter((r) => r.direction === "outbound" && r.started_at);
+  if (outbound.length === 0) return;
+
+  const oldest = outbound.reduce(
+    (min: string, r: any) => (r.started_at < min ? r.started_at : min),
+    outbound[0].started_at,
+  );
+  const since = new Date(new Date(oldest).getTime() - 10 * 60_000).toISOString();
+
+  const { data: placeholders } = await supabaseAdmin
+    .from("threecplus_call_logs")
+    .select("id, phone, user_id, started_at, metadata, call_id")
+    .eq("account_id", accountId)
+    .gte("started_at", since)
+    .or("call_id.is.null,call_id.eq.")
+    .limit(1000);
+
+  const pool = (placeholders || []).filter(
+    (p: any) => (p.metadata?.source ?? "click2call_api") === "click2call_api" && !p.call_id,
+  );
+  if (pool.length === 0) return;
+
+  const used = new Set<string>();
+  for (const row of rows) {
+    if (!row.started_at || row.direction !== "outbound") continue;
+    const key = phoneKey(row.phone);
+    if (!key) continue;
+    const ts = new Date(row.started_at).getTime();
+
+    let best: any = null;
+    let bestDiff = Infinity;
+    for (const p of pool) {
+      if (used.has(p.id)) continue;
+      if (phoneKey(p.phone) !== key) continue;
+      if (row.user_id && p.user_id && row.user_id !== p.user_id) continue;
+      const diff = Math.abs(new Date(p.started_at).getTime() - ts);
+      if (diff <= 180_000 && diff < bestDiff) {
+        best = p;
+        bestDiff = diff;
+      }
+    }
+    if (!best) continue;
+    used.add(best.id);
+
+    const { error } = await supabaseAdmin
+      .from("threecplus_call_logs")
+      .update({ call_id: row.call_id })
+      .eq("id", best.id);
+    if (error) console.warn("[threecplus-sync-calls] claim placeholder falhou:", error.message);
+  }
+}
+
 function dedupeRows(rows: any[]): any[] {
   const seen = new Map<string, any>();
   for (const row of rows) {
