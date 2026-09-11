@@ -66,6 +66,7 @@ export function dedupeCalls<T extends ConversationCall>(calls: T[]): T[] {
     if (c.call_id) return true;
     return !synced.some(
       (s) =>
+        (s.engine || "3cplus") === (c.engine || "3cplus") &&
         digits(s.phone) === digits(c.phone) &&
         (!s.user_id || !c.user_id || s.user_id === c.user_id) &&
         Math.abs(ts(s) - ts(c)) <= 180_000,
