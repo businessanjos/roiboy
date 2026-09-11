@@ -195,6 +195,20 @@ export function ZappChatView({
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
 
+  // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
+  const oldestMessageAt = useMemo(() => {
+    const first = messages[0];
+    return first?.created_at ?? null;
+  }, [messages]);
+
+  const { calls: conversationCalls } = useConversationCalls({
+    phone: contactInfo.phone,
+    sinceISO: oldestMessageAt,
+    enabled: !contactInfo.isGroup,
+  });
+
+
+
   // Compute search matches
   const searchMatchIds = useMemo(() => {
     if (!searchQuery.trim()) return [];
