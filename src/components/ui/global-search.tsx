@@ -20,6 +20,7 @@ import {
   UserSearch,
   Building2,
   UserCog,
+  MessageCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -140,6 +141,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const canViewFinancial = hasSectorAccess("financeiro");
   const canViewMarketing = hasSectorAccess("marketing");
   const canViewTeam = hasPermission(PERMISSIONS.TEAM_VIEW);
+  // Conversas do ROY zAPP: só os setores que o usuário pode enxergar.
+  const zappSectorIds = useMemo(
+    () =>
+      hasSectorAccess("royzapp")
+        ? sectors
+            .filter((s) => !s.comingSoon && s.id !== "royzapp" && hasSectorAccess(s.id))
+            .map((s) => s.id as string)
+        : [],
+    [hasSectorAccess],
+  );
+  const zappSectorKey = zappSectorIds.join("|");
   const canViewContracts = canViewClients;
 
   const filteredPages = useMemo(() => {
@@ -166,7 +178,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       return;
     }
 
-    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}`;
+    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}|${zappSectorKey}`;
     const cached = resultCache.get(cacheKey);
     if (cached) {
       setRemote(cached);
@@ -536,6 +548,43 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         );
       }
 
+      if (zappSectorIds.length > 0) {
+        const zappFilters = [
+          `contact_name.ilike.${like}`,
+          `last_message_preview.ilike.${like}`,
+        ];
+        if (phoneLike) zappFilters.push(`phone_e164.ilike.${phoneLike}`);
+        const sectorNames = new Map(sectors.map((s) => [s.id as string, s.name]));
+        tasks.push(
+          supabase
+            .from("zapp_conversations")
+            .select("id, contact_name, phone_e164, sector_id, last_message_preview, last_message_at, is_group")
+            .in("sector_id", zappSectorIds)
+            .or(zappFilters.join(","))
+            .order("last_message_at", { ascending: false, nullsFirst: false })
+            .limit(8)
+            .then(({ data }) =>
+              (data || []).map((c) => ({
+                id: `zapp:${c.id}`,
+                title: c.contact_name || c.phone_e164,
+                description:
+                  [
+                    c.is_group ? "Grupo" : c.phone_e164,
+                    c.last_message_preview,
+                    c.last_message_at
+                      ? new Date(c.last_message_at).toLocaleDateString("pt-BR")
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Conversa",
+                group: `Conversas · ${sectorNames.get(c.sector_id || "") || "ROY zAPP"}`,
+                href: `/roy-zapp?sector=${c.sector_id || ""}&conversation=${c.id}`,
+                icon: <MessageCircle className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
       const settled = await Promise.all(
         tasks.map((t) => Promise.resolve(t).catch(() => [] as SearchResult[])),
       );
@@ -567,6 +616,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     canViewMarketing,
     canViewTeam,
     canViewContracts,
+    zappSectorKey,
+    zappSectorIds,
   ]);
 
 
