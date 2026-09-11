@@ -139,7 +139,7 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
   let query = supabase
     .from("threecplus_call_logs")
     .select(
-      "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, metadata, user_id, agent_external_id, lead_id, deal_id, client_id, activity_id",
+      "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, metadata, user_id, agent_external_id, lead_id, deal_id, client_id, activity_id, engine",
     )
     .eq("account_id", accountId)
     .is("activity_id", null)
