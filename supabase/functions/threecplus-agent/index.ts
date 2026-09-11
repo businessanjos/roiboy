@@ -7,6 +7,7 @@ import {
   getBaseDomain,
   mentionsAgentIdHeader,
   resolveAgentAuth,
+  setContextManagerToken,
   with3cContext,
 } from "../_shared/threecplus.ts";
 
@@ -112,14 +113,8 @@ function getWebphoneNotReadyMessage() {
   return "O ramal WebRTC abriu, mas ainda não foi registrado na 3C Plus. Aguarde alguns segundos e tente novamente.";
 }
 
-let runtimeManagerToken: string | null = null;
-let runtimeAgentId: string | null = null;
-
 async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
-  return fetchThreeCAgentRuntimeForUser(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken, {
-    managerToken: runtimeManagerToken,
-    agentId: runtimeAgentId,
-  });
+  return fetchThreeCAgentRuntimeForUser(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken);
 }
 
 async function waitForWebphoneRegistration(apiBase: string, apiToken: string, timeoutMs = 12000) {
@@ -716,8 +711,7 @@ Deno.serve((req) => with3cContext(async () => {
     const apiBase = `${baseDomain}/api/v1`;
     const agentApiToken = auth.personalToken;
     const effectiveApiToken = auth.apiToken;
-    runtimeManagerToken = auth.managerServiceToken ?? null;
-    runtimeAgentId = auth.agentId ?? null;
+    setContextManagerToken(auth.managerServiceToken);
 
     // Return connection info
     if (action === "get_connection_info") {

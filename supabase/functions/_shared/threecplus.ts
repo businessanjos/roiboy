@@ -211,11 +211,13 @@ export async function fetchThreeCAgentRuntimeForUser(
   options?: { managerToken?: string | null; agentId?: string | null },
 ): Promise<ThreeCAgentRuntime> {
   const runtime = await fetchThreeCAgentRuntime(baseDomain, apiToken);
-  if (!options?.managerToken || !options.agentId || runtime.agent_http_status === 200) return runtime;
+  const managerToken = options?.managerToken ?? contextManagerToken();
+  const agentId = options?.agentId ?? contextAgentId();
+  if (!managerToken || !agentId || runtime.agent_http_status === 200) return runtime;
 
   try {
     const response = await fetch(`${getBaseDomain(baseDomain)}/api/v1/agents/status`, {
-      headers: { Accept: "application/json", Authorization: `Bearer ${options.managerToken}` },
+      headers: { Accept: "application/json", Authorization: `Bearer ${managerToken}` },
     });
     const text = await response.text();
     const payload = parseJsonBody(text);
@@ -228,7 +230,7 @@ export async function fetchThreeCAgentRuntimeForUser(
       : Array.isArray(root?.data) ? root.data : root ? [root] : [];
     const row = candidates.find((item) => {
       const record = asObject(item);
-      return record?.id != null && String(record.id) === String(options.agentId);
+      return record?.id != null && String(record.id) === String(agentId);
     });
     if (!row) return runtime;
 
@@ -402,11 +404,11 @@ export async function resolveAgentIdByToken(
 
 import { AsyncLocalStorage } from "node:async_hooks";
 
-const AGENT_CONTEXT = new AsyncLocalStorage<{ agentId: string | null }>();
+const AGENT_CONTEXT = new AsyncLocalStorage<{ agentId: string | null; managerToken: string | null }>();
 
 /** Envolve o handler da edge function para isolar o agente daquela requisição. */
 export function with3cContext<T>(fn: () => Promise<T> | T): Promise<T> | T {
-  return AGENT_CONTEXT.run({ agentId: null }, fn as () => T);
+  return AGENT_CONTEXT.run({ agentId: null, managerToken: null }, fn as () => T);
 }
 
 export function setContextAgentId(agentId: unknown) {
@@ -417,6 +419,16 @@ export function setContextAgentId(agentId: unknown) {
 
 export function contextAgentId(): string | null {
   return AGENT_CONTEXT.getStore()?.agentId ?? null;
+}
+
+export function setContextManagerToken(token: unknown) {
+  const store = AGENT_CONTEXT.getStore();
+  if (!store) return;
+  store.managerToken = typeof token === "string" && token.trim() ? token.trim() : null;
+}
+
+export function contextManagerToken(): string | null {
+  return AGENT_CONTEXT.getStore()?.managerToken ?? null;
 }
 
 export const SERVICE_TOKEN_MISSING_AGENT_MESSAGE =
