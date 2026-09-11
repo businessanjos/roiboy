@@ -63,6 +63,7 @@ interface ZappChatHeaderProps {
   onDismissConversation?: () => void;
   onOpenEditGroup?: () => void;
   onCall?: () => void;
+  callInProgress?: boolean;
   onToggleSearch?: () => void;
   onOpenMediaGallery?: () => void;
   /** Abre o CRM da conversa já no formulário de criação de negócio. */
@@ -99,6 +100,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onDismissConversation,
   onOpenEditGroup,
   onCall,
+  callInProgress = false,
   onToggleSearch,
   onOpenMediaGallery,
   onOpenCreateDeal,
@@ -306,8 +308,10 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               size="icon" 
               className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
               onClick={onCall}
+              disabled={callInProgress}
+              aria-label={callInProgress ? "Discando…" : "Ligar via 3C Plus"}
             >
-              <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+              {callInProgress ? <span className="text-xs">Discando…</span> : <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
             </Button>
             {onOpenCreateDeal && (
               <Button
@@ -359,9 +363,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall}>
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall} disabled={callInProgress}>
                     <Phone className="h-4 w-4 mr-2" />
-                    Ligar
+                    {callInProgress ? "Discando…" : "Ligar"}
                   </DropdownMenuItem>
                   {onOpenCreateDeal && (
                     <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onOpenCreateDeal}>

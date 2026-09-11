@@ -10,6 +10,7 @@ import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
 import { useConversationCalls } from "@/hooks/useConversationCalls";
+import { threeCDialPhone } from "@/lib/phoneNormalize";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -195,6 +196,7 @@ export function ZappChatView({
   const [searchQuery, setSearchQuery] = useState("");
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
+  const [callInProgress, setCallInProgress] = useState(false);
 
   // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
   const oldestMessageAt = useMemo(() => {
@@ -275,13 +277,27 @@ export function ZappChatView({
   // 3C Plus call handler
   const handleCall = useCallback(async () => {
     const phone = contactInfo.phone;
-    if (!phone) {
-      toast.error("Número de telefone não disponível");
+    const dialPhone = threeCDialPhone(phone);
+    if (!dialPhone) {
+      toast.error(`Número inválido: ${phone || "vazio"}`);
       return;
     }
+    window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
+      id: `optimistic-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
+      contact_name: contactInfo.name || null, direction: "outbound", status: "dialing",
+      duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
+      user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
+      recording_url: null,
+    }}));
+    setCallInProgress(true);
     try {
+      const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
-        body: { phone, contact_name: contactInfo.name },
+        body: {
+          phone: dialPhone,
+          contact_name: contactInfo.name,
+          runtime_proof: cached && Date.now() - cached.polledAt < 20_000 ? cached.proof : null,
+        },
       });
       if (error) {
         toast.error("Erro ao iniciar chamada", { description: "Não foi possível conectar ao serviço de chamadas." });
@@ -292,7 +308,7 @@ export function ZappChatView({
         return;
       }
       if (data?.success) {
-        toast.success("Chamada iniciada no 3C Plus", { description: `Ligando para ${contactInfo.name}...` });
+        toast.success("Discando…", { description: `Ligando para ${contactInfo.name}...` });
         return;
       }
       if (["AGENT_NOT_IDLE", "AGENT_OFFLINE", "AGENT_ON_BREAK", "MANUAL_NOT_ALLOWED"].includes(data?.code)) {
@@ -304,6 +320,8 @@ export function ZappChatView({
     } catch (err) {
       console.error("[ZappChatView] 3C Plus call error:", err);
       toast.error("Erro ao iniciar chamada");
+    } finally {
+      setCallInProgress(false);
     }
   }, [contactInfo.phone, contactInfo.name]);
 
@@ -368,6 +386,7 @@ export function ZappChatView({
         onOpenEditGroup={onOpenEditGroup}
         accountId={accountId}
         onCall={handleCall}
+        callInProgress={callInProgress}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
         onOpenCreateDeal={onOpenCreateDeal}

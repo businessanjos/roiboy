@@ -12,6 +12,15 @@ interface AgentRuntime {
   manual_mode?: boolean;
   agent_status?: string | null;
   normalized_status?: "offline" | "idle" | "on_call" | "break" | "manual" | "unknown";
+  campaign_id?: string | null;
+  campaign_name?: string | null;
+  manual_campaign?: boolean;
+}
+
+declare global {
+  interface Window {
+    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number; proof: string };
+  }
 }
 
 interface ConnectionInfo {
@@ -54,6 +63,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [domain, setDomain] = useState("https://eternumentoringclub1.3c.plus");
   const [status, setStatus] = useState<DialerStatus>("offline");
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
     const { data, error } = await supabase.functions.invoke("threecplus-agent", { body: { action } });
@@ -64,7 +74,12 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const refreshStatus = useCallback(async () => {
     try {
       const data = await invokeAgent("get_runtime");
-      if (data?.success) setStatus(mapRuntimeStatus(data.runtime));
+      if (data?.success) {
+        setStatus(mapRuntimeStatus(data.runtime));
+        if (data.runtime_proof) {
+          window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
+        }
+      }
       else setStatus("offline");
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
@@ -85,6 +100,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         ]);
         if (!active) return;
         setHasExtension(Boolean(extensionData?.success && extensionData?.extension));
+        agentIdRef.current = typeof (connectionData as ConnectionInfo & { agent_id?: string }).agent_id === "string"
+          ? (connectionData as ConnectionInfo & { agent_id?: string }).agent_id ?? null
+          : null;
         if (connectionData?.success) setDomain(normalizeDomain(connectionData.domain));
         if (extensionData?.success && extensionData?.extension) await refreshStatus();
         else setLoadingStatus(false);

@@ -18,6 +18,7 @@ import {
   setContextAgentId,
   with3cContext,
 } from "../_shared/threecplus.ts";
+import { threeCDialPhone } from "../_shared/phone-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -447,7 +448,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
         call_id: String(callId),
         call_type: String(call?.mode || "dialer"),
         direction: isInbound ? "inbound" : "outbound",
-        phone: call?.number ? String(call.number) : null,
+        phone: call?.number ? (threeCDialPhone(String(call.number)) ?? String(call.number).replace(/\D/g, "")) : null,
         contact_name: call?.receptive_name || null,
         campaign_id: call?.campaign_id != null ? String(call.campaign_id) : null,
         campaign_name: call?.campaign || null,
@@ -571,7 +572,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
             call_id: String(callId),
             call_type: String(call?.mode || "dialer"),
             direction: isInbound ? "inbound" : "outbound",
-            phone: call?.number ? String(call.number) : null,
+            phone: call?.number ? (threeCDialPhone(String(call.number)) ?? String(call.number).replace(/\D/g, "")) : null,
             contact_name: call?.receptive_name || null,
             campaign_id: call?.campaign_id != null ? String(call.campaign_id) : null,
             campaign_name: call?.campaign || null,

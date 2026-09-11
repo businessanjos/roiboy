@@ -4,7 +4,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { dedupeCalls, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 
 const CALL_SELECT =
-  "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, created_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, activity_id, recording_url, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)";
+  "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, created_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, activity_id, recording_url, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)";
 
 /** Últimos 8 dígitos — casamento tolerante a DDI/DDD/formatação. */
 function last8(phone?: string | null) {
@@ -79,6 +79,17 @@ export function useConversationCalls({ phone, sinceISO, enabled = true }: Option
       void supabase.removeChannel(channel);
     };
   }, [accountId, key, enabled, load]);
+
+  useEffect(() => {
+    if (!enabled || !key) return;
+    const onOptimisticCall = (event: Event) => {
+      const detail = (event as CustomEvent<ConversationCall>).detail;
+      if (!detail || last8(detail.phone) !== key) return;
+      setCalls((previous) => dedupeCalls([...previous.filter((call) => call.id !== detail.id), detail]));
+    };
+    window.addEventListener("threecplus:optimistic-call", onOptimisticCall);
+    return () => window.removeEventListener("threecplus:optimistic-call", onOptimisticCall);
+  }, [enabled, key]);
 
   return { calls, reloadCalls: load };
 }

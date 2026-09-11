@@ -32,6 +32,7 @@ interface TranscriptRow {
   temperature: string | null;
   last_error: string | null;
   recording_url: string | null;
+  metadata: Record<string, any> | null;
 }
 
 interface CallRow {
@@ -100,7 +101,7 @@ export function ThreeCPlusCallsList() {
       supabase
         .from("threecplus_call_logs")
         .select(
-          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
         )
         .eq("account_id", currentUser.account_id)
         .gte("started_at", since)
@@ -282,6 +283,9 @@ export function ThreeCPlusCallsList() {
                     </p>
                     {t?.summary?.resumo && (
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{t.summary.resumo}</p>
+                    )}
+                    {call.status === "failed" && call.metadata?.threec_error && (
+                      <p className="mt-1 text-xs text-destructive">{String(call.metadata.threec_error)}</p>
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">

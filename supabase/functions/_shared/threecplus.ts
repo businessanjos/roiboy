@@ -67,7 +67,58 @@ export type ThreeCAgentRuntime = {
   agent_http_status: number | null;
   campaign_http_status: number | null;
   webphone_registered: boolean;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  manual_campaign: boolean;
 };
+
+async function runtimeProofKey(): Promise<CryptoKey> {
+  const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+}
+
+function bytesToBase64(bytes: Uint8Array): string {
+  let binary = "";
+  for (const byte of bytes) binary += String.fromCharCode(byte);
+  return btoa(binary);
+}
+
+function base64ToBytes(value: string): Uint8Array {
+  return Uint8Array.from(atob(value), (char) => char.charCodeAt(0));
+}
+
+export async function createThreeCRuntimeProof(agentId: string, runtime: ThreeCAgentRuntime) {
+  const payload = JSON.stringify({ agent_id: agentId, polled_at: new Date().toISOString(), runtime });
+  const payloadBytes = new TextEncoder().encode(payload);
+  const signature = await crypto.subtle.sign("HMAC", await runtimeProofKey(), payloadBytes);
+  return `${bytesToBase64(payloadBytes)}.${bytesToBase64(new Uint8Array(signature))}`;
+}
+
+export async function verifyThreeCRuntimeProof(proof: unknown, expectedAgentId: string | null) {
+  if (typeof proof !== "string" || !expectedAgentId) return null;
+  const [payloadPart, signaturePart] = proof.split(".");
+  if (!payloadPart || !signaturePart) return null;
+  try {
+    const payloadBytes = base64ToBytes(payloadPart);
+    const signature = base64ToBytes(signaturePart);
+    const valid = await crypto.subtle.verify("HMAC", await runtimeProofKey(), signature, payloadBytes);
+    if (!valid) return null;
+    const payload = new TextDecoder().decode(payloadBytes);
+    const parsed = JSON.parse(payload);
+    if (String(parsed.agent_id || "") !== expectedAgentId) return null;
+    const age = Date.now() - new Date(parsed.polled_at).getTime();
+    if (!Number.isFinite(age) || age < 0 || age > 20_000) return null;
+    return parsed.runtime as ThreeCAgentRuntime;
+  } catch {
+    return null;
+  }
+}
 
 function asObject(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
@@ -151,6 +202,9 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
     agent_http_status: null,
     campaign_http_status: null,
     webphone_registered: false,
+    campaign_id: null,
+    campaign_name: null,
+    manual_campaign: false,
   };
 
   let agentOk = false;
@@ -187,6 +241,13 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
       console.log("[threecplus-runtime] GET logged campaign:", JSON.stringify({ path, status: response.status }));
       if (response.ok) {
         runtime.logged_campaign = true;
+        const campaign = asObject(payload);
+        const campaignData = asObject(campaign?.data) ?? campaign;
+        runtime.campaign_id = campaignData?.id != null ? String(campaignData.id) : null;
+        runtime.campaign_name = typeof campaignData?.name === "string"
+          ? campaignData.name
+          : typeof campaignData?.campaign === "string" ? campaignData.campaign : null;
+        runtime.manual_campaign = /manual|prospec[cç][aã]o/i.test(runtime.campaign_name ?? "");
         break;
       }
       if (response.status !== 404) break;
