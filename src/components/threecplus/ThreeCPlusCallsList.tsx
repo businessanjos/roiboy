@@ -135,20 +135,20 @@ export function ThreeCPlusCallsList() {
       if (outcome === "unlinked" && (c.lead_id || c.deal_id || c.client_id)) return false;
       if (outcome !== "all" && outcome !== "unlinked" && outcomeOf(c) !== outcome) return false;
       if (temperature !== "all" && (t?.temperature || "") !== temperature) return false;
+      if (engine !== "all" && (c.engine || "3cplus") !== engine) return false;
       return true;
     });
-  }, [calls, seller, outcome, temperature]);
+  }, [calls, seller, outcome, temperature, engine]);
 
   const counters = useMemo(() => {
     const answered = calls.filter((c) => (c.duration_seconds || 0) > 0).length;
     const transcribed = calls.filter(
       (c) => c.threecplus_call_transcripts?.[0]?.status === "done",
     ).length;
-    const pending = calls.filter((c) =>
-      ["pending", "processing", "error"].includes(c.threecplus_call_transcripts?.[0]?.status || ""),
-    ).length;
     const unlinked = calls.filter((c) => !c.lead_id && !c.deal_id && !c.client_id).length;
-    return { answered, transcribed, pending, unlinked };
+    const threeC = calls.filter((c) => (c.engine || "3cplus") === "3cplus").length;
+    const ryka = calls.filter((c) => c.engine === "ryka_call").length;
+    return { answered, transcribed, unlinked, threeC, ryka };
   }, [calls]);
 
   const transcribeNow = async (call: CallRow, force: boolean) => {
