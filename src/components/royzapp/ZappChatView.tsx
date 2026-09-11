@@ -11,6 +11,8 @@ import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
 import { useConversationCalls } from "@/hooks/useConversationCalls";
 import { threeCDialPhone } from "@/lib/phoneNormalize";
+import { useCallEngines } from "@/hooks/useCallEngines";
+import { dialWithRyka, getLastEngine, setLastEngine, type CallEngine } from "@/lib/telephony/callEngines";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -334,7 +336,7 @@ export function ZappChatView({
     } finally {
       setCallInProgress(false);
     }
-  }, [contactInfo.phone, contactInfo.name]);
+  }, [contactInfo.phone, contactInfo.name, callEngines]);
 
   if (!selectedConversation) {
     return (
@@ -398,6 +400,7 @@ export function ZappChatView({
         accountId={accountId}
         onCall={handleCall}
         callInProgress={callInProgress}
+        callEngines={callEngines.length > 0 ? callEngines : ["3cplus"]}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
         onOpenCreateDeal={onOpenCreateDeal}
