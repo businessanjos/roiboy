@@ -110,7 +110,12 @@ export function ZappMessagesList({
   isLoadingOlderMessages = false,
   isLoadingMessages = false,
   onLoadOlderMessages,
+  calls,
 }: ZappMessagesListProps) {
+  const sortedCalls = useMemo(
+    () => [...(calls || [])].sort((a, b) => callTs(a) - callTs(b)),
+    [calls],
+  );
   const viewportRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   // Guarda a altura do scroll antes de carregar histórico, para manter a
