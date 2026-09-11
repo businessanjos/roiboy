@@ -62,8 +62,10 @@ interface ZappChatHeaderProps {
   onDeleteConversation?: () => void;
   onDismissConversation?: () => void;
   onOpenEditGroup?: () => void;
-  onCall?: () => void;
+  onCall?: (engine?: "3cplus" | "ryka_call") => void;
   callInProgress?: boolean;
+  /** Motores de ligação configurados na conta (mostra menu quando há mais de um). */
+  callEngines?: Array<"3cplus" | "ryka_call">;
   onToggleSearch?: () => void;
   onOpenMediaGallery?: () => void;
   /** Abre o CRM da conversa já no formulário de criação de negócio. */
@@ -101,6 +103,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   onOpenEditGroup,
   onCall,
   callInProgress = false,
+  callEngines = ["3cplus"],
   onToggleSearch,
   onOpenMediaGallery,
   onOpenCreateDeal,
