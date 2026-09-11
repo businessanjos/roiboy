@@ -123,6 +123,21 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [refreshStatus]);
 
+  // Escala o conteúdo da 3C para caber na largura atual do painel.
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const update = () => {
+      const width = el.clientWidth;
+      if (!width) return;
+      setScale(Math.min(1, Math.max(0.4, width / BASE_WIDTH)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isOpen, expanded]);
+
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
 
