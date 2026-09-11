@@ -219,5 +219,28 @@ export async function persistRykaCall(
     console.warn("[ryka-call] process-calls invoke failed:", String(error));
   }
 
-  return { call_log_id: logId, updated: true };
+  // Fecha o ciclo no cadastro do lead: temperatura, última interação e tarefa de follow-up.
+  let taskId: string | null = null;
+  try {
+    const { data: fresh } = await supabase
+      .from("threecplus_call_logs")
+      .select(
+        "id, call_id, phone, contact_name, started_at, created_at, lead_id, deal_id, client_id, user_id, activity_id, metadata, followup_task_id",
+      )
+      .eq("id", logId)
+      .maybeSingle();
+    if (fresh) {
+      const insights = await applyCallInsights(supabase, {
+        accountId,
+        call: fresh,
+        summary: summaryFromRykaPostCall(call?.post_call),
+        engineLabel: "Call Ryka",
+      });
+      taskId = insights.task_id;
+    }
+  } catch (error) {
+    console.warn("[ryka-call] follow-up failed:", String(error));
+  }
+
+  return { call_log_id: logId, updated: true, task_id: taskId };
 }
