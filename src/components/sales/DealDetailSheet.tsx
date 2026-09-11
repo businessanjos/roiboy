@@ -1912,8 +1912,17 @@ export function DealDetailSheet({
                                         )}
                                       </>
                                     )}
+                                    {/* Gravação da ligação (3C Plus) */}
+                                    {activity.file_url && activity.type === 'call' && (
+                                      <audio
+                                        controls
+                                        preload="none"
+                                        src={activity.file_url}
+                                        className="mt-2 w-full max-w-[320px] h-9"
+                                      />
+                                    )}
                                     {/* File attachment display */}
-                                    {activity.file_url && (
+                                    {activity.file_url && activity.type !== 'call' && (
                                       <div className="mt-2">
                                         {activity.type === 'image' ? (
                                           <div className="relative group/img">
