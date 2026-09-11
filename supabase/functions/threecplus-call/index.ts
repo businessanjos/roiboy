@@ -8,6 +8,7 @@ import {
   mentionsAgentIdHeader,
   persistAgentLink,
   resolveAgentAuth,
+  verifyThreeCRuntimeProof,
   with3cContext,
 } from "../_shared/threecplus.ts";
 import { threeCDialPhone } from "../_shared/phone-normalize.ts";
@@ -51,41 +52,25 @@ function sanitizeResponse(text: string): string {
   return String(text || "").replace(/3cs_[A-Za-z0-9._-]+/g, "[token]").slice(0, 2000);
 }
 
-function validRuntimeSnapshot(value: unknown, expectedAgentId: string | null) {
-  if (!value || typeof value !== "object") return null;
-  const runtime = value as Record<string, unknown>;
-  const polledAt = typeof runtime.polled_at === "string" ? new Date(runtime.polled_at).getTime() : NaN;
-  if (!Number.isFinite(polledAt) || Math.abs(Date.now() - polledAt) > 20_000) return null;
-  if (!expectedAgentId || String(runtime.agent_id || "") !== expectedAgentId) return null;
-  const normalized = String(runtime.normalized_status || "");
-  if (!["offline", "idle", "on_call", "break", "manual", "unknown"].includes(normalized)) return null;
-  return {
-    logged_campaign: runtime.logged_campaign === true,
-    has_active_call: runtime.has_active_call === true,
-    manual_mode: runtime.manual_mode === true || normalized === "manual",
-    agent_status: typeof runtime.agent_status === "string" ? runtime.agent_status : null,
-    normalized_status: normalized,
-    agent_http_status: null,
-    campaign_http_status: null,
-    webphone_registered: runtime.webphone_registered === true,
-    campaign_id: runtime.campaign_id != null ? String(runtime.campaign_id) : null,
-    campaign_name: typeof runtime.campaign_name === "string" ? runtime.campaign_name : null,
-    manual_campaign: runtime.manual_campaign === true || /manual|prospec[cç][aã]o/i.test(String(runtime.campaign_name || "")),
-    source: "recent_dialer_poll",
-  };
-}
-
 async function postToAgentEndpoint(
   baseDomain: string,
   agentApiToken: string,
   path: string,
   body?: Record<string, unknown>,
 ) {
-  return fetch3c(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
+  const request = () => fetch3c(`${baseDomain}/api/v1${path}?api_token=${agentApiToken}`, {
     method: "POST",
     headers: { "Content-Type": "application/json", Accept: "application/json" },
+    signal: AbortSignal.timeout(4_000),
     ...(body ? { body: JSON.stringify(body) } : {}),
   });
+  try {
+    const response = await request();
+    if (response.status < 500) return response;
+  } catch (error) {
+    console.warn(`[threecplus-call] ${path} timeout/network failure; retrying once`, error);
+  }
+  return request();
 }
 
 async function createCallLog(
@@ -192,7 +177,7 @@ Deno.serve((req) => with3cContext(async () => {
         .catch((error) => console.warn("[threecplus-call] background agent/connect failed:", error)));
     }
 
-    const runtime = validRuntimeSnapshot(body.runtime_snapshot, auth.agentId) ?? await fetchThreeCAgentRuntimeForUser(
+    const runtime = await verifyThreeCRuntimeProof(body.runtime_proof, auth.agentId) ?? await fetchThreeCAgentRuntimeForUser(
       auth.baseDomain,
       auth.apiToken,
       { managerToken: auth.managerServiceToken, agentId: auth.agentId },

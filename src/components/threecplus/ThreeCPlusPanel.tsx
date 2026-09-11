@@ -19,7 +19,7 @@ interface AgentRuntime {
 
 declare global {
   interface Window {
-    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number; agentId: string };
+    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number; proof: string };
   }
 }
 
@@ -76,8 +76,8 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
         setStatus(mapRuntimeStatus(data.runtime));
-        if (agentIdRef.current) {
-          window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), agentId: agentIdRef.current };
+        if (data.runtime_proof) {
+          window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
         }
       }
       else setStatus("offline");

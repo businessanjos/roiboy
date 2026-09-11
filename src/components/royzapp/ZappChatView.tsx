@@ -296,9 +296,7 @@ export function ZappChatView({
         body: {
           phone: dialPhone,
           contact_name: contactInfo.name,
-          runtime_snapshot: cached && Date.now() - cached.polledAt < 20_000
-            ? { ...cached.runtime, agent_id: cached.agentId, polled_at: new Date(cached.polledAt).toISOString() }
-            : null,
+          runtime_proof: cached && Date.now() - cached.polledAt < 20_000 ? cached.proof : null,
         },
       });
       if (error) {

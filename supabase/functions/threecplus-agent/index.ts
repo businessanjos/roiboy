@@ -1,6 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
+  createThreeCRuntimeProof,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
   fetchThreeCAgentRuntimeForUser,
@@ -768,7 +769,8 @@ Deno.serve((req) => with3cContext(async () => {
 
     if (action === "get_runtime") {
       const runtime = await fetchAgentRuntimeState(apiBase, effectiveApiToken);
-      return new Response(JSON.stringify({ success: true, runtime }),
+      const runtime_proof = auth.agentId ? await createThreeCRuntimeProof(auth.agentId, runtime) : null;
+      return new Response(JSON.stringify({ success: true, runtime, runtime_proof }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 

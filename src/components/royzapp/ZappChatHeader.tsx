@@ -363,9 +363,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall}>
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall} disabled={callInProgress}>
                     <Phone className="h-4 w-4 mr-2" />
-                    Ligar
+                    {callInProgress ? "Discando…" : "Ligar"}
                   </DropdownMenuItem>
                   {onOpenCreateDeal && (
                     <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onOpenCreateDeal}>

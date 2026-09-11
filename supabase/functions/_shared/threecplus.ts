@@ -72,6 +72,42 @@ export type ThreeCAgentRuntime = {
   manual_campaign: boolean;
 };
 
+async function runtimeProofKey(): Promise<CryptoKey> {
+  const secret = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  return crypto.subtle.importKey(
+    "raw",
+    new TextEncoder().encode(secret),
+    { name: "HMAC", hash: "SHA-256" },
+    false,
+    ["sign", "verify"],
+  );
+}
+
+export async function createThreeCRuntimeProof(agentId: string, runtime: ThreeCAgentRuntime) {
+  const payload = JSON.stringify({ agent_id: agentId, polled_at: new Date().toISOString(), runtime });
+  const signature = await crypto.subtle.sign("HMAC", await runtimeProofKey(), new TextEncoder().encode(payload));
+  return `${btoa(payload)}.${btoa(String.fromCharCode(...new Uint8Array(signature)))}`;
+}
+
+export async function verifyThreeCRuntimeProof(proof: unknown, expectedAgentId: string | null) {
+  if (typeof proof !== "string" || !expectedAgentId) return null;
+  const [payloadPart, signaturePart] = proof.split(".");
+  if (!payloadPart || !signaturePart) return null;
+  try {
+    const payload = atob(payloadPart);
+    const signature = Uint8Array.from(atob(signaturePart), (char) => char.charCodeAt(0));
+    const valid = await crypto.subtle.verify("HMAC", await runtimeProofKey(), signature, new TextEncoder().encode(payload));
+    if (!valid) return null;
+    const parsed = JSON.parse(payload);
+    if (String(parsed.agent_id || "") !== expectedAgentId) return null;
+    const age = Date.now() - new Date(parsed.polled_at).getTime();
+    if (!Number.isFinite(age) || age < 0 || age > 20_000) return null;
+    return parsed.runtime as ThreeCAgentRuntime;
+  } catch {
+    return null;
+  }
+}
+
 function asObject(value: unknown): Record<string, unknown> | null {
   return value && typeof value === "object" && !Array.isArray(value)
     ? value as Record<string, unknown>
