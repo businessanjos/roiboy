@@ -6,6 +6,7 @@
 //   {}              -> processa o lote pendente (cron a cada 10 min)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getBaseDomain } from "../_shared/threecplus.ts";
+import { applyCallInsights } from "../_shared/call-followups.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -312,7 +313,7 @@ async function processItem(supabase: any, apiKey: string, item: any) {
   try {
     const { data: call } = await supabase
       .from("threecplus_call_logs")
-      .select("id, call_id, phone, contact_name, duration_seconds, agent_name, activity_id, deal_id, recording_url, account_id")
+      .select("id, call_id, phone, contact_name, duration_seconds, agent_name, activity_id, deal_id, lead_id, client_id, user_id, started_at, created_at, metadata, followup_task_id, recording_url, account_id")
       .eq("id", item.call_log_id)
       .maybeSingle();
     if (!call) return await fail("Ligação não encontrada");
