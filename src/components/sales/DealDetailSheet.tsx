@@ -96,6 +96,7 @@ import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
+import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
@@ -228,6 +229,8 @@ export function DealDetailSheet({
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeDetailTab, setActiveDetailTab] = useState("history");
   const [activities, setActivities] = useState<DealActivity[]>([]);
+  const [dealCalls, setDealCalls] = useState<ConversationCall[]>([]);
+
   const [tasks, setTasks] = useState<DealTask[]>([]);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -393,7 +396,31 @@ export function DealDetailSheet({
   
   const { isAdmin } = usePermissions();
 
+  // Ligações da 3C desta negociação (para reaproveitar o mesmo evento do RoyZapp).
   useEffect(() => {
+    if (!deal?.id || !open) {
+      setDealCalls([]);
+      return;
+    }
+    let cancelled = false;
+    (async () => {
+      const { data } = await supabase
+        .from("threecplus_call_logs")
+        .select(
+          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, created_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, activity_id, recording_url, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+        )
+        .eq("deal_id", deal.id)
+        .order("started_at", { ascending: false })
+        .limit(100);
+      if (!cancelled) setDealCalls((data as unknown as ConversationCall[]) || []);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [deal?.id, open]);
+
+  useEffect(() => {
+
     if (deal?.id && open) {
       fetchActivities();
       fetchCurrentUser();
@@ -1913,14 +1940,27 @@ export function DealDetailSheet({
                                       </>
                                     )}
                                     {/* Gravação da ligação (3C Plus) */}
-                                    {activity.file_url && activity.type === 'call' && (
-                                      <audio
-                                        controls
-                                        preload="none"
-                                        src={activity.file_url}
-                                        className="mt-2 w-full max-w-[320px] h-9"
-                                      />
-                                    )}
+                                    {activity.type === 'call' && (() => {
+                                      const linkedCall = dealCalls.find((c) => c.activity_id === activity.id);
+                                      if (linkedCall) {
+                                        return (
+                                          <CallTimelineEvent
+                                            key={linkedCall.id}
+                                            call={linkedCall}
+                                            className="justify-start px-0"
+                                          />
+                                        );
+                                      }
+                                      return activity.file_url ? (
+                                        <audio
+                                          controls
+                                          preload="none"
+                                          src={activity.file_url}
+                                          className="mt-2 w-full max-w-[320px] h-9"
+                                        />
+                                      ) : null;
+                                    })()}
+
                                     {/* File attachment display */}
                                     {activity.file_url && activity.type !== 'call' && (
                                       <div className="mt-2">

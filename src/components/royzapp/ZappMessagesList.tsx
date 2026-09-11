@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
+import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
+
+const callTs = (c: ConversationCall) =>
+  new Date(c.started_at || c.created_at || 0).getTime();
+
 
 
 
@@ -42,6 +47,8 @@ interface ZappMessagesListProps {
   isLoadingOlderMessages?: boolean;
   /** Carrega o bloco anterior do histórico. */
   onLoadOlderMessages?: () => void;
+  /** Ligações da 3C do contato, intercaladas cronologicamente no histórico. */
+  calls?: ConversationCall[];
 }
 
 // Build a fallback mention map from sender_phone data in group messages
@@ -103,7 +110,12 @@ export function ZappMessagesList({
   isLoadingOlderMessages = false,
   isLoadingMessages = false,
   onLoadOlderMessages,
+  calls,
 }: ZappMessagesListProps) {
+  const sortedCalls = useMemo(
+    () => [...(calls || [])].sort((a, b) => callTs(a) - callTs(b)),
+    [calls],
+  );
   const viewportRef = useRef<HTMLDivElement>(null);
   const topSentinelRef = useRef<HTMLDivElement>(null);
   // Guarda a altura do scroll antes de carregar histórico, para manter a
@@ -538,8 +550,18 @@ export function ZappMessagesList({
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
+              const msgTs = new Date(message.created_at).getTime();
+              const prevTs = prev ? new Date(prev.created_at).getTime() : -Infinity;
+              const callsBefore = sortedCalls.filter((c) => {
+                const ts = callTs(c);
+                return ts > prevTs && ts <= msgTs;
+              });
+
               return (
                 <div key={message.id} data-index={index} data-msg-id={message.id} className="w-full min-w-0">
+                  {callsBefore.map((call) => (
+                    <CallTimelineEvent key={`call-${call.id}`} call={call} />
+                  ))}
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -556,6 +578,14 @@ export function ZappMessagesList({
                 </div>
               );
             })}
+            {(() => {
+              const lastMsg = enrichedMessages[enrichedMessages.length - 1];
+              const lastTs = lastMsg ? new Date(lastMsg.created_at).getTime() : -Infinity;
+              return sortedCalls
+                .filter((c) => callTs(c) > lastTs)
+                .map((call) => <CallTimelineEvent key={`call-${call.id}`} call={call} />);
+            })()}
+
           </div>
         )}
 

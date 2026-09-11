@@ -9,6 +9,7 @@ import { ZappMediaGallery } from "./ZappMediaGallery";
 import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
+import { useConversationCalls } from "@/hooks/useConversationCalls";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -195,6 +196,20 @@ export function ZappChatView({
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
 
+  // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
+  const oldestMessageAt = useMemo(() => {
+    const first = messages[0];
+    return first?.created_at ?? null;
+  }, [messages]);
+
+  const { calls: conversationCalls } = useConversationCalls({
+    phone: contactInfo.phone,
+    sinceISO: oldestMessageAt,
+    enabled: !contactInfo.isGroup,
+  });
+
+
+
   // Compute search matches
   const searchMatchIds = useMemo(() => {
     if (!searchQuery.trim()) return [];
@@ -374,6 +389,7 @@ export function ZappChatView({
 
       {/* Messages */}
       <ZappMessagesList 
+        calls={conversationCalls}
         messages={messages} 
         conversationId={selectedConversation?.zapp_conversation_id ?? selectedConversation?.id ?? null}
         hasMoreMessages={hasMoreMessages}
