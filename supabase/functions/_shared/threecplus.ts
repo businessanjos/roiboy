@@ -184,6 +184,7 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
         headers: { Accept: "application/json" },
       });
       runtime.campaign_http_status = response.status;
+      console.log("[threecplus-runtime] GET logged campaign:", JSON.stringify({ path, status: response.status }));
       if (response.ok) {
         runtime.logged_campaign = true;
         break;
@@ -195,7 +196,7 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
     }
   }
 
-  if (agentOk && runtime.logged_campaign && runtime.normalized_status === "unknown") {
+  if (runtime.logged_campaign && (runtime.normalized_status === "unknown" || (!agentOk && !runtime.agent_status))) {
     runtime.normalized_status = "idle";
   } else if (runtime.normalized_status === "unknown") {
     runtime.normalized_status = "offline";
