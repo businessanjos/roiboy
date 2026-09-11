@@ -319,6 +319,223 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         );
       }
 
+      if (canViewTasks) {
+        tasks.push(
+          supabase
+            .from("internal_tasks")
+            .select("id, title, description, status, due_date")
+            .or(`title.ilike.${like},description.ilike.${like}`)
+            .order("due_date", { ascending: false, nullsFirst: false })
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((t) => ({
+                id: `task:${t.id}`,
+                title: t.title,
+                description:
+                  [
+                    t.status,
+                    t.due_date ? new Date(t.due_date).toLocaleDateString("pt-BR") : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Tarefa",
+                group: "Tarefas",
+                href: `/tasks?task=${t.id}`,
+                icon: <CheckSquare className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewProducts) {
+        tasks.push(
+          supabase
+            .from("products")
+            .select("id, name, description, price, is_active")
+            .or(`name.ilike.${like},description.ilike.${like}`)
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((p) => ({
+                id: `product:${p.id}`,
+                title: p.name,
+                description:
+                  [
+                    p.price
+                      ? p.price.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                      : null,
+                    p.is_active ? "Ativo" : "Inativo",
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Produto",
+                group: "Produtos",
+                href: `/products?product=${p.id}`,
+                icon: <Package className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewContracts) {
+        tasks.push(
+          supabase
+            .from("client_contracts")
+            .select("id, client_id, status, value, start_date, clients!inner(full_name)")
+            .ilike("clients.full_name", like)
+            .order("start_date", { ascending: false })
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((c: Record<string, unknown>) => ({
+                id: `contract:${c.id as string}`,
+                title: `Contrato · ${(c.clients as { full_name?: string })?.full_name ?? ""}`,
+                description:
+                  [
+                    c.status as string,
+                    typeof c.value === "number"
+                      ? c.value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                      : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Contrato",
+                group: "Contratos",
+                href: `/clients/${c.client_id as string}?tab=contracts`,
+                icon: <FileText className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewEvents) {
+        tasks.push(
+          supabase
+            .from("event_suppliers")
+            .select("id, name, nome_fantasia, category, city")
+            .or(`name.ilike.${like},nome_fantasia.ilike.${like},contact_name.ilike.${like}`)
+            .limit(4)
+            .then(({ data }) =>
+              (data || []).map((s) => ({
+                id: `supplier:${s.id}`,
+                title: s.name,
+                description:
+                  [s.nome_fantasia, s.category, s.city].filter(Boolean).join(" · ") ||
+                  "Fornecedor",
+                group: "Fornecedores",
+                href: `/events/suppliers?supplier=${s.id}`,
+                icon: <Truck className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewFinancial) {
+        tasks.push(
+          supabase
+            .from("financial_entries")
+            .select("id, description, amount, entry_type, due_date, document_number")
+            .or(`description.ilike.${like},document_number.ilike.${like}`)
+            .order("due_date", { ascending: false })
+            .limit(5)
+            .then(({ data }) =>
+              (data || []).map((e) => ({
+                id: `entry:${e.id}`,
+                title: e.description,
+                description:
+                  [
+                    e.entry_type === "income" ? "Receita" : "Despesa",
+                    typeof e.amount === "number"
+                      ? e.amount.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                      : null,
+                    e.due_date ? new Date(e.due_date).toLocaleDateString("pt-BR") : null,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ") || "Lançamento",
+                group: "Financeiro",
+                href: `/financial/entries?entry=${e.id}`,
+                icon: <Wallet className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewMarketing) {
+        tasks.push(
+          supabase
+            .from("marketing_projects")
+            .select("id, name, description, status")
+            .or(`name.ilike.${like},description.ilike.${like}`)
+            .limit(4)
+            .then(({ data }) =>
+              (data || []).map((p) => ({
+                id: `mkproject:${p.id}`,
+                title: p.name,
+                description: [p.status, p.description].filter(Boolean).join(" · ") || "Projeto",
+                group: "Projetos",
+                href: `/marketing/projetos/${p.id}`,
+                icon: <FolderKanban className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewRh) {
+        tasks.push(
+          supabase
+            .from("hr_service_providers")
+            .select("id, full_name, company_name, position, provider_kind")
+            .or(`full_name.ilike.${like},company_name.ilike.${like},email.ilike.${like}`)
+            .limit(4)
+            .then(({ data }) =>
+              (data || []).map((p) => ({
+                id: `provider:${p.id}`,
+                title: p.full_name,
+                description:
+                  [p.company_name, p.position].filter(Boolean).join(" · ") || "Prestador",
+                group: "Prestadores",
+                href: `/rh/service-providers/${p.id}`,
+                icon: <Building2 className="h-4 w-4" />,
+              })),
+            ),
+        );
+
+        tasks.push(
+          supabase
+            .from("hr_jobs")
+            .select("id, title, position, department, status")
+            .or(`title.ilike.${like},position.ilike.${like},department.ilike.${like}`)
+            .limit(4)
+            .then(({ data }) =>
+              (data || []).map((j) => ({
+                id: `job:${j.id}`,
+                title: j.title,
+                description:
+                  [j.department, j.status].filter(Boolean).join(" · ") || "Vaga",
+                group: "Vagas",
+                href: `/rh/vacancies/${j.id}`,
+                icon: <UserSearch className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
+      if (canViewTeam) {
+        tasks.push(
+          supabase
+            .from("users")
+            .select("id, name, email, role, is_active")
+            .or(`name.ilike.${like},email.ilike.${like}`)
+            .eq("is_active", true)
+            .limit(4)
+            .then(({ data }) =>
+              (data || []).map((u) => ({
+                id: `user:${u.id}`,
+                title: u.name || u.email,
+                description: [u.role, u.email].filter(Boolean).join(" · ") || "Equipe",
+                group: "Equipe",
+                href: `/settings?tab=team&user=${u.id}`,
+                icon: <UserCog className="h-4 w-4" />,
+              })),
+            ),
+        );
+      }
+
       const settled = await Promise.all(
         tasks.map((t) => Promise.resolve(t).catch(() => [] as SearchResult[])),
       );
