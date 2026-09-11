@@ -101,7 +101,7 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
 import { MergeDealDialog } from "./MergeDealDialog";
-import { ThreeCPlusCallButton } from "./ThreeCPlusCallButton";
+import { CallEngineButton } from "./CallEngineButton";
 import { DealRulerButton } from "./DealRulerButton";
 import { useDealMerge } from "@/hooks/useDealMerge";
 import { DEAL_FIELD_IDS } from "@/utils/dealToClientContractMapping";
@@ -1117,7 +1117,7 @@ export function DealDetailSheet({
                         {contactPhone}
                         <Copy className="h-3 w-3 opacity-60" />
                       </button>
-                      <ThreeCPlusCallButton contactPhone={contactPhone} contactName={contactName} />
+                      <CallEngineButton contactPhone={contactPhone} contactName={contactName} dealId={deal?.id ?? null} />
                     </>
                   )}
                 </div>

@@ -51,9 +51,15 @@ interface CallRow {
   deal_id: string | null;
   client_id: string | null;
   recording_url: string | null;
+  engine?: string | null;
   metadata: Record<string, any> | null;
   threecplus_call_transcripts: TranscriptRow[] | null;
 }
+
+const ENGINE_LABELS: Record<string, string> = {
+  "3cplus": "3C Plus",
+  ryka_call: "Call Ryka",
+};
 
 const PERIODS = [
   { value: "7", label: "Últimos 7 dias" },
@@ -91,6 +97,7 @@ export function ThreeCPlusCallsList() {
   const [seller, setSeller] = useState("all");
   const [outcome, setOutcome] = useState("all");
   const [temperature, setTemperature] = useState("all");
+  const [engine, setEngine] = useState("all");
   const [selected, setSelected] = useState<CallRow | null>(null);
   const [working, setWorking] = useState<string | null>(null);
 
@@ -102,7 +109,7 @@ export function ThreeCPlusCallsList() {
       supabase
         .from("threecplus_call_logs")
         .select(
-          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
         )
         .eq("account_id", currentUser.account_id)
         .gte("started_at", since)
@@ -128,20 +135,20 @@ export function ThreeCPlusCallsList() {
       if (outcome === "unlinked" && (c.lead_id || c.deal_id || c.client_id)) return false;
       if (outcome !== "all" && outcome !== "unlinked" && outcomeOf(c) !== outcome) return false;
       if (temperature !== "all" && (t?.temperature || "") !== temperature) return false;
+      if (engine !== "all" && (c.engine || "3cplus") !== engine) return false;
       return true;
     });
-  }, [calls, seller, outcome, temperature]);
+  }, [calls, seller, outcome, temperature, engine]);
 
   const counters = useMemo(() => {
     const answered = calls.filter((c) => (c.duration_seconds || 0) > 0).length;
     const transcribed = calls.filter(
       (c) => c.threecplus_call_transcripts?.[0]?.status === "done",
     ).length;
-    const pending = calls.filter((c) =>
-      ["pending", "processing", "error"].includes(c.threecplus_call_transcripts?.[0]?.status || ""),
-    ).length;
     const unlinked = calls.filter((c) => !c.lead_id && !c.deal_id && !c.client_id).length;
-    return { answered, transcribed, pending, unlinked };
+    const threeC = calls.filter((c) => (c.engine || "3cplus") === "3cplus").length;
+    const ryka = calls.filter((c) => c.engine === "ryka_call").length;
+    return { answered, transcribed, unlinked, threeC, ryka };
   }, [calls]);
 
   const transcribeNow = async (call: CallRow, force: boolean) => {
@@ -202,11 +209,12 @@ export function ThreeCPlusCallsList() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-5">
           {[
             { label: "Atendidas", value: counters.answered },
             { label: "Transcritas", value: counters.transcribed },
-            { label: "Na fila", value: counters.pending },
+            { label: "3C Plus", value: counters.threeC },
+            { label: "Call Ryka", value: counters.ryka },
             { label: "Sem contato", value: counters.unlinked },
           ].map((c) => (
             <div key={c.label} className="rounded-lg border border-border px-3 py-2">
@@ -254,6 +262,14 @@ export function ThreeCPlusCallsList() {
               <SelectItem value="frio">Frio</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={engine} onValueChange={setEngine}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os motores</SelectItem>
+              <SelectItem value="3cplus">3C Plus</SelectItem>
+              <SelectItem value="ryka_call">Call Ryka</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -290,6 +306,7 @@ export function ThreeCPlusCallsList() {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{ENGINE_LABELS[call.engine || "3cplus"]}</Badge>
                     <Badge variant="outline">{outcomeOf(call)}</Badge>
                     {t?.temperature && (
                       <Badge className={TEMP_COLORS[t.temperature] || ""} variant="secondary">

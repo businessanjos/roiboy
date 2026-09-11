@@ -11,6 +11,8 @@ import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
 import { useConversationCalls } from "@/hooks/useConversationCalls";
 import { threeCDialPhone } from "@/lib/phoneNormalize";
+import { useCallEngines } from "@/hooks/useCallEngines";
+import { dialWithRyka, getLastEngine, setLastEngine, type CallEngine } from "@/lib/telephony/callEngines";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -197,6 +199,7 @@ export function ZappChatView({
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [callInProgress, setCallInProgress] = useState(false);
+  const { engines: callEngines } = useCallEngines();
 
   // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
   const oldestMessageAt = useMemo(() => {
@@ -274,14 +277,25 @@ export function ZappChatView({
   }, [onMessageChange, dismissSuggestions, messageInputRef]);
 
 
-  // 3C Plus call handler
-  const handleCall = useCallback(async () => {
+  // Ligação: 3C Plus ou Call Ryka (WhatsApp)
+  const handleCall = useCallback(async (engine?: CallEngine) => {
     const phone = contactInfo.phone;
     const dialPhone = threeCDialPhone(phone);
     if (!dialPhone) {
       toast.error(`Número inválido: ${phone || "vazio"}`);
       return;
     }
+    const chosen: CallEngine = engine || getLastEngine() || callEngines[0] || "3cplus";
+    setLastEngine(chosen);
+
+    if (chosen === "ryka_call") {
+      setCallInProgress(true);
+      const result = await dialWithRyka({ phone: dialPhone, contact_name: contactInfo.name });
+      setCallInProgress(false);
+      if (!result.ok) toast.error(result.error || "Não foi possível abrir o Call Ryka.");
+      return;
+    }
+
     setCallInProgress(true);
     try {
       const cached = window.__threeCPlusRuntime;
@@ -323,7 +337,7 @@ export function ZappChatView({
     } finally {
       setCallInProgress(false);
     }
-  }, [contactInfo.phone, contactInfo.name]);
+  }, [contactInfo.phone, contactInfo.name, callEngines]);
 
   if (!selectedConversation) {
     return (
@@ -387,6 +401,7 @@ export function ZappChatView({
         accountId={accountId}
         onCall={handleCall}
         callInProgress={callInProgress}
+        callEngines={callEngines.length > 0 ? callEngines : ["3cplus"]}
         onToggleSearch={() => setShowSearch(s => !s)}
         onOpenMediaGallery={() => setShowMediaGallery(true)}
         onOpenCreateDeal={onOpenCreateDeal}

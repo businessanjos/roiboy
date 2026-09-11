@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PlanLimitsProvider } from "@/hooks/usePlanLimits";
 import { NotificationsProvider } from "@/hooks/useNotifications";
 import { ThreeCPlusPanel } from "@/components/threecplus/ThreeCPlusPanel";
+import { CallRykaPanel } from "@/components/telephony/CallRykaPanel";
 import { useSector } from "@/contexts/SectorContext";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery } from "@tanstack/react-query";
@@ -188,6 +189,7 @@ export function AppLayout() {
           {/* Aviso de nova versão é renderizado globalmente em App.tsx */}
 
           <ThreeCPlusPanel visible={showThreeCPlus} />
+          <CallRykaPanel />
         </div>
       </NotificationsProvider>
     </PlanLimitsProvider>

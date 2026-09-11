@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send, MessageCircle } from "lucide-react";
 import { McpConnectionTab } from "./McpConnectionTab";
 import { TrafficHubTab } from "./TrafficHubTab";
 import {
@@ -25,6 +25,7 @@ import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusConnectionCard } from "./ThreeCPlusConnectionCard";
 import { ThreeCPlusAgentsTable } from "./ThreeCPlusAgentsTable";
 import { ThreeCPlusCallsSyncCard } from "./ThreeCPlusCallsSyncCard";
+import { CallRykaConnectionCard } from "./CallRykaConnectionCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
@@ -46,6 +47,7 @@ const integrations_list = [
   { id: "zoom", name: "Zoom", description: "Capture presença e interações de reuniões", icon: Video },
   { id: "google", name: "Google Meet", description: "Capture presença de reuniões do Google Meet", icon: Calendar },
   { id: "3cplus", name: "3C Plus", description: "Plataforma de telefonia cloud para call center", icon: Phone },
+  { id: "ryka_call", name: "Call Ryka", description: "Motor de ligação via WhatsApp", icon: Phone },
   { id: "mcp", name: "Assistente IA no Claude", description: "Conecte o Claude Desktop aos dados do ROY", icon: Bot },
 ];
 
@@ -498,6 +500,10 @@ export function IntegrationsContent() {
               <Phone className="h-4 w-4" />
               <span>3C Plus</span>
             </TabsTrigger>
+            <TabsTrigger value="ryka_call" className="gap-2 px-3 py-2">
+              <MessageCircle className="h-4 w-4" />
+              <span>Call Ryka</span>
+            </TabsTrigger>
             <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
@@ -819,6 +825,11 @@ export function IntegrationsContent() {
         </TabsContent>
 
 
+
+        {/* Call Ryka Tab */}
+        <TabsContent value="ryka_call" className="space-y-4">
+          <CallRykaConnectionCard onChanged={fetchIntegrations} />
+        </TabsContent>
 
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">

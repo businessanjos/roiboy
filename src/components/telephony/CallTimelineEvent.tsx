@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, ExternalLink } from "lucide-react";
+import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, ExternalLink, MessageCircle } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -40,6 +40,8 @@ export interface ConversationCall {
   client_id: string | null;
   activity_id?: string | null;
   recording_url: string | null;
+  /** Motor usado: "3cplus" (padrão) ou "ryka_call" (Call Ryka via WhatsApp). */
+  engine?: string | null;
   metadata?: Record<string, unknown> | null;
   threecplus_call_transcripts?: CallTranscript[] | null;
 }
@@ -64,6 +66,7 @@ export function dedupeCalls<T extends ConversationCall>(calls: T[]): T[] {
     if (c.call_id) return true;
     return !synced.some(
       (s) =>
+        (s.engine || "3cplus") === (c.engine || "3cplus") &&
         digits(s.phone) === digits(c.phone) &&
         (!s.user_id || !c.user_id || s.user_id === c.user_id) &&
         Math.abs(ts(s) - ts(c)) <= 180_000,
@@ -116,7 +119,14 @@ export function CallTimelineEvent({
   const who = agentLabel || call.agent_name || null;
   const when = call.started_at || call.created_at;
   const time = when ? format(new Date(when), "HH:mm", { locale: ptBR }) : "";
-  const Icon = answered || isPendingCall(call) ? (out ? PhoneOutgoing : PhoneIncoming) : PhoneMissed;
+  const isRyka = call.engine === "ryka_call";
+  const Icon = isRyka
+    ? MessageCircle
+    : answered || isPendingCall(call)
+      ? out
+        ? PhoneOutgoing
+        : PhoneIncoming
+      : PhoneMissed;
   const summaryText: string | null = transcript?.summary?.resumo || null;
 
   const openDeal = () => {
@@ -145,7 +155,8 @@ export function CallTimelineEvent({
               {out ? "Ligação de saída" : "Ligação recebida"}
               {who ? ` · ${who}` : ""}
               {answered ? ` · ${fmtDuration(call.duration_seconds)}` : ""} · {outcome}
-              {pending ? " · aguardando dados da 3C" : ""}
+              {pending ? (isRyka ? " · aguardando dados do Call Ryka" : " · aguardando dados da 3C") : ""}
+              {isRyka ? " · Call Ryka" : ""}
             </span>
             {time && <span className="opacity-70">· {time}</span>}
             {call.deal_id && <ExternalLink className="h-3 w-3 opacity-60" />}

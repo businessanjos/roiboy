@@ -24427,7 +24427,10 @@ export type Database = {
           deal_id: string | null
           direction: string
           duration_seconds: number | null
+          end_reason: string | null
           ended_at: string | null
+          engine: string
+          external_ref: string | null
           id: string
           lead_id: string | null
           linked_at: string | null
@@ -24460,7 +24463,10 @@ export type Database = {
           deal_id?: string | null
           direction?: string
           duration_seconds?: number | null
+          end_reason?: string | null
           ended_at?: string | null
+          engine?: string
+          external_ref?: string | null
           id?: string
           lead_id?: string | null
           linked_at?: string | null
@@ -24493,7 +24499,10 @@ export type Database = {
           deal_id?: string | null
           direction?: string
           duration_seconds?: number | null
+          end_reason?: string | null
           ended_at?: string | null
+          engine?: string
+          external_ref?: string | null
           id?: string
           lead_id?: string | null
           linked_at?: string | null
