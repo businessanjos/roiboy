@@ -43,8 +43,36 @@ export interface ConversationCall {
   threecplus_call_transcripts?: CallTranscript[] | null;
 }
 
+/** Registro criado pelo ROY na discagem, ainda sem os dados da 3C. */
+export function isPendingCall(call: ConversationCall) {
+  return !call.call_id;
+}
+
+/**
+ * Remove o registro local do click2call quando a sync da 3C já trouxe a mesma
+ * ligação (mesmo telefone, mesmo usuário, até 3 min de diferença).
+ */
+export function dedupeCalls<T extends ConversationCall>(calls: T[]): T[] {
+  const synced = calls.filter((c) => !!c.call_id);
+  const digits = (p?: string | null) => {
+    const d = (p || "").replace(/\D/g, "");
+    return d.length >= 8 ? d.slice(-8) : "";
+  };
+  const ts = (c: ConversationCall) => new Date(c.started_at || c.created_at || 0).getTime();
+  return calls.filter((c) => {
+    if (c.call_id) return true;
+    return !synced.some(
+      (s) =>
+        digits(s.phone) === digits(c.phone) &&
+        (!s.user_id || !c.user_id || s.user_id === c.user_id) &&
+        Math.abs(ts(s) - ts(c)) <= 180_000,
+    );
+  });
+}
+
 export function callOutcome(call: ConversationCall) {
   const raw = (call.status || "").toLowerCase();
+  if (isPendingCall(call)) return "Ligação em andamento";
   if ((call.duration_seconds || 0) > 0) return "Atendida";
   if (raw.includes("caixa") || raw.includes("voicemail")) return "Caixa postal";
   if (raw.includes("ocupad") || raw.includes("busy")) return "Ocupado";
@@ -80,12 +108,13 @@ export function CallTimelineEvent({
   const [open, setOpen] = useState(false);
   const transcript = call.threecplus_call_transcripts?.[0];
   const outcome = callOutcome(call);
+  const pending = isPendingCall(call);
   const answered = outcome === "Atendida";
   const out = isOutbound(call);
   const who = agentLabel || call.agent_name || null;
   const when = call.started_at || call.created_at;
   const time = when ? format(new Date(when), "HH:mm", { locale: ptBR }) : "";
-  const Icon = answered ? (out ? PhoneOutgoing : PhoneIncoming) : PhoneMissed;
+  const Icon = answered || isPendingCall(call) ? (out ? PhoneOutgoing : PhoneIncoming) : PhoneMissed;
   const summaryText: string | null = transcript?.summary?.resumo || null;
 
   const openDeal = () => {
@@ -114,6 +143,7 @@ export function CallTimelineEvent({
               {out ? "Ligação de saída" : "Ligação recebida"}
               {who ? ` · ${who}` : ""}
               {answered ? ` · ${fmtDuration(call.duration_seconds)}` : ""} · {outcome}
+              {pending ? " · aguardando dados da 3C" : ""}
             </span>
             {time && <span className="opacity-70">· {time}</span>}
             {call.deal_id && <ExternalLink className="h-3 w-3 opacity-60" />}

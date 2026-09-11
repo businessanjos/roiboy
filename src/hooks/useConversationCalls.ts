@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import type { ConversationCall } from "@/components/telephony/CallTimelineEvent";
+import { dedupeCalls, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 
 const CALL_SELECT =
   "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, created_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, activity_id, recording_url, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)";
@@ -53,7 +53,7 @@ export function useConversationCalls({ phone, sinceISO, enabled = true }: Option
     const rows = ((data as unknown as ConversationCall[]) || []).filter(
       (c) => last8(c.phone) === key,
     );
-    setCalls(rows);
+    setCalls(dedupeCalls(rows));
   }, [accountId, key, since, enabled]);
 
   useEffect(() => {

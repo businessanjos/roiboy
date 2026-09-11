@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { supabase } from "@/integrations/supabase/client";
+import { dedupeCalls } from "@/components/telephony/CallTimelineEvent";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -72,6 +73,7 @@ function fmtDuration(seconds: number | null) {
 
 function outcomeOf(call: CallRow) {
   const raw = (call.status || "").toLowerCase();
+  if (!call.call_id) return "em andamento";
   if ((call.duration_seconds || 0) > 0) return "atendida";
   if (raw.includes("caixa") || raw.includes("voicemail")) return "caixa postal";
   if (raw.includes("ocupad") || raw.includes("busy")) return "ocupado";
@@ -106,7 +108,7 @@ export function ThreeCPlusCallsList() {
         .limit(400),
       supabase.from("users").select("id, name").eq("account_id", currentUser.account_id),
     ]);
-    setCalls((data as unknown as CallRow[]) || []);
+    setCalls(dedupeCalls((data as unknown as CallRow[]) || []) as CallRow[]);
     setUsers((userRows as { id: string; name: string }[]) || []);
     setLoading(false);
   }, [currentUser?.account_id, period]);
