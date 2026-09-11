@@ -161,6 +161,24 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
 
   return (
     <>
+      {visible && hasExtension && !isOpen && launcherHidden && (
+        <Button
+          type="button"
+          size="icon"
+          variant="secondary"
+          className="fixed bottom-20 right-4 z-50 h-10 w-10 rounded-full border border-border shadow-lg lg:bottom-6 lg:right-6"
+          onClick={() => {
+            setLauncherHidden(false);
+            setIsOpen(true);
+            void refreshStatus();
+          }}
+          aria-label="Abrir Discador 3C"
+          title="Abrir Discador 3C"
+        >
+          <Phone className="h-4 w-4 text-primary" />
+        </Button>
+      )}
+
       {visible && hasExtension && !isOpen && !launcherHidden && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button

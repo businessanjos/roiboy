@@ -41,6 +41,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
     }
 
     setCalling(true);
+    window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
     try {
       const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
