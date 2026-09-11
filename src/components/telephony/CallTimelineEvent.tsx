@@ -128,6 +128,9 @@ export function CallTimelineEvent({
         : PhoneIncoming
       : PhoneMissed;
   const summaryText: string | null = transcript?.summary?.resumo || null;
+  const followupTask = (call.metadata as any)?.followup_task as
+    | { id: string; title: string }
+    | undefined;
 
   const openDeal = () => {
     if (call.deal_id) window.open(`/sales?deal=${call.deal_id}`, "_blank");
