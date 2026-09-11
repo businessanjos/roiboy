@@ -280,7 +280,7 @@ export function ZappChatView({
         toast.success("Chamada iniciada no 3C Plus", { description: `Ligando para ${contactInfo.name}...` });
         return;
       }
-      if (["AGENT_NOT_IDLE", "AGENT_OFFLINE", "AGENT_ON_BREAK"].includes(data?.code)) {
+      if (["AGENT_NOT_IDLE", "AGENT_OFFLINE", "AGENT_ON_BREAK", "MANUAL_NOT_ALLOWED"].includes(data?.code)) {
         window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
         toast.error(data?.error || "Abra o Discador 3C e verifique seu estado antes de tentar novamente.");
         return;

@@ -56,6 +56,125 @@ export async function fetch3c(url: string, init?: RequestInit): Promise<Response
   return fetch(finalUrl, { ...init, headers });
 }
 
+export type ThreeCAgentStatus = "offline" | "idle" | "on_call" | "break" | "manual" | "unknown";
+
+export type ThreeCAgentRuntime = {
+  logged_campaign: boolean;
+  has_active_call: boolean;
+  manual_mode: boolean;
+  agent_status: string | null;
+  normalized_status: ThreeCAgentStatus;
+  agent_http_status: number | null;
+  campaign_http_status: number | null;
+};
+
+function asObject(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? value as Record<string, unknown>
+    : null;
+}
+
+function findStructuredAgentState(value: unknown, depth = 0): string | null {
+  if (depth > 5) return null;
+  const record = asObject(value);
+  if (!record) return null;
+  for (const key of ["status", "agent_status", "agentStatus", "state", "mode"]) {
+    const field = record[key];
+    if (typeof field === "string" && field.trim()) return field.trim().toLowerCase();
+  }
+  for (const key of ["data", "agent"]) {
+    const nested = findStructuredAgentState(record[key], depth + 1);
+    if (nested) return nested;
+  }
+  return null;
+}
+
+function hasStructuredCall(value: unknown, depth = 0): boolean {
+  if (depth > 5) return false;
+  const record = asObject(value);
+  if (!record) return false;
+  const call = asObject(record.call);
+  if (call && (call.id != null || call.call_id != null || call.phone != null || call.number != null)) return true;
+  if (record.call_id != null) return true;
+  return hasStructuredCall(record.data, depth + 1) || hasStructuredCall(record.agent, depth + 1);
+}
+
+function normalizeStructuredAgentState(raw: string | null, hasActiveCall: boolean): ThreeCAgentStatus {
+  if (hasActiveCall) return "on_call";
+  if (!raw) return "unknown";
+  const value = raw.replaceAll("-", "_").replaceAll(" ", "_");
+  const exact: Record<string, ThreeCAgentStatus> = {
+    idle: "idle", ocioso: "idle", available: "idle", disponivel: "idle", disponível: "idle", ready: "idle",
+    on_call: "on_call", in_call: "on_call", talking: "on_call", em_chamada: "on_call", dialing: "on_call",
+    manual: "manual", manual_call: "manual", manual_mode: "manual",
+    break: "break", pause: "break", pausa: "break", intervalo: "break", acw: "break", tpa: "break",
+    offline: "offline", logged_out: "offline", disconnected: "offline", desconectado: "offline",
+  };
+  return exact[value] ?? "unknown";
+}
+
+function parseJsonBody(text: string): unknown {
+  if (!text) return null;
+  try { return JSON.parse(text); } catch { return { non_json_body: text.slice(0, 1000) }; }
+}
+
+/** Fonte única do estado do agente para chamadas, painel e tabela administrativa. */
+export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: string): Promise<ThreeCAgentRuntime> {
+  const runtime: ThreeCAgentRuntime = {
+    logged_campaign: false,
+    has_active_call: false,
+    manual_mode: false,
+    agent_status: null,
+    normalized_status: "offline",
+    agent_http_status: null,
+    campaign_http_status: null,
+  };
+
+  let agentOk = false;
+  try {
+    const response = await fetch3c(`${getBaseDomain(baseDomain)}/api/v1/agent?api_token=${apiToken}`, {
+      method: "GET",
+      headers: { Accept: "application/json" },
+    });
+    const text = await response.text();
+    const payload = parseJsonBody(text);
+    runtime.agent_http_status = response.status;
+    agentOk = response.ok;
+    console.log("[threecplus-runtime] GET /api/v1/agent raw:", JSON.stringify({ status: response.status, json: payload }));
+    runtime.agent_status = findStructuredAgentState(payload);
+    runtime.has_active_call = hasStructuredCall(payload);
+    runtime.normalized_status = response.ok
+      ? normalizeStructuredAgentState(runtime.agent_status, runtime.has_active_call)
+      : "offline";
+    runtime.manual_mode = runtime.normalized_status === "manual";
+  } catch (error) {
+    console.error("[threecplus-runtime] GET /api/v1/agent failed:", error);
+  }
+
+  for (const path of ["/api/v1/campaigns/agent/loggedCampaign", "/api/v1/agent/loggedCampaign"]) {
+    try {
+      const response = await fetch3c(`${getBaseDomain(baseDomain)}${path}?api_token=${apiToken}`, {
+        method: "GET",
+        headers: { Accept: "application/json" },
+      });
+      runtime.campaign_http_status = response.status;
+      if (response.ok) {
+        runtime.logged_campaign = true;
+        break;
+      }
+      if (response.status !== 404) break;
+    } catch (error) {
+      console.error(`[threecplus-runtime] GET ${path} failed:`, error);
+      break;
+    }
+  }
+
+  if (agentOk && runtime.logged_campaign && runtime.normalized_status === "unknown") {
+    runtime.normalized_status = "idle";
+  }
+  return runtime;
+}
+
 /** Detecta erros da 3C que reclamam do header X-Agent-Id. */
 export function mentionsAgentIdHeader(...parts: Array<unknown>): boolean {
   return parts.some((part) => typeof part === "string" && /x-?agent-?id/i.test(part));

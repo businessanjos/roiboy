@@ -4,6 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   fetchAgentIdFromApi,
+  fetchThreeCAgentRuntime,
   fetch3c,
   findAgentByExtensionOrEmail,
   listThreeCAgents,
@@ -29,29 +30,6 @@ function getBaseDomain(domain: string | null): string {
   base = base.replace(/\/$/, "");
   if (!base.startsWith("http")) base = "https://" + base;
   return base;
-}
-
-function classifyAgentStatus(payload: unknown, responseOk: boolean) {
-  if (!responseOk) return "offline";
-  const extractState = (value: unknown, depth = 0): string | null => {
-    if (depth > 4 || !value || typeof value !== "object") return null;
-    const record = value as Record<string, unknown>;
-    for (const key of ["status", "state", "agent_status", "agentStatus", "mode"]) {
-      const current = record[key];
-      if (typeof current === "string" && current.trim()) return current.trim().toLowerCase();
-    }
-    for (const key of ["data", "agent", "call"]) {
-      const nested = extractState(record[key], depth + 1);
-      if (nested) return nested;
-    }
-    return null;
-  };
-  const normalized = extractState(payload) || "";
-  if (/in_call|on_call|talking|chamada|em chamada/.test(normalized)) return "on_call";
-  if (/intervalo|break|pause|pausa|acw|tpa/.test(normalized)) return "break";
-  if (/offline|logged_out|desconectado|disconnected/.test(normalized)) return "offline";
-  if (/idle|ocioso|available|dispon[ií]vel|ready/.test(normalized)) return "idle";
-  return "offline";
 }
 
 Deno.serve((req) => with3cContext(async () => {
@@ -242,14 +220,8 @@ Deno.serve((req) => with3cContext(async () => {
         if (!auth.apiToken || !auth.agentId) continue;
         setContextAgentId(auth.agentId);
         try {
-          const response = await fetch3c(`${auth.baseDomain}/api/v1/agent?api_token=${auth.apiToken}`, {
-            method: "GET",
-            headers: { Accept: "application/json" },
-          });
-          const text = await response.text();
-          let payload: unknown = text;
-          try { payload = JSON.parse(text); } catch { /* resposta textual da 3C */ }
-          statuses[target.id] = classifyAgentStatus(payload, response.ok);
+          const runtime = await fetchThreeCAgentRuntime(auth.baseDomain, auth.apiToken);
+          statuses[target.id] = runtime.normalized_status === "manual" ? "idle" : runtime.normalized_status;
         } catch {
           statuses[target.id] = "offline";
         }

@@ -3,6 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
+  fetchThreeCAgentRuntime,
   fetch3c,
   mentionsAgentIdHeader,
   persistAgentLink,
@@ -44,20 +45,6 @@ function isAgentNotIdle(status: number, text: string): boolean {
   return /n[ãa]o\s+est[áa]\s+ocioso/i.test(message);
 }
 
-function extractAgentState(value: unknown, depth = 0): string | null {
-  if (depth > 4 || !value || typeof value !== "object") return null;
-  const record = value as Record<string, unknown>;
-  for (const key of ["status", "state", "agent_status", "agentStatus", "mode"]) {
-    const current = record[key];
-    if (typeof current === "string" && current.trim()) return current.trim().toLowerCase();
-  }
-  for (const key of ["data", "agent", "call"]) {
-    const nested = extractAgentState(record[key], depth + 1);
-    if (nested) return nested;
-  }
-  return null;
-}
-
 async function postToAgentEndpoint(
   baseDomain: string,
   agentApiToken: string,
@@ -71,53 +58,9 @@ async function postToAgentEndpoint(
   });
 }
 
-async function getAgentRuntime(baseDomain: string, agentApiToken: string) {
-  const runtime = {
-    hasActiveCall: false,
-    manualMode: false,
-    loggedCampaign: false,
-    status: "offline" as "offline" | "idle" | "on_call" | "break" | "unknown",
-  };
-
-  try {
-    const agentRes = await fetch3c(`${baseDomain}/api/v1/agent?api_token=${agentApiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    const agentText = await agentRes.text();
-    let agentPayload: unknown = agentText;
-    try { agentPayload = JSON.parse(agentText); } catch { /* resposta textual */ }
-    const normalized = extractAgentState(agentPayload) || extractApiMessage(agentText, "").toLowerCase();
-    runtime.hasActiveCall = /in_call|on_call|talking|chamada|em chamada/.test(normalized);
-    runtime.manualMode = /manual/.test(normalized);
-    if (agentRes.ok) {
-      if (runtime.hasActiveCall) runtime.status = "on_call";
-      else if (/intervalo|break|pause|pausa|acw|tpa/.test(normalized)) runtime.status = "break";
-      else if (/offline|logged_out|desconectado|disconnected/.test(normalized)) runtime.status = "offline";
-      else if (/idle|ocioso|available|dispon[ií]vel|ready/.test(normalized)) runtime.status = "idle";
-      else runtime.status = "unknown";
-    }
-  } catch (err) {
-    console.warn("[threecplus-call] getAgentRuntime agent error:", err);
-  }
-
-  try {
-    const campaignRes = await fetch3c(`${baseDomain}/api/v1/campaigns/agent/loggedCampaign?api_token=${agentApiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    runtime.loggedCampaign = campaignRes.ok;
-    if (runtime.status === "unknown" && runtime.loggedCampaign && !runtime.hasActiveCall) runtime.status = "idle";
-  } catch (err) {
-    console.warn("[threecplus-call] getAgentRuntime campaign error:", err);
-  }
-
-  return runtime;
-}
-
 async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
-  const runtime = await getAgentRuntime(baseDomain, agentApiToken);
-  if (runtime.manualMode) {
+  const runtime = await fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+  if (runtime.manual_mode) {
     try {
       const response = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/manual_call/exit");
       const text = await response.text();
@@ -126,7 +69,17 @@ async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
       console.warn("[threecplus-call] cleanup manual_call/exit failed:", err);
     }
   }
-  return getAgentRuntime(baseDomain, agentApiToken);
+  return fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+}
+
+function isManualNotAllowed(status: number, text: string): boolean {
+  if (![400, 403, 409, 422].includes(status)) return false;
+  const message = extractApiMessage(text, "").toLowerCase();
+  return [
+    "manual call not allowed", "manual_call not allowed", "manual dialing not allowed",
+    "campanha não permite", "campanha nao permite", "discagem manual não permitida",
+    "discagem manual nao permitida", "modo manual não permitido", "modo manual nao permitido",
+  ].some((part) => message.includes(part));
 }
 
 async function logCall(
@@ -258,8 +211,8 @@ Deno.serve((req) => with3cContext(async () => {
 
 
     // Consulta o estado real antes de qualquer tentativa. Nunca conecta ou desloga automaticamente.
-    let runtime = await getAgentRuntime(baseDomain, agentApiToken);
-    if (runtime.status === "offline") {
+    let runtime = await fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+    if (runtime.normalized_status === "offline") {
       return new Response(JSON.stringify({
         success: false,
         code: "AGENT_OFFLINE",
@@ -267,7 +220,7 @@ Deno.serve((req) => with3cContext(async () => {
         runtime,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (runtime.status === "break") {
+    if (runtime.normalized_status === "break") {
       return new Response(JSON.stringify({
         success: false,
         code: "AGENT_ON_BREAK",
@@ -275,7 +228,7 @@ Deno.serve((req) => with3cContext(async () => {
         runtime,
       }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
-    if (runtime.status === "on_call" || runtime.status === "unknown") {
+    if (runtime.normalized_status === "on_call") {
       return new Response(JSON.stringify({
         success: false,
         code: "AGENT_NOT_IDLE",
@@ -327,6 +280,15 @@ Deno.serve((req) => with3cContext(async () => {
         manualModeAlreadyActive = true;
         console.log("[threecplus-call] Agent already in manual mode, dialing without enter");
         break;
+      }
+
+      if (isManualNotAllowed(enterRes.status, enterText)) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "MANUAL_NOT_ALLOWED",
+          error: "Sua campanha atual não permite ligação manual. No Discador 3C, entre na campanha Prospecção Manual.",
+          runtime,
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
 
       if (isAgentNotIdle(enterRes.status, enterText)) {
