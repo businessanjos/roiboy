@@ -235,6 +235,11 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
 
     const answered = (call.duration_seconds || 0) > 0;
     const outcome = callOutcome(call);
+    const isRyka = call.engine === "ryka_call";
+    const engineLabel = isRyka ? "Call Ryka" : "3C";
+    const activityTitle = answered
+      ? `Ligação atendida (${engineLabel})`
+      : `Ligação ${outcome} (${engineLabel})`;
 
     if (deal?.id) {
       // Idempotência por call_id: procura atividade já criada
@@ -250,11 +255,12 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
       let activityId = existing?.id || null;
       if (!activityId) {
         const lines = [
+          `Motor: ${engineLabel}`,
           `Resultado: ${outcome}`,
           `Direção: ${call.direction === "inbound" ? "recebida" : "realizada"}`,
           `Duração falada: ${fmtDuration(call.duration_seconds || 0)}`,
         ];
-        if (call.qualification_name) lines.push(`Qualificação 3C: ${call.qualification_name}`);
+        if (call.qualification_name) lines.push(`Qualificação: ${call.qualification_name}`);
         if (rec) lines.push(`Gravação: ${rec}`);
         lines.push(marker);
 
@@ -264,7 +270,7 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
             account_id: accountId,
             deal_id: deal.id,
             type: "call",
-            title: answered ? "Ligação atendida (3C)" : `Ligação ${outcome} (3C)`,
+            title: activityTitle,
             content: lines.join("\n"),
             user_id: userId,
             file_url: rec,
@@ -289,30 +295,53 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
       await supabase.from("threecplus_call_logs").update(patch).eq("id", call.id);
     }
 
-    // Atualiza a última interação quando atendida
-    if (answered && call.started_at) {
-      if (client?.id) {
-        await supabase
-          .from("clients")
-          .update({ last_contact_at: call.started_at })
-          .eq("id", client.id)
-          .or(`last_contact_at.is.null,last_contact_at.lt.${call.started_at}`);
-      }
-      if (lead?.id) {
+    // Linha do tempo do lead: TODA ligação (atendida ou não), idempotente por call_id.
+    if (lead?.id && call.call_id) {
+      const { data: already } = await supabase
+        .from("lead_timeline")
+        .select("id")
+        .eq("lead_id", lead.id)
+        .eq("event_type", "call")
+        .eq("metadata->>call_id", String(call.call_id))
+        .maybeSingle();
+      if (!already) {
         await supabase.from("lead_timeline").insert({
           account_id: accountId,
           lead_id: lead.id,
           event_type: "call",
-          title: answered ? "Ligação atendida (3C)" : `Ligação ${outcome} (3C)`,
+          title: activityTitle,
           description: `Ligação ${outcome} (${fmtDuration(call.duration_seconds || 0)})`,
           user_id: userId,
-          metadata: { call_id: call.call_id, source: "3cplus" },
+          created_at: call.started_at || new Date().toISOString(),
+          metadata: {
+            call_id: call.call_id,
+            call_log_id: call.id,
+            source: isRyka ? "ryka_call" : "3cplus",
+            deal_id: deal?.id || null,
+            activity_id: patch.activity_id || call.activity_id || null,
+          },
         });
       }
     }
 
-    // Fila de transcrição
-    if (answered && rec) {
+    // Última interação do cliente quando atendida
+    if (answered && call.started_at && client?.id) {
+      await supabase
+        .from("clients")
+        .update({ last_contact_at: call.started_at })
+        .eq("id", client.id)
+        .or(`last_contact_at.is.null,last_contact_at.lt.${call.started_at}`);
+    }
+    if (call.started_at && lead?.id) {
+      await supabase
+        .from("leads")
+        .update({ last_contact_at: call.started_at })
+        .eq("id", lead.id)
+        .or(`last_contact_at.is.null,last_contact_at.lt.${call.started_at}`);
+    }
+
+    // Fila de transcrição (só 3C: o Call Ryka já entrega transcrição e resumo)
+    if (answered && rec && !isRyka) {
       const { error: qErr } = await supabase.from("threecplus_call_transcripts").upsert(
         {
           account_id: accountId,
