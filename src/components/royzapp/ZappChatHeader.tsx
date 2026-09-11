@@ -306,16 +306,42 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               </Button>
             )}
 
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
-              onClick={onCall}
-              disabled={callInProgress}
-              aria-label={callInProgress ? "Discando…" : "Ligar via 3C Plus"}
-            >
-              {callInProgress ? <span className="text-xs">Discando…</span> : <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
-            </Button>
+            {callEngines.length > 1 ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                    disabled={callInProgress}
+                    aria-label={callInProgress ? "Discando…" : "Ligar"}
+                  >
+                    {callInProgress ? <span className="text-xs">Discando…</span> : <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => onCall?.("3cplus")}>
+                    <Phone className="h-4 w-4 mr-2" />
+                    3C Plus
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => onCall?.("ryka_call")}>
+                    <MessageCircle className="h-4 w-4 mr-2 text-emerald-500" />
+                    Call Ryka (WhatsApp)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                onClick={() => onCall?.(callEngines[0])}
+                disabled={callInProgress}
+                aria-label={callInProgress ? "Discando…" : "Ligar"}
+              >
+                {callInProgress ? <span className="text-xs">Discando…</span> : <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+              </Button>
+            )}
             {onOpenCreateDeal && (
               <Button
                 variant="ghost"
@@ -366,10 +392,27 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                     </DropdownMenuItem>
                   )}
 
-                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onCall} disabled={callInProgress}>
-                    <Phone className="h-4 w-4 mr-2" />
-                    {callInProgress ? "Discando…" : "Ligar"}
-                  </DropdownMenuItem>
+                  {callEngines.map((engine) => (
+                    <DropdownMenuItem
+                      key={engine}
+                      className="text-zapp-text hover:bg-zapp-hover"
+                      onClick={() => onCall?.(engine)}
+                      disabled={callInProgress}
+                    >
+                      {engine === "ryka_call" ? (
+                        <MessageCircle className="h-4 w-4 mr-2 text-emerald-500" />
+                      ) : (
+                        <Phone className="h-4 w-4 mr-2" />
+                      )}
+                      {callInProgress
+                        ? "Discando…"
+                        : callEngines.length > 1
+                          ? engine === "ryka_call"
+                            ? "Ligar via Call Ryka"
+                            : "Ligar via 3C Plus"
+                          : "Ligar"}
+                    </DropdownMenuItem>
+                  ))}
                   {onOpenCreateDeal && (
                     <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={onOpenCreateDeal}>
                       <Briefcase className="h-4 w-4 mr-2" />
