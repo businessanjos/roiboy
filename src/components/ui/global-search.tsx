@@ -11,6 +11,15 @@ import {
   CalendarDays,
   IdCard,
   Loader2,
+  CheckSquare,
+  Package,
+  FileText,
+  Truck,
+  Wallet,
+  FolderKanban,
+  UserSearch,
+  Building2,
+  UserCog,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
