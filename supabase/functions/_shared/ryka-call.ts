@@ -4,6 +4,8 @@
 //
 // A 3C Plus continua intacta: aqui só tratamos ligações com engine = "ryka_call".
 
+import { applyCallInsights, summaryFromRykaPostCall } from "./call-followups.ts";
+
 export const RYKA_BASE_URL = "https://callryka.com/api/public/v1";
 export const RYKA_ENGINE = "ryka_call";
 
@@ -101,16 +103,9 @@ function transcriptToText(entries: any): string | null {
 }
 
 function summaryFromPostCall(call: any): Record<string, unknown> | null {
-  const post = call?.post_call;
-  if (!post) return null;
-  if (typeof post === "string") return { resumo: post, fonte: "call_ryka" };
-  return {
-    resumo: post.summary || post.resumo || post.text || null,
-    dores: post.pains || post.dores || undefined,
-    objecoes: post.objections || post.objecoes || undefined,
-    proximos_passos: post.next_steps || post.proximos_passos || undefined,
-    fonte: "call_ryka",
-  };
+  const normalized = summaryFromRykaPostCall(call?.post_call);
+  if (!normalized) return null;
+  return { ...normalized, fonte: "call_ryka" };
 }
 
 /**
