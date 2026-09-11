@@ -371,7 +371,25 @@ async function processItem(supabase: any, apiKey: string, item: any) {
         .eq("id", call.activity_id);
     }
 
-    return { call_log_id: item.call_log_id, ok: true, temperature: summary?.temperatura || null };
+    // Fecha o ciclo: temperatura/última interação no lead + tarefa de follow-up.
+    let followup: any = null;
+    try {
+      followup = await applyCallInsights(supabase, {
+        accountId: item.account_id || call.account_id,
+        call,
+        summary,
+        engineLabel: "3C",
+      });
+    } catch (e) {
+      console.error("[threecplus-transcribe-call] follow-up:", String(e?.message || e));
+    }
+
+    return {
+      call_log_id: item.call_log_id,
+      ok: true,
+      temperature: summary?.temperatura || null,
+      task_id: followup?.task_id || null,
+    };
   } catch (err: any) {
     return await fail(String(err?.message || err));
   }
