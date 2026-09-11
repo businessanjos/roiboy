@@ -7,6 +7,7 @@ import {
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
 import { useMemo } from "react";
+import { scrollMainToTop } from "@/lib/navigation/scrollMain";
 
 interface NavItem {
   id: string;
@@ -89,6 +90,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
+    scrollMainToTop();
     onNavigate?.();
   };
 

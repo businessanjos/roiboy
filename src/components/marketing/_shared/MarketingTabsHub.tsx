@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import type { LucideIcon } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { scrollMainToTop } from "@/lib/navigation/scrollMain";
 
 export interface MarketingHubTab {
   value: string;
@@ -46,6 +47,7 @@ export function MarketingTabsHub({ tabs }: MarketingTabsHubProps) {
     const next = new URLSearchParams(searchParams);
     next.set("tab", value);
     setSearchParams(next, { replace: true });
+    scrollMainToTop();
   };
 
   return (

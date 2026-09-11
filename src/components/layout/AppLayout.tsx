@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
+import { MAIN_SCROLL_ID } from "@/lib/navigation/scrollMain";
 import { MobileAppHeader } from "./MobileAppHeader";
 import { MobileTabBar } from "./MobileTabBar";
 import { GlobalHeader } from "./GlobalHeader";
@@ -167,6 +168,7 @@ export function AppLayout() {
           <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden gap-4">
             <Sidebar />
             <main
+              id={MAIN_SCROLL_ID}
               className={
                 "flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain lg:pb-0 " +
                 (location.pathname.startsWith("/roy-zapp")

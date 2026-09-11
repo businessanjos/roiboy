@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Activity, Building2, Users,
   FileText, Cpu, ArrowLeft, Shield, KeyRound, ScanSearch,
 } from "lucide-react";
+import { scrollMainToTop } from "@/lib/navigation/scrollMain";
 
 interface NavItem {
   id: string;
@@ -47,6 +48,7 @@ export function AdminSidebarNav({ collapsed, onNavigate }: { collapsed: boolean;
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
+    scrollMainToTop();
     onNavigate?.();
   };
 

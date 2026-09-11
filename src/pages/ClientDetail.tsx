@@ -209,6 +209,23 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
+const CLIENT_SECTION_TITLES: Record<string, string> = {
+  "churn-signals": "Sinais de Churn",
+  agenda: "Agenda",
+  deals: "Negócios",
+  contracts: "Contratos",
+  subscriptions: "Financeiro",
+  negocio: "Perfil do Negócio",
+  fichas: "Fichas (Formulário)",
+  briefing: "Briefing Comercial",
+  campos: "Campos",
+  sales: "Metas & Vendas",
+  cx: "Momentos CX",
+  instagram: "Instagram",
+  vinculos: "Vínculos",
+  roi: "ROI",
+};
+
 export default function ClientDetail() {
   const { id } = useParams<{ id: string }>();
   const { currentUser, loading: userLoading } = useCurrentUser();
@@ -2641,8 +2658,17 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      {/* Perfil do Negócio (sempre visível no topo) */}
-      <ClientBusinessProfile clientId={id!} variant="card" />
+      {/* Perfil do Negócio (resumo na Timeline; a seção própria tem a versão completa) */}
+      {(searchParams.get("tab") || "timeline") === "timeline" && (
+        <ClientBusinessProfile clientId={id!} variant="card" />
+      )}
+
+      {/* Título da seção ativa (retorno visual ao trocar de item no menu) */}
+      {(searchParams.get("tab") || "timeline") !== "timeline" && (
+        <h2 className="text-lg font-semibold text-foreground">
+          {CLIENT_SECTION_TITLES[searchParams.get("tab") || ""] || "Seção"}
+        </h2>
+      )}
 
       {/* Content based on active tab from sidebar */}
       {(() => {
