@@ -2641,8 +2641,10 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      {/* Perfil do Negócio (sempre visível no topo) */}
-      <ClientBusinessProfile clientId={id!} variant="card" />
+      {/* Perfil do Negócio (resumo na Timeline; a seção própria tem a versão completa) */}
+      {(searchParams.get("tab") || "timeline") === "timeline" && (
+        <ClientBusinessProfile clientId={id!} variant="card" />
+      )}
 
       {/* Content based on active tab from sidebar */}
       {(() => {
