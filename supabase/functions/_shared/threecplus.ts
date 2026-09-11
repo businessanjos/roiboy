@@ -66,6 +66,7 @@ export type ThreeCAgentRuntime = {
   normalized_status: ThreeCAgentStatus;
   agent_http_status: number | null;
   campaign_http_status: number | null;
+  webphone_registered: boolean;
 };
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -99,6 +100,27 @@ function hasStructuredCall(value: unknown, depth = 0): boolean {
   return hasStructuredCall(record.data, depth + 1) || hasStructuredCall(record.agent, depth + 1);
 }
 
+function findStructuredBoolean(value: unknown, keys: string[], depth = 0): boolean | null {
+  if (depth > 5) return null;
+  const record = asObject(value);
+  if (!record) return null;
+  for (const key of keys) {
+    const field = record[key];
+    if (typeof field === "boolean") return field;
+    if (typeof field === "number") return field !== 0;
+    if (typeof field === "string") {
+      const normalized = field.trim().toLowerCase();
+      if (["true", "1", "yes", "sim", "registered", "connected", "online"].includes(normalized)) return true;
+      if (["false", "0", "no", "nao", "não", "unregistered", "disconnected", "offline"].includes(normalized)) return false;
+    }
+  }
+  for (const key of ["data", "agent", "extension", "webrtc", "webphone"]) {
+    const nested = findStructuredBoolean(record[key], keys, depth + 1);
+    if (nested !== null) return nested;
+  }
+  return null;
+}
+
 function normalizeStructuredAgentState(raw: string | null, hasActiveCall: boolean): ThreeCAgentStatus {
   if (hasActiveCall) return "on_call";
   if (!raw) return "unknown";
@@ -128,6 +150,7 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
     normalized_status: "offline",
     agent_http_status: null,
     campaign_http_status: null,
+    webphone_registered: false,
   };
 
   let agentOk = false;
@@ -143,6 +166,9 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
     console.log("[threecplus-runtime] GET /api/v1/agent raw:", JSON.stringify({ status: response.status, json: payload }));
     runtime.agent_status = findStructuredAgentState(payload);
     runtime.has_active_call = hasStructuredCall(payload);
+    runtime.webphone_registered = findStructuredBoolean(payload, [
+      "webphone", "webphone_registered", "web_phone", "webrtc_registered", "extension_registered", "registered",
+    ]) ?? false;
     runtime.normalized_status = response.ok
       ? normalizeStructuredAgentState(runtime.agent_status, runtime.has_active_call)
       : "offline";

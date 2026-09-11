@@ -3,6 +3,8 @@ import {
   AGENT_ID_REQUIRED_MESSAGE,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
+  fetchThreeCAgentRuntime,
+  getBaseDomain,
   mentionsAgentIdHeader,
   resolveAgentAuth,
   with3cContext,
@@ -24,17 +26,6 @@ function getValidUserApiToken(value: unknown): string | null {
   const trimmed = value.trim();
   if (!trimmed || trimmed === "account_level") return null;
   return trimmed;
-}
-
-function getBaseDomain(domain: string | null): string {
-  if (!domain) return "https://eternumentoringclub1.3c.plus";
-  let base = domain.trim();
-  base = base.replace(/\/login\/?$/, "");
-  base = base.replace(/\/agent\/?.*$/, "");
-  base = base.replace(/\/supervisor\/?.*$/, "");
-  base = base.replace(/\/$/, "");
-  if (!base.startsWith("http")) base = "https://" + base;
-  return base;
 }
 
 function asRecord(value: unknown): Record<string, unknown> | null {
@@ -188,49 +179,7 @@ function extractAgentStatus(value: unknown, depth = 0): string | null {
 }
 
 async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
-  const runtime = {
-    logged_campaign: false,
-    has_active_call: false,
-    manual_mode: false,
-    call_id: null as string | number | null,
-    agent_status: null as string | null,
-    webphone_registered: false,
-  };
-
-  try {
-    const agentRes = await fetch3c(`${apiBase}/agent?api_token=${apiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    const agentText = await agentRes.text();
-
-    if (agentRes.ok) {
-      const agentPayload = safeJsonParse(agentText);
-      const callDetails = extractCallDetails(agentPayload);
-      const agentStatus = extractAgentStatus(agentPayload);
-      const webphoneRegistered = extractWebphoneRegistered(agentPayload);
-
-      runtime.has_active_call = Boolean(callDetails?.id || callDetails?.phone);
-      runtime.call_id = callDetails?.id ?? null;
-      runtime.agent_status = agentStatus;
-      runtime.manual_mode = Boolean(agentStatus && /manual/i.test(agentStatus));
-      runtime.webphone_registered = webphoneRegistered ?? false;
-    }
-  } catch (error) {
-    console.error("[threecplus-agent] fetchAgentRuntimeState agent error:", error);
-  }
-
-  try {
-    const campaignRes = await fetch3c(`${apiBase}/agent/loggedCampaign?api_token=${apiToken}`, {
-      method: "GET",
-      headers: { Accept: "application/json" },
-    });
-    runtime.logged_campaign = campaignRes.ok;
-  } catch (error) {
-    console.error("[threecplus-agent] fetchAgentRuntimeState campaign error:", error);
-  }
-
-  return runtime;
+  return fetchThreeCAgentRuntime(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken);
 }
 
 async function waitForWebphoneRegistration(apiBase: string, apiToken: string, timeoutMs = 12000) {
