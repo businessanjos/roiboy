@@ -166,7 +166,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       return;
     }
 
-    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}`;
+    const cacheKey = `${term.toLowerCase()}|${canViewClients}${canViewLeads}${canViewSales}${canViewEvents}${canViewCollaborators}${canViewTasks}${canViewProducts}${canViewFinancial}${canViewMarketing}${canViewTeam}${canViewContracts}`;
     const cached = resultCache.get(cacheKey);
     if (cached) {
       setRemote(cached);
