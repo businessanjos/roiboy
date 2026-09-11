@@ -1939,14 +1939,27 @@ export function DealDetailSheet({
                                       </>
                                     )}
                                     {/* Gravação da ligação (3C Plus) */}
-                                    {activity.file_url && activity.type === 'call' && (
-                                      <audio
-                                        controls
-                                        preload="none"
-                                        src={activity.file_url}
-                                        className="mt-2 w-full max-w-[320px] h-9"
-                                      />
-                                    )}
+                                    {activity.type === 'call' && (() => {
+                                      const linkedCall = dealCalls.find((c) => c.activity_id === activity.id);
+                                      if (linkedCall) {
+                                        return (
+                                          <CallTimelineEvent
+                                            key={linkedCall.id}
+                                            call={linkedCall}
+                                            className="justify-start px-0"
+                                          />
+                                        );
+                                      }
+                                      return activity.file_url ? (
+                                        <audio
+                                          controls
+                                          preload="none"
+                                          src={activity.file_url}
+                                          className="mt-2 w-full max-w-[320px] h-9"
+                                        />
+                                      ) : null;
+                                    })()}
+
                                     {/* File attachment display */}
                                     {activity.file_url && activity.type !== 'call' && (
                                       <div className="mt-2">
