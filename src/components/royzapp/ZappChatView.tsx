@@ -9,6 +9,7 @@ import { ZappMediaGallery } from "./ZappMediaGallery";
 import { ConversationAssignment, ContactInfo } from "./types";
 import { Message } from "@/hooks/useZappData";
 import { useMessageAssistant } from "@/hooks/useMessageAssistant";
+import { useConversationCalls } from "@/hooks/useConversationCalls";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
