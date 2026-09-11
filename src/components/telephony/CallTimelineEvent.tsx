@@ -178,6 +178,22 @@ export function CallTimelineEvent({
             </div>
           )}
 
+          {followupTask?.title && (
+            <p className="mt-1 text-left text-[11px] text-muted-foreground">
+              Tarefa criada:{" "}
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`/tasks?task=${followupTask.id}`, "_blank");
+                }}
+              >
+                {followupTask.title}
+              </button>
+            </p>
+          )}
+
           {answered && !summaryText && (transcript?.recording_url || call.recording_url) && (
             <button
               type="button"

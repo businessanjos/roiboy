@@ -45,6 +45,7 @@ const DEAL_ITEM_VENDA_FIELD_NAME = "Item da Venda";
 const DEAL_ORIGEM_VENDA_FIELD_NAME = "Origem da Venda";
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 import { LeadTimeline } from "./LeadTimeline";
+import { LeadLastCallCard } from "./LeadLastCallCard";
 import { LeadCustomFieldsManager, LeadCustomField } from "@/components/custom-fields/LeadCustomFieldsManager";
 import { LeadFieldValueEditor } from "@/components/custom-fields/LeadFieldValueEditor";
 import { toast } from "sonner";
@@ -440,6 +441,9 @@ export function LeadDetailSheet({
                   </div>
                 </div>
 
+
+                {/* Última ligação (3C Plus ou Call Ryka) */}
+                <LeadLastCallCard leadId={lead.id} />
 
                 {/* Dados espelhados do negócio (somente leitura) */}
                 {(dealItemVenda || dealOrigemVenda) && (
