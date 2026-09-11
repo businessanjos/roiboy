@@ -1,7 +1,18 @@
 import { useState } from "react";
-import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, ExternalLink, MessageCircle } from "lucide-react";
+import {
+  Phone,
+  PhoneIncoming,
+  PhoneMissed,
+  PhoneOutgoing,
+  ExternalLink,
+  MessageCircle,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
@@ -111,7 +122,37 @@ export function CallTimelineEvent({
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
-  const transcript = call.threecplus_call_transcripts?.[0];
+  const [localTranscript, setLocalTranscript] = useState<CallTranscript | null>(null);
+  const [transcribing, setTranscribing] = useState(false);
+  const transcript = localTranscript || call.threecplus_call_transcripts?.[0];
+
+  const runTranscription = async () => {
+    setTranscribing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("threecplus-transcribe-call", {
+        body: { call_log_id: call.id, force: true },
+      });
+      if (error) throw error;
+      const result = data?.results?.[0];
+      if (result && result.ok === false) {
+        toast.error("Não foi possível transcrever", { description: result.error });
+      } else if (!result) {
+        toast.error("Esta ligação ainda não tem gravação disponível para transcrever.");
+      } else {
+        toast.success("Transcrição concluída.");
+      }
+      const { data: row } = await supabase
+        .from("threecplus_call_transcripts")
+        .select("status, summary, transcript, temperature, last_error, recording_url")
+        .eq("call_log_id", call.id)
+        .maybeSingle();
+      if (row) setLocalTranscript(row as unknown as CallTranscript);
+    } catch (err: any) {
+      toast.error("Falha ao transcrever", { description: err?.message });
+    } finally {
+      setTranscribing(false);
+    }
+  };
   const outcome = callOutcome(call);
   const pending = isPendingCall(call);
   const answered = outcome === "Atendida";
@@ -274,6 +315,17 @@ export function CallTimelineEvent({
               <p className="text-xs text-muted-foreground">
                 {transcript?.last_error || "Transcrição ainda não disponível."}
               </p>
+            )}
+
+            {!isRyka && (transcript?.recording_url || call.recording_url) && (
+              <Button size="sm" variant="secondary" onClick={runTranscription} disabled={transcribing}>
+                {transcribing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {transcript?.transcript ? "Refazer transcrição e resumo" : "Transcrever e resumir agora"}
+              </Button>
             )}
           </div>
         </DialogContent>
