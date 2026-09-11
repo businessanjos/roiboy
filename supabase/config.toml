@@ -56,6 +56,9 @@ verify_jwt = false
 [functions.threecplus-admin-token-check]
 verify_jwt = false
 
+[functions.ryka-call-webhook]
+verify_jwt = false
+
 
 
 
