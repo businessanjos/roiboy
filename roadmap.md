@@ -12,3 +12,9 @@
 - [x] Erro bruto da 3C no registro e painel
 - [x] Publicar funções; validação estática e regressões concluídas
 - [ ] Confirmar uma discagem real após o próximo clique de usuário
+
+# Regressão de permissão no click-to-call
+- [x] Corrigir leitura da campanha que desviava para click2call sem permissão
+- [x] Criar evento somente depois de a 3C aceitar a discagem
+- [ ] Marcar e ocultar placeholders órfãos de hoje
+- [ ] Publicar e validar chamada real com o agente 58219

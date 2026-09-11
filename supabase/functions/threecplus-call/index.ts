@@ -154,16 +154,6 @@ Deno.serve((req) => with3cContext(async () => {
       return json({ success: false, code: "NO_AGENT_TOKEN", error: "Configure o Token de API do agente em Integrações > 3C Plus > Meu Ramal." });
     }
 
-    const callLogId = await createCallLog(
-      supabaseAdmin,
-      userData,
-      cleanPhone,
-      body.contact_name,
-      body.lead_id,
-      body.client_id,
-      body.deal_id,
-    );
-
     if (auth.agentId) {
       runInBackground(persistAgentLink(supabaseAdmin, {
         accountId: userData.account_id,
@@ -183,21 +173,35 @@ Deno.serve((req) => with3cContext(async () => {
       { managerToken: auth.managerServiceToken, agentId: auth.agentId },
     );
 
-    const fail = async (code: string, message: string, endpoint?: string, status?: number, response?: string) => {
-      const rawResponse = sanitizeResponse(response || "");
-      await updateCallLog(supabaseAdmin, callLogId, {
-        status: "failed",
-        ended_at: new Date().toISOString(),
-        metadata: {
-          source: "click2call_api",
-          dial_phone: cleanPhone,
-          threec_endpoint: endpoint ?? null,
-          threec_status: status ?? null,
-          threec_error: message,
-          threec_response: rawResponse || null,
-        },
-      });
-      return json({ success: false, code, error: message, runtime, call_log_id: callLogId });
+    const fail = (code: string, message: string) =>
+      json({ success: false, code, error: message, runtime });
+
+    const persistAcceptedCall = async (
+      endpoint: string,
+      status: number,
+      response: string,
+      requestTrace: Array<{ endpoint: string; status: number; body: string }>,
+      elapsedMs: number,
+    ) => {
+      const callLogId = await createCallLog(
+        supabaseAdmin,
+        userData,
+        cleanPhone,
+        body.contact_name,
+        body.lead_id,
+        body.client_id,
+        body.deal_id,
+      );
+      await updateCallLog(supabaseAdmin, callLogId, { metadata: {
+        source: "click2call_api",
+        dial_phone: cleanPhone,
+        threec_endpoint: endpoint,
+        threec_status: status,
+        threec_response: sanitizeResponse(response) || null,
+        request_trace: requestTrace,
+        dial_elapsed_ms: elapsedMs,
+      }});
+      return callLogId;
     };
 
     if (runtime.normalized_status === "offline") {
@@ -208,31 +212,34 @@ Deno.serve((req) => with3cContext(async () => {
 
     const manualPath = runtime.manual_mode || runtime.manual_campaign;
     if (manualPath) {
+      const startedAt = performance.now();
+      const requestTrace: Array<{ endpoint: string; status: number; body: string }> = [];
       if (!runtime.manual_mode) {
         const enterRes = await postToAgentEndpoint(auth.baseDomain, auth.apiToken, "/agent/manual_call/enter");
         const enterText = await enterRes.text();
+        requestTrace.push({ endpoint: "manual_call/enter", status: enterRes.status, body: sanitizeResponse(enterText) });
         console.log("[threecplus-call] manual_call/enter:", enterRes.status, sanitizeResponse(enterText));
         if (!(enterRes.ok || enterRes.status === 204 || isManualModeAlreadyActive(enterRes.status, enterText))) {
           const message = isManualNotAllowed(enterRes.status, enterText)
             ? "Sua campanha atual não permite ligação manual. No Discador 3C, entre na campanha Prospecção Manual."
             : extractApiMessage(enterText, "Não foi possível entrar no modo de ligação manual.");
-          return fail(isManualNotAllowed(enterRes.status, enterText) ? "MANUAL_NOT_ALLOWED" : "API_CALL_FAILED", message, "manual_call/enter", enterRes.status, enterText);
+          return fail(isManualNotAllowed(enterRes.status, enterText) ? "MANUAL_NOT_ALLOWED" : "API_CALL_FAILED", message);
         }
       }
 
       console.log("[threecplus-call] manual_call/dial exact phone:", cleanPhone);
       const dialRes = await postToAgentEndpoint(auth.baseDomain, auth.apiToken, "/agent/manual_call/dial", { phone: cleanPhone });
       const dialText = await dialRes.text();
+      requestTrace.push({ endpoint: "manual_call/dial", status: dialRes.status, body: sanitizeResponse(dialText) });
       console.log("[threecplus-call] manual_call/dial raw:", dialRes.status, sanitizeResponse(dialText));
       if (!(dialRes.ok || dialRes.status === 204)) {
         const message = extractApiMessage(dialText, `Falha na chamada (status ${dialRes.status})`);
-        return fail(isManualNotAllowed(dialRes.status, dialText) ? "MANUAL_NOT_ALLOWED" : "API_CALL_FAILED", message, "manual_call/dial", dialRes.status, dialText);
+        return fail(isManualNotAllowed(dialRes.status, dialText) ? "MANUAL_NOT_ALLOWED" : "API_CALL_FAILED", message);
       }
-      await updateCallLog(supabaseAdmin, callLogId, { metadata: {
-        source: "click2call_api", dial_phone: cleanPhone, threec_endpoint: "manual_call/dial",
-        threec_status: dialRes.status, threec_response: sanitizeResponse(dialText) || null,
-      }});
-      return json({ success: true, message: "Chamada iniciada no 3C Plus", call_log_id: callLogId, path: runtime.manual_mode ? "manual_dial" : "manual_enter_dial" });
+      const elapsedMs = Math.round(performance.now() - startedAt);
+      const callLogId = await persistAcceptedCall("manual_call/dial", dialRes.status, dialText, requestTrace, elapsedMs);
+      console.log("[threecplus-call] accepted manual call:", JSON.stringify({ phone: cleanPhone, elapsed_ms: elapsedMs, requests: requestTrace }));
+      return json({ success: true, message: "Chamada iniciada no 3C Plus", call_log_id: callLogId, path: runtime.manual_mode ? "manual_dial" : "manual_enter_dial", elapsed_ms: elapsedMs });
     }
 
     const clickPayload: Record<string, string> = { phone: cleanPhone };
@@ -243,17 +250,16 @@ Deno.serve((req) => with3cContext(async () => {
     const clickText = await clickRes.text();
     console.log("[threecplus-call] click2call raw:", clickRes.status, sanitizeResponse(clickText));
     if (clickRes.ok || clickRes.status === 204) {
-      await updateCallLog(supabaseAdmin, callLogId, { metadata: {
-        source: "click2call_api", dial_phone: cleanPhone, threec_endpoint: "click2call",
-        threec_status: clickRes.status, threec_response: sanitizeResponse(clickText) || null,
-      }});
+      const callLogId = await persistAcceptedCall("click2call", clickRes.status, clickText, [
+        { endpoint: "click2call", status: clickRes.status, body: sanitizeResponse(clickText) },
+      ], 0);
       return json({ success: true, message: "Chamada iniciada no 3C Plus", call_log_id: callLogId, path: "click2call" });
     }
 
     const message = mentionsAgentIdHeader(clickText)
       ? AGENT_ID_REQUIRED_MESSAGE
       : extractApiMessage(clickText, `Falha na chamada (status ${clickRes.status})`);
-    return fail(mentionsAgentIdHeader(clickText) ? "AGENT_ID_REQUIRED" : "API_CALL_FAILED", message, "click2call", clickRes.status, clickText);
+    return fail(mentionsAgentIdHeader(clickText) ? "AGENT_ID_REQUIRED" : "API_CALL_FAILED", message);
   } catch (error) {
     console.error("[threecplus-call] Error:", error);
     return json({ success: false, error: "Erro interno do servidor." }, 500);

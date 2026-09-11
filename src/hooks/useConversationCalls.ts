@@ -51,7 +51,7 @@ export function useConversationCalls({ phone, sinceISO, enabled = true }: Option
       .limit(200);
 
     const rows = ((data as unknown as ConversationCall[]) || []).filter(
-      (c) => last8(c.phone) === key,
+      (c) => last8(c.phone) === key && c.status !== "failed",
     );
     setCalls(dedupeCalls(rows));
   }, [accountId, key, since, enabled]);
