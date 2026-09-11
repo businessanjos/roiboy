@@ -231,6 +231,17 @@ export default function ClientDetail() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const activeSectionTab = searchParams.get("tab") || "timeline";
+  const sectionAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  // Ao trocar de seção pelo menu lateral, leva a seção escolhida para o topo da área visível.
+  useEffect(() => {
+    if (activeSectionTab === "timeline") return;
+    const raf = requestAnimationFrame(() => {
+      sectionAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeSectionTab]);
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
@@ -2607,8 +2618,8 @@ export default function ClientDetail() {
       </div>
 
 
-      {/* Risk Alerts */}
-      {riskEvents.length > 0 && (
+      {/* Risk Alerts (só na linha do tempo, para não empurrar as demais seções) */}
+      {activeSectionTab === "timeline" && riskEvents.length > 0 && (
         <Card className="shadow-card border-warning/30 bg-warning-muted/30">
           <CardHeader className="pb-2">
             <CardTitle className="text-base font-medium flex items-center gap-2 text-warning">
@@ -2634,7 +2645,7 @@ export default function ClientDetail() {
         </Card>
       )}
 
-      {formResponseSummaries.length > 0 && searchParams.get("tab") !== "fichas" && (
+      {activeSectionTab === "timeline" && formResponseSummaries.length > 0 && (
         <Card className="shadow-card border-primary/30 bg-primary/5">
           <CardContent className="p-4">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -2659,14 +2670,15 @@ export default function ClientDetail() {
       )}
 
       {/* Perfil do Negócio (resumo na Timeline; a seção própria tem a versão completa) */}
-      {(searchParams.get("tab") || "timeline") === "timeline" && (
+      {activeSectionTab === "timeline" && (
         <ClientBusinessProfile clientId={id!} variant="card" />
       )}
 
-      {/* Título da seção ativa (retorno visual ao trocar de item no menu) */}
-      {(searchParams.get("tab") || "timeline") !== "timeline" && (
+      {/* Âncora + título da seção ativa (a página rola até aqui ao clicar no menu) */}
+      <div ref={sectionAnchorRef} className="scroll-mt-4" />
+      {activeSectionTab !== "timeline" && (
         <h2 className="text-lg font-semibold text-foreground">
-          {CLIENT_SECTION_TITLES[searchParams.get("tab") || ""] || "Seção"}
+          {CLIENT_SECTION_TITLES[activeSectionTab] || "Seção"}
         </h2>
       )}
 
