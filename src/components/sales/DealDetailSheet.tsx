@@ -96,6 +96,7 @@ import { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 import { DealActivitiesTab } from "./DealActivitiesTab";
 import { ContractSummaryPanel } from "./contracts/ContractSummaryPanel";
 import { DealFieldsConfigDialog } from "./DealFieldsConfigDialog";
+import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
 import { usePermissions } from "@/hooks/usePermissions";
 import { DealLeadInfo } from "./DealLeadInfo";
 import { DealTransferDialog } from "./DealTransferDialog";
