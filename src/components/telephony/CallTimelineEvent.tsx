@@ -316,6 +316,17 @@ export function CallTimelineEvent({
                 {transcript?.last_error || "Transcrição ainda não disponível."}
               </p>
             )}
+
+            {!isRyka && (transcript?.recording_url || call.recording_url) && (
+              <Button size="sm" variant="secondary" onClick={runTranscription} disabled={transcribing}>
+                {transcribing ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                {transcript?.transcript ? "Refazer transcrição e resumo" : "Transcrever e resumir agora"}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>
