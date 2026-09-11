@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
-import { Headphones, Loader2, Phone, PhoneCall, X } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -42,8 +42,13 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
   return "offline";
 }
 
+const BASE_WIDTH = 1120;
+
 export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [scale, setScale] = useState(1);
+  const panelRef = useRef<HTMLElement | null>(null);
   const [launcherHidden, setLauncherHidden] = useState(false);
   const [hasExtension, setHasExtension] = useState(false);
   const [domain, setDomain] = useState("https://eternumentoringclub1.3c.plus");
@@ -118,6 +123,21 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [refreshStatus]);
 
+  // Escala o conteúdo da 3C para caber na largura atual do painel.
+  useEffect(() => {
+    const el = panelRef.current;
+    if (!el) return;
+    const update = () => {
+      const width = el.clientWidth;
+      if (!width) return;
+      setScale(Math.min(1, Math.max(0.4, width / BASE_WIDTH)));
+    };
+    update();
+    const observer = new ResizeObserver(update);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [isOpen, expanded]);
+
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
 
@@ -161,37 +181,64 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       )}
 
       <aside
+        ref={panelRef}
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-full flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 sm:w-[min(92vw,64rem)]",
+          "fixed inset-y-0 right-0 z-[60] flex w-full flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
+          expanded
+            ? "sm:w-[min(96vw,72rem)]"
+            : "sm:w-[min(96vw,34rem)]",
           visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex h-14 shrink-0 items-center justify-between border-b border-border px-4">
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
           <div className="flex min-w-0 items-center gap-2">
-            <StatusIcon className="h-4 w-4 text-primary" />
-            <span className="font-semibold">Discador 3C</span>
-            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <StatusIcon className="h-4 w-4 shrink-0 text-primary" />
+            <span className="truncate text-sm font-semibold">Discador 3C</span>
+            <span className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground">
               <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
               {statusInfo.label}
             </span>
           </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsOpen(false)}
-            aria-label="Fechar Discador 3C"
-          >
-            <X className="h-4 w-4" />
-          </Button>
+          <div className="flex shrink-0 items-center">
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="hidden sm:inline-flex"
+              onClick={() => setExpanded((v) => !v)}
+              aria-label={expanded ? "Reduzir painel" : "Ampliar painel"}
+              title={expanded ? "Reduzir painel" : "Ampliar painel"}
+            >
+              {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            </Button>
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              onClick={() => setIsOpen(false)}
+              aria-label="Fechar Discador 3C"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
         </div>
-        <iframe
-          src={`${domain}/agent`}
-          title="Painel do agente 3C Plus"
-          allow="microphone; autoplay"
-          className="min-h-0 w-full flex-1 border-0 bg-background"
-        />
+        {/* O iframe é renderizado numa largura fixa e reduzido por escala,
+            para caber inteiro em painéis estreitos sem cortes laterais. */}
+        <div className="relative min-h-0 flex-1 overflow-hidden">
+          <iframe
+            src={`${domain}/agent`}
+            title="Painel do agente 3C Plus"
+            allow="microphone; autoplay"
+            style={{
+              width: `${BASE_WIDTH}px`,
+              height: scale < 1 ? `${100 / scale}%` : "100%",
+              transform: `scale(${scale})`,
+              transformOrigin: "top left",
+            }}
+            className="absolute left-0 top-0 border-0 bg-background"
+          />
+        </div>
       </aside>
     </>
   );
