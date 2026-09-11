@@ -97,6 +97,7 @@ export function ThreeCPlusCallsList() {
   const [seller, setSeller] = useState("all");
   const [outcome, setOutcome] = useState("all");
   const [temperature, setTemperature] = useState("all");
+  const [engine, setEngine] = useState("all");
   const [selected, setSelected] = useState<CallRow | null>(null);
   const [working, setWorking] = useState<string | null>(null);
 
