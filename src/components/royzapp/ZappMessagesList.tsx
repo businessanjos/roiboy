@@ -538,8 +538,18 @@ export function ZappMessagesList({
                 !prev ||
                 new Date(message.created_at).toDateString() !== new Date(prev.created_at).toDateString();
 
+              const msgTs = new Date(message.created_at).getTime();
+              const prevTs = prev ? new Date(prev.created_at).getTime() : -Infinity;
+              const callsBefore = sortedCalls.filter((c) => {
+                const ts = callTs(c);
+                return ts > prevTs && ts <= msgTs;
+              });
+
               return (
                 <div key={message.id} data-index={index} data-msg-id={message.id} className="w-full min-w-0">
+                  {callsBefore.map((call) => (
+                    <CallTimelineEvent key={`call-${call.id}`} call={call} />
+                  ))}
                   <ZappMessageBubble
                     message={message}
                     showTimestamp={!!showTimestamp}
@@ -556,6 +566,14 @@ export function ZappMessagesList({
                 </div>
               );
             })}
+            {(() => {
+              const lastMsg = enrichedMessages[enrichedMessages.length - 1];
+              const lastTs = lastMsg ? new Date(lastMsg.created_at).getTime() : -Infinity;
+              return sortedCalls
+                .filter((c) => callTs(c) > lastTs)
+                .map((call) => <CallTimelineEvent key={`call-${call.id}`} call={call} />);
+            })()}
+
           </div>
         )}
 
