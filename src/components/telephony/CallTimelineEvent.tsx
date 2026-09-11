@@ -40,6 +40,8 @@ export interface ConversationCall {
   client_id: string | null;
   activity_id?: string | null;
   recording_url: string | null;
+  /** Motor usado: "3cplus" (padrão) ou "ryka_call" (Call Ryka via WhatsApp). */
+  engine?: string | null;
   metadata?: Record<string, unknown> | null;
   threecplus_call_transcripts?: CallTranscript[] | null;
 }

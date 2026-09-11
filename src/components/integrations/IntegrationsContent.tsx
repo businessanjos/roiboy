@@ -10,7 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
-import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send } from "lucide-react";
+import { Video, Calendar, Copy, CheckCircle2, XCircle, RefreshCw, Plus, MessageSquare, Loader2, LogOut, ExternalLink, Webhook, Phone, Building, Cloud, Bot, Send, MessageCircle } from "lucide-react";
 import { McpConnectionTab } from "./McpConnectionTab";
 import { TrafficHubTab } from "./TrafficHubTab";
 import {
