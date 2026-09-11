@@ -8,6 +8,16 @@ const corsHeaders = {
 const RYKA_LOGIN_URL = "https://rykasystem.com";
 const ELIGIBLE_PRODUCTS = ["rykas mentoring", "eternum club"];
 
+function isEligibleProduct(name: string): boolean {
+  const n = (name || "")
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  return ELIGIBLE_PRODUCTS.some((p) => n.includes(p));
+}
+
 function generateTempPassword(length = 12): string {
   const lower = "abcdefghijkmnpqrstuvwxyz";
   const upper = "ABCDEFGHJKLMNPQRSTUVWXYZ";
@@ -210,7 +220,7 @@ Deno.serve(async (req) => {
   const productNames: string[] = (client.client_products || [])
     .map((cp: any) => cp.products?.name || "")
     .filter(Boolean);
-  const isEligible = productNames.some(n => ELIGIBLE_PRODUCTS.includes(n.toLowerCase()));
+  const isEligible = productNames.some(isEligibleProduct);
   if (!isEligible) {
     return jsonResp({
       error: "Cliente não tem produto elegível para Clínica Ryka (Rykas Mentoring ou Eternum Club).",
@@ -243,7 +253,7 @@ Deno.serve(async (req) => {
     .single();
 
   // Determine product label for Ryka payload
-  const primaryProduct = productNames.find(n => ELIGIBLE_PRODUCTS.includes(n.toLowerCase())) || productNames[0] || "";
+  const primaryProduct = productNames.find(isEligibleProduct) || productNames[0] || "";
 
   // Dispatch to Ryka webhook (client.created)
   const rykaPayload = {
