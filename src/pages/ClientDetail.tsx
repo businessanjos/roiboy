@@ -2646,6 +2646,13 @@ export default function ClientDetail() {
         <ClientBusinessProfile clientId={id!} variant="card" />
       )}
 
+      {/* Título da seção ativa (retorno visual ao trocar de item no menu) */}
+      {(searchParams.get("tab") || "timeline") !== "timeline" && (
+        <h2 className="text-lg font-semibold text-foreground">
+          {CLIENT_SECTION_TITLES[searchParams.get("tab") || ""] || "Seção"}
+        </h2>
+      )}
+
       {/* Content based on active tab from sidebar */}
       {(() => {
         const activeTab = searchParams.get("tab") || "timeline";
