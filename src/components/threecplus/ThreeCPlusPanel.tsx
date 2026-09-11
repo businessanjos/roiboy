@@ -121,11 +121,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
 
-  if (!hasExtension) return null;
-
   return (
     <>
-      {visible && !isOpen && !launcherHidden && (
+      {visible && hasExtension && !isOpen && !launcherHidden && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button
             type="button"
@@ -165,7 +163,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       <aside
         className={cn(
           "fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
-          visible && isOpen ? "translate-x-0" : "translate-x-full"
+          visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!isOpen}
       >
