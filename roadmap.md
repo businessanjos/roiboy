@@ -23,4 +23,4 @@
 - [x] Mapear fallback de campanha logada e registrar resposta bruta da 3C
 - [x] Tratar campanha sem discagem manual com MANUAL_NOT_ALLOWED
 - [x] Manter iframe montado ao fechar e navegar
-- [ ] Publicar e validar funções e interface
+- [x] Publicar e validar funções e interface
