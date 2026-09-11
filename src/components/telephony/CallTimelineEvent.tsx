@@ -1,7 +1,18 @@
 import { useState } from "react";
-import { Phone, PhoneIncoming, PhoneMissed, PhoneOutgoing, ExternalLink, MessageCircle } from "lucide-react";
+import {
+  Phone,
+  PhoneIncoming,
+  PhoneMissed,
+  PhoneOutgoing,
+  ExternalLink,
+  MessageCircle,
+  Loader2,
+  Sparkles,
+} from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import {
