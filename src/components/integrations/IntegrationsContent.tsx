@@ -25,6 +25,7 @@ import { WebhooksTab } from "./webhooks/WebhooksTab";
 import { ThreeCPlusConnectionCard } from "./ThreeCPlusConnectionCard";
 import { ThreeCPlusAgentsTable } from "./ThreeCPlusAgentsTable";
 import { ThreeCPlusCallsSyncCard } from "./ThreeCPlusCallsSyncCard";
+import { CallRykaConnectionCard } from "./CallRykaConnectionCard";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 import { GoogleDriveCard } from "./GoogleDriveCard";
@@ -499,6 +500,10 @@ export function IntegrationsContent() {
               <Phone className="h-4 w-4" />
               <span>3C Plus</span>
             </TabsTrigger>
+            <TabsTrigger value="ryka_call" className="gap-2 px-3 py-2">
+              <MessageCircle className="h-4 w-4" />
+              <span>Call Ryka</span>
+            </TabsTrigger>
             <TabsTrigger value="gdrive" className="gap-2 px-3 py-2">
               <Cloud className="h-4 w-4" />
               <span>Google Drive</span>
@@ -820,6 +825,11 @@ export function IntegrationsContent() {
         </TabsContent>
 
 
+
+        {/* Call Ryka Tab */}
+        <TabsContent value="ryka_call" className="space-y-4">
+          <CallRykaConnectionCard onChanged={fetchIntegrations} />
+        </TabsContent>
 
         {/* Google Drive Tab */}
         <TabsContent value="gdrive" className="space-y-4">
