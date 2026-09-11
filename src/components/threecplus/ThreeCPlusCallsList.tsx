@@ -209,7 +209,7 @@ export function ThreeCPlusCallsList() {
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-5">
           {[
             { label: "Atendidas", value: counters.answered },
             { label: "Transcritas", value: counters.transcribed },
@@ -262,6 +262,14 @@ export function ThreeCPlusCallsList() {
               <SelectItem value="frio">Frio</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={engine} onValueChange={setEngine}>
+            <SelectTrigger className="w-[160px]"><SelectValue /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os motores</SelectItem>
+              <SelectItem value="3cplus">3C Plus</SelectItem>
+              <SelectItem value="ryka_call">Call Ryka</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         {loading ? (
@@ -298,6 +306,7 @@ export function ThreeCPlusCallsList() {
                     )}
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
+                    <Badge variant="outline">{ENGINE_LABELS[call.engine || "3cplus"]}</Badge>
                     <Badge variant="outline">{outcomeOf(call)}</Badge>
                     {t?.temperature && (
                       <Badge className={TEMP_COLORS[t.temperature] || ""} variant="secondary">
