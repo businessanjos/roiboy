@@ -105,7 +105,7 @@ async function claimLocalPlaceholders(supabaseAdmin: any, accountId: string, row
 
   const { data: placeholders } = await supabaseAdmin
     .from("threecplus_call_logs")
-    .select("id, phone, user_id, started_at, metadata, call_id")
+    .select("id, phone, user_id, started_at, metadata, call_id, contact_name")
     .eq("account_id", accountId)
     .gte("started_at", since)
     .or("call_id.is.null,call_id.eq.")
@@ -137,6 +137,7 @@ async function claimLocalPlaceholders(supabaseAdmin: any, accountId: string, row
     }
     if (!best) continue;
     used.add(best.id);
+    if (!row.contact_name && best.contact_name) row.contact_name = best.contact_name;
 
     const { error } = await supabaseAdmin
       .from("threecplus_call_logs")
@@ -501,6 +502,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       }
 
       if (!adminError) {
+        await claimLocalPlaceholders(supabaseAdmin, accountId, rows);
         const dedupedRows = dedupeRows(rows);
         for (let i = 0; i < dedupedRows.length; i += 200) {
           const chunk = dedupedRows.slice(i, i + 200);
@@ -599,6 +601,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       }
 
       let agentSynced = 0;
+      await claimLocalPlaceholders(supabaseAdmin, accountId, rows);
       const dedupedRows = dedupeRows(rows);
       for (let i = 0; i < dedupedRows.length; i += 200) {
         const chunk = dedupedRows.slice(i, i + 200);
