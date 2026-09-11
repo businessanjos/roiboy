@@ -37,6 +37,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import type { DateRange as DayPickerRange } from "react-day-picker";
 import { ThreeCPlusSyncSummary } from "./ThreeCPlusSyncSummary";
+import { ThreeCPlusCallsList } from "./ThreeCPlusCallsList";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -312,6 +313,8 @@ export function ThreeCPlusMetrics() {
   return (
     <div className="space-y-6">
       <ThreeCPlusSyncSummary />
+
+      <ThreeCPlusCallsList />
 
       {/* Filters */}
       <div className="flex flex-wrap items-center gap-3">

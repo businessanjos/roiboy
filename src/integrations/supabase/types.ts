@@ -24411,6 +24411,7 @@ export type Database = {
       threecplus_call_logs: {
         Row: {
           account_id: string
+          activity_id: string | null
           acw_seconds: number | null
           agent_email: string | null
           agent_external_id: string | null
@@ -24429,10 +24430,12 @@ export type Database = {
           ended_at: string | null
           id: string
           lead_id: string | null
+          linked_at: string | null
           metadata: Json | null
           phone: string | null
           qualification: string | null
           qualification_name: string | null
+          recording_url: string | null
           started_at: string | null
           status: string
           updated_at: string
@@ -24441,6 +24444,7 @@ export type Database = {
         }
         Insert: {
           account_id: string
+          activity_id?: string | null
           acw_seconds?: number | null
           agent_email?: string | null
           agent_external_id?: string | null
@@ -24459,10 +24463,12 @@ export type Database = {
           ended_at?: string | null
           id?: string
           lead_id?: string | null
+          linked_at?: string | null
           metadata?: Json | null
           phone?: string | null
           qualification?: string | null
           qualification_name?: string | null
+          recording_url?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -24471,6 +24477,7 @@ export type Database = {
         }
         Update: {
           account_id?: string
+          activity_id?: string | null
           acw_seconds?: number | null
           agent_email?: string | null
           agent_external_id?: string | null
@@ -24489,10 +24496,12 @@ export type Database = {
           ended_at?: string | null
           id?: string
           lead_id?: string | null
+          linked_at?: string | null
           metadata?: Json | null
           phone?: string | null
           qualification?: string | null
           qualification_name?: string | null
+          recording_url?: string | null
           started_at?: string | null
           status?: string
           updated_at?: string
@@ -24554,6 +24563,65 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      threecplus_call_transcripts: {
+        Row: {
+          account_id: string
+          attempts: number
+          call_id: string | null
+          call_log_id: string
+          created_at: string
+          id: string
+          last_error: string | null
+          processed_at: string | null
+          recording_url: string | null
+          status: string
+          summary: Json | null
+          temperature: string | null
+          transcript: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          attempts?: number
+          call_id?: string | null
+          call_log_id: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          recording_url?: string | null
+          status?: string
+          summary?: Json | null
+          temperature?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          attempts?: number
+          call_id?: string | null
+          call_log_id?: string
+          created_at?: string
+          id?: string
+          last_error?: string | null
+          processed_at?: string | null
+          recording_url?: string | null
+          status?: string
+          summary?: Json | null
+          temperature?: string | null
+          transcript?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "threecplus_call_transcripts_call_log_id_fkey"
+            columns: ["call_log_id"]
+            isOneToOne: true
+            referencedRelation: "threecplus_call_logs"
             referencedColumns: ["id"]
           },
         ]

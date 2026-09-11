@@ -463,6 +463,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
         last_synced_at: adminMaxStarted || now.toISOString(),
       });
 
+      await triggerProcessCalls(accountId);
       return { synced: rows.length, mode: "admin", from: startStr, to: endStr };
     }
 
@@ -574,11 +575,29 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       last_synced_at: maxStarted || now.toISOString(),
     });
 
+    await triggerProcessCalls(accountId);
     return { synced: totalSynced, agents: perAgent, from: startStr, to: endStr };
   } catch (err) {
     console.error("[threecplus-sync-calls] error:", err);
     await finish({ status: "error", last_error: String(err?.message || err) });
     return { error: String(err?.message || err), synced: 0 };
+  }
+}
+
+// Dispara o vínculo com leads/negociações e a fila de transcrição (passo independente).
+async function triggerProcessCalls(accountId: string) {
+  try {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/threecplus-process-calls`;
+    await fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+      },
+      body: JSON.stringify({ account_id: accountId }),
+    });
+  } catch (err) {
+    console.error("[threecplus-sync-calls] process-calls falhou:", err);
   }
 }
 
