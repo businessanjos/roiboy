@@ -198,14 +198,26 @@ export function ThreeCPlusCallsList() {
               <CardDescription>Resultado, resumo por IA e gravação de cada ligação.</CardDescription>
             </div>
           </div>
-          <Button size="sm" variant="outline" onClick={relink} disabled={working === "relink"}>
-            {working === "relink" ? (
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-            ) : (
-              <RefreshCw className="mr-2 h-4 w-4" />
-            )}
-            Vincular a contatos
-          </Button>
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Switch
+                id="calls-auto-tasks"
+                checked={autoTasks}
+                onCheckedChange={saveAutoTasks}
+              />
+              <Label htmlFor="calls-auto-tasks" className="text-xs font-normal text-muted-foreground">
+                Criar tarefas automaticamente a partir das ligações
+              </Label>
+            </div>
+            <Button size="sm" variant="outline" onClick={relink} disabled={working === "relink"}>
+              {working === "relink" ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <RefreshCw className="mr-2 h-4 w-4" />
+              )}
+              Vincular a contatos
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
