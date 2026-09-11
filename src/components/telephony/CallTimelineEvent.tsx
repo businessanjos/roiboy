@@ -20,6 +20,7 @@ export interface CallTranscript {
   temperature: string | null;
   last_error: string | null;
   recording_url: string | null;
+  metadata?: Record<string, unknown> | null;
 }
 
 export interface ConversationCall {
@@ -73,6 +74,7 @@ export function dedupeCalls<T extends ConversationCall>(calls: T[]): T[] {
 export function callOutcome(call: ConversationCall) {
   const raw = (call.status || "").toLowerCase();
   if (isPendingCall(call)) return "Ligação em andamento";
+  if (raw === "failed") return "Falha na chamada";
   if ((call.duration_seconds || 0) > 0) return "Atendida";
   if (raw.includes("caixa") || raw.includes("voicemail")) return "Caixa postal";
   if (raw.includes("ocupad") || raw.includes("busy")) return "Ocupado";

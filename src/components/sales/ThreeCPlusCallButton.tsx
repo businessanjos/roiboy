@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { threeCDialPhone } from "@/lib/phoneNormalize";
 
 declare global {
   interface WindowEventMap {
@@ -33,15 +34,30 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
     e.stopPropagation();
     if (calling) return;
 
-    if (!contactPhone) {
-      toast.error("Número de telefone não disponível");
+    const dialPhone = threeCDialPhone(contactPhone);
+    if (!dialPhone) {
+      toast.error(`Número inválido: ${contactPhone || "vazio"}`);
       return;
     }
 
     setCalling(true);
+    window.dispatchEvent(new CustomEvent("threecplus:optimistic-call", { detail: {
+      id: `optimistic-${crypto.randomUUID()}`, call_id: "", phone: dialPhone,
+      contact_name: contactName || null, direction: "outbound", status: "dialing",
+      duration_seconds: 0, started_at: new Date().toISOString(), qualification_name: null,
+      user_id: null, agent_name: null, lead_id: null, deal_id: null, client_id: null,
+      recording_url: null,
+    }}));
     try {
+      const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
-        body: { phone: contactPhone, contact_name: contactName },
+        body: {
+          phone: dialPhone,
+          contact_name: contactName,
+          runtime_snapshot: cached && Date.now() - cached.polledAt < 20_000
+            ? { ...cached.runtime, polled_at: new Date(cached.polledAt).toISOString() }
+            : null,
+        },
       });
 
       if (error) {
@@ -57,7 +73,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
       }
 
       if (data?.success) {
-        toast.success("Chamada iniciada no 3C Plus", {
+        toast.success("Discando…", {
           description: `Ligando para ${contactName || contactPhone}...`,
         });
         return;
@@ -89,7 +105,7 @@ export function ThreeCPlusCallButton({ contactPhone, contactName }: ThreeCPlusCa
             className="h-6 w-6 text-primary hover:text-primary hover:bg-primary/10"
             onClick={makeCall}
           >
-            {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Phone className="h-3.5 w-3.5" />}
+            {calling ? <Loader2 className="h-3.5 w-3.5 animate-spin" aria-label="Discando…" /> : <Phone className="h-3.5 w-3.5" />}
           </Button>
         </TooltipTrigger>
         <TooltipContent>

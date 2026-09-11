@@ -24,6 +24,26 @@ export function digitsOnly(input: string): string {
 }
 
 /**
+ * Número estrito para discagem na 3C Plus.
+ * Retorna somente dígitos no formato brasileiro 55 + DDD + número.
+ */
+export function threeCDialPhone(input: string | null | undefined): string | null {
+  if (!input) return null;
+  let digits = digitsOnly(String(input));
+  while (digits.startsWith("0")) digits = digits.slice(1);
+
+  if (digits.length === 10 || digits.length === 11) digits = `${BR_DDI}${digits}`;
+  if (!digits.startsWith(BR_DDI)) return null;
+
+  if (digits.length === 12) {
+    const subscriber = digits.slice(4);
+    if (/^[6-9]/.test(subscriber)) digits = `${digits.slice(0, 4)}9${subscriber}`;
+  }
+
+  return (digits.length === 12 || digits.length === 13) ? digits : null;
+}
+
+/**
  * Retorna o formato canônico E.164 com correções para celulares brasileiros.
  * Adiciona o 9º dígito quando faltar e o DDI +55 quando faltar.
  * Para números não-BR, apenas garante o `+`.

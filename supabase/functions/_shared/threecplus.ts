@@ -67,6 +67,9 @@ export type ThreeCAgentRuntime = {
   agent_http_status: number | null;
   campaign_http_status: number | null;
   webphone_registered: boolean;
+  campaign_id: string | null;
+  campaign_name: string | null;
+  manual_campaign: boolean;
 };
 
 function asObject(value: unknown): Record<string, unknown> | null {
@@ -151,6 +154,9 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
     agent_http_status: null,
     campaign_http_status: null,
     webphone_registered: false,
+    campaign_id: null,
+    campaign_name: null,
+    manual_campaign: false,
   };
 
   let agentOk = false;
@@ -187,6 +193,13 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
       console.log("[threecplus-runtime] GET logged campaign:", JSON.stringify({ path, status: response.status }));
       if (response.ok) {
         runtime.logged_campaign = true;
+        const campaign = asObject(payload);
+        const campaignData = asObject(campaign?.data) ?? campaign;
+        runtime.campaign_id = campaignData?.id != null ? String(campaignData.id) : null;
+        runtime.campaign_name = typeof campaignData?.name === "string"
+          ? campaignData.name
+          : typeof campaignData?.campaign === "string" ? campaignData.campaign : null;
+        runtime.manual_campaign = /manual|prospec[cç][aã]o/i.test(runtime.campaign_name ?? "");
         break;
       }
       if (response.status !== 404) break;

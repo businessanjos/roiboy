@@ -12,6 +12,15 @@ interface AgentRuntime {
   manual_mode?: boolean;
   agent_status?: string | null;
   normalized_status?: "offline" | "idle" | "on_call" | "break" | "manual" | "unknown";
+  campaign_id?: string | null;
+  campaign_name?: string | null;
+  manual_campaign?: boolean;
+}
+
+declare global {
+  interface Window {
+    __threeCPlusRuntime?: { runtime: AgentRuntime; polledAt: number };
+  }
 }
 
 interface ConnectionInfo {
@@ -64,7 +73,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const refreshStatus = useCallback(async () => {
     try {
       const data = await invokeAgent("get_runtime");
-      if (data?.success) setStatus(mapRuntimeStatus(data.runtime));
+      if (data?.success) {
+        setStatus(mapRuntimeStatus(data.runtime));
+        window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now() };
+      }
       else setStatus("offline");
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);

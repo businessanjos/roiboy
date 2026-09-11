@@ -80,5 +80,16 @@ export function useConversationCalls({ phone, sinceISO, enabled = true }: Option
     };
   }, [accountId, key, enabled, load]);
 
+  useEffect(() => {
+    if (!enabled || !key) return;
+    const onOptimisticCall = (event: Event) => {
+      const detail = (event as CustomEvent<ConversationCall>).detail;
+      if (!detail || last8(detail.phone) !== key) return;
+      setCalls((previous) => dedupeCalls([...previous.filter((call) => call.id !== detail.id), detail]));
+    };
+    window.addEventListener("threecplus:optimistic-call", onOptimisticCall);
+    return () => window.removeEventListener("threecplus:optimistic-call", onOptimisticCall);
+  }, [enabled, key]);
+
   return { calls, reloadCalls: load };
 }
