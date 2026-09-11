@@ -197,6 +197,8 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
 
   if (agentOk && runtime.logged_campaign && runtime.normalized_status === "unknown") {
     runtime.normalized_status = "idle";
+  } else if (runtime.normalized_status === "unknown") {
+    runtime.normalized_status = "offline";
   }
   return runtime;
 }

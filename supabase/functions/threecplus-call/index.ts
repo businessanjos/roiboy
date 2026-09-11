@@ -312,6 +312,14 @@ Deno.serve((req) => with3cContext(async () => {
         return new Response(JSON.stringify({ success: true, message: "Chamada iniciada no 3C Plus" }),
           { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       }
+      if (isManualNotAllowed(dialRes.status, dialText)) {
+        return new Response(JSON.stringify({
+          success: false,
+          code: "MANUAL_NOT_ALLOWED",
+          error: "Sua campanha atual não permite ligação manual. No Discador 3C, entre na campanha Prospecção Manual.",
+          runtime,
+        }), { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
     }
 
     const agentIdIssue = mentionsAgentIdHeader(click2callText, lastEnterMessage);

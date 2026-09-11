@@ -50,22 +50,6 @@ function safeJsonParse(text: string): unknown | null {
   }
 }
 
-function parseBooleanish(value: unknown): boolean | null {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") return value !== 0;
-  if (typeof value !== "string") return null;
-
-  const normalized = value.trim().toLowerCase();
-  if (["true", "1", "yes", "sim", "registered", "connected", "online"].includes(normalized)) {
-    return true;
-  }
-  if (["false", "0", "no", "nao", "não", "unregistered", "disconnected", "offline"].includes(normalized)) {
-    return false;
-  }
-
-  return null;
-}
-
 function normalizePhone(value: unknown): string | null {
   if (typeof value === "number" && Number.isFinite(value)) return String(value);
   if (typeof value !== "string") return null;
@@ -124,58 +108,8 @@ function extractCallDetails(value: unknown): { id?: string | number; phone?: str
   };
 }
 
-function extractWebphoneRegistered(value: unknown, depth = 0): boolean | null {
-  if (!value || depth > 4) return null;
-  const record = asRecord(value);
-  if (!record) return null;
-
-  const directKeys = [
-    "webphone",
-    "webphone_registered",
-    "web_phone",
-    "webrtc_registered",
-    "extension_registered",
-    "registered",
-  ];
-
-  for (const key of directKeys) {
-    const parsed = parseBooleanish(record[key]);
-    if (parsed !== null) return parsed;
-  }
-
-  const nestedKeys = ["data", "agent", "extension", "webrtc", "webphone"];
-  for (const key of nestedKeys) {
-    const nested = extractWebphoneRegistered(record[key], depth + 1);
-    if (nested !== null) return nested;
-  }
-
-  return null;
-}
-
 function getWebphoneNotReadyMessage() {
   return "O ramal WebRTC abriu, mas ainda não foi registrado na 3C Plus. Aguarde alguns segundos e tente novamente.";
-}
-
-function extractAgentStatus(value: unknown, depth = 0): string | null {
-  if (!value || depth > 4) return null;
-  const record = asRecord(value);
-  if (!record) return null;
-
-  const directKeys = ["status", "state", "agent_status", "agentStatus", "mode"];
-  for (const key of directKeys) {
-    const currentValue = record[key];
-    if (typeof currentValue === "string" && currentValue.trim()) {
-      return currentValue.trim().toLowerCase();
-    }
-  }
-
-  const nestedKeys = ["data", "agent", "call"];
-  for (const key of nestedKeys) {
-    const nestedStatus = extractAgentStatus(record[key], depth + 1);
-    if (nestedStatus) return nestedStatus;
-  }
-
-  return null;
 }
 
 async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
