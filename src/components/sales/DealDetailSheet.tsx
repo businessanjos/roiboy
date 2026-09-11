@@ -228,6 +228,8 @@ export function DealDetailSheet({
   const [searchParams, setSearchParams] = useSearchParams();
   const [activeDetailTab, setActiveDetailTab] = useState("history");
   const [activities, setActivities] = useState<DealActivity[]>([]);
+  const [dealCalls, setDealCalls] = useState<ConversationCall[]>([]);
+
   const [tasks, setTasks] = useState<DealTask[]>([]);
   const [timelineItems, setTimelineItems] = useState<TimelineItem[]>([]);
   const [loading, setLoading] = useState(true);
