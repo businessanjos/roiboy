@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
+import { MAIN_SCROLL_ID } from "@/lib/navigation/scrollMain";
 import { MobileAppHeader } from "./MobileAppHeader";
 import { MobileTabBar } from "./MobileTabBar";
 import { GlobalHeader } from "./GlobalHeader";

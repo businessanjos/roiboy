@@ -5,6 +5,7 @@ import {
   Grid3X3, Calendar, Heart, Link2, FileSignature, CreditCard,
   Target, AlertTriangle, Lightbulb, User, ClipboardList, ShieldAlert, Instagram, Briefcase,
 } from "lucide-react";
+import { scrollMainToTop } from "@/lib/navigation/scrollMain";
 
 interface NavItem {
   id: string;
@@ -59,6 +60,7 @@ export function ClientDetailSidebarNav({
 
   const handleTabChange = (tab: string) => {
     setSearchParams({ tab });
+    scrollMainToTop();
     onNavigate?.();
   };
 
