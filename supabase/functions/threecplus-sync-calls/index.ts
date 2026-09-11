@@ -463,6 +463,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
         last_synced_at: adminMaxStarted || now.toISOString(),
       });
 
+      await triggerProcessCalls(accountId);
       return { synced: rows.length, mode: "admin", from: startStr, to: endStr };
     }
 
@@ -574,6 +575,7 @@ async function syncAccount(supabaseAdmin: any, accountId: string, payload: any) 
       last_synced_at: maxStarted || now.toISOString(),
     });
 
+    await triggerProcessCalls(accountId);
     return { synced: totalSynced, agents: perAgent, from: startStr, to: endStr };
   } catch (err) {
     console.error("[threecplus-sync-calls] error:", err);
