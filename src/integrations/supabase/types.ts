@@ -72,6 +72,7 @@ export type Database = {
           ai_roi_prompt: string | null
           ai_system_prompt: string | null
           block_overdue_days: number | null
+          calls_auto_tasks: boolean
           created_at: string
           dashboard_churn_goal: number
           dashboard_nps_goal: number
@@ -115,6 +116,7 @@ export type Database = {
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
           block_overdue_days?: number | null
+          calls_auto_tasks?: boolean
           created_at?: string
           dashboard_churn_goal?: number
           dashboard_nps_goal?: number
@@ -158,6 +160,7 @@ export type Database = {
           ai_roi_prompt?: string | null
           ai_system_prompt?: string | null
           block_overdue_days?: number | null
+          calls_auto_tasks?: boolean
           created_at?: string
           dashboard_churn_goal?: number
           dashboard_nps_goal?: number
@@ -16267,6 +16270,7 @@ export type Database = {
           id: string
           instagram: string | null
           instagrams: Json | null
+          last_contact_at: string | null
           mql: string | null
           neighborhood: string | null
           notes: string | null
@@ -16282,6 +16286,9 @@ export type Database = {
           street: string | null
           street_number: string | null
           tags: Json | null
+          temperature: string | null
+          temperature_manual_at: string | null
+          temperature_updated_at: string | null
           updated_at: string
           zip_code: string | null
         }
@@ -16324,6 +16331,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           instagrams?: Json | null
+          last_contact_at?: string | null
           mql?: string | null
           neighborhood?: string | null
           notes?: string | null
@@ -16339,6 +16347,9 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tags?: Json | null
+          temperature?: string | null
+          temperature_manual_at?: string | null
+          temperature_updated_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -16381,6 +16392,7 @@ export type Database = {
           id?: string
           instagram?: string | null
           instagrams?: Json | null
+          last_contact_at?: string | null
           mql?: string | null
           neighborhood?: string | null
           notes?: string | null
@@ -16396,6 +16408,9 @@ export type Database = {
           street?: string | null
           street_number?: string | null
           tags?: Json | null
+          temperature?: string | null
+          temperature_manual_at?: string | null
+          temperature_updated_at?: string | null
           updated_at?: string
           zip_code?: string | null
         }
@@ -24431,6 +24446,7 @@ export type Database = {
           ended_at: string | null
           engine: string
           external_ref: string | null
+          followup_task_id: string | null
           id: string
           lead_id: string | null
           linked_at: string | null
@@ -24467,6 +24483,7 @@ export type Database = {
           ended_at?: string | null
           engine?: string
           external_ref?: string | null
+          followup_task_id?: string | null
           id?: string
           lead_id?: string | null
           linked_at?: string | null
@@ -24503,6 +24520,7 @@ export type Database = {
           ended_at?: string | null
           engine?: string
           external_ref?: string | null
+          followup_task_id?: string | null
           id?: string
           lead_id?: string | null
           linked_at?: string | null
@@ -24551,6 +24569,13 @@ export type Database = {
             columns: ["deal_id"]
             isOneToOne: false
             referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "threecplus_call_logs_followup_task_id_fkey"
+            columns: ["followup_task_id"]
+            isOneToOne: false
+            referencedRelation: "internal_tasks"
             referencedColumns: ["id"]
           },
           {

@@ -128,6 +128,9 @@ export function CallTimelineEvent({
         : PhoneIncoming
       : PhoneMissed;
   const summaryText: string | null = transcript?.summary?.resumo || null;
+  const followupTask = (call.metadata as any)?.followup_task as
+    | { id: string; title: string }
+    | undefined;
 
   const openDeal = () => {
     if (call.deal_id) window.open(`/sales?deal=${call.deal_id}`, "_blank");
@@ -176,6 +179,22 @@ export function CallTimelineEvent({
                 Ver resumo completo
               </button>
             </div>
+          )}
+
+          {followupTask?.title && (
+            <p className="mt-1 text-left text-[11px] text-muted-foreground">
+              Tarefa criada:{" "}
+              <button
+                type="button"
+                className="font-medium text-primary hover:underline"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  window.open(`/tasks?task=${followupTask.id}`, "_blank");
+                }}
+              >
+                {followupTask.title}
+              </button>
+            </p>
           )}
 
           {answered && !summaryText && (transcript?.recording_url || call.recording_url) && (

@@ -6,6 +6,7 @@
 //   {}              -> processa o lote pendente (cron a cada 10 min)
 import { createClient } from "npm:@supabase/supabase-js@2";
 import { getBaseDomain } from "../_shared/threecplus.ts";
+import { applyCallInsights } from "../_shared/call-followups.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -312,7 +313,7 @@ async function processItem(supabase: any, apiKey: string, item: any) {
   try {
     const { data: call } = await supabase
       .from("threecplus_call_logs")
-      .select("id, call_id, phone, contact_name, duration_seconds, agent_name, activity_id, deal_id, recording_url, account_id")
+      .select("id, call_id, phone, contact_name, duration_seconds, agent_name, activity_id, deal_id, lead_id, client_id, user_id, started_at, created_at, metadata, followup_task_id, recording_url, account_id")
       .eq("id", item.call_log_id)
       .maybeSingle();
     if (!call) return await fail("Ligação não encontrada");
@@ -370,7 +371,25 @@ async function processItem(supabase: any, apiKey: string, item: any) {
         .eq("id", call.activity_id);
     }
 
-    return { call_log_id: item.call_log_id, ok: true, temperature: summary?.temperatura || null };
+    // Fecha o ciclo: temperatura/última interação no lead + tarefa de follow-up.
+    let followup: any = null;
+    try {
+      followup = await applyCallInsights(supabase, {
+        accountId: item.account_id || call.account_id,
+        call,
+        summary,
+        engineLabel: "3C",
+      });
+    } catch (e) {
+      console.error("[threecplus-transcribe-call] follow-up:", String(e?.message || e));
+    }
+
+    return {
+      call_log_id: item.call_log_id,
+      ok: true,
+      temperature: summary?.temperatura || null,
+      task_id: followup?.task_id || null,
+    };
   } catch (err: any) {
     return await fail(String(err?.message || err));
   }

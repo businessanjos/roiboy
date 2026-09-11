@@ -4,6 +4,8 @@
 //
 // A 3C Plus continua intacta: aqui só tratamos ligações com engine = "ryka_call".
 
+import { applyCallInsights, summaryFromRykaPostCall } from "./call-followups.ts";
+
 export const RYKA_BASE_URL = "https://callryka.com/api/public/v1";
 export const RYKA_ENGINE = "ryka_call";
 
@@ -101,16 +103,9 @@ function transcriptToText(entries: any): string | null {
 }
 
 function summaryFromPostCall(call: any): Record<string, unknown> | null {
-  const post = call?.post_call;
-  if (!post) return null;
-  if (typeof post === "string") return { resumo: post, fonte: "call_ryka" };
-  return {
-    resumo: post.summary || post.resumo || post.text || null,
-    dores: post.pains || post.dores || undefined,
-    objecoes: post.objections || post.objecoes || undefined,
-    proximos_passos: post.next_steps || post.proximos_passos || undefined,
-    fonte: "call_ryka",
-  };
+  const normalized = summaryFromRykaPostCall(call?.post_call);
+  if (!normalized) return null;
+  return { ...normalized, fonte: "call_ryka" };
 }
 
 /**
@@ -202,9 +197,10 @@ export async function persistRykaCall(
         account_id: accountId,
         call_log_id: logId,
         call_id: String(call.id),
-        status: "completed",
+        status: "done",
         transcript: transcriptText,
         summary,
+        temperature: (summary as any)?.temperatura || null,
         recording_url: null,
         last_error: null,
         processed_at: new Date().toISOString(),
@@ -223,5 +219,28 @@ export async function persistRykaCall(
     console.warn("[ryka-call] process-calls invoke failed:", String(error));
   }
 
-  return { call_log_id: logId, updated: true };
+  // Fecha o ciclo no cadastro do lead: temperatura, última interação e tarefa de follow-up.
+  let taskId: string | null = null;
+  try {
+    const { data: fresh } = await supabase
+      .from("threecplus_call_logs")
+      .select(
+        "id, call_id, phone, contact_name, started_at, created_at, lead_id, deal_id, client_id, user_id, activity_id, metadata, followup_task_id",
+      )
+      .eq("id", logId)
+      .maybeSingle();
+    if (fresh) {
+      const insights = await applyCallInsights(supabase, {
+        accountId,
+        call: fresh,
+        summary: summaryFromRykaPostCall(call?.post_call),
+        engineLabel: "Call Ryka",
+      });
+      taskId = insights.task_id;
+    }
+  } catch (error) {
+    console.warn("[ryka-call] follow-up failed:", String(error));
+  }
+
+  return { call_log_id: logId, updated: true, task_id: taskId };
 }
