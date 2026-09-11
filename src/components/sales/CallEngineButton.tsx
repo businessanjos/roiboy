@@ -10,7 +10,7 @@ import {
 import { toast } from "sonner";
 import { threeCDialPhone } from "@/lib/phoneNormalize";
 import { useCallEngines } from "@/hooks/useCallEngines";
-import { dialWithRyka, getLastEngine, setLastEngine, type CallEngine } from "@/lib/telephony/callEngines";
+import { dialWith3C, dialWithRyka, getLastEngine, setLastEngine, type CallEngine } from "@/lib/telephony/callEngines";
 import { ThreeCPlusCallButton } from "./ThreeCPlusCallButton";
 
 interface Props {
@@ -70,6 +70,23 @@ export function CallEngineButton({ contactPhone, contactName, dealId, leadId, cl
       </Button>
     );
   }
+
+  const call3C = async () => {
+    const dialPhone = threeCDialPhone(contactPhone);
+    if (!dialPhone) {
+      toast.error(`Número inválido: ${contactPhone || "vazio"}`);
+      return;
+    }
+    setLastEngine("3cplus");
+    setDialing(true);
+    const result = await dialWith3C({ phone: dialPhone, contact_name: contactName });
+    setDialing(false);
+    if (result.ok) {
+      toast.success("Discando…", { description: `Ligando para ${contactName || contactPhone}...` });
+      return;
+    }
+    toast.error(result.error || "Não foi possível completar a ligação.");
+  };
 
   const preferred: CallEngine = getLastEngine() || "3cplus";
 
