@@ -231,6 +231,17 @@ export default function ClientDetail() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
+  const activeSectionTab = searchParams.get("tab") || "timeline";
+  const sectionAnchorRef = useRef<HTMLDivElement | null>(null);
+
+  // Ao trocar de seção pelo menu lateral, leva a seção escolhida para o topo da área visível.
+  useEffect(() => {
+    if (activeSectionTab === "timeline") return;
+    const raf = requestAnimationFrame(() => {
+      sectionAnchorRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+    return () => cancelAnimationFrame(raf);
+  }, [activeSectionTab]);
   const [client, setClient] = useState<Client | null>(null);
   const [clientProducts, setClientProducts] = useState<ClientProduct[]>([]);
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
