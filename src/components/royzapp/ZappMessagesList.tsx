@@ -15,6 +15,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
+import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
+
+const callTs = (c: ConversationCall) =>
+  new Date(c.started_at || c.created_at || 0).getTime();
+
 
 
 
