@@ -3,7 +3,7 @@ import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   AGENT_ID_REQUIRED_MESSAGE,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
-  fetchThreeCAgentRuntime,
+  fetchThreeCAgentRuntimeForUser,
   fetch3c,
   mentionsAgentIdHeader,
   persistAgentLink,
@@ -58,8 +58,8 @@ async function postToAgentEndpoint(
   });
 }
 
-async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
-  const runtime = await fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+async function cleanupAgentState(baseDomain: string, agentApiToken: string, managerToken?: string | null, agentId?: string | null) {
+  const runtime = await fetchThreeCAgentRuntimeForUser(baseDomain, agentApiToken, { managerToken, agentId });
   if (runtime.manual_mode) {
     try {
       const response = await postToAgentEndpoint(baseDomain, agentApiToken, "/agent/manual_call/exit");
@@ -69,7 +69,7 @@ async function cleanupAgentState(baseDomain: string, agentApiToken: string) {
       console.warn("[threecplus-call] cleanup manual_call/exit failed:", err);
     }
   }
-  return fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+  return fetchThreeCAgentRuntimeForUser(baseDomain, agentApiToken, { managerToken, agentId });
 }
 
 function isManualNotAllowed(status: number, text: string): boolean {
@@ -211,7 +211,10 @@ Deno.serve((req) => with3cContext(async () => {
 
 
     // Consulta o estado real antes de qualquer tentativa. Nunca conecta ou desloga automaticamente.
-    let runtime = await fetchThreeCAgentRuntime(baseDomain, agentApiToken);
+    let runtime = await fetchThreeCAgentRuntimeForUser(baseDomain, agentApiToken, {
+      managerToken: auth.managerServiceToken,
+      agentId: resolvedAgentId,
+    });
     if (runtime.normalized_status === "offline") {
       return new Response(JSON.stringify({
         success: false,
@@ -294,7 +297,7 @@ Deno.serve((req) => with3cContext(async () => {
       if (isAgentNotIdle(enterRes.status, enterText)) {
         agentNotIdle = true;
         console.log("[threecplus-call] Agent is not idle, aborting manual dial fallback");
-        runtime = await cleanupAgentState(baseDomain, agentApiToken);
+        runtime = await cleanupAgentState(baseDomain, agentApiToken, auth.managerServiceToken, resolvedAgentId);
         break;
       }
 

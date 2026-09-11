@@ -3,7 +3,7 @@ import {
   AGENT_ID_REQUIRED_MESSAGE,
   SERVICE_TOKEN_MISSING_AGENT_MESSAGE,
   fetch3c,
-  fetchThreeCAgentRuntime,
+  fetchThreeCAgentRuntimeForUser,
   getBaseDomain,
   mentionsAgentIdHeader,
   resolveAgentAuth,
@@ -112,8 +112,14 @@ function getWebphoneNotReadyMessage() {
   return "O ramal WebRTC abriu, mas ainda não foi registrado na 3C Plus. Aguarde alguns segundos e tente novamente.";
 }
 
+let runtimeManagerToken: string | null = null;
+let runtimeAgentId: string | null = null;
+
 async function fetchAgentRuntimeState(apiBase: string, apiToken: string) {
-  return fetchThreeCAgentRuntime(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken);
+  return fetchThreeCAgentRuntimeForUser(apiBase.replace(/\/api\/v1\/?$/, ""), apiToken, {
+    managerToken: runtimeManagerToken,
+    agentId: runtimeAgentId,
+  });
 }
 
 async function waitForWebphoneRegistration(apiBase: string, apiToken: string, timeoutMs = 12000) {
@@ -710,6 +716,8 @@ Deno.serve((req) => with3cContext(async () => {
     const apiBase = `${baseDomain}/api/v1`;
     const agentApiToken = auth.personalToken;
     const effectiveApiToken = auth.apiToken;
+    runtimeManagerToken = auth.managerServiceToken ?? null;
+    runtimeAgentId = auth.agentId ?? null;
 
     // Return connection info
     if (action === "get_connection_info") {

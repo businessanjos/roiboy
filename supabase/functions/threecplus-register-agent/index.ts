@@ -4,7 +4,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2";
 import {
   fetchAgentIdFromApi,
-  fetchThreeCAgentRuntime,
+  fetchThreeCAgentRuntimeForUser,
   fetch3c,
   findAgentByExtensionOrEmail,
   listThreeCAgents,
@@ -220,7 +220,10 @@ Deno.serve((req) => with3cContext(async () => {
         if (!auth.apiToken || !auth.agentId) continue;
         setContextAgentId(auth.agentId);
         try {
-          const runtime = await fetchThreeCAgentRuntime(auth.baseDomain, auth.apiToken);
+          const runtime = await fetchThreeCAgentRuntimeForUser(auth.baseDomain, auth.apiToken, {
+            managerToken: auth.managerServiceToken,
+            agentId: auth.agentId,
+          });
           statuses[target.id] = runtime.normalized_status === "manual" ? "idle" : runtime.normalized_status;
         } catch {
           statuses[target.id] = "offline";

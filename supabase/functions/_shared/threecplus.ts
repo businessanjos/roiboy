@@ -204,6 +204,47 @@ export async function fetchThreeCAgentRuntime(baseDomain: string, apiToken: stri
   return runtime;
 }
 
+/** Complementa a leitura com a rota oficial de Gestor quando /agent não está disponível. */
+export async function fetchThreeCAgentRuntimeForUser(
+  baseDomain: string,
+  apiToken: string,
+  options?: { managerToken?: string | null; agentId?: string | null },
+): Promise<ThreeCAgentRuntime> {
+  const runtime = await fetchThreeCAgentRuntime(baseDomain, apiToken);
+  if (!options?.managerToken || !options.agentId || runtime.agent_http_status === 200) return runtime;
+
+  try {
+    const response = await fetch(`${getBaseDomain(baseDomain)}/api/v1/agents/status`, {
+      headers: { Accept: "application/json", Authorization: `Bearer ${options.managerToken}` },
+    });
+    const text = await response.text();
+    const payload = parseJsonBody(text);
+    console.log("[threecplus-runtime] GET /api/v1/agents/status raw:", JSON.stringify({ status: response.status, json: payload }));
+    if (!response.ok) return runtime;
+
+    const root = asObject(payload);
+    const candidates = Array.isArray(payload)
+      ? payload
+      : Array.isArray(root?.data) ? root.data : root ? [root] : [];
+    const row = candidates.find((item) => {
+      const record = asObject(item);
+      return record?.id != null && String(record.id) === String(options.agentId);
+    });
+    if (!row) return runtime;
+
+    runtime.agent_http_status = response.status;
+    runtime.agent_status = findStructuredAgentState(row);
+    runtime.has_active_call = hasStructuredCall(row);
+    runtime.normalized_status = normalizeStructuredAgentState(runtime.agent_status, runtime.has_active_call);
+    runtime.manual_mode = runtime.normalized_status === "manual";
+    if (runtime.normalized_status === "unknown" && runtime.logged_campaign) runtime.normalized_status = "idle";
+    return runtime;
+  } catch (error) {
+    console.error("[threecplus-runtime] GET /api/v1/agents/status failed:", error);
+    return runtime;
+  }
+}
+
 /** Detecta erros da 3C que reclamam do header X-Agent-Id. */
 export function mentionsAgentIdHeader(...parts: Array<unknown>): boolean {
   return parts.some((part) => typeof part === "string" && /x-?agent-?id/i.test(part));
