@@ -94,12 +94,9 @@ export function CallEngineButton({ contactPhone, contactName, dealId, leadId, cl
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
-        <DropdownMenuItem asChild>
-          <div className="flex cursor-pointer items-center gap-2">
-            <Phone className="h-4 w-4" />
-            <span className="flex-1">3C Plus</span>
-            <ThreeCPlusCallButton contactPhone={contactPhone} contactName={contactName} />
-          </div>
+        <DropdownMenuItem onClick={() => void call3C()}>
+          <Phone className="mr-2 h-4 w-4" />
+          3C Plus
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => void callRyka()}>
           <MessageCircle className="mr-2 h-4 w-4 text-emerald-500" />
