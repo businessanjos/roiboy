@@ -207,6 +207,9 @@ Deno.serve((req) => with3cContext(async () => {
     if (runtime.normalized_status === "offline") {
       return fail("AGENT_OFFLINE", "Você está offline na 3C. Entre em uma campanha no Discador 3C e tente de novo.");
     }
+    if (runtime.normalized_status === "unknown") {
+      return fail("AGENT_STATE_UNKNOWN", "Não foi possível confirmar seu estado na 3C. Abra o Discador 3C, entre em uma campanha e tente de novo.");
+    }
     if (runtime.normalized_status === "break") return fail("AGENT_ON_BREAK", "Saia do intervalo no Discador 3C para ligar.");
     if (runtime.normalized_status === "on_call") return fail("AGENT_NOT_IDLE", "Finalize a chamada atual no Discador 3C e tente de novo.");
 
