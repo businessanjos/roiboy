@@ -162,7 +162,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
 
       <aside
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-full max-w-md flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
+          "fixed inset-y-0 right-0 z-[60] flex w-full flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300 sm:w-[min(92vw,64rem)]",
           visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
         )}
         aria-hidden={!isOpen}
@@ -190,7 +190,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           src={`${domain}/agent`}
           title="Painel do agente 3C Plus"
           allow="microphone; autoplay"
-          className="min-h-0 flex-1 border-0 bg-background"
+          className="min-h-0 w-full flex-1 border-0 bg-background"
         />
       </aside>
     </>
