@@ -199,6 +199,7 @@ export function ZappChatView({
   const [searchCurrentIndex, setSearchCurrentIndex] = useState(0);
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [callInProgress, setCallInProgress] = useState(false);
+  const { engines: callEngines } = useCallEngines();
 
   // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
   const oldestMessageAt = useMemo(() => {
