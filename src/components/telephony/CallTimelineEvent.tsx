@@ -20,8 +20,6 @@ export interface CallTranscript {
   temperature: string | null;
   last_error: string | null;
   recording_url: string | null;
-  metadata?: Record<string, unknown> | null;
-  metadata?: Record<string, unknown> | null;
 }
 
 export interface ConversationCall {
@@ -42,6 +40,7 @@ export interface ConversationCall {
   client_id: string | null;
   activity_id?: string | null;
   recording_url: string | null;
+  metadata?: Record<string, unknown> | null;
   threecplus_call_transcripts?: CallTranscript[] | null;
 }
 
