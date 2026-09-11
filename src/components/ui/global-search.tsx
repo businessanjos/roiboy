@@ -20,6 +20,7 @@ import {
   UserSearch,
   Building2,
   UserCog,
+  MessageCircle,
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
@@ -140,6 +141,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const canViewFinancial = hasSectorAccess("financeiro");
   const canViewMarketing = hasSectorAccess("marketing");
   const canViewTeam = hasPermission(PERMISSIONS.TEAM_VIEW);
+  // Conversas do ROY zAPP: só os setores que o usuário pode enxergar.
+  const zappSectorIds = useMemo(
+    () =>
+      hasSectorAccess("royzapp")
+        ? sectors
+            .filter((s) => !s.comingSoon && s.id !== "royzapp" && hasSectorAccess(s.id))
+            .map((s) => s.id as string)
+        : [],
+    [hasSectorAccess],
+  );
+  const zappSectorKey = zappSectorIds.join("|");
   const canViewContracts = canViewClients;
 
   const filteredPages = useMemo(() => {
