@@ -28974,6 +28974,7 @@ export type Database = {
         | "openai"
         | "evolution"
         | "3cplus"
+        | "ryka_call"
       interaction_type:
         | "chat"
         | "qna"
@@ -29331,6 +29332,7 @@ export const Constants = {
         "openai",
         "evolution",
         "3cplus",
+        "ryka_call",
       ],
       interaction_type: [
         "chat",
