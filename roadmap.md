@@ -10,4 +10,5 @@
 - [x] Normalização e validação estrita do telefone
 - [x] Estado recente do Discador e evento otimista
 - [x] Erro bruto da 3C no registro e painel
-- [ ] Publicar funções e validar o fluxo real
+- [x] Publicar funções; validação estática e regressões concluídas
+- [ ] Confirmar uma discagem real após o próximo clique de usuário
