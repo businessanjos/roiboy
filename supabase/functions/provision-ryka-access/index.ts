@@ -198,7 +198,7 @@ Deno.serve(async (req) => {
     .from("clients")
     .select(`
       id, account_id, full_name, company_name, emails, phone_e164, cnpj, cpf,
-      city, state, zip_code, instagram, address, neighborhood,
+      city, state, zip_code, instagram, street, street_number, neighborhood,
       client_products(product_id, products(id, name))
     `)
     .eq("id", clientId)
@@ -260,7 +260,7 @@ Deno.serve(async (req) => {
       city: client.city,
       state: client.state,
       zip_code: client.zip_code,
-      address: client.address,
+      address: [client.street, client.street_number].filter(Boolean).join(", ") || null,
       neighborhood: client.neighborhood,
       instagram: client.instagram,
       product: primaryProduct,
