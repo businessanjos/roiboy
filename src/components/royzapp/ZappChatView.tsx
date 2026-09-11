@@ -274,14 +274,25 @@ export function ZappChatView({
   }, [onMessageChange, dismissSuggestions, messageInputRef]);
 
 
-  // 3C Plus call handler
-  const handleCall = useCallback(async () => {
+  // Ligação: 3C Plus ou Call Ryka (WhatsApp)
+  const handleCall = useCallback(async (engine?: CallEngine) => {
     const phone = contactInfo.phone;
     const dialPhone = threeCDialPhone(phone);
     if (!dialPhone) {
       toast.error(`Número inválido: ${phone || "vazio"}`);
       return;
     }
+    const chosen: CallEngine = engine || getLastEngine() || callEngines[0] || "3cplus";
+    setLastEngine(chosen);
+
+    if (chosen === "ryka_call") {
+      setCallInProgress(true);
+      const result = await dialWithRyka({ phone: dialPhone, contact_name: contactInfo.name });
+      setCallInProgress(false);
+      if (!result.ok) toast.error(result.error || "Não foi possível abrir o Call Ryka.");
+      return;
+    }
+
     setCallInProgress(true);
     try {
       const cached = window.__threeCPlusRuntime;
