@@ -134,6 +134,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const canViewLeads = canViewSales && canViewClients;
   const canViewEvents = hasSectorAccess("eventos") && hasPermission(PERMISSIONS.EVENTS_VIEW);
   const canViewCollaborators = canSeeRh && hasSectorAccess("rh");
+  const canViewRh = canViewCollaborators;
+  const canViewTasks = true; // tarefas seguem o RLS/setor no próprio banco
+  const canViewProducts = hasPermission(PERMISSIONS.PRODUCTS_VIEW);
+  const canViewFinancial = hasSectorAccess("financeiro");
+  const canViewMarketing = hasSectorAccess("marketing");
+  const canViewTeam = hasPermission(PERMISSIONS.TEAM_VIEW);
+  const canViewContracts = canViewClients;
 
   const filteredPages = useMemo(() => {
     if (!query.trim()) return pages.slice(0, 8);
