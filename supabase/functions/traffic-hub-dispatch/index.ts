@@ -145,7 +145,7 @@ function chainNext(depth: number) {
 }
 
 // Somente negócios de tráfego: [TRAF-STUDIO-EC] e [TRAF-IMP-EC]
-const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC", "ORG-EC"];
+const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC", "ORG-EC", "ORG-EVER"];
 
 function isTrafficOrigin(origins: string[]) {
   return origins.some((o) => TRAFFIC_TAGS.some((t) => String(o).toUpperCase().includes(t)));
