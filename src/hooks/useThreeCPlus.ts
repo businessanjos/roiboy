@@ -149,6 +149,11 @@ export function useThreeCPlus() {
 
   // Invoke the unified edge function
   const invokeAgent = useCallback(async (action: string, body: Record<string, unknown> = {}) => {
+    // Garante sessão válida (refresh) antes de chamar; sem isso a função devolve 401.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) {
+      throw new Error("Sessão expirada. Faça login novamente para usar o discador.");
+    }
     const { data, error } = await supabase.functions.invoke("threecplus-agent", {
       body: { action, ...body },
     });
