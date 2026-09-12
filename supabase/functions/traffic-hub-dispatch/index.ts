@@ -144,8 +144,8 @@ function chainNext(depth: number) {
   if (typeof EdgeRuntime !== "undefined") EdgeRuntime.waitUntil(task);
 }
 
-// Somente negócios de tráfego: [TRAF-STUDIO-EC] e [TRAF-IMP-EC]
-const TRAFFIC_TAGS = ["TRAF-STUDIO-EC", "TRAF-IMP-EC", "ORG-EC", "ORG-EVER"];
+// Negócios de tráfego pago ([TRAF-*]) e de todos os canais orgânicos ([ORG-*])
+const TRAFFIC_TAGS = ["TRAF-", "ORG-"];
 
 function isTrafficOrigin(origins: string[]) {
   return origins.some((o) => TRAFFIC_TAGS.some((t) => String(o).toUpperCase().includes(t)));
