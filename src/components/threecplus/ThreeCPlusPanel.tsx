@@ -66,6 +66,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
+    // Sem sessão ativa a função responde 401; evita erro e mantém o discador oculto.
+    const { data: sessionData } = await supabase.auth.getSession();
+    if (!sessionData.session) return null;
     const { data, error } = await supabase.functions.invoke("threecplus-agent", { body: { action } });
     if (error) throw error;
     return data;
