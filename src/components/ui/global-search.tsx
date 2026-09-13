@@ -142,16 +142,17 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const canViewMarketing = hasSectorAccess("marketing");
   const canViewTeam = hasPermission(PERMISSIONS.TEAM_VIEW);
   // Conversas do ROY zAPP: só os setores que o usuário pode enxergar.
+  const zappSectorIdsRaw = hasSectorAccess("royzapp")
+    ? sectors
+        .filter((s) => !s.comingSoon && s.id !== "royzapp" && hasSectorAccess(s.id))
+        .map((s) => s.id as string)
+    : [];
+  const zappSectorKey = zappSectorIdsRaw.join("|");
+  // Identidade estável: só muda quando a lista de setores realmente muda.
   const zappSectorIds = useMemo(
-    () =>
-      hasSectorAccess("royzapp")
-        ? sectors
-            .filter((s) => !s.comingSoon && s.id !== "royzapp" && hasSectorAccess(s.id))
-            .map((s) => s.id as string)
-        : [],
-    [hasSectorAccess],
+    () => (zappSectorKey ? zappSectorKey.split("|") : []),
+    [zappSectorKey],
   );
-  const zappSectorKey = zappSectorIds.join("|");
   const canViewContracts = canViewClients;
 
   const filteredPages = useMemo(() => {
