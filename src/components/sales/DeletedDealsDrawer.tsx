@@ -23,6 +23,9 @@ interface DeletedDeal {
   deleted_at: string;
   deleted_by: string | null;
   responsible_user_id: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   responsible_name?: string | null;
   deleted_by_name?: string | null;
 }
@@ -40,6 +43,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
   const [deals, setDeals] = useState<DeletedDeal[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [purgingId, setPurgingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const fetchDeleted = useCallback(async () => {
     if (!currentUser?.account_id) return;
@@ -49,6 +53,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .from('deals')
         .select(`
           id, title, value, status, deleted_at, deleted_by, responsible_user_id,
+          contact_name, contact_phone, contact_email,
           responsible_user:users!deals_responsible_user_id_fkey(name)
         `)
         .eq('account_id', currentUser.account_id)
@@ -81,6 +86,9 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
           deleted_at: d.deleted_at,
           deleted_by: d.deleted_by,
           responsible_user_id: d.responsible_user_id,
+          contact_name: d.contact_name,
+          contact_phone: d.contact_phone,
+          contact_email: d.contact_email,
           responsible_name: d.responsible_user?.name ?? null,
           deleted_by_name: d.deleted_by ? byNames[d.deleted_by] ?? null : null,
         }))
