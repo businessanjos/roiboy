@@ -174,7 +174,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
     const raw = query.trim();
     const term = sanitize(raw);
     if (term.length < 2) {
-      setRemote([]);
+      setRemote((prev) => (prev.length ? [] : prev));
       setSearching(false);
       return;
     }
