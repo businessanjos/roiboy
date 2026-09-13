@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { Loader2, RotateCcw, Trash2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
@@ -155,15 +156,27 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por título, contato, telefone, e-mail ou responsável..."
+            className="pl-9"
+          />
+        </div>
+
+        <div className="mt-3 space-y-2">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
             </div>
-          ) : deals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum negócio excluído.</p>
+          ) : filteredDeals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {deals.length === 0 ? "Nenhum negócio excluído." : "Nenhum resultado para essa busca."}
+            </p>
           ) : (
-            deals.map(d => (
+            filteredDeals.map(d => (
               <div
                 key={d.id}
                 className="flex items-center justify-between gap-3 p-3 border rounded-lg"
