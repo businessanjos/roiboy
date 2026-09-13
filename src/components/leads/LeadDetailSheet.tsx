@@ -213,11 +213,12 @@ export function LeadDetailSheet({
       });
 
 
-      // Fetch associated deals
+      // Fetch associated deals (ignora negócios excluídos / soft-delete)
       const { data: dealsData, error: dealsError } = await supabase
         .from("deals")
         .select("id, title, value, responsible_user_id, stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
         .eq("lead_id", leadId)
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (dealsError) throw dealsError;
