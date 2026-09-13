@@ -145,6 +145,20 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
     }
   };
 
+  const term = search.trim().toLowerCase();
+  const digits = term.replace(/\D/g, "");
+  const filteredDeals = !term
+    ? deals
+    : deals.filter(d => {
+        const haystack = [d.title, d.contact_name, d.contact_email, d.responsible_name, d.deleted_by_name]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (haystack.includes(term)) return true;
+        if (digits.length >= 4 && (d.contact_phone || "").replace(/\D/g, "").includes(digits)) return true;
+        return false;
+      });
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
