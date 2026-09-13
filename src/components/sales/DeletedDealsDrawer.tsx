@@ -8,7 +8,8 @@ import {
 } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, RotateCcw, Trash2 } from "lucide-react";
+import { Loader2, RotateCcw, Trash2, Search } from "lucide-react";
+import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
@@ -23,6 +24,9 @@ interface DeletedDeal {
   deleted_at: string;
   deleted_by: string | null;
   responsible_user_id: string | null;
+  contact_name?: string | null;
+  contact_phone?: string | null;
+  contact_email?: string | null;
   responsible_name?: string | null;
   deleted_by_name?: string | null;
 }
@@ -40,6 +44,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
   const [deals, setDeals] = useState<DeletedDeal[]>([]);
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [purgingId, setPurgingId] = useState<string | null>(null);
+  const [search, setSearch] = useState("");
 
   const fetchDeleted = useCallback(async () => {
     if (!currentUser?.account_id) return;
@@ -49,6 +54,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .from('deals')
         .select(`
           id, title, value, status, deleted_at, deleted_by, responsible_user_id,
+          contact_name, contact_phone, contact_email,
           responsible_user:users!deals_responsible_user_id_fkey(name)
         `)
         .eq('account_id', currentUser.account_id)
@@ -81,6 +87,9 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
           deleted_at: d.deleted_at,
           deleted_by: d.deleted_by,
           responsible_user_id: d.responsible_user_id,
+          contact_name: d.contact_name,
+          contact_phone: d.contact_phone,
+          contact_email: d.contact_email,
           responsible_name: d.responsible_user?.name ?? null,
           deleted_by_name: d.deleted_by ? byNames[d.deleted_by] ?? null : null,
         }))
@@ -136,6 +145,20 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
     }
   };
 
+  const term = search.trim().toLowerCase();
+  const digits = term.replace(/\D/g, "");
+  const filteredDeals = !term
+    ? deals
+    : deals.filter(d => {
+        const haystack = [d.title, d.contact_name, d.contact_email, d.responsible_name, d.deleted_by_name]
+          .filter(Boolean)
+          .join(" ")
+          .toLowerCase();
+        if (haystack.includes(term)) return true;
+        if (digits.length >= 4 && (d.contact_phone || "").replace(/\D/g, "").includes(digits)) return true;
+        return false;
+      });
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
@@ -147,15 +170,27 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
           </SheetDescription>
         </SheetHeader>
 
-        <div className="mt-4 space-y-2">
+        <div className="mt-4 relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Buscar por título, contato, telefone, e-mail ou responsável..."
+            className="pl-9"
+          />
+        </div>
+
+        <div className="mt-3 space-y-2">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" /> Carregando...
             </div>
-          ) : deals.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Nenhum negócio excluído.</p>
+          ) : filteredDeals.length === 0 ? (
+            <p className="text-sm text-muted-foreground">
+              {deals.length === 0 ? "Nenhum negócio excluído." : "Nenhum resultado para essa busca."}
+            </p>
           ) : (
-            deals.map(d => (
+            filteredDeals.map(d => (
               <div
                 key={d.id}
                 className="flex items-center justify-between gap-3 p-3 border rounded-lg"
