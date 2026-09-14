@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { MessageCircle, X, Minus } from "lucide-react";
+import { MessageCircle, X, Minus, ExternalLink } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -30,18 +30,34 @@ export function CallRykaPanel() {
   const [session, setSession] = useState<RykaOpenDetail | null>(null);
   const [visible, setVisible] = useState(false);
   const [inCall, setInCall] = useState(false);
+  const [maybeBlocked, setMaybeBlocked] = useState(false);
   const activeRef = useRef(false);
+
+  const openExternal = useCallback((detail: RykaOpenDetail | null) => {
+    const target = detail?.external_url || detail?.embed_url;
+    if (!target) return;
+    window.open(target, "callryka", "width=440,height=780,noopener");
+  }, []);
 
   useEffect(() => {
     const onOpen = (event: WindowEventMap["rykacall:open"]) => {
       setSession(event.detail);
       setVisible(true);
       setInCall(false);
+      setMaybeBlocked(false);
       activeRef.current = false;
     };
     window.addEventListener("rykacall:open", onOpen);
     return () => window.removeEventListener("rykacall:open", onOpen);
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    setMaybeBlocked(false);
+    const timer = window.setTimeout(() => setMaybeBlocked(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [session]);
+
 
   const emitTimelineCall = useCallback(
     (detail: RykaOpenDetail, payload: RykaEvent["payload"], ended: boolean) => {
@@ -76,6 +92,9 @@ export function CallRykaPanel() {
     const onMessage = (event: MessageEvent<RykaEvent>) => {
       const data = event.data;
       if (!data || data.source !== "ryka-call") return;
+      setMaybeBlocked(false);
+
+
 
       if (data.type === "call.started") {
         activeRef.current = true;
@@ -131,9 +150,19 @@ export function CallRykaPanel() {
             <span className="text-xs text-muted-foreground">{inCall ? "Em chamada" : "Pronto"}</span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Abrir em nova janela"
+              onClick={() => openExternal(session)}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setVisible(false)} title="Ocultar">
               <Minus className="h-4 w-4" />
             </Button>
+
             <Button
               variant="ghost"
               size="icon"
@@ -154,12 +183,23 @@ export function CallRykaPanel() {
           </div>
         </div>
 
+        {maybeBlocked && (
+          <div className="border-b border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            <p>Se o discador aparecer em branco ou com "recusou conexão", o Call Ryka ainda não liberou a abertura dentro do ROY.</p>
+            <Button size="sm" variant="secondary" className="mt-2 gap-2" onClick={() => openExternal(session)}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              Abrir em nova janela
+            </Button>
+          </div>
+        )}
+
         <iframe
           title="Discador Call Ryka"
           src={session.embed_url}
           allow="microphone"
           className="h-full w-full flex-1 border-0"
         />
+
       </div>
     </>
   );
