@@ -29,6 +29,7 @@ export interface RykaDialParams {
 
 export interface RykaOpenDetail extends RykaDialParams {
   embed_url: string;
+  external_url?: string | null;
   call_log_id: string;
 }
 
