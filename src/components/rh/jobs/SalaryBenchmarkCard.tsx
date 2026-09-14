@@ -287,7 +287,7 @@ function computeRecommendations(params: Parameters<typeof computeAttractiveness>
 
 
 
-const BENCHMARK_OWNER_EMAIL = "m.quintana@me.com";
+const BENCHMARK_OWNER_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
 
 export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 60 }: Props) {
   const { currentUser } = useCurrentUser();
@@ -301,7 +301,7 @@ export function SalaryBenchmarkCard({ job, city, state, jobId, alertThreshold = 
   const autoRanRef = useRef(false);
   const [logRefreshKey, setLogRefreshKey] = useState(0);
 
-  const canRegenerate = (currentUser?.email || "").toLowerCase() === BENCHMARK_OWNER_EMAIL;
+  const canRegenerate = BENCHMARK_OWNER_EMAILS.includes((currentUser?.email || "").toLowerCase());
 
   // Load cached benchmark from DB
   useEffect(() => {
