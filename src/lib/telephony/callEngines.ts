@@ -48,7 +48,12 @@ export async function dialWithRyka(params: RykaDialParams): Promise<{ ok: boolea
   }
   window.dispatchEvent(
     new CustomEvent("rykacall:open", {
-      detail: { ...params, embed_url: data.embed_url, call_log_id: data.call_log_id },
+      detail: {
+        ...params,
+        embed_url: data.embed_url,
+        external_url: data.url || null,
+        call_log_id: data.call_log_id,
+      },
     }),
   );
   return { ok: true };
