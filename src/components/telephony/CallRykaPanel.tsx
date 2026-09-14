@@ -92,6 +92,9 @@ export function CallRykaPanel() {
     const onMessage = (event: MessageEvent<RykaEvent>) => {
       const data = event.data;
       if (!data || data.source !== "ryka-call") return;
+      setMaybeBlocked(false);
+
+
 
       if (data.type === "call.started") {
         activeRef.current = true;
