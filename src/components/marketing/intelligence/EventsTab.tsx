@@ -401,6 +401,16 @@ const EVENTS: EventItem[] = [
 
 const MONTHS_ORDER = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+// Os eventos são anuais e o mês é referência histórica: exibimos o ano da
+// PRÓXIMA edição — se o mês já passou neste ano, cai no ano seguinte.
+function editionYear(monthIndex: number, now = new Date()): number {
+  return now.getFullYear() + (monthIndex < now.getMonth() ? 1 : 0);
+}
+/** Distância em meses a partir do mês atual (0 = este mês). */
+function monthsAhead(monthIndex: number, now = new Date()): number {
+  return (monthIndex - now.getMonth() + 12) % 12;
+}
+
 // Ordem de prioridade: primeiro eventos de estética (esteticistas/biomédicos/multi),
 // depois sociedades médicas (médicos, dermato, cirurgiões plásticos, HOF).
 function audiencePriority(ev: EventItem): number {
@@ -437,7 +447,7 @@ function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Badge variant="outline" className="text-xs">
-              <Calendar className="h-3 w-3 mr-1" /> {ev.month}
+              <Calendar className="h-3 w-3 mr-1" /> {ev.month} {editionYear(ev.monthIndex)}
             </Badge>
             {onDelete && (
               <Button
@@ -548,7 +558,9 @@ export default function EventsTab() {
         );
       })
       .sort((a, b) => {
-        if (a.monthIndex !== b.monthIndex) return a.monthIndex - b.monthIndex;
+        const oa = monthsAhead(a.monthIndex);
+        const ob = monthsAhead(b.monthIndex);
+        if (oa !== ob) return oa - ob;
         const pa = audiencePriority(a);
         const pb = audiencePriority(b);
         if (pa !== pb) return pa - pb;
@@ -559,12 +571,14 @@ export default function EventsTab() {
   const byMonth = useMemo(() => {
     const map = new Map<string, EventItem[]>();
     for (const e of filtered) {
-      const key = e.month;
+      const key = `${e.month} ${editionYear(e.monthIndex)}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
     return Array.from(map.entries()).sort(
-      (a, b) => MONTHS_ORDER.indexOf(a[0]) - MONTHS_ORDER.indexOf(b[0]),
+      (a, b) =>
+        monthsAhead(MONTHS_ORDER.indexOf(a[0].split(" ")[0])) -
+        monthsAhead(MONTHS_ORDER.indexOf(b[0].split(" ")[0])),
     );
   }, [filtered]);
 
@@ -732,7 +746,7 @@ export default function EventsTab() {
           </div>
           <p className="text-xs text-muted-foreground">
             {total} evento(s) — {totalBR} no Brasil · {totalINT} internacionais
-            {userEvents.length > 0 && ` · ${userEvents.length} adicionado(s) via IA`}. Ordenados por mês.
+            {userEvents.length > 0 && ` · ${userEvents.length} adicionado(s) via IA`}. Ordenados pela próxima edição (mês/ano).
           </p>
         </CardContent>
       </Card>
@@ -913,7 +927,7 @@ export default function EventsTab() {
                         <h4 className="font-semibold text-sm">{e.name}</h4>
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-[10px]">
-                            <Calendar className="h-2.5 w-2.5 mr-0.5" /> {e.month}
+                            <Calendar className="h-2.5 w-2.5 mr-0.5" /> {e.month} {editionYear(e.monthIndex ?? MONTH_TO_INDEX[e.month] ?? 0)}
                           </Badge>
                           <Badge variant="outline" className="text-[10px]">
                             {e.country === "BR" ? "Brasil" : "Internacional"}
