@@ -558,7 +558,9 @@ export default function EventsTab() {
         );
       })
       .sort((a, b) => {
-        if (a.monthIndex !== b.monthIndex) return a.monthIndex - b.monthIndex;
+        const oa = monthsAhead(a.monthIndex);
+        const ob = monthsAhead(b.monthIndex);
+        if (oa !== ob) return oa - ob;
         const pa = audiencePriority(a);
         const pb = audiencePriority(b);
         if (pa !== pb) return pa - pb;
@@ -569,12 +571,14 @@ export default function EventsTab() {
   const byMonth = useMemo(() => {
     const map = new Map<string, EventItem[]>();
     for (const e of filtered) {
-      const key = e.month;
+      const key = `${e.month} ${editionYear(e.monthIndex)}`;
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(e);
     }
     return Array.from(map.entries()).sort(
-      (a, b) => MONTHS_ORDER.indexOf(a[0]) - MONTHS_ORDER.indexOf(b[0]),
+      (a, b) =>
+        monthsAhead(MONTHS_ORDER.indexOf(a[0].split(" ")[0])) -
+        monthsAhead(MONTHS_ORDER.indexOf(b[0].split(" ")[0])),
     );
   }, [filtered]);
 
