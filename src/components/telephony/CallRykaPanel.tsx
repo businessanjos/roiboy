@@ -150,9 +150,19 @@ export function CallRykaPanel() {
             <span className="text-xs text-muted-foreground">{inCall ? "Em chamada" : "Pronto"}</span>
           </div>
           <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="h-7 w-7"
+              title="Abrir em nova janela"
+              onClick={() => openExternal(session)}
+            >
+              <ExternalLink className="h-4 w-4" />
+            </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setVisible(false)} title="Ocultar">
               <Minus className="h-4 w-4" />
             </Button>
+
             <Button
               variant="ghost"
               size="icon"
