@@ -746,7 +746,7 @@ export default function EventsTab() {
           </div>
           <p className="text-xs text-muted-foreground">
             {total} evento(s) — {totalBR} no Brasil · {totalINT} internacionais
-            {userEvents.length > 0 && ` · ${userEvents.length} adicionado(s) via IA`}. Ordenados por mês.
+            {userEvents.length > 0 && ` · ${userEvents.length} adicionado(s) via IA`}. Ordenados pela próxima edição (mês/ano).
           </p>
         </CardContent>
       </Card>
