@@ -927,7 +927,7 @@ export default function EventsTab() {
                         <h4 className="font-semibold text-sm">{e.name}</h4>
                         <div className="flex items-center gap-1">
                           <Badge variant="outline" className="text-[10px]">
-                            <Calendar className="h-2.5 w-2.5 mr-0.5" /> {e.month}
+                            <Calendar className="h-2.5 w-2.5 mr-0.5" /> {e.month} {editionYear(e.monthIndex ?? MONTH_TO_INDEX[e.month] ?? 0)}
                           </Badge>
                           <Badge variant="outline" className="text-[10px]">
                             {e.country === "BR" ? "Brasil" : "Internacional"}
