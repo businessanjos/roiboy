@@ -183,12 +183,23 @@ export function CallRykaPanel() {
           </div>
         </div>
 
+        {maybeBlocked && (
+          <div className="border-b border-border bg-muted/60 px-3 py-2 text-xs text-muted-foreground">
+            <p>Se o discador aparecer em branco ou com "recusou conexão", o Call Ryka ainda não liberou a abertura dentro do ROY.</p>
+            <Button size="sm" variant="secondary" className="mt-2 gap-2" onClick={() => openExternal(session)}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              Abrir em nova janela
+            </Button>
+          </div>
+        )}
+
         <iframe
           title="Discador Call Ryka"
           src={session.embed_url}
           allow="microphone"
           className="h-full w-full flex-1 border-0"
         />
+
       </div>
     </>
   );
