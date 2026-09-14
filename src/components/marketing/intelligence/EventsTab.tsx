@@ -401,6 +401,16 @@ const EVENTS: EventItem[] = [
 
 const MONTHS_ORDER = ["Jan","Fev","Mar","Abr","Mai","Jun","Jul","Ago","Set","Out","Nov","Dez"];
 
+// Os eventos são anuais e o mês é referência histórica: exibimos o ano da
+// PRÓXIMA edição — se o mês já passou neste ano, cai no ano seguinte.
+function editionYear(monthIndex: number, now = new Date()): number {
+  return now.getFullYear() + (monthIndex < now.getMonth() ? 1 : 0);
+}
+/** Distância em meses a partir do mês atual (0 = este mês). */
+function monthsAhead(monthIndex: number, now = new Date()): number {
+  return (monthIndex - now.getMonth() + 12) % 12;
+}
+
 // Ordem de prioridade: primeiro eventos de estética (esteticistas/biomédicos/multi),
 // depois sociedades médicas (médicos, dermato, cirurgiões plásticos, HOF).
 function audiencePriority(ev: EventItem): number {
