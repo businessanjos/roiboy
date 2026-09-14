@@ -30,18 +30,34 @@ export function CallRykaPanel() {
   const [session, setSession] = useState<RykaOpenDetail | null>(null);
   const [visible, setVisible] = useState(false);
   const [inCall, setInCall] = useState(false);
+  const [maybeBlocked, setMaybeBlocked] = useState(false);
   const activeRef = useRef(false);
+
+  const openExternal = useCallback((detail: RykaOpenDetail | null) => {
+    const target = detail?.external_url || detail?.embed_url;
+    if (!target) return;
+    window.open(target, "callryka", "width=440,height=780,noopener");
+  }, []);
 
   useEffect(() => {
     const onOpen = (event: WindowEventMap["rykacall:open"]) => {
       setSession(event.detail);
       setVisible(true);
       setInCall(false);
+      setMaybeBlocked(false);
       activeRef.current = false;
     };
     window.addEventListener("rykacall:open", onOpen);
     return () => window.removeEventListener("rykacall:open", onOpen);
   }, []);
+
+  useEffect(() => {
+    if (!session) return;
+    setMaybeBlocked(false);
+    const timer = window.setTimeout(() => setMaybeBlocked(true), 5000);
+    return () => window.clearTimeout(timer);
+  }, [session]);
+
 
   const emitTimelineCall = useCallback(
     (detail: RykaOpenDetail, payload: RykaEvent["payload"], ended: boolean) => {
