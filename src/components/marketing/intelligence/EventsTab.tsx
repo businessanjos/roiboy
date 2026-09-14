@@ -447,7 +447,7 @@ function EventCard({ ev, onDelete }: { ev: EventItem; onDelete?: () => void }) {
           </div>
           <div className="flex items-center gap-1 shrink-0">
             <Badge variant="outline" className="text-xs">
-              <Calendar className="h-3 w-3 mr-1" /> {ev.month}
+              <Calendar className="h-3 w-3 mr-1" /> {ev.month} {editionYear(ev.monthIndex)}
             </Badge>
             {onDelete && (
               <Button
