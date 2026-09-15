@@ -161,23 +161,57 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [refreshStatus]);
 
-  // Escala o conteúdo da 3C para caber na largura atual do painel.
+  // Escala o conteúdo da 3C para caber na largura atual do painel,
+  // sem reduzir além do limite confortável de clique.
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return;
     const update = () => {
       const width = el.clientWidth;
       if (!width) return;
-      setScale(Math.min(1, Math.max(0.4, width / BASE_WIDTH)));
+      setScale(Math.min(1, Math.max(MIN_SCALE, width / BASE_WIDTH)));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isOpen, expanded]);
+  }, [isOpen, expanded, panelWidth]);
+
+  // Guarda a largura escolhida pelo usuário.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(WIDTH_STORAGE_KEY, String(Math.round(panelWidth)));
+  }, [panelWidth]);
+
+  // Trava a rolagem do fundo enquanto o discador está aberto.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [isOpen]);
+
+  // Arrastar a alça esquerda para redimensionar.
+  const startResize = useCallback((event: React.PointerEvent) => {
+    event.preventDefault();
+    setResizing(true);
+    const onMove = (e: PointerEvent) => {
+      const maxWidth = window.innerWidth * 0.96;
+      const next = Math.min(maxWidth, Math.max(MIN_PANEL_WIDTH, window.innerWidth - e.clientX));
+      setPanelWidth(next);
+    };
+    const onUp = () => {
+      setResizing(false);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, []);
 
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
+  const drawerOpen = visible && hasExtension && isOpen;
 
   return (
     <>
