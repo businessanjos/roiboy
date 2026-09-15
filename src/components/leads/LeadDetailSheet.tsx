@@ -317,7 +317,7 @@ export function LeadDetailSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           {loading ? (
             <div className="space-y-4 mt-6">
