@@ -160,27 +160,42 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [hasExtension, refreshStatus, status]);
 
-  // Cronômetro da ligação em andamento.
+  // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
-    if (status !== "on_call") {
+    if (status === "on_call") {
+      if (!callStartedAt.current) callStartedAt.current = Date.now();
+    } else {
       callStartedAt.current = null;
+      if (status === "offline" || status === "pause") setDialingSince(null);
+    }
+    const base = status === "on_call" ? callStartedAt.current : dialingSince;
+    if (!base) {
       setElapsed(0);
       return;
     }
-    if (!callStartedAt.current) callStartedAt.current = Date.now();
-    const tick = () => {
-      if (callStartedAt.current) setElapsed((Date.now() - callStartedAt.current) / 1000);
-    };
+    const tick = () => setElapsed((Date.now() - base) / 1000);
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
+  }, [status, dialingSince]);
+
+  // Encerrada a chamada, o cartão de discagem some.
+  useEffect(() => {
+    if (status !== "on_call") return;
+    return () => setDialingSince(null);
   }, [status]);
 
   useEffect(() => {
     const openDrawer = (event: Event) => {
-      const detail = (event as CustomEvent<{ contact_name?: string | null; phone?: string | null }>).detail;
-      if (detail && (detail.contact_name || detail.phone)) {
-        setContact({ name: detail.contact_name ?? null, phone: detail.phone ?? null });
+      const detail = (event as CustomEvent<{
+        contact_name?: string | null;
+        contactName?: string | null;
+        phone?: string | null;
+      }>).detail;
+      const name = detail?.contact_name ?? detail?.contactName ?? null;
+      if (detail && (name || detail.phone)) {
+        setContact({ name, phone: detail.phone ?? null });
+        setDialingSince(Date.now());
       }
       setLauncherHidden(false);
       setIsOpen(true);
@@ -193,6 +208,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.removeEventListener("threecplus:dial-request", openDrawer);
     };
   }, [refreshStatus]);
+
 
   // Guarda a largura escolhida pelo usuário.
   useEffect(() => {
