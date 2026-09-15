@@ -3,6 +3,7 @@ import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { setThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 
 type DialerStatus = "offline" | "idle" | "on_call" | "pause";
 
