@@ -55,6 +55,7 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
 const MIN_PANEL_WIDTH = 420;
 const DEFAULT_PANEL_WIDTH = 1120;
 const WIDTH_STORAGE_KEY = "roy_threec_panel_width";
+const DIAL_RUNTIME_GRACE_MS = 5_000;
 
 function readStoredWidth(): number | null {
   if (typeof window === "undefined") return null;
@@ -158,10 +159,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => { active = false; };
   }, [invokeAgent, refreshStatus]);
 
-  // Enquanto houver chamada ativa, o estado é consultado com mais frequência.
+  const dialing = !inCall && dialingSince !== null;
+
+  // Enquanto houver chamada ativa ou uma tentativa em andamento, o estado é
+  // consultado com mais frequência para detectar atendimento e encerramento.
   useEffect(() => {
     if (!hasExtension) return;
-    const interval = inCall ? 5_000 : 30_000;
+    const interval = inCall || dialing ? 5_000 : 30_000;
     const timer = window.setInterval(() => { void refreshStatus(); }, interval);
     const onFocus = () => { void refreshStatus(); };
     window.addEventListener("focus", onFocus);
@@ -169,7 +173,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [hasExtension, refreshStatus, inCall]);
+  }, [hasExtension, refreshStatus, inCall, dialing]);
 
   // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
@@ -195,10 +199,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => setDialingSince(null);
   }, [inCall]);
 
-  // Sem chamada ativa na 3C (qualificação, desligou ou saiu), a tentativa encerra.
+  // O sinal explícito da chamada prevalece sobre o estado geral do agente. A 3C
+  // pode manter `on_call` durante a qualificação, mesmo sem ligação ativa.
+  // A tolerância evita apagar uma nova tentativa antes de a 3C registrá-la.
   useEffect(() => {
-    if (hasActiveCall === false && status !== "on_call") setDialingSince(null);
-  }, [hasActiveCall, status]);
+    if (hasActiveCall !== false || dialingSince === null) return;
+    const remainingGrace = DIAL_RUNTIME_GRACE_MS - (Date.now() - dialingSince);
+    if (remainingGrace <= 0) {
+      setDialingSince(null);
+      return;
+    }
+    const timer = window.setTimeout(() => setDialingSince(null), remainingGrace);
+    return () => window.clearTimeout(timer);
+  }, [hasActiveCall, dialingSince]);
 
   // Se a tentativa não virar chamada, o cartão some após 2 minutos.
   useEffect(() => {
@@ -222,7 +235,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       }
       setLauncherHidden(false);
       setIsOpen(true);
-      void refreshStatus();
+      window.setTimeout(() => { void refreshStatus(); }, 1_500);
     };
     window.addEventListener("threecplus:open-drawer", openDrawer);
     window.addEventListener("threecplus:dial-request", openDrawer);
@@ -268,7 +281,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
-  const dialing = !inCall && dialingSince !== null;
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
