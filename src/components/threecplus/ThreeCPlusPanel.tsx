@@ -55,6 +55,7 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
 const MIN_PANEL_WIDTH = 420;
 const DEFAULT_PANEL_WIDTH = 1120;
 const WIDTH_STORAGE_KEY = "roy_threec_panel_width";
+const DIAL_RUNTIME_GRACE_MS = 5_000;
 
 function readStoredWidth(): number | null {
   if (typeof window === "undefined") return null;
@@ -92,6 +93,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [dialingSince, setDialingSince] = useState<number | null>(null);
   const [hasActiveCall, setHasActiveCall] = useState<boolean | null>(null);
   const callStartedAt = useRef<number | null>(null);
+  const dialingSinceRef = useRef<number | null>(null);
+  const callWasActiveRef = useRef(false);
+  const noActivePollsRef = useRef(0);
 
   // "Em chamada" só vale com chamada ativa de fato: na qualificação a 3C mantém
   // o agente em on_call, mas a ligação já terminou.
@@ -112,20 +116,40 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     try {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
+        const active = data.runtime?.has_active_call === true;
         setStatus(mapRuntimeStatus(data.runtime));
-        setHasActiveCall(data.runtime?.has_active_call === true);
+        setHasActiveCall(active);
+        if (active) {
+          callWasActiveRef.current = true;
+          noActivePollsRef.current = 0;
+          dialingSinceRef.current = null;
+          setDialingSince(null);
+        } else if (dialingSinceRef.current !== null) {
+          const pastGrace = Date.now() - dialingSinceRef.current >= DIAL_RUNTIME_GRACE_MS;
+          if (callWasActiveRef.current) {
+            dialingSinceRef.current = null;
+            callWasActiveRef.current = false;
+            noActivePollsRef.current = 0;
+            setDialingSince(null);
+          } else if (pastGrace) {
+            noActivePollsRef.current += 1;
+            if (noActivePollsRef.current >= 2) {
+              dialingSinceRef.current = null;
+              noActivePollsRef.current = 0;
+              setDialingSince(null);
+            }
+          }
+        }
         if (data.runtime_proof) {
           window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
         }
       }
       else {
         setStatus("offline");
-        setHasActiveCall(false);
+        setHasActiveCall(null);
       }
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
-      setStatus("offline");
-      setHasActiveCall(false);
     } finally {
       setLoadingStatus(false);
     }
@@ -158,10 +182,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => { active = false; };
   }, [invokeAgent, refreshStatus]);
 
-  // Enquanto houver chamada ativa, o estado é consultado com mais frequência.
+  const dialing = !inCall && dialingSince !== null;
+
+  // Enquanto houver chamada ativa ou uma tentativa em andamento, o estado é
+  // consultado com mais frequência para detectar atendimento e encerramento.
   useEffect(() => {
     if (!hasExtension) return;
-    const interval = inCall ? 5_000 : 30_000;
+    const interval = inCall || dialing ? 5_000 : 30_000;
     const timer = window.setInterval(() => { void refreshStatus(); }, interval);
     const onFocus = () => { void refreshStatus(); };
     window.addEventListener("focus", onFocus);
@@ -169,7 +196,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [hasExtension, refreshStatus, inCall]);
+  }, [hasExtension, refreshStatus, inCall, dialing]);
 
   // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
@@ -189,21 +216,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => window.clearInterval(timer);
   }, [inCall, dialingSince]);
 
-  // Encerrada a chamada, o cartão de discagem some.
-  useEffect(() => {
-    if (!inCall) return;
-    return () => setDialingSince(null);
-  }, [inCall]);
-
-  // Sem chamada ativa na 3C (qualificação, desligou ou saiu), a tentativa encerra.
-  useEffect(() => {
-    if (hasActiveCall === false && status !== "on_call") setDialingSince(null);
-  }, [hasActiveCall, status]);
-
   // Se a tentativa não virar chamada, o cartão some após 2 minutos.
   useEffect(() => {
     if (dialingSince === null || inCall) return;
-    const timer = window.setTimeout(() => setDialingSince(null), 120_000);
+    const timer = window.setTimeout(() => {
+      dialingSinceRef.current = null;
+      noActivePollsRef.current = 0;
+      setDialingSince(null);
+    }, 120_000);
     return () => window.clearTimeout(timer);
   }, [dialingSince, inCall]);
 
@@ -217,12 +237,17 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       }>).detail;
       const name = detail?.contact_name ?? detail?.contactName ?? null;
       if (detail && (name || detail.phone)) {
+        const startedAt = Date.now();
         setContact({ name, phone: detail.phone ?? null });
-        setDialingSince(Date.now());
+        dialingSinceRef.current = startedAt;
+        callWasActiveRef.current = false;
+        noActivePollsRef.current = 0;
+        setHasActiveCall(null);
+        setDialingSince(startedAt);
       }
       setLauncherHidden(false);
       setIsOpen(true);
-      void refreshStatus();
+      window.setTimeout(() => { void refreshStatus(); }, 1_500);
     };
     window.addEventListener("threecplus:open-drawer", openDrawer);
     window.addEventListener("threecplus:dial-request", openDrawer);
@@ -268,7 +293,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
-  const dialing = !inCall && dialingSince !== null;
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
