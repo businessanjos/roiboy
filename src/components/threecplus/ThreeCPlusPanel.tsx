@@ -295,8 +295,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       )}
 
       {/* Em chamada ou discando, o cartão flutuante mostra o contato e o tempo. */}
-      {visible && hasExtension && !isOpen && !launcherHidden && activeCall && (
-        <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:right-6">
+      {visible && hasExtension && !launcherHidden && activeCall && (
+        <div
+          className={cn(
+            "pointer-events-auto fixed bottom-20 z-[70] flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6",
+            isOpen ? "left-4 lg:left-6" : "right-4 lg:right-6"
+          )}
+        >
           <span className="relative flex h-2.5 w-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
@@ -309,15 +314,17 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             </p>
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-8"
-            onClick={() => setIsOpen(true)}
-          >
-            Abrir
-          </Button>
+          {!isOpen && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8"
+              onClick={() => setIsOpen(true)}
+            >
+              Abrir
+            </Button>
+          )}
           <Button
             type="button"
             size="icon"
