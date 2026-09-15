@@ -258,6 +258,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
+  // Avisa as fichas (lead/negócio) que o discador está aberto, para liberarem o clique.
+  useEffect(() => {
+    setThreeCPlusOpen(drawerOpen);
+    return () => setThreeCPlusOpen(false);
+  }, [drawerOpen]);
+
+
+
 
   return (
     <>
