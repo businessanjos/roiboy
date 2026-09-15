@@ -52,10 +52,27 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
 }
 
 const BASE_WIDTH = 1120;
+const MIN_SCALE = 0.6;
+const MIN_PANEL_WIDTH = 420;
+const WIDTH_STORAGE_KEY = "roy_threec_panel_width";
+
+function readStoredWidth(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(WIDTH_STORAGE_KEY);
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed >= MIN_PANEL_WIDTH ? parsed : null;
+}
+
+function defaultWidth(): number {
+  if (typeof window === "undefined") return BASE_WIDTH;
+  return Math.min(window.innerWidth * 0.96, BASE_WIDTH);
+}
 
 export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [panelWidth, setPanelWidth] = useState<number>(() => readStoredWidth() ?? defaultWidth());
+  const [resizing, setResizing] = useState(false);
   const [scale, setScale] = useState(1);
   const panelRef = useRef<HTMLElement | null>(null);
   const [launcherHidden, setLauncherHidden] = useState(false);
