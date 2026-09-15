@@ -167,7 +167,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       if (!callStartedAt.current) callStartedAt.current = Date.now();
     } else {
       callStartedAt.current = null;
-      if (status === "offline" || status === "pause") setDialingSince(null);
     }
     const base = status === "on_call" ? callStartedAt.current : dialingSince;
     if (!base) {
