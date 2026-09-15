@@ -330,21 +330,27 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             </Button>
           </div>
         </div>
-        {/* O iframe é renderizado numa largura fixa e reduzido por escala,
-            para caber inteiro em painéis estreitos sem cortes laterais. */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
-          <iframe
-            src={`${domain}/agent`}
-            title="Painel do agente 3C Plus"
-            allow="microphone; autoplay"
-            style={{
-              width: `${BASE_WIDTH}px`,
-              height: scale < 1 ? `${100 / scale}%` : "100%",
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-            }}
-            className="absolute left-0 top-0 border-0 bg-background"
-          />
+        {/* O iframe é renderizado numa largura fixa e reduzido por escala até um
+            limite confortável; abaixo disso o painel rola na horizontal em vez
+            de encolher mais, evitando cortes e botões pequenos demais. */}
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+          <div
+            className="relative h-full"
+            style={{ width: `${Math.round(BASE_WIDTH * scale)}px` }}
+          >
+            <iframe
+              src={`${domain}/agent`}
+              title="Painel do agente 3C Plus"
+              allow="microphone; autoplay"
+              style={{
+                width: `${BASE_WIDTH}px`,
+                height: scale < 1 ? `${100 / scale}%` : "100%",
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+              className="absolute left-0 top-0 border-0 bg-background"
+            />
+          </div>
         </div>
       </aside>
     </>
