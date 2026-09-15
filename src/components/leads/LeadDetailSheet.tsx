@@ -3,6 +3,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { useThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import {
@@ -118,6 +119,8 @@ export function LeadDetailSheet({
   onCreateDeal,
   onDealClick,
 }: LeadDetailSheetProps) {
+  // Com o discador 3C aberto, a ficha deixa de bloquear cliques fora dela.
+  const dialerOpen = useThreeCPlusOpen();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { isAdmin } = usePermissions();
@@ -315,7 +318,7 @@ export function LeadDetailSheet({
 
   return (
     <>
-      <Sheet open={open} onOpenChange={onOpenChange}>
+      <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
         <SheetContent className="w-full sm:max-w-xl overflow-y-auto">
           {loading ? (
             <div className="space-y-4 mt-6">

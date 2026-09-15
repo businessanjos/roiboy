@@ -3,6 +3,7 @@ import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { setThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 
 type DialerStatus = "offline" | "idle" | "on_call" | "pause";
 
@@ -166,7 +167,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       if (!callStartedAt.current) callStartedAt.current = Date.now();
     } else {
       callStartedAt.current = null;
-      if (status === "offline" || status === "pause") setDialingSince(null);
     }
     const base = status === "on_call" ? callStartedAt.current : dialingSince;
     if (!base) {
@@ -258,6 +258,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
+  // Avisa as fichas (lead/negócio) que o discador está aberto, para liberarem o clique.
+  useEffect(() => {
+    setThreeCPlusOpen(drawerOpen);
+    return () => setThreeCPlusOpen(false);
+  }, [drawerOpen]);
+
+
+
 
   return (
     <>
@@ -287,8 +295,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       )}
 
       {/* Em chamada ou discando, o cartão flutuante mostra o contato e o tempo. */}
-      {visible && hasExtension && !isOpen && !launcherHidden && activeCall && (
-        <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:right-6">
+      {visible && hasExtension && !launcherHidden && activeCall && (
+        <div
+          className={cn(
+            "pointer-events-auto fixed bottom-20 z-[70] flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6",
+            isOpen ? "left-4 lg:left-6" : "right-4 lg:right-6"
+          )}
+        >
           <span className="relative flex h-2.5 w-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
@@ -301,15 +314,17 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             </p>
           </div>
 
-          <Button
-            type="button"
-            size="sm"
-            variant="secondary"
-            className="h-8"
-            onClick={() => setIsOpen(true)}
-          >
-            Abrir
-          </Button>
+          {!isOpen && (
+            <Button
+              type="button"
+              size="sm"
+              variant="secondary"
+              className="h-8"
+              onClick={() => setIsOpen(true)}
+            >
+              Abrir
+            </Button>
+          )}
           <Button
             type="button"
             size="icon"
@@ -382,7 +397,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             : { width: `min(96vw, ${Math.round(panelWidth)}px)` }
         }
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
+          "pointer-events-auto fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
           !resizing && "transition-[transform,opacity,width] duration-300 ease-out",
           drawerOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
         )}
@@ -406,10 +421,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
               <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
               {statusInfo.label}
             </span>
-            {inCall && (
-              <span className="shrink-0 font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>
+            {activeCall && (
+              <span className="shrink-0 font-mono text-xs text-destructive">
+                {inCall ? "" : "Chamando "}
+                {formatElapsed(elapsed)}
+              </span>
             )}
-            {inCall && contactLabel && (
+            {activeCall && contactLabel && (
               <span className="truncate text-xs text-muted-foreground">· {contactLabel}</span>
             )}
           </div>

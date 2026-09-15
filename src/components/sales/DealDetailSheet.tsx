@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { useThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 import {
   parseReceivedInput,
   formatReceivedDraft,
@@ -224,6 +225,8 @@ export function DealDetailSheet({
   onDealUpdated,
   processingWonDealId,
 }: DealDetailSheetProps) {
+  // Com o discador 3C aberto, a ficha deixa de bloquear cliques fora dela.
+  const dialerOpen = useThreeCPlusOpen();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1035,7 +1038,7 @@ export function DealDetailSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
       <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
         <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
