@@ -397,7 +397,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             : { width: `min(96vw, ${Math.round(panelWidth)}px)` }
         }
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
+          "pointer-events-auto fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
           !resizing && "transition-[transform,opacity,width] duration-300 ease-out",
           drawerOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
         )}
