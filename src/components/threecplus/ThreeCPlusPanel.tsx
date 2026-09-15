@@ -88,7 +88,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [contact, setContact] = useState<{ name?: string | null; phone?: string | null } | null>(null);
+  const [dialingSince, setDialingSince] = useState<number | null>(null);
   const callStartedAt = useRef<number | null>(null);
+
   const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
