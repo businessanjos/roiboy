@@ -253,7 +253,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
-  const inCall = status === "on_call";
   const dialing = !inCall && dialingSince !== null;
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
