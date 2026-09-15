@@ -65,7 +65,12 @@ export async function dialWith3C(params: {
   contact_name?: string | null;
 }): Promise<{ ok: boolean; error?: string; call_log_id?: string }> {
   const cached = window.__threeCPlusRuntime;
-  window.dispatchEvent(new CustomEvent("threecplus:open-drawer"));
+  window.dispatchEvent(
+    new CustomEvent("threecplus:open-drawer", {
+      detail: { phone: params.phone, contact_name: params.contact_name ?? null },
+    }),
+  );
+
   const { data, error } = await supabase.functions.invoke("threecplus-call", {
     body: {
       phone: params.phone,

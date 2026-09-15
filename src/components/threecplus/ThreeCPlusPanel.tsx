@@ -88,7 +88,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [loadingStatus, setLoadingStatus] = useState(true);
   const [elapsed, setElapsed] = useState(0);
   const [contact, setContact] = useState<{ name?: string | null; phone?: string | null } | null>(null);
+  const [dialingSince, setDialingSince] = useState<number | null>(null);
   const callStartedAt = useRef<number | null>(null);
+
   const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
@@ -158,27 +160,50 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [hasExtension, refreshStatus, status]);
 
-  // Cronômetro da ligação em andamento.
+  // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
-    if (status !== "on_call") {
+    if (status === "on_call") {
+      if (!callStartedAt.current) callStartedAt.current = Date.now();
+    } else {
       callStartedAt.current = null;
+      if (status === "offline" || status === "pause") setDialingSince(null);
+    }
+    const base = status === "on_call" ? callStartedAt.current : dialingSince;
+    if (!base) {
       setElapsed(0);
       return;
     }
-    if (!callStartedAt.current) callStartedAt.current = Date.now();
-    const tick = () => {
-      if (callStartedAt.current) setElapsed((Date.now() - callStartedAt.current) / 1000);
-    };
+    const tick = () => setElapsed((Date.now() - base) / 1000);
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
+  }, [status, dialingSince]);
+
+  // Encerrada a chamada, o cartão de discagem some.
+  useEffect(() => {
+    if (status !== "on_call") return;
+    return () => setDialingSince(null);
   }, [status]);
+
+  // Se a tentativa não virar chamada, o cartão some após 2 minutos.
+  useEffect(() => {
+    if (dialingSince === null || status === "on_call") return;
+    const timer = window.setTimeout(() => setDialingSince(null), 120_000);
+    return () => window.clearTimeout(timer);
+  }, [dialingSince, status]);
+
 
   useEffect(() => {
     const openDrawer = (event: Event) => {
-      const detail = (event as CustomEvent<{ contact_name?: string | null; phone?: string | null }>).detail;
-      if (detail && (detail.contact_name || detail.phone)) {
-        setContact({ name: detail.contact_name ?? null, phone: detail.phone ?? null });
+      const detail = (event as CustomEvent<{
+        contact_name?: string | null;
+        contactName?: string | null;
+        phone?: string | null;
+      }>).detail;
+      const name = detail?.contact_name ?? detail?.contactName ?? null;
+      if (detail && (name || detail.phone)) {
+        setContact({ name, phone: detail.phone ?? null });
+        setDialingSince(Date.now());
       }
       setLauncherHidden(false);
       setIsOpen(true);
@@ -191,6 +216,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.removeEventListener("threecplus:dial-request", openDrawer);
     };
   }, [refreshStatus]);
+
 
   // Guarda a largura escolhida pelo usuário.
   useEffect(() => {
@@ -228,7 +254,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
   const inCall = status === "on_call";
+  const dialing = !inCall && dialingSince !== null;
+  const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
+
 
   return (
     <>
@@ -239,7 +268,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           variant="secondary"
           className={cn(
             "fixed right-0 top-1/2 z-50 h-9 w-7 -translate-y-1/2 translate-x-1 rounded-l-md rounded-r-none border border-r-0 border-border shadow-sm transition-all hover:translate-x-0 hover:opacity-100",
-            inCall ? "border-destructive/50 opacity-100" : "opacity-40"
+            activeCall ? "border-destructive/50 opacity-100" : "opacity-40"
           )}
           onClick={() => {
             setLauncherHidden(false);
@@ -247,23 +276,31 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             void refreshStatus();
           }}
           aria-label="Abrir Discador 3C"
-          title={inCall ? `Em chamada ${formatElapsed(elapsed)}` : "Abrir Discador 3C"}
+          title={
+            activeCall
+              ? `${inCall ? "Em chamada" : "Chamando"} ${contactLabel || ""} ${formatElapsed(elapsed)}`.trim()
+              : "Abrir Discador 3C"
+          }
         >
-          <Phone className={cn("h-4 w-4", inCall ? "text-destructive" : "text-primary")} />
+          <Phone className={cn("h-4 w-4", activeCall ? "text-destructive" : "text-primary")} />
         </Button>
       )}
 
-      {/* Em chamada, o cartão flutuante mostra o contato e o tempo da ligação. */}
-      {visible && hasExtension && !isOpen && !launcherHidden && inCall && (
+      {/* Em chamada ou discando, o cartão flutuante mostra o contato e o tempo. */}
+      {visible && hasExtension && !isOpen && !launcherHidden && activeCall && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:right-6">
           <span className="relative flex h-2.5 w-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{contactLabel || "Em chamada"}</p>
-            <p className="font-mono text-xs text-muted-foreground">{formatElapsed(elapsed)}</p>
+            <p className="truncate text-sm font-medium">{contactLabel || (inCall ? "Em chamada" : "Chamando")}</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>{inCall ? "Em chamada" : "Chamando"}</span>
+              <span className="font-mono">{formatElapsed(elapsed)}</span>
+            </p>
           </div>
+
           <Button
             type="button"
             size="sm"
@@ -287,7 +324,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         </div>
       )}
 
-      {visible && hasExtension && !isOpen && !launcherHidden && !inCall && (
+      {visible && hasExtension && !isOpen && !launcherHidden && !activeCall && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button
             type="button"
