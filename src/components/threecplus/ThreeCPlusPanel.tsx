@@ -52,10 +52,27 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
 }
 
 const BASE_WIDTH = 1120;
+const MIN_SCALE = 0.6;
+const MIN_PANEL_WIDTH = 420;
+const WIDTH_STORAGE_KEY = "roy_threec_panel_width";
+
+function readStoredWidth(): number | null {
+  if (typeof window === "undefined") return null;
+  const raw = window.localStorage.getItem(WIDTH_STORAGE_KEY);
+  const parsed = raw ? Number(raw) : NaN;
+  return Number.isFinite(parsed) && parsed >= MIN_PANEL_WIDTH ? parsed : null;
+}
+
+function defaultWidth(): number {
+  if (typeof window === "undefined") return BASE_WIDTH;
+  return Math.min(window.innerWidth * 0.96, BASE_WIDTH);
+}
 
 export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [expanded, setExpanded] = useState(true);
+  const [panelWidth, setPanelWidth] = useState<number>(() => readStoredWidth() ?? defaultWidth());
+  const [resizing, setResizing] = useState(false);
   const [scale, setScale] = useState(1);
   const panelRef = useRef<HTMLElement | null>(null);
   const [launcherHidden, setLauncherHidden] = useState(false);
@@ -144,23 +161,57 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [refreshStatus]);
 
-  // Escala o conteúdo da 3C para caber na largura atual do painel.
+  // Escala o conteúdo da 3C para caber na largura atual do painel,
+  // sem reduzir além do limite confortável de clique.
   useEffect(() => {
     const el = panelRef.current;
     if (!el) return;
     const update = () => {
       const width = el.clientWidth;
       if (!width) return;
-      setScale(Math.min(1, Math.max(0.4, width / BASE_WIDTH)));
+      setScale(Math.min(1, Math.max(MIN_SCALE, width / BASE_WIDTH)));
     };
     update();
     const observer = new ResizeObserver(update);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [isOpen, expanded]);
+  }, [isOpen, expanded, panelWidth]);
+
+  // Guarda a largura escolhida pelo usuário.
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(WIDTH_STORAGE_KEY, String(Math.round(panelWidth)));
+  }, [panelWidth]);
+
+  // Trava a rolagem do fundo enquanto o discador está aberto.
+  useEffect(() => {
+    if (!isOpen) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [isOpen]);
+
+  // Arrastar a alça esquerda para redimensionar.
+  const startResize = useCallback((event: React.PointerEvent) => {
+    event.preventDefault();
+    setResizing(true);
+    const onMove = (e: PointerEvent) => {
+      const maxWidth = window.innerWidth * 0.96;
+      const next = Math.min(maxWidth, Math.max(MIN_PANEL_WIDTH, window.innerWidth - e.clientX));
+      setPanelWidth(next);
+    };
+    const onUp = () => {
+      setResizing(false);
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+  }, []);
 
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
+  const drawerOpen = visible && hasExtension && isOpen;
 
   return (
     <>
@@ -219,18 +270,35 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         </div>
       )}
 
+      {/* Fundo escurecido: separa o discador da tela de trás e fecha ao clicar fora. */}
+      <div
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+        className={cn(
+          "fixed inset-0 z-[55] bg-background/60 backdrop-blur-[2px] transition-opacity duration-300",
+          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+      />
+
       <aside
         ref={panelRef}
+        style={{ width: `min(96vw, ${expanded ? Math.round(panelWidth) : Math.min(Math.round(panelWidth), 544)}px)` }}
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-full flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
-          expanded
-            ? "sm:w-[min(96vw,72rem)]"
-            : "sm:w-[min(96vw,34rem)]",
-          visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
+          "fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
+          !resizing && "transition-[transform,opacity,width] duration-300 ease-out",
+          drawerOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
+        {/* Alça para ajustar a largura do painel. */}
+        <div
+          onPointerDown={startResize}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Ajustar largura do discador"
+          className="absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/30 sm:block"
+        />
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3 pl-4">
           <div className="flex min-w-0 items-center gap-2">
             <StatusIcon className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate text-sm font-semibold">Discador 3C</span>
@@ -262,21 +330,27 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             </Button>
           </div>
         </div>
-        {/* O iframe é renderizado numa largura fixa e reduzido por escala,
-            para caber inteiro em painéis estreitos sem cortes laterais. */}
-        <div className="relative min-h-0 flex-1 overflow-hidden">
-          <iframe
-            src={`${domain}/agent`}
-            title="Painel do agente 3C Plus"
-            allow="microphone; autoplay"
-            style={{
-              width: `${BASE_WIDTH}px`,
-              height: scale < 1 ? `${100 / scale}%` : "100%",
-              transform: `scale(${scale})`,
-              transformOrigin: "top left",
-            }}
-            className="absolute left-0 top-0 border-0 bg-background"
-          />
+        {/* O iframe é renderizado numa largura fixa e reduzido por escala até um
+            limite confortável; abaixo disso o painel rola na horizontal em vez
+            de encolher mais, evitando cortes e botões pequenos demais. */}
+        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
+          <div
+            className="relative h-full"
+            style={{ width: `${Math.round(BASE_WIDTH * scale)}px` }}
+          >
+            <iframe
+              src={`${domain}/agent`}
+              title="Painel do agente 3C Plus"
+              allow="microphone; autoplay"
+              style={{
+                width: `${BASE_WIDTH}px`,
+                height: scale < 1 ? `${100 / scale}%` : "100%",
+                transform: `scale(${scale})`,
+                transformOrigin: "top left",
+              }}
+              className="absolute left-0 top-0 border-0 bg-background"
+            />
+          </div>
         </div>
       </aside>
     </>
