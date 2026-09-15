@@ -270,18 +270,35 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         </div>
       )}
 
+      {/* Fundo escurecido: separa o discador da tela de trás e fecha ao clicar fora. */}
+      <div
+        onClick={() => setIsOpen(false)}
+        aria-hidden="true"
+        className={cn(
+          "fixed inset-0 z-[55] bg-background/60 backdrop-blur-[2px] transition-opacity duration-300",
+          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+        )}
+      />
+
       <aside
         ref={panelRef}
+        style={{ width: `min(96vw, ${expanded ? Math.round(panelWidth) : Math.min(Math.round(panelWidth), 544)}px)` }}
         className={cn(
-          "fixed inset-y-0 right-0 z-[60] flex w-full flex-col border-l border-border bg-background shadow-2xl transition-transform duration-300",
-          expanded
-            ? "sm:w-[min(96vw,72rem)]"
-            : "sm:w-[min(96vw,34rem)]",
-          visible && hasExtension && isOpen ? "translate-x-0" : "translate-x-full"
+          "fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
+          !resizing && "transition-[transform,opacity,width] duration-300 ease-out",
+          drawerOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
         )}
         aria-hidden={!isOpen}
       >
-        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3">
+        {/* Alça para ajustar a largura do painel. */}
+        <div
+          onPointerDown={startResize}
+          role="separator"
+          aria-orientation="vertical"
+          aria-label="Ajustar largura do discador"
+          className="absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/30 sm:block"
+        />
+        <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3 pl-4">
           <div className="flex min-w-0 items-center gap-2">
             <StatusIcon className="h-4 w-4 shrink-0 text-primary" />
             <span className="truncate text-sm font-semibold">Discador 3C</span>
