@@ -421,10 +421,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
               <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
               {statusInfo.label}
             </span>
-            {inCall && (
-              <span className="shrink-0 font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>
+            {activeCall && (
+              <span className="shrink-0 font-mono text-xs text-destructive">
+                {inCall ? "" : "Chamando "}
+                {formatElapsed(elapsed)}
+              </span>
             )}
-            {inCall && contactLabel && (
+            {activeCall && contactLabel && (
               <span className="truncate text-xs text-muted-foreground">· {contactLabel}</span>
             )}
           </div>
