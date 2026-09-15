@@ -51,9 +51,8 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
   return "offline";
 }
 
-const BASE_WIDTH = 1120;
-const MIN_SCALE = 0.6;
 const MIN_PANEL_WIDTH = 420;
+const DEFAULT_PANEL_WIDTH = 1120;
 const WIDTH_STORAGE_KEY = "roy_threec_panel_width";
 
 function readStoredWidth(): number | null {
@@ -64,22 +63,32 @@ function readStoredWidth(): number | null {
 }
 
 function defaultWidth(): number {
-  if (typeof window === "undefined") return BASE_WIDTH;
-  return Math.min(window.innerWidth * 0.96, BASE_WIDTH);
+  if (typeof window === "undefined") return DEFAULT_PANEL_WIDTH;
+  return Math.min(window.innerWidth * 0.96, DEFAULT_PANEL_WIDTH);
+}
+
+function formatElapsed(seconds: number): string {
+  const s = Math.max(0, Math.floor(seconds));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return h > 0 ? `${h}:${pad(m)}:${pad(sec)}` : `${pad(m)}:${pad(sec)}`;
 }
 
 export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const [fullscreen, setFullscreen] = useState(false);
   const [panelWidth, setPanelWidth] = useState<number>(() => readStoredWidth() ?? defaultWidth());
   const [resizing, setResizing] = useState(false);
-  const [scale, setScale] = useState(1);
-  const panelRef = useRef<HTMLElement | null>(null);
   const [launcherHidden, setLauncherHidden] = useState(false);
   const [hasExtension, setHasExtension] = useState(false);
   const [domain, setDomain] = useState("https://eternumentoringclub1.3c.plus");
   const [status, setStatus] = useState<DialerStatus>("offline");
   const [loadingStatus, setLoadingStatus] = useState(true);
+  const [elapsed, setElapsed] = useState(0);
+  const [contact, setContact] = useState<{ name?: string | null; phone?: string | null } | null>(null);
+  const callStartedAt = useRef<number | null>(null);
   const agentIdRef = useRef<string | null>(null);
 
   const invokeAgent = useCallback(async (action: string) => {
@@ -136,19 +145,41 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => { active = false; };
   }, [invokeAgent, refreshStatus]);
 
+  // Enquanto houver chamada, o estado é consultado com mais frequência.
   useEffect(() => {
     if (!hasExtension) return;
-    const timer = window.setInterval(() => { void refreshStatus(); }, 30_000);
+    const interval = status === "on_call" ? 5_000 : 30_000;
+    const timer = window.setInterval(() => { void refreshStatus(); }, interval);
     const onFocus = () => { void refreshStatus(); };
     window.addEventListener("focus", onFocus);
     return () => {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [hasExtension, refreshStatus]);
+  }, [hasExtension, refreshStatus, status]);
+
+  // Cronômetro da ligação em andamento.
+  useEffect(() => {
+    if (status !== "on_call") {
+      callStartedAt.current = null;
+      setElapsed(0);
+      return;
+    }
+    if (!callStartedAt.current) callStartedAt.current = Date.now();
+    const tick = () => {
+      if (callStartedAt.current) setElapsed((Date.now() - callStartedAt.current) / 1000);
+    };
+    tick();
+    const timer = window.setInterval(tick, 1000);
+    return () => window.clearInterval(timer);
+  }, [status]);
 
   useEffect(() => {
-    const openDrawer = () => {
+    const openDrawer = (event: Event) => {
+      const detail = (event as CustomEvent<{ contact_name?: string | null; phone?: string | null }>).detail;
+      if (detail && (detail.contact_name || detail.phone)) {
+        setContact({ name: detail.contact_name ?? null, phone: detail.phone ?? null });
+      }
       setLauncherHidden(false);
       setIsOpen(true);
       void refreshStatus();
@@ -161,35 +192,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
   }, [refreshStatus]);
 
-  // Escala o conteúdo da 3C para caber na largura atual do painel,
-  // sem reduzir além do limite confortável de clique.
-  useEffect(() => {
-    const el = panelRef.current;
-    if (!el) return;
-    const update = () => {
-      const width = el.clientWidth;
-      if (!width) return;
-      setScale(Math.min(1, Math.max(MIN_SCALE, width / BASE_WIDTH)));
-    };
-    update();
-    const observer = new ResizeObserver(update);
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [isOpen, expanded, panelWidth]);
-
   // Guarda a largura escolhida pelo usuário.
   useEffect(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(WIDTH_STORAGE_KEY, String(Math.round(panelWidth)));
   }, [panelWidth]);
 
-  // Trava a rolagem do fundo enquanto o discador está aberto.
+  // Só o modo tela cheia bloqueia a rolagem do fundo.
   useEffect(() => {
-    if (!isOpen) return;
+    if (!isOpen || !fullscreen) return;
     const previous = document.body.style.overflow;
     document.body.style.overflow = "hidden";
     return () => { document.body.style.overflow = previous; };
-  }, [isOpen]);
+  }, [isOpen, fullscreen]);
 
   // Arrastar a alça esquerda para redimensionar.
   const startResize = useCallback((event: React.PointerEvent) => {
@@ -212,6 +227,8 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
+  const inCall = status === "on_call";
+  const contactLabel = contact?.name || contact?.phone || null;
 
   return (
     <>
@@ -220,20 +237,57 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           type="button"
           size="icon"
           variant="secondary"
-          className="fixed right-0 top-1/2 z-50 h-9 w-7 -translate-y-1/2 translate-x-1 rounded-l-md rounded-r-none border border-r-0 border-border opacity-40 shadow-sm transition-all hover:translate-x-0 hover:opacity-100"
+          className={cn(
+            "fixed right-0 top-1/2 z-50 h-9 w-7 -translate-y-1/2 translate-x-1 rounded-l-md rounded-r-none border border-r-0 border-border shadow-sm transition-all hover:translate-x-0 hover:opacity-100",
+            inCall ? "border-destructive/50 opacity-100" : "opacity-40"
+          )}
           onClick={() => {
             setLauncherHidden(false);
             setIsOpen(true);
             void refreshStatus();
           }}
           aria-label="Abrir Discador 3C"
-          title="Abrir Discador 3C"
+          title={inCall ? `Em chamada ${formatElapsed(elapsed)}` : "Abrir Discador 3C"}
         >
-          <Phone className="h-4 w-4 text-primary" />
+          <Phone className={cn("h-4 w-4", inCall ? "text-destructive" : "text-primary")} />
         </Button>
       )}
 
-      {visible && hasExtension && !isOpen && !launcherHidden && (
+      {/* Em chamada, o cartão flutuante mostra o contato e o tempo da ligação. */}
+      {visible && hasExtension && !isOpen && !launcherHidden && inCall && (
+        <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:right-6">
+          <span className="relative flex h-2.5 w-2.5 shrink-0">
+            <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
+            <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
+          </span>
+          <div className="min-w-0">
+            <p className="truncate text-sm font-medium">{contactLabel || "Em chamada"}</p>
+            <p className="font-mono text-xs text-muted-foreground">{formatElapsed(elapsed)}</p>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="secondary"
+            className="h-8"
+            onClick={() => setIsOpen(true)}
+          >
+            Abrir
+          </Button>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-muted-foreground"
+            onClick={() => setLauncherHidden(true)}
+            aria-label="Minimizar discador"
+            title="Minimizar"
+          >
+            <Minimize2 className="h-4 w-4" />
+          </Button>
+        </div>
+      )}
+
+      {visible && hasExtension && !isOpen && !launcherHidden && !inCall && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button
             type="button"
@@ -270,34 +324,43 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         </div>
       )}
 
-      {/* Fundo escurecido: separa o discador da tela de trás e fecha ao clicar fora. */}
-      <div
-        onClick={() => setIsOpen(false)}
-        aria-hidden="true"
-        className={cn(
-          "fixed inset-0 z-[55] bg-background/60 backdrop-blur-[2px] transition-opacity duration-300",
-          drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
-        )}
-      />
+      {/* Fundo escurecido apenas em tela cheia. */}
+      {fullscreen && (
+        <div
+          onClick={() => setFullscreen(false)}
+          aria-hidden="true"
+          className={cn(
+            "fixed inset-0 z-[55] bg-background/60 backdrop-blur-[2px] transition-opacity duration-300",
+            drawerOpen ? "opacity-100" : "pointer-events-none opacity-0"
+          )}
+        />
+      )}
 
+      {/* O quadro da 3C fica sempre montado: fechar apenas esconde, a chamada
+          continua ativa em segundo plano. */}
       <aside
-        ref={panelRef}
-        style={{ width: `min(96vw, ${expanded ? Math.round(panelWidth) : Math.min(Math.round(panelWidth), 544)}px)` }}
+        style={
+          fullscreen
+            ? { width: "100vw" }
+            : { width: `min(96vw, ${Math.round(panelWidth)}px)` }
+        }
         className={cn(
           "fixed inset-y-0 right-0 z-[60] flex flex-col border-l border-border bg-background shadow-2xl will-change-transform",
           !resizing && "transition-[transform,opacity,width] duration-300 ease-out",
           drawerOpen ? "translate-x-0 opacity-100" : "pointer-events-none translate-x-full opacity-0"
         )}
-        aria-hidden={!isOpen}
+        aria-hidden={!drawerOpen}
       >
         {/* Alça para ajustar a largura do painel. */}
-        <div
-          onPointerDown={startResize}
-          role="separator"
-          aria-orientation="vertical"
-          aria-label="Ajustar largura do discador"
-          className="absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/30 sm:block"
-        />
+        {!fullscreen && (
+          <div
+            onPointerDown={startResize}
+            role="separator"
+            aria-orientation="vertical"
+            aria-label="Ajustar largura do discador"
+            className="absolute inset-y-0 left-0 z-10 hidden w-1.5 cursor-col-resize bg-transparent transition-colors hover:bg-primary/30 sm:block"
+          />
+        )}
         <div className="flex h-12 shrink-0 items-center justify-between border-b border-border px-3 pl-4">
           <div className="flex min-w-0 items-center gap-2">
             <StatusIcon className="h-4 w-4 shrink-0 text-primary" />
@@ -306,6 +369,12 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
               <span className={cn("h-2 w-2 rounded-full", statusInfo.dot)} />
               {statusInfo.label}
             </span>
+            {inCall && (
+              <span className="shrink-0 font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>
+            )}
+            {inCall && contactLabel && (
+              <span className="truncate text-xs text-muted-foreground">· {contactLabel}</span>
+            )}
           </div>
           <div className="flex shrink-0 items-center">
             <Button
@@ -313,11 +382,11 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
               variant="ghost"
               size="icon"
               className="hidden sm:inline-flex"
-              onClick={() => setExpanded((v) => !v)}
-              aria-label={expanded ? "Reduzir painel" : "Ampliar painel"}
-              title={expanded ? "Reduzir painel" : "Ampliar painel"}
+              onClick={() => setFullscreen((v) => !v)}
+              aria-label={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
+              title={fullscreen ? "Sair da tela cheia" : "Tela cheia"}
             >
-              {expanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+              {fullscreen ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
             </Button>
             <Button
               type="button"
@@ -325,32 +394,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
               size="icon"
               onClick={() => setIsOpen(false)}
               aria-label="Fechar Discador 3C"
+              title={inCall ? "Fechar (a chamada continua)" : "Fechar"}
             >
               <X className="h-4 w-4" />
             </Button>
           </div>
         </div>
-        {/* O iframe é renderizado numa largura fixa e reduzido por escala até um
-            limite confortável; abaixo disso o painel rola na horizontal em vez
-            de encolher mais, evitando cortes e botões pequenos demais. */}
-        <div className="min-h-0 flex-1 overflow-x-auto overflow-y-hidden">
-          <div
-            className="relative h-full"
-            style={{ width: `${Math.round(BASE_WIDTH * scale)}px` }}
-          >
-            <iframe
-              src={`${domain}/agent`}
-              title="Painel do agente 3C Plus"
-              allow="microphone; autoplay"
-              style={{
-                width: `${BASE_WIDTH}px`,
-                height: scale < 1 ? `${100 / scale}%` : "100%",
-                transform: `scale(${scale})`,
-                transformOrigin: "top left",
-              }}
-              className="absolute left-0 top-0 border-0 bg-background"
-            />
-          </div>
+        <div className="min-h-0 flex-1">
+          <iframe
+            src={`${domain}/agent`}
+            title="Painel do agente 3C Plus"
+            allow="microphone; autoplay"
+            className="h-full w-full border-0 bg-background"
+          />
         </div>
       </aside>
     </>
