@@ -108,14 +108,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
         setStatus(mapRuntimeStatus(data.runtime));
+        setHasActiveCall(data.runtime?.has_active_call === true);
         if (data.runtime_proof) {
           window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
         }
       }
-      else setStatus("offline");
+      else {
+        setStatus("offline");
+        setHasActiveCall(false);
+      }
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
       setStatus("offline");
+      setHasActiveCall(false);
     } finally {
       setLoadingStatus(false);
     }
