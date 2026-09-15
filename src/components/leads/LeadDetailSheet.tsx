@@ -118,6 +118,8 @@ export function LeadDetailSheet({
   onCreateDeal,
   onDealClick,
 }: LeadDetailSheetProps) {
+  // Com o discador 3C aberto, a ficha deixa de bloquear cliques fora dela.
+  const dialerOpen = useThreeCPlusOpen();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
   const { isAdmin } = usePermissions();
