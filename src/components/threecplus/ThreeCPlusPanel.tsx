@@ -90,7 +90,12 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [elapsed, setElapsed] = useState(0);
   const [contact, setContact] = useState<{ name?: string | null; phone?: string | null } | null>(null);
   const [dialingSince, setDialingSince] = useState<number | null>(null);
+  const [hasActiveCall, setHasActiveCall] = useState<boolean | null>(null);
   const callStartedAt = useRef<number | null>(null);
+
+  // "Em chamada" só vale com chamada ativa de fato: na qualificação a 3C mantém
+  // o agente em on_call, mas a ligação já terminou.
+  const inCall = status === "on_call" && hasActiveCall !== false;
 
   const agentIdRef = useRef<string | null>(null);
 
@@ -108,14 +113,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
         setStatus(mapRuntimeStatus(data.runtime));
+        setHasActiveCall(data.runtime?.has_active_call === true);
         if (data.runtime_proof) {
           window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
         }
       }
-      else setStatus("offline");
+      else {
+        setStatus("offline");
+        setHasActiveCall(false);
+      }
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
       setStatus("offline");
+      setHasActiveCall(false);
     } finally {
       setLoadingStatus(false);
     }
@@ -148,10 +158,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => { active = false; };
   }, [invokeAgent, refreshStatus]);
 
-  // Enquanto houver chamada, o estado é consultado com mais frequência.
+  // Enquanto houver chamada ativa, o estado é consultado com mais frequência.
   useEffect(() => {
     if (!hasExtension) return;
-    const interval = status === "on_call" ? 5_000 : 30_000;
+    const interval = inCall ? 5_000 : 30_000;
     const timer = window.setInterval(() => { void refreshStatus(); }, interval);
     const onFocus = () => { void refreshStatus(); };
     window.addEventListener("focus", onFocus);
@@ -159,16 +169,16 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [hasExtension, refreshStatus, status]);
+  }, [hasExtension, refreshStatus, inCall]);
 
   // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
-    if (status === "on_call") {
+    if (inCall) {
       if (!callStartedAt.current) callStartedAt.current = Date.now();
     } else {
       callStartedAt.current = null;
     }
-    const base = status === "on_call" ? callStartedAt.current : dialingSince;
+    const base = inCall ? callStartedAt.current : dialingSince;
     if (!base) {
       setElapsed(0);
       return;
@@ -177,20 +187,25 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [status, dialingSince]);
+  }, [inCall, dialingSince]);
 
   // Encerrada a chamada, o cartão de discagem some.
   useEffect(() => {
-    if (status !== "on_call") return;
+    if (!inCall) return;
     return () => setDialingSince(null);
-  }, [status]);
+  }, [inCall]);
+
+  // Sem chamada ativa na 3C (qualificação, desligou ou saiu), a tentativa encerra.
+  useEffect(() => {
+    if (hasActiveCall === false && status !== "on_call") setDialingSince(null);
+  }, [hasActiveCall, status]);
 
   // Se a tentativa não virar chamada, o cartão some após 2 minutos.
   useEffect(() => {
-    if (dialingSince === null || status === "on_call") return;
+    if (dialingSince === null || inCall) return;
     const timer = window.setTimeout(() => setDialingSince(null), 120_000);
     return () => window.clearTimeout(timer);
-  }, [dialingSince, status]);
+  }, [dialingSince, inCall]);
 
 
   useEffect(() => {
@@ -253,7 +268,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const drawerOpen = visible && hasExtension && isOpen;
-  const inCall = status === "on_call";
   const dialing = !inCall && dialingSince !== null;
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
