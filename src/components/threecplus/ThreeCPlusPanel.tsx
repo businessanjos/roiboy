@@ -260,7 +260,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           variant="secondary"
           className={cn(
             "fixed right-0 top-1/2 z-50 h-9 w-7 -translate-y-1/2 translate-x-1 rounded-l-md rounded-r-none border border-r-0 border-border shadow-sm transition-all hover:translate-x-0 hover:opacity-100",
-            inCall ? "border-destructive/50 opacity-100" : "opacity-40"
+            activeCall ? "border-destructive/50 opacity-100" : "opacity-40"
           )}
           onClick={() => {
             setLauncherHidden(false);
@@ -268,23 +268,31 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             void refreshStatus();
           }}
           aria-label="Abrir Discador 3C"
-          title={inCall ? `Em chamada ${formatElapsed(elapsed)}` : "Abrir Discador 3C"}
+          title={
+            activeCall
+              ? `${inCall ? "Em chamada" : "Chamando"} ${contactLabel || ""} ${formatElapsed(elapsed)}`.trim()
+              : "Abrir Discador 3C"
+          }
         >
-          <Phone className={cn("h-4 w-4", inCall ? "text-destructive" : "text-primary")} />
+          <Phone className={cn("h-4 w-4", activeCall ? "text-destructive" : "text-primary")} />
         </Button>
       )}
 
-      {/* Em chamada, o cartão flutuante mostra o contato e o tempo da ligação. */}
-      {visible && hasExtension && !isOpen && !launcherHidden && inCall && (
+      {/* Em chamada ou discando, o cartão flutuante mostra o contato e o tempo. */}
+      {visible && hasExtension && !isOpen && !launcherHidden && activeCall && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:right-6">
           <span className="relative flex h-2.5 w-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
             <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-destructive" />
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm font-medium">{contactLabel || "Em chamada"}</p>
-            <p className="font-mono text-xs text-muted-foreground">{formatElapsed(elapsed)}</p>
+            <p className="truncate text-sm font-medium">{contactLabel || (inCall ? "Em chamada" : "Chamando")}</p>
+            <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <span>{inCall ? "Em chamada" : "Chamando"}</span>
+              <span className="font-mono">{formatElapsed(elapsed)}</span>
+            </p>
           </div>
+
           <Button
             type="button"
             size="sm"
