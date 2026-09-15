@@ -185,6 +185,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => setDialingSince(null);
   }, [status]);
 
+  // Se a tentativa não virar chamada, o cartão some após 2 minutos.
+  useEffect(() => {
+    if (dialingSince === null || status === "on_call") return;
+    const timer = window.setTimeout(() => setDialingSince(null), 120_000);
+    return () => window.clearTimeout(timer);
+  }, [dialingSince, status]);
+
+
   useEffect(() => {
     const openDrawer = (event: Event) => {
       const detail = (event as CustomEvent<{
