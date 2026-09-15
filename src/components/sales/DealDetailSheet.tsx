@@ -1035,7 +1035,7 @@ export function DealDetailSheet({
   };
 
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
       <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
         <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
