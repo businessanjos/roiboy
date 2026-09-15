@@ -148,10 +148,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => { active = false; };
   }, [invokeAgent, refreshStatus]);
 
-  // Enquanto houver chamada, o estado é consultado com mais frequência.
+  // Enquanto houver chamada ativa, o estado é consultado com mais frequência.
   useEffect(() => {
     if (!hasExtension) return;
-    const interval = status === "on_call" ? 5_000 : 30_000;
+    const interval = inCall ? 5_000 : 30_000;
     const timer = window.setInterval(() => { void refreshStatus(); }, interval);
     const onFocus = () => { void refreshStatus(); };
     window.addEventListener("focus", onFocus);
@@ -159,16 +159,16 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       window.clearInterval(timer);
       window.removeEventListener("focus", onFocus);
     };
-  }, [hasExtension, refreshStatus, status]);
+  }, [hasExtension, refreshStatus, inCall]);
 
   // Cronômetro: conta o tempo tentando ligar e depois o tempo da ligação atendida.
   useEffect(() => {
-    if (status === "on_call") {
+    if (inCall) {
       if (!callStartedAt.current) callStartedAt.current = Date.now();
     } else {
       callStartedAt.current = null;
     }
-    const base = status === "on_call" ? callStartedAt.current : dialingSince;
+    const base = inCall ? callStartedAt.current : dialingSince;
     if (!base) {
       setElapsed(0);
       return;
@@ -177,20 +177,25 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     tick();
     const timer = window.setInterval(tick, 1000);
     return () => window.clearInterval(timer);
-  }, [status, dialingSince]);
+  }, [inCall, dialingSince]);
 
   // Encerrada a chamada, o cartão de discagem some.
   useEffect(() => {
-    if (status !== "on_call") return;
+    if (!inCall) return;
     return () => setDialingSince(null);
-  }, [status]);
+  }, [inCall]);
+
+  // Sem chamada ativa na 3C (qualificação, desligou ou saiu), a tentativa encerra.
+  useEffect(() => {
+    if (hasActiveCall === false && status !== "on_call") setDialingSince(null);
+  }, [hasActiveCall, status]);
 
   // Se a tentativa não virar chamada, o cartão some após 2 minutos.
   useEffect(() => {
-    if (dialingSince === null || status === "on_call") return;
+    if (dialingSince === null || inCall) return;
     const timer = window.setTimeout(() => setDialingSince(null), 120_000);
     return () => window.clearTimeout(timer);
-  }, [dialingSince, status]);
+  }, [dialingSince, inCall]);
 
 
   useEffect(() => {
