@@ -90,7 +90,12 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [elapsed, setElapsed] = useState(0);
   const [contact, setContact] = useState<{ name?: string | null; phone?: string | null } | null>(null);
   const [dialingSince, setDialingSince] = useState<number | null>(null);
+  const [hasActiveCall, setHasActiveCall] = useState<boolean | null>(null);
   const callStartedAt = useRef<number | null>(null);
+
+  // "Em chamada" só vale com chamada ativa de fato: na qualificação a 3C mantém
+  // o agente em on_call, mas a ligação já terminou.
+  const inCall = status === "on_call" && hasActiveCall !== false;
 
   const agentIdRef = useRef<string | null>(null);
 
