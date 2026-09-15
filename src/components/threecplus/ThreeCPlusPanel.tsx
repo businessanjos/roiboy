@@ -316,7 +316,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         </div>
       )}
 
-      {visible && hasExtension && !isOpen && !launcherHidden && !inCall && (
+      {visible && hasExtension && !isOpen && !launcherHidden && !activeCall && (
         <div className="fixed bottom-20 right-4 z-50 flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
           <Button
             type="button"
