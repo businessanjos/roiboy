@@ -93,6 +93,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [dialingSince, setDialingSince] = useState<number | null>(null);
   const [hasActiveCall, setHasActiveCall] = useState<boolean | null>(null);
   const callStartedAt = useRef<number | null>(null);
+  const dialingSinceRef = useRef<number | null>(null);
+  const callWasActiveRef = useRef(false);
+  const noActivePollsRef = useRef(0);
 
   // "Em chamada" só vale com chamada ativa de fato: na qualificação a 3C mantém
   // o agente em on_call, mas a ligação já terminou.
@@ -113,20 +116,40 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     try {
       const data = await invokeAgent("get_runtime");
       if (data?.success) {
+        const active = data.runtime?.has_active_call === true;
         setStatus(mapRuntimeStatus(data.runtime));
-        setHasActiveCall(data.runtime?.has_active_call === true);
+        setHasActiveCall(active);
+        if (active) {
+          callWasActiveRef.current = true;
+          noActivePollsRef.current = 0;
+          dialingSinceRef.current = null;
+          setDialingSince(null);
+        } else if (dialingSinceRef.current !== null) {
+          const pastGrace = Date.now() - dialingSinceRef.current >= DIAL_RUNTIME_GRACE_MS;
+          if (callWasActiveRef.current) {
+            dialingSinceRef.current = null;
+            callWasActiveRef.current = false;
+            noActivePollsRef.current = 0;
+            setDialingSince(null);
+          } else if (pastGrace) {
+            noActivePollsRef.current += 1;
+            if (noActivePollsRef.current >= 2) {
+              dialingSinceRef.current = null;
+              noActivePollsRef.current = 0;
+              setDialingSince(null);
+            }
+          }
+        }
         if (data.runtime_proof) {
           window.__threeCPlusRuntime = { runtime: data.runtime, polledAt: Date.now(), proof: data.runtime_proof };
         }
       }
       else {
         setStatus("offline");
-        setHasActiveCall(false);
+        setHasActiveCall(null);
       }
     } catch (error) {
       console.warn("[ThreeCPlusPanel] Não foi possível atualizar o status:", error);
-      setStatus("offline");
-      setHasActiveCall(false);
     } finally {
       setLoadingStatus(false);
     }
@@ -193,30 +216,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => window.clearInterval(timer);
   }, [inCall, dialingSince]);
 
-  // Encerrada a chamada, o cartão de discagem some.
-  useEffect(() => {
-    if (!inCall) return;
-    return () => setDialingSince(null);
-  }, [inCall]);
-
-  // O sinal explícito da chamada prevalece sobre o estado geral do agente. A 3C
-  // pode manter `on_call` durante a qualificação, mesmo sem ligação ativa.
-  // A tolerância evita apagar uma nova tentativa antes de a 3C registrá-la.
-  useEffect(() => {
-    if (hasActiveCall !== false || dialingSince === null) return;
-    const remainingGrace = DIAL_RUNTIME_GRACE_MS - (Date.now() - dialingSince);
-    if (remainingGrace <= 0) {
-      setDialingSince(null);
-      return;
-    }
-    const timer = window.setTimeout(() => setDialingSince(null), remainingGrace);
-    return () => window.clearTimeout(timer);
-  }, [hasActiveCall, dialingSince]);
-
   // Se a tentativa não virar chamada, o cartão some após 2 minutos.
   useEffect(() => {
     if (dialingSince === null || inCall) return;
-    const timer = window.setTimeout(() => setDialingSince(null), 120_000);
+    const timer = window.setTimeout(() => {
+      dialingSinceRef.current = null;
+      noActivePollsRef.current = 0;
+      setDialingSince(null);
+    }, 120_000);
     return () => window.clearTimeout(timer);
   }, [dialingSince, inCall]);
 
@@ -230,8 +237,13 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       }>).detail;
       const name = detail?.contact_name ?? detail?.contactName ?? null;
       if (detail && (name || detail.phone)) {
+        const startedAt = Date.now();
         setContact({ name, phone: detail.phone ?? null });
-        setDialingSince(Date.now());
+        dialingSinceRef.current = startedAt;
+        callWasActiveRef.current = false;
+        noActivePollsRef.current = 0;
+        setHasActiveCall(null);
+        setDialingSince(startedAt);
       }
       setLauncherHidden(false);
       setIsOpen(true);
