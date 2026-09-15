@@ -224,6 +224,8 @@ export function DealDetailSheet({
   onDealUpdated,
   processingWonDealId,
 }: DealDetailSheetProps) {
+  // Com o discador 3C aberto, a ficha deixa de bloquear cliques fora dela.
+  const dialerOpen = useThreeCPlusOpen();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [searchParams, setSearchParams] = useSearchParams();
