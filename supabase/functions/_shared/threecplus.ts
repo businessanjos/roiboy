@@ -150,12 +150,29 @@ function findStructuredStatusChangedAt(value: unknown, depth = 0): string | null
   for (const key of ["status_started_at", "status_start_time", "status_since", "status_updated_at"]) {
     const field = record[key];
     if (typeof field === "string" && field.trim()) return field.trim();
+    if (typeof field === "number" && Number.isFinite(field)) return String(field);
   }
   for (const key of ["data", "agent"]) {
     const nested = findStructuredStatusChangedAt(record[key], depth + 1);
     if (nested) return nested;
   }
   return null;
+}
+
+function hasActiveCallForAgent(value: unknown, agentId: string, depth = 0): boolean {
+  if (depth > 7 || value == null) return false;
+  if (Array.isArray(value)) return value.some((item) => hasActiveCallForAgent(item, agentId, depth + 1));
+  const record = asObject(value);
+  if (!record) return false;
+
+  const agent = asObject(record.agent);
+  const rowAgentId = agent?.id ?? record.agent_id ?? record.agentId;
+  const looksLikeCall = record.phone != null || record.number != null || record.call_id != null || record.mode != null;
+  if (looksLikeCall && rowAgentId != null && String(rowAgentId) === String(agentId)) return true;
+
+  return Object.values(record).some((item) =>
+    (Array.isArray(item) || asObject(item) !== null) && hasActiveCallForAgent(item, agentId, depth + 1)
+  );
 }
 
 function hasStructuredCall(value: unknown, depth = 0): boolean {
@@ -320,6 +337,25 @@ export async function fetchThreeCAgentRuntimeForUser(
     runtime.agent_status = findStructuredAgentState(row);
     runtime.agent_status_changed_at = findStructuredStatusChangedAt(row);
     runtime.has_active_call = hasStructuredCall(row);
+
+    // `/agents/status` informa o estado do agente, mas não inclui a chamada.
+    // A rota oficial de chamadas ativas da empresa é a fonte autoritativa para
+    // distinguir conversa em andamento de TPA/qualificação pós-ligação.
+    try {
+      const callsResponse = await fetch(`${getBaseDomain(baseDomain)}/api/v1/company/calls`, {
+        headers: { Accept: "application/json", Authorization: `Bearer ${managerToken}` },
+      });
+      const callsText = await callsResponse.text();
+      const callsPayload = parseJsonBody(callsText);
+      console.log("[threecplus-runtime] GET /api/v1/company/calls:", JSON.stringify({
+        status: callsResponse.status,
+        has_agent_call: callsResponse.ok ? hasActiveCallForAgent(callsPayload, String(agentId)) : null,
+      }));
+      if (callsResponse.ok) runtime.has_active_call = hasActiveCallForAgent(callsPayload, String(agentId));
+    } catch (error) {
+      console.error("[threecplus-runtime] GET /api/v1/company/calls failed:", error);
+    }
+
     runtime.normalized_status = normalizeStructuredAgentState(runtime.agent_status, runtime.has_active_call);
     runtime.manual_mode = runtime.normalized_status === "manual";
     if (runtime.normalized_status === "unknown" && runtime.logged_campaign) runtime.normalized_status = "idle";
