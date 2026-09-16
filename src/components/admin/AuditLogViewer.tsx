@@ -635,9 +635,12 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-medium truncate max-w-[200px] block">
-                        {log.entity_name || "-"}
+                      <span className="text-sm font-medium block max-w-[420px]">
+                        {describeLog(log)}
                       </span>
+                      {log.context && (
+                        <span className="text-xs text-muted-foreground block">{log.context}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button
