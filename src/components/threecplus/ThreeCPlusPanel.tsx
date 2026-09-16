@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
-import { Link } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
