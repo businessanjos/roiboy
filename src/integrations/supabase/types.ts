@@ -27235,6 +27235,66 @@ export type Database = {
         }
         Relationships: []
       }
+      zapp_message_reactions: {
+        Row: {
+          account_id: string
+          created_at: string
+          emoji: string
+          external_message_id: string | null
+          from_me: boolean
+          id: string
+          reacted_at: string
+          reactor_name: string | null
+          reactor_phone: string
+          reactor_user_id: string | null
+          zapp_conversation_id: string | null
+          zapp_message_id: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          emoji: string
+          external_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          reacted_at?: string
+          reactor_name?: string | null
+          reactor_phone?: string
+          reactor_user_id?: string | null
+          zapp_conversation_id?: string | null
+          zapp_message_id?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          emoji?: string
+          external_message_id?: string | null
+          from_me?: boolean
+          id?: string
+          reacted_at?: string
+          reactor_name?: string | null
+          reactor_phone?: string
+          reactor_user_id?: string | null
+          zapp_conversation_id?: string | null
+          zapp_message_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_message_reactions_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_message_reactions_zapp_message_id_fkey"
+            columns: ["zapp_message_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_messages"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_messages: {
         Row: {
           account_id: string
