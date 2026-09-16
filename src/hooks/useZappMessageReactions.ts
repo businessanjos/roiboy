@@ -56,7 +56,15 @@ export function useZappMessageReactions({
       console.error("[Reactions] load error:", error.message);
       return;
     }
-    setReactions((data || []) as ZappReaction[]);
+    const serverReactions = (data || []) as ZappReaction[];
+    setReactions((current) => {
+      const pendingIds = pendingMessagesRef.current;
+      if (pendingIds.size === 0) return serverReactions;
+      return [
+        ...serverReactions.filter((reaction) => !reaction.zapp_message_id || !pendingIds.has(reaction.zapp_message_id)),
+        ...current.filter((reaction) => reaction.zapp_message_id && pendingIds.has(reaction.zapp_message_id)),
+      ];
+    });
   }, [conversationId]);
 
   useEffect(() => {
@@ -176,8 +184,8 @@ export function useZappMessageReactions({
         );
         return;
       }
-      await load();
       pendingMessagesRef.current.delete(messageId);
+      await load();
     },
     [byMessage, contactPhone, groupJid, conversationId, sectorId, integrationId, load],
   );
