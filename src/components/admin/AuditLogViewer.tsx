@@ -692,27 +692,25 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                     <p className="font-medium">
                       {entityLabels[selectedLog.entity_type] || selectedLog.entity_type}
                     </p>
-                    {selectedLog.entity_name && (
-                      <p className="text-xs text-muted-foreground">{selectedLog.entity_name}</p>
-                    )}
                   </div>
                 </div>
 
-                {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">O que aconteceu</p>
+                  <p className="font-medium">{describeLog(selectedLog)}</p>
+                </div>
+
+                {selectedLog.entity_name && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Detalhes</p>
-                    <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-[200px]">
-                      {JSON.stringify(selectedLog.details, null, 2)}
-                    </pre>
+                    <p className="text-sm text-muted-foreground">Registro</p>
+                    <p className="font-medium">{selectedLog.entity_name}</p>
                   </div>
                 )}
 
-                {selectedLog.user_agent && (
+                {selectedLog.context && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">User Agent</p>
-                    <p className="text-xs text-muted-foreground break-all">
-                      {selectedLog.user_agent}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Vinculado a</p>
+                    <p className="font-medium">{selectedLog.context}</p>
                   </div>
                 )}
               </div>
