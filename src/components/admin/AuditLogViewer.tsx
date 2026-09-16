@@ -248,7 +248,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
         if (accountId) query = query.eq("account_id", accountId);
         if (actionFilter !== "all") query = query.eq("action", actionFilter);
-        if (entityFilter !== "all") query = query.eq("entity_type", entityFilter);
+        if (isCommercial) {
+          // Foco no comercial: só tarefas/atividades de vendas
+          query = query.eq("entity_type", "task");
+        } else if (entityFilter !== "all") {
+          query = query.eq("entity_type", entityFilter);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
