@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
-import { Link } from "react-router-dom";
+
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -237,7 +237,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   }, [invokeAgent, refreshStatus]);
 
   const dialing = !inCall && dialingSince !== null;
-  const canUseDialer = hasExtension || accountConnected;
+  // O discador só existe para quem tem ramal na 3C (vendedores). Para os demais
+  // (CS, marketing, consultoras) nada é renderizado.
+  const canUseDialer = hasExtension;
 
   // Enquanto houver chamada ativa ou uma tentativa em andamento, o estado é
   // consultado com mais frequência para detectar atendimento e encerramento.
@@ -448,9 +450,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           >
             <Phone className={cn("h-4 w-4", activeCall ? "text-destructive" : "text-primary")} />
             <span>Discador 3C</span>
-            {!hasExtension ? (
-              <span className="text-xs text-warning">Ramal não configurado</span>
-            ) : activeCall ? (
+            {activeCall ? (
               <span className="flex items-center gap-1.5 text-xs text-destructive">
                 <span className="relative flex h-2 w-2">
                   <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />
@@ -568,14 +568,6 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           </div>
         </div>
 
-        {!hasExtension && (
-          <div className="flex items-center justify-between gap-3 border-b border-border bg-warning/10 px-4 py-2 text-xs">
-            <span>Seu ramal da 3C ainda não está configurado, por isso a discagem automática fica indisponível.</span>
-            <Button variant="outline" size="sm" asChild>
-              <Link to="/settings?tab=integrations">Configurar</Link>
-            </Button>
-          </div>
-        )}
 
         <div className="relative min-h-0 flex-1">
           <iframe
