@@ -91,7 +91,9 @@ export function useSectorNavItems(): NavItem[] {
 
     const canSeeSalesDashboard = isManagementUser(currentUser, isSuperAdmin);
     if (!canSeeSalesDashboard) {
-      sectorItems = sectorItems.filter((item) => item.to !== "/sales-dashboard");
+      sectorItems = sectorItems.filter(
+        (item) => item.to !== "/sales-dashboard" && item.to !== "/sales/logs",
+      );
     }
 
     // Produtividade do ROY zAPP: apenas admins e heads (mesma regra da view interna).
