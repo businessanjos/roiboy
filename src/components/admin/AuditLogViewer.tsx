@@ -477,7 +477,20 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
     },
   });
 
+  // Pessoas que realmente aparecem no período carregado
+  const people = Array.from(
+    new Map(
+      (logs ?? [])
+        .filter((l) => l.user_id)
+        .map((l) => [l.user_id as string, l.user_name || l.user_email || "Sem nome"]),
+    ).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1]));
+
+  const selectedPersonName =
+    userFilter === "all" ? "Todas as pessoas" : people.find(([id]) => id === userFilter)?.[1] ?? "Pessoa";
+
   const filteredLogs = logs?.filter((log) => {
+    if (userFilter !== "all" && log.user_id !== userFilter) return false;
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
