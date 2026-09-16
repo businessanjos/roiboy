@@ -111,16 +111,19 @@ export function useZappMessageReactions({
         toast.error("Não é possível reagir a esta mensagem");
         return;
       }
-      if (!contactPhone) {
-        toast.error("Contato sem telefone para reagir");
+      // Em grupos não existe telefone do contato: o destino é o próprio grupo.
+      if (!groupJid && !contactPhone) {
+        toast.error("Esta conversa não tem um destino válido para reagir");
         return;
       }
 
       const current = (byMessage.get(messageId) || []).find((g) => g.mine && g.emoji === emoji);
       const nextEmoji = current ? "" : emoji;
 
-      // Atualização otimista
+      // Atualização otimista (guardando o estado anterior para desfazer em erro)
+      let previous: ZappReaction[] = [];
       setReactions((prev) => {
+        previous = prev;
         const withoutMine = prev.filter((r) => !(r.zapp_message_id === messageId && r.from_me));
         if (!nextEmoji) return withoutMine;
         return [
@@ -139,7 +142,9 @@ export function useZappMessageReactions({
       const { error } = await invokeUazapiManager({
         body: {
           action: "send_reaction",
-          phone: contactPhone,
+          phone: contactPhone || undefined,
+          group_jid: groupJid || undefined,
+          conversation_id: conversationId || undefined,
           message_id: externalMessageId,
           emoji: nextEmoji,
           sector_id: sectorId,
@@ -149,11 +154,17 @@ export function useZappMessageReactions({
 
       if (error) {
         console.error("[Reactions] send error:", error);
-        toast.error("Não foi possível enviar a reação");
+        setReactions(previous);
+        toast.error(
+          typeof (error as any)?.message === "string" && (error as any).message
+            ? `Não foi possível enviar a reação: ${(error as any).message}`
+            : "Não foi possível enviar a reação",
+        );
+        return;
       }
       void load();
     },
-    [byMessage, contactPhone, sectorId, integrationId, load],
+    [byMessage, contactPhone, groupJid, conversationId, sectorId, integrationId, load],
   );
 
   return { byMessage, react, reloadReactions: load };
