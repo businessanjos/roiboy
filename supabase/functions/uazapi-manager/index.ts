@@ -2093,6 +2093,83 @@ Deno.serve(async (req) => {
       }
       result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId }, sectorServer);
       result = { deleted: true, api_response: result };
+
+    } else if (action === "send_reaction") {
+      // Reagir (ou remover reação, emoji vazio) em uma mensagem do WhatsApp
+      const messageId = normalizeQuotedMessageId(payload.message_id) || String(payload.message_id || "").trim();
+      const emoji = String(payload.emoji ?? "").trim();
+      const cleanPhone = phone?.replace(/\D/g, "");
+      if (!messageId) {
+        return new Response(
+          JSON.stringify({ error: "message_id é obrigatório" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (!cleanPhone || cleanPhone.length < 10) {
+        return new Response(
+          JSON.stringify({ error: "Número de telefone inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (emoji.length > 16) {
+        return new Response(
+          JSON.stringify({ error: "Emoji inválido" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      try {
+        result = await uazapiInstance(
+          "/message/react",
+          "POST",
+          token!,
+          { number: cleanPhone, id: messageId, text: emoji },
+          sectorServer,
+        );
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
+
+      // Espelha a reação no banco para aparecer imediatamente na conversa
+      const { data: targetRows } = await supabase
+        .from("zapp_messages")
+        .select("id, account_id, zapp_conversation_id")
+        .eq("account_id", accountId)
+        .ilike("external_message_id", `%${messageId}`)
+        .limit(1);
+      const targetMessage = targetRows?.[0];
+
+      if (targetMessage) {
+        if (!emoji) {
+          await supabase
+            .from("zapp_message_reactions")
+            .delete()
+            .eq("zapp_message_id", targetMessage.id)
+            .eq("reactor_phone", "me");
+        } else {
+          await supabase.from("zapp_message_reactions").upsert(
+            {
+              account_id: targetMessage.account_id,
+              zapp_conversation_id: targetMessage.zapp_conversation_id,
+              zapp_message_id: targetMessage.id,
+              external_message_id: messageId,
+              emoji,
+              reactor_phone: "me",
+              reactor_name: userData.name || null,
+              reactor_user_id: userData.id,
+              from_me: true,
+              reacted_at: new Date().toISOString(),
+            },
+            { onConflict: "zapp_message_id,reactor_phone" },
+          );
+        }
+      }
+
+      result = { reacted: true, removed: !emoji, api_response: result };
+
+
     
     } else if (action === "unlink_instance") {
       if (!integration_id) {
