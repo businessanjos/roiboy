@@ -67,6 +67,8 @@ interface UnifiedLog {
   user_agent?: string | null;
   created_at: string;
   source: "audit" | "deal";
+  /** A quem o registro pertence: "Lead Fulano", "Negócio X", "Cliente Y" */
+  context?: string | null;
 }
 
 const actionIcons: Record<string, React.ReactNode> = {
