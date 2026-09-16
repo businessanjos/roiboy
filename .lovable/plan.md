@@ -25,6 +25,7 @@ A interface já tem os emojis, mas o problema está antes dela: o banco continua
 
 ### 4. Corrigir o envio pelo ROY
 - Passar a conexão exata da conversa ao comando de reação, evitando escolher outra conexão quando um setor possui mais de uma.
+- Resolver o aviso "Contato sem telefone para reagir": em grupos e em conversas sem telefone salvo, o destino correto é o identificador da própria conversa/grupo, não um telefone. Usar esse identificador ao reagir e só mostrar o aviso quando realmente não houver destino algum.
 - Incluir `send_reaction` nas mesmas validações de setor dos demais envios.
 - Validar e tratar os erros ao espelhar a reação no banco; em falha, desfazer o emoji otimista e mostrar o erro real ao usuário.
 - Manter o endpoint confirmado da UAZAPI (`/message/react`, com número, ID e emoji; texto vazio remove).
