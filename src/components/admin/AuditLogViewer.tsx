@@ -116,6 +116,18 @@ const actionColors: Record<string, string> = {
   image: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
 };
 
+/** Barra colorida na lateral da linha, para diferenciar o tipo de ação. */
+const actionRowAccent: Record<string, string> = {
+  create: "border-l-success",
+  complete: "border-l-info",
+  update: "border-l-warning",
+  delete: "border-l-danger",
+  stage_change: "border-l-purple-500",
+  status_change: "border-l-indigo-500",
+  note: "border-l-muted-foreground/40",
+  image: "border-l-muted-foreground/40",
+};
+
 const actionLabels: Record<string, string> = {
   create: "Criou",
   update: "Atualizou",
