@@ -455,22 +455,29 @@ Deno.serve(async (req) => {
     }
     
     // 3. REACTIONS: store them (emoji shown under the reacted message) and return early
-    if (payload.message) {
-      const msg = payload.message as Record<string, unknown>;
-      const msgReaction = asRecord(msg.reaction);
-      const msgTypeCheck = String(msg.messageType ?? "").toLowerCase();
-      const typeCheck = String(msg.type ?? "").toLowerCase();
-      const isReaction =
-        msgReaction !== null ||
-        msgTypeCheck.includes("reaction") ||
-        typeCheck.includes("reaction");
+    {
+      const reactionCandidates: Record<string, unknown>[] = [];
+      if (payload.message) reactionCandidates.push(payload.message as Record<string, unknown>);
+      const altMessages = (payload as Record<string, any>).data?.messages;
+      if (Array.isArray(altMessages)) {
+        for (const m of altMessages) if (m && typeof m === "object") reactionCandidates.push(m as Record<string, unknown>);
+      }
 
-      if (isReaction) {
+      const reactionEvents = reactionCandidates
+        .map((m) => ({ msg: m, parsed: extractReaction(m) }))
+        .filter((r) => r.parsed !== null);
+
+      if (reactionEvents.length > 0) {
         try {
-          const result = await handleReactionEvent(msg, msgReaction);
-          return new Response(JSON.stringify({ success: true, reason: "reaction_message", ...result }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          const results = [];
+          for (const ev of reactionEvents) {
+            results.push(await handleReactionEvent(ev.msg, null));
+          }
+          console.log(`[REACTION] Processadas ${results.length} reação(ões)`);
+          return new Response(
+            JSON.stringify({ success: true, reason: "reaction_message", results }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         } catch (reactionError) {
           console.error("[REACTION] Error:", (reactionError as Error).message);
           return new Response(JSON.stringify({ ignored: true, reason: "reaction_error" }), {
