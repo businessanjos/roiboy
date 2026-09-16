@@ -2096,8 +2096,8 @@ Deno.serve(async (req) => {
 
     } else if (action === "send_reaction") {
       // Reagir (ou remover reação, emoji vazio) em uma mensagem do WhatsApp.
-      // Mantemos o id original (com prefixo) porque a UAZAPI o aceita e ele é
-      // o que identifica a mensagem com precisão; o sufixo serve de fallback.
+      // O banco pode guardar "telefone:id"; a rota de reação espera o id puro
+      // da mensagem do WhatsApp.
       const rawMessageId = String(payload.message_id || "").trim();
       const messageId = rawMessageId || normalizeQuotedMessageId(payload.message_id) || "";
       const messageIdSuffix = messageId.includes(":") ? messageId.split(":").slice(1).join(":") : messageId;
@@ -2133,7 +2133,7 @@ Deno.serve(async (req) => {
           "/message/react",
           "POST",
           token!,
-          { number: destination, id: messageId, text: emoji },
+           { number: destination, id: messageIdSuffix, text: emoji },
           sectorServer,
         );
       } catch (err) {
@@ -2152,6 +2152,17 @@ Deno.serve(async (req) => {
         return new Response(
           JSON.stringify({ error: "Não foi possível enviar a reação", details: apiError }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      const responseType = String(
+        apiResponse?.type || apiResponse?.messageType || apiResponse?.message?.type || apiResponse?.message?.messageType || "",
+      ).toLowerCase();
+      if (responseType && !responseType.includes("reaction")) {
+        console.error(`[uazapi-manager][send_reaction] tipo inesperado na resposta: ${responseType}`);
+        return new Response(
+          JSON.stringify({ error: "O WhatsApp respondeu como mensagem comum, não como reação" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 
@@ -2182,7 +2193,13 @@ Deno.serve(async (req) => {
             .delete()
             .eq("zapp_message_id", targetMessage.id)
             .eq("reactor_phone", "me");
-          if (delErr) console.error("[uazapi-manager][send_reaction] erro ao remover:", delErr.message);
+          if (delErr) {
+            console.error("[uazapi-manager][send_reaction] erro ao remover:", delErr.message);
+            return new Response(
+              JSON.stringify({ error: "A reação foi removida no WhatsApp, mas não foi sincronizada no ROY", details: delErr.message }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+            );
+          }
         } else {
           const { error: upErr } = await supabase.from("zapp_message_reactions").upsert(
             {
@@ -2209,9 +2226,13 @@ Deno.serve(async (req) => {
         }
       } else {
         console.warn("[uazapi-manager][send_reaction] mensagem alvo não encontrada ou ambígua no banco");
+        return new Response(
+          JSON.stringify({ error: "A mensagem reagida não foi localizada nesta conversa" }),
+          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
       }
 
-      result = { reacted: true, removed: !emoji, mirrored: !!targetMessage, api_response: apiResponse };
+      result = { reacted: true, removed: !emoji, mirrored: true, message_id: targetMessage.id };
 
 
     
