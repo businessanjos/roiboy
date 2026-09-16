@@ -58,11 +58,11 @@
     --danger-muted: 0 60% 92%;
 
     /* Cores vivas do indicador de atividade no funil de vendas */
-    --activity-overdue: 0 85% 55%;
+    --activity-overdue: 356 90% 45%;
     --activity-today: 142 85% 42%;
     --activity-none: 48 100% 50%;
-    --activity-future: 25 95% 53%;
-    --activity-future-muted: 25 90% 94%;
+    --activity-future: 30 100% 50%;
+    --activity-future-muted: 30 90% 94%;
 
 
 
