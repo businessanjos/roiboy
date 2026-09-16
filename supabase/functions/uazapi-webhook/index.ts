@@ -188,6 +188,7 @@ function messageIdSuffix(value: string): string {
 interface ExtractedReaction {
   targetId: string;
   emoji: string;
+  operation: "set" | "remove" | "deferred";
   fromMe: boolean;
   reactorPhone: string;
   reactorName: string | null;
@@ -214,7 +215,7 @@ function idFromUnknown(value: unknown): string {
 function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null {
   const normalized = normalizeZappReaction(msg);
   if (!normalized) return null;
-  const { targetId, emoji, fromMe, senderJid, senderName: reactorName } = normalized;
+  const { targetId, emoji, operation, fromMe, senderJid, senderName: reactorName } = normalized;
 
   if (!targetId) {
     const shape = Object.entries(msg)
@@ -230,14 +231,16 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
       idFromUnknown(msg.quoted) ? "quoted" :
       idFromUnknown(msg.reactionMessageId) || idFromUnknown(msg.quotedMessageId) || idFromUnknown(msg.quoted_message_id) ? "explicit" :
       idFromUnknown(asRecord(msg.contextInfo)?.stanzaId) ? "context" : "messageid"
-    } target_len=${targetId.length} emoji=${emoji ? "present" : "empty"}`,
+    } target_len=${targetId.length} operation=${operation} emoji=${emoji ? "present" : "empty"} fields=${[
+      "reaction", "reactionMessage", "emoji", "reaction_text", "reactionText", "content", "body", "text",
+    ].filter((key) => Object.prototype.hasOwnProperty.call(msg, key)).join("|") || "none"}`,
   );
 
   const reactorPhone = fromMe
     ? "me"
     : extractPhoneFromJid(senderJid) || normalizePhone(senderJid) || "unknown";
 
-  return { targetId, emoji, fromMe, reactorPhone, reactorName };
+  return { targetId, emoji, operation, fromMe, reactorPhone, reactorName };
 }
 
 /**
@@ -289,12 +292,17 @@ async function persistReaction(
 ): Promise<Record<string, unknown>> {
   const target = await findReactionTarget(db, data.targetId, scope);
 
+  if (data.operation === "deferred") {
+    console.log("[REACTION] Evento incompleto adiado sem alterar reação existente");
+    return { deferred: true, reason: "reaction_emoji_missing" };
+  }
+
   if (!target) {
     if (!scope.accountId) {
       console.log("[REACTION] Mensagem alvo não encontrada e sem conta para guardar pendente");
       return { ignored: true, reason: "reaction_target_not_found" };
     }
-    if (!data.emoji) {
+    if (data.operation === "remove") {
       await db
         .from("zapp_message_reactions")
         .delete()
@@ -328,7 +336,7 @@ async function persistReaction(
     return { pending: !error, reason: "reaction_target_pending" };
   }
 
-  if (!data.emoji) {
+  if (data.operation === "remove") {
     const { error } = await db
       .from("zapp_message_reactions")
       .delete()
@@ -397,6 +405,7 @@ async function handleReactionEvent(
 async function resolveReactionConversationId(
   db: ReturnType<typeof createClient>,
   accountId: string,
+  integrationId: string,
   msg: Record<string, unknown>,
 ): Promise<string | null> {
   const chatId = firstString(msg.chatid, msg.chatId, msg.remoteJid, asRecord(msg.key)?.remoteJid);
@@ -408,6 +417,7 @@ async function resolveReactionConversationId(
       .from("zapp_conversations")
       .select("id")
       .eq("account_id", accountId)
+      .eq("integration_id", integrationId)
       .eq("group_jid", chatId)
       .limit(2);
     return data?.length === 1 ? data[0].id : null;
@@ -415,14 +425,24 @@ async function resolveReactionConversationId(
 
   const phone = extractPhoneFromJid(chatId) || normalizePhone(chatId);
   if (!phone) return null;
-  const digits = phone.replace(/\D/g, "");
+  const variants = buildPhoneVariants(phone);
+  const { data: byThread } = await db
+    .from("zapp_conversations")
+    .select("id")
+    .eq("account_id", accountId)
+    .eq("integration_id", integrationId)
+    .eq("external_thread_id", chatId)
+    .limit(2);
+  if (byThread?.length === 1) return byThread[0].id;
+
   const { data } = await db
     .from("zapp_conversations")
-    .select("id, phone_e164")
+    .select("id")
     .eq("account_id", accountId)
-    .limit(500);
-  const matches = (data || []).filter((row) => String(row.phone_e164 || "").replace(/\D/g, "").endsWith(digits.slice(-10)));
-  return matches.length === 1 ? matches[0].id : null;
+    .eq("integration_id", integrationId)
+    .in("phone_e164", variants.length ? variants : [phone])
+    .limit(2);
+  return data?.length === 1 ? data[0].id : null;
 }
 
 
@@ -855,11 +875,11 @@ Deno.serve(async (req) => {
       try {
         const results = [];
         for (const msg of declaredReactionCandidates) {
-          const conversationId = await resolveReactionConversationId(supabase, accountId, msg);
+          const conversationId = await resolveReactionConversationId(supabase, accountId, integrationId, msg);
           results.push(await handleReactionEvent(msg, null, { accountId, conversationId }));
         }
         console.log(`[REACTION] Resultados: ${results.map((result) => String(
-          result.saved ? "saved" : result.removed ? "removed" : result.pending ? "pending" : result.reason || "ignored"
+          result.saved ? "saved" : result.removed ? "removed" : result.pending ? "pending" : result.deferred ? "deferred" : result.reason || "ignored"
         )).join(",")}`);
         return new Response(
           JSON.stringify({ success: true, reason: "reaction_message", results }),
