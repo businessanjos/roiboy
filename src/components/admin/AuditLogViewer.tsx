@@ -635,28 +635,29 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               <SelectItem value="status_change">Mudança de status</SelectItem>
               <SelectItem value="note">Nota no negócio</SelectItem>
               <SelectItem value="image">Anexo no negócio</SelectItem>
-              <SelectItem value="login">Login</SelectItem>
-              <SelectItem value="export">Exportação</SelectItem>
-              <SelectItem value="assign">Atribuição</SelectItem>
+              {!isCommercial && <SelectItem value="login">Login</SelectItem>}
+              {!isCommercial && <SelectItem value="export">Exportação</SelectItem>}
+              {!isCommercial && <SelectItem value="assign">Atribuição</SelectItem>}
             </SelectContent>
           </Select>
-          <Select value={entityFilter} onValueChange={setEntityFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos tipos</SelectItem>
-              <SelectItem value="deal">Negócios</SelectItem>
-              <SelectItem value="task">Tarefas</SelectItem>
-              <SelectItem value="client">Clientes</SelectItem>
-              <SelectItem value="user">Usuários</SelectItem>
-              <SelectItem value="event">Eventos</SelectItem>
-              <SelectItem value="contract">Contratos</SelectItem>
-              <SelectItem value="product">Produtos</SelectItem>
-              <SelectItem value="form">Formulários</SelectItem>
-              <SelectItem value="settings">Configurações</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isCommercial && (
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos tipos</SelectItem>
+                <SelectItem value="deal">Negócios</SelectItem>
+                <SelectItem value="task">Tarefas</SelectItem>
+                <SelectItem value="client">Clientes</SelectItem>
+                <SelectItem value="user">Usuários</SelectItem>
+                <SelectItem value="contract">Contratos</SelectItem>
+                <SelectItem value="product">Produtos</SelectItem>
+                <SelectItem value="form">Formulários</SelectItem>
+                <SelectItem value="settings">Configurações</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
