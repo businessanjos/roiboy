@@ -294,7 +294,40 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
             });
           });
         }
+
+        // 4) Negócios criados (autor gravado a partir de agora em created_by)
+        if (actionFilter === "all" || actionFilter === "create") {
+          let createdQuery = supabase
+            .from("deals")
+            .select("id, title, created_at, created_by")
+            .not("created_by", "is", null)
+            .gte("created_at", sinceIso)
+            .order("created_at", { ascending: false })
+            .limit(300);
+
+          if (accountId) createdQuery = createdQuery.eq("account_id", accountId);
+
+          const { data: created, error: createdError } = await createdQuery;
+          if (createdError) throw createdError;
+
+          (created ?? []).forEach((row: any) => {
+            results.push({
+              id: `deal-created-${row.id}`,
+              user_id: row.created_by,
+              user_name: null,
+              user_email: null,
+              action: "create",
+              entity_type: "deal",
+              entity_id: row.id,
+              entity_name: row.title,
+              details: null,
+              created_at: row.created_at,
+              source: "deal",
+            });
+          });
+        }
       }
+
 
       // Resolve os nomes das pessoas nas linhas vindas do comercial
       const missingUserIds = Array.from(
