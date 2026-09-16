@@ -72,6 +72,21 @@ Deno.test("does not convert a missing emoji into removal", () => {
   assertEquals(normalizeZappReaction(message)?.operation, "deferred");
 });
 
+Deno.test("extracts reaction from provider metadata and JSON content", () => {
+  const nested = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    metadata: { event: { reactionText: "❤️" } },
+  };
+  const encoded = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    content: JSON.stringify({ emoji: "👍" }),
+  };
+  assertEquals(normalizeZappReaction(nested)?.emoji, "❤️");
+  assertEquals(normalizeZappReaction(encoded)?.emoji, "👍");
+});
+
 Deno.test("does not classify an intentional emoji message as a reaction", () => {
   const message = { messageType: "text", text: "👍" };
   assertEquals(isZappReaction(message), false);

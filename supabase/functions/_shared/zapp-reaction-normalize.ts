@@ -47,6 +47,36 @@ function reactionTextFromRecord(record: Record<string, unknown> | null): string 
   );
 }
 
+function parseRecord(value: unknown): Record<string, unknown> | null {
+  const direct = reactionRecord(value);
+  if (direct) return direct;
+  if (typeof value !== "string") return null;
+  const trimmed = value.trim();
+  if (!trimmed.startsWith("{") || !trimmed.endsWith("}")) return null;
+  try {
+    return reactionRecord(JSON.parse(trimmed));
+  } catch {
+    return null;
+  }
+}
+
+function nestedRecords(root: Record<string, unknown>, maxDepth = 5): Record<string, unknown>[] {
+  const records: Record<string, unknown>[] = [];
+  const seen = new Set<object>();
+  const visit = (value: unknown, depth: number) => {
+    if (depth > maxDepth) return;
+    const record = parseRecord(value);
+    if (!record || seen.has(record)) return;
+    seen.add(record);
+    records.push(record);
+    for (const nested of Object.values(record)) {
+      if (nested && (typeof nested === "object" || typeof nested === "string")) visit(nested, depth + 1);
+    }
+  };
+  visit(root, 0);
+  return records;
+}
+
 function hasExplicitEmptyReaction(record: Record<string, unknown> | null): boolean {
   if (!record) return false;
   for (const key of ["emoji", "reaction_text", "reactionText"]) {
@@ -115,6 +145,7 @@ export function normalizeZappReaction(message: Record<string, unknown>): Normali
   const extendedText = reactionRecord(messageContent?.extendedTextMessage);
   const contentRecord = reactionRecord(message.content);
   const bodyRecord = reactionRecord(message.body);
+  const records = nestedRecords(message);
 
   const targetId = firstString(
     reactionIdFromUnknown(nested?.messageId),
@@ -141,6 +172,7 @@ export function normalizeZappReaction(message: Record<string, unknown>): Normali
     reactionTextFromRecord(contentRecord),
     reactionTextFromRecord(bodyRecord),
     reactionTextFromRecord(messageContent),
+    ...records.map(reactionTextFromRecord),
   );
   if (!emoji && declaredType.includes("reaction")) {
     emoji = firstString(message.reaction_text, message.text, message.body);
@@ -149,7 +181,7 @@ export function normalizeZappReaction(message: Record<string, unknown>): Normali
   }
   if (emoji.length > 64) emoji = "";
 
-  const explicitRemoval = hasExplicitEmptyReaction(nested) || hasExplicitEmptyReaction(message);
+  const explicitRemoval = records.some(hasExplicitEmptyReaction);
   const operation: NormalizedZappReaction["operation"] = emoji
     ? "set"
     : explicitRemoval
