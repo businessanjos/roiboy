@@ -2095,19 +2095,28 @@ Deno.serve(async (req) => {
       result = { deleted: true, api_response: result };
 
     } else if (action === "send_reaction") {
-      // Reagir (ou remover reação, emoji vazio) em uma mensagem do WhatsApp
-      const messageId = normalizeQuotedMessageId(payload.message_id) || String(payload.message_id || "").trim();
+      // Reagir (ou remover reação, emoji vazio) em uma mensagem do WhatsApp.
+      // Mantemos o id original (com prefixo) porque a UAZAPI o aceita e ele é
+      // o que identifica a mensagem com precisão; o sufixo serve de fallback.
+      const rawMessageId = String(payload.message_id || "").trim();
+      const messageId = rawMessageId || normalizeQuotedMessageId(payload.message_id) || "";
+      const messageIdSuffix = messageId.includes(":") ? messageId.split(":").slice(1).join(":") : messageId;
       const emoji = String(payload.emoji ?? "").trim();
+      const conversationId = String(payload.conversation_id || "").trim() || null;
+      // Em grupos o destino é o próprio identificador do grupo, não um telefone.
+      const groupJid = String(payload.group_jid || payload.chat_jid || "").trim();
       const cleanPhone = phone?.replace(/\D/g, "");
+      const destination = groupJid || cleanPhone || "";
+
       if (!messageId) {
         return new Response(
           JSON.stringify({ error: "message_id é obrigatório" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
-      if (!cleanPhone || cleanPhone.length < 10) {
+      if (!destination || (!groupJid && destination.length < 10)) {
         return new Response(
-          JSON.stringify({ error: "Número de telefone inválido" }),
+          JSON.stringify({ error: "Destino inválido para a reação" }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -2118,12 +2127,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      let apiResponse: any;
       try {
-        result = await uazapiInstance(
+        apiResponse = await uazapiInstance(
           "/message/react",
           "POST",
           token!,
-          { number: cleanPhone, id: messageId, text: emoji },
+          { number: destination, id: messageId, text: emoji },
           sectorServer,
         );
       } catch (err) {
@@ -2132,29 +2142,54 @@ Deno.serve(async (req) => {
         throw err;
       }
 
+      // Alguns retornos vêm 200 com falha lógica no corpo
+      const apiError =
+        apiResponse?.error ||
+        (apiResponse?.success === false ? (apiResponse?.message || "falha ao reagir") : null) ||
+        (apiResponse?.status === "error" ? (apiResponse?.message || "falha ao reagir") : null);
+      if (apiError) {
+        console.error("[uazapi-manager][send_reaction] resposta com erro:", JSON.stringify(apiError).slice(0, 300));
+        return new Response(
+          JSON.stringify({ error: "Não foi possível enviar a reação", details: apiError }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
       // Espelha a reação no banco para aparecer imediatamente na conversa
-      const { data: targetRows } = await supabase
+      let targetQuery = supabase
         .from("zapp_messages")
         .select("id, account_id, zapp_conversation_id")
-        .eq("account_id", accountId)
-        .ilike("external_message_id", `%${messageId}`)
-        .limit(1);
-      const targetMessage = targetRows?.[0];
+        .eq("account_id", accountId);
+      if (conversationId) targetQuery = targetQuery.eq("zapp_conversation_id", conversationId);
+
+      const { data: exactRows } = await targetQuery.eq("external_message_id", messageId).limit(2);
+      let targetMessage = exactRows?.length === 1 ? exactRows[0] : null;
+
+      if (!targetMessage && messageIdSuffix) {
+        let suffixQuery = supabase
+          .from("zapp_messages")
+          .select("id, account_id, zapp_conversation_id")
+          .eq("account_id", accountId);
+        if (conversationId) suffixQuery = suffixQuery.eq("zapp_conversation_id", conversationId);
+        const { data: suffixRows } = await suffixQuery.ilike("external_message_id", `%${messageIdSuffix}`).limit(2);
+        targetMessage = suffixRows?.length === 1 ? suffixRows[0] : null;
+      }
 
       if (targetMessage) {
         if (!emoji) {
-          await supabase
+          const { error: delErr } = await supabase
             .from("zapp_message_reactions")
             .delete()
             .eq("zapp_message_id", targetMessage.id)
             .eq("reactor_phone", "me");
+          if (delErr) console.error("[uazapi-manager][send_reaction] erro ao remover:", delErr.message);
         } else {
-          await supabase.from("zapp_message_reactions").upsert(
+          const { error: upErr } = await supabase.from("zapp_message_reactions").upsert(
             {
               account_id: targetMessage.account_id,
               zapp_conversation_id: targetMessage.zapp_conversation_id,
               zapp_message_id: targetMessage.id,
-              external_message_id: messageId,
+              external_message_id: messageIdSuffix,
               emoji,
               reactor_phone: "me",
               reactor_name: userData.name || null,
@@ -2164,10 +2199,19 @@ Deno.serve(async (req) => {
             },
             { onConflict: "zapp_message_id,reactor_phone" },
           );
+          if (upErr) {
+            console.error("[uazapi-manager][send_reaction] erro ao gravar:", upErr.message);
+            return new Response(
+              JSON.stringify({ error: "Reação enviada, mas não foi possível registrar", details: upErr.message }),
+              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+            );
+          }
         }
+      } else {
+        console.warn("[uazapi-manager][send_reaction] mensagem alvo não encontrada ou ambígua no banco");
       }
 
-      result = { reacted: true, removed: !emoji, api_response: result };
+      result = { reacted: true, removed: !emoji, mirrored: !!targetMessage, api_response: apiResponse };
 
 
     
