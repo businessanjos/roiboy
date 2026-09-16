@@ -58,7 +58,10 @@ interface ZappMessageBubbleProps {
   onScrollToQuoted?: (quotedMessageId: string) => void;
   isHighlighted?: boolean;
   searchHighlight?: boolean;
+  reactions?: ReactionGroup[];
+  onReact?: (emoji: string) => void;
 }
+
 
 // Function to handle file download with correct filename (fetch-to-blob pattern)
 async function handleFileDownload(url: string, filename: string) {
