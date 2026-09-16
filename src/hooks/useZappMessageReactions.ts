@@ -165,9 +165,13 @@ export function useZappMessageReactions({
         console.error("[Reactions] send error:", error);
         setReactions(previous);
         pendingMessagesRef.current.delete(messageId);
+        const errorMessage = data?.error ||
+          (typeof (error as { message?: unknown } | null)?.message === "string"
+            ? String((error as { message: string }).message)
+            : "");
         toast.error(
-          data?.error || (typeof (error as any)?.message === "string" && (error as any).message)
-            ? `Não foi possível enviar a reação: ${(error as any).message}`
+          errorMessage
+            ? `Não foi possível enviar a reação: ${errorMessage}`
             : "Não foi possível enviar a reação",
         );
         return;
