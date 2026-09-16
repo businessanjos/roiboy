@@ -22,6 +22,7 @@ import {
   expandBreakdownToInstallments,
 } from "@/utils/dealToClientContractMapping";
 import { DealKanban } from "@/components/sales/DealKanban";
+import { PipelineActivityLegend } from "@/components/sales/PipelineActivityLegend";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
@@ -2831,6 +2832,8 @@ export default function SalesPipeline() {
               {/* Resumo agora vive na linha do botão de filtros (sem duplicar) */}
 
             </div>
+
+            <PipelineActivityLegend className="mb-2" />
 
             {/* Status sub-tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>

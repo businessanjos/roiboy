@@ -15,6 +15,8 @@ import { DealActivitiesDialog } from "./DealActivitiesDialog";
 import { VipBadge } from "@/components/client/VipBadge";
 import type { ActivityStatus } from "@/hooks/useBatchDealActivityStatus";
 import { DealRulerButton } from "./DealRulerButton";
+import { getDealActivityIndicator } from "@/lib/sales/dealActivityIndicator";
+
 
 interface DealCardProps {
   deal: Deal;
@@ -125,35 +127,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
   const timeBadge = getTimeBadgeStyle();
 
-  // Activity status indicator
-  const getActivityStatusIndicator = () => {
-    // No pending activities = all done (or no activities)
-    if (activityStatus.pendingCount === 0) {
-      return { 
-        bgColor: "bg-success", 
-        textColor: "text-success", 
-        label: "Feito" 
-      };
-    }
-    
-    // Has overdue activities
-    if (activityStatus.hasOverdue) {
-      return { 
-        bgColor: "bg-danger", 
-        textColor: "text-danger", 
-        label: "Atrasado!" 
-      };
-    }
-    
-    // Has pending but none overdue
-    return { 
-      bgColor: "bg-warning", 
-      textColor: "text-warning", 
-      label: "A fazer" 
-    };
-  };
+  // Activity status indicator (vermelho atrasada / verde hoje / laranja futura / amarelo sem atividade)
+  const statusIndicator = getDealActivityIndicator(activityStatus);
 
-  const statusIndicator = getActivityStatusIndicator();
 
   return (
     <>
@@ -171,6 +147,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
     >
       {/* Left color accent bar */}
       <div 
+        title={statusIndicator.label}
         className={cn(
           "absolute left-0 top-0 bottom-0 w-1 rounded-l",
           statusIndicator.bgColor

@@ -57,6 +57,12 @@
     --danger-foreground: 0 0% 100%;
     --danger-muted: 0 60% 92%;
 
+    /* Laranja de "atividade futura" no funil de vendas */
+    --activity-future: 25 95% 53%;
+    --activity-future-muted: 25 90% 94%;
+
+
+
     --info: 180 13% 36%; /* #506767 */
     --info-foreground: 47 30% 92%;
     --info-muted: 180 15% 88%;
