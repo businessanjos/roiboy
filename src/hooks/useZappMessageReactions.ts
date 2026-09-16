@@ -22,6 +22,8 @@ export interface ReactionGroup {
 interface Options {
   conversationId?: string | null;
   contactPhone?: string;
+  /** Em grupos o destino da reação é o identificador do grupo. */
+  groupJid?: string | null;
   sectorId?: string;
   integrationId?: string | null;
 }
@@ -33,6 +35,7 @@ interface Options {
 export function useZappMessageReactions({
   conversationId,
   contactPhone,
+  groupJid,
   sectorId,
   integrationId,
 }: Options) {
