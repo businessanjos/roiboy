@@ -585,7 +585,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                 <TableHead>Usuário</TableHead>
                 <TableHead>Ação</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Registro</TableHead>
+                <TableHead>O que aconteceu</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
