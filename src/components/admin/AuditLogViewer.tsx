@@ -450,7 +450,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
       log.user_name?.toLowerCase().includes(searchLower) ||
       log.user_email?.toLowerCase().includes(searchLower) ||
       log.entity_name?.toLowerCase().includes(searchLower) ||
-      log.action.toLowerCase().includes(searchLower) ||
+      log.context?.toLowerCase().includes(searchLower) ||
+      describeLog(log).toLowerCase().includes(searchLower) ||
       log.entity_type.toLowerCase().includes(searchLower)
     );
   });
