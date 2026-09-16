@@ -53,12 +53,13 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
   return "offline";
 }
 
-const MIN_PANEL_WIDTH = 420;
-const MIN_PANEL_HEIGHT = 380;
-const DEFAULT_PANEL_WIDTH = 1040;
-const DEFAULT_PANEL_HEIGHT = 720;
+const MIN_PANEL_WIDTH = 340;
+const MIN_PANEL_HEIGHT = 320;
+const DEFAULT_PANEL_WIDTH = 720;
+const DEFAULT_PANEL_HEIGHT = 560;
 const MARGIN = 16;
-const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry";
+// v2: geometrias antigas ocupavam quase a tela inteira e pareciam uma gaveta.
+const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry_v2";
 const OPEN_STORAGE_KEY = "roy_threec_panel_open";
 const DIAL_RUNTIME_GRACE_MS = 5_000;
 
