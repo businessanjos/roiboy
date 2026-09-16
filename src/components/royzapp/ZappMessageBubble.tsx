@@ -844,16 +844,74 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
               )}
             </div>
           )}
+
+          {/* Reações (emojis) recebidas/enviadas nesta mensagem */}
+          {reactions && reactions.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {reactions.map((group) => (
+                <button
+                  key={group.emoji}
+                  type="button"
+                  title={group.names.join(", ")}
+                  onClick={() => onReact?.(group.emoji)}
+                  className={cn(
+                    "flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition-colors",
+                    group.mine
+                      ? "border-zapp-accent/70 bg-zapp-accent/20"
+                      : "border-white/10 bg-black/20 hover:bg-black/30",
+                    !onReact && "cursor-default",
+                  )}
+                >
+                  <span>{group.emoji}</span>
+                  {group.count > 1 && (
+                    <span className="text-[10px] text-zapp-text-muted">{group.count}</span>
+                  )}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Action buttons — CSS only (sem portais/animações por mensagem) */}
-        {!isEditing && (onReply || (onEdit && canEdit) || (onDelete && canDelete)) && (
+        {!isEditing && (onReply || onReact || (onEdit && canEdit) || (onDelete && canDelete)) && (
           <div
             className={cn(
               "flex items-center gap-1 flex-shrink-0 transition-opacity duration-150",
               showActions ? "opacity-100" : "opacity-0 pointer-events-none"
             )}
           >
+            {onReact && (
+              <Popover open={emojiOpen} onOpenChange={setEmojiOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    title="Reagir"
+                    aria-label="Reagir"
+                    className="h-7 w-7 bg-zapp-panel/90 hover:bg-zapp-hover shadow-md rounded-full"
+                  >
+                    <SmilePlus className="h-4 w-4 text-zapp-text-muted" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-1" align="center">
+                  <div className="flex items-center gap-1">
+                    {QUICK_REACTIONS.map((emoji) => (
+                      <button
+                        key={emoji}
+                        type="button"
+                        className="rounded-full px-1.5 py-1 text-lg hover:bg-muted"
+                        onClick={() => {
+                          setEmojiOpen(false);
+                          onReact(emoji);
+                        }}
+                      >
+                        {emoji}
+                      </button>
+                    ))}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            )}
             {onReply && (
               <Button
                 variant="ghost"
@@ -895,6 +953,7 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
             )}
           </div>
         )}
+
       </div>
     </div>
     </div>
