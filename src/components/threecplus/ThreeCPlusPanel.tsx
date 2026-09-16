@@ -312,6 +312,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   // Guarda posição, tamanho e se o popup ficou aberto.
   useEffect(() => {
     if (typeof window === "undefined") return;
+    geometryRef.current = geometry;
     window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(geometry));
   }, [geometry]);
 
