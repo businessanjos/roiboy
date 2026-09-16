@@ -206,8 +206,54 @@ Deno.serve(async (req) => {
         // ============================================
         if (value.messages && Array.isArray(value.messages)) {
           for (const msg of value.messages) {
-            // Skip reactions
-            if (msg.type === "reaction") continue;
+            // Reactions: save/replace/remove the emoji on the target message
+            if (msg.type === "reaction" || msg.reaction) {
+              const targetId = String(msg.reaction?.message_id || "").trim();
+              const emoji = String(msg.reaction?.emoji || "").trim();
+              const reactorPhone = normalizePhone(msg.from) || "unknown";
+
+              if (!targetId) {
+                console.log("[meta-webhook][REACTION] evento sem id da mensagem alvo, ignorando");
+                continue;
+              }
+
+              const { data: targetRows } = await supabase
+                .from("zapp_messages")
+                .select("id, account_id, zapp_conversation_id")
+                .eq("account_id", accountId)
+                .eq("external_message_id", targetId)
+                .limit(2);
+
+              if (!targetRows || targetRows.length !== 1) {
+                console.log(`[meta-webhook][REACTION] alvo não encontrado ou ambíguo (${targetRows?.length || 0})`);
+                continue;
+              }
+              const target = targetRows[0];
+
+              if (!emoji) {
+                await supabase
+                  .from("zapp_message_reactions")
+                  .delete()
+                  .eq("zapp_message_id", target.id)
+                  .eq("reactor_phone", reactorPhone);
+              } else {
+                const { error: reactErr } = await supabase.from("zapp_message_reactions").upsert(
+                  {
+                    account_id: target.account_id,
+                    zapp_conversation_id: target.zapp_conversation_id,
+                    zapp_message_id: target.id,
+                    external_message_id: targetId,
+                    emoji,
+                    reactor_phone: reactorPhone,
+                    from_me: false,
+                    reacted_at: new Date().toISOString(),
+                  },
+                  { onConflict: "zapp_message_id,reactor_phone" },
+                );
+                if (reactErr) console.error("[meta-webhook][REACTION] erro ao gravar:", reactErr.message);
+              }
+              continue;
+            }
 
             const senderPhone = normalizePhone(msg.from);
             const externalMessageId = msg.id;
