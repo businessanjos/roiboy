@@ -86,8 +86,9 @@ function defaultGeometry(): Geometry {
   if (typeof window === "undefined") {
     return { x: MARGIN, y: MARGIN, width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANEL_HEIGHT };
   }
-  const width = Math.min(DEFAULT_PANEL_WIDTH, window.innerWidth - MARGIN * 2);
-  const height = Math.min(DEFAULT_PANEL_HEIGHT, window.innerHeight - MARGIN * 2);
+  // Sempre menor que a tela, para parecer uma janela solta sobre o conteúdo.
+  const width = Math.min(DEFAULT_PANEL_WIDTH, Math.round(window.innerWidth * 0.66));
+  const height = Math.min(DEFAULT_PANEL_HEIGHT, Math.round(window.innerHeight * 0.72));
   return clampGeometry({
     x: window.innerWidth - width - MARGIN,
     y: window.innerHeight - height - MARGIN,
