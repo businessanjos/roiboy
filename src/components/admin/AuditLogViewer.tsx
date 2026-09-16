@@ -692,7 +692,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
                 </TableRow>
               ) : (
                 filteredLogs?.map((log) => (
-                  <TableRow key={log.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow
+                    key={log.id}
+                    className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
+                      actionRowAccent[log.action] ?? "border-l-transparent"
+                    }`}
+                  >
                     <TableCell className="text-sm">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
