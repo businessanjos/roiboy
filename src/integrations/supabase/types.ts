@@ -27245,7 +27245,7 @@ export type Database = {
           id: string
           reacted_at: string
           reactor_name: string | null
-          reactor_phone: string | null
+          reactor_phone: string
           reactor_user_id: string | null
           zapp_conversation_id: string | null
           zapp_message_id: string | null
@@ -27259,7 +27259,7 @@ export type Database = {
           id?: string
           reacted_at?: string
           reactor_name?: string | null
-          reactor_phone?: string | null
+          reactor_phone?: string
           reactor_user_id?: string | null
           zapp_conversation_id?: string | null
           zapp_message_id?: string | null
@@ -27273,7 +27273,7 @@ export type Database = {
           id?: string
           reacted_at?: string
           reactor_name?: string | null
-          reactor_phone?: string | null
+          reactor_phone?: string
           reactor_user_id?: string | null
           zapp_conversation_id?: string | null
           zapp_message_id?: string | null
