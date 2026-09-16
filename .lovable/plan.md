@@ -35,8 +35,10 @@
 ### 3. Abrir a ligação direto do chat
 - Ao ligar pelo cabeçalho da conversa no RoyZapp, abrir o popup imediatamente, tanto em sucesso quanto em falha, já com nome e telefone do contato no cronômetro.
 
-### 4. Reabrir sempre possível
-- Garantir que exista sempre um ponto de reabertura visível (abinha lateral ou botão flutuante), inclusive durante chamada e depois de fechar no X.
+### 4. Nunca mais "sumir"
+- Trocar a abinha invisível por um botão flutuante sempre legível com o texto "Discador 3C" e o estado do agente.
+- Fechar no X passa a apenas recolher o popup para esse botão, nunca esconder o acesso.
+- Guardar se o popup ficou aberto ou recolhido, para voltar do mesmo jeito ao trocar de tela ou recarregar.
 
 ## Detalhes técnicos
 
