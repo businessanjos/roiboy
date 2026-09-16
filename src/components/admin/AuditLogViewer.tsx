@@ -150,7 +150,15 @@ const PERIOD_DAYS: Record<string, number> = {
   "7": 7,
   "30": 30,
   "90": 90,
+  "180": 180,
 };
+
+/** Teto rígido de exibição na tela (os registros continuam no banco). */
+const MAX_VISIBLE_DAYS = 180;
+
+/** Ruído automático que não representa ação de pessoa. */
+const NOISE_ACTIONS = new Set(["auto_heal_inactive"]);
+const NOISE_ENTITIES = new Set(["hr_collaborators"]);
 
 interface AuditLogViewerProps {
   accountId?: string; // If provided, shows logs for specific account (super admin view)
