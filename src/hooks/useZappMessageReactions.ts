@@ -1,0 +1,157 @@
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
+import { toast } from "sonner";
+
+export interface ZappReaction {
+  id: string;
+  zapp_message_id: string | null;
+  emoji: string;
+  reactor_phone: string;
+  reactor_name: string | null;
+  from_me: boolean;
+}
+
+export interface ReactionGroup {
+  emoji: string;
+  count: number;
+  names: string[];
+  mine: boolean;
+}
+
+interface Options {
+  conversationId?: string | null;
+  contactPhone?: string;
+  sectorId?: string;
+  integrationId?: string | null;
+}
+
+/**
+ * Carrega e mantém em tempo real as reações (emojis) das mensagens da conversa,
+ * e permite reagir/remover reação pelo ROY.
+ */
+export function useZappMessageReactions({
+  conversationId,
+  contactPhone,
+  sectorId,
+  integrationId,
+}: Options) {
+  const [reactions, setReactions] = useState<ZappReaction[]>([]);
+
+  const load = useCallback(async () => {
+    if (!conversationId) {
+      setReactions([]);
+      return;
+    }
+    const { data, error } = await supabase
+      .from("zapp_message_reactions")
+      .select("id, zapp_message_id, emoji, reactor_phone, reactor_name, from_me")
+      .eq("zapp_conversation_id", conversationId);
+
+    if (error) {
+      console.error("[Reactions] load error:", error.message);
+      return;
+    }
+    setReactions((data || []) as ZappReaction[]);
+  }, [conversationId]);
+
+  useEffect(() => {
+    void load();
+  }, [load]);
+
+  useEffect(() => {
+    if (!conversationId) return;
+    const channel = supabase
+      .channel(`zapp-reactions-${conversationId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "zapp_message_reactions",
+          filter: `zapp_conversation_id=eq.${conversationId}`,
+        },
+        () => {
+          void load();
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [conversationId, load]);
+
+  /** Reações agrupadas por mensagem e por emoji. */
+  const byMessage = useMemo(() => {
+    const map = new Map<string, ReactionGroup[]>();
+    for (const r of reactions) {
+      if (!r.zapp_message_id) continue;
+      const list = map.get(r.zapp_message_id) || [];
+      const existing = list.find((g) => g.emoji === r.emoji);
+      const who = r.from_me ? "Você" : r.reactor_name || "Contato";
+      if (existing) {
+        existing.count += 1;
+        existing.names.push(who);
+        existing.mine = existing.mine || r.from_me;
+      } else {
+        list.push({ emoji: r.emoji, count: 1, names: [who], mine: r.from_me });
+      }
+      map.set(r.zapp_message_id, list);
+    }
+    return map;
+  }, [reactions]);
+
+  const react = useCallback(
+    async (messageId: string, externalMessageId: string | null | undefined, emoji: string) => {
+      if (!externalMessageId) {
+        toast.error("Não é possível reagir a esta mensagem");
+        return;
+      }
+      if (!contactPhone) {
+        toast.error("Contato sem telefone para reagir");
+        return;
+      }
+
+      const current = (byMessage.get(messageId) || []).find((g) => g.mine && g.emoji === emoji);
+      const nextEmoji = current ? "" : emoji;
+
+      // Atualização otimista
+      setReactions((prev) => {
+        const withoutMine = prev.filter((r) => !(r.zapp_message_id === messageId && r.from_me));
+        if (!nextEmoji) return withoutMine;
+        return [
+          ...withoutMine,
+          {
+            id: `optimistic-${messageId}`,
+            zapp_message_id: messageId,
+            emoji: nextEmoji,
+            reactor_phone: "me",
+            reactor_name: "Você",
+            from_me: true,
+          },
+        ];
+      });
+
+      const { error } = await invokeUazapiManager({
+        body: {
+          action: "send_reaction",
+          phone: contactPhone,
+          message_id: externalMessageId,
+          emoji: nextEmoji,
+          sector_id: sectorId,
+          integration_id: integrationId || undefined,
+        },
+      });
+
+      if (error) {
+        console.error("[Reactions] send error:", error);
+        toast.error("Não foi possível enviar a reação");
+      }
+      void load();
+    },
+    [byMessage, contactPhone, sectorId, integrationId, load],
+  );
+
+  return { byMessage, react, reloadReactions: load };
+}
