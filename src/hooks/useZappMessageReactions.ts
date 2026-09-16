@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { invokeUazapiManager } from "@/lib/royzapp/invokeUazapiManager";
 import { toast } from "sonner";
@@ -40,6 +40,7 @@ export function useZappMessageReactions({
   integrationId,
 }: Options) {
   const [reactions, setReactions] = useState<ZappReaction[]>([]);
+  const pendingMessagesRef = useRef(new Set<string>());
 
   const load = useCallback(async () => {
     if (!conversationId) {
@@ -55,7 +56,15 @@ export function useZappMessageReactions({
       console.error("[Reactions] load error:", error.message);
       return;
     }
-    setReactions((data || []) as ZappReaction[]);
+    const serverReactions = (data || []) as ZappReaction[];
+    setReactions((current) => {
+      const pendingIds = pendingMessagesRef.current;
+      if (pendingIds.size === 0) return serverReactions;
+      return [
+        ...serverReactions.filter((reaction) => !reaction.zapp_message_id || !pendingIds.has(reaction.zapp_message_id)),
+        ...current.filter((reaction) => reaction.zapp_message_id && pendingIds.has(reaction.zapp_message_id)),
+      ];
+    });
   }, [conversationId]);
 
   useEffect(() => {
@@ -107,6 +116,7 @@ export function useZappMessageReactions({
 
   const react = useCallback(
     async (messageId: string, externalMessageId: string | null | undefined, emoji: string) => {
+      if (pendingMessagesRef.current.has(messageId)) return;
       if (!externalMessageId) {
         toast.error("Não é possível reagir a esta mensagem");
         return;
@@ -119,6 +129,7 @@ export function useZappMessageReactions({
 
       const current = (byMessage.get(messageId) || []).find((g) => g.mine && g.emoji === emoji);
       const nextEmoji = current ? "" : emoji;
+      pendingMessagesRef.current.add(messageId);
 
       // Atualização otimista (guardando o estado anterior para desfazer em erro)
       let previous: ZappReaction[] = [];
@@ -139,7 +150,12 @@ export function useZappMessageReactions({
         ];
       });
 
-      const { error } = await invokeUazapiManager({
+      const { data, error } = await invokeUazapiManager<{
+        reacted?: boolean;
+        removed?: boolean;
+        mirrored?: boolean;
+        error?: string;
+      }>({
         body: {
           action: "send_reaction",
           phone: contactPhone || undefined,
@@ -152,17 +168,24 @@ export function useZappMessageReactions({
         },
       });
 
-      if (error) {
+      const confirmed = !error && data?.reacted === true && data?.mirrored === true && (nextEmoji !== "" || data.removed === true);
+      if (!confirmed) {
         console.error("[Reactions] send error:", error);
         setReactions(previous);
+        pendingMessagesRef.current.delete(messageId);
+        const errorMessage = data?.error ||
+          (typeof (error as { message?: unknown } | null)?.message === "string"
+            ? String((error as { message: string }).message)
+            : "");
         toast.error(
-          typeof (error as any)?.message === "string" && (error as any).message
-            ? `Não foi possível enviar a reação: ${(error as any).message}`
+          errorMessage
+            ? `Não foi possível enviar a reação: ${errorMessage}`
             : "Não foi possível enviar a reação",
         );
         return;
       }
-      void load();
+      pendingMessagesRef.current.delete(messageId);
+      await load();
     },
     [byMessage, contactPhone, groupJid, conversationId, sectorId, integrationId, load],
   );

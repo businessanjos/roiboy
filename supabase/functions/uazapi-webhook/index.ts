@@ -188,6 +188,22 @@ interface ExtractedReaction {
   reactorName: string | null;
 }
 
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
+function idFromUnknown(value: unknown): string {
+  if (typeof value === "string" || typeof value === "number") return String(value).trim();
+  const record = asRecord(value);
+  if (!record) return "";
+  const key = asRecord(record.key);
+  return firstString(record.messageId, record.message_id, record.id, key?.id);
+}
+
 /**
  * Extrai os dados de uma reação nos formatos que a UAZAPI/Baileys usa:
  * `msg.reaction`, `msg.reactionMessage`, `msg.message.reactionMessage`,
@@ -204,24 +220,27 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
     null;
 
   const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
-  const looksLikeReaction = nested !== null || declaredType.includes("reaction");
+  const flatReaction = typeof msg.reaction === "string" ? msg.reaction.trim() : "";
+  const looksLikeReaction = nested !== null || declaredType.includes("reaction") || Boolean(flatReaction);
   if (!looksLikeReaction) return null;
 
   const nestedKey = asRecord(nested?.key);
-  const targetId = String(
-    (nested?.messageId as string) ||
-      (nested?.message_id as string) ||
-      (nestedKey?.id as string) ||
-      (nested?.id as string) ||
-      (msg.reactionMessageId as string) ||
-      (msg.quotedMessageId as string) ||
-      (msg.quoted_message_id as string) ||
-      "",
-  ).trim();
+  // No payload plano da UAZAPI, `messageid` identifica o evento da reação;
+  // a mensagem alvo fica em `quoted`. Nunca use o id do próprio evento como alvo.
+  const targetId = firstString(
+    idFromUnknown(nested?.messageId),
+    idFromUnknown(nested?.message_id),
+    idFromUnknown(nestedKey?.id),
+    idFromUnknown(nested?.id),
+    idFromUnknown(msg.quoted),
+    idFromUnknown(msg.reactionMessageId),
+    idFromUnknown(msg.quotedMessageId),
+    idFromUnknown(msg.quoted_message_id),
+  );
 
   // Emoji: só campos de reação. `msg.text` vale apenas quando o próprio
   // evento se declara como reação (formato documentado da UAZAPI).
-  let emoji = String((nested?.text as string) ?? (nested?.emoji as string) ?? "").trim();
+  let emoji = firstString(nested?.text, nested?.emoji, flatReaction);
   if (!emoji && declaredType.includes("reaction")) {
     emoji = String((msg.reaction_text as string) ?? (msg.text as string) ?? "").trim();
   }
@@ -229,8 +248,11 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
   if (emoji.length > 16) emoji = "";
 
   if (!targetId) {
-    const fields = Object.keys(nested || msg).join(",");
-    console.log(`[REACTION] Evento de reação sem id do alvo. Campos: [${fields}]`);
+    const shape = Object.entries(msg)
+      .filter(([key]) => ["reaction", "quoted", "messageid", "chatid", "type", "messageType"].includes(key))
+      .map(([key, value]) => `${key}:${Array.isArray(value) ? "array" : typeof value}`)
+      .join(",");
+    console.log(`[REACTION] Evento de reação sem id do alvo. Estrutura: [${shape}]`);
     return null;
   }
 
@@ -460,38 +482,19 @@ Deno.serve(async (req) => {
       });
     }
     
-    // 3. REACTIONS: store them (emoji shown under the reacted message) and return early
-    {
-      const reactionCandidates: Record<string, unknown>[] = [];
-      if (payload.message) reactionCandidates.push(payload.message as Record<string, unknown>);
-      const altMessages = (payload as Record<string, any>).data?.messages;
-      if (Array.isArray(altMessages)) {
-        for (const m of altMessages) if (m && typeof m === "object") reactionCandidates.push(m as Record<string, unknown>);
-      }
-
-      const reactionEvents = reactionCandidates
-        .map((m) => ({ msg: m, parsed: extractReaction(m) }))
-        .filter((r) => r.parsed !== null);
-
-      if (reactionEvents.length > 0) {
-        try {
-          const results = [];
-          for (const ev of reactionEvents) {
-            results.push(await handleReactionEvent(ev.msg, null));
-          }
-          console.log(`[REACTION] Processadas ${results.length} reação(ões)`);
-          return new Response(
-            JSON.stringify({ success: true, reason: "reaction_message", results }),
-            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
-          );
-        } catch (reactionError) {
-          console.error("[REACTION] Error:", (reactionError as Error).message);
-          return new Response(JSON.stringify({ ignored: true, reason: "reaction_error" }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
-        }
-      }
+    // Reações só podem ser persistidas depois de identificar a integração/conta.
+    // Ainda assim, marque-as agora para nunca deixá-las cair no fluxo de texto comum.
+    const reactionCandidates: Record<string, unknown>[] = [];
+    if (payload.message) reactionCandidates.push(payload.message as Record<string, unknown>);
+    const altMessages = (payload as Record<string, any>).data?.messages;
+    if (Array.isArray(altMessages)) {
+      for (const m of altMessages) if (m && typeof m === "object") reactionCandidates.push(m as Record<string, unknown>);
     }
+    const declaredReactionCandidates = reactionCandidates.filter((msg) => {
+      const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
+      const flatReaction = typeof msg.reaction === "string" ? msg.reaction.trim() : "";
+      return declaredType.includes("reaction") || Boolean(flatReaction) || asRecord(msg.reaction) !== null || asRecord(msg.reactionMessage) !== null;
+    });
 
     
     // 4. LIGHTWEIGHT ACK HANDLER: Process ack events with minimal overhead
@@ -853,6 +856,27 @@ Deno.serve(async (req) => {
     }
 
     const integrationId = integration.id;
+
+    // 3. REACTIONS: process only after account isolation is known, then always
+    // return early so an incomplete reaction can never become a normal message.
+    if (declaredReactionCandidates.length > 0) {
+      try {
+        const results = [];
+        for (const msg of declaredReactionCandidates) {
+          results.push(await handleReactionEvent(msg, null, { accountId }));
+        }
+        console.log(`[REACTION] Processadas ${results.length} reação(ões) na conta identificada`);
+        return new Response(
+          JSON.stringify({ success: true, reason: "reaction_message", results }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      } catch (reactionError) {
+        console.error("[REACTION] Error:", (reactionError as Error).message);
+        return new Response(JSON.stringify({ ignored: true, reason: "reaction_error" }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+    }
     
     
     // Find the department for this sector (with cache)
