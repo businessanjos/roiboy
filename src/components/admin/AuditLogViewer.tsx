@@ -67,6 +67,8 @@ interface UnifiedLog {
   user_agent?: string | null;
   created_at: string;
   source: "audit" | "deal";
+  /** A quem o registro pertence: "Lead Fulano", "Negócio X", "Cliente Y" */
+  context?: string | null;
 }
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -143,6 +145,31 @@ const entityLabels: Record<string, string> = {
   permission: "Permissão",
   deal: "Negócio",
 };
+
+/** Frase legível: "Excluiu a tarefa 'Follow Up' — Lead Fulano" */
+function describeLog(log: UnifiedLog): string {
+  const acao = actionLabels[log.action] ?? log.action;
+  const tipo = (entityLabels[log.entity_type] ?? log.entity_type).toLowerCase();
+  const nome = log.entity_name ? ` "${log.entity_name}"` : "";
+  const onde = log.context ? ` — ${log.context}` : "";
+
+  if (log.entity_type === "deal") {
+    const de = (log.details as any)?.de;
+    const para = (log.details as any)?.para;
+    if (log.action === "stage_change" && (de || para)) {
+      return `Moveu o negócio${nome} de "${de ?? "?"}" para "${para ?? "?"}"`;
+    }
+    if (log.action === "status_change" && para) {
+      return `Marcou o negócio${nome} como "${para}"`;
+    }
+    if (log.action === "note") return `Registrou uma nota no negócio${nome}`;
+    if (log.action === "image") return `Anexou um arquivo no negócio${nome}`;
+    if (log.action === "delete") return `Excluiu o negócio${nome}`;
+    if (log.action === "create") return `Criou o negócio${nome}`;
+  }
+
+  return `${acao} ${tipo}${nome}${onde}`;
+}
 
 const DEAL_ACTIVITY_TYPES = ["stage_change", "status_change", "note", "image"];
 
@@ -351,6 +378,65 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         });
       }
 
+      // Descobre a quem cada tarefa pertence (lead, negócio ou cliente)
+      const taskIds = Array.from(
+        new Set(
+          results
+            .filter((r) => r.entity_type === "task" && r.entity_id)
+            .map((r) => r.entity_id as string),
+        ),
+      );
+      if (taskIds.length > 0) {
+        const { data: tasks } = await supabase
+          .from("internal_tasks")
+          .select("id, deal_id, lead_id, client_id")
+          .in("id", taskIds);
+
+        const dealIds = new Set<string>();
+        const leadIds = new Set<string>();
+        const clientIds = new Set<string>();
+        (tasks ?? []).forEach((t: any) => {
+          if (t.deal_id) dealIds.add(t.deal_id);
+          if (t.lead_id) leadIds.add(t.lead_id);
+          if (t.client_id) clientIds.add(t.client_id);
+        });
+
+        const [dealsRes, leadsRes, clientsRes] = await Promise.all([
+          dealIds.size
+            ? supabase.from("deals").select("id, title").in("id", Array.from(dealIds))
+            : Promise.resolve({ data: [] as any[] }),
+          leadIds.size
+            ? supabase.from("leads").select("id, full_name").in("id", Array.from(leadIds))
+            : Promise.resolve({ data: [] as any[] }),
+          clientIds.size
+            ? supabase.from("clients").select("id, full_name").in("id", Array.from(clientIds))
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        const dealNames = new Map<string, string>();
+        (dealsRes.data ?? []).forEach((d: any) => dealNames.set(d.id, d.title));
+        const leadNames = new Map<string, string>();
+        (leadsRes.data ?? []).forEach((l: any) => leadNames.set(l.id, l.full_name));
+        const clientNames = new Map<string, string>();
+        (clientsRes.data ?? []).forEach((c: any) => clientNames.set(c.id, c.full_name));
+
+        const taskContext = new Map<string, string>();
+        (tasks ?? []).forEach((t: any) => {
+          const label =
+            (t.lead_id && leadNames.get(t.lead_id) && `Lead ${leadNames.get(t.lead_id)}`) ||
+            (t.deal_id && dealNames.get(t.deal_id) && `Negócio ${dealNames.get(t.deal_id)}`) ||
+            (t.client_id && clientNames.get(t.client_id) && `Cliente ${clientNames.get(t.client_id)}`) ||
+            null;
+          if (label) taskContext.set(t.id, label);
+        });
+
+        results.forEach((r) => {
+          if (r.entity_type === "task" && r.entity_id) {
+            r.context = taskContext.get(r.entity_id) ?? null;
+          }
+        });
+      }
+
       return results.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
@@ -364,7 +450,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
       log.user_name?.toLowerCase().includes(searchLower) ||
       log.user_email?.toLowerCase().includes(searchLower) ||
       log.entity_name?.toLowerCase().includes(searchLower) ||
-      log.action.toLowerCase().includes(searchLower) ||
+      log.context?.toLowerCase().includes(searchLower) ||
+      describeLog(log).toLowerCase().includes(searchLower) ||
       log.entity_type.toLowerCase().includes(searchLower)
     );
   });
@@ -372,15 +459,9 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
   const exportCsv = () => {
     const rows = filteredLogs ?? [];
     if (rows.length === 0) return;
-    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Detalhe"];
+    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Vinculado a", "Descrição"];
     const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const body = rows.map((log) => {
-      const detail = log.details
-        ? Object.entries(log.details)
-            .filter(([, v]) => v !== null && v !== undefined && v !== "")
-            .map(([k, v]) => `${k}: ${v}`)
-            .join(" | ")
-        : "";
       return [
         format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
         log.user_name ?? "",
@@ -388,7 +469,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         actionLabels[log.action] ?? log.action,
         entityLabels[log.entity_type] ?? log.entity_type,
         log.entity_name ?? "",
-        detail,
+        log.context ?? "",
+        describeLog(log),
       ]
         .map(escape)
         .join(";");
@@ -503,7 +585,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                 <TableHead>Usuário</TableHead>
                 <TableHead>Ação</TableHead>
                 <TableHead>Tipo</TableHead>
-                <TableHead>Registro</TableHead>
+                <TableHead>O que aconteceu</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -553,9 +635,12 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <span className="text-sm font-medium truncate max-w-[200px] block">
-                        {log.entity_name || "-"}
+                      <span className="text-sm font-medium block max-w-[420px]">
+                        {describeLog(log)}
                       </span>
+                      {log.context && (
+                        <span className="text-xs text-muted-foreground block">{log.context}</span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <Button
@@ -607,27 +692,25 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                     <p className="font-medium">
                       {entityLabels[selectedLog.entity_type] || selectedLog.entity_type}
                     </p>
-                    {selectedLog.entity_name && (
-                      <p className="text-xs text-muted-foreground">{selectedLog.entity_name}</p>
-                    )}
                   </div>
                 </div>
 
-                {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
+                <div>
+                  <p className="text-sm text-muted-foreground">O que aconteceu</p>
+                  <p className="font-medium">{describeLog(selectedLog)}</p>
+                </div>
+
+                {selectedLog.entity_name && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-2">Detalhes</p>
-                    <pre className="bg-muted p-3 rounded-md text-xs overflow-auto max-h-[200px]">
-                      {JSON.stringify(selectedLog.details, null, 2)}
-                    </pre>
+                    <p className="text-sm text-muted-foreground">Registro</p>
+                    <p className="font-medium">{selectedLog.entity_name}</p>
                   </div>
                 )}
 
-                {selectedLog.user_agent && (
+                {selectedLog.context && (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">User Agent</p>
-                    <p className="text-xs text-muted-foreground break-all">
-                      {selectedLog.user_agent}
-                    </p>
+                    <p className="text-sm text-muted-foreground">Vinculado a</p>
+                    <p className="font-medium">{selectedLog.context}</p>
                   </div>
                 )}
               </div>
