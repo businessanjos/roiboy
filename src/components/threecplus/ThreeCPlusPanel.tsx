@@ -133,6 +133,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   });
   const [fullscreen, setFullscreen] = useState(false);
   const [geometry, setGeometry] = useState<Geometry>(() => readStoredGeometry());
+  const geometryRef = useRef<Geometry>(geometry);
   const [interacting, setInteracting] = useState(false);
   const [hasExtension, setHasExtension] = useState(false);
   const [accountConnected, setAccountConnected] = useState(false);
