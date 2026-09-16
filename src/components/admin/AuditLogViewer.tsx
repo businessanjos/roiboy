@@ -146,6 +146,31 @@ const entityLabels: Record<string, string> = {
   deal: "Negócio",
 };
 
+/** Frase legível: "Excluiu a tarefa 'Follow Up' — Lead Fulano" */
+function describeLog(log: UnifiedLog): string {
+  const acao = actionLabels[log.action] ?? log.action;
+  const tipo = (entityLabels[log.entity_type] ?? log.entity_type).toLowerCase();
+  const nome = log.entity_name ? ` "${log.entity_name}"` : "";
+  const onde = log.context ? ` — ${log.context}` : "";
+
+  if (log.entity_type === "deal") {
+    const de = (log.details as any)?.de;
+    const para = (log.details as any)?.para;
+    if (log.action === "stage_change" && (de || para)) {
+      return `Moveu o negócio${nome} de "${de ?? "?"}" para "${para ?? "?"}"`;
+    }
+    if (log.action === "status_change" && para) {
+      return `Marcou o negócio${nome} como "${para}"`;
+    }
+    if (log.action === "note") return `Registrou uma nota no negócio${nome}`;
+    if (log.action === "image") return `Anexou um arquivo no negócio${nome}`;
+    if (log.action === "delete") return `Excluiu o negócio${nome}`;
+    if (log.action === "create") return `Criou o negócio${nome}`;
+  }
+
+  return `${acao} ${tipo}${nome}${onde}`;
+}
+
 const DEAL_ACTIVITY_TYPES = ["stage_change", "status_change", "note", "image"];
 
 const PERIOD_DAYS: Record<string, number> = {
