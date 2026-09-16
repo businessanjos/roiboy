@@ -415,6 +415,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
+              <SelectItem value="180">Últimos 6 meses</SelectItem>
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
