@@ -197,6 +197,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         const { data, error } = await query;
         if (error) throw error;
         (data ?? []).forEach((row: any) => {
+          // Ignora rotinas automáticas do sistema (não são ações de pessoas)
+          if (NOISE_ACTIONS.has(row.action) || NOISE_ENTITIES.has(row.entity_type)) return;
           results.push({
             id: `audit-${row.id}`,
             user_id: row.user_id,
