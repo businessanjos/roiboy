@@ -343,10 +343,8 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     setInteracting(true);
     const startX = event.clientX;
     const startY = event.clientY;
-    let base: Geometry | null = null;
-    setGeometry((prev) => { base = prev; return prev; });
+    const base = geometryRef.current;
     const onMove = (e: PointerEvent) => {
-      if (!base) return;
       setGeometry(
         clampGeometry({
           ...base,
@@ -372,10 +370,8 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     setInteracting(true);
     const startX = event.clientX;
     const startY = event.clientY;
-    let base: Geometry | null = null;
-    setGeometry((prev) => { base = prev; return prev; });
+    const base = geometryRef.current;
     const onMove = (e: PointerEvent) => {
-      if (!base) return;
       const dx = e.clientX - startX;
       const dy = e.clientY - startY;
       let { x, y, width, height } = base;
@@ -391,6 +387,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       }
       setGeometry(clampGeometry({ x, y, width, height }));
     };
+
     const onUp = () => {
       setInteracting(false);
       window.removeEventListener("pointermove", onMove);
