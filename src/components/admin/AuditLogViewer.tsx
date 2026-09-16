@@ -459,15 +459,9 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
   const exportCsv = () => {
     const rows = filteredLogs ?? [];
     if (rows.length === 0) return;
-    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Detalhe"];
+    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Vinculado a", "Descrição"];
     const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const body = rows.map((log) => {
-      const detail = log.details
-        ? Object.entries(log.details)
-            .filter(([, v]) => v !== null && v !== undefined && v !== "")
-            .map(([k, v]) => `${k}: ${v}`)
-            .join(" | ")
-        : "";
       return [
         format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
         log.user_name ?? "",
@@ -475,7 +469,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         actionLabels[log.action] ?? log.action,
         entityLabels[log.entity_type] ?? log.entity_type,
         log.entity_name ?? "",
-        detail,
+        log.context ?? "",
+        describeLog(log),
       ]
         .map(escape)
         .join(";");
