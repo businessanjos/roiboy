@@ -1,4 +1,5 @@
 import {
+  History,
   ScrollText,
   LayoutDashboard,
   Users,
