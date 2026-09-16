@@ -842,6 +842,11 @@ Deno.serve(async (req) => {
               );
               stats.reactionsProcessed++;
             }
+            await reconcileHistoryReactions(
+              supabase,
+              integration.account_id,
+              conversationId,
+            );
             if (removedReactionBubble) {
               await refreshConversationPreview(supabase, conversationId);
             }
