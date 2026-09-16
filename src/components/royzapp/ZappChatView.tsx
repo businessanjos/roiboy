@@ -297,6 +297,12 @@ export function ZappChatView({
     }
 
     setCallInProgress(true);
+    // Abre o discador já na tentativa: o atendimento e a qualificação acontecem nele.
+    window.dispatchEvent(
+      new CustomEvent("threecplus:open-drawer", {
+        detail: { phone: dialPhone, contact_name: contactInfo.name ?? null },
+      }),
+    );
     try {
       const cached = window.__threeCPlusRuntime;
       const { data, error } = await supabase.functions.invoke("threecplus-call", {
