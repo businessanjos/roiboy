@@ -121,6 +121,10 @@ const actionLabels: Record<string, string> = {
   status_change: "Mudou status",
   note: "Registrou nota",
   image: "Anexou arquivo",
+  "user.deactivated": "Desativou usuário",
+  "user.activated": "Reativou usuário",
+  "user.access_profile_changed": "Alterou permissões",
+  "user.created": "Criou usuário",
 };
 
 const entityLabels: Record<string, string> = {
@@ -146,7 +150,15 @@ const PERIOD_DAYS: Record<string, number> = {
   "7": 7,
   "30": 30,
   "90": 90,
+  "180": 180,
 };
+
+/** Teto rígido de exibição na tela (os registros continuam no banco). */
+const MAX_VISIBLE_DAYS = 180;
+
+/** Ruído automático que não representa ação de pessoa. */
+const NOISE_ACTIONS = new Set(["auto_heal_inactive"]);
+const NOISE_ENTITIES = new Set(["hr_collaborators"]);
 
 interface AuditLogViewerProps {
   accountId?: string; // If provided, shows logs for specific account (super admin view)
@@ -162,7 +174,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
   const { data: logs, isLoading, refetch } = useQuery({
     queryKey: ["audit-logs-unified", accountId, actionFilter, entityFilter, periodFilter],
     queryFn: async (): Promise<UnifiedLog[]> => {
-      const sinceIso = subDays(new Date(), PERIOD_DAYS[periodFilter] ?? 30).toISOString();
+      const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
+      const sinceIso = subDays(new Date(), days).toISOString();
       const wantsDeals = entityFilter === "all" || entityFilter === "deal";
       const wantsAudit = entityFilter !== "deal";
 
@@ -184,6 +197,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         const { data, error } = await query;
         if (error) throw error;
         (data ?? []).forEach((row: any) => {
+          // Ignora rotinas automáticas do sistema (não são ações de pessoas)
+          if (NOISE_ACTIONS.has(row.action) || NOISE_ENTITIES.has(row.entity_type)) return;
           results.push({
             id: `audit-${row.id}`,
             user_id: row.user_id,
@@ -279,7 +294,40 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
             });
           });
         }
+
+        // 4) Negócios criados (autor gravado a partir de agora em created_by)
+        if (actionFilter === "all" || actionFilter === "create") {
+          let createdQuery = supabase
+            .from("deals")
+            .select("id, title, created_at, created_by")
+            .not("created_by", "is", null)
+            .gte("created_at", sinceIso)
+            .order("created_at", { ascending: false })
+            .limit(300);
+
+          if (accountId) createdQuery = createdQuery.eq("account_id", accountId);
+
+          const { data: created, error: createdError } = await createdQuery;
+          if (createdError) throw createdError;
+
+          (created ?? []).forEach((row: any) => {
+            results.push({
+              id: `deal-created-${row.id}`,
+              user_id: row.created_by,
+              user_name: null,
+              user_email: null,
+              action: "create",
+              entity_type: "deal",
+              entity_id: row.id,
+              entity_name: row.title,
+              details: null,
+              created_at: row.created_at,
+              source: "deal",
+            });
+          });
+        }
       }
+
 
       // Resolve os nomes das pessoas nas linhas vindas do comercial
       const missingUserIds = Array.from(
@@ -400,6 +448,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
+              <SelectItem value="180">Últimos 6 meses</SelectItem>
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
@@ -440,6 +489,11 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
             </SelectContent>
           </Select>
         </div>
+
+        <p className="text-xs text-muted-foreground mb-3">
+          Esta tela exibe até 6 meses de histórico para manter o carregamento rápido. Os registros
+          anteriores continuam guardados e podem ser consultados sob demanda.
+        </p>
 
         <ScrollArea className="h-[500px]">
           <Table>
