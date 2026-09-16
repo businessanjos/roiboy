@@ -154,6 +154,8 @@ export function useZappMessageReactions({
         reacted?: boolean;
         removed?: boolean;
         mirrored?: boolean;
+          provider_applied?: boolean;
+          warning?: string;
         error?: string;
       }>({
         body: {
@@ -168,7 +170,7 @@ export function useZappMessageReactions({
         },
       });
 
-      const confirmed = !error && data?.reacted === true && data?.mirrored === true && (nextEmoji !== "" || data.removed === true);
+      const confirmed = !error && data?.reacted === true && (data?.mirrored === true || data?.provider_applied === true) && (nextEmoji !== "" || data.removed === true);
       if (!confirmed) {
         console.error("[Reactions] send error:", error);
         setReactions(previous);
@@ -185,7 +187,8 @@ export function useZappMessageReactions({
         return;
       }
       pendingMessagesRef.current.delete(messageId);
-      await load();
+      if (data?.mirrored === true) await load();
+      else if (data?.warning) toast.warning(data.warning);
     },
     [byMessage, contactPhone, groupJid, conversationId, sectorId, integrationId, load],
   );

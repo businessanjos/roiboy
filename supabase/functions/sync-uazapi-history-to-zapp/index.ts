@@ -218,6 +218,7 @@ async function persistHistoryReaction(
 ): Promise<"saved" | "removed" | "pending" | "ignored"> {
   const normalized = normalizeZappReaction(message as unknown as Record<string, unknown>);
   if (!normalized?.targetId) return "ignored";
+  if (normalized.operation === "deferred") return "ignored";
 
   const targetSuffix = zappMessageIdSuffix(normalized.targetId);
   const { data: exact } = await supabase
@@ -252,7 +253,7 @@ async function persistHistoryReaction(
       .is("zapp_message_id", null)
       .eq("external_message_id", targetSuffix)
       .eq("reactor_phone", reactorPhone);
-    if (!normalized.emoji) return "removed";
+    if (normalized.operation === "remove") return "removed";
     const { error } = await supabase.from("zapp_message_reactions").insert({
       account_id: accountId,
       zapp_conversation_id: conversationId,
@@ -268,7 +269,7 @@ async function persistHistoryReaction(
     return "pending";
   }
 
-  if (!normalized.emoji) {
+  if (normalized.operation === "remove") {
     const { error } = await supabase
       .from("zapp_message_reactions")
       .delete()
@@ -291,6 +292,37 @@ async function persistHistoryReaction(
   }, { onConflict: "zapp_message_id,reactor_phone" });
   if (error) throw error;
   return "saved";
+}
+
+async function reconcileHistoryReactions(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+  conversationId: string,
+) {
+  const { data: pending } = await supabase
+    .from("zapp_message_reactions")
+    .select("id, external_message_id")
+    .eq("account_id", accountId)
+    .eq("zapp_conversation_id", conversationId)
+    .is("zapp_message_id", null)
+    .limit(500);
+
+  for (const reaction of pending || []) {
+    const targetId = String(reaction.external_message_id || "").split(":").pop() || "";
+    if (!targetId) continue;
+    const { data: target } = await supabase
+      .from("zapp_messages")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("zapp_conversation_id", conversationId)
+      .or(`external_message_id.eq.${targetId},external_message_id.like.%:${targetId}`)
+      .limit(2);
+    if (target?.length !== 1) continue;
+    await supabase
+      .from("zapp_message_reactions")
+      .update({ zapp_message_id: target[0].id })
+      .eq("id", reaction.id);
+  }
 }
 
 async function refreshConversationPreview(
@@ -810,6 +842,11 @@ Deno.serve(async (req) => {
               );
               stats.reactionsProcessed++;
             }
+            await reconcileHistoryReactions(
+              supabase,
+              integration.account_id,
+              conversationId,
+            );
             if (removedReactionBubble) {
               await refreshConversationPreview(supabase, conversationId);
             }

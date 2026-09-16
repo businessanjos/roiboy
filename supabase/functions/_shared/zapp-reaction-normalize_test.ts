@@ -16,6 +16,7 @@ Deno.test("recognizes a flat UAZAPI reaction", () => {
   assertEquals(normalizeZappReaction(message), {
     targetId: "TARGET_MESSAGE_ID",
     emoji: "👍",
+    operation: "set",
     fromMe: false,
     senderJid: "5511999999999@s.whatsapp.net",
     senderName: null,
@@ -49,6 +50,41 @@ Deno.test("keeps an empty reaction as a removal event", () => {
   assertEquals(isZappReaction(message), true);
   assertEquals(normalizeZappReaction(message)?.targetId, "TARGET_MESSAGE_ID");
   assertEquals(normalizeZappReaction(message)?.emoji, "");
+  assertEquals(normalizeZappReaction(message)?.operation, "remove");
+});
+
+Deno.test("extracts reaction nested in content", () => {
+  const message = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    content: { reaction: "😂" },
+  };
+  assertEquals(normalizeZappReaction(message)?.emoji, "😂");
+  assertEquals(normalizeZappReaction(message)?.operation, "set");
+});
+
+Deno.test("does not convert a missing emoji into removal", () => {
+  const message = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    text: "[reação]",
+  };
+  assertEquals(normalizeZappReaction(message)?.operation, "deferred");
+});
+
+Deno.test("extracts reaction from provider metadata and JSON content", () => {
+  const nested = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    metadata: { event: { reactionText: "❤️" } },
+  };
+  const encoded = {
+    type: "reaction",
+    messageid: "TARGET_MESSAGE_ID",
+    content: JSON.stringify({ emoji: "👍" }),
+  };
+  assertEquals(normalizeZappReaction(nested)?.emoji, "❤️");
+  assertEquals(normalizeZappReaction(encoded)?.emoji, "👍");
 });
 
 Deno.test("does not classify an intentional emoji message as a reaction", () => {

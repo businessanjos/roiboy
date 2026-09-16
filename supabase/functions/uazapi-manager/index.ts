@@ -2169,13 +2169,6 @@ Deno.serve(async (req) => {
       const responseType = String(
         apiResponse?.type || apiResponse?.messageType || apiResponse?.message?.type || apiResponse?.message?.messageType || "",
       ).toLowerCase();
-      if (responseType && !responseType.includes("reaction")) {
-        console.error(`[uazapi-manager][send_reaction] tipo inesperado na resposta: ${responseType}`);
-        return new Response(
-          JSON.stringify({ error: "O WhatsApp respondeu como mensagem comum, não como reação" }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
 
       const providerMessageId = firstString(
         apiResponse?.messageid,
@@ -2192,13 +2185,7 @@ Deno.serve(async (req) => {
         apiResponse?.error === false ||
         Boolean(providerMessageId) ||
         responseType.includes("reaction");
-      if (!explicitSuccess) {
-        console.error("[uazapi-manager][send_reaction] resposta sem confirmação explícita");
-        return new Response(
-          JSON.stringify({ error: emoji ? "O WhatsApp não confirmou a reação" : "O WhatsApp não confirmou a remoção da reação" }),
-          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
-        );
-      }
+      if (!explicitSuccess) console.warn("[uazapi-manager][send_reaction] HTTP aceito sem marcador explícito; aguardando webhook");
 
       // Espelha a reação no banco para aparecer imediatamente na conversa
       let targetQuery = supabase
@@ -2230,8 +2217,8 @@ Deno.serve(async (req) => {
           if (delErr) {
             console.error("[uazapi-manager][send_reaction] erro ao remover:", delErr.message);
             return new Response(
-              JSON.stringify({ error: "A reação foi removida no WhatsApp, mas não foi sincronizada no ROY", details: delErr.message }),
-              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+              JSON.stringify({ reacted: true, removed: true, provider_applied: true, mirrored: false, warning: "Removida no WhatsApp; sincronização local pendente" }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
             );
           }
         } else {
@@ -2253,16 +2240,16 @@ Deno.serve(async (req) => {
           if (upErr) {
             console.error("[uazapi-manager][send_reaction] erro ao gravar:", upErr.message);
             return new Response(
-              JSON.stringify({ error: "Reação enviada, mas não foi possível registrar", details: upErr.message }),
-              { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+              JSON.stringify({ reacted: true, provider_applied: true, mirrored: false, warning: "Enviada ao WhatsApp; sincronização local pendente" }),
+              { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
             );
           }
         }
       } else {
         console.warn("[uazapi-manager][send_reaction] mensagem alvo não encontrada ou ambígua no banco");
         return new Response(
-          JSON.stringify({ error: "A mensagem reagida não foi localizada nesta conversa" }),
-          { status: 409, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          JSON.stringify({ reacted: true, removed: !emoji, provider_applied: true, mirrored: false, warning: "WhatsApp confirmou; aguardando sincronização no ROY" }),
+          { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
 

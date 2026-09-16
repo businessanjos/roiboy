@@ -24,4 +24,8 @@
 - [x] Identificar sincronização histórica criando balões de reação
 - [x] Unificar detecção de reações ao vivo e no histórico
 - [x] Publicar funções e reprocessar a janela afetada
-- [ ] Confirmar reação e remoção reais nos dois sentidos
+- [x] Diferenciar reação, remoção explícita e evento incompleto
+- [x] Ampliar extração segura do emoji e escopo da conversa
+- [x] Evitar falso erro quando o WhatsApp aceita e o espelhamento local atrasa
+- [x] Publicar funções corrigidas
+- [ ] Confirmar reação e remoção reais nos dois sentidos após novo evento do usuário
