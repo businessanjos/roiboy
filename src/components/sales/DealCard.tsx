@@ -149,7 +149,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
       <div 
         title={statusIndicator.label}
         className={cn(
-          "absolute left-0 top-0 bottom-0 w-1 rounded-l",
+          "absolute left-0 top-0 bottom-0 w-1.5 rounded-l",
           statusIndicator.bgColor
         )} 
       />
