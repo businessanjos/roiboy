@@ -6,6 +6,7 @@ A interface já tem os emojis, mas o problema está antes dela: o banco continua
 
 ### 1. Interpretar o formato real recebido
 - Ajustar o webhook da UAZAPI para reconhecer os formatos de reação realmente usados pela integração, incluindo os objetos aninhados `reactionMessage`, `message.reactionMessage`, `content.reactionMessage` e suas chaves de mensagem.
+- Corrigir também o segundo caminho de entrada (`data.messages[]`): hoje ele trata mensagens comuns, encontra reação sem texto e a descarta antes do processamento.
 - Separar corretamente:
   - ID do próprio evento de reação;
   - ID da mensagem que recebeu a reação;
