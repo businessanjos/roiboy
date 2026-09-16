@@ -7255,6 +7255,7 @@ export type Database = {
           contact_name: string | null
           contact_phone: string | null
           created_at: string
+          created_by: string | null
           currency: string | null
           deleted_at: string | null
           deleted_by: string | null
@@ -7298,6 +7299,7 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
@@ -7341,6 +7343,7 @@ export type Database = {
           contact_name?: string | null
           contact_phone?: string | null
           created_at?: string
+          created_by?: string | null
           currency?: string | null
           deleted_at?: string | null
           deleted_by?: string | null
