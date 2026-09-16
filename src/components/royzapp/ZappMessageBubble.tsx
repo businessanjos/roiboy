@@ -17,13 +17,19 @@ import {
   AlertCircle,
   Pencil,
   X,
+  SmilePlus,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Message, getSenderColor } from "./types";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Textarea } from "@/components/ui/textarea";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import type { ReactionGroup } from "@/hooks/useZappMessageReactions";
+
+const QUICK_REACTIONS = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
+
 
 // Evita transcrições duplicadas quando o componente remonta (scroll/virtualização)
 const autoTranscribedIds = new Set<string>();
