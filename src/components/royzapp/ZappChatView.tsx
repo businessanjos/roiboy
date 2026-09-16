@@ -438,6 +438,8 @@ export function ZappChatView({
         onRetryMediaDownload={onRetryMediaDownload}
         searchQuery={searchQuery}
         searchMatchIds={searchMatchIds}
+        contactPhone={contactInfo.phone}
+        sectorId={sectorId}
         searchFocusId={searchMatchIds.length > 0 && searchCurrentIndex > 0 ? searchMatchIds[searchCurrentIndex - 1] : null}
       />
 

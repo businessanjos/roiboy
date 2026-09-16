@@ -16,6 +16,7 @@ import {
 import { Message } from "@/hooks/useZappData";
 import { ZappMessageBubble } from "./ZappMessageBubble";
 import { CallTimelineEvent, type ConversationCall } from "@/components/telephony/CallTimelineEvent";
+import { useZappMessageReactions } from "@/hooks/useZappMessageReactions";
 
 const callTs = (c: ConversationCall) =>
   new Date(c.started_at || c.created_at || 0).getTime();
@@ -49,6 +50,12 @@ interface ZappMessagesListProps {
   onLoadOlderMessages?: () => void;
   /** Ligações da 3C do contato, intercaladas cronologicamente no histórico. */
   calls?: ConversationCall[];
+  /** Telefone do contato — necessário para enviar reações. */
+  contactPhone?: string;
+  /** Setor da conversa, usado no envio de reações. */
+  sectorId?: string;
+  /** Instância do WhatsApp usada na conversa. */
+  integrationId?: string | null;
 }
 
 // Build a fallback mention map from sender_phone data in group messages
@@ -111,7 +118,16 @@ export function ZappMessagesList({
   isLoadingMessages = false,
   onLoadOlderMessages,
   calls,
+  contactPhone,
+  sectorId,
+  integrationId,
 }: ZappMessagesListProps) {
+  const { byMessage: reactionsByMessage, react } = useZappMessageReactions({
+    conversationId,
+    contactPhone,
+    sectorId,
+    integrationId,
+  });
   const sortedCalls = useMemo(
     () => [...(calls || [])].sort((a, b) => callTs(a) - callTs(b)),
     [calls],
@@ -574,6 +590,12 @@ export function ZappMessagesList({
                     onScrollToQuoted={handleScrollToQuoted}
                     isHighlighted={highlightedMessageId === message.id}
                     searchHighlight={searchMatchSet.has(message.id)}
+                    reactions={reactionsByMessage.get(message.id)}
+                    onReact={
+                      message.external_message_id
+                        ? (emoji) => void react(message.id, message.external_message_id, emoji)
+                        : undefined
+                    }
                   />
                 </div>
               );
