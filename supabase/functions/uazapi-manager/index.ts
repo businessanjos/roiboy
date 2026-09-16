@@ -910,7 +910,7 @@ Deno.serve(async (req) => {
       // por estado stale no frontend (ex.: CS mandando pelo número Comercial).
       // Ações somente-leitura de setor são liberadas; apenas envios reais
       // (send_*) são bloqueados.
-      const sendActions = ["send_text", "send_media", "send_to_group", "send_media_to_group"];
+      const sendActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "send_reaction"];
       if (
         sendActions.includes(action) &&
         sector_id &&
@@ -1062,7 +1062,7 @@ Deno.serve(async (req) => {
     }
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number", "send_reaction"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action} (integration: ${intData?.id || "n/a"}, instance: ${intData?.config?.instance_name || "n/a"})`);
       return new Response(
@@ -1080,7 +1080,7 @@ Deno.serve(async (req) => {
     // setor deste WhatsApp for "viewer". Admin de conta sempre passa.
     {
       const writeActions = [
-        "send_text", "send_media", "send_to_group", "send_media_to_group",
+        "send_text", "send_media", "send_to_group", "send_media_to_group", "send_reaction",
         "delete_message", "create", "connect", "qrcode", "disconnect",
         "reset_instance", "adopt_instance", "unlink_instance",
         "add_instance_to_sector", "update_instance_pin", "configure_webhook",
