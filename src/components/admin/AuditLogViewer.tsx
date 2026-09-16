@@ -210,22 +210,30 @@ const NOISE_ENTITIES = new Set(["hr_collaborators"]);
 
 interface AuditLogViewerProps {
   accountId?: string; // If provided, shows logs for specific account (super admin view)
+  /** "commercial" = só negócios e tarefas de vendas; "system" = log geral. */
+  scope?: "system" | "commercial";
 }
 
-export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
+export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerProps) {
+  const isCommercial = scope === "commercial";
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("30");
+  const [userFilter, setUserFilter] = useState<string>("all");
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<UnifiedLog | null>(null);
 
   const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ["audit-logs-unified", accountId, actionFilter, entityFilter, periodFilter],
+    queryKey: ["audit-logs-unified", scope, accountId, actionFilter, entityFilter, periodFilter],
     queryFn: async (): Promise<UnifiedLog[]> => {
       const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
-      const sinceIso = subDays(new Date(), days).toISOString();
-      const wantsDeals = entityFilter === "all" || entityFilter === "deal";
-      const wantsAudit = entityFilter !== "deal";
+      const sinceIso =
+        periodFilter === "today"
+          ? startOfDay(new Date()).toISOString()
+          : subDays(new Date(), days).toISOString();
+      const wantsDeals = isCommercial || entityFilter === "all" || entityFilter === "deal";
+      const wantsAudit = isCommercial || entityFilter !== "deal";
 
       const results: UnifiedLog[] = [];
 
