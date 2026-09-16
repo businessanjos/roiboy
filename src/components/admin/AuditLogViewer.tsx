@@ -353,6 +353,65 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         });
       }
 
+      // Descobre a quem cada tarefa pertence (lead, negócio ou cliente)
+      const taskIds = Array.from(
+        new Set(
+          results
+            .filter((r) => r.entity_type === "task" && r.entity_id)
+            .map((r) => r.entity_id as string),
+        ),
+      );
+      if (taskIds.length > 0) {
+        const { data: tasks } = await supabase
+          .from("internal_tasks")
+          .select("id, deal_id, lead_id, client_id")
+          .in("id", taskIds);
+
+        const dealIds = new Set<string>();
+        const leadIds = new Set<string>();
+        const clientIds = new Set<string>();
+        (tasks ?? []).forEach((t: any) => {
+          if (t.deal_id) dealIds.add(t.deal_id);
+          if (t.lead_id) leadIds.add(t.lead_id);
+          if (t.client_id) clientIds.add(t.client_id);
+        });
+
+        const [dealsRes, leadsRes, clientsRes] = await Promise.all([
+          dealIds.size
+            ? supabase.from("deals").select("id, title").in("id", Array.from(dealIds))
+            : Promise.resolve({ data: [] as any[] }),
+          leadIds.size
+            ? supabase.from("leads").select("id, full_name").in("id", Array.from(leadIds))
+            : Promise.resolve({ data: [] as any[] }),
+          clientIds.size
+            ? supabase.from("clients").select("id, full_name").in("id", Array.from(clientIds))
+            : Promise.resolve({ data: [] as any[] }),
+        ]);
+
+        const dealNames = new Map<string, string>();
+        (dealsRes.data ?? []).forEach((d: any) => dealNames.set(d.id, d.title));
+        const leadNames = new Map<string, string>();
+        (leadsRes.data ?? []).forEach((l: any) => leadNames.set(l.id, l.full_name));
+        const clientNames = new Map<string, string>();
+        (clientsRes.data ?? []).forEach((c: any) => clientNames.set(c.id, c.full_name));
+
+        const taskContext = new Map<string, string>();
+        (tasks ?? []).forEach((t: any) => {
+          const label =
+            (t.lead_id && leadNames.get(t.lead_id) && `Lead ${leadNames.get(t.lead_id)}`) ||
+            (t.deal_id && dealNames.get(t.deal_id) && `Negócio ${dealNames.get(t.deal_id)}`) ||
+            (t.client_id && clientNames.get(t.client_id) && `Cliente ${clientNames.get(t.client_id)}`) ||
+            null;
+          if (label) taskContext.set(t.id, label);
+        });
+
+        results.forEach((r) => {
+          if (r.entity_type === "task" && r.entity_id) {
+            r.context = taskContext.get(r.entity_id) ?? null;
+          }
+        });
+      }
+
       return results.sort(
         (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
       );
