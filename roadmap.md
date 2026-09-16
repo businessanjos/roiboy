@@ -36,3 +36,4 @@
 - [x] Recolher o popup durante gravação sem interromper a chamada
 - [x] Isolar respostas antigas ao trocar de lead ou iniciar nova ligação
 - [x] Validar movimento, recolhimento, troca de lead e ausência de erros no navegador
+- [x] Tornar também o botão recolhido arrastável e salvar sua posição

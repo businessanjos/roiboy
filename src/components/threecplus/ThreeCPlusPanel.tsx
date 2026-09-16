@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
+import { GripVertical, Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
@@ -62,6 +62,7 @@ const MARGIN = 16;
 const COMPOSER_CLEARANCE = 112;
 // v3 descarta geometrias antigas que cobriam quase toda a conversa.
 const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry_v3";
+const LAUNCHER_POSITION_STORAGE_KEY = "roy_threec_launcher_position_v1";
 const OPEN_STORAGE_KEY = "roy_threec_panel_open";
 const DIAL_RUNTIME_GRACE_MS = 5_000;
 
@@ -70,6 +71,33 @@ interface Geometry {
   y: number;
   width: number;
   height: number;
+}
+
+interface Position {
+  x: number;
+  y: number;
+}
+
+function clampLauncherPosition(position: Position, width = 330, height = 52): Position {
+  if (typeof window === "undefined") return position;
+  return {
+    x: Math.min(Math.max(MARGIN, position.x), Math.max(MARGIN, window.innerWidth - width - MARGIN)),
+    y: Math.min(Math.max(MARGIN, position.y), Math.max(MARGIN, window.innerHeight - height - MARGIN)),
+  };
+}
+
+function readLauncherPosition(): Position {
+  if (typeof window === "undefined") return { x: MARGIN, y: 80 };
+  const fallback = clampLauncherPosition({ x: window.innerWidth - 330 - MARGIN, y: 80 });
+  try {
+    const raw = window.localStorage.getItem(LAUNCHER_POSITION_STORAGE_KEY);
+    if (!raw) return fallback;
+    const parsed = JSON.parse(raw) as Partial<Position>;
+    if (typeof parsed.x !== "number" || typeof parsed.y !== "number") return fallback;
+    return clampLauncherPosition(parsed as Position);
+  } catch {
+    return fallback;
+  }
 }
 
 function clampGeometry(geo: Geometry): Geometry {
@@ -143,6 +171,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const [fullscreen, setFullscreen] = useState(false);
   const [geometry, setGeometry] = useState<Geometry>(() => readStoredGeometry());
   const geometryRef = useRef<Geometry>(geometry);
+  const [launcherPosition, setLauncherPosition] = useState<Position>(() => readLauncherPosition());
+  const launcherPositionRef = useRef<Position>(launcherPosition);
+  const launcherRef = useRef<HTMLDivElement | null>(null);
+  const launcherDraggedRef = useRef(false);
   const [interacting, setInteracting] = useState(false);
   const [hasExtension, setHasExtension] = useState(false);
   const [accountConnected, setAccountConnected] = useState(false);
@@ -351,6 +383,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     geometryRef.current = geometry;
   }, [geometry]);
 
+  useEffect(() => {
+    launcherPositionRef.current = launcherPosition;
+  }, [launcherPosition]);
+
   const persistGeometry = useCallback(() => {
     if (typeof window === "undefined") return;
     window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(geometryRef.current));
@@ -370,9 +406,53 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(next));
         return next;
       });
+      const launcherRect = launcherRef.current?.getBoundingClientRect();
+      setLauncherPosition((prev) => {
+        const next = clampLauncherPosition(prev, launcherRect?.width, launcherRect?.height);
+        launcherPositionRef.current = next;
+        window.localStorage.setItem(LAUNCHER_POSITION_STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
     };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // O botão recolhido também é uma janela flutuante: arrasta por qualquer área
+  // e só abre o discador quando houve um clique, não após um movimento.
+  const startLauncherDrag = useCallback((event: React.PointerEvent<HTMLDivElement>) => {
+    if (event.button !== 0) return;
+    event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
+    launcherDraggedRef.current = false;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    const base = launcherPositionRef.current;
+    const rect = launcherRef.current?.getBoundingClientRect();
+
+    const onMove = (moveEvent: PointerEvent) => {
+      const dx = moveEvent.clientX - startX;
+      const dy = moveEvent.clientY - startY;
+      if (Math.abs(dx) + Math.abs(dy) > 4) launcherDraggedRef.current = true;
+      const next = clampLauncherPosition(
+        { x: base.x + dx, y: base.y + dy },
+        rect?.width,
+        rect?.height,
+      );
+      launcherPositionRef.current = next;
+      setLauncherPosition(next);
+    };
+
+    const onUp = () => {
+      if (launcherDraggedRef.current) {
+        window.localStorage.setItem(LAUNCHER_POSITION_STORAGE_KEY, JSON.stringify(launcherPositionRef.current));
+      }
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+    };
+
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
   }, []);
 
   // Só o modo tela cheia bloqueia a rolagem do fundo.
@@ -486,12 +566,23 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     <>
       {/* Botão sempre visível: fechar o popup apenas recolhe para cá. */}
       {visible && canUseDialer && !isOpen && (
-        <div className="fixed right-4 top-20 z-[60] flex items-center rounded-md border border-border bg-card shadow-lg lg:right-6 lg:top-24">
+        <div
+          ref={launcherRef}
+          style={{ left: Math.round(launcherPosition.x), top: Math.round(launcherPosition.y) }}
+          onPointerDown={startLauncherDrag}
+          className="fixed z-[60] flex touch-none select-none items-center rounded-md border border-border bg-card shadow-lg cursor-grab active:cursor-grabbing"
+          title="Arraste para mover o Discador 3C"
+        >
+          <GripVertical className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           <Button
             type="button"
             variant="ghost"
             className="h-11 gap-2 px-3"
             onClick={() => {
+              if (launcherDraggedRef.current) {
+                launcherDraggedRef.current = false;
+                return;
+              }
               setIsOpen(true);
               void refreshStatus();
             }}
