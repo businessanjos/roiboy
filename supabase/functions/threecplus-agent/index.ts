@@ -679,11 +679,26 @@ Deno.serve((req) => with3cContext(async () => {
       const metadata = asRecord(userInt?.metadata);
       const stored = extractExtension(metadata);
       const storedPassword = metadata?.extension_password as string | null;
+      // A conta ter a 3C conectada já habilita o discador na tela; sem ramal,
+      // a interface avisa que falta configurar em vez de sumir.
+      const { data: accountIntegration } = await supabaseAdmin
+        .from("integrations")
+        .select("id, status")
+        .eq("account_id", userData.account_id)
+        .eq("type", "3cplus")
+        .maybeSingle();
       return new Response(
-        JSON.stringify({ success: true, extension: stored, extension_password: storedPassword ? "••••" : null, has_password: Boolean(storedPassword) }),
+        JSON.stringify({
+          success: true,
+          extension: stored,
+          extension_password: storedPassword ? "••••" : null,
+          has_password: Boolean(storedPassword),
+          account_connected: Boolean(accountIntegration?.id && accountIntegration.status === "connected"),
+        }),
         { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
 
     // Autenticação: token de serviço da conta + X-Agent-Id, com fallback ao token individual
     const auth = await resolveAgentAuth(supabaseAdmin, {
