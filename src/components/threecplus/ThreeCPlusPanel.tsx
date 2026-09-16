@@ -286,6 +286,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => window.clearTimeout(timer);
   }, [dialingSince, inCall]);
 
+  // Ligação encerrada/qualificada: limpa contato, cronômetro e marcadores para
+  // que o próximo lead comece do zero.
+  useEffect(() => {
+    if (inCall || dialingSince !== null) return;
+    callStartedAt.current = null;
+    callWasActiveRef.current = false;
+    noActivePollsRef.current = 0;
+    setElapsed(0);
+    setContact(null);
+  }, [inCall, dialingSince]);
+
+
+
   useEffect(() => {
     const openDrawer = (event: Event) => {
       const detail = (event as CustomEvent<{
