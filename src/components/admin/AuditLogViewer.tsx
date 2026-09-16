@@ -538,7 +538,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Log de Auditoria
+            {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
