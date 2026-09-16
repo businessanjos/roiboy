@@ -174,7 +174,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
   const { data: logs, isLoading, refetch } = useQuery({
     queryKey: ["audit-logs-unified", accountId, actionFilter, entityFilter, periodFilter],
     queryFn: async (): Promise<UnifiedLog[]> => {
-      const sinceIso = subDays(new Date(), PERIOD_DAYS[periodFilter] ?? 30).toISOString();
+      const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
+      const sinceIso = subDays(new Date(), days).toISOString();
       const wantsDeals = entityFilter === "all" || entityFilter === "deal";
       const wantsAudit = entityFilter !== "deal";
 
