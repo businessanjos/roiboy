@@ -2205,6 +2205,16 @@ Deno.serve(async (req) => {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
                 insertedMessageDbId = insertedMsg?.id || null;
+
+                // Reações que chegaram antes desta mensagem ficam vinculadas agora
+                if (insertedMessageDbId && zappConversationId) {
+                  await reconcilePendingReactions(supabase, {
+                    accountId: accountId,
+                    conversationId: zappConversationId,
+                    messageDbId: insertedMessageDbId,
+                    externalMessageId: messageId,
+                  });
+                }
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
 
                 // EAGER MEDIA DOWNLOAD: kick off download immediately (fire-and-forget)
