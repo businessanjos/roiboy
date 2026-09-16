@@ -1942,6 +1942,7 @@ Deno.serve(async (req) => {
         // For inbound: single query by external_message_id
         // ============================================
         let insertedMessageDbId: string | null = null;
+        let existingMessageDbId: string | null = null;
         if (zappConversationId) {
           let skipInsert = false;
           let isDuplicate = false;
@@ -2156,6 +2157,7 @@ Deno.serve(async (req) => {
               .maybeSingle();
 
             if (existingMsg) {
+              existingMessageDbId = existingMsg.id;
               if (existingMsg.is_deleted) {
                 return new Response(
                   JSON.stringify({ ignored: true, reason: "message_deleted" }),
@@ -2196,6 +2198,7 @@ Deno.serve(async (req) => {
                   .maybeSingle();
 
                 if (suffixMatch) {
+                  existingMessageDbId = suffixMatch.id;
                   if (suffixMatch.is_deleted) {
                     return new Response(
                       JSON.stringify({ ignored: true, reason: "message_deleted" }),
@@ -2302,6 +2305,15 @@ Deno.serve(async (req) => {
                   }
                 }
               }
+            }
+
+            if (!insertedMessageDbId && existingMessageDbId && zappConversationId) {
+              await reconcilePendingReactions(supabase, {
+                accountId,
+                conversationId: zappConversationId,
+                messageDbId: existingMessageDbId,
+                externalMessageId: messageId,
+              });
             }
 
           // Create or update zapp_conversation_assignment for the queue
