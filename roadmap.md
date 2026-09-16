@@ -23,5 +23,5 @@
 # Reações do RoyZapp
 - [x] Identificar sincronização histórica criando balões de reação
 - [x] Unificar detecção de reações ao vivo e no histórico
-- [ ] Publicar funções e reprocessar a janela afetada
+- [x] Publicar funções e reprocessar a janela afetada
 - [ ] Confirmar reação e remoção reais nos dois sentidos
