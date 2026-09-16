@@ -245,7 +245,13 @@ export const getContactInfo = (assignment: ConversationAssignment): ContactInfo 
       ? (zappConv.contact_name || "Grupo sem nome")
       : (clientData?.full_name || leadData?.full_name || zappConv.contact_name || zappConv.phone_e164 || "Desconhecido");
     
-    const phone = zappConv.phone_e164 || "";
+    const phone =
+      zappConv.phone_e164 ||
+      (clientData as any)?.phone_e164 ||
+      (clientData as any)?.phone ||
+      (leadData as any)?.phone_e164 ||
+      (leadData as any)?.phone ||
+      "";
     
     // Build searchable text with all relevant fields
     const searchableText = normalizeSearchText([
