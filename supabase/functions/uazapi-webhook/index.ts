@@ -165,6 +165,107 @@ function normalizePhone(phone: string | undefined): string {
   return canonicalE164(phone) || "";
 }
 
+function asRecord(value: unknown): Record<string, unknown> | null {
+  return value && typeof value === "object" && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : null;
+}
+
+/**
+ * Processa uma reação (emoji) recebida do WhatsApp.
+ * Localiza a mensagem alvo pelo external_message_id e grava/remove a reação.
+ * Emoji vazio = reação removida.
+ */
+async function handleReactionEvent(
+  msg: Record<string, unknown>,
+  reaction: Record<string, unknown> | null,
+): Promise<Record<string, unknown>> {
+  const reactionKey = asRecord(reaction?.key) || asRecord(msg.key);
+  const targetIdRaw =
+    (reaction?.messageId as string) ||
+    (reaction?.message_id as string) ||
+    (reaction?.id as string) ||
+    (reactionKey?.id as string) ||
+    (msg.quotedMessageId as string) ||
+    (msg.quoted_message_id as string) ||
+    (msg.reactionMessageId as string) ||
+    "";
+  const targetId = String(targetIdRaw || "").trim();
+
+  const emoji = String(
+    (reaction?.text as string) ??
+      (reaction?.emoji as string) ??
+      (msg.reaction_text as string) ??
+      (msg.text as string) ??
+      (msg.content as string) ??
+      "",
+  ).trim();
+
+  if (!targetId) {
+    console.log("[REACTION] Sem id da mensagem alvo, ignorando");
+    return { ignored: true, reason: "reaction_no_target" };
+  }
+
+  const fromMe = msg.fromMe === true || msg.from_me === true || reaction?.fromMe === true;
+  const senderJid = String(
+    (msg.participant as string) ||
+      (msg.sender as string) ||
+      (msg.chatid as string) ||
+      (reaction?.sender as string) ||
+      "",
+  );
+  const reactorPhone = fromMe ? "me" : (extractPhoneFromJid(senderJid) || normalizePhone(senderJid) || "unknown");
+  const reactorName = String((msg.senderName as string) || (msg.pushName as string) || "") || null;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+  const db = createClient(supabaseUrl, supabaseKey);
+
+  const { data: targets } = await db
+    .from("zapp_messages")
+    .select("id, account_id, zapp_conversation_id")
+    .ilike("external_message_id", `%${targetId}`)
+    .limit(1);
+
+  const target = targets?.[0];
+  if (!target) {
+    console.log(`[REACTION] Mensagem alvo não encontrada: ${targetId}`);
+    return { ignored: true, reason: "reaction_target_not_found" };
+  }
+
+  if (!emoji) {
+    const { error } = await db
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("zapp_message_id", target.id)
+      .eq("reactor_phone", reactorPhone);
+    if (error) console.error("[REACTION] Erro ao remover:", error.message);
+    return { removed: true, message_id: target.id };
+  }
+
+  const { error } = await db
+    .from("zapp_message_reactions")
+    .upsert(
+      {
+        account_id: target.account_id,
+        zapp_conversation_id: target.zapp_conversation_id,
+        zapp_message_id: target.id,
+        external_message_id: targetId,
+        emoji,
+        reactor_phone: reactorPhone,
+        reactor_name: reactorName,
+        from_me: fromMe,
+        reacted_at: new Date().toISOString(),
+      },
+      { onConflict: "zapp_message_id,reactor_phone" },
+    );
+
+  if (error) console.error("[REACTION] Erro ao gravar:", error.message);
+  return { saved: !error, message_id: target.id, emoji };
+}
+
+
+
 // ============================================
 // KILL SWITCH: set to true to temporarily disable all processing
 // (function still responds 200 to avoid UAZAPI retry storms)
