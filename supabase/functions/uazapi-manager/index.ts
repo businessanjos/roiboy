@@ -2129,6 +2129,9 @@ Deno.serve(async (req) => {
 
       let apiResponse: any;
       try {
+        console.log(
+          `[uazapi-manager][send_reaction] operation=${emoji ? "set" : "remove"} id_len=${messageIdSuffix.length} destination=${groupJid ? "group" : "contact"}`,
+        );
         apiResponse = await uazapiInstance(
           "/message/react",
           "POST",
@@ -2162,6 +2165,29 @@ Deno.serve(async (req) => {
         console.error(`[uazapi-manager][send_reaction] tipo inesperado na resposta: ${responseType}`);
         return new Response(
           JSON.stringify({ error: "O WhatsApp respondeu como mensagem comum, não como reação" }),
+          { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
+        );
+      }
+
+      const providerMessageId = firstString(
+        apiResponse?.messageid,
+        apiResponse?.messageId,
+        apiResponse?.id,
+        apiResponse?.key?.id,
+        apiResponse?.message?.id,
+        apiResponse?.message?.messageid,
+      );
+      const explicitSuccess =
+        apiResponse?.success === true ||
+        apiResponse?.status === "success" ||
+        apiResponse?.status === "ok" ||
+        apiResponse?.error === false ||
+        Boolean(providerMessageId) ||
+        responseType.includes("reaction");
+      if (!explicitSuccess) {
+        console.error("[uazapi-manager][send_reaction] resposta sem confirmação explícita");
+        return new Response(
+          JSON.stringify({ error: emoji ? "O WhatsApp não confirmou a reação" : "O WhatsApp não confirmou a remoção da reação" }),
           { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } },
         );
       }
