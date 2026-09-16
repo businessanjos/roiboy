@@ -65,6 +65,15 @@ export default {
           soft: "hsl(var(--warning-soft, var(--warning-muted)))",
           strong: "hsl(var(--warning-strong, var(--warning-foreground)))",
         },
+        "activity-overdue": {
+          DEFAULT: "hsl(var(--activity-overdue, 0 85% 55%))",
+        },
+        "activity-today": {
+          DEFAULT: "hsl(var(--activity-today, 142 85% 42%))",
+        },
+        "activity-none": {
+          DEFAULT: "hsl(var(--activity-none, 48 100% 50%))",
+        },
         "activity-future": {
           DEFAULT: "hsl(var(--activity-future, 25 95% 53%))",
           muted: "hsl(var(--activity-future-muted, 25 90% 94%))",

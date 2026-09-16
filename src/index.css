@@ -57,7 +57,10 @@
     --danger-foreground: 0 0% 100%;
     --danger-muted: 0 60% 92%;
 
-    /* Laranja de "atividade futura" no funil de vendas */
+    /* Cores vivas do indicador de atividade no funil de vendas */
+    --activity-overdue: 0 85% 55%;
+    --activity-today: 142 85% 42%;
+    --activity-none: 48 100% 50%;
     --activity-future: 25 95% 53%;
     --activity-future-muted: 25 90% 94%;
 
@@ -161,6 +164,14 @@
     --danger-muted: 0 55% 15%;
     --info: 180 18% 50%;
     --info-muted: 180 20% 15%;
+
+    /* Indicador de atividade do funil - um pouco mais claro no dark */
+    --activity-overdue: 0 88% 62%;
+    --activity-today: 142 80% 48%;
+    --activity-none: 48 100% 55%;
+    --activity-future: 25 95% 58%;
+    --activity-future-muted: 25 45% 18%;
+
 
     /* Score colors mais vibrantes no dark */
     --score-critical: 0 70% 55%;

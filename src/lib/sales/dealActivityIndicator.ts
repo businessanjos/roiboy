@@ -19,10 +19,10 @@ export interface DealActivityIndicator {
 }
 
 export const DEAL_ACTIVITY_INDICATORS: Record<DealActivityState, DealActivityIndicator> = {
-  overdue: { state: "overdue", bgColor: "bg-danger", textColor: "text-danger", label: "Atrasada" },
-  today: { state: "today", bgColor: "bg-success", textColor: "text-success", label: "Hoje" },
+  overdue: { state: "overdue", bgColor: "bg-activity-overdue", textColor: "text-activity-overdue", label: "Atrasada" },
+  today: { state: "today", bgColor: "bg-activity-today", textColor: "text-activity-today", label: "Hoje" },
   future: { state: "future", bgColor: "bg-activity-future", textColor: "text-activity-future", label: "Futura" },
-  none: { state: "none", bgColor: "bg-warning", textColor: "text-warning", label: "Sem atividade" },
+  none: { state: "none", bgColor: "bg-activity-none", textColor: "text-activity-none", label: "Sem atividade" },
 };
 
 export function getDealActivityIndicator(status: ActivityStatus): DealActivityIndicator {
