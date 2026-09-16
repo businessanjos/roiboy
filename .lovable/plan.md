@@ -1,23 +1,34 @@
-# Limite de tempo no log de ações
+# Log de ações: prazo de exibição e o que mais incluir
 
-Recomendação: **180 dias** (6 meses) visíveis na aba. É o ponto de equilíbrio — cobre um semestre inteiro de histórico comercial, sem deixar a tela pesada. Nada é apagado: os registros continuam gravados e eu consigo consultar qualquer período quando você precisar.
+## 1. Prazo na aba
 
-## O que muda na tela
+Recomendação: **180 dias** (6 meses) visíveis na tela. Cobre um semestre inteiro sem deixar a aba pesada. Nada é apagado — os registros continuam no banco e eu consigo consultar qualquer período quando você pedir.
 
-- A aba de logs passa a mostrar apenas registros dos últimos 180 dias.
-- Os filtros de período continuam: 7, 30 e 90 dias, mais a opção "6 meses" como máximo.
-- Um aviso discreto no topo informa que a tela mostra até 6 meses e que períodos anteriores podem ser consultados sob demanda.
-- A exportação em planilha continua funcionando, respeitando o período escolhido.
+- Filtros de período: 7, 30, 90 dias e 6 meses (máximo).
+- Aviso discreto no topo: a tela mostra até 6 meses; períodos anteriores sob consulta.
+- Exportação em planilha continua, respeitando o período escolhido.
 
-## O que não muda
+## 2. O que mais dá para incluir com precisão total
 
-- Nenhum registro é apagado do banco.
-- Nenhuma regra de acesso muda: a aba segue restrita a administradores e gestores.
-- As fontes seguem as mesmas: ações em negócios (etapa, ganho, perdido, notas, anexos, exclusão) e tarefas, sempre com autor gravado.
+Conferi as fontes reais dos últimos 60 dias. Entra apenas o que tem autor gravado em 100% dos casos:
+
+- **Usuários e permissões** — usuário desativado, perfil de acesso alterado. Hoje fica escondido no meio do log; passa a ter tipo próprio "Usuário".
+- **Eventos** — criação, edição e exclusão de evento, com autor.
+- **Clientes** — exclusão de cliente, com autor.
+
+Fica de fora (não tem autor confiável, entraria como informação errada):
+
+- **Ligações 3C** — só 12,5% têm vendedor vinculado (a maioria vem da discagem automática).
+- **Ligações na linha do tempo do lead** — 588 de 1.705 com autor (34%).
+- **Criação de negócio** — o sistema não grava quem criou; só o responsável atual, que muda depois.
+
+## 3. Opcional (recomendo)
+
+Passar a gravar **quem criou cada negócio** de agora em diante. Hoje essa informação se perde. Com isso, daqui a alguns meses o log passa a mostrar também "Fulano criou o negócio X" com precisão total. Não afeta nada existente e não altera negócios antigos.
 
 ## Detalhes técnicos
 
-- Em `src/components/admin/AuditLogViewer.tsx`: adicionar `"180"` ao mapa `PERIOD_DAYS` e ao seletor de período, e fixar um teto rígido de 180 dias no cálculo de `sinceIso`, aplicado às três consultas (`audit_logs`, `deal_activities`, `deals` excluídos).
-- Manter os `limit` por fonte já existentes.
-- Adicionar linha de texto auxiliar abaixo dos filtros explicando o teto de 6 meses.
-- Sem migração de banco, sem job agendado, sem exclusão de dados.
+- `src/components/admin/AuditLogViewer.tsx`: adicionar `"180"` ao `PERIOD_DAYS` e ao seletor; teto rígido de 180 dias no cálculo de `sinceIso`, aplicado às três consultas (`audit_logs`, `deal_activities`, `deals` excluídos); texto auxiliar abaixo dos filtros.
+- Ampliar o mapa de tipos/ações para rotular `entity_type` `user`, `event` e `client` e as ações `user.deactivated` / `user.access_profile_changed` em português; excluir o ruído automático `hr_collaborators / auto_heal_inactive`.
+- Opcional (item 3): migração adicionando `created_by uuid` em `deals` com preenchimento automático na criação, e nova fonte no log quando houver dados.
+- Sem exclusão de dados e sem job agendado.
