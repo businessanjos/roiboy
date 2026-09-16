@@ -53,12 +53,13 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
   return "offline";
 }
 
-const MIN_PANEL_WIDTH = 420;
-const MIN_PANEL_HEIGHT = 380;
-const DEFAULT_PANEL_WIDTH = 1040;
-const DEFAULT_PANEL_HEIGHT = 720;
+const MIN_PANEL_WIDTH = 340;
+const MIN_PANEL_HEIGHT = 320;
+const DEFAULT_PANEL_WIDTH = 720;
+const DEFAULT_PANEL_HEIGHT = 560;
 const MARGIN = 16;
-const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry";
+// v2: geometrias antigas ocupavam quase a tela inteira e pareciam uma gaveta.
+const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry_v2";
 const OPEN_STORAGE_KEY = "roy_threec_panel_open";
 const DIAL_RUNTIME_GRACE_MS = 5_000;
 
@@ -85,8 +86,9 @@ function defaultGeometry(): Geometry {
   if (typeof window === "undefined") {
     return { x: MARGIN, y: MARGIN, width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANEL_HEIGHT };
   }
-  const width = Math.min(DEFAULT_PANEL_WIDTH, window.innerWidth - MARGIN * 2);
-  const height = Math.min(DEFAULT_PANEL_HEIGHT, window.innerHeight - MARGIN * 2);
+  // Sempre menor que a tela, para parecer uma janela solta sobre o conteúdo.
+  const width = Math.min(DEFAULT_PANEL_WIDTH, Math.round(window.innerWidth * 0.66));
+  const height = Math.min(DEFAULT_PANEL_HEIGHT, Math.round(window.innerHeight * 0.72));
   return clampGeometry({
     x: window.innerWidth - width - MARGIN,
     y: window.innerHeight - height - MARGIN,
@@ -284,6 +286,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => window.clearTimeout(timer);
   }, [dialingSince, inCall]);
 
+  // Ligação encerrada/qualificada: limpa contato, cronômetro e marcadores para
+  // que o próximo lead comece do zero.
+  useEffect(() => {
+    if (inCall || dialingSince !== null) return;
+    callStartedAt.current = null;
+    callWasActiveRef.current = false;
+    noActivePollsRef.current = 0;
+    setElapsed(0);
+    setContact(null);
+  }, [inCall, dialingSince]);
+
+
+
   useEffect(() => {
     const openDrawer = (event: Event) => {
       const detail = (event as CustomEvent<{
@@ -294,6 +309,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const name = detail?.contact_name ?? detail?.contactName ?? null;
       if (detail && (name || detail.phone)) {
         const startedAt = Date.now();
+        // Nova tentativa: zera o cronômetro e o contato da ligação anterior.
+        callStartedAt.current = null;
+        setElapsed(0);
         setContact({ name, phone: detail.phone ?? null });
         dialingSinceRef.current = startedAt;
         callWasActiveRef.current = false;
