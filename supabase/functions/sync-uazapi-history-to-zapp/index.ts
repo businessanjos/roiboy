@@ -329,6 +329,7 @@ Deno.serve(async (req) => {
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
     const targetPhoneRaw = body.target_phone ? String(body.target_phone) : "";
     const targetPhone = targetPhoneRaw ? normalizePhone(targetPhoneRaw) : "";
+    const targetChatId = body.target_chat_id ? String(body.target_chat_id) : "";
     const targetPhoneAlt = targetPhone
       ? phoneWithoutBrazilNinth(targetPhone)
       : null;
@@ -437,6 +438,8 @@ Deno.serve(async (req) => {
         const directPhone = !isGroup
           ? bestDirectPhone(chat.phone, chatId)
           : "";
+
+        if (targetChatId && chatId !== targetChatId) continue;
 
         // If filtering to a specific phone, skip groups and any chat that doesn't match
         if (targetPhone) {
