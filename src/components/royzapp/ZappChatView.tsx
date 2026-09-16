@@ -439,6 +439,8 @@ export function ZappChatView({
         searchQuery={searchQuery}
         searchMatchIds={searchMatchIds}
         contactPhone={contactInfo.phone}
+        groupJid={selectedConversation?.zapp_conversation?.group_jid || null}
+        integrationId={selectedConversation?.zapp_conversation?.integration_id || null}
         sectorId={sectorId}
         searchFocusId={searchMatchIds.length > 0 && searchCurrentIndex > 0 ? searchMatchIds[searchCurrentIndex - 1] : null}
       />
