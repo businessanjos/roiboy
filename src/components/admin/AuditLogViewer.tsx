@@ -457,6 +457,11 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
           </Select>
         </div>
 
+        <p className="text-xs text-muted-foreground mb-3">
+          Esta tela exibe até 6 meses de histórico para manter o carregamento rápido. Os registros
+          anteriores continuam guardados e podem ser consultados sob demanda.
+        </p>
+
         <ScrollArea className="h-[500px]">
           <Table>
             <TableHeader>
