@@ -121,6 +121,10 @@ const actionLabels: Record<string, string> = {
   status_change: "Mudou status",
   note: "Registrou nota",
   image: "Anexou arquivo",
+  "user.deactivated": "Desativou usuário",
+  "user.activated": "Reativou usuário",
+  "user.access_profile_changed": "Alterou permissões",
+  "user.created": "Criou usuário",
 };
 
 const entityLabels: Record<string, string> = {
