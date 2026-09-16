@@ -214,24 +214,32 @@ Deno.serve(async (req) => {
       });
     }
     
-    // 3. Skip reactions BEFORE any DB queries
+    // 3. REACTIONS: store them (emoji shown under the reacted message) and return early
     if (payload.message) {
       const msg = payload.message as Record<string, unknown>;
-      const msgReaction = msg.reaction;
-      if (msgReaction && typeof msgReaction === "object" && msgReaction !== null) {
-        return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
-      }
-      const msgTypeCheck = msg.messageType as string;
-      const typeCheck = msg.type as string;
-      if ((msgTypeCheck && String(msgTypeCheck).toLowerCase().includes("reaction")) || 
-          (typeCheck && String(typeCheck).toLowerCase().includes("reaction"))) {
-        return new Response(JSON.stringify({ ignored: true, reason: "reaction_message" }), { 
-          headers: { ...corsHeaders, "Content-Type": "application/json" } 
-        });
+      const msgReaction = asRecord(msg.reaction);
+      const msgTypeCheck = String(msg.messageType ?? "").toLowerCase();
+      const typeCheck = String(msg.type ?? "").toLowerCase();
+      const isReaction =
+        msgReaction !== null ||
+        msgTypeCheck.includes("reaction") ||
+        typeCheck.includes("reaction");
+
+      if (isReaction) {
+        try {
+          const result = await handleReactionEvent(msg, msgReaction);
+          return new Response(JSON.stringify({ success: true, reason: "reaction_message", ...result }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        } catch (reactionError) {
+          console.error("[REACTION] Error:", (reactionError as Error).message);
+          return new Response(JSON.stringify({ ignored: true, reason: "reaction_error" }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
       }
     }
+
     
     // 4. LIGHTWEIGHT ACK HANDLER: Process ack events with minimal overhead
     // ACK events are ~30% of all invocations (3 per message: sent→delivered→read)
