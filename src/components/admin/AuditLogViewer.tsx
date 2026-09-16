@@ -235,6 +235,16 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
       const wantsDeals = isCommercial || entityFilter === "all" || entityFilter === "deal";
       const wantsAudit = isCommercial || entityFilter !== "deal";
 
+      // No escopo comercial, só entram pessoas com cargo da área Comercial
+      let salesUserIds: Set<string> | null = null;
+      if (isCommercial) {
+        const { data: salesRoles } = await supabase
+          .from("user_team_roles")
+          .select("user_id, team_roles!inner(area)")
+          .eq("team_roles.area", "Comercial");
+        salesUserIds = new Set((salesRoles ?? []).map((r: any) => r.user_id));
+      }
+
       const results: UnifiedLog[] = [];
 
       // 1) Log de auditoria existente (tarefas, eventos, pessoas...)
@@ -389,6 +399,13 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
         }
       }
 
+
+      // Mantém somente a equipe de vendas no escopo comercial
+      const scoped = salesUserIds
+        ? results.filter((r) => r.user_id && salesUserIds!.has(r.user_id))
+        : results;
+      results.length = 0;
+      results.push(...scoped);
 
       // Resolve os nomes das pessoas nas linhas vindas do comercial
       const missingUserIds = Array.from(
