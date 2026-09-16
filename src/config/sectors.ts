@@ -1,4 +1,5 @@
 import {
+  History,
   ScrollText,
   LayoutDashboard,
   Users,
@@ -232,6 +233,7 @@ export const sectors: Sector[] = [
       { to: "/sales-team/incentive-presentation", icon: Gauge, label: "Acelerômetro" },
       { to: "/sales-team/spiffs", icon: Gift, label: "SPIFFs", permission: PERMISSIONS.TEAM_VIEW },
       { to: "/insights", icon: BarChart3, label: "Insights", permission: PERMISSIONS.REPORTS_VIEW },
+      { to: "/sales/logs", icon: History, label: "Logs" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },

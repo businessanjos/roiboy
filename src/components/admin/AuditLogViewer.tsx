@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Table,
@@ -52,6 +52,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
 
 interface UnifiedLog {
   id: string;
@@ -105,6 +114,18 @@ const actionColors: Record<string, string> = {
   status_change: "bg-purple-500/10 text-purple-500 border-purple-500/20",
   note: "bg-muted-foreground/10 text-muted-foreground border-border/20",
   image: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
+};
+
+/** Barra colorida na lateral da linha, para diferenciar o tipo de ação. */
+const actionRowAccent: Record<string, string> = {
+  create: "border-l-success",
+  complete: "border-l-info",
+  update: "border-l-warning",
+  delete: "border-l-danger",
+  stage_change: "border-l-purple-500",
+  status_change: "border-l-indigo-500",
+  note: "border-l-muted-foreground/40",
+  image: "border-l-muted-foreground/40",
 };
 
 const actionLabels: Record<string, string> = {
@@ -189,22 +210,30 @@ const NOISE_ENTITIES = new Set(["hr_collaborators"]);
 
 interface AuditLogViewerProps {
   accountId?: string; // If provided, shows logs for specific account (super admin view)
+  /** "commercial" = só negócios e tarefas de vendas; "system" = log geral. */
+  scope?: "system" | "commercial";
 }
 
-export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
+export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerProps) {
+  const isCommercial = scope === "commercial";
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("30");
+  const [userFilter, setUserFilter] = useState<string>("all");
+  const [userPickerOpen, setUserPickerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<UnifiedLog | null>(null);
 
   const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ["audit-logs-unified", accountId, actionFilter, entityFilter, periodFilter],
+    queryKey: ["audit-logs-unified", scope, accountId, actionFilter, entityFilter, periodFilter],
     queryFn: async (): Promise<UnifiedLog[]> => {
       const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
-      const sinceIso = subDays(new Date(), days).toISOString();
-      const wantsDeals = entityFilter === "all" || entityFilter === "deal";
-      const wantsAudit = entityFilter !== "deal";
+      const sinceIso =
+        periodFilter === "today"
+          ? startOfDay(new Date()).toISOString()
+          : subDays(new Date(), days).toISOString();
+      const wantsDeals = isCommercial || entityFilter === "all" || entityFilter === "deal";
+      const wantsAudit = isCommercial || entityFilter !== "deal";
 
       const results: UnifiedLog[] = [];
 
@@ -219,7 +248,12 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
 
         if (accountId) query = query.eq("account_id", accountId);
         if (actionFilter !== "all") query = query.eq("action", actionFilter);
-        if (entityFilter !== "all") query = query.eq("entity_type", entityFilter);
+        if (isCommercial) {
+          // Foco no comercial: só tarefas/atividades de vendas
+          query = query.eq("entity_type", "task");
+        } else if (entityFilter !== "all") {
+          query = query.eq("entity_type", entityFilter);
+        }
 
         const { data, error } = await query;
         if (error) throw error;
@@ -443,7 +477,20 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
     },
   });
 
+  // Pessoas que realmente aparecem no período carregado
+  const people = Array.from(
+    new Map(
+      (logs ?? [])
+        .filter((l) => l.user_id)
+        .map((l) => [l.user_id as string, l.user_name || l.user_email || "Sem nome"]),
+    ).entries(),
+  ).sort((a, b) => a[1].localeCompare(b[1]));
+
+  const selectedPersonName =
+    userFilter === "all" ? "Todas as pessoas" : people.find(([id]) => id === userFilter)?.[1] ?? "Pessoa";
+
   const filteredLogs = logs?.filter((log) => {
+    if (userFilter !== "all" && log.user_id !== userFilter) return false;
     if (!search) return true;
     const searchLower = search.toLowerCase();
     return (
@@ -491,7 +538,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
         <div className="flex items-center justify-between">
           <CardTitle className="flex items-center gap-2">
             <Activity className="h-5 w-5" />
-            Log de Auditoria
+            {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
           </CardTitle>
           <div className="flex items-center gap-2">
             <Button
@@ -521,12 +568,52 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
               className="pl-9"
             />
           </div>
+          <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[200px] justify-start font-normal">
+                <User className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{selectedPersonName}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar pessoa..." />
+                <CommandList>
+                  <CommandEmpty>Ninguém encontrado</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todas as pessoas"
+                      onSelect={() => {
+                        setUserFilter("all");
+                        setUserPickerOpen(false);
+                      }}
+                    >
+                      Todas as pessoas
+                    </CommandItem>
+                    {people.map(([id, name]) => (
+                      <CommandItem
+                        key={id}
+                        value={name}
+                        onSelect={() => {
+                          setUserFilter(id);
+                          setUserPickerOpen(false);
+                        }}
+                      >
+                        {name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
             <SelectTrigger className="w-[150px]">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
@@ -548,28 +635,29 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
               <SelectItem value="status_change">Mudança de status</SelectItem>
               <SelectItem value="note">Nota no negócio</SelectItem>
               <SelectItem value="image">Anexo no negócio</SelectItem>
-              <SelectItem value="login">Login</SelectItem>
-              <SelectItem value="export">Exportação</SelectItem>
-              <SelectItem value="assign">Atribuição</SelectItem>
+              {!isCommercial && <SelectItem value="login">Login</SelectItem>}
+              {!isCommercial && <SelectItem value="export">Exportação</SelectItem>}
+              {!isCommercial && <SelectItem value="assign">Atribuição</SelectItem>}
             </SelectContent>
           </Select>
-          <Select value={entityFilter} onValueChange={setEntityFilter}>
-            <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos tipos</SelectItem>
-              <SelectItem value="deal">Negócios</SelectItem>
-              <SelectItem value="task">Tarefas</SelectItem>
-              <SelectItem value="client">Clientes</SelectItem>
-              <SelectItem value="user">Usuários</SelectItem>
-              <SelectItem value="event">Eventos</SelectItem>
-              <SelectItem value="contract">Contratos</SelectItem>
-              <SelectItem value="product">Produtos</SelectItem>
-              <SelectItem value="form">Formulários</SelectItem>
-              <SelectItem value="settings">Configurações</SelectItem>
-            </SelectContent>
-          </Select>
+          {!isCommercial && (
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger className="w-[150px]">
+                <SelectValue placeholder="Tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos tipos</SelectItem>
+                <SelectItem value="deal">Negócios</SelectItem>
+                <SelectItem value="task">Tarefas</SelectItem>
+                <SelectItem value="client">Clientes</SelectItem>
+                <SelectItem value="user">Usuários</SelectItem>
+                <SelectItem value="contract">Contratos</SelectItem>
+                <SelectItem value="product">Produtos</SelectItem>
+                <SelectItem value="form">Formulários</SelectItem>
+                <SelectItem value="settings">Configurações</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
@@ -604,7 +692,12 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                 </TableRow>
               ) : (
                 filteredLogs?.map((log) => (
-                  <TableRow key={log.id} className="cursor-pointer hover:bg-muted/50">
+                  <TableRow
+                    key={log.id}
+                    className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
+                      actionRowAccent[log.action] ?? "border-l-transparent"
+                    }`}
+                  >
                     <TableCell className="text-sm">
                       <div className="flex items-center gap-2">
                         <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
