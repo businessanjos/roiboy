@@ -197,11 +197,34 @@ function firstString(...values: unknown[]): string {
 }
 
 function idFromUnknown(value: unknown): string {
-  if (typeof value === "string" || typeof value === "number") return String(value).trim();
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      try {
+        return idFromUnknown(JSON.parse(trimmed));
+      } catch {
+        return trimmed;
+      }
+    }
+    return trimmed;
+  }
+  if (typeof value === "number") return String(value).trim();
   const record = asRecord(value);
   if (!record) return "";
   const key = asRecord(record.key);
-  return firstString(record.messageId, record.message_id, record.id, key?.id);
+  return firstString(
+    record.messageId,
+    record.message_id,
+    record.messageid,
+    record.MessageID,
+    record.stanzaId,
+    record.stanza_id,
+    record.id,
+    key?.messageId,
+    key?.messageid,
+    key?.id,
+  );
 }
 
 /**
@@ -236,13 +259,19 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
     idFromUnknown(msg.reactionMessageId),
     idFromUnknown(msg.quotedMessageId),
     idFromUnknown(msg.quoted_message_id),
+    idFromUnknown(asRecord(msg.contextInfo)?.stanzaId),
+    idFromUnknown(asRecord(asRecord(msg.message)?.extendedTextMessage)?.contextInfo),
+    // Algumas versões planas da UAZAPI usam `messageid` para a mensagem alvo.
+    // Mantido por último para não prevalecer sobre os campos explícitos acima.
+    idFromUnknown(msg.messageid),
   );
 
   // Emoji: só campos de reação. `msg.text` vale apenas quando o próprio
   // evento se declara como reação (formato documentado da UAZAPI).
   let emoji = firstString(nested?.text, nested?.emoji, flatReaction);
   if (!emoji && declaredType.includes("reaction")) {
-    emoji = String((msg.reaction_text as string) ?? (msg.text as string) ?? "").trim();
+    emoji = firstString(msg.reaction_text, msg.text, msg.content, msg.body);
+    if (/^\[rea[cç][aã]o\]$/i.test(emoji)) emoji = "";
   }
   // Emoji muito longo = não é emoji; tratamos como ausente para não sujar os dados.
   if (emoji.length > 16) emoji = "";
@@ -255,6 +284,14 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
     console.log(`[REACTION] Evento de reação sem id do alvo. Estrutura: [${shape}]`);
     return null;
   }
+
+  console.log(
+    `[REACTION] Estrutura reconhecida target_source=${
+      idFromUnknown(msg.quoted) ? "quoted" :
+      idFromUnknown(msg.reactionMessageId) || idFromUnknown(msg.quotedMessageId) || idFromUnknown(msg.quoted_message_id) ? "explicit" :
+      idFromUnknown(asRecord(msg.contextInfo)?.stanzaId) ? "context" : "messageid"
+    } target_len=${targetId.length} emoji=${emoji ? "present" : "empty"}`,
+  );
 
   const fromMe =
     msg.fromMe === true ||
@@ -429,6 +466,37 @@ async function handleReactionEvent(
   const db = createClient(supabaseUrl, supabaseKey);
 
   return await persistReaction(db, extracted, scope);
+}
+
+async function resolveReactionConversationId(
+  db: ReturnType<typeof createClient>,
+  accountId: string,
+  msg: Record<string, unknown>,
+): Promise<string | null> {
+  const chatId = firstString(msg.chatid, msg.chatId, msg.remoteJid, asRecord(msg.key)?.remoteJid);
+  if (!chatId) return null;
+
+  const isGroup = chatId.includes("@g.us");
+  if (isGroup) {
+    const { data } = await db
+      .from("zapp_conversations")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("group_jid", chatId)
+      .limit(2);
+    return data?.length === 1 ? data[0].id : null;
+  }
+
+  const phone = extractPhoneFromJid(chatId) || normalizePhone(chatId);
+  if (!phone) return null;
+  const digits = phone.replace(/\D/g, "");
+  const { data } = await db
+    .from("zapp_conversations")
+    .select("id, phone_e164")
+    .eq("account_id", accountId)
+    .limit(500);
+  const matches = (data || []).filter((row) => String(row.phone_e164 || "").replace(/\D/g, "").endsWith(digits.slice(-10)));
+  return matches.length === 1 ? matches[0].id : null;
 }
 
 
@@ -863,9 +931,12 @@ Deno.serve(async (req) => {
       try {
         const results = [];
         for (const msg of declaredReactionCandidates) {
-          results.push(await handleReactionEvent(msg, null, { accountId }));
+          const conversationId = await resolveReactionConversationId(supabase, accountId, msg);
+          results.push(await handleReactionEvent(msg, null, { accountId, conversationId }));
         }
-        console.log(`[REACTION] Processadas ${results.length} reação(ões) na conta identificada`);
+        console.log(`[REACTION] Resultados: ${results.map((result) => String(
+          result.saved ? "saved" : result.removed ? "removed" : result.pending ? "pending" : result.reason || "ignored"
+        )).join(",")}`);
         return new Response(
           JSON.stringify({ success: true, reason: "reaction_message", results }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } },

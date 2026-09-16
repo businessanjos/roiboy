@@ -18,7 +18,18 @@ export async function invokeUazapiManager<T = unknown>(
   options: FunctionInvokeOptions,
 ): Promise<InvokeResult<T>> {
   const first = await supabase.functions.invoke<T>("uazapi-manager", options);
-  if (!(await isUnauthorized(first.error))) return first;
+  if (!(await isUnauthorized(first.error))) {
+    if (!first.error) return first;
+    const context = "context" in first.error ? (first.error as FunctionsHttpError).context : undefined;
+    if (!context) return first;
+    try {
+      const details = await context.clone().json() as { error?: string; details?: string; detail?: string };
+      const message = details.error || details.details || details.detail;
+      return message ? { data: first.data, error: new Error(message) } : first;
+    } catch {
+      return first;
+    }
+  }
 
   const { data, error: refreshError } = await supabase.auth.refreshSession();
   if (refreshError || !data.session?.access_token) {
