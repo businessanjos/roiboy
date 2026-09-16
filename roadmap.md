@@ -19,3 +19,9 @@
 - [x] Marcar e ocultar placeholders órfãos de hoje
 - [x] Publicar e validar falha segura sem criar registro
 - [ ] Validar enter/dial real quando o agente 58219 estiver online em Prospecção Manual
+
+# Reações do RoyZapp
+- [x] Identificar sincronização histórica criando balões de reação
+- [x] Unificar detecção de reações ao vivo e no histórico
+- [x] Publicar funções e reprocessar a janela afetada
+- [ ] Confirmar reação e remoção reais nos dois sentidos

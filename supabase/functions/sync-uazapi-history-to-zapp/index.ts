@@ -1,4 +1,9 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import {
+  isZappReaction,
+  normalizeZappReaction,
+  zappMessageIdSuffix,
+} from "../_shared/zapp-reaction-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -42,6 +47,12 @@ type UazMessage = {
   fileURL?: string;
   mimetype?: string;
   quoted?: string | Record<string, unknown>;
+  reaction?: unknown;
+  reactionMessage?: unknown;
+  type?: string;
+  body?: unknown;
+  participant?: string;
+  pushName?: string;
 };
 
 function json(status: number, body: Record<string, unknown>) {
@@ -196,10 +207,116 @@ function extractContent(m: UazMessage): {
   if (!content && mediaType === "video") content = "🎬 Vídeo";
   if (!content && mediaType === "document") content = "📄 Documento";
   if (!content && mediaType === "sticker") content = "🎨 Figurinha";
-  if (!content && rawType.includes("reaction"))
-    content = String(m.text || "[reação]");
-
   return { content, messageType: mediaType || "text", mediaUrl, mediaType };
+}
+
+async function persistHistoryReaction(
+  supabase: ReturnType<typeof createClient>,
+  message: UazMessage,
+  accountId: string,
+  conversationId: string,
+): Promise<"saved" | "removed" | "pending" | "ignored"> {
+  const normalized = normalizeZappReaction(message as unknown as Record<string, unknown>);
+  if (!normalized?.targetId) return "ignored";
+
+  const targetSuffix = zappMessageIdSuffix(normalized.targetId);
+  const { data: exact } = await supabase
+    .from("zapp_messages")
+    .select("id")
+    .eq("account_id", accountId)
+    .eq("zapp_conversation_id", conversationId)
+    .eq("external_message_id", normalized.targetId)
+    .limit(2);
+
+  let targetId = exact?.length === 1 ? exact[0].id : null;
+  if (!targetId && targetSuffix) {
+    const { data: suffixMatches } = await supabase
+      .from("zapp_messages")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("zapp_conversation_id", conversationId)
+      .ilike("external_message_id", `%${targetSuffix}`)
+      .limit(2);
+    if (suffixMatches?.length === 1) targetId = suffixMatches[0].id;
+  }
+
+  const reactorPhone = normalized.fromMe
+    ? "me"
+    : normalizePhone(normalized.senderJid) || "unknown";
+
+  if (!targetId) {
+    await supabase
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("account_id", accountId)
+      .is("zapp_message_id", null)
+      .eq("external_message_id", targetSuffix)
+      .eq("reactor_phone", reactorPhone);
+    if (!normalized.emoji) return "removed";
+    const { error } = await supabase.from("zapp_message_reactions").insert({
+      account_id: accountId,
+      zapp_conversation_id: conversationId,
+      zapp_message_id: null,
+      external_message_id: targetSuffix,
+      emoji: normalized.emoji,
+      reactor_phone: reactorPhone,
+      reactor_name: normalized.senderName,
+      from_me: normalized.fromMe,
+      reacted_at: new Date(normalizeUazTimestampMs(message.messageTimestamp)).toISOString(),
+    });
+    if (error) throw error;
+    return "pending";
+  }
+
+  if (!normalized.emoji) {
+    const { error } = await supabase
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("zapp_message_id", targetId)
+      .eq("reactor_phone", reactorPhone);
+    if (error) throw error;
+    return "removed";
+  }
+
+  const { error } = await supabase.from("zapp_message_reactions").upsert({
+    account_id: accountId,
+    zapp_conversation_id: conversationId,
+    zapp_message_id: targetId,
+    external_message_id: targetSuffix,
+    emoji: normalized.emoji,
+    reactor_phone: reactorPhone,
+    reactor_name: normalized.senderName,
+    from_me: normalized.fromMe,
+    reacted_at: new Date(normalizeUazTimestampMs(message.messageTimestamp)).toISOString(),
+  }, { onConflict: "zapp_message_id,reactor_phone" });
+  if (error) throw error;
+  return "saved";
+}
+
+async function refreshConversationPreview(
+  supabase: ReturnType<typeof createClient>,
+  conversationId: string,
+): Promise<void> {
+  const { data: latest, error } = await supabase
+    .from("zapp_messages")
+    .select("content, direction, sent_at")
+    .eq("zapp_conversation_id", conversationId)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  await supabase
+    .from("zapp_conversations")
+    .update({
+      last_message_at: latest?.sent_at || null,
+      last_message_preview: latest
+        ? latest.direction === "outbound"
+          ? `Você: ${String(latest.content || "").slice(0, 80)}`
+          : String(latest.content || "").slice(0, 100)
+        : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId);
 }
 
 function quotedId(raw: UazMessage["quoted"]): string | null {
@@ -238,6 +355,7 @@ Deno.serve(async (req) => {
     const maxMessagesPerChat = Number(body.max_messages_per_chat || 10000);
     const targetPhoneRaw = body.target_phone ? String(body.target_phone) : "";
     const targetPhone = targetPhoneRaw ? normalizePhone(targetPhoneRaw) : "";
+    const targetChatId = body.target_chat_id ? String(body.target_chat_id) : "";
     const targetPhoneAlt = targetPhone
       ? phoneWithoutBrazilNinth(targetPhone)
       : null;
@@ -312,6 +430,8 @@ Deno.serve(async (req) => {
       assignmentsCreated: 0,
       skippedNoPhone: 0,
       skippedNoContent: 0,
+      reactionsProcessed: 0,
+      reactionBubblesRemoved: 0,
       oldestSynced: null as string | null,
       newestSynced: null as string | null,
     };
@@ -345,6 +465,8 @@ Deno.serve(async (req) => {
           ? bestDirectPhone(chat.phone, chatId)
           : "";
 
+        if (targetChatId && chatId !== targetChatId) continue;
+
         // If filtering to a specific phone, skip groups and any chat that doesn't match
         if (targetPhone) {
           if (isGroup) continue;
@@ -374,6 +496,12 @@ Deno.serve(async (req) => {
           });
 
           if (filtered.length) {
+            const reactionMessages = filtered.filter((message) =>
+              isZappReaction(message as unknown as Record<string, unknown>)
+            );
+            const ordinaryMessages = filtered.filter((message) =>
+              !isZappReaction(message as unknown as Record<string, unknown>)
+            );
             let conversationId: string | null = null;
             let clientId: string | null = null;
             let phoneForConversation = directPhone;
@@ -390,7 +518,7 @@ Deno.serve(async (req) => {
               conversationId = existing?.id || null;
 
               if (!conversationId) {
-                const latest = filtered[0];
+                const latest = ordinaryMessages[0] || filtered[0];
                 const preview = extractContent(latest).content.slice(0, 100);
                 const { data: created, error } = await supabase
                   .from("zapp_conversations")
@@ -455,7 +583,7 @@ Deno.serve(async (req) => {
               }
 
               if (!conversationId) {
-                const latest = filtered[0];
+                const latest = ordinaryMessages[0] || filtered[0];
                 const preview = extractContent(latest).content.slice(0, 100);
                 const { data: created, error } = await supabase
                   .from("zapp_conversations")
@@ -499,7 +627,7 @@ Deno.serve(async (req) => {
             );
 
             const rows = [];
-            for (const m of filtered.reverse()) {
+            for (const m of ordinaryMessages.reverse()) {
               const externalId = String(m.id || `${m.chatid}:${m.messageid}`);
               if (!externalId) {
                 stats.duplicates++;
@@ -648,6 +776,42 @@ Deno.serve(async (req) => {
                   );
                 if (!error) stats.assignmentsCreated++;
               }
+            }
+
+            let removedReactionBubble = false;
+            // O provedor retorna as mensagens da mais nova para a mais antiga.
+            // Aplicar da mais antiga para a mais nova garante que o último evento
+            // determine o estado final da reação em uma sincronização repetida.
+            for (const reactionMessage of reactionMessages.reverse()) {
+              const reactionExternalIds = [
+                reactionMessage.id,
+                reactionMessage.messageid,
+                reactionMessage.chatid && reactionMessage.messageid
+                  ? `${reactionMessage.chatid}:${reactionMessage.messageid}`
+                  : null,
+              ].filter((value): value is string => typeof value === "string" && value.length > 0);
+              if (reactionExternalIds.length) {
+                const { error: cleanupError, count } = await supabase
+                  .from("zapp_messages")
+                  .delete({ count: "exact" })
+                  .eq("account_id", integration.account_id)
+                  .eq("zapp_conversation_id", conversationId)
+                  .in("external_message_id", reactionExternalIds)
+                  .eq("synced_from_history", true);
+                if (cleanupError) throw cleanupError;
+                stats.reactionBubblesRemoved += count || 0;
+                removedReactionBubble ||= (count || 0) > 0;
+              }
+              await persistHistoryReaction(
+                supabase,
+                reactionMessage,
+                integration.account_id,
+                conversationId,
+              );
+              stats.reactionsProcessed++;
+            }
+            if (removedReactionBubble) {
+              await refreshConversationPreview(supabase, conversationId);
             }
           }
 

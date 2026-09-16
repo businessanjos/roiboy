@@ -1,6 +1,11 @@
 // @ts-nocheck
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { canonicalE164, phoneVariants as buildPhoneVariants } from "../_shared/phone-normalize.ts";
+import {
+  isZappReaction,
+  normalizeZappReaction,
+  reactionIdFromUnknown,
+} from "../_shared/zapp-reaction-normalize.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -197,34 +202,7 @@ function firstString(...values: unknown[]): string {
 }
 
 function idFromUnknown(value: unknown): string {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    if (!trimmed) return "";
-    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
-      try {
-        return idFromUnknown(JSON.parse(trimmed));
-      } catch {
-        return trimmed;
-      }
-    }
-    return trimmed;
-  }
-  if (typeof value === "number") return String(value).trim();
-  const record = asRecord(value);
-  if (!record) return "";
-  const key = asRecord(record.key);
-  return firstString(
-    record.messageId,
-    record.message_id,
-    record.messageid,
-    record.MessageID,
-    record.stanzaId,
-    record.stanza_id,
-    record.id,
-    key?.messageId,
-    key?.messageid,
-    key?.id,
-  );
+  return reactionIdFromUnknown(value);
 }
 
 /**
@@ -234,47 +212,9 @@ function idFromUnknown(value: unknown): string {
  * Retorna null quando o evento não é (ou não tem dados suficientes de) reação.
  */
 function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null {
-  const nested =
-    asRecord(msg.reaction) ||
-    asRecord(msg.reactionMessage) ||
-    asRecord(asRecord(msg.message)?.reactionMessage) ||
-    asRecord(asRecord(msg.message)?.reaction) ||
-    asRecord(asRecord(msg.content)?.reactionMessage) ||
-    null;
-
-  const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
-  const flatReaction = typeof msg.reaction === "string" ? msg.reaction.trim() : "";
-  const looksLikeReaction = nested !== null || declaredType.includes("reaction") || Boolean(flatReaction);
-  if (!looksLikeReaction) return null;
-
-  const nestedKey = asRecord(nested?.key);
-  // No payload plano da UAZAPI, `messageid` identifica o evento da reação;
-  // a mensagem alvo fica em `quoted`. Nunca use o id do próprio evento como alvo.
-  const targetId = firstString(
-    idFromUnknown(nested?.messageId),
-    idFromUnknown(nested?.message_id),
-    idFromUnknown(nestedKey?.id),
-    idFromUnknown(nested?.id),
-    idFromUnknown(msg.quoted),
-    idFromUnknown(msg.reactionMessageId),
-    idFromUnknown(msg.quotedMessageId),
-    idFromUnknown(msg.quoted_message_id),
-    idFromUnknown(asRecord(msg.contextInfo)?.stanzaId),
-    idFromUnknown(asRecord(asRecord(msg.message)?.extendedTextMessage)?.contextInfo),
-    // Algumas versões planas da UAZAPI usam `messageid` para a mensagem alvo.
-    // Mantido por último para não prevalecer sobre os campos explícitos acima.
-    idFromUnknown(msg.messageid),
-  );
-
-  // Emoji: só campos de reação. `msg.text` vale apenas quando o próprio
-  // evento se declara como reação (formato documentado da UAZAPI).
-  let emoji = firstString(nested?.text, nested?.emoji, flatReaction);
-  if (!emoji && declaredType.includes("reaction")) {
-    emoji = firstString(msg.reaction_text, msg.text, msg.content, msg.body);
-    if (/^\[rea[cç][aã]o\]$/i.test(emoji)) emoji = "";
-  }
-  // Emoji muito longo = não é emoji; tratamos como ausente para não sujar os dados.
-  if (emoji.length > 16) emoji = "";
+  const normalized = normalizeZappReaction(msg);
+  if (!normalized) return null;
+  const { targetId, emoji, fromMe, senderJid, senderName: reactorName } = normalized;
 
   if (!targetId) {
     const shape = Object.entries(msg)
@@ -293,23 +233,9 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
     } target_len=${targetId.length} emoji=${emoji ? "present" : "empty"}`,
   );
 
-  const fromMe =
-    msg.fromMe === true ||
-    msg.from_me === true ||
-    nested?.fromMe === true ||
-    nestedKey?.fromMe === true;
-
-  const senderJid = String(
-    (msg.participant as string) ||
-      (msg.sender as string) ||
-      (nested?.sender as string) ||
-      (msg.chatid as string) ||
-      "",
-  );
   const reactorPhone = fromMe
     ? "me"
     : extractPhoneFromJid(senderJid) || normalizePhone(senderJid) || "unknown";
-  const reactorName = String((msg.senderName as string) || (msg.pushName as string) || "") || null;
 
   return { targetId, emoji, fromMe, reactorPhone, reactorName };
 }
@@ -559,9 +485,7 @@ Deno.serve(async (req) => {
       for (const m of altMessages) if (m && typeof m === "object") reactionCandidates.push(m as Record<string, unknown>);
     }
     const declaredReactionCandidates = reactionCandidates.filter((msg) => {
-      const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
-      const flatReaction = typeof msg.reaction === "string" ? msg.reaction.trim() : "";
-      return declaredType.includes("reaction") || Boolean(flatReaction) || asRecord(msg.reaction) !== null || asRecord(msg.reactionMessage) !== null;
+      return isZappReaction(msg);
     });
 
     
