@@ -568,12 +568,52 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               className="pl-9"
             />
           </div>
+          <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
+            <PopoverTrigger asChild>
+              <Button variant="outline" className="w-[200px] justify-start font-normal">
+                <User className="h-4 w-4 mr-2 shrink-0" />
+                <span className="truncate">{selectedPersonName}</span>
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[240px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar pessoa..." />
+                <CommandList>
+                  <CommandEmpty>Ninguém encontrado</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todas as pessoas"
+                      onSelect={() => {
+                        setUserFilter("all");
+                        setUserPickerOpen(false);
+                      }}
+                    >
+                      Todas as pessoas
+                    </CommandItem>
+                    {people.map(([id, name]) => (
+                      <CommandItem
+                        key={id}
+                        value={name}
+                        onSelect={() => {
+                          setUserFilter(id);
+                          setUserPickerOpen(false);
+                        }}
+                      >
+                        {name}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
             <SelectTrigger className="w-[150px]">
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Período" />
             </SelectTrigger>
             <SelectContent>
+              <SelectItem value="today">Hoje</SelectItem>
               <SelectItem value="7">Últimos 7 dias</SelectItem>
               <SelectItem value="30">Últimos 30 dias</SelectItem>
               <SelectItem value="90">Últimos 90 dias</SelectItem>
