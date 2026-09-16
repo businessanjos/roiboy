@@ -2832,6 +2832,8 @@ export default function SalesPipeline() {
 
             </div>
 
+            <PipelineActivityLegend className="mb-2" />
+
             {/* Status sub-tabs */}
             <Tabs value={activeTab} onValueChange={setActiveTab}>
               <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-9">
