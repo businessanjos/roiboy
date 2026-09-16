@@ -121,12 +121,14 @@ export function ZappMessagesList({
   onLoadOlderMessages,
   calls,
   contactPhone,
+  groupJid,
   sectorId,
   integrationId,
 }: ZappMessagesListProps) {
   const { byMessage: reactionsByMessage, react } = useZappMessageReactions({
     conversationId,
     contactPhone,
+    groupJid,
     sectorId,
     integrationId,
   });
