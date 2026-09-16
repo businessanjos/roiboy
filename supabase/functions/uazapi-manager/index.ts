@@ -15,6 +15,14 @@ type ServerConfig = { host: string; adminToken: string; source: "global" | "sect
 
 const GLOBAL_SERVER: ServerConfig = { host: UAZAPI_URL, adminToken: UAZAPI_ADMIN_TOKEN, source: "global" };
 
+function firstString(...values: unknown[]): string {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+    if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  }
+  return "";
+}
+
 async function resolveServerForSector(
   supabase: any,
   accountId: string,

@@ -270,7 +270,8 @@ function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null
   // evento se declara como reação (formato documentado da UAZAPI).
   let emoji = firstString(nested?.text, nested?.emoji, flatReaction);
   if (!emoji && declaredType.includes("reaction")) {
-    emoji = String((msg.reaction_text as string) ?? (msg.text as string) ?? "").trim();
+    emoji = firstString(msg.reaction_text, msg.text, msg.content, msg.body);
+    if (/^\[rea[cç][aã]o\]$/i.test(emoji)) emoji = "";
   }
   // Emoji muito longo = não é emoji; tratamos como ausente para não sujar os dados.
   if (emoji.length > 16) emoji = "";
