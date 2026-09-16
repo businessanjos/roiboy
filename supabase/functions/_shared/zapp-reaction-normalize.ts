@@ -179,6 +179,7 @@ export function normalizeZappReaction(message: Record<string, unknown>): Normali
     if (!emoji && typeof message.content === "string") emoji = message.content.trim();
     if (/^\[rea[cç][aã]o\]$/i.test(emoji)) emoji = "";
   }
+  if (/^\[rea[cç][aã]o\]$/i.test(emoji)) emoji = "";
   if (emoji.length > 64) emoji = "";
 
   const explicitRemoval = records.some(hasExplicitEmptyReaction);

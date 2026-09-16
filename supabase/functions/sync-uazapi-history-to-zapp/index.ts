@@ -294,6 +294,37 @@ async function persistHistoryReaction(
   return "saved";
 }
 
+async function reconcileHistoryReactions(
+  supabase: ReturnType<typeof createClient>,
+  accountId: string,
+  conversationId: string,
+) {
+  const { data: pending } = await supabase
+    .from("zapp_message_reactions")
+    .select("id, external_message_id")
+    .eq("account_id", accountId)
+    .eq("zapp_conversation_id", conversationId)
+    .is("zapp_message_id", null)
+    .limit(500);
+
+  for (const reaction of pending || []) {
+    const targetId = String(reaction.external_message_id || "").split(":").pop() || "";
+    if (!targetId) continue;
+    const { data: target } = await supabase
+      .from("zapp_messages")
+      .select("id")
+      .eq("account_id", accountId)
+      .eq("zapp_conversation_id", conversationId)
+      .or(`external_message_id.eq.${targetId},external_message_id.like.%:${targetId}`)
+      .limit(2);
+    if (target?.length !== 1) continue;
+    await supabase
+      .from("zapp_message_reactions")
+      .update({ zapp_message_id: target[0].id })
+      .eq("id", reaction.id);
+  }
+}
+
 async function refreshConversationPreview(
   supabase: ReturnType<typeof createClient>,
   conversationId: string,
