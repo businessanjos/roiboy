@@ -1,44 +1,40 @@
 # Corrigir definitivamente as reações no RoyZapp
 
-A interface já tem os emojis, mas o problema está antes dela: o banco continua com **zero reações** e o registro real das 09:31 mostra `Sem id da mensagem alvo, ignorando`. Ou seja, o WhatsApp envia a reação, porém o webhook não reconhece onde a UAZAPI colocou o identificador da mensagem reagida. Além disso, o canal oficial da Meta ainda descarta reações explicitamente.
+Os testes mais recentes confirmam que o problema continua nos dois sentidos:
+
+- Ao reagir pelo WhatsApp, o evento chega ao ROY, mas o identificador da mensagem original não é extraído. O banco continua sem nenhuma reação salva.
+- Ao reagir ou remover pelo ROY, aparece “Não foi possível enviar a reação”, porém não existe chamada correspondente no gerenciador de envio. A ação está falhando antes de chegar ao WhatsApp.
 
 ## Correções
 
-### 1. Interpretar o formato real recebido
-- Ajustar o webhook da UAZAPI para reconhecer os formatos de reação realmente usados pela integração, incluindo os objetos aninhados `reactionMessage`, `message.reactionMessage`, `content.reactionMessage` e suas chaves de mensagem.
-- Corrigir também o segundo caminho de entrada (`data.messages[]`): hoje ele trata mensagens comuns, encontra reação sem texto e a descarta antes do processamento.
-- Separar corretamente:
-  - ID do próprio evento de reação;
-  - ID da mensagem que recebeu a reação;
-  - emoji, inclusive vazio para remoção;
-  - autor da reação e sentido recebido/enviado.
-- Registrar diagnóstico seguro somente com nomes de campos e resultado do vínculo, sem conteúdo de conversa ou credenciais, para futuras variações não voltarem a falhar silenciosamente.
+### 1. Capturar o formato real da reação recebida
+- Registrar somente a estrutura segura do evento de reação: nomes dos campos, presença, tamanho e formato dos identificadores, sem texto, telefone, token ou conteúdo da conversa.
+- Tratar o formato plano recebido atualmente, inclusive quando `quoted` não contém o alvo e ele vem em outro nível do evento, da conversa ou da chave interna da reação.
+- Separar obrigatoriamente o ID do evento de reação do ID da mensagem reagida, impedindo que o emoji seja salvo como uma mensagem comum.
+- Normalizar o ID alvo para o mesmo padrão usado nas mensagens do ROY (`número:id`), mantendo busca exata por conta e conversa antes do fallback por sufixo.
 
-### 2. Vincular à mensagem certa com segurança
-- Normalizar os IDs compostos da UAZAPI antes da busca e tentar primeiro igualdade exata por conta e integração.
-- Usar correspondência por sufixo apenas como fallback controlado e exigir resultado único, evitando associar uma reação à mensagem de outra conta ou conversa.
-- Se a reação chegar antes da mensagem original, guardá-la pelo ID externo e reconciliá-la assim que a mensagem for salva, em vez de descartá-la.
+### 2. Garantir persistência e reconciliação
+- Quando a mensagem original for localizada, criar, trocar ou remover exatamente uma reação vinculada a ela.
+- Quando o evento chegar antes da mensagem, guardar a reação pendente com todos os dados necessários e reconciliá-la após a mensagem ser salva.
+- Corrigir erros de gravação hoje ocultos pelo retorno “processada”, fazendo o registro distinguir reação salva, pendente, removida ou rejeitada.
+- Manter isolamento por conta, conexão e conversa, inclusive quando existirem IDs repetidos em conversas diferentes.
 
-### 3. Cobrir também o WhatsApp oficial
-- Substituir o descarte atual de `msg.type === "reaction"` no webhook da Meta pelo mesmo fluxo de gravação, troca e remoção.
-- Manter cada integração isolada por conta, conversa e mensagem.
+### 3. Fazer o clique do ROY chegar ao WhatsApp
+- Rastrear o clique desde o seletor do emoji até a chamada de envio e corrigir o ponto que interrompe a ação antes do gerenciador.
+- Garantir que a conversa forneça a conexão exata, o destino correto e o ID externo da mensagem ao comando.
+- Em conversas individuais, usar o telefone normalizado; em grupos, usar o identificador do grupo.
+- Mostrar no aviso o motivo retornado pelo envio, sem reduzir falhas diferentes à mensagem genérica atual.
 
-### 4. Corrigir o envio pelo ROY
-- Passar a conexão exata da conversa ao comando de reação, evitando escolher outra conexão quando um setor possui mais de uma.
-- Resolver o aviso "Contato sem telefone para reagir": em grupos e em conversas sem telefone salvo, o destino correto é o identificador da própria conversa/grupo, não um telefone. Usar esse identificador ao reagir e só mostrar o aviso quando realmente não houver destino algum.
-- Incluir `send_reaction` nas mesmas validações de setor dos demais envios.
-- Validar e tratar os erros ao espelhar a reação no banco; em falha, desfazer o emoji otimista e mostrar o erro real ao usuário.
-- Manter o endpoint confirmado da UAZAPI (`/message/react`, com número, ID e emoji; texto vazio remove).
+### 4. Remover a reação de verdade
+- Enviar a remoção pelo mesmo endpoint, conexão, destino e ID canônico usados na criação, com o valor de remoção aceito pela UAZAPI.
+- Validar a resposta real da UAZAPI antes de apagar a reação local; uma resposta HTTP bem-sucedida não será suficiente se o corpo não confirmar a operação.
+- Aguardar a confirmação recebida pelo webhook ou consultar o estado da mensagem quando necessário.
+- Em falha, restaurar o emoji no ROY e informar o motivo; em sucesso, remover a mesma linha local sem deixar o WhatsApp divergente.
 
-### 5. Garantir atualização visual
-- Preservar a atualização em tempo real já configurada.
-- Fazer o estado otimista permanecer até a confirmação, sem ser apagado por uma leitura vazia prematura.
-- Confirmar que adicionar, trocar e remover reação atualiza o chip, a contagem e o destaque de “Você” sem recarregar a conversa.
+## Validação ponta a ponta
 
-## Validação
-
-- Reproduzir com uma mensagem recebida e uma enviada.
-- Testar reação criada pelo WhatsApp, troca de emoji e remoção.
-- Testar reação criada pelo ROY e confirmar que aparece também no WhatsApp.
-- Conferir no banco que cada operação cria, atualiza ou remove exatamente uma linha vinculada à mensagem correta.
-- Validar em uma conversa de setor com conexão específica e revisar os registros dos dois webhooks sem expor conteúdo sensível.
+- Reagir pelo WhatsApp em mensagem recebida e enviada; confirmar que o emoji aparece no balão correto do ROY, sem criar novo balão.
+- Trocar e remover a reação no WhatsApp; confirmar atualização automática no ROY.
+- Criar, trocar e remover pelo ROY; confirmar cada ação no WhatsApp e no banco.
+- Testar conversa individual e grupo, além de mensagem cujo ID esteja duplicado em outra conversa.
+- Confirmar nos registros que cada clique gera uma única tentativa, usa a conexão correta e termina com confirmação ou erro explícito.
