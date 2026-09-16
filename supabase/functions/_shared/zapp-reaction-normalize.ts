@@ -35,6 +35,7 @@ function reactionTextFromRecord(record: Record<string, unknown> | null): string 
     record.text,
     record.reaction_text,
     record.reactionText,
+    typeof record.reaction === "string" ? record.reaction : "",
     content?.emoji,
     content?.text,
     content?.reaction,
