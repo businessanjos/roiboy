@@ -55,11 +55,13 @@ function mapRuntimeStatus(runtime?: AgentRuntime | null): DialerStatus {
 
 const MIN_PANEL_WIDTH = 340;
 const MIN_PANEL_HEIGHT = 320;
-const DEFAULT_PANEL_WIDTH = 720;
-const DEFAULT_PANEL_HEIGHT = 560;
+const DEFAULT_PANEL_WIDTH = 540;
+const DEFAULT_PANEL_HEIGHT = 460;
 const MARGIN = 16;
-// v2: geometrias antigas ocupavam quase a tela inteira e pareciam uma gaveta.
-const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry_v2";
+// Mantém a faixa de composição do RoyZapp livre para texto, áudio e anexos.
+const COMPOSER_CLEARANCE = 112;
+// v3 descarta geometrias antigas que cobriam quase toda a conversa.
+const GEOMETRY_STORAGE_KEY = "roy_threec_panel_geometry_v3";
 const OPEN_STORAGE_KEY = "roy_threec_panel_open";
 const DIAL_RUNTIME_GRACE_MS = 5_000;
 
@@ -73,11 +75,16 @@ interface Geometry {
 function clampGeometry(geo: Geometry): Geometry {
   if (typeof window === "undefined") return geo;
   const maxW = Math.max(MIN_PANEL_WIDTH, window.innerWidth - MARGIN * 2);
-  const maxH = Math.max(MIN_PANEL_HEIGHT, window.innerHeight - MARGIN * 2);
+  const availableHeight = Math.max(240, window.innerHeight - MARGIN - COMPOSER_CLEARANCE);
+  const minHeight = Math.min(MIN_PANEL_HEIGHT, availableHeight);
+  const maxH = Math.max(minHeight, availableHeight);
   const width = Math.min(Math.max(MIN_PANEL_WIDTH, geo.width), maxW);
-  const height = Math.min(Math.max(MIN_PANEL_HEIGHT, geo.height), maxH);
+  const height = Math.min(Math.max(minHeight, geo.height), maxH);
   const x = Math.min(Math.max(MARGIN, geo.x), Math.max(MARGIN, window.innerWidth - width - MARGIN));
-  const y = Math.min(Math.max(MARGIN, geo.y), Math.max(MARGIN, window.innerHeight - height - MARGIN));
+  const y = Math.min(
+    Math.max(MARGIN, geo.y),
+    Math.max(MARGIN, window.innerHeight - height - COMPOSER_CLEARANCE),
+  );
   return { x, y, width, height };
 }
 
@@ -86,12 +93,12 @@ function defaultGeometry(): Geometry {
   if (typeof window === "undefined") {
     return { x: MARGIN, y: MARGIN, width: DEFAULT_PANEL_WIDTH, height: DEFAULT_PANEL_HEIGHT };
   }
-  // Sempre menor que a tela, para parecer uma janela solta sobre o conteúdo.
-  const width = Math.min(DEFAULT_PANEL_WIDTH, Math.round(window.innerWidth * 0.66));
-  const height = Math.min(DEFAULT_PANEL_HEIGHT, Math.round(window.innerHeight * 0.72));
+  // Sempre menor que a conversa e acima do compositor, como uma janela solta.
+  const width = Math.min(DEFAULT_PANEL_WIDTH, Math.round(window.innerWidth * 0.58));
+  const height = Math.min(DEFAULT_PANEL_HEIGHT, Math.round(window.innerHeight * 0.6));
   return clampGeometry({
     x: window.innerWidth - width - MARGIN,
-    y: window.innerHeight - height - MARGIN,
+    y: window.innerHeight - height - COMPOSER_CLEARANCE,
     width,
     height,
   });
@@ -150,6 +157,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const dialingSinceRef = useRef<number | null>(null);
   const callWasActiveRef = useRef(false);
   const noActivePollsRef = useRef(0);
+  const lifecycleEpochRef = useRef(0);
 
   // "Em chamada" só vale com chamada ativa de fato: na qualificação a 3C mantém
   // o agente em on_call, mas a ligação já terminou.
@@ -167,8 +175,11 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   }, []);
 
   const refreshStatus = useCallback(async () => {
+    const requestEpoch = lifecycleEpochRef.current;
     try {
       const data = await invokeAgent("get_runtime");
+      // Uma resposta iniciada durante a ligação anterior nunca pode limpar a nova.
+      if (requestEpoch !== lifecycleEpochRef.current) return;
       if (data?.success) {
         const active = data.runtime?.has_active_call === true;
         setStatus(mapRuntimeStatus(data.runtime));
@@ -308,6 +319,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       }>).detail;
       const name = detail?.contact_name ?? detail?.contactName ?? null;
       if (detail && (name || detail.phone)) {
+        lifecycleEpochRef.current += 1;
         const startedAt = Date.now();
         // Nova tentativa: zera o cronômetro e o contato da ligação anterior.
         callStartedAt.current = null;
@@ -324,18 +336,25 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     };
     window.addEventListener("threecplus:open-drawer", openDrawer);
     window.addEventListener("threecplus:dial-request", openDrawer);
+    const collapseForAudio = () => setIsOpen(false);
+    window.addEventListener("threecplus:collapse-for-audio", collapseForAudio);
     return () => {
       window.removeEventListener("threecplus:open-drawer", openDrawer);
       window.removeEventListener("threecplus:dial-request", openDrawer);
+      window.removeEventListener("threecplus:collapse-for-audio", collapseForAudio);
     };
   }, [refreshStatus]);
 
-  // Guarda posição, tamanho e se o popup ficou aberto.
+  // Mantém a geometria atual disponível aos eventos de ponteiro. A persistência
+  // acontece ao terminar a interação, evitando gravações contínuas durante drag.
   useEffect(() => {
-    if (typeof window === "undefined") return;
     geometryRef.current = geometry;
-    window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(geometry));
   }, [geometry]);
+
+  const persistGeometry = useCallback(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(geometryRef.current));
+  }, []);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -344,7 +363,14 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
 
   // Mantém o popup dentro da tela quando a janela muda de tamanho.
   useEffect(() => {
-    const onResize = () => setGeometry((prev) => clampGeometry(prev));
+    const onResize = () => {
+      setGeometry((prev) => {
+        const next = clampGeometry(prev);
+        geometryRef.current = next;
+        window.localStorage.setItem(GEOMETRY_STORAGE_KEY, JSON.stringify(next));
+        return next;
+      });
+    };
     window.addEventListener("resize", onResize);
     return () => window.removeEventListener("resize", onResize);
   }, []);
@@ -362,27 +388,29 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     if (fullscreen) return;
     if ((event.target as HTMLElement).closest("button")) return;
     event.preventDefault();
+    event.currentTarget.setPointerCapture(event.pointerId);
     setInteracting(true);
     const startX = event.clientX;
     const startY = event.clientY;
     const base = geometryRef.current;
     const onMove = (e: PointerEvent) => {
-      setGeometry(
-        clampGeometry({
-          ...base,
-          x: base.x + (e.clientX - startX),
-          y: base.y + (e.clientY - startY),
-        }),
-      );
+      const next = clampGeometry({
+        ...base,
+        x: base.x + (e.clientX - startX),
+        y: base.y + (e.clientY - startY),
+      });
+      geometryRef.current = next;
+      setGeometry(next);
     };
     const onUp = () => {
       setInteracting(false);
+      persistGeometry();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
-  }, [fullscreen]);
+  }, [fullscreen, persistGeometry]);
 
   // Arrastar as bordas/cantos para redimensionar.
   const startResize = useCallback((edge: ResizeEdge) => (event: React.PointerEvent) => {
@@ -407,17 +435,20 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         height = base.height - dy;
         if (height >= MIN_PANEL_HEIGHT) y = base.y + dy;
       }
-      setGeometry(clampGeometry({ x, y, width, height }));
+      const next = clampGeometry({ x, y, width, height });
+      geometryRef.current = next;
+      setGeometry(next);
     };
 
     const onUp = () => {
       setInteracting(false);
+      persistGeometry();
       window.removeEventListener("pointermove", onMove);
       window.removeEventListener("pointerup", onUp);
     };
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
-  }, [fullscreen]);
+  }, [fullscreen, persistGeometry]);
 
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
@@ -455,7 +486,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     <>
       {/* Botão sempre visível: fechar o popup apenas recolhe para cá. */}
       {visible && canUseDialer && !isOpen && (
-        <div className="fixed bottom-20 right-4 z-[60] flex items-center rounded-md border border-border bg-card shadow-lg lg:bottom-6 lg:right-6">
+        <div className="fixed right-4 top-20 z-[60] flex items-center rounded-md border border-border bg-card shadow-lg lg:right-6 lg:top-24">
           <Button
             type="button"
             variant="ghost"
@@ -539,7 +570,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
         <div
           onPointerDown={startDrag}
           className={cn(
-            "flex h-12 shrink-0 select-none items-center justify-between border-b border-border bg-muted/40 px-3 pl-4",
+            "flex h-12 shrink-0 touch-none select-none items-center justify-between border-b border-border bg-muted/40 px-3 pl-4",
             fullscreen ? "cursor-default" : "cursor-move",
           )}
           title={fullscreen ? undefined : "Arraste para mover o discador"}

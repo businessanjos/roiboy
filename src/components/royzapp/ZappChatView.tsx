@@ -1,4 +1,4 @@
-import { RefObject, useCallback, useState, useMemo } from "react";
+import { RefObject, useCallback, useEffect, useState, useMemo } from "react";
 import { MessageSquare, Clock, Lock } from "lucide-react";
 import { ZappChatHeader } from "./ZappChatHeader";
 import { ZappMessagesList } from "./ZappMessagesList";
@@ -200,6 +200,13 @@ export function ZappChatView({
   const [showMediaGallery, setShowMediaGallery] = useState(false);
   const [callInProgress, setCallInProgress] = useState(false);
   const { engines: callEngines } = useCallEngines();
+
+  // Deixa os controles de gravação sempre livres. Recolher o quadro não encerra
+  // a ligação da 3C nem desmonta o iframe; o cartão compacto segue mostrando o tempo.
+  useEffect(() => {
+    if (!isRecording) return;
+    window.dispatchEvent(new CustomEvent("threecplus:collapse-for-audio"));
+  }, [isRecording]);
 
   // Ligações da 3C do contato — mesmo intervalo das mensagens carregadas.
   const oldestMessageAt = useMemo(() => {
