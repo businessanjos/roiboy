@@ -65,7 +65,12 @@ export default {
           soft: "hsl(var(--warning-soft, var(--warning-muted)))",
           strong: "hsl(var(--warning-strong, var(--warning-foreground)))",
         },
+        "activity-future": {
+          DEFAULT: "hsl(var(--activity-future, 25 95% 53%))",
+          muted: "hsl(var(--activity-future-muted, 25 90% 94%))",
+        },
         danger: {
+
           DEFAULT: "hsl(var(--danger))",
           foreground: "hsl(var(--danger-foreground))",
           muted: "hsl(var(--danger-muted))",

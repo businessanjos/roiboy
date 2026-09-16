@@ -125,35 +125,9 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
 
   const timeBadge = getTimeBadgeStyle();
 
-  // Activity status indicator
-  const getActivityStatusIndicator = () => {
-    // No pending activities = all done (or no activities)
-    if (activityStatus.pendingCount === 0) {
-      return { 
-        bgColor: "bg-success", 
-        textColor: "text-success", 
-        label: "Feito" 
-      };
-    }
-    
-    // Has overdue activities
-    if (activityStatus.hasOverdue) {
-      return { 
-        bgColor: "bg-danger", 
-        textColor: "text-danger", 
-        label: "Atrasado!" 
-      };
-    }
-    
-    // Has pending but none overdue
-    return { 
-      bgColor: "bg-warning", 
-      textColor: "text-warning", 
-      label: "A fazer" 
-    };
-  };
+  // Activity status indicator (vermelho atrasada / verde hoje / laranja futura / amarelo sem atividade)
+  const statusIndicator = getDealActivityIndicator(activityStatus);
 
-  const statusIndicator = getActivityStatusIndicator();
 
   return (
     <>
