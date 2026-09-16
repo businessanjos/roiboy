@@ -5,7 +5,6 @@ import {
   isZappReaction,
   normalizeZappReaction,
   reactionIdFromUnknown,
-  reactionRecord,
 } from "../_shared/zapp-reaction-normalize.ts";
 
 const corsHeaders = {

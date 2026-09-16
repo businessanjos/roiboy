@@ -750,16 +750,20 @@ Deno.serve(async (req) => {
             }
 
             for (const reactionMessage of reactionMessages) {
-              const reactionExternalId = String(
-                reactionMessage.id || `${reactionMessage.chatid}:${reactionMessage.messageid}`,
-              );
-              if (reactionExternalId) {
+              const reactionExternalIds = [
+                reactionMessage.id,
+                reactionMessage.messageid,
+                reactionMessage.chatid && reactionMessage.messageid
+                  ? `${reactionMessage.chatid}:${reactionMessage.messageid}`
+                  : null,
+              ].filter((value): value is string => typeof value === "string" && value.length > 0);
+              if (reactionExternalIds.length) {
                 const { error: cleanupError, count } = await supabase
                   .from("zapp_messages")
                   .delete({ count: "exact" })
                   .eq("account_id", integration.account_id)
                   .eq("zapp_conversation_id", conversationId)
-                  .eq("external_message_id", reactionExternalId)
+                  .in("external_message_id", reactionExternalIds)
                   .eq("synced_from_history", true);
                 if (cleanupError) throw cleanupError;
                 stats.reactionBubblesRemoved += count || 0;
