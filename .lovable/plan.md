@@ -1,11 +1,12 @@
-# Histórico de atividade do comercial, em Insights
+# Logs: histórico de atividade do comercial
 
-Tirar o histórico de vendas de dentro das Configurações do sistema e dar a ele um lugar próprio dentro de Insights, focado no que os vendedores fazem — visível apenas para gestores e administradores.
+Tirar o histórico de vendas de dentro das Configurações do sistema e dar a ele um lugar próprio no menu de Vendas, focado no que os vendedores fazem — visível apenas para gestores e administradores.
 
 ## O que muda
 
-### 1. Nova página em Insights
-- Item "Atividade da equipe" no menu de Insights, dentro de Vendas.
+### 1. Nova página "Logs"
+- Item "Logs" no menu de Vendas, logo abaixo de Insights (item próprio, não uma aba dentro de Insights).
+- Não se mistura com a Gestão Comercial, que continua mostrando desempenho individual.
 - Aparece somente para gestor/admin. Vendedor, consultora, marketing e demais usuários não veem o item e, se digitarem o endereço, são redirecionados — mesma regra já usada no Painel de Vendas.
 - A aba em Configurações continua existindo para o log geral do sistema, sem misturar com o comercial.
 
