@@ -570,7 +570,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           ref={launcherRef}
           style={{ left: Math.round(launcherPosition.x), top: Math.round(launcherPosition.y) }}
           onPointerDown={startLauncherDrag}
-          className="fixed z-[60] flex touch-none select-none items-center rounded-md border border-border bg-card shadow-lg cursor-grab active:cursor-grabbing"
+          className="pointer-events-auto fixed z-[60] flex touch-none select-none items-center rounded-md border border-border bg-card shadow-lg cursor-grab active:cursor-grabbing"
           title="Arraste para mover o Discador 3C"
         >
           <GripVertical className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />
