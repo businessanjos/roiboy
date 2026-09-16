@@ -296,6 +296,9 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       const name = detail?.contact_name ?? detail?.contactName ?? null;
       if (detail && (name || detail.phone)) {
         const startedAt = Date.now();
+        // Nova tentativa: zera o cronômetro e o contato da ligação anterior.
+        callStartedAt.current = null;
+        setElapsed(0);
         setContact({ name, phone: detail.phone ?? null });
         dialingSinceRef.current = startedAt;
         callWasActiveRef.current = false;
