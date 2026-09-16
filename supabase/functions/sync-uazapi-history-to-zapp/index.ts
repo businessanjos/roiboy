@@ -293,6 +293,32 @@ async function persistHistoryReaction(
   return "saved";
 }
 
+async function refreshConversationPreview(
+  supabase: ReturnType<typeof createClient>,
+  conversationId: string,
+): Promise<void> {
+  const { data: latest, error } = await supabase
+    .from("zapp_messages")
+    .select("content, direction, sent_at")
+    .eq("zapp_conversation_id", conversationId)
+    .order("sent_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  if (error) throw error;
+  await supabase
+    .from("zapp_conversations")
+    .update({
+      last_message_at: latest?.sent_at || null,
+      last_message_preview: latest
+        ? latest.direction === "outbound"
+          ? `Você: ${String(latest.content || "").slice(0, 80)}`
+          : String(latest.content || "").slice(0, 100)
+        : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", conversationId);
+}
+
 function quotedId(raw: UazMessage["quoted"]): string | null {
   if (!raw) return null;
   if (typeof raw === "string") return raw || null;
@@ -752,7 +778,11 @@ Deno.serve(async (req) => {
               }
             }
 
-            for (const reactionMessage of reactionMessages) {
+            let removedReactionBubble = false;
+            // O provedor retorna as mensagens da mais nova para a mais antiga.
+            // Aplicar da mais antiga para a mais nova garante que o último evento
+            // determine o estado final da reação em uma sincronização repetida.
+            for (const reactionMessage of reactionMessages.reverse()) {
               const reactionExternalIds = [
                 reactionMessage.id,
                 reactionMessage.messageid,
@@ -770,6 +800,7 @@ Deno.serve(async (req) => {
                   .eq("synced_from_history", true);
                 if (cleanupError) throw cleanupError;
                 stats.reactionBubblesRemoved += count || 0;
+                removedReactionBubble ||= (count || 0) > 0;
               }
               await persistHistoryReaction(
                 supabase,
@@ -778,6 +809,9 @@ Deno.serve(async (req) => {
                 conversationId,
               );
               stats.reactionsProcessed++;
+            }
+            if (removedReactionBubble) {
+              await refreshConversationPreview(supabase, conversationId);
             }
           }
 
