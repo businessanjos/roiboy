@@ -166,11 +166,11 @@
     --info-muted: 180 20% 15%;
 
     /* Indicador de atividade do funil - um pouco mais claro no dark */
-    --activity-overdue: 0 88% 62%;
+    --activity-overdue: 356 90% 52%;
     --activity-today: 142 80% 48%;
     --activity-none: 48 100% 55%;
-    --activity-future: 25 95% 58%;
-    --activity-future-muted: 25 45% 18%;
+    --activity-future: 30 100% 55%;
+    --activity-future-muted: 30 45% 18%;
 
 
     /* Score colors mais vibrantes no dark */
