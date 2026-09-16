@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, subDays } from "date-fns";
+import { format, subDays, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Table,
