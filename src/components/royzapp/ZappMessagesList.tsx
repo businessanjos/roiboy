@@ -50,8 +50,10 @@ interface ZappMessagesListProps {
   onLoadOlderMessages?: () => void;
   /** Ligações da 3C do contato, intercaladas cronologicamente no histórico. */
   calls?: ConversationCall[];
-  /** Telefone do contato — necessário para enviar reações. */
+  /** Telefone do contato — usado como destino das reações em conversas 1:1. */
   contactPhone?: string;
+  /** Identificador do grupo — destino das reações em conversas de grupo. */
+  groupJid?: string | null;
   /** Setor da conversa, usado no envio de reações. */
   sectorId?: string;
   /** Instância do WhatsApp usada na conversa. */
@@ -119,12 +121,14 @@ export function ZappMessagesList({
   onLoadOlderMessages,
   calls,
   contactPhone,
+  groupJid,
   sectorId,
   integrationId,
 }: ZappMessagesListProps) {
   const { byMessage: reactionsByMessage, react } = useZappMessageReactions({
     conversationId,
     contactPhone,
+    groupJid,
     sectorId,
     integrationId,
   });

@@ -1087,7 +1087,14 @@ export default function RoyZapp() {
     const name = zc?.is_group 
       ? (zc?.contact_name || "Grupo sem nome")
       : (zc?.client?.full_name || zc?.lead?.full_name || zc?.contact_name || c?.full_name || zc?.phone_e164 || "Desconhecido");
-    const phone = zc?.phone_e164 || c?.phone_e164 || "";
+    const phone =
+      zc?.phone_e164 ||
+      (zc?.client as any)?.phone_e164 ||
+      (zc?.client as any)?.phone ||
+      (zc?.lead as any)?.phone_e164 ||
+      (zc?.lead as any)?.phone ||
+      c?.phone_e164 ||
+      "";
     const searchableText = normalizeSearchText([
       zc?.client?.full_name, zc?.lead?.full_name, zc?.contact_name, c?.full_name, phone, zc?.last_message_preview,
     ].filter(Boolean).join(" "));

@@ -172,96 +172,241 @@ function asRecord(value: unknown): Record<string, unknown> | null {
 }
 
 /**
+ * IDs de mensagem da UAZAPI podem vir como "<prefixoTelefone>:<idWhatsApp>".
+ * Para casar a mensagem alvo usamos o sufixo (o id real do WhatsApp).
+ */
+function messageIdSuffix(value: string): string {
+  const trimmed = String(value || "").trim();
+  return trimmed.includes(":") ? trimmed.split(":").slice(1).join(":") : trimmed;
+}
+
+interface ExtractedReaction {
+  targetId: string;
+  emoji: string;
+  fromMe: boolean;
+  reactorPhone: string;
+  reactorName: string | null;
+}
+
+/**
+ * Extrai os dados de uma reação nos formatos que a UAZAPI/Baileys usa:
+ * `msg.reaction`, `msg.reactionMessage`, `msg.message.reactionMessage`,
+ * `msg.content.reactionMessage` ou `messageType: "reaction"` com o emoji em `text`.
+ * Retorna null quando o evento não é (ou não tem dados suficientes de) reação.
+ */
+function extractReaction(msg: Record<string, unknown>): ExtractedReaction | null {
+  const nested =
+    asRecord(msg.reaction) ||
+    asRecord(msg.reactionMessage) ||
+    asRecord(asRecord(msg.message)?.reactionMessage) ||
+    asRecord(asRecord(msg.message)?.reaction) ||
+    asRecord(asRecord(msg.content)?.reactionMessage) ||
+    null;
+
+  const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
+  const looksLikeReaction = nested !== null || declaredType.includes("reaction");
+  if (!looksLikeReaction) return null;
+
+  const nestedKey = asRecord(nested?.key);
+  const targetId = String(
+    (nested?.messageId as string) ||
+      (nested?.message_id as string) ||
+      (nestedKey?.id as string) ||
+      (nested?.id as string) ||
+      (msg.reactionMessageId as string) ||
+      (msg.quotedMessageId as string) ||
+      (msg.quoted_message_id as string) ||
+      "",
+  ).trim();
+
+  // Emoji: só campos de reação. `msg.text` vale apenas quando o próprio
+  // evento se declara como reação (formato documentado da UAZAPI).
+  let emoji = String((nested?.text as string) ?? (nested?.emoji as string) ?? "").trim();
+  if (!emoji && declaredType.includes("reaction")) {
+    emoji = String((msg.reaction_text as string) ?? (msg.text as string) ?? "").trim();
+  }
+  // Emoji muito longo = não é emoji; tratamos como ausente para não sujar os dados.
+  if (emoji.length > 16) emoji = "";
+
+  if (!targetId) {
+    const fields = Object.keys(nested || msg).join(",");
+    console.log(`[REACTION] Evento de reação sem id do alvo. Campos: [${fields}]`);
+    return null;
+  }
+
+  const fromMe =
+    msg.fromMe === true ||
+    msg.from_me === true ||
+    nested?.fromMe === true ||
+    nestedKey?.fromMe === true;
+
+  const senderJid = String(
+    (msg.participant as string) ||
+      (msg.sender as string) ||
+      (nested?.sender as string) ||
+      (msg.chatid as string) ||
+      "",
+  );
+  const reactorPhone = fromMe
+    ? "me"
+    : extractPhoneFromJid(senderJid) || normalizePhone(senderJid) || "unknown";
+  const reactorName = String((msg.senderName as string) || (msg.pushName as string) || "") || null;
+
+  return { targetId, emoji, fromMe, reactorPhone, reactorName };
+}
+
+/**
+ * Localiza a mensagem alvo priorizando igualdade exata e, como fallback,
+ * o sufixo do id — exigindo resultado único para nunca vincular a reação
+ * à mensagem de outra conta/conversa.
+ */
+async function findReactionTarget(
+  db: ReturnType<typeof createClient>,
+  targetId: string,
+  scope: { accountId?: string | null; conversationId?: string | null },
+): Promise<{ id: string; account_id: string; zapp_conversation_id: string } | null> {
+  const applyScope = (q: any) => {
+    if (scope.conversationId) q = q.eq("zapp_conversation_id", scope.conversationId);
+    else if (scope.accountId) q = q.eq("account_id", scope.accountId);
+    return q;
+  };
+
+  const { data: exact } = await applyScope(
+    db.from("zapp_messages").select("id, account_id, zapp_conversation_id").eq("external_message_id", targetId),
+  ).limit(2);
+  if (exact?.length === 1) return exact[0] as any;
+
+  const suffix = messageIdSuffix(targetId);
+  if (!suffix) return null;
+
+  const { data: bySuffix } = await applyScope(
+    db
+      .from("zapp_messages")
+      .select("id, account_id, zapp_conversation_id")
+      .ilike("external_message_id", `%${suffix}`),
+  ).limit(2);
+
+  if (bySuffix?.length === 1) return bySuffix[0] as any;
+  if ((bySuffix?.length || 0) > 1) {
+    console.log(`[REACTION] Sufixo ambíguo (${bySuffix!.length} mensagens), ignorando para não vincular errado`);
+  }
+  return null;
+}
+
+/**
+ * Grava, troca ou remove a reação. Quando a mensagem alvo ainda não existe,
+ * guarda a reação pelo id externo para reconciliar assim que ela chegar.
+ */
+async function persistReaction(
+  db: ReturnType<typeof createClient>,
+  data: ExtractedReaction,
+  scope: { accountId?: string | null; conversationId?: string | null },
+): Promise<Record<string, unknown>> {
+  const target = await findReactionTarget(db, data.targetId, scope);
+
+  if (!target) {
+    if (!scope.accountId) {
+      console.log("[REACTION] Mensagem alvo não encontrada e sem conta para guardar pendente");
+      return { ignored: true, reason: "reaction_target_not_found" };
+    }
+    if (!data.emoji) {
+      await db
+        .from("zapp_message_reactions")
+        .delete()
+        .eq("account_id", scope.accountId)
+        .is("zapp_message_id", null)
+        .eq("external_message_id", messageIdSuffix(data.targetId))
+        .eq("reactor_phone", data.reactorPhone);
+      return { removed: true, pending: true };
+    }
+    // O índice de pendentes é parcial, então fazemos substituição manual.
+    await db
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("account_id", scope.accountId)
+      .is("zapp_message_id", null)
+      .eq("external_message_id", messageIdSuffix(data.targetId))
+      .eq("reactor_phone", data.reactorPhone);
+
+    const { error } = await db.from("zapp_message_reactions").insert({
+      account_id: scope.accountId,
+      zapp_conversation_id: scope.conversationId || null,
+      zapp_message_id: null,
+      external_message_id: messageIdSuffix(data.targetId),
+      emoji: data.emoji,
+      reactor_phone: data.reactorPhone,
+      reactor_name: data.reactorName,
+      from_me: data.fromMe,
+      reacted_at: new Date().toISOString(),
+    });
+    if (error) console.error("[REACTION] Erro ao guardar pendente:", error.message);
+    return { pending: !error, reason: "reaction_target_pending" };
+  }
+
+  if (!data.emoji) {
+    const { error } = await db
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("zapp_message_id", target.id)
+      .eq("reactor_phone", data.reactorPhone);
+    if (error) console.error("[REACTION] Erro ao remover:", error.message);
+    return { removed: !error, message_id: target.id };
+  }
+
+  const { error } = await db.from("zapp_message_reactions").upsert(
+    {
+      account_id: target.account_id,
+      zapp_conversation_id: target.zapp_conversation_id,
+      zapp_message_id: target.id,
+      external_message_id: messageIdSuffix(data.targetId),
+      emoji: data.emoji,
+      reactor_phone: data.reactorPhone,
+      reactor_name: data.reactorName,
+      from_me: data.fromMe,
+      reacted_at: new Date().toISOString(),
+    },
+    { onConflict: "zapp_message_id,reactor_phone" },
+  );
+
+  if (error) console.error("[REACTION] Erro ao gravar:", error.message);
+  return { saved: !error, message_id: target.id, emoji: data.emoji };
+}
+
+/**
+ * Vincula reações que chegaram antes da mensagem original ser salva.
+ */
+async function reconcilePendingReactions(
+  db: ReturnType<typeof createClient>,
+  params: { accountId: string; conversationId: string; messageDbId: string; externalMessageId: string },
+): Promise<void> {
+  const suffix = messageIdSuffix(params.externalMessageId);
+  if (!suffix) return;
+  const { error } = await db
+    .from("zapp_message_reactions")
+    .update({ zapp_message_id: params.messageDbId, zapp_conversation_id: params.conversationId })
+    .eq("account_id", params.accountId)
+    .is("zapp_message_id", null)
+    .eq("external_message_id", suffix);
+  if (error) console.error("[REACTION] Erro ao reconciliar pendentes:", error.message);
+}
+
+/**
  * Processa uma reação (emoji) recebida do WhatsApp.
- * Localiza a mensagem alvo pelo external_message_id e grava/remove a reação.
  * Emoji vazio = reação removida.
  */
 async function handleReactionEvent(
   msg: Record<string, unknown>,
-  reaction: Record<string, unknown> | null,
+  _reaction: Record<string, unknown> | null,
+  scope: { accountId?: string | null; conversationId?: string | null } = {},
 ): Promise<Record<string, unknown>> {
-  const reactionKey = asRecord(reaction?.key) || asRecord(msg.key);
-  const targetIdRaw =
-    (reaction?.messageId as string) ||
-    (reaction?.message_id as string) ||
-    (reaction?.id as string) ||
-    (reactionKey?.id as string) ||
-    (msg.quotedMessageId as string) ||
-    (msg.quoted_message_id as string) ||
-    (msg.reactionMessageId as string) ||
-    "";
-  const targetId = String(targetIdRaw || "").trim();
-
-  const emoji = String(
-    (reaction?.text as string) ??
-      (reaction?.emoji as string) ??
-      (msg.reaction_text as string) ??
-      (msg.text as string) ??
-      (msg.content as string) ??
-      "",
-  ).trim();
-
-  if (!targetId) {
-    console.log("[REACTION] Sem id da mensagem alvo, ignorando");
-    return { ignored: true, reason: "reaction_no_target" };
-  }
-
-  const fromMe = msg.fromMe === true || msg.from_me === true || reaction?.fromMe === true;
-  const senderJid = String(
-    (msg.participant as string) ||
-      (msg.sender as string) ||
-      (msg.chatid as string) ||
-      (reaction?.sender as string) ||
-      "",
-  );
-  const reactorPhone = fromMe ? "me" : (extractPhoneFromJid(senderJid) || normalizePhone(senderJid) || "unknown");
-  const reactorName = String((msg.senderName as string) || (msg.pushName as string) || "") || null;
+  const extracted = extractReaction(msg);
+  if (!extracted) return { ignored: true, reason: "reaction_no_target" };
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
   const db = createClient(supabaseUrl, supabaseKey);
 
-  const { data: targets } = await db
-    .from("zapp_messages")
-    .select("id, account_id, zapp_conversation_id")
-    .ilike("external_message_id", `%${targetId}`)
-    .limit(1);
-
-  const target = targets?.[0];
-  if (!target) {
-    console.log(`[REACTION] Mensagem alvo não encontrada: ${targetId}`);
-    return { ignored: true, reason: "reaction_target_not_found" };
-  }
-
-  if (!emoji) {
-    const { error } = await db
-      .from("zapp_message_reactions")
-      .delete()
-      .eq("zapp_message_id", target.id)
-      .eq("reactor_phone", reactorPhone);
-    if (error) console.error("[REACTION] Erro ao remover:", error.message);
-    return { removed: true, message_id: target.id };
-  }
-
-  const { error } = await db
-    .from("zapp_message_reactions")
-    .upsert(
-      {
-        account_id: target.account_id,
-        zapp_conversation_id: target.zapp_conversation_id,
-        zapp_message_id: target.id,
-        external_message_id: targetId,
-        emoji,
-        reactor_phone: reactorPhone,
-        reactor_name: reactorName,
-        from_me: fromMe,
-        reacted_at: new Date().toISOString(),
-      },
-      { onConflict: "zapp_message_id,reactor_phone" },
-    );
-
-  if (error) console.error("[REACTION] Erro ao gravar:", error.message);
-  return { saved: !error, message_id: target.id, emoji };
+  return await persistReaction(db, extracted, scope);
 }
 
 
@@ -316,22 +461,29 @@ Deno.serve(async (req) => {
     }
     
     // 3. REACTIONS: store them (emoji shown under the reacted message) and return early
-    if (payload.message) {
-      const msg = payload.message as Record<string, unknown>;
-      const msgReaction = asRecord(msg.reaction);
-      const msgTypeCheck = String(msg.messageType ?? "").toLowerCase();
-      const typeCheck = String(msg.type ?? "").toLowerCase();
-      const isReaction =
-        msgReaction !== null ||
-        msgTypeCheck.includes("reaction") ||
-        typeCheck.includes("reaction");
+    {
+      const reactionCandidates: Record<string, unknown>[] = [];
+      if (payload.message) reactionCandidates.push(payload.message as Record<string, unknown>);
+      const altMessages = (payload as Record<string, any>).data?.messages;
+      if (Array.isArray(altMessages)) {
+        for (const m of altMessages) if (m && typeof m === "object") reactionCandidates.push(m as Record<string, unknown>);
+      }
 
-      if (isReaction) {
+      const reactionEvents = reactionCandidates
+        .map((m) => ({ msg: m, parsed: extractReaction(m) }))
+        .filter((r) => r.parsed !== null);
+
+      if (reactionEvents.length > 0) {
         try {
-          const result = await handleReactionEvent(msg, msgReaction);
-          return new Response(JSON.stringify({ success: true, reason: "reaction_message", ...result }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-          });
+          const results = [];
+          for (const ev of reactionEvents) {
+            results.push(await handleReactionEvent(ev.msg, null));
+          }
+          console.log(`[REACTION] Processadas ${results.length} reação(ões)`);
+          return new Response(
+            JSON.stringify({ success: true, reason: "reaction_message", results }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" } },
+          );
         } catch (reactionError) {
           console.error("[REACTION] Error:", (reactionError as Error).message);
           return new Response(JSON.stringify({ ignored: true, reason: "reaction_error" }), {
@@ -2053,6 +2205,16 @@ Deno.serve(async (req) => {
                 console.error("Error saving zapp_message:", zappMsgError);
               } else {
                 insertedMessageDbId = insertedMsg?.id || null;
+
+                // Reações que chegaram antes desta mensagem ficam vinculadas agora
+                if (insertedMessageDbId && zappConversationId) {
+                  await reconcilePendingReactions(supabase, {
+                    accountId: accountId,
+                    conversationId: zappConversationId,
+                    messageDbId: insertedMessageDbId,
+                    externalMessageId: messageId,
+                  });
+                }
                 console.log(`Zapp message saved! Media: ${mediaType || 'none'}, LazyDownload: ${encryptedMediaUrl ? 'pending' : 'no'}`);
 
                 // EAGER MEDIA DOWNLOAD: kick off download immediately (fire-and-forget)
