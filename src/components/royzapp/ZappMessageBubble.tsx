@@ -257,9 +257,13 @@ export const ZappMessageBubble = memo(function ZappMessageBubble({
   onScrollToQuoted,
   isHighlighted,
   searchHighlight,
+  reactions,
+  onReact,
 }: ZappMessageBubbleProps) {
   const { toast } = useToast();
   const [showActions, setShowActions] = useState(false);
+  const [emojiOpen, setEmojiOpen] = useState(false);
+
 
   const [isTranscribing, setIsTranscribing] = useState(false);
   const [isDownloading, setIsDownloading] = useState(false);
