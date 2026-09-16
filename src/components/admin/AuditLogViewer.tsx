@@ -400,6 +400,13 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
       }
 
 
+      // Mantém somente a equipe de vendas no escopo comercial
+      const scoped = salesUserIds
+        ? results.filter((r) => r.user_id && salesUserIds!.has(r.user_id))
+        : results;
+      results.length = 0;
+      results.push(...scoped);
+
       // Resolve os nomes das pessoas nas linhas vindas do comercial
       const missingUserIds = Array.from(
         new Set(results.filter((r) => !r.user_name && r.user_id).map((r) => r.user_id as string)),
