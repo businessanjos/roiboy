@@ -492,7 +492,8 @@ Deno.serve(async (req) => {
     }
     const declaredReactionCandidates = reactionCandidates.filter((msg) => {
       const declaredType = `${String(msg.messageType ?? "")} ${String(msg.type ?? "")}`.toLowerCase();
-      return declaredType.includes("reaction") || msg.reaction !== undefined || msg.reactionMessage !== undefined;
+      const flatReaction = typeof msg.reaction === "string" ? msg.reaction.trim() : "";
+      return declaredType.includes("reaction") || Boolean(flatReaction) || asRecord(msg.reaction) !== null || asRecord(msg.reactionMessage) !== null;
     });
 
     
