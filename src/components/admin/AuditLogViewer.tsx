@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Table,
@@ -23,11 +23,11 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { 
-  Search, 
-  Filter, 
-  RefreshCw, 
-  User, 
+import {
+  Search,
+  Filter,
+  RefreshCw,
+  User,
   Calendar,
   Activity,
   Eye,
@@ -40,7 +40,11 @@ import {
   Upload,
   UserPlus,
   CheckCircle,
-  Archive
+  Archive,
+  ArrowRight,
+  StickyNote,
+  Paperclip,
+  Flag,
 } from "lucide-react";
 import {
   Dialog,
@@ -49,9 +53,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
-interface AuditLog {
+interface UnifiedLog {
   id: string;
-  account_id: string;
   user_id: string | null;
   user_name: string | null;
   user_email: string | null;
@@ -60,9 +63,10 @@ interface AuditLog {
   entity_id: string | null;
   entity_name: string | null;
   details: Record<string, unknown> | null;
-  ip_address: string | null;
-  user_agent: string | null;
+  ip_address?: string | null;
+  user_agent?: string | null;
   created_at: string;
+  source: "audit" | "deal";
 }
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -77,6 +81,10 @@ const actionIcons: Record<string, React.ReactNode> = {
   assign: <UserPlus className="h-4 w-4" />,
   complete: <CheckCircle className="h-4 w-4" />,
   archive: <Archive className="h-4 w-4" />,
+  stage_change: <ArrowRight className="h-4 w-4" />,
+  status_change: <Flag className="h-4 w-4" />,
+  note: <StickyNote className="h-4 w-4" />,
+  image: <Paperclip className="h-4 w-4" />,
 };
 
 const actionColors: Record<string, string> = {
@@ -91,6 +99,10 @@ const actionColors: Record<string, string> = {
   assign: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
   complete: "bg-success/10 text-success border-success/20",
   archive: "bg-warning/10 text-warning border-warning/20",
+  stage_change: "bg-info/10 text-info border-info/20",
+  status_change: "bg-purple-500/10 text-purple-500 border-purple-500/20",
+  note: "bg-muted-foreground/10 text-muted-foreground border-border/20",
+  image: "bg-indigo-500/10 text-indigo-500 border-indigo-500/20",
 };
 
 const actionLabels: Record<string, string> = {
@@ -105,6 +117,10 @@ const actionLabels: Record<string, string> = {
   assign: "Atribuiu",
   complete: "Completou",
   archive: "Arquivou",
+  stage_change: "Mudou etapa",
+  status_change: "Mudou status",
+  note: "Registrou nota",
+  image: "Anexou arquivo",
 };
 
 const entityLabels: Record<string, string> = {
@@ -121,6 +137,15 @@ const entityLabels: Record<string, string> = {
   integration: "Integração",
   role: "Cargo",
   permission: "Permissão",
+  deal: "Negócio",
+};
+
+const DEAL_ACTIVITY_TYPES = ["stage_change", "status_change", "note", "image"];
+
+const PERIOD_DAYS: Record<string, number> = {
+  "7": 7,
+  "30": 30,
+  "90": 90,
 };
 
 interface AuditLogViewerProps {
@@ -131,32 +156,156 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
   const [search, setSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
-  const [selectedLog, setSelectedLog] = useState<AuditLog | null>(null);
+  const [periodFilter, setPeriodFilter] = useState<string>("30");
+  const [selectedLog, setSelectedLog] = useState<UnifiedLog | null>(null);
 
   const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ["audit-logs", accountId, actionFilter, entityFilter],
-    queryFn: async () => {
-      let query = supabase
-        .from("audit_logs")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(500);
+    queryKey: ["audit-logs-unified", accountId, actionFilter, entityFilter, periodFilter],
+    queryFn: async (): Promise<UnifiedLog[]> => {
+      const sinceIso = subDays(new Date(), PERIOD_DAYS[periodFilter] ?? 30).toISOString();
+      const wantsDeals = entityFilter === "all" || entityFilter === "deal";
+      const wantsAudit = entityFilter !== "deal";
 
-      if (accountId) {
-        query = query.eq("account_id", accountId);
+      const results: UnifiedLog[] = [];
+
+      // 1) Log de auditoria existente (tarefas, eventos, pessoas...)
+      if (wantsAudit) {
+        let query = supabase
+          .from("audit_logs")
+          .select("*")
+          .gte("created_at", sinceIso)
+          .order("created_at", { ascending: false })
+          .limit(500);
+
+        if (accountId) query = query.eq("account_id", accountId);
+        if (actionFilter !== "all") query = query.eq("action", actionFilter);
+        if (entityFilter !== "all") query = query.eq("entity_type", entityFilter);
+
+        const { data, error } = await query;
+        if (error) throw error;
+        (data ?? []).forEach((row: any) => {
+          results.push({
+            id: `audit-${row.id}`,
+            user_id: row.user_id,
+            user_name: row.user_name,
+            user_email: row.user_email,
+            action: row.action,
+            entity_type: row.entity_type,
+            entity_id: row.entity_id,
+            entity_name: row.entity_name,
+            details: row.details,
+            ip_address: row.ip_address,
+            user_agent: row.user_agent,
+            created_at: row.created_at,
+            source: "audit",
+          });
+        });
       }
 
-      if (actionFilter !== "all") {
-        query = query.eq("action", actionFilter);
+      // 2) Ações dentro dos negócios (apenas com autor identificado)
+      if (wantsDeals) {
+        const typeFilter = DEAL_ACTIVITY_TYPES.includes(actionFilter)
+          ? [actionFilter]
+          : actionFilter === "all"
+            ? DEAL_ACTIVITY_TYPES
+            : [];
+
+        if (typeFilter.length > 0) {
+          let activityQuery = supabase
+            .from("deal_activities")
+            .select("id, type, title, content, old_value, new_value, created_at, user_id, deal_id, deals(title)")
+            .in("type", typeFilter)
+            .not("user_id", "is", null)
+            .gte("created_at", sinceIso)
+            .order("created_at", { ascending: false })
+            .limit(500);
+
+          if (accountId) activityQuery = activityQuery.eq("account_id", accountId);
+
+          const { data: activities, error: activityError } = await activityQuery;
+          if (activityError) throw activityError;
+
+          (activities ?? []).forEach((row: any) => {
+            results.push({
+              id: `deal-activity-${row.id}`,
+              user_id: row.user_id,
+              user_name: null,
+              user_email: null,
+              action: row.type,
+              entity_type: "deal",
+              entity_id: row.deal_id,
+              entity_name: row.deals?.title ?? null,
+              details: {
+                titulo: row.title ?? null,
+                conteudo: row.content ?? null,
+                de: row.old_value ?? null,
+                para: row.new_value ?? null,
+              },
+              created_at: row.created_at,
+              source: "deal",
+            });
+          });
+        }
+
+        // 3) Negócios excluídos (autor gravado em deleted_by)
+        if (actionFilter === "all" || actionFilter === "delete") {
+          let deletedQuery = supabase
+            .from("deals")
+            .select("id, title, deleted_at, deleted_by")
+            .not("deleted_at", "is", null)
+            .not("deleted_by", "is", null)
+            .gte("deleted_at", sinceIso)
+            .order("deleted_at", { ascending: false })
+            .limit(300);
+
+          if (accountId) deletedQuery = deletedQuery.eq("account_id", accountId);
+
+          const { data: deleted, error: deletedError } = await deletedQuery;
+          if (deletedError) throw deletedError;
+
+          (deleted ?? []).forEach((row: any) => {
+            results.push({
+              id: `deal-deleted-${row.id}`,
+              user_id: row.deleted_by,
+              user_name: null,
+              user_email: null,
+              action: "delete",
+              entity_type: "deal",
+              entity_id: row.id,
+              entity_name: row.title,
+              details: null,
+              created_at: row.deleted_at,
+              source: "deal",
+            });
+          });
+        }
       }
 
-      if (entityFilter !== "all") {
-        query = query.eq("entity_type", entityFilter);
+      // Resolve os nomes das pessoas nas linhas vindas do comercial
+      const missingUserIds = Array.from(
+        new Set(results.filter((r) => !r.user_name && r.user_id).map((r) => r.user_id as string)),
+      );
+      if (missingUserIds.length > 0) {
+        const { data: users } = await supabase
+          .from("users")
+          .select("id, name, email")
+          .in("id", missingUserIds);
+        const map = new Map<string, { name: string | null; email: string | null }>();
+        (users ?? []).forEach((u: any) => map.set(u.id, { name: u.name, email: u.email }));
+        results.forEach((r) => {
+          if (!r.user_name && r.user_id) {
+            const found = map.get(r.user_id);
+            if (found) {
+              r.user_name = found.name;
+              r.user_email = found.email;
+            }
+          }
+        });
       }
 
-      const { data, error } = await query;
-      if (error) throw error;
-      return data as AuditLog[];
+      return results.sort(
+        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
+      );
     },
   });
 
@@ -172,6 +321,40 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
     );
   });
 
+  const exportCsv = () => {
+    const rows = filteredLogs ?? [];
+    if (rows.length === 0) return;
+    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Detalhe"];
+    const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const body = rows.map((log) => {
+      const detail = log.details
+        ? Object.entries(log.details)
+            .filter(([, v]) => v !== null && v !== undefined && v !== "")
+            .map(([k, v]) => `${k}: ${v}`)
+            .join(" | ")
+        : "";
+      return [
+        format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+        log.user_name ?? "",
+        log.user_email ?? "",
+        actionLabels[log.action] ?? log.action,
+        entityLabels[log.entity_type] ?? log.entity_type,
+        log.entity_name ?? "",
+        detail,
+      ]
+        .map(escape)
+        .join(";");
+    });
+    const csv = [header.map(escape).join(";"), ...body].join("\n");
+    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `log-acoes-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <Card>
       <CardHeader className="pb-3">
@@ -180,10 +363,21 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
             <Activity className="h-5 w-5" />
             Log de Auditoria
           </CardTitle>
-          <Button variant="outline" size="sm" onClick={() => refetch()}>
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Atualizar
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={exportCsv}
+              disabled={!filteredLogs || filteredLogs.length === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              Exportar
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
         </div>
       </CardHeader>
       <CardContent>
@@ -191,14 +385,25 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por usuário, entidade..."
+              placeholder="Buscar por pessoa, negócio, tarefa..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
             />
           </div>
-          <Select value={actionFilter} onValueChange={setActionFilter}>
+          <Select value={periodFilter} onValueChange={setPeriodFilter}>
             <SelectTrigger className="w-[150px]">
+              <Calendar className="h-4 w-4 mr-2" />
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="7">Últimos 7 dias</SelectItem>
+              <SelectItem value="30">Últimos 30 dias</SelectItem>
+              <SelectItem value="90">Últimos 90 dias</SelectItem>
+            </SelectContent>
+          </Select>
+          <Select value={actionFilter} onValueChange={setActionFilter}>
+            <SelectTrigger className="w-[170px]">
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Ação" />
             </SelectTrigger>
@@ -207,24 +412,27 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
               <SelectItem value="create">Criação</SelectItem>
               <SelectItem value="update">Atualização</SelectItem>
               <SelectItem value="delete">Exclusão</SelectItem>
+              <SelectItem value="complete">Conclusão</SelectItem>
+              <SelectItem value="stage_change">Mudança de etapa</SelectItem>
+              <SelectItem value="status_change">Mudança de status</SelectItem>
+              <SelectItem value="note">Nota no negócio</SelectItem>
+              <SelectItem value="image">Anexo no negócio</SelectItem>
               <SelectItem value="login">Login</SelectItem>
-              <SelectItem value="logout">Logout</SelectItem>
-              <SelectItem value="view">Visualização</SelectItem>
               <SelectItem value="export">Exportação</SelectItem>
               <SelectItem value="assign">Atribuição</SelectItem>
-              <SelectItem value="complete">Conclusão</SelectItem>
             </SelectContent>
           </Select>
           <Select value={entityFilter} onValueChange={setEntityFilter}>
             <SelectTrigger className="w-[150px]">
-              <SelectValue placeholder="Entidade" />
+              <SelectValue placeholder="Tipo" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">Todas entidades</SelectItem>
+              <SelectItem value="all">Todos tipos</SelectItem>
+              <SelectItem value="deal">Negócios</SelectItem>
+              <SelectItem value="task">Tarefas</SelectItem>
               <SelectItem value="client">Clientes</SelectItem>
               <SelectItem value="user">Usuários</SelectItem>
               <SelectItem value="event">Eventos</SelectItem>
-              <SelectItem value="task">Tarefas</SelectItem>
               <SelectItem value="contract">Contratos</SelectItem>
               <SelectItem value="product">Produtos</SelectItem>
               <SelectItem value="form">Formulários</SelectItem>
@@ -240,8 +448,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                 <TableHead className="w-[180px]">Data/Hora</TableHead>
                 <TableHead>Usuário</TableHead>
                 <TableHead>Ação</TableHead>
-                <TableHead>Entidade</TableHead>
-                <TableHead>Nome</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Registro</TableHead>
                 <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
@@ -277,8 +485,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <Badge 
-                        variant="outline" 
+                      <Badge
+                        variant="outline"
                         className={`gap-1 ${actionColors[log.action] || ""}`}
                       >
                         {actionIcons[log.action]}
@@ -296,8 +504,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                       </span>
                     </TableCell>
                     <TableCell>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         size="sm"
                         onClick={() => setSelectedLog(log)}
                       >
@@ -327,8 +535,8 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Ação</p>
-                    <Badge 
-                      variant="outline" 
+                    <Badge
+                      variant="outline"
                       className={`gap-1 ${actionColors[selectedLog.action] || ""}`}
                     >
                       {actionIcons[selectedLog.action]}
@@ -341,7 +549,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                     <p className="text-xs text-muted-foreground">{selectedLog.user_email}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Entidade</p>
+                    <p className="text-sm text-muted-foreground">Tipo</p>
                     <p className="font-medium">
                       {entityLabels[selectedLog.entity_type] || selectedLog.entity_type}
                     </p>
@@ -350,7 +558,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                     )}
                   </div>
                 </div>
-                
+
                 {selectedLog.details && Object.keys(selectedLog.details).length > 0 && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Detalhes</p>
@@ -359,7 +567,7 @@ export function AuditLogViewer({ accountId }: AuditLogViewerProps) {
                     </pre>
                   </div>
                 )}
-                
+
                 {selectedLog.user_agent && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">User Agent</p>
