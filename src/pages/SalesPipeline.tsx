@@ -22,6 +22,7 @@ import {
   expandBreakdownToInstallments,
 } from "@/utils/dealToClientContractMapping";
 import { DealKanban } from "@/components/sales/DealKanban";
+import { PipelineActivityLegend } from "@/components/sales/PipelineActivityLegend";
 import { DealDialog } from "@/components/sales/DealDialog";
 import { DealDetailSheet } from "@/components/sales/DealDetailSheet";
 import { DealStagesManager } from "@/components/sales/DealStagesManager";
