@@ -2,20 +2,23 @@
 
 ## O que eu verifiquei de fato
 
-Abri o ROY autenticado como o seu usuário, entrei no RoyZapp e conferi a tela: **nenhum botão ou popup do discador 3C aparece**. O quadro do discador existe na página, mas fica totalmente escondido.
+- Abri o ROY autenticado e entrei no RoyZapp: nenhum botão ou popup do discador aparece. O quadro existe na página, porém escondido.
+- Conferi os cadastros da 3C: só 5 pessoas têm vínculo e só 4 têm ramal (Maikol, Everton, Darlan, Jonathan). O Darlan tem ramal 1013 e agente 113482.
+- Conferi os registros do serviço da 3C agora há pouco: a consulta responde normalmente e o Darlan aparece como agente ativo. Ou seja, no computador dele o problema não é o cadastro: é a própria interface do discador.
 
 ## Os erros encontrados (confirmados)
 
-1. **O discador só aparece para quem tem ramal cadastrado.**
-   O painel só se mostra quando o usuário tem ramal 3C gravado no seu cadastro. Hoje só 4 pessoas têm ramal (Maikol, Everton, Darlan, Jonathan) e um usuário tem só o código de agente, sem ramal. O seu usuário não tem nenhum dos dois, então o discador some por completo — sem aviso, sem botão, sem explicação. Foi exatamente isso que fez o popup "sumir".
+1. **O botão de fechar (X) do discador faz ele "sumir de vez".**
+   Ao clicar no X do botão flutuante, o discador some e o único jeito de trazê-lo de volta é uma abinha de 7 pixels de largura, quase transparente (40% de opacidade), colada na borda direita da tela, sem texto. Na prática ninguém acha. É o que aconteceu no computador do Darlan.
 
-2. **Não existe popup dentro do chat.** O que existe hoje é uma gaveta que entra pela lateral direita ocupando a tela inteira de altura. Não nasce embaixo, não é flutuante e não pode ser movida — só redimensionada pela borda esquerda.
+2. **Não existe popup dentro do chat.** O que existe hoje é uma gaveta que entra pela lateral direita ocupando toda a altura da tela e, com a largura padrão, cobre a conversa inteira. Não nasce embaixo, não é flutuante e não pode ser movida — só redimensionada por uma borda fina.
 
-3. **O botão de ligar do chat não abre o discador em caso de sucesso.** Ao ligar pelo cabeçalho da conversa, o painel só é aberto quando a ligação **falha** (agente offline, em pausa etc.). Quando a discagem dá certo, aparece apenas um aviso "Discando…" e o usuário fica sem tela para atender/qualificar.
+3. **Para quem não tem ramal, o discador desaparece sem nenhum aviso.** É o caso do meu teste e de mais usuários da conta: nenhum botão, nenhuma explicação.
 
-4. **Ao ocultar o discador, o botão de reabrir some junto em algumas situações.** A abinha lateral de reabrir só é desenhada quando não há chamada em andamento e depende do mesmo bloqueio do item 1.
+4. **O botão de ligar do chat não abre o discador quando a ligação dá certo.** Ao ligar pelo cabeçalho da conversa, o painel só abre quando a ligação **falha**. Dando certo, aparece só o aviso "Discando…" e a pessoa fica sem tela para atender/qualificar.
 
-5. **O discador só é montado em Vendas e no RoyZapp.** Fora dessas áreas ele não existe, mesmo que a pessoa esteja ligando.
+5. **O discador só existe em Vendas e no RoyZapp.** Fora dessas áreas ele não é montado.
+
 
 ## O que vou fazer
 
