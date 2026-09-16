@@ -319,20 +319,26 @@ async function persistReaction(
         .eq("reactor_phone", data.reactorPhone);
       return { removed: true, pending: true };
     }
-    const { error } = await db.from("zapp_message_reactions").upsert(
-      {
-        account_id: scope.accountId,
-        zapp_conversation_id: scope.conversationId || null,
-        zapp_message_id: null,
-        external_message_id: messageIdSuffix(data.targetId),
-        emoji: data.emoji,
-        reactor_phone: data.reactorPhone,
-        reactor_name: data.reactorName,
-        from_me: data.fromMe,
-        reacted_at: new Date().toISOString(),
-      },
-      { onConflict: "account_id,external_message_id,reactor_phone" },
-    );
+    // O índice de pendentes é parcial, então fazemos substituição manual.
+    await db
+      .from("zapp_message_reactions")
+      .delete()
+      .eq("account_id", scope.accountId)
+      .is("zapp_message_id", null)
+      .eq("external_message_id", messageIdSuffix(data.targetId))
+      .eq("reactor_phone", data.reactorPhone);
+
+    const { error } = await db.from("zapp_message_reactions").insert({
+      account_id: scope.accountId,
+      zapp_conversation_id: scope.conversationId || null,
+      zapp_message_id: null,
+      external_message_id: messageIdSuffix(data.targetId),
+      emoji: data.emoji,
+      reactor_phone: data.reactorPhone,
+      reactor_name: data.reactorName,
+      from_me: data.fromMe,
+      reacted_at: new Date().toISOString(),
+    });
     if (error) console.error("[REACTION] Erro ao guardar pendente:", error.message);
     return { pending: !error, reason: "reaction_target_pending" };
   }
