@@ -87,7 +87,7 @@ interface Participant {
   waitlist_position: number | null;
   notes: string | null;
   rsvp_token: string | null;
-  custom_data?: Record<string, any> | null;
+  custom_data?: any;
   clients?: Client;
 }
 
