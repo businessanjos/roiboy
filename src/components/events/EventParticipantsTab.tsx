@@ -1032,41 +1032,113 @@ export default function EventParticipantsTab({
 
       {/* Edit Participant Dialog */}
       <Dialog open={!!editParticipant} onOpenChange={(open) => !open && setEditParticipant(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar participante</DialogTitle>
-            <DialogDescription>
-              {editParticipant?.client_id
-                ? "As alterações de nome, e-mail e telefone atualizam também a ficha do cliente."
-                : "Atualize os dados de contato do convidado."}
-            </DialogDescription>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-11 w-11">
+                <AvatarImage src={editParticipant?.clients?.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {(editName || "?").substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <DialogTitle className="truncate">{editName || "Editar participante"}</DialogTitle>
+                <DialogDescription className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {editParticipant?.client_id ? "Cliente" : "Externo"}
+                  </Badge>
+                  <span className="text-xs">
+                    {editParticipant?.client_id
+                      ? "Altera também a ficha do cliente"
+                      : "Dados de contato do convidado"}
+                  </span>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome *</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Email
+                  </Label>
+                  <Input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> Telefone
+                  </Label>
+                  <Input
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Observações</Label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Observações sobre o participante..."
+                  className="bg-background resize-none"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Telefone</Label>
-              <Input
-                value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Histórico de alterações
+              </div>
+              <ScrollArea className="max-h-44 rounded-lg border p-3">
+                {editHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma alteração manual registrada até agora.
+                  </p>
+                ) : (
+                  <ol className="relative space-y-4 border-l pl-4">
+                    {editHistory.map((entry, idx) => (
+                      <li key={idx} className="relative">
+                        <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
+                        <p className="text-sm font-medium">{entry.by_name || "Usuário"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.at
+                            ? format(new Date(entry.at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                            : ""}
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {(entry.changes || []).map((c: any, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">
+                              <span className="text-foreground">{c.field}:</span>{" "}
+                              <span className="line-through">{c.from || "vazio"}</span> →{" "}
+                              <span className="text-foreground">{c.to || "vazio"}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </ScrollArea>
             </div>
           </div>
 
