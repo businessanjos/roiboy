@@ -153,7 +153,7 @@ export default function MentoriaEC() {
 
       const fetchChunked = async <T,>(
         label: string,
-        run: (ids: string[]) => Promise<{ data: T[] | null; error: any }>,
+        run: (ids: string[]) => any,
       ): Promise<T[]> => {
         const results = await Promise.all(idChunks.map((ids) => run(ids)));
         const rows: T[] = [];
