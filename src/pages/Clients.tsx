@@ -287,6 +287,11 @@ export default function Clients() {
   const [filterSpecialty, setFilterSpecialty] = usePersistedFilter<string>("clients", "specialty", "all");
   const [filterRevenueMissing, setFilterRevenueMissing] = usePersistedFilter<string>("clients", "revenueMissing", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
+  // Período (última atualização do cliente)
+  const [filterPeriod, setFilterPeriod] = usePersistedFilter<string>("clients", "period", "all");
+  const [filterPeriodStart, setFilterPeriodStart] = usePersistedFilter<string>("clients", "periodStart", "");
+  const [filterPeriodEnd, setFilterPeriodEnd] = usePersistedFilter<string>("clients", "periodEnd", "");
+  const [periodPopoverOpen, setPeriodPopoverOpen] = useState(false);
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
   const [specialtyOptions, setSpecialtyOptions] = useState<string[]>([]);
