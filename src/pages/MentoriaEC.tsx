@@ -111,31 +111,13 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      // Carteira ativa: todos os clientes ativos da conta (paginado, sem teto de 1000)
       const PAGE = 1000;
-      const clients: any[] = [];
-      for (let page = 0; page < 20; page++) {
-        const { data, error: clErr } = await supabase
-          .from("clients")
-          .select("id, full_name, logo_url, business_segment, status")
-          .eq("account_id", accountId!)
-          .in("status", ACTIVE_CLIENT_STATUSES)
-          .order("id")
-          .range(page * PAGE, page * PAGE + PAGE - 1);
-        if (clErr) throw clErr;
-        clients.push(...(data || []));
-        if (!data || data.length < PAGE) break;
-      }
-
-      const clientIds = (clients || []).map((c) => c.id);
-      if (clientIds.length === 0) return [];
 
       const chunk = <T,>(arr: T[], size: number): T[][] => {
         const out: T[][] = [];
         for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
         return out;
       };
-      const idChunks = chunk(clientIds, 200);
 
       const fetchAllPages = async (label: string, build: (from: number, to: number) => any) => {
         const rows: any[] = [];
@@ -150,6 +132,22 @@ export default function MentoriaEC() {
         }
         return rows;
       };
+
+      // Universo = clientes com contrato ATIVO (mesma régua da tela de Clientes)
+      const contracts = await fetchAllPages("contratos", (from, to) =>
+        supabase
+          .from("client_contracts")
+          .select("client_id, end_date, status, product_id")
+          .eq("account_id", accountId!)
+          .eq("status", "active")
+          .order("id")
+          .range(from, to),
+      );
+
+      const clientIds = [...new Set(contracts.map((c: any) => c.client_id).filter(Boolean))];
+      if (clientIds.length === 0) return [];
+
+      const idChunks = chunk(clientIds as string[], 200);
 
       const fetchChunked = async <T,>(
         label: string,
@@ -167,18 +165,9 @@ export default function MentoriaEC() {
         return rows;
       };
 
-      const [contracts, links, productsRes, attendance, statuses] = await Promise.all([
-        fetchAllPages("contratos", (from, to) =>
-          supabase
-            .from("client_contracts")
-            .select("client_id, end_date, status, product_id")
-            .eq("account_id", accountId!)
-            .eq("status", "active")
-            .order("id")
-            .range(from, to),
-        ),
-        fetchChunked<any>("produtos do cliente", (ids) =>
-          supabase.from("client_products").select("client_id, product_id").eq("is_active", true).in("client_id", ids),
+      const [clients, productsRes, attendance, statuses] = await Promise.all([
+        fetchChunked<any>("clientes", (ids) =>
+          supabase.from("clients").select("id, full_name, logo_url, business_segment, status").in("id", ids),
         ),
         supabase.from("products").select("id, name, color"),
         fetchChunked<any>("presenças", (ids) =>
@@ -188,13 +177,8 @@ export default function MentoriaEC() {
             .in("client_id", ids)
             .order("session_date", { ascending: false }),
         ),
-        fetchAllPages("situação", (from, to) =>
-          supabase
-            .from("ec_mentoring_client_status")
-            .select("client_id, status")
-            .eq("account_id", accountId!)
-            .order("client_id")
-            .range(from, to),
+        fetchChunked<any>("situação", (ids) =>
+          supabase.from("ec_mentoring_client_status").select("client_id, status").in("client_id", ids),
         ),
       ]);
       if (productsRes.error) console.error("[MentoriaEC] falha ao carregar produtos:", productsRes.error);
@@ -204,7 +188,7 @@ export default function MentoriaEC() {
         (products || []).map((p: any) => [p.id, { name: p.name, color: p.color ?? null }]),
       );
 
-      // Contrato ativo tem prioridade (traz o fim do contrato); fallback: produto vinculado ao cliente
+      // Havendo mais de um contrato ativo, prevalece o de término mais distante
       const byClient = new Map<string, { endDate: string | null; productId: string | null }>();
       (contracts || []).forEach((c: any) => {
         const prev = byClient.get(c.client_id);
@@ -212,11 +196,7 @@ export default function MentoriaEC() {
           byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
         }
       });
-      (links || []).forEach((l: any) => {
-        if (!byClient.has(l.client_id)) {
-          byClient.set(l.client_id, { endDate: null, productId: l.product_id });
-        }
-      });
+
 
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
