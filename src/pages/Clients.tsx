@@ -1470,6 +1470,7 @@ export default function Clients() {
     filterArea !== "all",
     filterSpecialty !== "all",
     filterRevenueMissing !== "all",
+    !!periodRange,
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
