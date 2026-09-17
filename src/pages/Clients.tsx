@@ -930,7 +930,7 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab, filterPeriod, filterPeriodStart, filterPeriodEnd]);
 
   // Fetch client stages when account is available
   useEffect(() => {
