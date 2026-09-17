@@ -129,6 +129,7 @@ export default function EventParticipantsTab({
   isLocked
 }: EventParticipantsTabProps) {
   const { toast } = useToast();
+  const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
