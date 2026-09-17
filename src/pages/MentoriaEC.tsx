@@ -122,41 +122,61 @@ export default function MentoriaEC() {
       const clientIds = (clients || []).map((c) => c.id);
       if (clientIds.length === 0) return [];
 
-      const [
-        { data: contracts, error: cErr },
-        { data: links, error: lErr },
-        { data: products, error: pErr },
-        { data: attendance, error: aErr },
-        { data: statuses, error: sErr },
-      ] = await Promise.all([
+      const chunk = <T,>(arr: T[], size: number): T[][] => {
+        const out: T[][] = [];
+        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+        return out;
+      };
+      const idChunks = chunk(clientIds, 200);
+
+      const fetchChunked = async <T,>(
+        label: string,
+        run: (ids: string[]) => Promise<{ data: T[] | null; error: any }>,
+      ): Promise<T[]> => {
+        const results = await Promise.all(idChunks.map((ids) => run(ids)));
+        const rows: T[] = [];
+        for (const r of results) {
+          if (r.error) {
+            console.error(`[MentoriaEC] falha ao carregar ${label}:`, r.error);
+            continue;
+          }
+          if (r.data) rows.push(...r.data);
+        }
+        return rows;
+      };
+
+      const [contracts, links, productsRes, attendance, statuses] = await Promise.all([
         supabase
           .from("client_contracts")
           .select("client_id, end_date, status, product_id")
           .eq("account_id", accountId!)
           .eq("status", "active")
-          .in("client_id", clientIds),
-        supabase
-          .from("client_products")
-          .select("client_id, product_id")
-          .eq("is_active", true)
-          .in("client_id", clientIds),
+          .then((r) => {
+            if (r.error) console.error("[MentoriaEC] falha ao carregar contratos:", r.error);
+            return r.data ?? [];
+          }),
+        fetchChunked<any>("produtos do cliente", (ids) =>
+          supabase.from("client_products").select("client_id, product_id").eq("is_active", true).in("client_id", ids),
+        ),
         supabase.from("products").select("id, name, color"),
-        supabase
-          .from("ec_mentoring_attendance")
-          .select("client_id, session_date")
-          .in("client_id", clientIds)
-          .order("session_date", { ascending: false }),
+        fetchChunked<any>("presenças", (ids) =>
+          supabase
+            .from("ec_mentoring_attendance")
+            .select("client_id, session_date")
+            .in("client_id", ids)
+            .order("session_date", { ascending: false }),
+        ),
         supabase
           .from("ec_mentoring_client_status")
           .select("client_id, status")
           .eq("account_id", accountId!)
-          .in("client_id", clientIds),
+          .then((r) => {
+            if (r.error) console.error("[MentoriaEC] falha ao carregar situação:", r.error);
+            return r.data ?? [];
+          }),
       ]);
-      if (cErr) throw cErr;
-      if (lErr) throw lErr;
-      if (pErr) throw pErr;
-      if (aErr) throw aErr;
-      if (sErr) throw sErr;
+      if (productsRes.error) console.error("[MentoriaEC] falha ao carregar produtos:", productsRes.error);
+      const products = productsRes.data ?? [];
 
       const productMeta = new Map<string, { name: string; color: string | null }>(
         (products || []).map((p: any) => [p.id, { name: p.name, color: p.color ?? null }]),
