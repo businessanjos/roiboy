@@ -137,6 +137,20 @@ export default function MentoriaEC() {
       };
       const idChunks = chunk(clientIds, 200);
 
+      const fetchAllPages = async (label: string, build: (from: number, to: number) => any) => {
+        const rows: any[] = [];
+        for (let page = 0; page < 20; page++) {
+          const { data, error } = await build(page * PAGE, page * PAGE + PAGE - 1);
+          if (error) {
+            console.error(`[MentoriaEC] falha ao carregar ${label}:`, error);
+            break;
+          }
+          rows.push(...(data || []));
+          if (!data || data.length < PAGE) break;
+        }
+        return rows;
+      };
+
       const fetchChunked = async <T,>(
         label: string,
         run: (ids: string[]) => Promise<{ data: T[] | null; error: any }>,
