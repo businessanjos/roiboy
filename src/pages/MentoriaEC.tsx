@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 // O filtro de programa usa o id do produto (montado dinamicamente a partir da carteira ativa)
 type ProgramFilter = string; // "all" | productId | "__none__"
 
-const ACTIVE_CLIENT_STATUSES = ["active", "paused", "churn_risk"] as const;
+
 
 
 type MentorshipStatus =
