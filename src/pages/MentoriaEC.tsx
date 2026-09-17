@@ -488,7 +488,8 @@ export default function MentoriaEC() {
           )}
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[320px]">
+
               <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
               {programOptions.noneCount > 0 && (
                 <SelectItem value="__none__">Sem programa ({programOptions.noneCount})</SelectItem>
