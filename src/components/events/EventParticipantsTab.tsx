@@ -390,7 +390,33 @@ export default function EventParticipantsTab({
     }
 
     if (!error) {
-      const payload: any = { notes: editNotes.trim() || null };
+      const before = editSnapshotRef.current;
+      const changes = [
+        { field: "Nome", from: before.name, to: editName.trim() },
+        { field: "Email", from: before.email, to: editEmail.trim() },
+        { field: "Telefone", from: before.phone, to: editPhone.trim() },
+        { field: "Observações", from: before.notes, to: editNotes.trim() },
+      ].filter((c) => (c.from || "") !== (c.to || ""));
+
+      const history = Array.isArray(editParticipant.custom_data?.edit_history)
+        ? editParticipant.custom_data.edit_history
+        : [];
+      const nextHistory = changes.length
+        ? [
+            {
+              at: new Date().toISOString(),
+              by_id: currentUser?.id || null,
+              by_name: currentUser?.name || currentUser?.email || "Usuário",
+              changes,
+            },
+            ...history,
+          ].slice(0, 30)
+        : history;
+
+      const payload: any = {
+        notes: editNotes.trim() || null,
+        custom_data: { ...(editParticipant.custom_data || {}), edit_history: nextHistory },
+      };
       if (!editParticipant.client_id) {
         payload.guest_name = editName.trim();
         payload.guest_email = editEmail.trim() || null;
