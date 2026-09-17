@@ -2600,6 +2600,21 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {periodRange && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Período: {periodLabel}
+                    <button
+                      onClick={() => {
+                        setFilterPeriod("all");
+                        setFilterPeriodStart("");
+                        setFilterPeriodEnd("");
+                      }}
+                      className="hover:text-destructive"
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
                 {filterRevenueMissing !== "all" && (
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     {filterRevenueMissing === "initial"
