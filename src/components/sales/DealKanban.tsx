@@ -32,7 +32,10 @@ interface DealKanbanProps {
   onDealClick: (deal: Deal) => void;
   onDealMove: (dealId: string, newStageId: string) => Promise<boolean>;
   showActivityCounts?: boolean;
+  /** Em tela cheia: o quadro ocupa toda a altura disponível do contêiner pai. */
+  fullHeight?: boolean;
 }
+
 
 interface RequiredFieldsModalState {
   open: boolean;
