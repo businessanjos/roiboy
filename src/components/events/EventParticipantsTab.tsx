@@ -52,6 +52,7 @@ import {
   FileSpreadsheet,
   AlertCircle,
   Martini,
+  Pencil,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
@@ -147,6 +148,14 @@ export default function EventParticipantsTab({
   // List filters
   const [statusFilter, setStatusFilter] = useState<ParticipantFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
+
+  // Edit participant state
+  const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
 
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -325,6 +334,83 @@ export default function EventParticipantsTab({
       toast({ title: "Erro", description: "Não foi possível atualizar o coquetel", variant: "destructive" });
     } else {
       toast({ title: next ? "Adicionado ao coquetel" : "Removido do coquetel" });
+      fetchParticipants();
+      onUpdate?.();
+    }
+  };
+
+  const openEditDialog = (p: Participant) => {
+    const clientEmails = p.clients?.emails;
+    const clientEmail = Array.isArray(clientEmails) && clientEmails.length > 0
+      ? (typeof clientEmails[0] === "object" ? clientEmails[0]?.email : clientEmails[0])
+      : "";
+    setEditParticipant(p);
+    setEditName(p.clients?.full_name || p.guest_name || "");
+    setEditEmail(p.clients ? (clientEmail || "") : (p.guest_email || ""));
+    setEditPhone(p.clients?.phone_e164 || p.guest_phone || "");
+    setEditNotes(p.notes || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editParticipant) return;
+    if (!editName.trim()) {
+      toast({ title: "Erro", description: "O nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    setSavingEdit(true);
+
+    let error: any = null;
+
+    if (editParticipant.client_id) {
+      // Cliente cadastrado: atualiza a ficha do cliente e as observações do participante
+      const existing = Array.isArray(editParticipant.clients?.emails)
+        ? [...(editParticipant.clients?.emails as any[])]
+        : [];
+      const emailValue = editEmail.trim();
+      let emails: any[] = existing;
+      if (emailValue) {
+        if (existing.length > 0 && typeof existing[0] === "object") {
+          emails = [{ ...existing[0], email: emailValue }, ...existing.slice(1)];
+        } else if (existing.length > 0) {
+          emails = [emailValue, ...existing.slice(1)];
+        } else {
+          emails = [{ email: emailValue }];
+        }
+      }
+
+      const { error: clientError } = await supabase
+        .from("clients")
+        .update({
+          full_name: editName.trim(),
+          phone_e164: editPhone.trim() || null,
+          emails,
+        })
+        .eq("id", editParticipant.client_id);
+      error = clientError;
+    }
+
+    if (!error) {
+      const payload: any = { notes: editNotes.trim() || null };
+      if (!editParticipant.client_id) {
+        payload.guest_name = editName.trim();
+        payload.guest_email = editEmail.trim() || null;
+        payload.guest_phone = editPhone.trim() || null;
+      }
+      const { error: participantError } = await supabase
+        .from("event_participants")
+        .update(payload)
+        .eq("id", editParticipant.id);
+      error = participantError;
+    }
+
+    setSavingEdit(false);
+
+    if (error) {
+      console.error("[EventParticipantsTab] edit error:", error);
+      toast({ title: "Erro", description: "Não foi possível salvar as alterações", variant: "destructive" });
+    } else {
+      toast({ title: "Participante atualizado" });
+      setEditParticipant(null);
       fetchParticipants();
       onUpdate?.();
     }
@@ -770,6 +856,9 @@ export default function EventParticipantsTab({
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'no_show')}>
                               <X className="h-4 w-4 mr-2 text-muted-foreground" /> Não Compareceu
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => openEditDialog(p)}>
+                              <Pencil className="h-4 w-4 mr-2 text-muted-foreground" /> Editar contato
+                            </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => toggleCoquetel(p)}>
                               <Martini className="h-4 w-4 mr-2 text-primary" />
                               {isCoquetel(p) ? "Remover do coquetel" : "Coquetel"}
@@ -903,6 +992,58 @@ export default function EventParticipantsTab({
             <Button onClick={handleAddParticipant}>
               <UserPlus className="h-4 w-4 mr-2" />
               Convidar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Participant Dialog */}
+      <Dialog open={!!editParticipant} onOpenChange={(open) => !open && setEditParticipant(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar participante</DialogTitle>
+            <DialogDescription>
+              {editParticipant?.client_id
+                ? "As alterações de nome, e-mail e telefone atualizam também a ficha do cliente."
+                : "Atualize os dados de contato do convidado."}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Nome *</Label>
+              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            </div>
+            <div className="space-y-2">
+              <Label>Email</Label>
+              <Input
+                type="email"
+                value={editEmail}
+                onChange={(e) => setEditEmail(e.target.value)}
+                placeholder="email@exemplo.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone</Label>
+              <Input
+                value={editPhone}
+                onChange={(e) => setEditPhone(e.target.value)}
+                placeholder="(11) 99999-9999"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Observações</Label>
+              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditParticipant(null)} disabled={savingEdit}>
+              Cancelar
+            </Button>
+            <Button onClick={handleSaveEdit} disabled={savingEdit}>
+              {savingEdit ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Pencil className="h-4 w-4 mr-2" />}
+              Salvar
             </Button>
           </DialogFooter>
         </DialogContent>
