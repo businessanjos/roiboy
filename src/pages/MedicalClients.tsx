@@ -497,7 +497,7 @@ export default function MedicalClients() {
                   </TableRow>
                   {expanded[c.id] && (
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={5} className="p-4">
+                      <TableCell colSpan={6} className="p-4">
                         <div className="space-y-4">
                           <div>
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
