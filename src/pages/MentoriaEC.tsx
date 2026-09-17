@@ -81,10 +81,8 @@ export default function MentoriaEC() {
   const [doneFilter, setDoneFilter] = useState<DoneFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
   const [searchParams, setSearchParams] = useSearchParams();
-  const programFilter = ((): ProgramFilter => {
-    const v = searchParams.get("program");
-    return v === "EC" || v === "RM" ? v : "all";
-  })();
+  const programFilter: ProgramFilter = searchParams.get("program") || "all";
+
   const setProgramFilter = (v: ProgramFilter) => {
     const next = new URLSearchParams(searchParams);
     if (v === "all") next.delete("program");
