@@ -342,6 +342,7 @@ export default function EventParticipantsTab({
         emailValue,
         p.clients?.phone_e164 || p.guest_phone || "",
         rsvpStatusConfig[p.rsvp_status].label,
+        isCoquetel(p) ? "Sim" : "Não",
         eventScheduledAt ? format(new Date(eventScheduledAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
         p.notes || ""
       ];
