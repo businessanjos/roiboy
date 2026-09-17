@@ -198,6 +198,18 @@ export default function SalesPipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
+  const [isPipelineFullscreen, setIsPipelineFullscreen] = useState(false);
+
+  // Esc sai da tela cheia do funil
+  useEffect(() => {
+    if (!isPipelineFullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsPipelineFullscreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPipelineFullscreen]);
+
 
   // Defer full leads loading until prospeccao tab is active
   const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads({ enabled: mainTab === 'prospeccao' });
