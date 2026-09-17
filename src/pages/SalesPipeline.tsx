@@ -2564,9 +2564,16 @@ export default function SalesPipeline() {
             <LeadsTab />
           </TabsContent>
 
-          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+          <TabsContent
+            value="pipeline"
+            className={cn(
+              "mt-3 sm:mt-4 space-y-3 sm:space-y-4",
+              isPipelineFullscreen && "flex-1 min-h-0 flex flex-col space-y-2 mt-2"
+            )}
+          >
             {/* Pipeline Selector + Sub-tabs Row */}
-            <div className="space-y-3">
+            <div className={cn("space-y-3", isPipelineFullscreen && "hidden")}>
+
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
                 <div className={cn("flex flex-col gap-2", (isMobile || filtersCollapsed) && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
