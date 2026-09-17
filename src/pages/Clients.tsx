@@ -464,6 +464,7 @@ export default function Clients() {
       if (filterSpecialty !== "all") baseParams["specialty"] = filterSpecialty;
       if (filterRevenueMissing !== "all") baseParams["revenue_missing"] = filterRevenueMissing;
       baseParams["sort"] = sortOrder;
+      applyPeriodParams(baseParams);
 
       const pageSize = 200;
       let allClients: any[] = [];
