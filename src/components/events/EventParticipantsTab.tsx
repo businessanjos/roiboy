@@ -312,8 +312,26 @@ export default function EventParticipantsTab({
     }
   };
 
+  const isCoquetel = (p: Participant) => p.custom_data?.coquetel === true;
+
+  const toggleCoquetel = async (p: Participant) => {
+    const next = !isCoquetel(p);
+    const { error } = await supabase
+      .from("event_participants")
+      .update({ custom_data: { ...(p.custom_data || {}), coquetel: next } })
+      .eq("id", p.id);
+
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível atualizar o coquetel", variant: "destructive" });
+    } else {
+      toast({ title: next ? "Adicionado ao coquetel" : "Removido do coquetel" });
+      fetchParticipants();
+      onUpdate?.();
+    }
+  };
+
   const exportCSV = () => {
-    const headers = ["Nome", "Email", "Telefone", "Status", "Data do Evento", "Notas"];
+    const headers = ["Nome", "Email", "Telefone", "Status", "Coquetel", "Data do Evento", "Notas"];
     const rows = participants.map(p => {
       const clientEmails = p.clients?.emails;
       const emailValue = Array.isArray(clientEmails) && clientEmails.length > 0 && typeof clientEmails[0] === 'object'
