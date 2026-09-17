@@ -51,7 +51,7 @@ const RELEVANT_FIELD_IDS = [
   "a82dfd9a-4e3a-4e26-98c0-62a864c3ecb5", // Área de atuação
 ];
 
-const MENTORSHIP_PRODUCT_PATTERNS = ["ryka", "eternum", "mvp", "private"];
+
 
 type Classification = "doctor" | "dentist" | null;
 
@@ -104,12 +104,45 @@ Deno.serve(async (req) => {
       });
     }
 
-    // 1) All non-inactive clients in this account with their (mentorship) products
-    const { data: clients } = await supabase
-      .from("clients")
-      .select("*, client_products(product_id, is_active, products(name, color)), responsible:users!clients_responsible_user_id_fkey(name)")
-      .eq("account_id", accountId)
-      .in("status", ["active", "churn_risk"]);
+    // 1) Universo = clientes com CONTRATO ATIVO (mesma régua das telas de Clientes e Mentoria)
+    const contracts: any[] = [];
+    {
+      const PAGE = 1000;
+      for (let from = 0; ; from += PAGE) {
+        const { data: page, error: err } = await supabase
+          .from("client_contracts")
+          .select("client_id, end_date, product_id, products(name, color)")
+          .eq("account_id", accountId)
+          .eq("status", "active")
+          .order("client_id", { ascending: true })
+          .range(from, from + PAGE - 1);
+        if (err) throw err;
+        contracts.push(...(page ?? []));
+        if (!page || page.length < PAGE) break;
+      }
+    }
+
+    // Contrato vigente por cliente (maior end_date quando houver mais de um)
+    const contractByClient = new Map<string, any>();
+    for (const ct of contracts) {
+      const prev = contractByClient.get(ct.client_id);
+      if (!prev || String(ct.end_date ?? "") > String(prev.end_date ?? "")) {
+        contractByClient.set(ct.client_id, ct);
+      }
+    }
+    const activeClientIds = Array.from(contractByClient.keys());
+
+    const clients: any[] = [];
+    for (let i = 0; i < activeClientIds.length; i += 200) {
+      const ids = activeClientIds.slice(i, i + 200);
+      const { data: page, error: err } = await supabase
+        .from("clients")
+        .select("*, responsible:users!clients_responsible_user_id_fkey(name)")
+        .in("id", ids);
+      if (err) throw err;
+      clients.push(...(page ?? []));
+    }
+
 
     // Campos da ficha que não fazem sentido expor na sincronização
     const HIDDEN_COLUMNS = new Set([
@@ -155,16 +188,13 @@ Deno.serve(async (req) => {
     };
 
     const clientList = (clients ?? []).map((c: any) => {
-      // Considera apenas vínculos de produto ativos (toggle na ficha do cliente)
-      const activeProducts = (c.client_products ?? []).filter((cp: any) => cp.is_active !== false);
-      const productNames: string[] = activeProducts
-        .map((cp: any) => cp.products?.name)
+      const contract = contractByClient.get(c.id);
+      const program: string | null = contract?.products?.name ?? null;
+      const programColor: string = contract?.products?.color || "#6b7280";
+      const practiceAreas: string[] = String(c.business_niche ?? "")
+        .split(",")
+        .map((s: string) => s.trim())
         .filter(Boolean);
-      const productColors: Record<string, string> = {};
-      for (const cp of activeProducts) {
-        if (cp.products?.name) productColors[cp.products.name] = cp.products.color || "#6b7280";
-      }
-
 
       // Todos os campos da ficha (fonte única), já formatados
       const recordFields = Object.keys(c)
@@ -188,15 +218,14 @@ Deno.serve(async (req) => {
         city: c.city,
         state: c.state,
         recordFields,
-        products: productNames,
-        productColors,
-        isMentorship: productNames.some((n) =>
-          MENTORSHIP_PRODUCT_PATTERNS.some((p) => n.toLowerCase().includes(p)),
-        ),
+        program,
+        programColor,
+        practiceAreas,
       };
     });
 
-    const mentorshipClientIds = clientList.filter((c) => c.isMentorship).map((c) => c.id);
+    const mentorshipClientIds = clientList.map((c) => c.id);
+
 
     // 2) Todos os campos personalizados preenchidos (sincronização completa)
     const fieldValues: any[] = [];
@@ -254,8 +283,8 @@ Deno.serve(async (req) => {
 
     // 3) Compile final list: a ficha do cliente (cadastro) é a fonte autoritativa.
     const result = clientList
-      .filter((c) => c.isMentorship)
       .map((c) => {
+
         const evidence: Ev[] = [...(evidenceByClient.get(c.id) ?? [])];
         const eduKind = classify(c.education);
         if (eduKind) {
@@ -286,8 +315,8 @@ Deno.serve(async (req) => {
 
         return { ...c, evidence, kind, customFields: customByClient.get(c.id) ?? [] };
       })
-      .filter((c) => c.kind !== null)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+
 
 
     return new Response(

@@ -25,19 +25,24 @@ type MedicalClient = {
   phone_e164?: string | null;
   city?: string | null;
   state?: string | null;
-  products: string[];
-  productColors: Record<string, string>;
+  program: string | null;
+  programColor: string;
+  practiceAreas: string[];
   evidence: Evidence[];
   recordFields?: FieldEntry[];
   customFields?: FieldEntry[];
 };
 
 
+
 export default function MedicalClients() {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<MedicalClient[]>([]);
   const [search, setSearch] = useState("");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
+  const [educationFilter, setEducationFilter] = useState<string>("all");
+
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
@@ -111,11 +116,37 @@ export default function MedicalClients() {
   }, [load, scheduleReload]);
 
 
-  const products = useMemo(() => {
-    const s = new Set<string>();
-    clients.forEach((c) => c.products.forEach((p) => s.add(p)));
-    return Array.from(s).sort();
+  const programs = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      const key = c.program ?? "__none__";
+      m.set(key, (m.get(key) ?? 0) + 1);
+    });
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
   }, [clients]);
+
+  const areas = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      (c.practiceAreas ?? []).forEach((a) => m.set(a, (m.get(a) ?? 0) + 1));
+    });
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+  }, [clients]);
+
+  const educationBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      const key = (c.education ?? "").trim();
+      if (!key) return;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    });
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [clients]);
+
+  const identifiedCount = useMemo(
+    () => clients.filter((c) => (c.education ?? "").trim() !== "").length,
+    [clients],
+  );
 
   const sources = useMemo(() => {
     const s = new Set<string>();
@@ -126,7 +157,9 @@ export default function MedicalClients() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return clients.filter((c) => {
-      if (productFilter !== "all" && !c.products.includes(productFilter)) return false;
+      if (programFilter !== "all" && (c.program ?? "__none__") !== programFilter) return false;
+      if (areaFilter !== "all" && !(c.practiceAreas ?? []).includes(areaFilter)) return false;
+      if (educationFilter !== "all" && (c.education ?? "").trim() !== educationFilter) return false;
       if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
       if (classificationFilter === "unclassified" && (c.education || c.education_specialty)) return false;
       if (classificationFilter === "classified" && !c.education && !c.education_specialty) return false;
@@ -136,7 +169,8 @@ export default function MedicalClients() {
         c.full_name,
         c.education ?? "",
         c.education_specialty ?? "",
-        ...c.products,
+        c.program ?? "",
+        ...(c.practiceAreas ?? []),
         ...c.evidence.map((e) => `${e.field ?? ""} ${e.text}`),
         ...(c.recordFields ?? []).map((f) => `${f.label} ${f.value}`),
         ...(c.customFields ?? []).map((f) => `${f.label} ${f.value}`),
@@ -146,14 +180,17 @@ export default function MedicalClients() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [clients, search, productFilter, sourceFilter, classificationFilter]);
+  }, [clients, search, programFilter, areaFilter, educationFilter, sourceFilter, classificationFilter]);
+
 
   const exportCsv = () => {
     const rows = [
-      ["Nome", "Produtos", "Formação", "Especialidade", "Evidências", "Ficha do cliente", "Campos personalizados"],
+      ["Nome", "Programa", "Áreas de atuação", "Formação", "Especialidade", "Evidências", "Ficha do cliente", "Campos personalizados"],
       ...filtered.map((c) => [
         c.full_name,
-        c.products.join(" | "),
+        c.program ?? "",
+        (c.practiceAreas ?? []).join(" | "),
+
         c.education ?? "",
         c.education_specialty ?? "",
         c.evidence.map((e) => `[${e.source}${e.field ? ` · ${e.field}` : ""}] ${e.text}`).join(" || "),
@@ -185,8 +222,9 @@ export default function MedicalClients() {
             Área da saúde na Mentoria
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Clientes ativos das mentorias identificados na área da saúde via onboarding ou cadastro.
+            Todos os clientes com contrato ativo, com a formação já identificada e a que ainda falta preencher.
           </p>
+
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
@@ -200,12 +238,28 @@ export default function MedicalClients() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Total identificados</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Clientes ativos</div>
             <div className="text-3xl font-bold mt-1">
               {loading ? <Skeleton className="h-8 w-16" /> : clients.length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Identificados (formação)</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : identifiedCount}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Faltam identificar</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : clients.length - identifiedCount}
             </div>
           </CardContent>
         </Card>
@@ -217,15 +271,40 @@ export default function MedicalClients() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Produtos distintos</div>
-            <div className="text-3xl font-bold mt-1">
-              {loading ? <Skeleton className="h-8 w-16" /> : products.length}
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {!loading && educationBreakdown.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setEducationFilter("all")}
+            className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          >
+            Todas as formações ({clients.length})
+          </button>
+          {educationBreakdown.map(([label, count]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setEducationFilter(educationFilter === label ? "all" : label)}
+              className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === label ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+            >
+              {label} ({count})
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setClassificationFilter(classificationFilter === "unclassified" ? "all" : "unclassified")
+            }
+            className={`text-xs rounded-full border px-3 py-1 transition-colors ${classificationFilter === "unclassified" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          >
+            Sem formação ({clients.length - identifiedCount})
+          </button>
+        </div>
+      )}
+
+
 
       <Card>
         <CardContent className="p-4 flex flex-wrap gap-3">
@@ -233,24 +312,38 @@ export default function MedicalClients() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Buscar por nome, produto, especialidade ou evidência..."
+              placeholder="Buscar por nome, programa, área, especialidade ou evidência..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={productFilter} onValueChange={setProductFilter}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Produto" />
+          <Select value={programFilter} onValueChange={setProgramFilter}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Programa" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os produtos</SelectItem>
-              {products.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todos os programas ({clients.length})</SelectItem>
+              {programs.map(([name, count]) => (
+                <SelectItem key={name} value={name}>
+                  {name === "__none__" ? "Sem programa" : name} ({count})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Select value={areaFilter} onValueChange={setAreaFilter}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Área de atuação" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todas as áreas de atuação</SelectItem>
+              {areas.map(([name, count]) => (
+                <SelectItem key={name} value={name}>
+                  {name} ({count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Fonte da evidência" />
@@ -293,7 +386,9 @@ export default function MedicalClients() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Produtos</TableHead>
+                  <TableHead>Programa</TableHead>
+                  <TableHead>Áreas de atuação</TableHead>
+
                   <TableHead>Formação</TableHead>
                   <TableHead>Evidências</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
@@ -317,22 +412,35 @@ export default function MedicalClients() {
                     </TableCell>
 
                     <TableCell>
+                      {c.program ? (
+                        <Badge
+                          style={{
+                            backgroundColor: `${c.programColor ?? "#6b7280"}20`,
+                            color: c.programColor ?? "#6b7280",
+                            borderColor: `${c.programColor ?? "#6b7280"}60`,
+                          }}
+                          variant="outline"
+                        >
+                          {c.program}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sem programa</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {c.products.map((p) => (
-                          <Badge
-                            key={p}
-                            style={{
-                              backgroundColor: `${c.productColors[p] ?? "#6b7280"}20`,
-                              color: c.productColors[p] ?? "#6b7280",
-                              borderColor: `${c.productColors[p] ?? "#6b7280"}60`,
-                            }}
-                            variant="outline"
-                          >
-                            {p}
-                          </Badge>
-                        ))}
+                        {(c.practiceAreas ?? []).length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          (c.practiceAreas ?? []).map((a) => (
+                            <Badge key={a} variant="secondary" className="text-xs font-normal">
+                              {a}
+                            </Badge>
+                          ))
+                        )}
                       </div>
                     </TableCell>
+
                     <TableCell className="text-sm min-w-[240px]">
                       <div className="space-y-1.5">
                         <EducationSelect
@@ -389,7 +497,7 @@ export default function MedicalClients() {
                   </TableRow>
                   {expanded[c.id] && (
                     <TableRow className="bg-muted/30 hover:bg-muted/30">
-                      <TableCell colSpan={5} className="p-4">
+                      <TableCell colSpan={6} className="p-4">
                         <div className="space-y-4">
                           <div>
                             <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-2">
