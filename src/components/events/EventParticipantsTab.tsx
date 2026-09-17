@@ -51,6 +51,7 @@ import {
   Upload,
   FileSpreadsheet,
   AlertCircle,
+  Martini,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ import {
 import { Database } from "@/integrations/supabase/types";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
+type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
 
 interface Client {
   id: string;
@@ -85,6 +87,7 @@ interface Participant {
   waitlist_position: number | null;
   notes: string | null;
   rsvp_token: string | null;
+  custom_data?: Record<string, any> | null;
   clients?: Client;
 }
 
@@ -142,7 +145,7 @@ export default function EventParticipantsTab({
   const [notes, setNotes] = useState("");
 
   // List filters
-  const [statusFilter, setStatusFilter] = useState<EventRsvpStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ParticipantFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Import state
