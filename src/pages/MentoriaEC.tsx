@@ -168,15 +168,15 @@ export default function MentoriaEC() {
       };
 
       const [contracts, links, productsRes, attendance, statuses] = await Promise.all([
-        supabase
-          .from("client_contracts")
-          .select("client_id, end_date, status, product_id")
-          .eq("account_id", accountId!)
-          .eq("status", "active")
-          .then((r) => {
-            if (r.error) console.error("[MentoriaEC] falha ao carregar contratos:", r.error);
-            return r.data ?? [];
-          }),
+        fetchAllPages("contratos", (from, to) =>
+          supabase
+            .from("client_contracts")
+            .select("client_id, end_date, status, product_id")
+            .eq("account_id", accountId!)
+            .eq("status", "active")
+            .order("id")
+            .range(from, to),
+        ),
         fetchChunked<any>("produtos do cliente", (ids) =>
           supabase.from("client_products").select("client_id, product_id").eq("is_active", true).in("client_id", ids),
         ),
