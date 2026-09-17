@@ -283,8 +283,8 @@ Deno.serve(async (req) => {
 
     // 3) Compile final list: a ficha do cliente (cadastro) é a fonte autoritativa.
     const result = clientList
-      .filter((c) => c.isMentorship)
       .map((c) => {
+
         const evidence: Ev[] = [...(evidenceByClient.get(c.id) ?? [])];
         const eduKind = classify(c.education);
         if (eduKind) {
