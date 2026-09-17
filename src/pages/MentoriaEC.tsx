@@ -52,8 +52,9 @@ interface EcMember {
   attendanceCount: number;
   mentorshipStatus: MentorshipStatus | null;
   productId: string | null;
-  program: "EC" | "RM" | null;
   productLabel: string | null;
+  productColor: string | null;
+
 }
 
 const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; className: string }[] = [
