@@ -53,6 +53,7 @@ import {
   AlertCircle,
   Martini,
   Pencil,
+  History,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Database } from "@/integrations/supabase/types";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
 type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
