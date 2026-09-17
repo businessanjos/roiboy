@@ -2852,7 +2852,12 @@ export default function SalesPipeline() {
             <PipelineActivityLegend className="mb-2" />
 
             {/* Status sub-tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
+            >
+
               <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-9">
                 <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
                   <TrendingUp className="h-3.5 w-3.5" />
