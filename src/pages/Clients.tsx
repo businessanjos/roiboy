@@ -897,6 +897,7 @@ export default function Clients() {
       if (filterArea !== "all") p.set("area", filterArea);
       if (filterSpecialty !== "all") p.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
+      applyPeriodParams(p);
       return p;
     };
     try {
