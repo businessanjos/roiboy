@@ -238,12 +238,28 @@ export default function MedicalClients() {
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Total identificados</div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Clientes ativos</div>
             <div className="text-3xl font-bold mt-1">
               {loading ? <Skeleton className="h-8 w-16" /> : clients.length}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Identificados (formação)</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : identifiedCount}
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4">
+            <div className="text-xs text-muted-foreground uppercase tracking-wide">Faltam identificar</div>
+            <div className="text-3xl font-bold mt-1">
+              {loading ? <Skeleton className="h-8 w-16" /> : clients.length - identifiedCount}
             </div>
           </CardContent>
         </Card>
@@ -255,15 +271,40 @@ export default function MedicalClients() {
             </div>
           </CardContent>
         </Card>
-        <Card>
-          <CardContent className="p-4">
-            <div className="text-xs text-muted-foreground uppercase tracking-wide">Produtos distintos</div>
-            <div className="text-3xl font-bold mt-1">
-              {loading ? <Skeleton className="h-8 w-16" /> : products.length}
-            </div>
-          </CardContent>
-        </Card>
       </div>
+
+      {!loading && educationBreakdown.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            onClick={() => setEducationFilter("all")}
+            className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === "all" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          >
+            Todas as formações ({clients.length})
+          </button>
+          {educationBreakdown.map(([label, count]) => (
+            <button
+              key={label}
+              type="button"
+              onClick={() => setEducationFilter(educationFilter === label ? "all" : label)}
+              className={`text-xs rounded-full border px-3 py-1 transition-colors ${educationFilter === label ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+            >
+              {label} ({count})
+            </button>
+          ))}
+          <button
+            type="button"
+            onClick={() =>
+              setClassificationFilter(classificationFilter === "unclassified" ? "all" : "unclassified")
+            }
+            className={`text-xs rounded-full border px-3 py-1 transition-colors ${classificationFilter === "unclassified" ? "bg-primary text-primary-foreground border-primary" : "hover:bg-muted"}`}
+          >
+            Sem formação ({clients.length - identifiedCount})
+          </button>
+        </div>
+      )}
+
+
 
       <Card>
         <CardContent className="p-4 flex flex-wrap gap-3">
