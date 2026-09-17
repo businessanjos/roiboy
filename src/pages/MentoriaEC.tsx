@@ -490,8 +490,13 @@ export default function MentoriaEC() {
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
-              <SelectItem value="EC">Eternum Club ({totals.ec})</SelectItem>
-              <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
+              {programOptions.noneCount > 0 && (
+                <SelectItem value="__none__">Sem programa ({programOptions.noneCount})</SelectItem>
+              )}
+              {programOptions.list.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label} ({o.count})</SelectItem>
+              ))}
+
             </SelectContent>
           </Select>
           <Select value={practiceFilter} onValueChange={setPracticeFilter}>
