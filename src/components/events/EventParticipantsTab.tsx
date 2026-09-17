@@ -51,6 +51,7 @@ import {
   Upload,
   FileSpreadsheet,
   AlertCircle,
+  Martini,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ import {
 import { Database } from "@/integrations/supabase/types";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
+type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
 
 interface Client {
   id: string;
@@ -85,6 +87,7 @@ interface Participant {
   waitlist_position: number | null;
   notes: string | null;
   rsvp_token: string | null;
+  custom_data?: any;
   clients?: Client;
 }
 
@@ -142,7 +145,7 @@ export default function EventParticipantsTab({
   const [notes, setNotes] = useState("");
 
   // List filters
-  const [statusFilter, setStatusFilter] = useState<EventRsvpStatus | "all">("all");
+  const [statusFilter, setStatusFilter] = useState<ParticipantFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
   // Import state
@@ -309,8 +312,26 @@ export default function EventParticipantsTab({
     }
   };
 
+  const isCoquetel = (p: Participant) => p.custom_data?.coquetel === true;
+
+  const toggleCoquetel = async (p: Participant) => {
+    const next = !isCoquetel(p);
+    const { error } = await supabase
+      .from("event_participants")
+      .update({ custom_data: { ...(p.custom_data || {}), coquetel: next } })
+      .eq("id", p.id);
+
+    if (error) {
+      toast({ title: "Erro", description: "Não foi possível atualizar o coquetel", variant: "destructive" });
+    } else {
+      toast({ title: next ? "Adicionado ao coquetel" : "Removido do coquetel" });
+      fetchParticipants();
+      onUpdate?.();
+    }
+  };
+
   const exportCSV = () => {
-    const headers = ["Nome", "Email", "Telefone", "Status", "Data do Evento", "Notas"];
+    const headers = ["Nome", "Email", "Telefone", "Status", "Coquetel", "Data do Evento", "Notas"];
     const rows = participants.map(p => {
       const clientEmails = p.clients?.emails;
       const emailValue = Array.isArray(clientEmails) && clientEmails.length > 0 && typeof clientEmails[0] === 'object'
@@ -321,6 +342,7 @@ export default function EventParticipantsTab({
         emailValue,
         p.clients?.phone_e164 || p.guest_phone || "",
         rsvpStatusConfig[p.rsvp_status].label,
+        isCoquetel(p) ? "Sim" : "Não",
         eventScheduledAt ? format(new Date(eventScheduledAt), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "",
         p.notes || ""
       ];
@@ -484,6 +506,7 @@ export default function EventParticipantsTab({
     declined: participants.filter(p => p.rsvp_status === 'declined').length,
     attended: participants.filter(p => p.rsvp_status === 'attended').length,
     noShow: participants.filter(p => p.rsvp_status === 'no_show').length,
+    coquetel: participants.filter(p => isCoquetel(p)).length,
   };
 
   const filteredClients = clients.filter(c => 
@@ -491,7 +514,7 @@ export default function EventParticipantsTab({
     !participants.some(p => p.client_id === c.id)
   );
 
-  const filterCards: { key: EventRsvpStatus | "all"; label: string; value: number; color: string }[] = [
+  const filterCards: { key: ParticipantFilter; label: string; value: number; color: string }[] = [
     { key: "all", label: "Total", value: stats.total, color: "text-foreground" },
     { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-success" },
     { key: "attended", label: "Presentes", value: stats.attended, color: "text-success" },
@@ -499,10 +522,15 @@ export default function EventParticipantsTab({
     { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-info" },
     { key: "declined", label: "Recusados", value: stats.declined, color: "text-danger" },
     { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-muted-foreground" },
+    { key: "coquetel", label: "Coquetel", value: stats.coquetel, color: "text-primary" },
   ];
 
   const filteredParticipants = participants.filter((p) => {
-    if (statusFilter !== "all" && p.rsvp_status !== statusFilter) return false;
+    if (statusFilter === "coquetel") {
+      if (!isCoquetel(p)) return false;
+    } else if (statusFilter !== "all" && p.rsvp_status !== statusFilter) {
+      return false;
+    }
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
     const name = getParticipantName(p).toLowerCase();
@@ -514,14 +542,14 @@ export default function EventParticipantsTab({
   return (
     <div className="space-y-6">
       {/* Stats — clique para filtrar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {filterCards.map((c) => {
           const active = statusFilter === c.key;
           return (
             <button
               key={c.key}
               type="button"
-              onClick={() => setStatusFilter((prev) => (prev === c.key ? "all" : (c.key as EventRsvpStatus | "all")))}
+              onClick={() => setStatusFilter((prev) => (prev === c.key ? "all" : c.key))}
               aria-pressed={active}
               className={`text-left rounded-lg border bg-card text-card-foreground shadow-sm p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 active ? "ring-2 ring-primary border-primary" : ""
@@ -586,7 +614,7 @@ export default function EventParticipantsTab({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64"
               />
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as EventRsvpStatus | "all")}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ParticipantFilter)}>
                 <SelectTrigger className="w-44">
                   <SelectValue />
                 </SelectTrigger>
@@ -598,6 +626,7 @@ export default function EventParticipantsTab({
                   <SelectItem value="waitlist">Lista de Espera</SelectItem>
                   <SelectItem value="declined">Recusados</SelectItem>
                   <SelectItem value="no_show">Faltaram</SelectItem>
+                  <SelectItem value="coquetel">Coquetel</SelectItem>
                 </SelectContent>
               </Select>
               {(statusFilter !== "all" || searchQuery) && (
@@ -670,9 +699,16 @@ export default function EventParticipantsTab({
                             <p className={`font-medium ${p.client_id ? 'text-foreground hover:text-primary hover:underline' : ''}`}>
                               {getParticipantName(p)}
                             </p>
-                            {!p.client_id && (
-                              <Badge variant="outline" className="text-xs">Externo</Badge>
-                            )}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {!p.client_id && (
+                                <Badge variant="outline" className="text-xs">Externo</Badge>
+                              )}
+                              {isCoquetel(p) && (
+                                <Badge className="text-xs bg-primary/10 text-primary">
+                                  <Martini className="h-3 w-3 mr-1" /> Coquetel
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
@@ -733,6 +769,10 @@ export default function EventParticipantsTab({
                             </DropdownMenuItem>
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'no_show')}>
                               <X className="h-4 w-4 mr-2 text-muted-foreground" /> Não Compareceu
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleCoquetel(p)}>
+                              <Martini className="h-4 w-4 mr-2 text-primary" />
+                              {isCoquetel(p) ? "Remover do coquetel" : "Coquetel"}
                             </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => deleteParticipant(p.id)}
