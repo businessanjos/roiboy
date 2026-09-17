@@ -2513,8 +2513,20 @@ export default function SalesPipeline() {
               {mainTab === 'pipeline' && (
                 <>
                   <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Expandir em tela cheia - desktop */}
+                  <Button
+                    variant={isPipelineFullscreen ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="h-8 gap-1.5 hidden sm:inline-flex"
+                    onClick={() => setIsPipelineFullscreen((v) => !v)}
+                    title={isPipelineFullscreen ? "Reduzir (Esc)" : "Expandir em tela cheia"}
+                  >
+                    {isPipelineFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                    <span className="hidden lg:inline text-xs">{isPipelineFullscreen ? "Reduzir" : "Expandir"}</span>
+                  </Button>
                   {/* View toggle - desktop only */}
                   <div className="flex items-center border rounded-lg overflow-hidden">
+
 
                     <Button
                       variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
