@@ -1484,6 +1484,9 @@ export default function Clients() {
     setFilterRevenueMissing("all");
     setFilterArea("all");
     setFilterSpecialty("all");
+    setFilterPeriod("all");
+    setFilterPeriodStart("");
+    setFilterPeriodEnd("");
   };
 
   // Country options for the filter dropdown.
