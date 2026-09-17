@@ -188,16 +188,13 @@ Deno.serve(async (req) => {
     };
 
     const clientList = (clients ?? []).map((c: any) => {
-      // Considera apenas vínculos de produto ativos (toggle na ficha do cliente)
-      const activeProducts = (c.client_products ?? []).filter((cp: any) => cp.is_active !== false);
-      const productNames: string[] = activeProducts
-        .map((cp: any) => cp.products?.name)
+      const contract = contractByClient.get(c.id);
+      const program: string | null = contract?.products?.name ?? null;
+      const programColor: string = contract?.products?.color || "#6b7280";
+      const practiceAreas: string[] = String(c.business_niche ?? "")
+        .split(",")
+        .map((s: string) => s.trim())
         .filter(Boolean);
-      const productColors: Record<string, string> = {};
-      for (const cp of activeProducts) {
-        if (cp.products?.name) productColors[cp.products.name] = cp.products.color || "#6b7280";
-      }
-
 
       // Todos os campos da ficha (fonte única), já formatados
       const recordFields = Object.keys(c)
@@ -221,15 +218,14 @@ Deno.serve(async (req) => {
         city: c.city,
         state: c.state,
         recordFields,
-        products: productNames,
-        productColors,
-        isMentorship: productNames.some((n) =>
-          MENTORSHIP_PRODUCT_PATTERNS.some((p) => n.toLowerCase().includes(p)),
-        ),
+        program,
+        programColor,
+        practiceAreas,
       };
     });
 
-    const mentorshipClientIds = clientList.filter((c) => c.isMentorship).map((c) => c.id);
+    const mentorshipClientIds = clientList.map((c) => c.id);
+
 
     // 2) Todos os campos personalizados preenchidos (sincronização completa)
     const fieldValues: any[] = [];
