@@ -2902,7 +2902,9 @@ export default function SalesPipeline() {
                     onDealClick={handleDealClick}
                     onDealMove={handleDealMove}
                     showActivityCounts={activeFilterNeedsActivityCounts}
+                    fullHeight={isPipelineFullscreen}
                   />
+
                 ) : (
                   <DealListView 
                     deals={sortedOpenDeals} 
