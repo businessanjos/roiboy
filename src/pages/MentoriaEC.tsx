@@ -213,9 +213,8 @@ export default function MentoriaEC() {
         };
       });
     },
-
-    },
   });
+
 
   const statusMutation = useMutation({
     mutationFn: async ({ clientId, status }: { clientId: string; status: MentorshipStatus }) => {
