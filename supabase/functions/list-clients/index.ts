@@ -95,6 +95,14 @@ Deno.serve(async (req) => {
     // "initial" | "current" | "any" — isola clientes sem faturamento preenchido
     // (nulo ou zero) para mutirão de preenchimento no CS.
     const revenueMissing = url.searchParams.get("revenue_missing") || "";
+    // Filtro de período sobre a última atualização do cliente (recent_activity_at)
+    const isoOrEmpty = (v: string | null) => {
+      if (!v) return "";
+      const d = new Date(v);
+      return isNaN(d.getTime()) ? "" : d.toISOString();
+    };
+    const updatedFrom = isoOrEmpty(url.searchParams.get("updated_from"));
+    const updatedTo = isoOrEmpty(url.searchParams.get("updated_to"));
 
 
     // Native (DB-orderable) sort mapping.
@@ -532,6 +540,10 @@ Deno.serve(async (req) => {
         );
       }
 
+
+      // Período pela última movimentação registrada na ficha do cliente.
+      if (updatedFrom) q = q.gte("recent_activity_at", updatedFrom);
+      if (updatedTo) q = q.lte("recent_activity_at", updatedTo);
 
       return q;
     };

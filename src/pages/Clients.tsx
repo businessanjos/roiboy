@@ -35,7 +35,7 @@ import { CustomFieldsManager, CustomField, FieldOption, FieldValueEditor } from 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
-import { format } from "date-fns";
+import { format, startOfDay, endOfDay, startOfMonth, endOfMonth, subDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
@@ -287,9 +287,66 @@ export default function Clients() {
   const [filterSpecialty, setFilterSpecialty] = usePersistedFilter<string>("clients", "specialty", "all");
   const [filterRevenueMissing, setFilterRevenueMissing] = usePersistedFilter<string>("clients", "revenueMissing", "all");
   const [sortOrder, setSortOrder] = usePersistedFilter<string>("clients", "sortOrder", "recent");
+  // Período (última atualização do cliente)
+  const [filterPeriod, setFilterPeriod] = usePersistedFilter<string>("clients", "period", "all");
+  const [filterPeriodStart, setFilterPeriodStart] = usePersistedFilter<string>("clients", "periodStart", "");
+  const [filterPeriodEnd, setFilterPeriodEnd] = usePersistedFilter<string>("clients", "periodEnd", "");
+  const [periodPopoverOpen, setPeriodPopoverOpen] = useState(false);
   const [activeTab, setActiveTab] = usePersistedFilter<string>("clients", "activeTab", "active");
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
   const [specialtyOptions, setSpecialtyOptions] = useState<string[]>([]);
+
+  // Intervalo do filtro de período (baseado na última atualização do cliente)
+  const periodRange = (() => {
+    const now = new Date();
+    switch (filterPeriod) {
+      case "today":
+        return { from: startOfDay(now), to: endOfDay(now) };
+      case "7d":
+        return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
+      case "30d":
+        return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
+      case "this_month":
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+      case "last_month": {
+        const prev = subMonths(now, 1);
+        return { from: startOfMonth(prev), to: endOfMonth(prev) };
+      }
+      case "custom": {
+        if (!filterPeriodStart || !filterPeriodEnd) return null;
+        return { from: startOfDay(new Date(filterPeriodStart)), to: endOfDay(new Date(filterPeriodEnd)) };
+      }
+      default:
+        return null;
+    }
+  })();
+
+  const PERIOD_LABELS: Record<string, string> = {
+    today: "Hoje",
+    "7d": "Últimos 7 dias",
+    "30d": "Últimos 30 dias",
+    this_month: "Mês atual",
+    last_month: "Mês passado",
+    custom: "Personalizado",
+  };
+
+  const periodLabel =
+    filterPeriod === "custom" && periodRange
+      ? `${format(periodRange.from, "dd/MM/yy")} - ${format(periodRange.to, "dd/MM/yy")}`
+      : PERIOD_LABELS[filterPeriod] ?? "Período: todo";
+
+  const applyPeriodParams = (p: URLSearchParams | Record<string, string>) => {
+    if (!periodRange) return;
+    const from = periodRange.from.toISOString();
+    const to = periodRange.to.toISOString();
+    if (p instanceof URLSearchParams) {
+      p.set("updated_from", from);
+      p.set("updated_to", to);
+    } else {
+      p["updated_from"] = from;
+      p["updated_to"] = to;
+    }
+  };
 
   // Tab → contract filter mapping (overrides filterContract on fetch)
   const tabContractFilter: Record<string, string | null> = {
@@ -407,6 +464,7 @@ export default function Clients() {
       if (filterSpecialty !== "all") baseParams["specialty"] = filterSpecialty;
       if (filterRevenueMissing !== "all") baseParams["revenue_missing"] = filterRevenueMissing;
       baseParams["sort"] = sortOrder;
+      applyPeriodParams(baseParams);
 
       const pageSize = 200;
       let allClients: any[] = [];
@@ -562,6 +620,7 @@ export default function Clients() {
       if (filterSpecialty !== "all") params.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") params.set("revenue_missing", filterRevenueMissing);
       params.set("sort", sortOrder);
+      applyPeriodParams(params);
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
@@ -838,6 +897,7 @@ export default function Clients() {
       if (filterArea !== "all") p.set("area", filterArea);
       if (filterSpecialty !== "all") p.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") p.set("revenue_missing", filterRevenueMissing);
+      applyPeriodParams(p);
       return p;
     };
     try {
@@ -870,7 +930,7 @@ export default function Clients() {
       fetchTabCounts();
     }, 800);
     return () => clearTimeout(timer);
-  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab]);
+  }, [searchQuery, filterResponsible, filterProduct, filterContract, filterClientStatus, filterLinks, filterCountry, filterEducation, filterArea, filterSpecialty, filterRevenueMissing, sortOrder, activeTab, filterPeriod, filterPeriodStart, filterPeriodEnd]);
 
   // Fetch client stages when account is available
   useEffect(() => {
@@ -1410,6 +1470,7 @@ export default function Clients() {
     filterArea !== "all",
     filterSpecialty !== "all",
     filterRevenueMissing !== "all",
+    !!periodRange,
   ].filter(Boolean).length;
 
   const clearAllFilters = () => {
@@ -1423,6 +1484,9 @@ export default function Clients() {
     setFilterRevenueMissing("all");
     setFilterArea("all");
     setFilterSpecialty("all");
+    setFilterPeriod("all");
+    setFilterPeriodStart("");
+    setFilterPeriodEnd("");
   };
 
   // Country options for the filter dropdown.
@@ -2178,6 +2242,54 @@ export default function Clients() {
               <SelectItem value="current">Sem faturamento atual</SelectItem>
             </SelectContent>
           </Select>
+          <Select
+            value={filterPeriod}
+            onValueChange={(v) => {
+              setFilterPeriod(v);
+              if (v === "custom") setPeriodPopoverOpen(true);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[200px] shrink-0" aria-label="Filtro de período">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Período: todo</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="this_month">Mês atual</SelectItem>
+              <SelectItem value="last_month">Mês passado</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterPeriod === "custom" && (
+            <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 shrink-0 h-10">
+                  <CalendarIcon className="h-4 w-4" />
+                  {periodRange ? periodLabel : "Escolher datas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  numberOfMonths={2}
+                  defaultMonth={filterPeriodStart ? new Date(filterPeriodStart) : undefined}
+                  selected={{
+                    from: filterPeriodStart ? new Date(filterPeriodStart) : undefined,
+                    to: filterPeriodEnd ? new Date(filterPeriodEnd) : undefined,
+                  }}
+                  onSelect={(r: any) => {
+                    setFilterPeriodStart(r?.from ? r.from.toISOString() : "");
+                    setFilterPeriodEnd(r?.to ? r.to.toISOString() : "");
+                    if (r?.from && r?.to) setPeriodPopoverOpen(false);
+                  }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
           <Button 
             variant={showFilters ? "secondary" : "outline"} 
             size="sm"
@@ -2484,6 +2596,21 @@ export default function Clients() {
                   <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
                     Especialidade: {filterSpecialty === "none" ? "Sem especialidade" : filterSpecialty}
                     <button onClick={() => setFilterSpecialty("all")} className="hover:text-destructive">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {periodRange && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Período: {periodLabel}
+                    <button
+                      onClick={() => {
+                        setFilterPeriod("all");
+                        setFilterPeriodStart("");
+                        setFilterPeriodEnd("");
+                      }}
+                      className="hover:text-destructive"
+                    >
                       <X className="h-3 w-3" />
                     </button>
                   </Badge>
