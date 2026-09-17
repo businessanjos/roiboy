@@ -148,6 +148,14 @@ export default function EventParticipantsTab({
   const [statusFilter, setStatusFilter] = useState<ParticipantFilter>("all");
   const [searchQuery, setSearchQuery] = useState("");
 
+  // Edit participant state
+  const [editParticipant, setEditParticipant] = useState<Participant | null>(null);
+  const [editName, setEditName] = useState("");
+  const [editEmail, setEditEmail] = useState("");
+  const [editPhone, setEditPhone] = useState("");
+  const [editNotes, setEditNotes] = useState("");
+  const [savingEdit, setSavingEdit] = useState(false);
+
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
   const [importing, setImporting] = useState(false);
