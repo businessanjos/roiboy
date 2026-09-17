@@ -386,7 +386,9 @@ export default function MedicalClients() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Cliente</TableHead>
-                  <TableHead>Produtos</TableHead>
+                  <TableHead>Programa</TableHead>
+                  <TableHead>Áreas de atuação</TableHead>
+
                   <TableHead>Formação</TableHead>
                   <TableHead>Evidências</TableHead>
                   <TableHead className="w-[80px]"></TableHead>
