@@ -585,9 +585,18 @@ export default function MentoriaEC() {
                     </TableCell>
                     <TableCell>
                       {m.productLabel ? (
-                        <Badge variant="outline" className={cn("text-xs", PRODUCT_META.get(m.productId ?? "")?.className)}>
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={{
+                            backgroundColor: `${m.productColor || "#6b7280"}1a`,
+                            borderColor: `${m.productColor || "#6b7280"}55`,
+                            color: m.productColor || "#6b7280",
+                          }}
+                        >
                           {m.productLabel}
                         </Badge>
+
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
