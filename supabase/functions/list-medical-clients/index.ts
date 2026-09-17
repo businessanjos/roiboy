@@ -315,8 +315,8 @@ Deno.serve(async (req) => {
 
         return { ...c, evidence, kind, customFields: customByClient.get(c.id) ?? [] };
       })
-      .filter((c) => c.kind !== null)
       .sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+
 
 
     return new Response(
