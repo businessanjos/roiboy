@@ -2879,7 +2879,11 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="open" className="mt-0">
+              <TabsContent
+                value="open"
+                className={cn("mt-0", isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
+              >
+
                 {hiddenOpenCount > 0 && (
                   <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
                     <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
