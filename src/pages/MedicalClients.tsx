@@ -312,24 +312,38 @@ export default function MedicalClients() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               className="pl-9"
-              placeholder="Buscar por nome, produto, especialidade ou evidência..."
+              placeholder="Buscar por nome, programa, área, especialidade ou evidência..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
           </div>
-          <Select value={productFilter} onValueChange={setProductFilter}>
-            <SelectTrigger className="w-[220px]">
-              <SelectValue placeholder="Produto" />
+          <Select value={programFilter} onValueChange={setProgramFilter}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Programa" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os produtos</SelectItem>
-              {products.map((p) => (
-                <SelectItem key={p} value={p}>
-                  {p}
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todos os programas ({clients.length})</SelectItem>
+              {programs.map(([name, count]) => (
+                <SelectItem key={name} value={name}>
+                  {name === "__none__" ? "Sem programa" : name} ({count})
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
+          <Select value={areaFilter} onValueChange={setAreaFilter}>
+            <SelectTrigger className="w-[240px]">
+              <SelectValue placeholder="Área de atuação" />
+            </SelectTrigger>
+            <SelectContent className="max-h-[320px]">
+              <SelectItem value="all">Todas as áreas de atuação</SelectItem>
+              {areas.map(([name, count]) => (
+                <SelectItem key={name} value={name}>
+                  {name} ({count})
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={sourceFilter} onValueChange={setSourceFilter}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Fonte da evidência" />
