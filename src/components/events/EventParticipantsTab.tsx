@@ -542,14 +542,14 @@ export default function EventParticipantsTab({
   return (
     <div className="space-y-6">
       {/* Stats — clique para filtrar */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-8 gap-3">
         {filterCards.map((c) => {
           const active = statusFilter === c.key;
           return (
             <button
               key={c.key}
               type="button"
-              onClick={() => setStatusFilter((prev) => (prev === c.key ? "all" : (c.key as EventRsvpStatus | "all")))}
+              onClick={() => setStatusFilter((prev) => (prev === c.key ? "all" : c.key))}
               aria-pressed={active}
               className={`text-left rounded-lg border bg-card text-card-foreground shadow-sm p-3 cursor-pointer transition-all hover:shadow-md hover:border-primary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary ${
                 active ? "ring-2 ring-primary border-primary" : ""
@@ -614,7 +614,7 @@ export default function EventParticipantsTab({
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-64"
               />
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as EventRsvpStatus | "all")}>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as ParticipantFilter)}>
                 <SelectTrigger className="w-44">
                   <SelectValue />
                 </SelectTrigger>
@@ -626,6 +626,7 @@ export default function EventParticipantsTab({
                   <SelectItem value="waitlist">Lista de Espera</SelectItem>
                   <SelectItem value="declined">Recusados</SelectItem>
                   <SelectItem value="no_show">Faltaram</SelectItem>
+                  <SelectItem value="coquetel">Coquetel</SelectItem>
                 </SelectContent>
               </Select>
               {(statusFilter !== "all" || searchQuery) && (
