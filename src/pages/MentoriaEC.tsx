@@ -386,10 +386,27 @@ export default function MentoriaEC() {
     const scheduled = members.filter((m) => !!m.nextScheduled).length;
     const done = members.filter(isDone).length;
     const pending = members.filter((m) => !m.lastAttendance && !m.nextScheduled).length;
-    const ec = members.filter((m) => m.program === "EC").length;
-    const rm = members.filter((m) => m.program === "RM").length;
-    return { total, scheduled, done, pending, ec, rm };
+    return { total, scheduled, done, pending };
   }, [members]);
+
+  const programOptions = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    let noneCount = 0;
+    members.forEach((m) => {
+      if (!m.productId) {
+        noneCount += 1;
+        return;
+      }
+      const cur = counts.get(m.productId);
+      if (cur) cur.count += 1;
+      else counts.set(m.productId, { label: m.productLabel || "Produto sem nome", count: 1 });
+    });
+    const list = Array.from(counts.entries())
+      .map(([id, v]) => ({ value: id, label: v.label, count: v.count }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    return { list, noneCount };
+  }, [members]);
+
 
   const rows = tab === "abertas" ? openList : doneList;
   const colSpan = 8;
