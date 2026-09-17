@@ -2242,6 +2242,54 @@ export default function Clients() {
               <SelectItem value="current">Sem faturamento atual</SelectItem>
             </SelectContent>
           </Select>
+          <Select
+            value={filterPeriod}
+            onValueChange={(v) => {
+              setFilterPeriod(v);
+              if (v === "custom") setPeriodPopoverOpen(true);
+            }}
+          >
+            <SelectTrigger className="w-full sm:w-[200px] shrink-0" aria-label="Filtro de período">
+              <SelectValue placeholder="Período" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Período: todo</SelectItem>
+              <SelectItem value="today">Hoje</SelectItem>
+              <SelectItem value="7d">Últimos 7 dias</SelectItem>
+              <SelectItem value="30d">Últimos 30 dias</SelectItem>
+              <SelectItem value="this_month">Mês atual</SelectItem>
+              <SelectItem value="last_month">Mês passado</SelectItem>
+              <SelectItem value="custom">Personalizado</SelectItem>
+            </SelectContent>
+          </Select>
+          {filterPeriod === "custom" && (
+            <Popover open={periodPopoverOpen} onOpenChange={setPeriodPopoverOpen}>
+              <PopoverTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2 shrink-0 h-10">
+                  <CalendarIcon className="h-4 w-4" />
+                  {periodRange ? periodLabel : "Escolher datas"}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  initialFocus
+                  mode="range"
+                  numberOfMonths={2}
+                  defaultMonth={filterPeriodStart ? new Date(filterPeriodStart) : undefined}
+                  selected={{
+                    from: filterPeriodStart ? new Date(filterPeriodStart) : undefined,
+                    to: filterPeriodEnd ? new Date(filterPeriodEnd) : undefined,
+                  }}
+                  onSelect={(r: any) => {
+                    setFilterPeriodStart(r?.from ? r.from.toISOString() : "");
+                    setFilterPeriodEnd(r?.to ? r.to.toISOString() : "");
+                    if (r?.from && r?.to) setPeriodPopoverOpen(false);
+                  }}
+                  className="pointer-events-auto p-3"
+                />
+              </PopoverContent>
+            </Popover>
+          )}
           <Button 
             variant={showFilters ? "secondary" : "outline"} 
             size="sm"
