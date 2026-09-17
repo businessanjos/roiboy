@@ -51,7 +51,7 @@ const RELEVANT_FIELD_IDS = [
   "a82dfd9a-4e3a-4e26-98c0-62a864c3ecb5", // Área de atuação
 ];
 
-const MENTORSHIP_PRODUCT_PATTERNS = ["ryka", "eternum", "mvp", "private"];
+
 
 type Classification = "doctor" | "dentist" | null;
 
