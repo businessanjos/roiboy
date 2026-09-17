@@ -32,7 +32,10 @@ interface DealKanbanProps {
   onDealClick: (deal: Deal) => void;
   onDealMove: (dealId: string, newStageId: string) => Promise<boolean>;
   showActivityCounts?: boolean;
+  /** Em tela cheia: o quadro ocupa toda a altura disponível do contêiner pai. */
+  fullHeight?: boolean;
 }
+
 
 interface RequiredFieldsModalState {
   open: boolean;
@@ -44,7 +47,7 @@ interface RequiredFieldsModalState {
   accountId: string;
 }
 
-export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false }: DealKanbanProps) {
+export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivityCounts = false, fullHeight = false }: DealKanbanProps) {
   const [activeDeal, setActiveDeal] = useState<Deal | null>(null);
   const { validateDealMove } = useRequiredFieldsValidation();
   const [requiredFieldsModal, setRequiredFieldsModal] = useState<RequiredFieldsModalState | null>(null);
@@ -285,7 +288,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
       window.removeEventListener("orientationchange", measure);
       ro.disconnect();
     };
-  }, [isMobile, activeStageId]);
+  }, [isMobile, activeStageId, fullHeight]);
 
 
   if (stages.length === 0) {

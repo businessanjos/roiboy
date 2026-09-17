@@ -78,6 +78,9 @@ import {
   Calendar,
   Download,
   MoreVertical,
+  Maximize2,
+  Minimize2,
+
   Columns3,
   SlidersHorizontal,
   DollarSign,
@@ -198,6 +201,18 @@ export default function SalesPipeline() {
   const [viewMode, setViewMode] = useState<'kanban' | 'list'>('kanban');
   const [activeTab, setActiveTab] = useState('open');
   const [mainTab, setMainTab] = useState<'prospeccao' | 'pipeline'>('pipeline');
+  const [isPipelineFullscreen, setIsPipelineFullscreen] = useState(false);
+
+  // Esc sai da tela cheia do funil
+  useEffect(() => {
+    if (!isPipelineFullscreen) return;
+    const onKeyDown = (e: KeyboardEvent) => {
+      if (e.key === "Escape") setIsPipelineFullscreen(false);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isPipelineFullscreen]);
+
 
   // Defer full leads loading until prospeccao tab is active
   const { leads, loading: leadsLoading, refetch: refetchLeads } = useLeads({ enabled: mainTab === 'prospeccao' });
@@ -2466,9 +2481,18 @@ export default function SalesPipeline() {
 
   return (
     <>
-      <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
+      <div className={cn(
+        "p-3 sm:p-4 space-y-3 sm:space-y-4",
+        isPipelineFullscreen && "fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
+      )}>
+
         {/* Main Tabs */}
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
+        <Tabs
+          value={mainTab}
+          onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}
+          className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
+        >
+
           <div className="flex items-center justify-between gap-2">
             <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
 
@@ -2492,8 +2516,20 @@ export default function SalesPipeline() {
               {mainTab === 'pipeline' && (
                 <>
                   <div className="flex items-center gap-1.5 sm:gap-2">
+                  {/* Expandir em tela cheia - desktop */}
+                  <Button
+                    variant={isPipelineFullscreen ? 'secondary' : 'outline'}
+                    size="sm"
+                    className="h-8 gap-1.5 hidden sm:inline-flex"
+                    onClick={() => setIsPipelineFullscreen((v) => !v)}
+                    title={isPipelineFullscreen ? "Reduzir (Esc)" : "Expandir em tela cheia"}
+                  >
+                    {isPipelineFullscreen ? <Minimize2 className="h-3.5 w-3.5" /> : <Maximize2 className="h-3.5 w-3.5" />}
+                    <span className="hidden lg:inline text-xs">{isPipelineFullscreen ? "Reduzir" : "Expandir"}</span>
+                  </Button>
                   {/* View toggle - desktop only */}
                   <div className="flex items-center border rounded-lg overflow-hidden">
+
 
                     <Button
                       variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
@@ -2555,9 +2591,16 @@ export default function SalesPipeline() {
             <LeadsTab />
           </TabsContent>
 
-          <TabsContent value="pipeline" className="mt-3 sm:mt-4 space-y-3 sm:space-y-4">
+          <TabsContent
+            value="pipeline"
+            className={cn(
+              "mt-3 sm:mt-4 space-y-3 sm:space-y-4",
+              isPipelineFullscreen && "flex-1 min-h-0 flex flex-col space-y-2 mt-2"
+            )}
+          >
             {/* Pipeline Selector + Sub-tabs Row */}
-            <div className="space-y-3">
+            <div className={cn("space-y-3", isPipelineFullscreen && "hidden")}>
+
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
                 <div className={cn("flex flex-col gap-2", (isMobile || filtersCollapsed) && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
@@ -2836,7 +2879,12 @@ export default function SalesPipeline() {
             <PipelineActivityLegend className="mb-2" />
 
             {/* Status sub-tabs */}
-            <Tabs value={activeTab} onValueChange={setActiveTab}>
+            <Tabs
+              value={activeTab}
+              onValueChange={setActiveTab}
+              className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
+            >
+
               <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-9">
                 <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
                   <TrendingUp className="h-3.5 w-3.5" />
@@ -2858,7 +2906,11 @@ export default function SalesPipeline() {
                   </Badge>
                 </TabsTrigger>
               </TabsList>
-              <TabsContent value="open" className="mt-0">
+              <TabsContent
+                value="open"
+                className={cn("mt-0", isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
+              >
+
                 {hiddenOpenCount > 0 && (
                   <div className="mb-3 flex flex-wrap items-center gap-2 rounded-lg border border-warning/40 bg-warning/10 px-3 py-2 text-xs">
                     <AlertTriangle className="h-4 w-4 text-warning shrink-0" />
@@ -2877,7 +2929,9 @@ export default function SalesPipeline() {
                     onDealClick={handleDealClick}
                     onDealMove={handleDealMove}
                     showActivityCounts={activeFilterNeedsActivityCounts}
+                    fullHeight={isPipelineFullscreen}
                   />
+
                 ) : (
                   <DealListView 
                     deals={sortedOpenDeals} 
