@@ -344,11 +344,16 @@ export default function EventParticipantsTab({
     const clientEmail = Array.isArray(clientEmails) && clientEmails.length > 0
       ? (typeof clientEmails[0] === "object" ? clientEmails[0]?.email : clientEmails[0])
       : "";
+    const name = p.clients?.full_name || p.guest_name || "";
+    const email = p.clients ? (clientEmail || "") : (p.guest_email || "");
+    const phone = p.clients?.phone_e164 || p.guest_phone || "";
+    const notesValue = p.notes || "";
+    editSnapshotRef.current = { name, email, phone, notes: notesValue };
     setEditParticipant(p);
-    setEditName(p.clients?.full_name || p.guest_name || "");
-    setEditEmail(p.clients ? (clientEmail || "") : (p.guest_email || ""));
-    setEditPhone(p.clients?.phone_e164 || p.guest_phone || "");
-    setEditNotes(p.notes || "");
+    setEditName(name);
+    setEditEmail(email);
+    setEditPhone(phone);
+    setEditNotes(notesValue);
   };
 
   const handleSaveEdit = async () => {
