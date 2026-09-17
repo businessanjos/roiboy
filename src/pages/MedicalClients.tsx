@@ -25,7 +25,10 @@ type MedicalClient = {
   phone_e164?: string | null;
   city?: string | null;
   state?: string | null;
-  products?: string[];
+  program: string | null;
+  programColor: string;
+  practiceAreas: string[];
+
   program: string | null;
   programColor: string;
   practiceAreas: string[];
