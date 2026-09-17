@@ -222,8 +222,9 @@ export default function MedicalClients() {
             Área da saúde na Mentoria
           </h1>
           <p className="text-muted-foreground text-sm mt-1">
-            Clientes ativos das mentorias identificados na área da saúde via onboarding ou cadastro.
+            Todos os clientes com contrato ativo, com a formação já identificada e a que ainda falta preencher.
           </p>
+
         </div>
         <div className="flex gap-2">
           <Button variant="outline" size="sm" onClick={() => load()} disabled={loading}>
