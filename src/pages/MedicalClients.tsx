@@ -185,10 +185,12 @@ export default function MedicalClients() {
 
   const exportCsv = () => {
     const rows = [
-      ["Nome", "Produtos", "Formação", "Especialidade", "Evidências", "Ficha do cliente", "Campos personalizados"],
+      ["Nome", "Programa", "Áreas de atuação", "Formação", "Especialidade", "Evidências", "Ficha do cliente", "Campos personalizados"],
       ...filtered.map((c) => [
         c.full_name,
-        c.products.join(" | "),
+        c.program ?? "",
+        (c.practiceAreas ?? []).join(" | "),
+
         c.education ?? "",
         c.education_specialty ?? "",
         c.evidence.map((e) => `[${e.source}${e.field ? ` · ${e.field}` : ""}] ${e.text}`).join(" || "),
