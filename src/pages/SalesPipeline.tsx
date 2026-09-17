@@ -78,6 +78,9 @@ import {
   Calendar,
   Download,
   MoreVertical,
+  Maximize2,
+  Minimize2,
+
   Columns3,
   SlidersHorizontal,
   DollarSign,
