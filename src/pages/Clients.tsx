@@ -620,6 +620,7 @@ export default function Clients() {
       if (filterSpecialty !== "all") params.set("specialty", filterSpecialty);
       if (filterRevenueMissing !== "all") params.set("revenue_missing", filterRevenueMissing);
       params.set("sort", sortOrder);
+      applyPeriodParams(params);
       
       const response = await fetch(
         `${SUPABASE_URL}/functions/v1/list-clients?${params.toString()}`,
