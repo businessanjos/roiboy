@@ -22,17 +22,11 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Produtos elegíveis para a mentoria ao vivo (Eternum Club + Rykas Mentoring)
-const MENTORING_PRODUCTS: { id: string; label: string; program: "EC" | "RM"; className: string }[] = [
-  { id: "b8c50eca-6fd9-41ac-a1d3-f78086daaea7", label: "Eternum Club", program: "EC", className: "bg-warning/15 text-warning-strong border-warning/30 dark:text-warning" },
-  { id: "6f74bb43-a1be-410f-a708-6abab066bb38", label: "Eternum Club", program: "EC", className: "bg-warning/15 text-warning-strong border-warning/30 dark:text-warning" },
-  { id: "8d3e9bb6-054b-44b3-952f-5920e0ed8775", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
-  { id: "eae406e9-6076-41eb-96ed-df0ab187a11c", label: "Rykas Mentoring", program: "RM", className: "bg-pink-500/15 text-pink-700 border-pink-500/30 dark:text-pink-300" },
-];
-const MENTORING_PRODUCT_IDS = MENTORING_PRODUCTS.map((p) => p.id);
-const PRODUCT_META = new Map(MENTORING_PRODUCTS.map((p) => [p.id, p]));
+// O filtro de programa usa o id do produto (montado dinamicamente a partir da carteira ativa)
+type ProgramFilter = string; // "all" | productId | "__none__"
 
-type ProgramFilter = "all" | "EC" | "RM";
+const ACTIVE_CLIENT_STATUSES = ["active", "paused", "churn_risk"] as const;
+
 
 type MentorshipStatus =
   | "novata"
@@ -58,8 +52,9 @@ interface EcMember {
   attendanceCount: number;
   mentorshipStatus: MentorshipStatus | null;
   productId: string | null;
-  program: "EC" | "RM" | null;
   productLabel: string | null;
+  productColor: string | null;
+
 }
 
 const MENTORSHIP_STATUS_OPTIONS: { value: MentorshipStatus; label: string; className: string }[] = [
@@ -86,10 +81,8 @@ export default function MentoriaEC() {
   const [doneFilter, setDoneFilter] = useState<DoneFilter>("all");
   const [mentorshipFilter, setMentorshipFilter] = useState<MentorshipStatusFilter>("all");
   const [searchParams, setSearchParams] = useSearchParams();
-  const programFilter = ((): ProgramFilter => {
-    const v = searchParams.get("program");
-    return v === "EC" || v === "RM" ? v : "all";
-  })();
+  const programFilter: ProgramFilter = searchParams.get("program") || "all";
+
   const setProgramFilter = (v: ProgramFilter) => {
     const next = new URLSearchParams(searchParams);
     if (v === "all") next.delete("program");
@@ -118,34 +111,36 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      const { data: contracts, error: cErr } = await supabase
-        .from("client_contracts")
-        .select("client_id, end_date, status, product_id")
+      // Carteira ativa: todos os clientes ativos da conta
+      const { data: clients, error: clErr } = await supabase
+        .from("clients")
+        .select("id, full_name, logo_url, business_segment, status")
         .eq("account_id", accountId!)
-        .in("product_id", MENTORING_PRODUCT_IDS)
-        .eq("status", "active");
-      if (cErr) throw cErr;
+        .in("status", ACTIVE_CLIENT_STATUSES);
+      if (clErr) throw clErr;
 
-      const byClient = new Map<string, { endDate: string | null; productId: string }>();
-      (contracts || []).forEach((c: any) => {
-        const prev = byClient.get(c.client_id);
-        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
-          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
-        }
-      });
-
-      const clientIds = Array.from(byClient.keys());
+      const clientIds = (clients || []).map((c) => c.id);
       if (clientIds.length === 0) return [];
 
       const [
-        { data: clients, error: clErr },
+        { data: contracts, error: cErr },
+        { data: links, error: lErr },
+        { data: products, error: pErr },
         { data: attendance, error: aErr },
         { data: statuses, error: sErr },
       ] = await Promise.all([
         supabase
-          .from("clients")
-          .select("id, full_name, logo_url, business_segment")
-          .in("id", clientIds),
+          .from("client_contracts")
+          .select("client_id, end_date, status, product_id")
+          .eq("account_id", accountId!)
+          .eq("status", "active")
+          .in("client_id", clientIds),
+        supabase
+          .from("client_products")
+          .select("client_id, product_id")
+          .eq("is_active", true)
+          .in("client_id", clientIds),
+        supabase.from("products").select("id, name, color"),
         supabase
           .from("ec_mentoring_attendance")
           .select("client_id, session_date")
@@ -157,9 +152,29 @@ export default function MentoriaEC() {
           .eq("account_id", accountId!)
           .in("client_id", clientIds),
       ]);
-      if (clErr) throw clErr;
+      if (cErr) throw cErr;
+      if (lErr) throw lErr;
+      if (pErr) throw pErr;
       if (aErr) throw aErr;
       if (sErr) throw sErr;
+
+      const productMeta = new Map<string, { name: string; color: string | null }>(
+        (products || []).map((p: any) => [p.id, { name: p.name, color: p.color ?? null }]),
+      );
+
+      // Contrato ativo tem prioridade (traz o fim do contrato); fallback: produto vinculado ao cliente
+      const byClient = new Map<string, { endDate: string | null; productId: string | null }>();
+      (contracts || []).forEach((c: any) => {
+        const prev = byClient.get(c.client_id);
+        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
+          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
+        }
+      });
+      (links || []).forEach((l: any) => {
+        if (!byClient.has(l.client_id)) {
+          byClient.set(l.client_id, { endDate: null, productId: l.product_id });
+        }
+      });
 
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
@@ -181,7 +196,7 @@ export default function MentoriaEC() {
       return (clients || []).map((c) => {
         const info = byClient.get(c.id);
         const att = attMap.get(c.id);
-        const meta = info?.productId ? PRODUCT_META.get(info.productId) : null;
+        const meta = info?.productId ? productMeta.get(info.productId) : null;
         return {
           clientId: c.id,
           fullName: c.full_name || "Sem nome",
@@ -193,12 +208,13 @@ export default function MentoriaEC() {
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
           productId: info?.productId ?? null,
-          program: meta?.program ?? null,
-          productLabel: meta?.label ?? null,
+          productLabel: meta?.name ?? null,
+          productColor: meta?.color ?? null,
         };
       });
     },
   });
+
 
   const statusMutation = useMutation({
     mutationFn: async ({ clientId, status }: { clientId: string; status: MentorshipStatus }) => {
@@ -295,7 +311,12 @@ export default function MentoriaEC() {
       if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
         return false;
       if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
-      if (programFilter !== "all" && m.program !== programFilter) return false;
+      if (programFilter !== "all") {
+        if (programFilter === "__none__") {
+          if (m.productId) return false;
+        } else if (m.productId !== programFilter) return false;
+      }
+
       if (practiceFilter !== "all") {
         if (practiceFilter === "__none__") {
           if (m.businessSegment) return false;
@@ -364,10 +385,27 @@ export default function MentoriaEC() {
     const scheduled = members.filter((m) => !!m.nextScheduled).length;
     const done = members.filter(isDone).length;
     const pending = members.filter((m) => !m.lastAttendance && !m.nextScheduled).length;
-    const ec = members.filter((m) => m.program === "EC").length;
-    const rm = members.filter((m) => m.program === "RM").length;
-    return { total, scheduled, done, pending, ec, rm };
+    return { total, scheduled, done, pending };
   }, [members]);
+
+  const programOptions = useMemo(() => {
+    const counts = new Map<string, { label: string; count: number }>();
+    let noneCount = 0;
+    members.forEach((m) => {
+      if (!m.productId) {
+        noneCount += 1;
+        return;
+      }
+      const cur = counts.get(m.productId);
+      if (cur) cur.count += 1;
+      else counts.set(m.productId, { label: m.productLabel || "Produto sem nome", count: 1 });
+    });
+    const list = Array.from(counts.entries())
+      .map(([id, v]) => ({ value: id, label: v.label, count: v.count }))
+      .sort((a, b) => a.label.localeCompare(b.label, "pt-BR"));
+    return { list, noneCount };
+  }, [members]);
+
 
   const rows = tab === "abertas" ? openList : doneList;
   const colSpan = 8;
@@ -387,7 +425,7 @@ export default function MentoriaEC() {
             <h1 className="text-2xl font-semibold">Mentoria Ao Vivo</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Membros ativos do Eternum Club e do Rykas Mentoring, com o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
+            Clientes ativos da carteira, de todos os programas, com o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
           </p>
         </div>
       </div>
@@ -449,10 +487,16 @@ export default function MentoriaEC() {
           )}
           <Select value={programFilter} onValueChange={(v) => setProgramFilter(v as ProgramFilter)}>
             <SelectTrigger className="w-[220px]"><SelectValue placeholder="Programa" /></SelectTrigger>
-            <SelectContent>
+            <SelectContent className="max-h-[320px]">
+
               <SelectItem value="all">Todos os programas ({totals.total})</SelectItem>
-              <SelectItem value="EC">Eternum Club ({totals.ec})</SelectItem>
-              <SelectItem value="RM">Rykas Mentoring ({totals.rm})</SelectItem>
+              {programOptions.noneCount > 0 && (
+                <SelectItem value="__none__">Sem programa ({programOptions.noneCount})</SelectItem>
+              )}
+              {programOptions.list.map((o) => (
+                <SelectItem key={o.value} value={o.value}>{o.label} ({o.count})</SelectItem>
+              ))}
+
             </SelectContent>
           </Select>
           <Select value={practiceFilter} onValueChange={setPracticeFilter}>
@@ -540,9 +584,18 @@ export default function MentoriaEC() {
                     </TableCell>
                     <TableCell>
                       {m.productLabel ? (
-                        <Badge variant="outline" className={cn("text-xs", PRODUCT_META.get(m.productId ?? "")?.className)}>
+                        <Badge
+                          variant="outline"
+                          className="text-xs"
+                          style={{
+                            backgroundColor: `${m.productColor || "#6b7280"}1a`,
+                            borderColor: `${m.productColor || "#6b7280"}55`,
+                            color: m.productColor || "#6b7280",
+                          }}
+                        >
                           {m.productLabel}
                         </Badge>
+
                       ) : (
                         <span className="text-muted-foreground text-xs">—</span>
                       )}
