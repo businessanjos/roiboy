@@ -111,34 +111,36 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      const { data: contracts, error: cErr } = await supabase
-        .from("client_contracts")
-        .select("client_id, end_date, status, product_id")
+      // Carteira ativa: todos os clientes ativos da conta
+      const { data: clients, error: clErr } = await supabase
+        .from("clients")
+        .select("id, full_name, logo_url, business_segment, status")
         .eq("account_id", accountId!)
-        .in("product_id", MENTORING_PRODUCT_IDS)
-        .eq("status", "active");
-      if (cErr) throw cErr;
+        .in("status", ACTIVE_CLIENT_STATUSES);
+      if (clErr) throw clErr;
 
-      const byClient = new Map<string, { endDate: string | null; productId: string }>();
-      (contracts || []).forEach((c: any) => {
-        const prev = byClient.get(c.client_id);
-        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
-          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
-        }
-      });
-
-      const clientIds = Array.from(byClient.keys());
+      const clientIds = (clients || []).map((c) => c.id);
       if (clientIds.length === 0) return [];
 
       const [
-        { data: clients, error: clErr },
+        { data: contracts, error: cErr },
+        { data: links, error: lErr },
+        { data: products, error: pErr },
         { data: attendance, error: aErr },
         { data: statuses, error: sErr },
       ] = await Promise.all([
         supabase
-          .from("clients")
-          .select("id, full_name, logo_url, business_segment")
-          .in("id", clientIds),
+          .from("client_contracts")
+          .select("client_id, end_date, status, product_id")
+          .eq("account_id", accountId!)
+          .eq("status", "active")
+          .in("client_id", clientIds),
+        supabase
+          .from("client_products")
+          .select("client_id, product_id")
+          .eq("is_active", true)
+          .in("client_id", clientIds),
+        supabase.from("products").select("id, name, color"),
         supabase
           .from("ec_mentoring_attendance")
           .select("client_id, session_date")
@@ -150,9 +152,29 @@ export default function MentoriaEC() {
           .eq("account_id", accountId!)
           .in("client_id", clientIds),
       ]);
-      if (clErr) throw clErr;
+      if (cErr) throw cErr;
+      if (lErr) throw lErr;
+      if (pErr) throw pErr;
       if (aErr) throw aErr;
       if (sErr) throw sErr;
+
+      const productMeta = new Map<string, { name: string; color: string | null }>(
+        (products || []).map((p: any) => [p.id, { name: p.name, color: p.color ?? null }]),
+      );
+
+      // Contrato ativo tem prioridade (traz o fim do contrato); fallback: produto vinculado ao cliente
+      const byClient = new Map<string, { endDate: string | null; productId: string | null }>();
+      (contracts || []).forEach((c: any) => {
+        const prev = byClient.get(c.client_id);
+        if (!prev || (c.end_date && (!prev.endDate || c.end_date > prev.endDate))) {
+          byClient.set(c.client_id, { endDate: c.end_date, productId: c.product_id });
+        }
+      });
+      (links || []).forEach((l: any) => {
+        if (!byClient.has(l.client_id)) {
+          byClient.set(l.client_id, { endDate: null, productId: l.product_id });
+        }
+      });
 
       const todayStr = format(new Date(), "yyyy-MM-dd");
       const attMap = new Map<string, { last: string | null; next: string | null; count: number }>();
@@ -174,7 +196,7 @@ export default function MentoriaEC() {
       return (clients || []).map((c) => {
         const info = byClient.get(c.id);
         const att = attMap.get(c.id);
-        const meta = info?.productId ? PRODUCT_META.get(info.productId) : null;
+        const meta = info?.productId ? productMeta.get(info.productId) : null;
         return {
           clientId: c.id,
           fullName: c.full_name || "Sem nome",
@@ -186,10 +208,12 @@ export default function MentoriaEC() {
           attendanceCount: att?.count ?? 0,
           mentorshipStatus: statusMap.get(c.id) ?? null,
           productId: info?.productId ?? null,
-          program: meta?.program ?? null,
-          productLabel: meta?.label ?? null,
+          productLabel: meta?.name ?? null,
+          productColor: meta?.color ?? null,
         };
       });
+    },
+
     },
   });
 
