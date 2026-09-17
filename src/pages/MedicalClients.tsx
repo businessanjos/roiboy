@@ -28,10 +28,6 @@ type MedicalClient = {
   program: string | null;
   programColor: string;
   practiceAreas: string[];
-
-  program: string | null;
-  programColor: string;
-  practiceAreas: string[];
   evidence: Evidence[];
   recordFields?: FieldEntry[];
   customFields?: FieldEntry[];
