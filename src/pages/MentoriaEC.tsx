@@ -111,13 +111,21 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      // Carteira ativa: todos os clientes ativos da conta
-      const { data: clients, error: clErr } = await supabase
-        .from("clients")
-        .select("id, full_name, logo_url, business_segment, status")
-        .eq("account_id", accountId!)
-        .in("status", ACTIVE_CLIENT_STATUSES);
-      if (clErr) throw clErr;
+      // Carteira ativa: todos os clientes ativos da conta (paginado, sem teto de 1000)
+      const PAGE = 1000;
+      const clients: any[] = [];
+      for (let page = 0; page < 20; page++) {
+        const { data, error: clErr } = await supabase
+          .from("clients")
+          .select("id, full_name, logo_url, business_segment, status")
+          .eq("account_id", accountId!)
+          .in("status", ACTIVE_CLIENT_STATUSES)
+          .order("id")
+          .range(page * PAGE, page * PAGE + PAGE - 1);
+        if (clErr) throw clErr;
+        clients.push(...(data || []));
+        if (!data || data.length < PAGE) break;
+      }
 
       const clientIds = (clients || []).map((c) => c.id);
       if (clientIds.length === 0) return [];
