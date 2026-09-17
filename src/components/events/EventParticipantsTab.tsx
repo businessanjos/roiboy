@@ -53,6 +53,7 @@ import {
   AlertCircle,
   Martini,
   Pencil,
+  History,
   Loader2
 } from "lucide-react";
 import { format } from "date-fns";
@@ -64,6 +65,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Database } from "@/integrations/supabase/types";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
 type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
@@ -129,6 +131,7 @@ export default function EventParticipantsTab({
   isLocked
 }: EventParticipantsTabProps) {
   const { toast } = useToast();
+  const { currentUser } = useCurrentUser();
   const navigate = useNavigate();
   const [participants, setParticipants] = useState<Participant[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
@@ -156,6 +159,10 @@ export default function EventParticipantsTab({
   const [editPhone, setEditPhone] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const editSnapshotRef = useRef({ name: "", email: "", phone: "", notes: "" });
+  const editHistory: any[] = Array.isArray(editParticipant?.custom_data?.edit_history)
+    ? editParticipant!.custom_data.edit_history
+    : [];
 
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
@@ -344,11 +351,16 @@ export default function EventParticipantsTab({
     const clientEmail = Array.isArray(clientEmails) && clientEmails.length > 0
       ? (typeof clientEmails[0] === "object" ? clientEmails[0]?.email : clientEmails[0])
       : "";
+    const name = p.clients?.full_name || p.guest_name || "";
+    const email = p.clients ? (clientEmail || "") : (p.guest_email || "");
+    const phone = p.clients?.phone_e164 || p.guest_phone || "";
+    const notesValue = p.notes || "";
+    editSnapshotRef.current = { name, email, phone, notes: notesValue };
     setEditParticipant(p);
-    setEditName(p.clients?.full_name || p.guest_name || "");
-    setEditEmail(p.clients ? (clientEmail || "") : (p.guest_email || ""));
-    setEditPhone(p.clients?.phone_e164 || p.guest_phone || "");
-    setEditNotes(p.notes || "");
+    setEditName(name);
+    setEditEmail(email);
+    setEditPhone(phone);
+    setEditNotes(notesValue);
   };
 
   const handleSaveEdit = async () => {
@@ -390,7 +402,33 @@ export default function EventParticipantsTab({
     }
 
     if (!error) {
-      const payload: any = { notes: editNotes.trim() || null };
+      const before = editSnapshotRef.current;
+      const changes = [
+        { field: "Nome", from: before.name, to: editName.trim() },
+        { field: "Email", from: before.email, to: editEmail.trim() },
+        { field: "Telefone", from: before.phone, to: editPhone.trim() },
+        { field: "Observações", from: before.notes, to: editNotes.trim() },
+      ].filter((c) => (c.from || "") !== (c.to || ""));
+
+      const history = Array.isArray(editParticipant.custom_data?.edit_history)
+        ? editParticipant.custom_data.edit_history
+        : [];
+      const nextHistory = changes.length
+        ? [
+            {
+              at: new Date().toISOString(),
+              by_id: currentUser?.id || null,
+              by_name: currentUser?.name || currentUser?.email || "Usuário",
+              changes,
+            },
+            ...history,
+          ].slice(0, 30)
+        : history;
+
+      const payload: any = {
+        notes: editNotes.trim() || null,
+        custom_data: { ...(editParticipant.custom_data || {}), edit_history: nextHistory },
+      };
       if (!editParticipant.client_id) {
         payload.guest_name = editName.trim();
         payload.guest_email = editEmail.trim() || null;
@@ -999,41 +1037,113 @@ export default function EventParticipantsTab({
 
       {/* Edit Participant Dialog */}
       <Dialog open={!!editParticipant} onOpenChange={(open) => !open && setEditParticipant(null)}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Editar participante</DialogTitle>
-            <DialogDescription>
-              {editParticipant?.client_id
-                ? "As alterações de nome, e-mail e telefone atualizam também a ficha do cliente."
-                : "Atualize os dados de contato do convidado."}
-            </DialogDescription>
+            <div className="flex items-center gap-3">
+              <Avatar className="h-11 w-11">
+                <AvatarImage src={editParticipant?.clients?.avatar_url || undefined} />
+                <AvatarFallback className="bg-primary/10 text-primary">
+                  {(editName || "?").substring(0, 2).toUpperCase()}
+                </AvatarFallback>
+              </Avatar>
+              <div className="min-w-0">
+                <DialogTitle className="truncate">{editName || "Editar participante"}</DialogTitle>
+                <DialogDescription className="flex items-center gap-2">
+                  <Badge variant="outline" className="text-xs">
+                    {editParticipant?.client_id ? "Cliente" : "Externo"}
+                  </Badge>
+                  <span className="text-xs">
+                    {editParticipant?.client_id
+                      ? "Altera também a ficha do cliente"
+                      : "Dados de contato do convidado"}
+                  </span>
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
 
           <div className="space-y-4">
-            <div className="space-y-2">
-              <Label>Nome *</Label>
-              <Input value={editName} onChange={(e) => setEditName(e.target.value)} />
+            <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Nome *</Label>
+                <Input
+                  value={editName}
+                  onChange={(e) => setEditName(e.target.value)}
+                  className="bg-background"
+                />
+              </div>
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    <Mail className="h-3 w-3" /> Email
+                  </Label>
+                  <Input
+                    type="email"
+                    value={editEmail}
+                    onChange={(e) => setEditEmail(e.target.value)}
+                    placeholder="email@exemplo.com"
+                    className="bg-background"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label className="text-xs uppercase tracking-wide text-muted-foreground flex items-center gap-1">
+                    <Phone className="h-3 w-3" /> Telefone
+                  </Label>
+                  <Input
+                    value={editPhone}
+                    onChange={(e) => setEditPhone(e.target.value)}
+                    placeholder="(11) 99999-9999"
+                    className="bg-background"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label className="text-xs uppercase tracking-wide text-muted-foreground">Observações</Label>
+                <Textarea
+                  value={editNotes}
+                  onChange={(e) => setEditNotes(e.target.value)}
+                  rows={2}
+                  placeholder="Observações sobre o participante..."
+                  className="bg-background resize-none"
+                />
+              </div>
             </div>
+
             <div className="space-y-2">
-              <Label>Email</Label>
-              <Input
-                type="email"
-                value={editEmail}
-                onChange={(e) => setEditEmail(e.target.value)}
-                placeholder="email@exemplo.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Telefone</Label>
-              <Input
-                value={editPhone}
-                onChange={(e) => setEditPhone(e.target.value)}
-                placeholder="(11) 99999-9999"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea value={editNotes} onChange={(e) => setEditNotes(e.target.value)} rows={2} />
+              <div className="flex items-center gap-2 text-sm font-medium">
+                <History className="h-4 w-4 text-muted-foreground" />
+                Histórico de alterações
+              </div>
+              <ScrollArea className="max-h-44 rounded-lg border p-3">
+                {editHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">
+                    Nenhuma alteração manual registrada até agora.
+                  </p>
+                ) : (
+                  <ol className="relative space-y-4 border-l pl-4">
+                    {editHistory.map((entry, idx) => (
+                      <li key={idx} className="relative">
+                        <span className="absolute -left-[21px] top-1.5 h-2 w-2 rounded-full bg-primary" />
+                        <p className="text-sm font-medium">{entry.by_name || "Usuário"}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {entry.at
+                            ? format(new Date(entry.at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })
+                            : ""}
+                        </p>
+                        <ul className="mt-1 space-y-0.5">
+                          {(entry.changes || []).map((c: any, i: number) => (
+                            <li key={i} className="text-xs text-muted-foreground">
+                              <span className="text-foreground">{c.field}:</span>{" "}
+                              <span className="line-through">{c.from || "vazio"}</span> →{" "}
+                              <span className="text-foreground">{c.to || "vazio"}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      </li>
+                    ))}
+                  </ol>
+                )}
+              </ScrollArea>
             </div>
           </div>
 
