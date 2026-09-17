@@ -770,6 +770,10 @@ export default function EventParticipantsTab({
                             <DropdownMenuItem onClick={() => updateRsvpStatus(p.id, 'no_show')}>
                               <X className="h-4 w-4 mr-2 text-muted-foreground" /> Não Compareceu
                             </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => toggleCoquetel(p)}>
+                              <Martini className="h-4 w-4 mr-2 text-primary" />
+                              {isCoquetel(p) ? "Remover do coquetel" : "Coquetel"}
+                            </DropdownMenuItem>
                             <DropdownMenuItem 
                               onClick={() => deleteParticipant(p.id)}
                               className="text-destructive"
