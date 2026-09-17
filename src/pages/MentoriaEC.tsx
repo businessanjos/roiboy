@@ -426,7 +426,7 @@ export default function MentoriaEC() {
             <h1 className="text-2xl font-semibold">Mentoria Ao Vivo</h1>
           </div>
           <p className="text-muted-foreground text-sm mt-1">
-            Membros ativos do Eternum Club e do Rykas Mentoring, com o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
+            Clientes ativos da carteira, de todos os programas, com o histórico de participação nas mentorias ao vivo (segundas e quintas, 7h).
           </p>
         </div>
       </div>
