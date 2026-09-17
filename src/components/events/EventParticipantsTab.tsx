@@ -156,6 +156,7 @@ export default function EventParticipantsTab({
   const [editPhone, setEditPhone] = useState("");
   const [editNotes, setEditNotes] = useState("");
   const [savingEdit, setSavingEdit] = useState(false);
+  const editSnapshotRef = useRef({ name: "", email: "", phone: "", notes: "" });
 
   // Import state
   const [importDialogOpen, setImportDialogOpen] = useState(false);
