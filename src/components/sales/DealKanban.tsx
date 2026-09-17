@@ -285,7 +285,7 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
       window.removeEventListener("orientationchange", measure);
       ro.disconnect();
     };
-  }, [isMobile, activeStageId]);
+  }, [isMobile, activeStageId, fullHeight]);
 
 
   if (stages.length === 0) {
