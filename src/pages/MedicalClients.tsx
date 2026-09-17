@@ -39,7 +39,10 @@ export default function MedicalClients() {
   const [loading, setLoading] = useState(true);
   const [clients, setClients] = useState<MedicalClient[]>([]);
   const [search, setSearch] = useState("");
-  const [productFilter, setProductFilter] = useState<string>("all");
+  const [programFilter, setProgramFilter] = useState<string>("all");
+  const [areaFilter, setAreaFilter] = useState<string>("all");
+  const [educationFilter, setEducationFilter] = useState<string>("all");
+
   const [sourceFilter, setSourceFilter] = useState<string>("all");
   const [classificationFilter, setClassificationFilter] = useState<string>("all");
   const [savingId, setSavingId] = useState<string | null>(null);
