@@ -338,6 +338,83 @@ export default function EventParticipantsTab({
     }
   };
 
+  const openEditDialog = (p: Participant) => {
+    const clientEmails = p.clients?.emails;
+    const clientEmail = Array.isArray(clientEmails) && clientEmails.length > 0
+      ? (typeof clientEmails[0] === "object" ? clientEmails[0]?.email : clientEmails[0])
+      : "";
+    setEditParticipant(p);
+    setEditName(p.clients?.full_name || p.guest_name || "");
+    setEditEmail(p.clients ? (clientEmail || "") : (p.guest_email || ""));
+    setEditPhone(p.clients?.phone_e164 || p.guest_phone || "");
+    setEditNotes(p.notes || "");
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editParticipant) return;
+    if (!editName.trim()) {
+      toast({ title: "Erro", description: "O nome é obrigatório", variant: "destructive" });
+      return;
+    }
+    setSavingEdit(true);
+
+    let error: any = null;
+
+    if (editParticipant.client_id) {
+      // Cliente cadastrado: atualiza a ficha do cliente e as observações do participante
+      const existing = Array.isArray(editParticipant.clients?.emails)
+        ? [...(editParticipant.clients?.emails as any[])]
+        : [];
+      const emailValue = editEmail.trim();
+      let emails: any[] = existing;
+      if (emailValue) {
+        if (existing.length > 0 && typeof existing[0] === "object") {
+          emails = [{ ...existing[0], email: emailValue }, ...existing.slice(1)];
+        } else if (existing.length > 0) {
+          emails = [emailValue, ...existing.slice(1)];
+        } else {
+          emails = [{ email: emailValue }];
+        }
+      }
+
+      const { error: clientError } = await supabase
+        .from("clients")
+        .update({
+          full_name: editName.trim(),
+          phone_e164: editPhone.trim() || null,
+          emails,
+        })
+        .eq("id", editParticipant.client_id);
+      error = clientError;
+    }
+
+    if (!error) {
+      const payload: any = { notes: editNotes.trim() || null };
+      if (!editParticipant.client_id) {
+        payload.guest_name = editName.trim();
+        payload.guest_email = editEmail.trim() || null;
+        payload.guest_phone = editPhone.trim() || null;
+      }
+      const { error: participantError } = await supabase
+        .from("event_participants")
+        .update(payload)
+        .eq("id", editParticipant.id);
+      error = participantError;
+    }
+
+    setSavingEdit(false);
+
+    if (error) {
+      console.error("[EventParticipantsTab] edit error:", error);
+      toast({ title: "Erro", description: "Não foi possível salvar as alterações", variant: "destructive" });
+    } else {
+      toast({ title: "Participante atualizado" });
+      setEditParticipant(null);
+      fetchParticipants();
+      onUpdate?.();
+    }
+  };
+
   const exportCSV = () => {
     const headers = ["Nome", "Email", "Telefone", "Status", "Coquetel", "Data do Evento", "Notas"];
     const rows = participants.map(p => {
