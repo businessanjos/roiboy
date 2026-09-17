@@ -412,22 +412,35 @@ export default function MedicalClients() {
                     </TableCell>
 
                     <TableCell>
+                      {c.program ? (
+                        <Badge
+                          style={{
+                            backgroundColor: `${c.programColor ?? "#6b7280"}20`,
+                            color: c.programColor ?? "#6b7280",
+                            borderColor: `${c.programColor ?? "#6b7280"}60`,
+                          }}
+                          variant="outline"
+                        >
+                          {c.program}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">Sem programa</span>
+                      )}
+                    </TableCell>
+                    <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {c.products.map((p) => (
-                          <Badge
-                            key={p}
-                            style={{
-                              backgroundColor: `${c.productColors[p] ?? "#6b7280"}20`,
-                              color: c.productColors[p] ?? "#6b7280",
-                              borderColor: `${c.productColors[p] ?? "#6b7280"}60`,
-                            }}
-                            variant="outline"
-                          >
-                            {p}
-                          </Badge>
-                        ))}
+                        {(c.practiceAreas ?? []).length === 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : (
+                          (c.practiceAreas ?? []).map((a) => (
+                            <Badge key={a} variant="secondary" className="text-xs font-normal">
+                              {a}
+                            </Badge>
+                          ))
+                        )}
                       </div>
                     </TableCell>
+
                     <TableCell className="text-sm min-w-[240px]">
                       <div className="space-y-1.5">
                         <EducationSelect
