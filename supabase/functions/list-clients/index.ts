@@ -533,6 +533,10 @@ Deno.serve(async (req) => {
       }
 
 
+      // Período pela última movimentação registrada na ficha do cliente.
+      if (updatedFrom) q = q.gte("recent_activity_at", updatedFrom);
+      if (updatedTo) q = q.lte("recent_activity_at", updatedTo);
+
       return q;
     };
 
