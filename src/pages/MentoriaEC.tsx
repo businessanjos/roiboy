@@ -188,14 +188,14 @@ export default function MentoriaEC() {
             .in("client_id", ids)
             .order("session_date", { ascending: false }),
         ),
-        supabase
-          .from("ec_mentoring_client_status")
-          .select("client_id, status")
-          .eq("account_id", accountId!)
-          .then((r) => {
-            if (r.error) console.error("[MentoriaEC] falha ao carregar situação:", r.error);
-            return r.data ?? [];
-          }),
+        fetchAllPages("situação", (from, to) =>
+          supabase
+            .from("ec_mentoring_client_status")
+            .select("client_id, status")
+            .eq("account_id", accountId!)
+            .order("client_id")
+            .range(from, to),
+        ),
       ]);
       if (productsRes.error) console.error("[MentoriaEC] falha ao carregar produtos:", productsRes.error);
       const products = productsRes.data ?? [];
