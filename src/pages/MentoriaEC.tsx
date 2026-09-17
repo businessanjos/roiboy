@@ -312,7 +312,12 @@ export default function MentoriaEC() {
       if (q && !m.fullName.toLowerCase().includes(q) && !(m.businessSegment ?? "").toLowerCase().includes(q))
         return false;
       if (mentorshipFilter !== "all" && m.mentorshipStatus !== mentorshipFilter) return false;
-      if (programFilter !== "all" && m.program !== programFilter) return false;
+      if (programFilter !== "all") {
+        if (programFilter === "__none__") {
+          if (m.productId) return false;
+        } else if (m.productId !== programFilter) return false;
+      }
+
       if (practiceFilter !== "all") {
         if (practiceFilter === "__none__") {
           if (m.businessSegment) return false;
