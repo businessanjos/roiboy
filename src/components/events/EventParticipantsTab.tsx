@@ -506,6 +506,7 @@ export default function EventParticipantsTab({
     declined: participants.filter(p => p.rsvp_status === 'declined').length,
     attended: participants.filter(p => p.rsvp_status === 'attended').length,
     noShow: participants.filter(p => p.rsvp_status === 'no_show').length,
+    coquetel: participants.filter(p => isCoquetel(p)).length,
   };
 
   const filteredClients = clients.filter(c => 
@@ -513,7 +514,7 @@ export default function EventParticipantsTab({
     !participants.some(p => p.client_id === c.id)
   );
 
-  const filterCards: { key: EventRsvpStatus | "all"; label: string; value: number; color: string }[] = [
+  const filterCards: { key: ParticipantFilter; label: string; value: number; color: string }[] = [
     { key: "all", label: "Total", value: stats.total, color: "text-foreground" },
     { key: "confirmed", label: "Confirmados", value: stats.confirmed, color: "text-success" },
     { key: "attended", label: "Presentes", value: stats.attended, color: "text-success" },
@@ -521,10 +522,15 @@ export default function EventParticipantsTab({
     { key: "waitlist", label: "Lista de Espera", value: stats.waitlist, color: "text-info" },
     { key: "declined", label: "Recusados", value: stats.declined, color: "text-danger" },
     { key: "no_show", label: "Faltaram", value: stats.noShow, color: "text-muted-foreground" },
+    { key: "coquetel", label: "Coquetel", value: stats.coquetel, color: "text-primary" },
   ];
 
   const filteredParticipants = participants.filter((p) => {
-    if (statusFilter !== "all" && p.rsvp_status !== statusFilter) return false;
+    if (statusFilter === "coquetel") {
+      if (!isCoquetel(p)) return false;
+    } else if (statusFilter !== "all" && p.rsvp_status !== statusFilter) {
+      return false;
+    }
     const q = searchQuery.trim().toLowerCase();
     if (!q) return true;
     const name = getParticipantName(p).toLowerCase();
