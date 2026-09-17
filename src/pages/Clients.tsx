@@ -296,6 +296,58 @@ export default function Clients() {
   const [areaOptions, setAreaOptions] = useState<string[]>([]);
   const [specialtyOptions, setSpecialtyOptions] = useState<string[]>([]);
 
+  // Intervalo do filtro de período (baseado na última atualização do cliente)
+  const periodRange = (() => {
+    const now = new Date();
+    switch (filterPeriod) {
+      case "today":
+        return { from: startOfDay(now), to: endOfDay(now) };
+      case "7d":
+        return { from: startOfDay(subDays(now, 6)), to: endOfDay(now) };
+      case "30d":
+        return { from: startOfDay(subDays(now, 29)), to: endOfDay(now) };
+      case "this_month":
+        return { from: startOfMonth(now), to: endOfMonth(now) };
+      case "last_month": {
+        const prev = subMonths(now, 1);
+        return { from: startOfMonth(prev), to: endOfMonth(prev) };
+      }
+      case "custom": {
+        if (!filterPeriodStart || !filterPeriodEnd) return null;
+        return { from: startOfDay(new Date(filterPeriodStart)), to: endOfDay(new Date(filterPeriodEnd)) };
+      }
+      default:
+        return null;
+    }
+  })();
+
+  const PERIOD_LABELS: Record<string, string> = {
+    today: "Hoje",
+    "7d": "Últimos 7 dias",
+    "30d": "Últimos 30 dias",
+    this_month: "Mês atual",
+    last_month: "Mês passado",
+    custom: "Personalizado",
+  };
+
+  const periodLabel =
+    filterPeriod === "custom" && periodRange
+      ? `${format(periodRange.from, "dd/MM/yy")} - ${format(periodRange.to, "dd/MM/yy")}`
+      : PERIOD_LABELS[filterPeriod] ?? "Período: todo";
+
+  const applyPeriodParams = (p: URLSearchParams | Record<string, string>) => {
+    if (!periodRange) return;
+    const from = periodRange.from.toISOString();
+    const to = periodRange.to.toISOString();
+    if (p instanceof URLSearchParams) {
+      p.set("updated_from", from);
+      p.set("updated_to", to);
+    } else {
+      p["updated_from"] = from;
+      p["updated_to"] = to;
+    }
+  };
+
   // Tab → contract filter mapping (overrides filterContract on fetch)
   const tabContractFilter: Record<string, string | null> = {
     active: "active",
