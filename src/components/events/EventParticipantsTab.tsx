@@ -699,9 +699,16 @@ export default function EventParticipantsTab({
                             <p className={`font-medium ${p.client_id ? 'text-foreground hover:text-primary hover:underline' : ''}`}>
                               {getParticipantName(p)}
                             </p>
-                            {!p.client_id && (
-                              <Badge variant="outline" className="text-xs">Externo</Badge>
-                            )}
+                            <div className="flex items-center gap-1 flex-wrap">
+                              {!p.client_id && (
+                                <Badge variant="outline" className="text-xs">Externo</Badge>
+                              )}
+                              {isCoquetel(p) && (
+                                <Badge className="text-xs bg-primary/10 text-primary">
+                                  <Martini className="h-3 w-3 mr-1" /> Coquetel
+                                </Badge>
+                              )}
+                            </div>
                           </div>
                         </div>
                       </TableCell>
