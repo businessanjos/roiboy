@@ -2472,7 +2472,12 @@ export default function SalesPipeline() {
       )}>
 
         {/* Main Tabs */}
-        <Tabs value={mainTab} onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}>
+        <Tabs
+          value={mainTab}
+          onValueChange={(v) => setMainTab(v as 'prospeccao' | 'pipeline')}
+          className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
+        >
+
           <div className="flex items-center justify-between gap-2">
             <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
 
