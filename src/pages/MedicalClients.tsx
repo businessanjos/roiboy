@@ -116,11 +116,37 @@ export default function MedicalClients() {
   }, [load, scheduleReload]);
 
 
-  const products = useMemo(() => {
-    const s = new Set<string>();
-    clients.forEach((c) => c.products.forEach((p) => s.add(p)));
-    return Array.from(s).sort();
+  const programs = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      const key = c.program ?? "__none__";
+      m.set(key, (m.get(key) ?? 0) + 1);
+    });
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
   }, [clients]);
+
+  const areas = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      (c.practiceAreas ?? []).forEach((a) => m.set(a, (m.get(a) ?? 0) + 1));
+    });
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0], "pt-BR"));
+  }, [clients]);
+
+  const educationBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    clients.forEach((c) => {
+      const key = (c.education ?? "").trim();
+      if (!key) return;
+      m.set(key, (m.get(key) ?? 0) + 1);
+    });
+    return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
+  }, [clients]);
+
+  const identifiedCount = useMemo(
+    () => clients.filter((c) => (c.education ?? "").trim() !== "").length,
+    [clients],
+  );
 
   const sources = useMemo(() => {
     const s = new Set<string>();
@@ -131,7 +157,9 @@ export default function MedicalClients() {
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
     return clients.filter((c) => {
-      if (productFilter !== "all" && !c.products.includes(productFilter)) return false;
+      if (programFilter !== "all" && (c.program ?? "__none__") !== programFilter) return false;
+      if (areaFilter !== "all" && !(c.practiceAreas ?? []).includes(areaFilter)) return false;
+      if (educationFilter !== "all" && (c.education ?? "").trim() !== educationFilter) return false;
       if (sourceFilter !== "all" && !c.evidence.some((e) => e.source === sourceFilter)) return false;
       if (classificationFilter === "unclassified" && (c.education || c.education_specialty)) return false;
       if (classificationFilter === "classified" && !c.education && !c.education_specialty) return false;
@@ -141,7 +169,8 @@ export default function MedicalClients() {
         c.full_name,
         c.education ?? "",
         c.education_specialty ?? "",
-        ...c.products,
+        c.program ?? "",
+        ...(c.practiceAreas ?? []),
         ...c.evidence.map((e) => `${e.field ?? ""} ${e.text}`),
         ...(c.recordFields ?? []).map((f) => `${f.label} ${f.value}`),
         ...(c.customFields ?? []).map((f) => `${f.label} ${f.value}`),
@@ -151,7 +180,8 @@ export default function MedicalClients() {
         .toLowerCase();
       return hay.includes(q);
     });
-  }, [clients, search, productFilter, sourceFilter, classificationFilter]);
+  }, [clients, search, programFilter, areaFilter, educationFilter, sourceFilter, classificationFilter]);
+
 
   const exportCsv = () => {
     const rows = [
