@@ -848,7 +848,12 @@ function CapturedDealsDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
         <DialogHeader>
-          <DialogTitle className="text-base">Captado — {userName}</DialogTitle>
+          <DialogTitle className="text-base">
+            Captado — {userName}
+            {periodLabel && (
+              <span className="ml-2 text-xs font-normal text-muted-foreground capitalize">({periodLabel})</span>
+            )}
+          </DialogTitle>
         </DialogHeader>
 
         <div className="max-h-[55vh] overflow-y-auto overflow-x-auto rounded-md border">
