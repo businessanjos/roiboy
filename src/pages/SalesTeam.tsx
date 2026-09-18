@@ -15,18 +15,11 @@ import { TeamGoalsTab } from "@/components/sales/team/TeamGoalsTab";
 import { TeamInsightsTab } from "@/components/sales/team/TeamInsightsTab";
 import { TeamConversationAnalysisTab } from "@/components/sales/team/TeamConversationAnalysisTab";
 import { QuotasIncentivesTab } from "@/components/sales/quotas/QuotasIncentivesTab";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
-  const userName = currentUser?.name?.toLowerCase() || "";
-  const userEmail = currentUser?.email?.toLowerCase() || "";
-  const hasFullAccess =
-    userName.includes("jonathan") ||
-    userName.includes("maikol") ||
-    userName.includes("everton") ||
-    userEmail.includes("anjosgroup.dados") ||
-    currentUser?.role === "super_admin" ||
-    currentUser?.is_also_admin === true;
+  const hasFullAccess = isManagementUser(currentUser);
   const { plan, saveSalesLevels } = useCommissionPlan();
   const [activeTab, setActiveTab] = useState("performance");
 
