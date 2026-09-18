@@ -1161,9 +1161,11 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
 
   return (
     <div className="rounded-lg border-2 border-warning/30 bg-warning/5 p-3 space-y-2">
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 flex-wrap">
         <Dice5 className="h-4 w-4 text-warning" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
+        <div className="ml-auto flex items-center gap-1.5">{period.control}</div>
+        <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
