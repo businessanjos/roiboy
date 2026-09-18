@@ -51,6 +51,7 @@ export function SpiffWindowDealsDialog({
         .order("won_at", { ascending: true });
       if (error) throw error;
       let rows = deals ?? [];
+      let matchingIds: Set<string> | null = null;
 
       const ids = rows.map((d: any) => d.id);
       let productByDeal = new Map<string, { name: string; color: string | null }>();
@@ -62,12 +63,11 @@ export function SpiffWindowDealsDialog({
           .in("deal_id", ids);
 
         if (targetProductId) {
-          const matching = new Set(
+          matchingIds = new Set(
             (fvs ?? [])
               .filter((f: any) => resolveItemVendaToProductId(f.value_text) === targetProductId)
-              .map((f: any) => f.deal_id),
+              .map((f: any) => f.deal_id) as string[],
           );
-          rows = rows.filter((d: any) => matching.has(d.id));
         }
 
         const productIds = Array.from(
@@ -84,12 +84,21 @@ export function SpiffWindowDealsDialog({
         }
       }
 
-      return { rows, productByDeal };
+      let targetProductName: string | null = null;
+      if (targetProductId) {
+        const { data: tp } = await supabase.from("products").select("name").eq("id", targetProductId).maybeSingle();
+        targetProductName = (tp as any)?.name ?? null;
+      }
+
+      return { rows, productByDeal, matchingIds, targetProductName };
     },
   });
 
   const rows = data?.rows ?? [];
-  const total = rows.reduce((acc: number, d: any) => acc + Number(d.value || 0), 0);
+  const matchingIds = data?.matchingIds ?? null;
+  const countsFor = (d: any) => (matchingIds ? matchingIds.has(d.id) : true);
+  const validRows = rows.filter(countsFor);
+  const total = validRows.reduce((acc: number, d: any) => acc + Number(d.value || 0), 0);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -99,6 +108,7 @@ export function SpiffWindowDealsDialog({
           <DialogDescription className="text-xs">
             {spiff?.name} · {win.label}
             {triggerSalesCount > 0 && <> · regra: {triggerSalesCount} vendas por janela</>}
+            {data?.targetProductName && <> · só contam vendas de <strong>{data.targetProductName}</strong></>}
           </DialogDescription>
         </DialogHeader>
 
@@ -110,19 +120,20 @@ export function SpiffWindowDealsDialog({
                 <TableHead className="text-xs">Produto</TableHead>
                 <TableHead className="text-xs text-right">Valor</TableHead>
                 <TableHead className="text-xs text-center">Ganha em</TableHead>
+                <TableHead className="text-xs text-center">Conta?</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {isLoading && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-xs text-muted-foreground py-4 text-center">
+                  <TableCell colSpan={5} className="text-xs text-muted-foreground py-4 text-center">
                     Carregando…
                   </TableCell>
                 </TableRow>
               )}
               {!isLoading && rows.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-xs text-muted-foreground py-4 text-center">
+                  <TableCell colSpan={5} className="text-xs text-muted-foreground py-4 text-center">
                     Nenhuma venda encontrada nesta janela.
                   </TableCell>
                 </TableRow>
@@ -160,6 +171,13 @@ export function SpiffWindowDealsDialog({
                     <TableCell className="py-2 text-xs text-center text-muted-foreground whitespace-nowrap">
                       {d.won_at ? new Date(d.won_at).toLocaleDateString("pt-BR") : "—"}
                     </TableCell>
+                    <TableCell className="py-2 text-center">
+                      {countsFor(d) ? (
+                        <Badge variant="outline" className="text-[10px] border-success text-success">Conta</Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Fora da regra</Badge>
+                      )}
+                    </TableCell>
                   </TableRow>
                 );
               })}
@@ -169,7 +187,10 @@ export function SpiffWindowDealsDialog({
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="text-muted-foreground">
-            {rows.length} venda{rows.length === 1 ? "" : "s"} na janela
+            {validRows.length} venda{validRows.length === 1 ? "" : "s"} válida{validRows.length === 1 ? "" : "s"} na janela
+            {matchingIds && rows.length !== validRows.length && (
+              <> · {rows.length - validRows.length} fora da regra de produto</>
+            )}
           </span>
           <span className="font-semibold tabular-nums">Total: R$ {formatBRL(total)}</span>
         </div>
