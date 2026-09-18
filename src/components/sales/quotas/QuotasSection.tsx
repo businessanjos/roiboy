@@ -13,11 +13,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
-// Time comercial com metas individuais por produto.
-// Inclui Closers (Darlan, Vanessa), Gerente (Jonathan) e Sócios (Everton, Maikol).
-const SALES_USER_IDS = [
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan Ferreira
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
+// Closers ativos vêm dinamicamente do RH (useActiveSalesClosers).
+// Gerente e Sócios seguem fixos porque não têm cargo de closer no RH.
+const EXTRA_SALES_USER_IDS = [
   "de43a643-0109-4afb-ac35-be768dbf4090", // Everton Pieri
   "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
   "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol Parnow
