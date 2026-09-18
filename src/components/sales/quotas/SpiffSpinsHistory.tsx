@@ -27,7 +27,9 @@ type SpinRow = {
   prize_amount: number;
   prize_label: string | null;
   spun_at: string;
-  payment_status: "pending" | "paid";
+  payment_status: "pending" | "paid" | "cancelled";
+  cancelled_at: string | null;
+  cancelled_reason: string | null;
   paid_at: string | null;
   paid_by: string | null;
   payment_notes: string | null;
@@ -61,7 +63,7 @@ export function SpiffSpinsHistory() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("spiff_spins")
-        .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes")
+        .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
         .eq("account_id", accountId!)
         .order("spun_at", { ascending: false })
         .limit(1000);
@@ -134,15 +136,16 @@ export function SpiffSpinsHistory() {
   }, [spinsQ.data, statusFilter, userFilter, spiffFilter, from, to, search, userById, spiffById]);
 
   const totals = useMemo(() => {
-    const totalAmount = filtered.reduce((acc, r) => acc + Number(r.prize_amount || 0), 0);
-    const paidAmount = filtered
+    const valid = filtered.filter((r) => !r.cancelled_at);
+    const totalAmount = valid.reduce((acc, r) => acc + Number(r.prize_amount || 0), 0);
+    const paidAmount = valid
       .filter((r) => r.payment_status === "paid")
       .reduce((acc, r) => acc + Number(r.prize_amount || 0), 0);
     const pendingAmount = totalAmount - paidAmount;
     return {
       total: filtered.length,
-      paidCount: filtered.filter((r) => r.payment_status === "paid").length,
-      pendingCount: filtered.filter((r) => r.payment_status === "pending").length,
+      paidCount: valid.filter((r) => r.payment_status === "paid").length,
+      pendingCount: valid.filter((r) => r.payment_status === "pending").length,
       totalAmount,
       paidAmount,
       pendingAmount,
@@ -347,7 +350,11 @@ export function SpiffSpinsHistory() {
                           : <span className="text-muted-foreground">R$ 0</span>}
                       </TableCell>
                       <TableCell className="text-center">
-                        {r.payment_status === "paid" ? (
+                        {r.cancelled_at ? (
+                          <Badge variant="outline" className="gap-1 border-danger text-danger" title={r.cancelled_reason || "Benefício cancelado"}>
+                            <XCircle className="h-3 w-3" /> Cancelado
+                          </Badge>
+                        ) : r.payment_status === "paid" ? (
                           <Badge className="bg-success hover:bg-success text-white gap-1">
                             <CheckCircle2 className="h-3 w-3" /> Pago
                           </Badge>
@@ -368,7 +375,9 @@ export function SpiffSpinsHistory() {
                         ) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {Number(r.prize_amount) <= 0 ? (
+                        {r.cancelled_at ? (
+                          <span className="text-[11px] text-danger">{r.cancelled_reason || "Cancelado"}</span>
+                        ) : Number(r.prize_amount) <= 0 ? (
                           <span className="text-xs text-muted-foreground">—</span>
                         ) : r.payment_status === "pending" ? (
                           <Button
