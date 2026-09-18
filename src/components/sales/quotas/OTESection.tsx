@@ -64,6 +64,8 @@ export function OTESection({
         .select("user_id, salary, employment_type, full_name, position")
         .eq("account_id", accountId!)
         .ilike("position", `%${positionTitle}%`)
+        .eq("status", "active")
+        .is("termination_date", null)
         .not("user_id", "is", null);
       if (error) throw error;
       return data;

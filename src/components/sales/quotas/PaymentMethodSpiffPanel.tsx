@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -51,23 +52,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
   const tiers: PaymentTier[] = Array.isArray(spiff.payment_tiers) ? spiff.payment_tiers : [];
 
   // Closers ativos
-  const closersQuery = useQuery({
-    queryKey: ["payment-spiff-closers", accountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, full_name, position")
-        .eq("account_id", accountId!)
-        .not("user_id", "is", null)
-        .or("position.ilike.%closer%,position.ilike.%executiv%");
-      if (error) throw error;
-      return (data ?? []).filter((c: any) => {
-        const pos = (c.position || "").toLowerCase();
-        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
-      });
-    },
-    enabled: !!accountId,
-  });
+  const closersQuery = useActiveSalesClosers();
 
   const allCloserIds = (closersQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
   const participantIds = Array.isArray(spiff.participant_user_ids) && spiff.participant_user_ids.length > 0

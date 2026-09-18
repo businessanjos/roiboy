@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { computeRouletteBasis } from "./rouletteBasis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
@@ -14,11 +15,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-// Apenas Closers/Executivos Comerciais ativos (Darlan e Vanessa).
-const SALES_USER_IDS = [
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan Ferreira
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
-];
+// Closers/Executivos Comerciais ativos vêm dinamicamente do RH.
 
 const ANNUAL_BONUS_THRESHOLD = 90;     // % de atingimento para o bônus anual
 const QUARTERLY_BONUS_THRESHOLD = 100; // % de atingimento para o bônus trimestral
@@ -64,34 +61,39 @@ export function CommissionSimulator({ presentationMode = false }: { presentation
     } catch {}
   }, [presentationMode, selectedUserId, simMode, achievementPct, salesCount, spiffOverrides, paymentMix]);
 
+  const closersQuery = useActiveSalesClosers();
+  const salesUserIds = (closersQuery.data ?? []).map((c) => c.userId);
+
   const usersQuery = useQuery({
-    queryKey: ["sales-team-users", accountId],
+    queryKey: ["sales-team-users", accountId, salesUserIds.join(",")],
     queryFn: async () => {
+      if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
         .select("id, name")
         .eq("account_id", accountId!)
-        .in("id", SALES_USER_IDS)
+        .in("id", salesUserIds)
         .order("name");
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId,
+    enabled: !!accountId && salesUserIds.length > 0,
   });
 
   // Busca salário CLT real dos vendedores (RH)
   const collaboratorsQuery = useQuery({
-    queryKey: ["sales-collaborators-salary", accountId],
+    queryKey: ["sales-collaborators-salary", accountId, salesUserIds.join(",")],
     queryFn: async () => {
+      if (salesUserIds.length === 0) return [];
       const { data, error } = await supabase
         .from("hr_collaborators")
         .select("user_id, salary")
         .eq("account_id", accountId!)
-        .in("user_id", SALES_USER_IDS);
+        .in("user_id", salesUserIds);
       if (error) throw error;
       return data;
     },
-    enabled: !!accountId,
+    enabled: !!accountId && salesUserIds.length > 0,
   });
 
   // Cargos comerciais para resolver o plano correto
