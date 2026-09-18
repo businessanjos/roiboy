@@ -62,19 +62,23 @@ export function QuotasSection() {
 
   const { quotas, loading, upsertQuota } = useQuotasIncentives(year, month);
 
+  const closersQuery = useActiveSalesClosers();
+  const closerIds = (closersQuery.data ?? []).map((c) => c.userId);
+
   const usersQuery = useQuery({
-    queryKey: ["sales-team-users", accountId, "v2-5users"],
+    queryKey: ["sales-team-users", accountId, "v3-dynamic", closerIds.join(",")],
     queryFn: async () => {
+      const ids = Array.from(new Set([...closerIds, ...EXTRA_SALES_USER_IDS]));
       const { data, error } = await supabase
         .from("users")
-        .select("id, name")
+        .select("id, name, is_active")
         .eq("account_id", accountId!)
-        .in("id", SALES_USER_IDS)
+        .in("id", ids)
         .order("name");
       if (error) throw error;
-      return data;
+      return (data ?? []).filter((u: any) => u.is_active !== false);
     },
-    enabled: !!accountId,
+    enabled: !!accountId && !closersQuery.isLoading,
   });
 
   const productsQuery = useQuery({
