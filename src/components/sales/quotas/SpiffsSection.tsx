@@ -18,6 +18,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 import { RouletteSpinDialog } from "./RouletteSpinDialog";
+import { SpiffWindowDealsDialog } from "./SpiffWindowDealsDialog";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
@@ -1454,6 +1455,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
   const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
+  const [salesDetail, setSalesDetail] = useState<{ uid: string; name: string } | null>(null);
 
   if (triggerSalesCount <= 0) return null;
 
@@ -1500,7 +1502,18 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
             {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
-                <TableCell className="text-center text-sm tabular-nums">{s.sales}</TableCell>
+                <TableCell className="text-center text-sm tabular-nums p-0">
+                  <button
+                    type="button"
+                    onClick={() => setSalesDetail({ uid: s.uid, name: s.name })}
+                    disabled={s.sales === 0}
+                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-pink-500/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    title={s.sales > 0 ? "Ver quais vendas formaram este número" : "Sem vendas na janela"}
+                  >
+                    <span className="tabular-nums">{s.sales}</span>
+                    {s.sales > 0 && <ListFilter className="h-3 w-3 text-muted-foreground" />}
+                  </button>
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={s.spins > 0 ? "default" : "secondary"} className="text-xs">
                     {s.spins} {s.spins === 1 ? "giro" : "giros"}
@@ -1541,6 +1554,16 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           spiff={spiff}
           user={{ uid: spinUser.uid, name: spinUser.name }}
           pendingSpins={spinUser.pending}
+        />
+      )}
+
+      {salesDetail && (
+        <SpiffWindowDealsDialog
+          open={!!salesDetail}
+          onOpenChange={(o) => { if (!o) setSalesDetail(null); }}
+          spiff={spiff}
+          userId={salesDetail.uid}
+          userName={salesDetail.name}
         />
       )}
     </div>
