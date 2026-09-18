@@ -1,4 +1,5 @@
 import { useState, useMemo, useEffect } from "react";
+import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 import { computeRouletteBasis } from "./rouletteBasis";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
