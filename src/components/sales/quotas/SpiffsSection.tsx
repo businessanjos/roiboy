@@ -1372,7 +1372,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           .in("deal_id", dealIds);
         const matchingIds = new Set(
           (fvs ?? [])
-            .filter((f: any) => resolveItemVendaToProductId(f.value_text) === targetProductId)
+            .filter((f: any) => dealCountsForTargetProduct(f.value_text, targetProductId))
             .map((f: any) => f.deal_id)
         );
         deals = deals.filter((d) => matchingIds.has(d.id));

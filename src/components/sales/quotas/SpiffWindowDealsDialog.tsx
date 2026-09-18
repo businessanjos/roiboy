@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
+import { resolveItemVendaToProductId, dealCountsForTargetProduct } from "@/lib/sales/itemVendaResolver";
 import { getSpiffWindow } from "@/lib/sales/spiffWindow";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -65,7 +65,7 @@ export function SpiffWindowDealsDialog({
         if (targetProductId) {
           matchingIds = new Set(
             (fvs ?? [])
-              .filter((f: any) => resolveItemVendaToProductId(f.value_text) === targetProductId)
+              .filter((f: any) => dealCountsForTargetProduct(f.value_text, targetProductId))
               .map((f: any) => f.deal_id) as string[],
           );
         }
