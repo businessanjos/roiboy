@@ -23466,6 +23466,9 @@ export type Database = {
           account_id: string
           approved_at: string | null
           approved_by: string | null
+          cancelled_at: string | null
+          cancelled_deal_id: string | null
+          cancelled_reason: string | null
           created_at: string
           created_by: string | null
           id: string
@@ -23485,6 +23488,9 @@ export type Database = {
           account_id: string
           approved_at?: string | null
           approved_by?: string | null
+          cancelled_at?: string | null
+          cancelled_deal_id?: string | null
+          cancelled_reason?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
@@ -23504,6 +23510,9 @@ export type Database = {
           account_id?: string
           approved_at?: string | null
           approved_by?: string | null
+          cancelled_at?: string | null
+          cancelled_deal_id?: string | null
+          cancelled_reason?: string | null
           created_at?: string
           created_by?: string | null
           id?: string
