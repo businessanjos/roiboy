@@ -11,12 +11,13 @@ import {
 } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import { ShieldCheck, Check, X, Clock, Inbox } from "lucide-react";
+import { ShieldCheck, Check, X, Clock, Inbox, ListFilter } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { toast } from "sonner";
+import { SpiffWindowDealsDialog } from "./SpiffWindowDealsDialog";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -26,6 +27,7 @@ interface PendingRequest {
   user_id: string;
   requested_by: string | null;
   created_at: string;
+  spiff?: any;
   spiff_name?: string;
   user_name?: string;
   requester_name?: string;
@@ -40,6 +42,7 @@ export function RouletteApprovalsQueue() {
   const [rejectId, setRejectId] = useState<string | null>(null);
   const [rejectReason, setRejectReason] = useState("");
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [detail, setDetail] = useState<PendingRequest | null>(null);
 
   const { data: pending = [] } = useQuery({
     queryKey: ["spiff-spin-requests-pending", currentUser?.account_id],
@@ -65,10 +68,10 @@ export function RouletteApprovalsQueue() {
         ...new Set(rows.flatMap((r) => [r.user_id, r.requested_by]).filter(Boolean)),
       ];
       const [spiffsRes, usersRes] = await Promise.all([
-        supabase.from("sales_spiffs").select("id, name").in("id", spiffIds),
+        supabase.from("sales_spiffs").select("*").in("id", spiffIds),
         supabase.from("users").select("id, name").in("id", userIds),
       ]);
-      const spiffMap = new Map((spiffsRes.data ?? []).map((s: any) => [s.id, s.name]));
+      const spiffMap = new Map((spiffsRes.data ?? []).map((s: any) => [s.id, s]));
       const userMap = new Map((usersRes.data ?? []).map((u: any) => [u.id, u.name]));
       return rows.map((r) => ({
         id: r.id,
@@ -76,7 +79,8 @@ export function RouletteApprovalsQueue() {
         user_id: r.user_id,
         requested_by: r.requested_by,
         created_at: r.created_at,
-        spiff_name: spiffMap.get(r.spiff_id) ?? "SPIFF",
+        spiff: spiffMap.get(r.spiff_id) ?? null,
+        spiff_name: (spiffMap.get(r.spiff_id) as any)?.name ?? "SPIFF",
         user_name: userMap.get(r.user_id) ?? "Vendedor",
         requester_name: r.requested_by ? userMap.get(r.requested_by) : null,
       }));
@@ -231,6 +235,16 @@ export function RouletteApprovalsQueue() {
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-8 gap-1"
+                  onClick={() => setDetail(r)}
+                  title="Ver quais vendas geraram este giro"
+                >
+                  <ListFilter className="h-3.5 w-3.5" />
+                  Ver vendas
+                </Button>
+                <Button
+                  size="sm"
+                  variant="outline"
                   className="h-8 gap-1 border-danger text-danger hover:bg-danger-soft hover:text-danger-strong"
                   onClick={() => openReject(r.id)}
                   disabled={busyId === r.id}
@@ -252,6 +266,17 @@ export function RouletteApprovalsQueue() {
           ))}
         </CardContent>
       </Card>
+
+      {detail && (
+        <SpiffWindowDealsDialog
+          open={!!detail}
+          onOpenChange={(o) => { if (!o) setDetail(null); }}
+          spiff={detail.spiff}
+          userId={detail.user_id}
+          userName={detail.user_name ?? "Vendedor"}
+          referenceDate={new Date(detail.created_at)}
+        />
+      )}
 
       <Dialog open={rejectOpen} onOpenChange={setRejectOpen}>
         <DialogContent className="sm:max-w-md">
