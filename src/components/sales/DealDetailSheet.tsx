@@ -1345,8 +1345,9 @@ export function DealDetailSheet({
                     </div>
                   </div>
                   <Popover
-                    open={receivedEditOpen}
+                    open={receivedEditOpen && (deal as any).status === "won"}
                     onOpenChange={async (openNow) => {
+                      if (openNow && (deal as any).status !== "won") return;
                       if (!openNow && receivedEditOpen) {
                         const v = fromReceivedDraft(receivedDraft);
                         const prev = localReceivedValue;
@@ -1376,8 +1377,13 @@ export function DealDetailSheet({
                     <PopoverTrigger asChild>
                       <button
                         type="button"
-                        className="text-2xl font-bold text-success hover:underline text-left w-full"
-                        title="Editar valor recebido"
+                        disabled={(deal as any).status !== "won"}
+                        className="text-2xl font-bold text-success hover:underline text-left w-full disabled:opacity-70 disabled:cursor-not-allowed disabled:no-underline"
+                        title={
+                          (deal as any).status === "won"
+                            ? "Editar valor recebido"
+                            : "Disponível quando a negociação for marcada como ganha"
+                        }
                       >
                         {localReceivedValue != null
                           ? formatCurrency(localReceivedValue)
@@ -1385,7 +1391,9 @@ export function DealDetailSheet({
                             <span className="flex flex-col items-start">
                               <span>{formatCurrency(0)}</span>
                               <span className="text-[10px] uppercase tracking-wide text-muted-foreground font-normal not-italic mt-0.5">
-                                Clique para informar o valor recebido
+                                {(deal as any).status === "won"
+                                  ? "Clique para informar o valor recebido"
+                                  : "Obrigatório ao marcar como ganha"}
                               </span>
                             </span>
                           )}
