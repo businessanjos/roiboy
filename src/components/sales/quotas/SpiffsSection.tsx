@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
+import { dealCountsForTargetProduct } from "@/lib/sales/itemVendaResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -1060,7 +1060,11 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           .select("deal_id, value_text")
           .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
           .in("deal_id", dealIds);
-        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === targetProductId).map((f: any) => f.deal_id));
+        const matchingIds = new Set(
+          (fvs ?? [])
+            .filter((f: any) => dealCountsForTargetProduct(f.value_text, targetProductId))
+            .map((f: any) => f.deal_id),
+        );
         deals = deals.filter((d) => matchingIds.has(d.id));
       }
       return deals;
