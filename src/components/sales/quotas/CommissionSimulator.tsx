@@ -14,11 +14,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
-// Apenas Closers/Executivos Comerciais ativos (Darlan e Vanessa).
-const SALES_USER_IDS = [
-  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan Ferreira
-  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
-];
+// Closers/Executivos Comerciais ativos vêm dinamicamente do RH.
 
 const ANNUAL_BONUS_THRESHOLD = 90;     // % de atingimento para o bônus anual
 const QUARTERLY_BONUS_THRESHOLD = 100; // % de atingimento para o bônus trimestral
