@@ -19,6 +19,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 import { RouletteSpinDialog } from "./RouletteSpinDialog";
 import { SpiffWindowDealsDialog } from "./SpiffWindowDealsDialog";
+import { ProductAuditDialog } from "./ProductAuditDialog";
+import { isManagementUser } from "@/lib/access/managementRoles";
+import { AlertTriangle } from "lucide-react";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
@@ -33,6 +36,7 @@ export function SpiffsSection() {
   const { spiffs, activePlan, saveSpiff, deleteSpiff } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [productAuditOpen, setProductAuditOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -656,8 +660,10 @@ export function SpiffsSection() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
+        <ProductAuditDialog open={productAuditOpen} onOpenChange={setProductAuditOpen} />
         <CardContent className="space-y-4">
           {spiffs.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum SPIFF criado. Crie campanhas temporárias para impulsionar vendas específicas.</p>
