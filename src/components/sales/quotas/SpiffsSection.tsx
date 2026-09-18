@@ -1000,6 +1000,17 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           pendingSpins={spinUser.pending}
         />
       )}
+
+      {capturedDetail && (
+        <CapturedDealsDialog
+          open={!!capturedDetail}
+          onOpenChange={(o) => { if (!o) setCapturedDetail(null); }}
+          userName={capturedDetail.name}
+          deals={capturedDetail.deals}
+          total={capturedDetail.total}
+          earnedSpins={capturedDetail.earnedSpins}
+        />
+      )}
     </div>
   );
 }
