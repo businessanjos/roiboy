@@ -942,7 +942,20 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
             {visibleSummary.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
-                <TableCell className="text-center text-sm tabular-nums">R$ {formatBRL(Math.round(s.total))}</TableCell>
+                <TableCell className="text-center text-sm tabular-nums p-0">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setCapturedDetail({ name: s.name, deals: s.deals, total: s.total, earnedSpins: s.earnedSpins })
+                    }
+                    disabled={s.deals.length === 0}
+                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-warning/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    title={s.deals.length > 0 ? "Ver negociações que formaram este valor" : "Sem negociações no período"}
+                  >
+                    <span className="tabular-nums">R$ {formatBRL(Math.round(s.total))}</span>
+                    {s.deals.length > 0 && <ListFilter className="h-3 w-3 text-muted-foreground" />}
+                  </button>
+                </TableCell>
                 <TableCell className="text-center">
                   <Badge variant={s.pendingSpins > 0 ? "default" : "secondary"} className="text-xs">
                     {s.pendingSpins} {s.pendingSpins === 1 ? "giro" : "giros"}
