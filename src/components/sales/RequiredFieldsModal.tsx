@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
@@ -84,6 +85,7 @@ export function RequiredFieldsModal({
   const [briefingComplete, setBriefingComplete] = useState(false);
   const [draftHydrated, setDraftHydrated] = useState(false);
   const [billingValues, setBillingValues] = useState<BillingMentoreeValues>(EMPTY_BILLING_VALUES);
+  const [receivedValue, setReceivedValue] = useState<string>("");
   const [dealContact, setDealContact] = useState<{ name?: string | null; phone?: string | null; email?: string | null } | undefined>(undefined);
   const skipAutosaveRef = useRef(false);
 
@@ -106,6 +108,7 @@ export function RequiredFieldsModal({
       setBillingValues(draft?.billingValues ?? EMPTY_BILLING_VALUES);
       setBriefingComplete(false);
       setDealContact(undefined);
+      setReceivedValue("");
 
       if (showBriefing && dealId) {
         supabase
@@ -121,10 +124,13 @@ export function RequiredFieldsModal({
       if (showBilling && dealId) {
         supabase
           .from("deals")
-          .select("contact_name, contact_phone, contact_email")
+          .select("contact_name, contact_phone, contact_email, received_value")
           .eq("id", dealId)
           .maybeSingle()
           .then(({ data }) => {
+            if (data && (data as any).received_value !== null && (data as any).received_value !== undefined) {
+              setReceivedValue(String((data as any).received_value).replace(".", ","));
+            }
             if (data) {
               setDealContact({
                 name: data.contact_name,
@@ -177,7 +183,10 @@ export function RequiredFieldsModal({
   // Briefing operacional é OBRIGATÓRIO em todo ganho (inclui carteira/renovação)
   const briefingOk = !showBriefing || briefingComplete;
   const billingOk = !showBilling || isBillingMentoreeComplete(billingValues);
-  const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk;
+  // Valor recebido (cash collect) é obrigatório no ganho — pode ser 0, mas precisa ser informado.
+  const parsedReceived = Number(String(receivedValue).replace(/\./g, "").replace(",", "."));
+  const receivedOk = !showBilling || (receivedValue.trim() !== "" && Number.isFinite(parsedReceived) && parsedReceived >= 0);
+  const canSave = allFieldsFilled && breakdownOk && briefingOk && billingOk && receivedOk;
 
   const handleSave = async () => {
     setSaving(true);
@@ -347,6 +356,14 @@ export function RequiredFieldsModal({
         }
       }
 
+      if (showBilling && receivedOk) {
+        const { error: rvErr } = await supabase
+          .from("deals")
+          .update({ received_value: parsedReceived } as any)
+          .eq("id", dealId);
+        if (rvErr) throw rvErr;
+      }
+
       clearLocalAutosaveDraft(draftKey);
       toast.success("Campos preenchidos!");
       onComplete();
@@ -419,6 +436,24 @@ export function RequiredFieldsModal({
     );
   };
 
+
+  const receivedValueSection = showBilling ? (
+    <div className="space-y-2 rounded-lg border border-border p-3">
+      <Label className="text-sm font-medium">
+        Valor recebido (R$) <span className="text-destructive">*</span>
+      </Label>
+      <Input
+        inputMode="decimal"
+        placeholder="0,00"
+        value={receivedValue}
+        onChange={(e) => setReceivedValue(e.target.value.replace(/[^0-9.,]/g, ""))}
+      />
+      <p className="text-xs text-muted-foreground">
+        Quanto entrou de fato no caixa nesta venda. Alimenta o Cash Collect dos SPIFFs. Se ainda não entrou nada, informe 0.
+      </p>
+    </div>
+  ) : null;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={`${showBriefing ? "max-w-3xl" : "max-w-md"} max-h-[90vh] overflow-y-auto`}>
@@ -443,6 +478,8 @@ export function RequiredFieldsModal({
                     {displayedFields.map((field) => renderField(field))}
                   </div>
                 )}
+
+                {receivedValueSection}
 
                 {showBilling && draftHydrated && (
                   <BillingMentoreeSection
@@ -475,6 +512,8 @@ export function RequiredFieldsModal({
                   {displayedFields.map((field) => renderField(field))}
                 </div>
               )}
+              {receivedValueSection}
+
               {showBilling && draftHydrated && (
                 <BillingMentoreeSection
                   dealId={dealId}
