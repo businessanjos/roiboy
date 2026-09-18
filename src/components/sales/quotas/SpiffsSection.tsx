@@ -785,13 +785,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
-        .select("id, entry_value, received_value, value, responsible_user_id, won_at, status")
+        .select("id, title, contact_name, client_id, entry_value, received_value, value, responsible_user_id, won_at, status")
         .eq("account_id", accountId!)
         .eq("status", "won")
         .gte("won_at", spiff.start_date)
         .lte("won_at", `${spiff.end_date}T23:59:59`);
       if (error) throw error;
-      let deals = (data ?? []) as Array<{ id: string; entry_value: number | null; received_value: number | null; value: number | null; responsible_user_id: string | null; won_at: string | null; status: string }>;
+      let deals = (data ?? []) as CapturedDeal[];
 
       // Filtro por produto-alvo da campanha (via custom field "Item da Venda")
       if (targetProductId && deals.length > 0) {
