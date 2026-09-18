@@ -1669,7 +1669,19 @@ export default function SalesPipeline() {
         .maybeSingle();
       const briefingMissing = !isRenewal && !briefingRow?.is_complete;
 
-      if (hasMissingFields || briefingMissing) {
+      // Valor recebido (cash collect) é obrigatório no ganho
+      const { data: dealRow } = await supabase
+        .from("deals")
+        .select("received_value")
+        .eq("id", dealId)
+        .maybeSingle();
+      const receivedMissing =
+        (dealRow as any)?.received_value === null || (dealRow as any)?.received_value === undefined;
+
+      if (hasMissingFields || briefingMissing || receivedMissing) {
+        if (!hasMissingFields && !briefingMissing && receivedMissing) {
+          toast.info("Informe o valor recebido antes de marcar como ganho.");
+        }
         if (!hasMissingFields && briefingMissing) {
           toast.info("Preencha o briefing para operação antes de marcar como ganho.");
         }
