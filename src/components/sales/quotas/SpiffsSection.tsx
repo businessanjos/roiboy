@@ -1269,6 +1269,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           deals={capturedDetail.deals}
           total={capturedDetail.total}
           earnedSpins={capturedDetail.earnedSpins}
+          periodLabel={period.label}
         />
       )}
     </div>
