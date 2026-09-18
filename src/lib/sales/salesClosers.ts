@@ -61,11 +61,16 @@ export function useActiveSalesClosers(positionFilter?: string) {
 
       return collaborators
         .filter((c: any) => activeUsers.has(c.user_id))
-        .map((c: any) => ({
-          userId: c.user_id as string,
-          name: (activeUsers.get(c.user_id) as string) || c.full_name || "Sem nome",
-          position: c.position || "",
-        }))
+        .map((c: any) => {
+          const name = (activeUsers.get(c.user_id) as string) || c.full_name || "Sem nome";
+          return {
+            userId: c.user_id as string,
+            name,
+            position: c.position || "",
+            user_id: c.user_id as string,
+            full_name: name,
+          };
+        })
         .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
     },
   });
