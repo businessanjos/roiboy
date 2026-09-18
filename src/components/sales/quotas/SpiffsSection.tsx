@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
+import { dealCountsForTargetProduct } from "@/lib/sales/itemVendaResolver";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,6 +19,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 import { RouletteSpinDialog } from "./RouletteSpinDialog";
 import { SpiffWindowDealsDialog } from "./SpiffWindowDealsDialog";
+import { ProductAuditDialog } from "./ProductAuditDialog";
+import { isManagementUser } from "@/lib/access/managementRoles";
+import { AlertTriangle } from "lucide-react";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
@@ -33,6 +36,7 @@ export function SpiffsSection() {
   const { spiffs, activePlan, saveSpiff, deleteSpiff } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [productAuditOpen, setProductAuditOpen] = useState(false);
 
   const [name, setName] = useState("");
   const [description, setDescription] = useState("");
@@ -214,6 +218,13 @@ export function SpiffsSection() {
               </CardTitle>
               <CardDescription>Campanhas de curto prazo: bônus fixo por meta ou roleta da sorte por valor captado</CardDescription>
             </div>
+            <div className="flex items-center gap-2">
+            {isManagementUser(currentUser as any) && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setProductAuditOpen(true)}>
+                <AlertTriangle className="h-4 w-4" />
+                Conferir produtos
+              </Button>
+            )}
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5" onClick={() => resetForm()}>
@@ -649,8 +660,10 @@ export function SpiffsSection() {
                 </div>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </CardHeader>
+        <ProductAuditDialog open={productAuditOpen} onOpenChange={setProductAuditOpen} />
         <CardContent className="space-y-4">
           {spiffs.length === 0 ? (
             <p className="text-center text-muted-foreground py-8">Nenhum SPIFF criado. Crie campanhas temporárias para impulsionar vendas específicas.</p>
@@ -1060,7 +1073,11 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           .select("deal_id, value_text")
           .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
           .in("deal_id", dealIds);
-        const matchingIds = new Set((fvs ?? []).filter((f: any) => f.value_text === targetProductId).map((f: any) => f.deal_id));
+        const matchingIds = new Set(
+          (fvs ?? [])
+            .filter((f: any) => dealCountsForTargetProduct(f.value_text, targetProductId))
+            .map((f: any) => f.deal_id),
+        );
         deals = deals.filter((d) => matchingIds.has(d.id));
       }
       return deals;
@@ -1368,7 +1385,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           .in("deal_id", dealIds);
         const matchingIds = new Set(
           (fvs ?? [])
-            .filter((f: any) => resolveItemVendaToProductId(f.value_text) === targetProductId)
+            .filter((f: any) => dealCountsForTargetProduct(f.value_text, targetProductId))
             .map((f: any) => f.deal_id)
         );
         deals = deals.filter((d) => matchingIds.has(d.id));
