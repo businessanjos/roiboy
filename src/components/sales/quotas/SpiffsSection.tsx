@@ -877,9 +877,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
   }
 
   const summary = userIds.map((uid) => {
-    const total = (dealsQuery.data ?? [])
-      .filter((d) => d.responsible_user_id === uid)
-      .reduce((acc, d) => acc + Number(d.received_value ?? d.entry_value ?? 0), 0);
+    const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
+    const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
     const remainder = triggerPerValue > 0 ? total - earnedSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
@@ -891,6 +890,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       uid,
       name: user?.name || collab?.full_name || "—",
       total,
+      deals: userDeals,
       earnedSpins,
       pendingSpins,
       consumedCount: consumed.count,
@@ -902,6 +902,9 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
   const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
+  const [capturedDetail, setCapturedDetail] = useState<
+    { name: string; deals: CapturedDeal[]; total: number; earnedSpins: number } | null
+  >(null);
 
   if (triggerPerValue <= 0) return null;
 
