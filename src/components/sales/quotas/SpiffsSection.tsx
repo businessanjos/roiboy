@@ -76,23 +76,7 @@ export function SpiffsSection() {
   const products = productsQuery.data ?? [];
 
   // Closers ativos (para seleção de participantes em SPIFFs de pagamento)
-  const closersQuery = useQuery({
-    queryKey: ["spiffs-closers", accountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, full_name, position")
-        .eq("account_id", accountId!)
-        .not("user_id", "is", null)
-        .or("position.ilike.%closer%,position.ilike.%executiv%");
-      if (error) throw error;
-      return (data ?? []).filter((c: any) => {
-        const pos = (c.position || "").toLowerCase();
-        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
-      });
-    },
-    enabled: !!accountId,
-  });
+  const closersQuery = useActiveSalesClosers();
   const closers = closersQuery.data ?? [];
 
   // Pools de prêmios para roleta
@@ -1087,23 +1071,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
 
   // Busca apenas Closers/Executivos Comerciais (exclui SDR, Gerente, Sócios)
   // SPIFFs/Cash Collect são exclusivos para Closers (executivos comerciais).
-  const salesTeamQuery = useQuery({
-    queryKey: ["sales-team-closers-roulette", accountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, full_name, position")
-        .eq("account_id", accountId!)
-        .not("user_id", "is", null)
-        .or("position.ilike.%closer%,position.ilike.%executiv%");
-      if (error) throw error;
-      return (data ?? []).filter((c: any) => {
-        const pos = (c.position || "").toLowerCase();
-        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
-      });
-    },
-    enabled: !!accountId,
-  });
+  const salesTeamQuery = useActiveSalesClosers();
 
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
   const allowedSet = new Set(teamUserIds);
@@ -1397,24 +1365,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
 
   // Busca apenas Closers/Executivos Comerciais (exclui SDR, Gerente, etc.)
   // SPIFFs de incentivo são exclusivos para Closers (executivos comerciais).
-  const salesTeamQuery = useQuery({
-    queryKey: ["sales-team-closers", accountId],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_collaborators")
-        .select("user_id, full_name, position")
-        .eq("account_id", accountId!)
-        .not("user_id", "is", null)
-        .or("position.ilike.%closer%,position.ilike.%executiv%");
-      if (error) throw error;
-      // Garantia extra: remove qualquer cargo que contenha SDR ou Gerente
-      return (data ?? []).filter((c: any) => {
-        const pos = (c.position || "").toLowerCase();
-        return !pos.includes("sdr") && !pos.includes("gerente") && !pos.includes("manager");
-      });
-    },
-    enabled: !!accountId,
-  });
+  const salesTeamQuery = useActiveSalesClosers();
 
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
   const allowedSet = new Set(teamUserIds);
