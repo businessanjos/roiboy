@@ -14,7 +14,7 @@ O valor "Captado" passa a ser clicável. Ao clicar, abre uma janela com a lista 
 
 No rodapé da janela: total somado, quantidade de negociações e quantos giros esse total gerou.
 
-Cada linha leva à ficha da negociação ao ser clicada.
+A lista tem rolagem própria com o cabeçalho fixo, para funcionar bem mesmo com muitas negociações e em telas pequenas. Cada linha é clicável e abre a ficha da negociação; a janela também tem botão de fechar funcional.
 
 ## Detalhes técnicos
 
