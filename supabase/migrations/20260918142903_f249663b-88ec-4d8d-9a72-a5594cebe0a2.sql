@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.cancel_spiff_benefit_on_guarantee_loss() FROM PUBLIC, anon, authenticated;
