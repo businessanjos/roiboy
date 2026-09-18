@@ -6,6 +6,9 @@ export interface SalesCloser {
   userId: string;
   name: string;
   position: string;
+  /** aliases para compatibilidade com as telas existentes */
+  user_id: string;
+  full_name: string;
 }
 
 /**
