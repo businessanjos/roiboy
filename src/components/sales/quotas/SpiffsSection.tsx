@@ -925,23 +925,122 @@ function CapturedDealsDialog({
 }
 
 
+// ── Filtro de período por benefício (permite ver meses anteriores) ──
+const toISODate = (d: Date) => {
+  const tz = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return tz.toISOString().split("T")[0];
+};
+
+function useSpiffPeriodFilter(spiff: any) {
+  const [preset, setPreset] = useState<string>("campaign");
+  const [customFrom, setCustomFrom] = useState<string>("");
+  const [customTo, setCustomTo] = useState<string>("");
+
+  const today = new Date();
+  let from = spiff.start_date as string;
+  let to = spiff.end_date as string;
+  let label = "Todo o período da campanha";
+
+  if (preset === "current-month") {
+    from = toISODate(new Date(today.getFullYear(), today.getMonth(), 1));
+    to = toISODate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+    label = "Mês atual";
+  } else if (preset === "last-month") {
+    from = toISODate(new Date(today.getFullYear(), today.getMonth() - 1, 1));
+    to = toISODate(new Date(today.getFullYear(), today.getMonth(), 0));
+    label = "Mês passado";
+  } else if (preset.startsWith("month-")) {
+    const [, y, m] = preset.split("-");
+    from = toISODate(new Date(Number(y), Number(m) - 1, 1));
+    to = toISODate(new Date(Number(y), Number(m), 0));
+    label = new Date(Number(y), Number(m) - 1, 1).toLocaleDateString("pt-BR", { month: "long", year: "numeric" });
+  } else if (preset === "last-7") {
+    const start = new Date(today);
+    start.setDate(start.getDate() - 6);
+    from = toISODate(start);
+    to = toISODate(today);
+    label = "Últimos 7 dias";
+  } else if (preset === "last-30") {
+    const start = new Date(today);
+    start.setDate(start.getDate() - 29);
+    from = toISODate(start);
+    to = toISODate(today);
+    label = "Últimos 30 dias";
+  } else if (preset === "custom" && customFrom && customTo) {
+    from = customFrom;
+    to = customTo;
+    label = `${new Date(`${customFrom}T12:00:00`).toLocaleDateString("pt-BR")} a ${new Date(`${customTo}T12:00:00`).toLocaleDateString("pt-BR")}`;
+  }
+
+  // Últimos 12 meses como opções rápidas de referência
+  const monthOptions = Array.from({ length: 12 }, (_, i) => {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    return {
+      value: `month-${d.getFullYear()}-${d.getMonth() + 1}`,
+      label: d.toLocaleDateString("pt-BR", { month: "long", year: "numeric" }),
+    };
+  });
+
+  const control = (
+    <div className="flex flex-wrap items-center gap-1.5">
+      <Select value={preset} onValueChange={setPreset}>
+        <SelectTrigger className="h-7 w-[210px] text-xs">
+          <SelectValue placeholder="Período" />
+        </SelectTrigger>
+        <SelectContent className="max-h-72">
+          <SelectItem value="campaign">Todo o período da campanha</SelectItem>
+          <SelectItem value="current-month">Mês atual</SelectItem>
+          <SelectItem value="last-month">Mês passado</SelectItem>
+          <SelectItem value="last-7">Últimos 7 dias</SelectItem>
+          <SelectItem value="last-30">Últimos 30 dias</SelectItem>
+          {monthOptions.map((m) => (
+            <SelectItem key={m.value} value={m.value} className="capitalize">
+              {m.label}
+            </SelectItem>
+          ))}
+          <SelectItem value="custom">Personalizado</SelectItem>
+        </SelectContent>
+      </Select>
+      {preset === "custom" && (
+        <>
+          <Input
+            type="date"
+            value={customFrom}
+            onChange={(e) => setCustomFrom(e.target.value)}
+            className="h-7 w-[140px] text-xs"
+          />
+          <Input
+            type="date"
+            value={customTo}
+            onChange={(e) => setCustomTo(e.target.value)}
+            className="h-7 w-[140px] text-xs"
+          />
+        </>
+      )}
+    </div>
+  );
+
+  return { from, to, label, control };
+}
+
 // ── Painel de giros pendentes por vendedor ──
 export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const triggerPerValue = Number(spiff.trigger_per_value || 0);
   const targetProductId: string | null = spiff.product_id || null;
+  const period = useSpiffPeriodFilter(spiff);
 
   const dealsQuery = useQuery({
-    queryKey: ["roulette-spins", accountId, spiff.id, spiff.start_date, spiff.end_date, targetProductId],
+    queryKey: ["roulette-spins", accountId, spiff.id, period.from, period.to, targetProductId],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("deals")
         .select("id, title, contact_name, client_id, entry_value, received_value, value, responsible_user_id, won_at, status")
         .eq("account_id", accountId!)
         .eq("status", "won")
-        .gte("won_at", spiff.start_date)
-        .lte("won_at", `${spiff.end_date}T23:59:59`);
+        .gte("won_at", period.from)
+        .lte("won_at", `${period.to}T23:59:59`);
       if (error) throw error;
       let deals = (data ?? []) as CapturedDeal[];
 
