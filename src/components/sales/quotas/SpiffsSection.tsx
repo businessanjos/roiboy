@@ -214,6 +214,13 @@ export function SpiffsSection() {
               </CardTitle>
               <CardDescription>Campanhas de curto prazo: bônus fixo por meta ou roleta da sorte por valor captado</CardDescription>
             </div>
+            <div className="flex items-center gap-2">
+            {isManagementUser(currentUser as any) && (
+              <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setProductAuditOpen(true)}>
+                <AlertTriangle className="h-4 w-4" />
+                Conferir produtos
+              </Button>
+            )}
             <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) resetForm(); }}>
               <DialogTrigger asChild>
                 <Button size="sm" className="gap-1.5" onClick={() => resetForm()}>
