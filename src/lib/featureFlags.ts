@@ -2,13 +2,14 @@ const normalizeEmail = (email: string) => email.trim().toLowerCase();
 
 export const featureFlags = {
   marketingPersonaAiSuggest: {
-    allowedEmails: ["m.quintana@me.com", "coachevertonsantos@gmail.com"],
+    allowedEmails: ["m.quintana@me.com", "coachevertonsantos@gmail.com", "anjosgroup.dados@anjosbusiness.com"],
   },
   opsConsultantWorkload: {
     allowedEmails: [
       "m.quintana@me.com",
       "coachevertonsantos@gmail.com",
       "jonathanmarcato@anjosbusiness.com",
+      "anjosgroup.dados@anjosbusiness.com",
     ],
   },
 } as const;

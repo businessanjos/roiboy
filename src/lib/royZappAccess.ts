@@ -14,6 +14,7 @@ import { ZAPP_VIEWS } from "@/lib/royZappRoutes";
 export const SECTOR_PICKER_EMAILS = [
   "m.quintana@me.com",
   "coachevertonsantos@gmail.com",
+  "anjosgroup.dados@anjosbusiness.com",
 ] as const;
 
 export function canPickSector(email?: string | null): boolean {

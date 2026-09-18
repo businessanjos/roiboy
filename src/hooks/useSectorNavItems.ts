@@ -73,7 +73,7 @@ export function useSectorNavItems(): NavItem[] {
     const userName = (currentUser?.name || "").toLowerCase();
     const userEmail = (currentUser?.email || "").toLowerCase();
 
-    const BONUS_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
+    const BONUS_VIEWERS = ["maikol", "jonathan", "everton", "bruna", "anjosgroup.dados"];
     const canSeeConsultantBonus = BONUS_VIEWERS.some(
       (k) => userName.includes(k) || userEmail.includes(k)
     );
@@ -81,7 +81,7 @@ export function useSectorNavItems(): NavItem[] {
       sectorItems = sectorItems.filter((item) => item.to !== "/operations/consultant-bonus");
     }
 
-    const IG_RANKING_VIEWERS = ["maikol", "bruna", "everton", "jonathan", "andreia"];
+    const IG_RANKING_VIEWERS = ["maikol", "bruna", "everton", "jonathan", "andreia", "anjosgroup.dados"];
     const canSeeIgRanking = IG_RANKING_VIEWERS.some(
       (k) => userName.includes(k) || userEmail.includes(k)
     );

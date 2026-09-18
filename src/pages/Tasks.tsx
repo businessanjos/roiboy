@@ -186,6 +186,7 @@ const TASKS_EXPORT_EMAILS = [
   "jonathanmarcato@anjosbusiness.com",
   "m.quintana@me.com",
   "coachevertonsantos@gmail.com",
+  "anjosgroup.dados@anjosbusiness.com",
 ];
 
 
