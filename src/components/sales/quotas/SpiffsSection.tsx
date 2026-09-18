@@ -773,6 +773,157 @@ export function SpiffsSection() {
 // Field ID do custom field "Item da Venda" — referencia products.id em deal_field_values.value_text
 const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
+export type CapturedDeal = {
+  id: string;
+  title: string | null;
+  contact_name: string | null;
+  client_id: string | null;
+  entry_value: number | null;
+  received_value: number | null;
+  value: number | null;
+  responsible_user_id: string | null;
+  won_at: string | null;
+  status: string;
+};
+
+/** Mesma regra usada no cálculo dos giros. */
+const capturedAmount = (d: CapturedDeal) => Number(d.received_value ?? d.entry_value ?? 0);
+
+// ── Detalhamento do valor captado por vendedor ──
+function CapturedDealsDialog({
+  open,
+  onOpenChange,
+  userName,
+  deals,
+  total,
+  earnedSpins,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+  userName: string;
+  deals: CapturedDeal[];
+  total: number;
+  earnedSpins: number;
+}) {
+  const navigate = useNavigate();
+  const dealIds = deals.map((d) => d.id);
+
+  const productsQuery = useQuery({
+    queryKey: ["captured-deals-products", dealIds.join(",")],
+    enabled: open && dealIds.length > 0,
+    queryFn: async () => {
+      const { data: fvs } = await supabase
+        .from("deal_field_values")
+        .select("deal_id, value_text")
+        .eq("field_id", ITEM_DA_VENDA_FIELD_ID)
+        .in("deal_id", dealIds);
+      const productIds = Array.from(
+        new Set((fvs ?? []).map((f: any) => f.value_text).filter((v: any): v is string => !!v)),
+      );
+      let nameById = new Map<string, { name: string; color: string | null }>();
+      if (productIds.length > 0) {
+        const { data: prods } = await supabase
+          .from("products")
+          .select("id, name, color")
+          .in("id", productIds);
+        nameById = new Map((prods ?? []).map((p: any) => [p.id, { name: p.name, color: p.color }]));
+      }
+      const byDeal = new Map<string, { name: string; color: string | null }>();
+      (fvs ?? []).forEach((f: any) => {
+        const prod = f.value_text ? nameById.get(f.value_text) : undefined;
+        if (prod) byDeal.set(f.deal_id, prod);
+      });
+      return byDeal;
+    },
+  });
+
+  const sorted = [...deals].sort(
+    (a, b) => new Date(b.won_at ?? 0).getTime() - new Date(a.won_at ?? 0).getTime(),
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="text-base">Captado — {userName}</DialogTitle>
+        </DialogHeader>
+
+        <div className="max-h-[55vh] overflow-y-auto overflow-x-auto rounded-md border">
+          <Table className="min-w-[680px]">
+            <TableHeader className="sticky top-0 bg-background z-10">
+              <TableRow>
+                <TableHead className="text-xs">Negociação</TableHead>
+                <TableHead className="text-xs">Produto</TableHead>
+                <TableHead className="text-xs text-right">Valor recebido</TableHead>
+                <TableHead className="text-xs text-right">Valor total</TableHead>
+                <TableHead className="text-xs text-center">Ganho em</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {sorted.map((d) => {
+                const prod = productsQuery.data?.get(d.id);
+                return (
+                  <TableRow
+                    key={d.id}
+                    className="cursor-pointer"
+                    onClick={() => {
+                      onOpenChange(false);
+                      navigate(`/pipeline?deal=${d.id}`);
+                    }}
+                  >
+                    <TableCell className="py-2">
+                      <p className="text-xs font-medium leading-tight">{d.title || "Sem título"}</p>
+                      {d.contact_name && (
+                        <p className="text-[11px] text-muted-foreground leading-tight">{d.contact_name}</p>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2">
+                      {prod ? (
+                        <Badge
+                          className="text-[10px] text-white border-transparent"
+                          style={{ backgroundColor: prod.color || "#6b7280" }}
+                        >
+                          {prod.name}
+                        </Badge>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">—</span>
+                      )}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-right tabular-nums font-medium">
+                      R$ {formatBRL(Math.round(capturedAmount(d)))}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-right tabular-nums text-muted-foreground">
+                      R$ {formatBRL(Math.round(Number(d.value || 0)))}
+                    </TableCell>
+                    <TableCell className="py-2 text-xs text-center text-muted-foreground whitespace-nowrap">
+                      {d.won_at ? new Date(d.won_at).toLocaleDateString("pt-BR") : "—"}
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+
+        <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+          <span className="text-muted-foreground">
+            {sorted.length} negociaç{sorted.length === 1 ? "ão" : "ões"} · {earnedSpins}{" "}
+            {earnedSpins === 1 ? "giro gerado" : "giros gerados"}
+          </span>
+          <span className="font-semibold tabular-nums">Total captado: R$ {formatBRL(Math.round(total))}</span>
+        </div>
+
+        <div className="flex justify-end">
+          <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>
+            Fechar
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+
 // ── Painel de giros pendentes por vendedor ──
 export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; restrictToUserId?: string }) {
   const { currentUser } = useCurrentUser();
