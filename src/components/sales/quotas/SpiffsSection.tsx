@@ -798,10 +798,12 @@ function CapturedDealsDialog({
   deals,
   total,
   earnedSpins,
+  periodLabel,
 }: {
   open: boolean;
   onOpenChange: (o: boolean) => void;
   userName: string;
+  periodLabel?: string;
   deals: CapturedDeal[];
   total: number;
   earnedSpins: number;
