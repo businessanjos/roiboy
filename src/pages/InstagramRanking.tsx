@@ -36,7 +36,7 @@ type Row = Snap & {
   posts_considered: number;
 };
 
-const ALLOWED_KEYS = ["maikol", "bruna", "everton", "jonathan", "andreia"];
+const ALLOWED_KEYS = ["maikol", "bruna", "everton", "jonathan", "andreia", "anjosgroup.dados"];
 
 const fmt = (n: number | null | undefined) => {
   const v = Number(n || 0);

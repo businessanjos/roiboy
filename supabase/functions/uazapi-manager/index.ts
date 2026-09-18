@@ -834,7 +834,7 @@ async function connectWithQrRetry(token: string, server?: ServerConfig): Promise
  * manda quando preenchido; `null` herda `user_sector_access`.
  * Retorna `null` quando o usuário é irrestrito (admin / sector picker).
  */
-const SECTOR_PICKER_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
+const SECTOR_PICKER_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "anjosgroup.dados@anjosbusiness.com"];
 
 async function resolveAllowedZappSectors(
   supabase: ReturnType<typeof createClient>,

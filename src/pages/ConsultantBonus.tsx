@@ -27,7 +27,7 @@ const QUARTER_LABELS = ["Q1", "Q2", "Q3", "Q4"];
 import { ConsultantPayoutTable } from "@/components/operations/ConsultantPayoutTable";
 import { fetchActiveConsultants, getConsultantSeniorityKey } from "@/lib/consultants";
 
-const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna"];
+const ALLOWED_VIEWERS = ["maikol", "jonathan", "everton", "bruna", "anjosgroup.dados"];
 
 const METRIC_ICONS: Record<MetricType, any> = {
   renewal_rate: Target,

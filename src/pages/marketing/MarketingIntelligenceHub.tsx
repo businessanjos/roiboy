@@ -7,7 +7,7 @@ const MarketingInsights = lazy(() => import("@/pages/MarketingInsights"));
 const MarketingIntelligence = lazy(() => import("@/pages/marketing/MarketingIntelligence"));
 
 /** Market Intelligence segue restrito ao mesmo usuário que tinha acesso ao menu antigo. */
-const MARKET_INTELLIGENCE_VIEWERS = ["m.quintana@me.com", "coachevertonsantos@gmail.com"];
+const MARKET_INTELLIGENCE_VIEWERS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "anjosgroup.dados@anjosbusiness.com"];
 
 export default function MarketingIntelligenceHub() {
   const { currentUser } = useCurrentUser();
