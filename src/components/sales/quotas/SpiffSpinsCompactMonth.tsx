@@ -63,7 +63,8 @@ export function SpiffSpinsCompactMonth({ restrictToUserId }: { restrictToUserId?
     return m;
   }, [usersQ.data]);
 
-  const rows = (spinsQ.data ?? []) as any[];
+  const allRows = (spinsQ.data ?? []) as any[];
+  const rows = restrictToUserId ? allRows.filter((r) => r.user_id === restrictToUserId) : allRows;
 
   const totals = useMemo(() => {
     const total = rows.reduce((a, r) => a + Number(r.prize_amount || 0), 0);
