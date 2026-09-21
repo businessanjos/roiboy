@@ -1173,7 +1173,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       <div className="flex items-center gap-2 flex-wrap">
         <Dice5 className="h-4 w-4 text-warning" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
-        <div className="ml-auto flex items-center gap-1.5">{period.control}</div>
+        <div className="ml-auto flex items-center gap-1.5">
+          {!restrictToUserId && (
+            <MultiCheckCombobox
+              options={summary.map((s) => ({ value: s.uid, label: s.name }))}
+              value={sellerFilter}
+              onChange={setSellerFilter}
+              placeholder="Todos os vendedores"
+              className="h-7 w-[190px] text-xs"
+              emptyText="Nenhum vendedor"
+            />
+          )}
+          {period.control}
+        </div>
         <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
         <Tooltip>
           <TooltipTrigger>
