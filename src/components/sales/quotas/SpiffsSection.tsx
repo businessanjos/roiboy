@@ -1302,7 +1302,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
       ? Number(spiff.trigger_week_start_day)
       : null;
 
-  // Helper: último dia útil do mês corrente (seg-sex). Se cair em sáb/dom, recua até sexta.
+  // Helper: último dia útil do mês de referência (seg-sex). Se cair em sáb/dom, recua até sexta.
   const getLastBusinessDayOfMonth = (ref: Date): Date => {
     const last = new Date(ref.getFullYear(), ref.getMonth() + 1, 0); // último dia do mês
     while (last.getDay() === 0 || last.getDay() === 6) {
@@ -1311,35 +1311,45 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     return last;
   };
 
-  // Cálculo da janela atual:
-  // - "last-business-day": exatamente o último dia útil do mês corrente (00:00 → 23:59)
-  // - weekStartDay definido: alinha à semana customizada (ex: Qua 00:00 → Ter 23:59).
-  // - Senão: usa janela rolante de N dias até hoje.
-  const today = new Date();
-  let windowStart: Date;
-  let windowEnd: Date;
-  if (windowType === "last-business-day") {
-    const lbd = getLastBusinessDayOfMonth(today);
-    windowStart = new Date(lbd);
-    windowStart.setHours(0, 0, 0, 0);
-    windowEnd = new Date(lbd);
-    windowEnd.setHours(23, 59, 59, 999);
-  } else if (weekStartDay !== null) {
-    const todayDow = today.getDay(); // 0=Dom..6=Sab
-    const diff = (todayDow - weekStartDay + 7) % 7;
-    windowStart = new Date(today);
-    windowStart.setDate(windowStart.getDate() - diff);
-    windowStart.setHours(0, 0, 0, 0);
-    windowEnd = new Date(windowStart);
-    windowEnd.setDate(windowEnd.getDate() + 6);
-    windowEnd.setHours(23, 59, 59, 999);
-  } else {
-    windowStart = new Date(today);
-    windowStart.setDate(windowStart.getDate() - windowDays + 1);
-    windowStart.setHours(0, 0, 0, 0);
-    windowEnd = new Date(today);
-    windowEnd.setHours(23, 59, 59, 999);
-  }
+  // Permite ver janelas retroativas (janela atual, anterior, etc.)
+  const [windowOffset, setWindowOffset] = useState(0);
+
+  // Cálculo da janela para um deslocamento (0 = janela atual):
+  // - "last-business-day": último dia útil do mês de referência
+  // - weekStartDay definido: semana customizada (ex: Qua 00:00 → Ter 23:59)
+  // - Senão: janela rolante de N dias
+  const computeWindow = (offset: number) => {
+    const ref = new Date();
+    let s: Date;
+    let e: Date;
+    if (windowType === "last-business-day") {
+      const lbd = getLastBusinessDayOfMonth(new Date(ref.getFullYear(), ref.getMonth() - offset, 1));
+      s = new Date(lbd);
+      s.setHours(0, 0, 0, 0);
+      e = new Date(lbd);
+      e.setHours(23, 59, 59, 999);
+    } else if (weekStartDay !== null) {
+      const diff = (ref.getDay() - weekStartDay + 7) % 7;
+      s = new Date(ref);
+      s.setDate(s.getDate() - diff - offset * 7);
+      s.setHours(0, 0, 0, 0);
+      e = new Date(s);
+      e.setDate(e.getDate() + 6);
+      e.setHours(23, 59, 59, 999);
+    } else {
+      e = new Date(ref);
+      e.setDate(e.getDate() - offset * windowDays);
+      e.setHours(23, 59, 59, 999);
+      s = new Date(e);
+      s.setDate(s.getDate() - windowDays + 1);
+      s.setHours(0, 0, 0, 0);
+    }
+    return { start: s, end: e };
+  };
+
+  const selectedWindow = computeWindow(windowOffset);
+  const windowStart = selectedWindow.start;
+  const windowEnd = selectedWindow.end;
   const campaignEnd = new Date(spiff.end_date);
   campaignEnd.setHours(23, 59, 59, 999);
   // A janela semanal/rolante/last-business-day é o que importa — start_date da campanha não corta a janela.
@@ -1348,11 +1358,23 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
   const effectiveEnd = windowEnd < campaignEnd ? windowEnd : campaignEnd;
 
   const dayNames = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
-  const windowLabel = windowType === "last-business-day"
-    ? `Último dia útil (${effectiveStart.toLocaleDateString("pt-BR")})`
-    : weekStartDay !== null
-      ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${effectiveStart.toLocaleDateString("pt-BR")} a ${effectiveEnd.toLocaleDateString("pt-BR")})`
-      : `Últimos ${windowDays}d`;
+  const describeWindow = (s: Date, e: Date) =>
+    windowType === "last-business-day"
+      ? `Último dia útil (${s.toLocaleDateString("pt-BR")})`
+      : weekStartDay !== null
+        ? `Semana ${dayNames[weekStartDay]}→${dayNames[(weekStartDay + 6) % 7]} (${s.toLocaleDateString("pt-BR")} a ${e.toLocaleDateString("pt-BR")})`
+        : `${s.toLocaleDateString("pt-BR")} a ${e.toLocaleDateString("pt-BR")}`;
+
+  const windowLabel = describeWindow(effectiveStart, effectiveEnd);
+
+  const windowOptions = Array.from({ length: 12 }, (_, i) => {
+    const w = computeWindow(i);
+    return {
+      value: String(i),
+      label: i === 0 ? `Janela atual — ${describeWindow(w.start, w.end)}` : describeWindow(w.start, w.end),
+    };
+  });
+
 
   const targetProductId: string | null = spiff.product_id || null;
 
