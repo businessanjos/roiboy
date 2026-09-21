@@ -13,7 +13,7 @@ import { ptBR } from "date-fns/locale";
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-export function SpiffSpinsCompactMonth() {
+export function SpiffSpinsCompactMonth({ restrictToUserId }: { restrictToUserId?: string } = {}) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
 
