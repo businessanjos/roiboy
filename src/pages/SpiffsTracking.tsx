@@ -140,7 +140,7 @@ export default function SpiffsTracking() {
                 </div>
               )}
 
-              <SpiffSpinsCompactMonth />
+              <SpiffSpinsCompactMonth restrictToUserId={restrictToUserId} />
             </TabsContent>
 
             <TabsContent value="history">
