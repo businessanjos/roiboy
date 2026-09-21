@@ -1474,6 +1474,18 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
           {triggerSalesCount} vendas / {windowLabel}
         </Badge>
+        {!restrictToUserId && (
+          <div className="ml-auto">
+            <MultiCheckCombobox
+              options={summary.map((s) => ({ value: s.uid, label: s.name }))}
+              value={sellerFilter}
+              onChange={setSellerFilter}
+              placeholder="Todos os vendedores"
+              className="h-7 w-[190px] text-xs"
+              emptyText="Nenhum vendedor"
+            />
+          </div>
+        )}
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
