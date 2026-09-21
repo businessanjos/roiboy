@@ -11,6 +11,8 @@ import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethod
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
 import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
 import { RouletteApprovalsQueue } from "@/components/sales/quotas/RouletteApprovalsQueue";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
