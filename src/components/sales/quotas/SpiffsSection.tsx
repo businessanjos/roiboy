@@ -1130,7 +1130,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     consumedByUser.set(log.user_id, cur);
   }
 
-  const summary = userIds.map((uid) => {
+  const summary = eligibleIds.map((uid) => {
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
@@ -1153,7 +1153,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     };
   }).sort((a, b) => b.pendingSpins - a.pendingSpins || b.earnedSpins - a.earnedSpins || a.name.localeCompare(b.name));
 
-  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+  const [sellerFilter, setSellerFilter] = usePersistedFilter<string[]>(`spiffs-${spiff.id}`, "sellers", []);
+
+  const visibleSummary = restrictToUserId
+    ? summary.filter((s) => s.uid === restrictToUserId)
+    : sellerFilter.length > 0
+      ? summary.filter((s) => sellerFilter.includes(s.uid))
+      : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
   const [capturedDetail, setCapturedDetail] = useState<
