@@ -39,8 +39,11 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
   em: PRODUCT_IDS.EM,
   eternum_mentoring_low: PRODUCT_IDS.EML,
   eml: PRODUCT_IDS.EML,
-  rykas_mentoring: PRODUCT_IDS.RM,
-  rykas: PRODUCT_IDS.RM,
+  // Rebranding RM -> EM: a opção "rykas_mentoring" do campo Item da Venda
+  // hoje tem o rótulo "EM l Eternum Mentoring" (ver custom_fields.options),
+  // então precisa resolver para o produto EM, não para o RM legado.
+  rykas_mentoring: PRODUCT_IDS.EM,
+  rykas: PRODUCT_IDS.EM,
   rm: PRODUCT_IDS.RM,
   eternum_club: PRODUCT_IDS.EC,
   ec: PRODUCT_IDS.EC,
