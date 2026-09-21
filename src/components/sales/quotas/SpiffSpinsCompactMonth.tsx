@@ -13,7 +13,7 @@ import { ptBR } from "date-fns/locale";
 const formatBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(v || 0);
 
-export function SpiffSpinsCompactMonth() {
+export function SpiffSpinsCompactMonth({ restrictToUserId }: { restrictToUserId?: string } = {}) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
 
@@ -63,7 +63,8 @@ export function SpiffSpinsCompactMonth() {
     return m;
   }, [usersQ.data]);
 
-  const rows = (spinsQ.data ?? []) as any[];
+  const allRows = (spinsQ.data ?? []) as any[];
+  const rows = restrictToUserId ? allRows.filter((r) => r.user_id === restrictToUserId) : allRows;
 
   const totals = useMemo(() => {
     const total = rows.reduce((a, r) => a + Number(r.prize_amount || 0), 0);

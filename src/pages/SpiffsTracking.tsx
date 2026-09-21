@@ -11,6 +11,8 @@ import { PaymentMethodSpiffPanel } from "@/components/sales/quotas/PaymentMethod
 import { SpiffSpinsHistory } from "@/components/sales/quotas/SpiffSpinsHistory";
 import { SpiffSpinsCompactMonth } from "@/components/sales/quotas/SpiffSpinsCompactMonth";
 import { RouletteApprovalsQueue } from "@/components/sales/quotas/RouletteApprovalsQueue";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { isManagementUser } from "@/lib/access/managementRoles";
 
 const isExpired = (endDate: string) => new Date(endDate) < new Date();
 
@@ -20,6 +22,9 @@ export default function SpiffsTracking() {
   const isLoading = false;
   const [tab, setTab] = useState<"active" | "all">("active");
   const [view, setView] = useState<"tracking" | "history">("tracking");
+  const { currentUser } = useCurrentUser();
+  // Vendedor comum enxerga apenas os próprios números; gestor/admin vê a equipe toda.
+  const restrictToUserId = isManagementUser(currentUser as any) ? undefined : currentUser?.id;
 
   const visibleSpiffs = (spiffs ?? []).filter((s) =>
     tab === "active" ? s.is_active && !isExpired(s.end_date) : true
@@ -100,7 +105,7 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{rouletteSpiffs.length}</Badge>
                       </div>
                       {rouletteSpiffs.map((spiff: any) => (
-                        <RouletteSpinsPanel key={spiff.id} spiff={spiff} />
+                        <RouletteSpinsPanel key={spiff.id} spiff={spiff} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
@@ -114,7 +119,7 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{customSpiffs.length}</Badge>
                       </div>
                       {customSpiffs.map((spiff: any) => (
-                        <CustomSpinsPanel key={spiff.id} spiff={spiff} />
+                        <CustomSpinsPanel key={spiff.id} spiff={spiff} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
@@ -128,18 +133,18 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{paymentSpiffs.length}</Badge>
                       </div>
                       {paymentSpiffs.map((spiff: any) => (
-                        <PaymentMethodSpiffPanel key={spiff.id} spiff={spiff as any} />
+                        <PaymentMethodSpiffPanel key={spiff.id} spiff={spiff as any} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
                 </div>
               )}
 
-              <SpiffSpinsCompactMonth />
+              <SpiffSpinsCompactMonth restrictToUserId={restrictToUserId} />
             </TabsContent>
 
             <TabsContent value="history">
-              <SpiffSpinsHistory />
+              <SpiffSpinsHistory restrictToUserId={restrictToUserId} />
             </TabsContent>
           </Tabs>
       </div>

@@ -35,7 +35,7 @@ type SpinRow = {
   payment_notes: string | null;
 };
 
-export function SpiffSpinsHistory() {
+export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: string } = {}) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
@@ -112,6 +112,7 @@ export function SpiffSpinsHistory() {
 
   const filtered = useMemo(() => {
     let rows = spinsQ.data ?? [];
+    if (restrictToUserId) rows = rows.filter((r) => r.user_id === restrictToUserId);
     if (statusFilter !== "all") rows = rows.filter((r) => r.payment_status === statusFilter);
     if (userFilter !== "all") rows = rows.filter((r) => r.user_id === userFilter);
     if (spiffFilter !== "all") rows = rows.filter((r) => r.spiff_id === spiffFilter);
@@ -133,7 +134,7 @@ export function SpiffSpinsHistory() {
       });
     }
     return rows;
-  }, [spinsQ.data, statusFilter, userFilter, spiffFilter, from, to, search, userById, spiffById]);
+  }, [spinsQ.data, restrictToUserId, statusFilter, userFilter, spiffFilter, from, to, search, userById, spiffById]);
 
   const totals = useMemo(() => {
     const valid = filtered.filter((r) => !r.cancelled_at);
