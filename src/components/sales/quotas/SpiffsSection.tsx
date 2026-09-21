@@ -1441,7 +1441,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     consumedByUser.set(log.user_id, (consumedByUser.get(log.user_id) ?? 0) + 1);
   }
 
-  const summary = userIds.map((uid) => {
+  const summary = eligibleIds.map((uid) => {
     const sales = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid).length;
     const earnedSpins = triggerSalesCount > 0 ? Math.floor(sales / triggerSalesCount) : 0;
     const remainder = triggerSalesCount > 0 ? sales - earnedSpins * triggerSalesCount : 0;
@@ -1453,7 +1453,13 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     return { uid, name: user?.name || collab?.full_name || "—", sales, spins, consumedCount, toNext };
   }).sort((a, b) => b.spins - a.spins || b.sales - a.sales || a.name.localeCompare(b.name));
 
-  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+  const [sellerFilter, setSellerFilter] = usePersistedFilter<string[]>(`spiffs-custom-${spiff.id}`, "sellers", []);
+
+  const visibleSummary = restrictToUserId
+    ? summary.filter((s) => s.uid === restrictToUserId)
+    : sellerFilter.length > 0
+      ? summary.filter((s) => sellerFilter.includes(s.uid))
+      : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
   const [salesDetail, setSalesDetail] = useState<{ uid: string; name: string } | null>(null);
