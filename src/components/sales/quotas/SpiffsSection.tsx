@@ -1396,12 +1396,12 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
   const salesTeamQuery = useActiveSalesClosers();
 
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
-  const allowedSet = new Set(teamUserIds);
-  // Apenas inclui vendas feitas por Closers da lista permitida
+  const closerSet = new Set(teamUserIds);
+  // Inclui também quem fechou venda na janela, desde que o usuário esteja ativo.
   const dealUserIds = Array.from(new Set(
     (dealsQuery.data ?? [])
       .map((d) => d.responsible_user_id)
-      .filter((uid): uid is string => !!uid && allowedSet.has(uid))
+      .filter((uid): uid is string => !!uid)
   ));
   const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
@@ -1409,12 +1409,17 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     queryKey: ["custom-spin-users", accountId, userIds.join(",")],
     queryFn: async () => {
       if (userIds.length === 0) return [];
-      const { data, error } = await supabase.from("users").select("id, name").in("id", userIds);
+      const { data, error } = await supabase.from("users").select("id, name, is_active").in("id", userIds);
       if (error) throw error;
       return data || [];
     },
     enabled: userIds.length > 0,
   });
+
+  const activeUserIds = new Set(
+    (usersQuery.data ?? []).filter((u: any) => u.is_active !== false).map((u: any) => u.id as string),
+  );
+  const eligibleIds = userIds.filter((uid) => closerSet.has(uid) || activeUserIds.has(uid));
 
   // Giros já consumidos nesta campanha (registrados via roleta)
   const spinsLogQuery = useQuery({
