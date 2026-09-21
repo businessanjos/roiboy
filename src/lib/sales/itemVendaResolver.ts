@@ -39,8 +39,11 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
   em: PRODUCT_IDS.EM,
   eternum_mentoring_low: PRODUCT_IDS.EML,
   eml: PRODUCT_IDS.EML,
-  rykas_mentoring: PRODUCT_IDS.RM,
-  rykas: PRODUCT_IDS.RM,
+  // Rebranding RM -> EM: a opção "rykas_mentoring" do campo Item da Venda
+  // hoje tem o rótulo "EM l Eternum Mentoring" (ver custom_fields.options),
+  // então precisa resolver para o produto EM, não para o RM legado.
+  rykas_mentoring: PRODUCT_IDS.EM,
+  rykas: PRODUCT_IDS.EM,
   rm: PRODUCT_IDS.RM,
   eternum_club: PRODUCT_IDS.EC,
   ec: PRODUCT_IDS.EC,
@@ -62,7 +65,8 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
   ren_eternum_mentoring: PRODUCT_IDS.REN_EM,
   ren_eternum_club: PRODUCT_IDS.REN_EC,
   ren_eternum_private: PRODUCT_IDS.REN_EP,
-  ren_rykas_mentoring: PRODUCT_IDS.REN_RM,
+  // "ren_rykas_mentoring" hoje é rotulada "REN. EM l Eternum Mentoring"
+  ren_rykas_mentoring: PRODUCT_IDS.REN_EM,
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
