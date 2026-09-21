@@ -65,7 +65,8 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
   ren_eternum_mentoring: PRODUCT_IDS.REN_EM,
   ren_eternum_club: PRODUCT_IDS.REN_EC,
   ren_eternum_private: PRODUCT_IDS.REN_EP,
-  ren_rykas_mentoring: PRODUCT_IDS.REN_RM,
+  // "ren_rykas_mentoring" hoje é rotulada "REN. EM l Eternum Mentoring"
+  ren_rykas_mentoring: PRODUCT_IDS.REN_EM,
 };
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
