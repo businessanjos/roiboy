@@ -22,6 +22,9 @@ export default function SpiffsTracking() {
   const isLoading = false;
   const [tab, setTab] = useState<"active" | "all">("active");
   const [view, setView] = useState<"tracking" | "history">("tracking");
+  const { currentUser } = useCurrentUser();
+  // Vendedor comum enxerga apenas os próprios números; gestor/admin vê a equipe toda.
+  const restrictToUserId = isManagementUser(currentUser as any) ? undefined : currentUser?.id;
 
   const visibleSpiffs = (spiffs ?? []).filter((s) =>
     tab === "active" ? s.is_active && !isExpired(s.end_date) : true
