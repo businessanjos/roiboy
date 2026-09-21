@@ -144,7 +144,7 @@ export default function SpiffsTracking() {
             </TabsContent>
 
             <TabsContent value="history">
-              <SpiffSpinsHistory />
+              <SpiffSpinsHistory restrictToUserId={restrictToUserId} />
             </TabsContent>
           </Tabs>
       </div>
