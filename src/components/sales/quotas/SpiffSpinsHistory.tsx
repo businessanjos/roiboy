@@ -35,7 +35,7 @@ type SpinRow = {
   payment_notes: string | null;
 };
 
-export function SpiffSpinsHistory() {
+export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: string } = {}) {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const qc = useQueryClient();
