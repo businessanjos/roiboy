@@ -134,7 +134,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
       });
     }
     return rows;
-  }, [spinsQ.data, statusFilter, userFilter, spiffFilter, from, to, search, userById, spiffById]);
+  }, [spinsQ.data, restrictToUserId, statusFilter, userFilter, spiffFilter, from, to, search, userById, spiffById]);
 
   const totals = useMemo(() => {
     const valid = filtered.filter((r) => !r.cancelled_at);
