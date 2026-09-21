@@ -105,7 +105,7 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{rouletteSpiffs.length}</Badge>
                       </div>
                       {rouletteSpiffs.map((spiff: any) => (
-                        <RouletteSpinsPanel key={spiff.id} spiff={spiff} />
+                        <RouletteSpinsPanel key={spiff.id} spiff={spiff} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
@@ -119,7 +119,7 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{customSpiffs.length}</Badge>
                       </div>
                       {customSpiffs.map((spiff: any) => (
-                        <CustomSpinsPanel key={spiff.id} spiff={spiff} />
+                        <CustomSpinsPanel key={spiff.id} spiff={spiff} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
@@ -133,7 +133,7 @@ export default function SpiffsTracking() {
                         <Badge variant="outline" className="text-[10px]">{paymentSpiffs.length}</Badge>
                       </div>
                       {paymentSpiffs.map((spiff: any) => (
-                        <PaymentMethodSpiffPanel key={spiff.id} spiff={spiff as any} />
+                        <PaymentMethodSpiffPanel key={spiff.id} spiff={spiff as any} restrictToUserId={restrictToUserId} />
                       ))}
                     </section>
                   )}
