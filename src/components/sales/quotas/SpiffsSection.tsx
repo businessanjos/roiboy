@@ -1496,8 +1496,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
           {triggerSalesCount} vendas / {windowLabel}
         </Badge>
-        {!restrictToUserId && (
-          <div className="ml-auto">
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          {!restrictToUserId && (
             <MultiCheckCombobox
               options={summary.map((s) => ({ value: s.uid, label: s.name }))}
               value={sellerFilter}
@@ -1506,8 +1506,20 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
               className="h-7 w-[190px] text-xs"
               emptyText="Nenhum vendedor"
             />
-          </div>
-        )}
+          )}
+          <Select value={String(windowOffset)} onValueChange={(v) => setWindowOffset(Number(v))}>
+            <SelectTrigger className="h-7 w-[250px] text-xs">
+              <SelectValue placeholder="Janela" />
+            </SelectTrigger>
+            <SelectContent className="max-h-72">
+              {windowOptions.map((o) => (
+                <SelectItem key={o.value} value={o.value} className="text-xs">
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
