@@ -112,6 +112,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
 
   const filtered = useMemo(() => {
     let rows = spinsQ.data ?? [];
+    if (restrictToUserId) rows = rows.filter((r) => r.user_id === restrictToUserId);
     if (statusFilter !== "all") rows = rows.filter((r) => r.payment_status === statusFilter);
     if (userFilter !== "all") rows = rows.filter((r) => r.user_id === userFilter);
     if (spiffFilter !== "all") rows = rows.filter((r) => r.spiff_id === spiffFilter);
