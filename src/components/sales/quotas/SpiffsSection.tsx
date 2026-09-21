@@ -23,6 +23,8 @@ import { SpiffWindowDealsDialog } from "./SpiffWindowDealsDialog";
 import { ProductAuditDialog } from "./ProductAuditDialog";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { AlertTriangle } from "lucide-react";
+import { MultiCheckCombobox } from "@/components/sales/MultiCheckCombobox";
+import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
@@ -1075,12 +1077,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
   const salesTeamQuery = useActiveSalesClosers();
 
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
-  const allowedSet = new Set(teamUserIds);
-  // Apenas inclui vendas feitas por Closers da lista permitida
+  const closerSet = new Set(teamUserIds);
+  // Inclui também quem fechou venda no período (ex.: sócios/gestores que vendem),
+  // desde que o usuário esteja ativo.
   const dealUserIds = Array.from(new Set(
     (dealsQuery.data ?? [])
       .map((d) => d.responsible_user_id)
-      .filter((uid): uid is string => !!uid && allowedSet.has(uid))
+      .filter((uid): uid is string => !!uid)
   ));
   const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
@@ -1090,13 +1093,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       if (userIds.length === 0) return [];
       const { data, error } = await supabase
         .from("users")
-        .select("id, name")
+        .select("id, name, is_active")
         .in("id", userIds);
       if (error) throw error;
       return data || [];
     },
     enabled: userIds.length > 0,
   });
+
+  const activeUserIds = new Set(
+    (usersQuery.data ?? []).filter((u: any) => u.is_active !== false).map((u: any) => u.id as string),
+  );
+  const eligibleIds = userIds.filter((uid) => closerSet.has(uid) || activeUserIds.has(uid));
+
 
   // Giros já consumidos (registrados via roleta)
   const spinsLogQuery = useQuery({
@@ -1121,7 +1130,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     consumedByUser.set(log.user_id, cur);
   }
 
-  const summary = userIds.map((uid) => {
+  const summary = eligibleIds.map((uid) => {
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
@@ -1144,7 +1153,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     };
   }).sort((a, b) => b.pendingSpins - a.pendingSpins || b.earnedSpins - a.earnedSpins || a.name.localeCompare(b.name));
 
-  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+  const [sellerFilter, setSellerFilter] = usePersistedFilter<string[]>(`spiffs-${spiff.id}`, "sellers", []);
+
+  const visibleSummary = restrictToUserId
+    ? summary.filter((s) => s.uid === restrictToUserId)
+    : sellerFilter.length > 0
+      ? summary.filter((s) => sellerFilter.includes(s.uid))
+      : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
   const [capturedDetail, setCapturedDetail] = useState<
@@ -1158,7 +1173,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       <div className="flex items-center gap-2 flex-wrap">
         <Dice5 className="h-4 w-4 text-warning" />
         <p className="text-sm font-medium">Giros pendentes — {spiff.name}</p>
-        <div className="ml-auto flex items-center gap-1.5">{period.control}</div>
+        <div className="ml-auto flex items-center gap-1.5">
+          {!restrictToUserId && (
+            <MultiCheckCombobox
+              options={summary.map((s) => ({ value: s.uid, label: s.name }))}
+              value={sellerFilter}
+              onChange={setSellerFilter}
+              placeholder="Todos os vendedores"
+              className="h-7 w-[190px] text-xs"
+              emptyText="Nenhum vendedor"
+            />
+          )}
+          {period.control}
+        </div>
         <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
         <Tooltip>
           <TooltipTrigger>
@@ -1369,12 +1396,12 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
   const salesTeamQuery = useActiveSalesClosers();
 
   const teamUserIds = (salesTeamQuery.data ?? []).map((c) => c.user_id).filter(Boolean) as string[];
-  const allowedSet = new Set(teamUserIds);
-  // Apenas inclui vendas feitas por Closers da lista permitida
+  const closerSet = new Set(teamUserIds);
+  // Inclui também quem fechou venda na janela, desde que o usuário esteja ativo.
   const dealUserIds = Array.from(new Set(
     (dealsQuery.data ?? [])
       .map((d) => d.responsible_user_id)
-      .filter((uid): uid is string => !!uid && allowedSet.has(uid))
+      .filter((uid): uid is string => !!uid)
   ));
   const userIds = Array.from(new Set([...dealUserIds, ...teamUserIds]));
 
@@ -1382,12 +1409,17 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     queryKey: ["custom-spin-users", accountId, userIds.join(",")],
     queryFn: async () => {
       if (userIds.length === 0) return [];
-      const { data, error } = await supabase.from("users").select("id, name").in("id", userIds);
+      const { data, error } = await supabase.from("users").select("id, name, is_active").in("id", userIds);
       if (error) throw error;
       return data || [];
     },
     enabled: userIds.length > 0,
   });
+
+  const activeUserIds = new Set(
+    (usersQuery.data ?? []).filter((u: any) => u.is_active !== false).map((u: any) => u.id as string),
+  );
+  const eligibleIds = userIds.filter((uid) => closerSet.has(uid) || activeUserIds.has(uid));
 
   // Giros já consumidos nesta campanha (registrados via roleta)
   const spinsLogQuery = useQuery({
@@ -1409,7 +1441,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     consumedByUser.set(log.user_id, (consumedByUser.get(log.user_id) ?? 0) + 1);
   }
 
-  const summary = userIds.map((uid) => {
+  const summary = eligibleIds.map((uid) => {
     const sales = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid).length;
     const earnedSpins = triggerSalesCount > 0 ? Math.floor(sales / triggerSalesCount) : 0;
     const remainder = triggerSalesCount > 0 ? sales - earnedSpins * triggerSalesCount : 0;
@@ -1421,7 +1453,13 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     return { uid, name: user?.name || collab?.full_name || "—", sales, spins, consumedCount, toNext };
   }).sort((a, b) => b.spins - a.spins || b.sales - a.sales || a.name.localeCompare(b.name));
 
-  const visibleSummary = restrictToUserId ? summary.filter((s) => s.uid === restrictToUserId) : summary;
+  const [sellerFilter, setSellerFilter] = usePersistedFilter<string[]>(`spiffs-custom-${spiff.id}`, "sellers", []);
+
+  const visibleSummary = restrictToUserId
+    ? summary.filter((s) => s.uid === restrictToUserId)
+    : sellerFilter.length > 0
+      ? summary.filter((s) => sellerFilter.includes(s.uid))
+      : summary;
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
   const [salesDetail, setSalesDetail] = useState<{ uid: string; name: string } | null>(null);
@@ -1436,6 +1474,18 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
           {triggerSalesCount} vendas / {windowLabel}
         </Badge>
+        {!restrictToUserId && (
+          <div className="ml-auto">
+            <MultiCheckCombobox
+              options={summary.map((s) => ({ value: s.uid, label: s.name }))}
+              value={sellerFilter}
+              onChange={setSellerFilter}
+              placeholder="Todos os vendedores"
+              className="h-7 w-[190px] text-xs"
+              emptyText="Nenhum vendedor"
+            />
+          </div>
+        )}
         <Tooltip>
           <TooltipTrigger>
             <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
