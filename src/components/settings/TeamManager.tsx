@@ -1089,6 +1089,21 @@ export function TeamManager() {
                           Admin
                         </Badge>
                       )}
+                      {!isUserActive(user) && (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs">Inativo</Badge>
+                          {(pendingByUser[user.id] || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => openDeactivateDialog(user, "transfer", e)}
+                              className="inline-flex items-center gap-1 rounded-md border border-warning/50 bg-warning/10 px-2 py-0.5 text-xs text-warning-foreground hover:bg-warning/20"
+                            >
+                              <AlertTriangle className="h-3 w-3 text-warning" />
+                              {pendingByUser[user.id]} pendência(s)
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -1101,6 +1116,30 @@ export function TeamManager() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {isUserActive(user) ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Inativar membro"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-warning hover:text-warning hover:bg-warning/10"
+                            onClick={(e) => openDeactivateDialog(user, "deactivate", e)}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Reativar membro"
+                            disabled={reactivatingId === user.id}
+                            className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            onClick={(e) => handleReactivate(user, e)}
+                          >
+                            {reactivatingId === user.id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <UserCheck className="h-4 w-4" />}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
