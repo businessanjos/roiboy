@@ -41,10 +41,15 @@ export default function PdaCalendarView({ collaborators }: { collaborators: HRCo
     const end = new Date(year, month + 1, 1).toISOString();
     const nameById = new Map(collaborators.map(c => [c.id, c]));
 
+    const dayStart = `${year}-${String(month + 1).padStart(2, "0")}-01`;
+    const dayEnd = new Date(year, month + 1, 1);
+    const dayEndStr = `${dayEnd.getFullYear()}-${String(dayEnd.getMonth() + 1).padStart(2, "0")}-01`;
+
     (async () => {
-      const [meetings, checkins] = await Promise.all([
+      const [meetings, checkins, followups] = await Promise.all([
         supabase.from("hr_rh_meetings").select("id, title, scheduled_at").gte("scheduled_at", start).lt("scheduled_at", end),
         supabase.from("hr_pda_checkins").select("id, person_id, title, scheduled_at").gte("scheduled_at", start).lt("scheduled_at", end),
+        supabase.from("hr_pda_followups").select("id, person_id, kind, followup_date").gte("followup_date", dayStart).lt("followup_date", dayEndStr),
       ]);
       if (cancelled) return;
       const evs: CalEvent[] = [];
@@ -58,6 +63,16 @@ export default function PdaCalendarView({ collaborators }: { collaborators: HRCo
           day: new Date(k.scheduled_at).getDate(),
           kind: "checkin",
           label: `Check-in · ${person?.full_name || k.title || "PDA"}`,
+          route: person ? ((person as any).__route || `/rh/collaborators/${person.id}`) : undefined,
+        });
+      });
+      (followups.data || []).forEach((f: any) => {
+        const person = nameById.get(f.person_id);
+        evs.push({
+          id: `f-${f.id}`,
+          day: new Date(`${f.followup_date}T12:00:00`).getDate(),
+          kind: "checkin",
+          label: `Acompanhamento ${f.kind || ""} · ${person?.full_name || "PDA"}`.replace("  ", " "),
           route: person ? ((person as any).__route || `/rh/collaborators/${person.id}`) : undefined,
         });
       });
