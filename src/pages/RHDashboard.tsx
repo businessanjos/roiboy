@@ -185,6 +185,8 @@ export default function RHDashboard() {
     const inactive = collabs.filter((c: any) => c.status !== "active");
     const clt = active.filter((c: any) => (c.employment_type || "").toLowerCase() === "clt");
     const pj = providers.filter((p: any) => p.status !== "terminated");
+    const pjDirectors = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() === "director");
+    const pjOthers = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() !== "director");
 
     // Composição por departamento
     const byDept: Record<string, number> = {};
