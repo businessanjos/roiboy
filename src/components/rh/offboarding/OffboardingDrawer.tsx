@@ -326,19 +326,23 @@ export default function OffboardingDrawer({
                 <Label>Data efetiva</Label>
                 <Input type="date" value={form.termination_date || ""} onChange={(e) => setForm({ ...form, termination_date: e.target.value })} />
               </div>
-              <div>
-                <Label>Aviso prévio</Label>
-                <Select value={form.notice_type} onValueChange={(v) => { setForm({ ...form, notice_type: v as any }); setCalcInput({ ...calcInput, noticeType: v as NoticeType }); }}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(NOTICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Dias de aviso</Label>
-                <Input type="number" value={form.notice_days || 30} onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, notice_days: n }); setCalcInput({ ...calcInput, noticeDays: n }); }} />
-              </div>
+              {!isPJ && (
+                <>
+                  <div>
+                    <Label>Aviso prévio</Label>
+                    <Select value={form.notice_type} onValueChange={(v) => { setForm({ ...form, notice_type: v as any }); setCalcInput({ ...calcInput, noticeType: v as NoticeType }); }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(NOTICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Dias de aviso</Label>
+                    <Input type="number" value={form.notice_days || 30} onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, notice_days: n }); setCalcInput({ ...calcInput, noticeDays: n }); }} />
+                  </div>
+                </>
+              )}
             </div>
 
             <div>
