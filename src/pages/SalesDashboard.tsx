@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
@@ -13,6 +13,8 @@ import {
   subDays,
   subMonths,
   subQuarters,
+  startOfDay,
+  endOfDay,
   format,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -110,6 +112,10 @@ import {
 } from "@/components/ryka/snapshot";
 import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
 import { Settings2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
+import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 
 type PeriodKey =
   | "this_month"
@@ -119,7 +125,8 @@ type PeriodKey =
   | "this_quarter"
   | "last_quarter"
   | "ytd"
-  | "last_year";
+  | "last_year"
+  | "custom";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   this_month: "Este mês",
@@ -130,7 +137,10 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   last_quarter: "Trimestre passado",
   ytd: "Ano atual",
   last_year: "Ano passado",
+  custom: "Personalizado",
 };
+
+const FILTERS_STORAGE_KEY = "sales-dashboard-filters-v1";
 
 const SNAPSHOT_PANEL_ID = "painel-comercial";
 
@@ -143,9 +153,19 @@ const KPI_TONE: Record<string, RykaTone> = {
   Outros: "neutral",
 };
 
-function getRange(period: PeriodKey): { start: Date; end: Date } {
+function getRange(
+  period: PeriodKey,
+  customStart?: Date | null,
+  customEnd?: Date | null
+): { start: Date; end: Date } {
   const now = new Date();
   switch (period) {
+    case "custom":
+      // Enquanto as duas datas não forem escolhidas, mantém o mês atual.
+      if (customStart && customEnd) {
+        return { start: startOfDay(customStart), end: endOfDay(customEnd) };
+      }
+      return { start: startOfMonth(now), end: endOfMonth(now) };
     case "this_month":
       return { start: startOfMonth(now), end: endOfMonth(now) };
     case "last_month": {
@@ -195,7 +215,42 @@ const COLORS = [
 export default function SalesDashboard() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { isSuperAdmin } = useSuperAdmin();
-  const [period, setPeriod] = useState<PeriodKey>("this_month");
+  // ---------- Filtros (período + vendedor), persistidos no navegador ----------
+  const storedFilters = (() => {
+    try {
+      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [period, setPeriod] = useState<PeriodKey>(
+    (storedFilters?.period as PeriodKey) || "this_month"
+  );
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(() => {
+    const from = storedFilters?.customFrom ? new Date(storedFilters.customFrom) : undefined;
+    const to = storedFilters?.customTo ? new Date(storedFilters.customTo) : undefined;
+    return from || to ? { from, to } : undefined;
+  });
+  const [repFilter, setRepFilter] = useState<string>(storedFilters?.rep || "all");
+  const [rangeOpen, setRangeOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          period,
+          rep: repFilter,
+          customFrom: customRange?.from ? customRange.from.toISOString() : null,
+          customTo: customRange?.to ? customRange.to.toISOString() : null,
+        })
+      );
+    } catch {}
+  }, [period, repFilter, customRange]);
+
+  const repId = repFilter !== "all" ? repFilter : null;
+  const { data: salesClosers } = useActiveSalesClosers();
   const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
 
   // ---------- KPI customization (per section, persisted in localStorage) ----------
@@ -235,15 +290,20 @@ export default function SalesDashboard() {
     [currentUser, isSuperAdmin]
   );
 
-  const { start, end } = useMemo(() => getRange(period), [period]);
+  const { start, end } = useMemo(
+    () => getRange(period, customRange?.from ?? null, customRange?.to ?? null),
+    [period, customRange?.from, customRange?.to]
+  );
+  // Chave estável de período (cobre também o intervalo personalizado)
+  const rangeKey = `${start.toISOString()}|${end.toISOString()}`;
   const accountId = currentUser?.account_id;
 
   // ---------------------- DATA ----------------------
   const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ["sales-dashboard-deals", accountId, period],
+    queryKey: ["sales-dashboard-deals", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select(
           "id, title, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
@@ -251,6 +311,8 @@ export default function SalesDashboard() {
         .eq("account_id", accountId!)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
@@ -258,10 +320,10 @@ export default function SalesDashboard() {
 
   // Won deals in window — accept either won_at or created_at fall back
   const { data: wonDeals, isLoading: wonLoading } = useQuery({
-    queryKey: ["sales-dashboard-won", accountId, period],
+    queryKey: ["sales-dashboard-won", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select(
           "id, title, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
@@ -270,22 +332,26 @@ export default function SalesDashboard() {
         .eq("status", "won")
         .gte("won_at", start.toISOString())
         .lte("won_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: lostDeals, isLoading: lostLoading } = useQuery({
-    queryKey: ["sales-dashboard-lost", accountId, period],
+    queryKey: ["sales-dashboard-lost", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
-        .select("id, lost_at, lost_reason, loss_reason_id, value")
+        .select("id, lost_at, lost_reason, loss_reason_id, value, responsible_user_id")
         .eq("account_id", accountId!)
         .eq("status", "lost")
         .gte("lost_at", start.toISOString())
         .lte("lost_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
@@ -307,10 +373,29 @@ export default function SalesDashboard() {
   const { goal } = useCompanyGoals(year);
 
   // Team metrics
-  const { metrics: teamMetrics, loading: teamLoading } = useSalesTeamMetrics({
+  const { metrics: allTeamMetrics, loading: teamLoading } = useSalesTeamMetrics({
     startDate: start,
     endDate: end,
   });
+  // Filtro de vendedor: toda a tela passa a olhar apenas o vendedor escolhido
+  const teamMetrics = useMemo(
+    () => (repId ? allTeamMetrics.filter((m) => m.user_id === repId) : allTeamMetrics),
+    [allTeamMetrics, repId]
+  );
+
+  // Opções do filtro de vendedor: closers ativos + quem aparece nas métricas do time
+  const repOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of salesClosers || []) {
+      if (c.user_id) map.set(c.user_id, c.full_name || c.name);
+    }
+    for (const m of allTeamMetrics) {
+      if (m.user_id && !map.has(m.user_id)) map.set(m.user_id, m.user_name);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [salesClosers, allTeamMetrics]);
 
   // ---------------------- DERIVED ----------------------
   // Receita recebida = SOMENTE received_value (dinheiro efetivamente entrado).
@@ -342,14 +427,16 @@ export default function SalesDashboard() {
 
   // Pipeline (open deals)
   const { data: openDeals, isLoading: openLoading } = useQuery({
-    queryKey: ["sales-dashboard-open", accountId],
+    queryKey: ["sales-dashboard-open", accountId, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select("id, value, stage_id, stage_changed_at, responsible_user_id")
         .eq("account_id", accountId!)
         .eq("status", "open");
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
@@ -420,7 +507,7 @@ export default function SalesDashboard() {
   // ---------------------- NEW KPIs ----------------------
   // Reuniões realizadas no período (internal_tasks completadas com agendamento)
   const { data: heldMeetingsRows } = useQuery({
-    queryKey: ["sales-dashboard-held", accountId, period],
+    queryKey: ["sales-dashboard-held", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       // Paginar para evitar o limite default de 1000 linhas do PostgREST.
@@ -431,14 +518,15 @@ export default function SalesDashboard() {
       const all: any[] = [];
       // Hard cap de segurança em 50k linhas
       while (from < 50000) {
-        const { data, error } = await supabase
+        let q = supabase
           .from("internal_tasks")
           .select("id, assigned_to, title, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", accountId!)
           .not("completed_at", "is", null)
           .gte("completed_at", start.toISOString())
-          .lte("completed_at", end.toISOString())
-          .range(from, from + PAGE - 1);
+          .lte("completed_at", end.toISOString());
+        if (repId) q = q.eq("assigned_to", repId);
+        const { data, error } = await q.range(from, from + PAGE - 1);
         if (error) throw error;
         const batch = data || [];
         all.push(...batch);
@@ -464,7 +552,7 @@ export default function SalesDashboard() {
 
   // Cancelamentos no período (Churn) — inclui dados do cliente p/ fallback de vendedor
   const { data: churnContracts } = useQuery({
-    queryKey: ["sales-dashboard-churn", accountId, period],
+    queryKey: ["sales-dashboard-churn", accountId, rangeKey],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       const { data, error } = await supabase
@@ -709,6 +797,8 @@ export default function SalesDashboard() {
     const unassignedContracts: any[] = [];
     for (const c of churnContracts || []) {
       const uid = resolveOwner(c);
+      // Com filtro de vendedor, só entram os cancelamentos atribuídos a ele
+      if (repId && uid !== repId) continue;
       const val = Number((c as any).value || 0);
       if (uid) {
         const info = userInfo.get(uid);
@@ -735,7 +825,7 @@ export default function SalesDashboard() {
       list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue, contracts: unassignedContracts });
     }
     return list;
-  }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
+  }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics, repId]);
 
   // ---------------------- KPI CATALOG ----------------------
   const churnTotalCount = churnByRep.reduce((a, r) => a + r.count, 0);
@@ -899,16 +989,65 @@ export default function SalesDashboard() {
         title="Dashboard Comercial"
         description="Visão executiva de receita, funil, equipe e origem dos ganhos."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[190px] h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(PERIOD_LABELS).map(([k, label]) => (
                   <SelectItem key={k} value={k}>
                     {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {period === "custom" && (
+              <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 rounded-xl justify-start text-left font-normal bg-card ring-1 ring-hairline",
+                      !customRange?.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="w-4 h-4 mr-2" />
+                    {customRange?.from
+                      ? customRange.to
+                        ? `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} → ${format(customRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                        : `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} → ...`
+                      : "Escolher datas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={customRange}
+                    onSelect={(r) => {
+                      setCustomRange(r);
+                      if (r?.from && r?.to) setRangeOpen(false);
+                    }}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+                <SelectValue placeholder="Todos os vendedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os vendedores</SelectItem>
+                {repOptions.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -963,7 +1102,13 @@ export default function SalesDashboard() {
                 activeKpi
                   ? [
                       { label: "Categoria", value: KPI_CATEGORY[activeKpi.id] || "Outros" },
-                      { label: "Período", value: PERIOD_LABELS[period] },
+                      {
+                        label: "Período",
+                        value:
+                          period === "custom"
+                            ? `${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(end, "dd/MM/yyyy", { locale: ptBR })}`
+                            : PERIOD_LABELS[period],
+                      },
                     ]
                   : undefined
               }
