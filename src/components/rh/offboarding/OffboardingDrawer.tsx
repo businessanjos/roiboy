@@ -91,7 +91,8 @@ export default function OffboardingDrawer({
         salary: offboarding.service_provider.fee_amount,
       } as any
     : null);
-  const deadlines = useMemo(() => computeLegalDeadlines(form.termination_date || offboarding.termination_date), [form.termination_date, offboarding.termination_date]);
+  const isPJ = !offboarding.collaborator && !!offboarding.service_provider;
+  const deadlines = useMemo(() => (isPJ ? [] : computeLegalDeadlines(form.termination_date || offboarding.termination_date)), [isPJ, form.termination_date, offboarding.termination_date]);
 
   // Rescissão calc inputs
   const [calcInput, setCalcInput] = useState(() => ({
