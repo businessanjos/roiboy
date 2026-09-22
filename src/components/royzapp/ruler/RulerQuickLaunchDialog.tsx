@@ -81,7 +81,10 @@ export function RulerQuickLaunchDialog({ open, onOpenChange, sectorId = "vendas"
           .limit(30);
 
         if (search.trim()) {
-          query = query.ilike("title", `%${search.trim()}%`);
+          const term = search.trim();
+          query = query.or(
+            `title.ilike.%${term}%,contact_name.ilike.%${term}%,contact_phone.ilike.%${term}%`,
+          );
         }
 
         const { data, error } = await query;

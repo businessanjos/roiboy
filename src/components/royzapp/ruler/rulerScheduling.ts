@@ -50,14 +50,7 @@ export function buildTouchRows(params: {
 
   // Se a data de início já passou, deslocamos a cadência INTEIRA em dias inteiros,
   // preservando o espaçamento entre os toques (D+1 e D+2 nunca caem no mesmo dia).
-  let shiftDays = 0;
-  for (const step of params.steps) {
-    const base = computeTouchDate(params.startDate, step.offset_days, params.dueTime, false);
-    if (base.getTime() >= now) continue;
-    const diffMs = now - base.getTime();
-    const needed = Math.ceil(diffMs / 86_400_000);
-    if (needed > shiftDays) shiftDays = needed;
-  }
+  const shiftDays = computeCadenceShiftDays(params.steps, params.startDate, params.dueTime);
 
   // Garante um dia distinto por toque: se o ajuste de fim de semana/feriado
   // empurrar dois toques para o mesmo dia, o seguinte vai para o próximo dia útil.
@@ -95,3 +88,20 @@ export function buildTouchRows(params: {
 }
 
 
+
+/** Dias de deslocamento aplicados a toda a cadência quando o início já passou. */
+export function computeCadenceShiftDays(
+  steps: { offset_days: number }[],
+  startDate: string,
+  dueTime: string,
+) {
+  const now = Date.now();
+  let shift = 0;
+  for (const step of steps) {
+    const base = computeTouchDate(startDate, step.offset_days, dueTime, false);
+    if (base.getTime() >= now) continue;
+    const needed = Math.ceil((now - base.getTime()) / 86_400_000);
+    if (needed > shift) shift = needed;
+  }
+  return shift;
+}
