@@ -407,28 +407,31 @@ export default function OrgChart() {
                 </div>
               )}
 
-              {/* Barra horizontal do CEO — vai do centro da coluna Marketing ao centro da Administrativo */}
-              <div className="relative w-full max-w-[1100px] h-px">
-                <div className="absolute top-0 left-[12.5%] right-[12.5%] h-px bg-border" />
+              {/* Barra horizontal do CEO — vai do centro da primeira ao centro da última coluna */}
+              <div className="relative w-full h-px" style={{ maxWidth: gridMaxWidth }}>
+                <div
+                  className="absolute top-0 h-px bg-border"
+                  style={{ left: `${50 / allColumns.length}%`, right: `${50 / allColumns.length}%` }}
+                />
               </div>
 
               {/* Tier intermediário: COO acima da coluna Marketing; demais colunas apenas propagam a linha */}
-              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px]">
+              <div className="grid gap-4 w-full" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
                 <div className="flex flex-col items-center">
                   <div className="w-px h-6 bg-border" />
                   {coo && renderPersonCard(coo, { size: "md", label: "COO" })}
                   <div className="w-px h-8 bg-border" />
                 </div>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex justify-center">
+                {allColumns.slice(1).map((c) => (
+                  <div key={c.key} className="flex justify-center">
                     <div className="w-px h-full bg-border" />
                   </div>
                 ))}
               </div>
 
               {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
-              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] relative">
-                {columns.map((col) => {
+              <div className="grid gap-4 w-full relative" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
+                {allColumns.map((col) => {
                   const isMarketing = col.key === "marketing";
                   const columnHead = col.gestor;
                   const headLabel = "Gestor";
