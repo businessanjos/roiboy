@@ -71,6 +71,9 @@ const COLUMNS: ColumnConfig[] = [
   },
 ];
 
+const tint = (color: string, alpha = 0.15) =>
+  color.startsWith("hsl(") ? color.replace(")", ` / ${alpha})`) : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
+
 function getInitials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
@@ -370,7 +373,7 @@ export default function OrgChart() {
             className={`text-[9px] px-1.5 py-0 h-4 font-normal ${deptColor ? "" : badgeColor ?? ""}`}
             style={
               deptColor
-                ? { backgroundColor: `${deptColor.replace(")", " / 0.15)")}`, color: deptColor, borderColor: deptColor }
+                ? { backgroundColor: tint(deptColor), color: deptColor, borderColor: deptColor }
                 : undefined
             }
           >
