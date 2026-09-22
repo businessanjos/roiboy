@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
-import CollaboratorsPDATable from "./components/CollaboratorsPDATable";
+import CollaboratorsPDAWorkspace from "./components/CollaboratorsPDAWorkspace";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
