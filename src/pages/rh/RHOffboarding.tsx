@@ -236,6 +236,7 @@ function OffboardingRow({ o, onClick }: { o: HROffboarding; onClick: () => void 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium truncate">{c?.full_name || "Colaborador"}</p>
+            {c && <Badge variant="outline" className="text-[10px]">{c.bondLabel}</Badge>}
             <Badge variant="outline" className={`text-[10px] ${OFFBOARDING_STAGE_COLORS[o.stage]}`}>
               {OFFBOARDING_STAGE_LABELS[o.stage]}
             </Badge>
