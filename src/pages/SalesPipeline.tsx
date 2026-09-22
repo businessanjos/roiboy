@@ -2884,6 +2884,26 @@ export default function SalesPipeline() {
                       selected={lostProductFilter}
                       onChange={setLostProductFilter}
                     />
+                    {lostTitleTagOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label=""
+                        placeholder="Todas as origens"
+                        width="w-full sm:w-[190px]"
+                        options={lostTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        selected={lostTitleTagFilter}
+                        onChange={setLostTitleTagFilter}
+                      />
+                    )}
+                    {lostMqlOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label=""
+                        placeholder="Todos os MQL"
+                        width="w-full sm:w-[190px]"
+                        options={lostMqlOptions.map(([label, count]) => ({ value: label, label: `${label} (${count})` }))}
+                        selected={lostMqlFilter}
+                        onChange={setLostMqlFilter}
+                      />
+                    )}
                     {(lostCreatedMonthFilter !== 'all' || lostMonthFilter !== 'all') && (
                       <Button
                         variant="ghost"
