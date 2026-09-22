@@ -499,8 +499,72 @@ export default function HRCollaborators() {
       )}
 
       {/* Table */}
-      {loading ? (
+      {view === "pj" ? (
+        providersLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : filteredProviders.length === 0 ? (
+          <div className="text-center py-16">
+            <UsersRound className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">Nenhum PJ encontrado</p>
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Pessoa</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Empresa</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Cargo / Serviço</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Tipo</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProviders.map(p => {
+                  const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
+                  return (
+                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={p.avatar_url || undefined} />
+                            <AvatarFallback className="bg-warning/10 text-warning text-xs font-medium">
+                              {getInitials(p.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">{p.full_name}</p>
+                            <p className="text-xs text-muted-foreground">{p.email || "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3 hidden md:table-cell">{p.company_name || "—"}</td>
+                      <td className="p-3 hidden md:table-cell">{p.department || "—"}</td>
+                      <td className="p-3 hidden lg:table-cell">{p.position || p.service_type || "—"}</td>
+                      <td className="p-3 hidden lg:table-cell">
+                        <Badge variant="outline" className="text-xs">
+                          {(p as any).provider_kind === "director" ? "Cargo de confiança" : "Prestador"}
+                        </Badge>
+                      </td>
+                      <td className="p-3"><Badge variant={st.variant}>{st.label}</Badge></td>
+                      <td className="p-3 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/service-providers/${p.id}`)} title="Abrir ficha">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+      ) : view === "pda" ? (
+        <CollaboratorsPDATable collaborators={pdaRows} />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <UsersRound className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -513,8 +577,6 @@ export default function HRCollaborators() {
             </p>
           )}
         </div>
-      ) : view === "pda" ? (
-        <CollaboratorsPDATable collaborators={filtered} />
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full min-w-[1100px] text-sm">
