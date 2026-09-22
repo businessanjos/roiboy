@@ -202,9 +202,9 @@ export default function OrgChart() {
       });
       members.forEach((m) => excludeIds.add(m.id));
 
-      return { ...col, gestor, members };
+      return { ...col, gestor, members, deptColor: deptColorFor([col.label, ...col.deptMatches]) };
     });
-  }, [people, ceo, coo]);
+  }, [people, ceo, coo, deptColorFor]);
 
   // Pessoas ainda não alocadas em nenhuma coluna fixa
   const unassigned = useMemo(() => {
