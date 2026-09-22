@@ -354,7 +354,7 @@ export default function HRCollaborators() {
   }
 
   return (
-    <div className="p-6 max-w-6xl mx-auto space-y-6">
+    <div className="p-6 w-full max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
       <div className="flex items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="shrink-0">
@@ -464,8 +464,8 @@ export default function HRCollaborators() {
           )}
         </div>
       ) : (
-        <div className="border rounded-lg overflow-hidden">
-          <table className="w-full text-sm">
+        <div className="border rounded-lg overflow-x-auto">
+          <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
                 <th className="p-3 w-10">
