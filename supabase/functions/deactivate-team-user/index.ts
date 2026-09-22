@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "count_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
+type Action = "count_open_items" | "list_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
 
 interface ItemDef {
   key: string;
@@ -253,6 +253,106 @@ async function transferItem(
   }
 }
 
+/** Como montar a descrição de cada registro na listagem detalhada. */
+const LIST_META: Record<string, {
+  title?: string[];
+  status?: string;
+  date?: string;
+  ref?: { col: string; table: string; label: string };
+}> = {
+  deals: { title: ["title", "contact_name"], status: "status" },
+  leads: { title: ["full_name"], status: "status" },
+  activities: { title: ["title"], date: "scheduled_at" },
+  sales_meetings: { title: ["title"], status: "status", date: "scheduled_at" },
+  clients_sales: { title: ["full_name"], status: "status" },
+  clients: { title: ["full_name"], status: "status" },
+  conversations: {
+    status: "status",
+    ref: { col: "conversation_id", table: "zapp_conversations", label: "contact_name" },
+  },
+  ruler: { title: ["contact_name"], status: "status" },
+  support_tickets: { title: ["subject"], status: "status" },
+  marketing_projects: { title: ["name"], status: "status" },
+  content_pieces: { title: ["title"], status: "status" },
+  content_approvals: { title: ["post_title"] },
+  event_checklist: { title: ["title"], status: "status", date: "due_date" },
+  event_deliverables: { title: ["title"], status: "status", date: "due_date" },
+  event_briefings: { ref: { col: "event_id", table: "events", label: "title" } },
+  dunning_cases: { status: "stage", ref: { col: "client_id", table: "clients", label: "full_name" } },
+  hr_admissions: { title: ["candidate_name"], status: "stage" },
+  hr_offboardings: {
+    status: "stage",
+    ref: { col: "collaborator_id", table: "hr_collaborators", label: "full_name" },
+  },
+  tasks: { title: ["title"], status: "status", date: "due_date" },
+  leader_actions: { title: ["title"], date: "due_date" },
+};
+
+/** Lista os registros em aberto de um item, para o gestor conferir um a um. */
+async function listOpenItems(
+  admin: any,
+  accountId: string,
+  userId: string,
+  key: string,
+  limit = 300,
+) {
+  const item = ITEM_BY_KEY[key];
+  const meta = LIST_META[key] || {};
+
+  let owners = [userId];
+  if (item.key === "conversations") {
+    owners = await getAgentIds(admin, accountId, userId);
+    if (owners.length === 0) return [];
+  }
+
+  const cols = new Set<string>(["id", "created_at"]);
+  for (const c of meta.title || []) cols.add(c);
+  if (meta.status) cols.add(meta.status);
+  if (meta.date) cols.add(meta.date);
+  if (meta.ref) cols.add(meta.ref.col);
+
+  let q = admin.from(item.table).select(Array.from(cols).join(","));
+  if (!item.noAccount) q = q.eq("account_id", accountId);
+  q = item.apply(q);
+
+  const filters: string[] = [];
+  for (const col of item.columns) for (const owner of owners) filters.push(`${col}.eq.${owner}`);
+  q = filters.length === 1 ? q.eq(item.columns[0], owners[0]) : q.or(filters.join(","));
+
+  const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
+  if (error) {
+    console.error(`list ${key} failed:`, error.message);
+    return [];
+  }
+
+  const rows = (data || []) as any[];
+
+  // Resolve nomes quando o registro só guarda o id de outra entidade.
+  let refNames: Record<string, string> = {};
+  if (meta.ref) {
+    const ids = Array.from(new Set(rows.map((r) => r[meta.ref!.col]).filter(Boolean)));
+    if (ids.length > 0) {
+      const { data: refs } = await admin.from(meta.ref.table)
+        .select(`id, ${meta.ref.label}`).in("id", ids);
+      refNames = Object.fromEntries(
+        (refs || []).map((r: any) => [r.id, r[meta.ref!.label] || ""]),
+      );
+    }
+  }
+
+  return rows.map((r) => {
+    const direct = (meta.title || []).map((c) => r[c]).find((v) => !!v);
+    const fromRef = meta.ref ? refNames[r[meta.ref.col]] : null;
+    return {
+      id: r.id,
+      title: direct || fromRef || "(sem título)",
+      status: meta.status ? r[meta.status] || null : null,
+      date: meta.date ? r[meta.date] || null : null,
+      created_at: r.created_at || null,
+    };
+  });
+}
+
 async function writeAuditLog(
   admin: any,
   params: {
@@ -329,6 +429,13 @@ Deno.serve(async (req: Request) => {
     if (action === "count_open_items") {
       const counts = await countOpenItems(admin, accountId, user_id);
       return json(200, { counts, labels: ITEM_LABELS });
+    }
+
+    if (action === "list_open_items") {
+      const key = (body as any).item_key as string;
+      if (!key || !ITEM_BY_KEY[key]) return json(400, { error: "Item inválido" });
+      const rows = await listOpenItems(admin, accountId, user_id, key);
+      return json(200, { rows, label: ITEM_LABELS[key] });
     }
 
     if (action === "reactivate") {
