@@ -44,7 +44,16 @@ export default function RHOffboarding() {
     return offboardings.filter((o) => {
       if (stageFilter !== "all" && o.stage !== stageFilter) return false;
       if (typeFilter !== "all" && o.termination_type !== typeFilter) return false;
-      if (search && !o.collaborator?.full_name.toLowerCase().includes(search.toLowerCase())) return false;
+      const person = getOffboardingPerson(o);
+      if (bondFilter !== "all") {
+        if (bondFilter === "pj" && !person?.isProvider) return false;
+        if (bondFilter === "clt" && person?.isProvider !== false) return false;
+      }
+      if (search) {
+        const q = normalize(search);
+        const hay = normalize(`${person?.full_name || ""} ${person?.position || ""} ${person?.department || ""} ${person?.email || ""}`);
+        if (!hay.includes(q)) return false;
+      }
       if (periodFilter !== "all") {
         const days = differenceInDays(now, new Date(o.created_at));
         if (periodFilter === "30" && days > 30) return false;
