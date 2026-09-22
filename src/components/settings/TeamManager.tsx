@@ -505,6 +505,51 @@ export function TeamManager() {
     setIsDeleteDialogOpen(true);
   };
 
+  // Conta pendências ainda sem dono dos membros inativos (badge laranja na lista).
+  const loadPendingCounts = async (inactiveUsers: TeamUser[]) => {
+    if (inactiveUsers.length === 0) {
+      setPendingByUser({});
+      return;
+    }
+    const results = await Promise.all(
+      inactiveUsers.map(async (u) => {
+        try {
+          const { data } = await supabase.functions.invoke("deactivate-team-user", {
+            body: { action: "count_open_items", user_id: u.id },
+          });
+          return [u.id, totalOpenItems(data?.counts)] as const;
+        } catch {
+          return [u.id, 0] as const;
+        }
+      }),
+    );
+    setPendingByUser(Object.fromEntries(results));
+  };
+
+  const openDeactivateDialog = (user: TeamUser, mode: "deactivate" | "transfer", e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeactivateTarget(user);
+    setDeactivateMode(mode);
+  };
+
+  const handleReactivate = async (user: TeamUser, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReactivatingId(user.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
+        body: { action: "reactivate", user_id: user.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${user.name} foi reativado.`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reativar membro");
+    } finally {
+      setReactivatingId(null);
+    }
+  };
+
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file || !selectedUser) return;
