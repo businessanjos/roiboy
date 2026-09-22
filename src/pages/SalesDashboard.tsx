@@ -783,6 +783,8 @@ export default function SalesDashboard() {
     const unassignedContracts: any[] = [];
     for (const c of churnContracts || []) {
       const uid = resolveOwner(c);
+      // Com filtro de vendedor, só entram os cancelamentos atribuídos a ele
+      if (repId && uid !== repId) continue;
       const val = Number((c as any).value || 0);
       if (uid) {
         const info = userInfo.get(uid);
@@ -809,7 +811,7 @@ export default function SalesDashboard() {
       list.push({ id: "_unassigned", name: "Sem vendedor atribuído", avatar: null, count: unassigned, value: unassignedValue, contracts: unassignedContracts });
     }
     return list;
-  }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics]);
+  }, [churnContracts, churnDealOwners, wonDealsForChurnMatch, teamMetrics, repId]);
 
   // ---------------------- KPI CATALOG ----------------------
   const churnTotalCount = churnByRep.reduce((a, r) => a + r.count, 0);
