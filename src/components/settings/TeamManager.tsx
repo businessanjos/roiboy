@@ -761,12 +761,20 @@ export function TeamManager() {
   };
 
   const visibleRoles = cxScopeOnly ? roles.filter(isCxScopedRole) : roles;
+  const isUserActive = (u: TeamUser) => u.is_active !== false;
+  const activeCount = users.filter(isUserActive).length;
+  const inactiveCount = users.length - activeCount;
+  const transferCandidates = users
+    .filter((u) => isUserActive(u))
+    .map((u) => ({ id: u.id, name: u.name }));
   const filteredUsers = users.filter((user) => {
     if (cxScopeOnly) {
       const userRoles = user.team_roles || (user.team_role ? [user.team_role] : []);
       if (userRoles.length === 0) return false;
       if (!userRoles.some(isCxScopedRole)) return false;
     }
+    if (statusFilter === "active" && !isUserActive(user)) return false;
+    if (statusFilter === "inactive" && isUserActive(user)) return false;
     return (
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
