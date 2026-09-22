@@ -53,13 +53,19 @@ export default function CollaboratorPdaTimeline({
     let cancelled = false;
     (async () => {
       setLoading(true);
-      const [history, checkins] = await Promise.all([
+      const [history, checkins, followups, cycles] = await Promise.all([
         supabase.from("hr_pda_field_history")
           .select("id, field_key, old_value, new_value, changed_by_name, created_at")
           .eq("person_id", personId).order("created_at", { ascending: false }).limit(200),
         supabase.from("hr_pda_checkins")
           .select("id, scheduled_at, title, status, notes")
           .eq("person_id", personId).order("scheduled_at", { ascending: false }).limit(100),
+        supabase.from("hr_pda_followups")
+          .select("id, followup_date, kind, angel_feedback, management_feedback, author_name")
+          .eq("person_id", personId).order("followup_date", { ascending: false }).limit(100),
+        supabase.from("hr_pda_cycles")
+          .select("id, label, created_at, pdi_done, pdi_delivered, effort_level, change_quality")
+          .eq("person_id", personId).order("created_at", { ascending: false }).limit(100),
       ]);
       if (cancelled) return;
 
@@ -79,6 +85,25 @@ export default function CollaboratorPdaTimeline({
         icon: "checkin",
         title: k.title || "Check-in do PDA",
         detail: [k.status, k.notes].filter(Boolean).join(" · ") || undefined,
+      }));
+      (followups.data || []).forEach((f: any) => list.push({
+        id: `f-${f.id}`,
+        at: `${f.followup_date}T12:00:00`,
+        icon: "checkin",
+        title: `Acompanhamento${f.kind ? ` · ${f.kind}` : ""}`,
+        detail: [f.angel_feedback, f.management_feedback, f.author_name ? `por ${f.author_name}` : null].filter(Boolean).join(" · ") || undefined,
+      }));
+      (cycles.data || []).forEach((c: any) => list.push({
+        id: `c-${c.id}`,
+        at: c.created_at,
+        icon: "change",
+        title: `PDI ${c.label || ""}`.trim(),
+        detail: [
+          c.pdi_done == null ? null : `Feito: ${c.pdi_done ? "SIM" : "NÃO"}`,
+          c.pdi_delivered == null ? null : `Entregue: ${c.pdi_delivered ? "SIM" : "NÃO"}`,
+          c.effort_level ? `Esforço: ${c.effort_level}` : null,
+          c.change_quality ? `QM: ${c.change_quality}` : null,
+        ].filter(Boolean).join(" · ") || undefined,
       }));
 
       list.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());

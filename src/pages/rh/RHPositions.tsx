@@ -66,7 +66,16 @@ const EMPTY_FORM = {
   experience_years: "",
   career_path: "",
   next_position_id: "",
+  pda_hierarchy: "",
+  ideal_primary_profile: "",
+  ideal_secondary_profile: "",
+  specific_knowledge: "",
+  profile_notes: "",
+  is_active: true,
 };
+
+const PDA_HIERARCHY_OPTIONS = ["C-level/Gestor", "Coordenador/Supervisor", "Analista", "Assistente", "Auxiliar/Estágio"];
+const PDA_PROFILE_OPTIONS = ["Executor", "Comunicador", "Analítico", "Planejador"];
 
 export default function RHPositions() {
   const navigate = useNavigate();
@@ -142,6 +151,12 @@ export default function RHPositions() {
         experience_years: pos.experience_years?.toString() || "",
         career_path: pos.career_path || "",
         next_position_id: pos.next_position_id || "",
+        pda_hierarchy: (pos as any).pda_hierarchy || "",
+        ideal_primary_profile: (pos as any).ideal_primary_profile || "",
+        ideal_secondary_profile: (pos as any).ideal_secondary_profile || "",
+        specific_knowledge: (pos as any).specific_knowledge || "",
+        profile_notes: (pos as any).profile_notes || "",
+        is_active: (pos as any).is_active !== false,
       });
     } else {
       setEditingPos(null);
@@ -169,7 +184,13 @@ export default function RHPositions() {
       experience_years: form.experience_years ? parseInt(form.experience_years) : null,
       career_path: form.career_path.trim() || null,
       next_position_id: form.next_position_id || null,
-    };
+      pda_hierarchy: form.pda_hierarchy || null,
+      ideal_primary_profile: form.ideal_primary_profile || null,
+      ideal_secondary_profile: form.ideal_secondary_profile || null,
+      specific_knowledge: form.specific_knowledge.trim() || null,
+      profile_notes: form.profile_notes.trim() || null,
+      is_active: form.is_active,
+    } as any;
 
     if (editingPos) {
       await updatePosition({ id: editingPos.id, ...payload });
@@ -501,11 +522,12 @@ export default function RHPositions() {
           </DialogHeader>
 
           <Tabs defaultValue="general" className="w-full">
-            <TabsList className="w-full grid grid-cols-4">
+            <TabsList className="w-full grid grid-cols-5">
               <TabsTrigger value="general" className="text-xs">Geral</TabsTrigger>
               <TabsTrigger value="skills" className="text-xs">Competências</TabsTrigger>
               <TabsTrigger value="requirements" className="text-xs">Requisitos</TabsTrigger>
               <TabsTrigger value="career" className="text-xs">Carreira</TabsTrigger>
+              <TabsTrigger value="pda" className="text-xs">PDA</TabsTrigger>
             </TabsList>
 
             <TabsContent value="general" className="space-y-4 mt-3">
@@ -660,6 +682,60 @@ export default function RHPositions() {
                     ))}
                   </SelectContent>
                 </Select>
+              </div>
+            </TabsContent>
+
+            <TabsContent value="pda" className="space-y-4 mt-3">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label>Hierarquia padrão</Label>
+                  <Select value={form.pda_hierarchy || "none"} onValueChange={v => setForm(f => ({ ...f, pda_hierarchy: v === "none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {PDA_HIERARCHY_OPTIONS.map(h => (<SelectItem key={h} value={h}>{h}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-end gap-2">
+                  <label className="flex items-center gap-2 text-sm">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 rounded border-border"
+                      checked={form.is_active}
+                      onChange={e => setForm(f => ({ ...f, is_active: e.target.checked }))}
+                    />
+                    Cargo ativo
+                  </label>
+                </div>
+                <div>
+                  <Label>Perfil ideal primário</Label>
+                  <Select value={form.ideal_primary_profile || "none"} onValueChange={v => setForm(f => ({ ...f, ideal_primary_profile: v === "none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {PDA_PROFILE_OPTIONS.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Perfil ideal secundário</Label>
+                  <Select value={form.ideal_secondary_profile || "none"} onValueChange={v => setForm(f => ({ ...f, ideal_secondary_profile: v === "none" ? "" : v }))}>
+                    <SelectTrigger><SelectValue placeholder="Selecionar..." /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Nenhum</SelectItem>
+                      {PDA_PROFILE_OPTIONS.map(o => (<SelectItem key={o} value={o}>{o}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+              <div>
+                <Label>Conhecimento específico</Label>
+                <Textarea value={form.specific_knowledge} onChange={e => setForm(f => ({ ...f, specific_knowledge: e.target.value }))} rows={5} placeholder="Ferramentas, técnicas e conhecimentos exigidos pelo cargo..." />
+              </div>
+              <div>
+                <Label>Observações de perfil</Label>
+                <Textarea value={form.profile_notes} onChange={e => setForm(f => ({ ...f, profile_notes: e.target.value }))} rows={4} placeholder="Como o perfil ideal se manifesta no dia a dia..." />
               </div>
             </TabsContent>
           </Tabs>

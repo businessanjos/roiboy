@@ -186,6 +186,8 @@ const HRPartners = lazyRetry(() => import("./pages/rh/HRPartners"));
 const HRPartnerProfile = lazyRetry(() => import("./pages/rh/HRPartnerProfile"));
 const RHPositions = lazyRetry(() => import("./pages/rh/RHPositions"));
 const RHBenefits = lazyRetry(() => import("./pages/rh/RHBenefits"));
+const RHBehaviorProfiles = lazyRetry(() => import("./pages/rh/RHBehaviorProfiles"));
+const RHMeetings = lazyRetry(() => import("./pages/rh/RHMeetings"));
 const RHOffers = lazyRetry(() => import("./pages/rh/RHOffers"));
 const RHOfferWizard = lazyRetry(() => import("./pages/rh/RHOfferWizard"));
 const RHAdmissions = lazyRetry(() => import("./pages/rh/RHAdmissions"));
@@ -436,6 +438,8 @@ const App = () => (
                             <Route path="/rh/org-chart" element={<OrgChart />} />
                             <Route path="/rh/departments" element={<RHDepartments />} />
                             <Route path="/rh/job-descriptions" element={<RHPositions />} />
+                            <Route path="/rh/behavior-profiles" element={<RHBehaviorProfiles />} />
+                            <Route path="/rh/meetings" element={<RHMeetings />} />
                             <Route path="/rh/benefits" element={<RHBenefits />} />
                             <Route path="/rh/vacancies" element={<RHVagas />} />
                             <Route path="/rh/vacancies/new" element={<RHJobForm />} />

@@ -12026,6 +12026,48 @@ export type Database = {
           },
         ]
       }
+      hr_behavior_profiles: {
+        Row: {
+          account_id: string
+          communication: string[]
+          created_at: string
+          id: string
+          improvements: string | null
+          leadership_style: string | null
+          motivation: string | null
+          profile_key: string
+          sort_order: number
+          strengths: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          communication?: string[]
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          leadership_style?: string | null
+          motivation?: string | null
+          profile_key: string
+          sort_order?: number
+          strengths?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          communication?: string[]
+          created_at?: string
+          id?: string
+          improvements?: string | null
+          leadership_style?: string | null
+          motivation?: string | null
+          profile_key?: string
+          sort_order?: number
+          strengths?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       hr_benefits: {
         Row: {
           account_id: string
@@ -12192,8 +12234,10 @@ export type Database = {
           pda_education: string | null
           pda_effort_level: string | null
           pda_hierarchy: string | null
+          pda_instagram: string | null
           pda_level: string | null
           pda_mental_model: string | null
+          pda_notes: string | null
           pda_pdi_delivered: boolean | null
           pda_pdi_done: boolean | null
           pda_phase: string | null
@@ -12275,8 +12319,10 @@ export type Database = {
           pda_education?: string | null
           pda_effort_level?: string | null
           pda_hierarchy?: string | null
+          pda_instagram?: string | null
           pda_level?: string | null
           pda_mental_model?: string | null
+          pda_notes?: string | null
           pda_pdi_delivered?: boolean | null
           pda_pdi_done?: boolean | null
           pda_phase?: string | null
@@ -12358,8 +12404,10 @@ export type Database = {
           pda_education?: string | null
           pda_effort_level?: string | null
           pda_hierarchy?: string | null
+          pda_instagram?: string | null
           pda_level?: string | null
           pda_mental_model?: string | null
+          pda_notes?: string | null
           pda_pdi_delivered?: boolean | null
           pda_pdi_done?: boolean | null
           pda_phase?: string | null
@@ -13954,6 +14002,171 @@ export type Database = {
         }
         Relationships: []
       }
+      hr_pda_cycles: {
+        Row: {
+          account_id: string
+          change_quality: string | null
+          created_at: string
+          created_by: string | null
+          effort_level: string | null
+          id: string
+          label: string
+          pdi_delivered: boolean | null
+          pdi_done: boolean | null
+          person_id: string
+          plan: string | null
+          source_table: string
+          starts_on: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          change_quality?: string | null
+          created_at?: string
+          created_by?: string | null
+          effort_level?: string | null
+          id?: string
+          label: string
+          pdi_delivered?: boolean | null
+          pdi_done?: boolean | null
+          person_id: string
+          plan?: string | null
+          source_table?: string
+          starts_on?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          change_quality?: string | null
+          created_at?: string
+          created_by?: string | null
+          effort_level?: string | null
+          id?: string
+          label?: string
+          pdi_delivered?: boolean | null
+          pdi_done?: boolean | null
+          person_id?: string
+          plan?: string | null
+          source_table?: string
+          starts_on?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hr_pda_documents: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          doc_date: string | null
+          doc_type: string
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          id: string
+          person_id: string
+          source_table: string
+          updated_at: string
+          uploaded_by: string | null
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          doc_date?: string | null
+          doc_type?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          person_id: string
+          source_table?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          doc_date?: string | null
+          doc_type?: string
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          id?: string
+          person_id?: string
+          source_table?: string
+          updated_at?: string
+          uploaded_by?: string | null
+        }
+        Relationships: []
+      }
+      hr_pda_empathy_maps: {
+        Row: {
+          account_id: string
+          angel_gains: string | null
+          angel_hears: string | null
+          angel_pains: string | null
+          angel_says: string | null
+          angel_sees: string | null
+          angel_thinks: string | null
+          created_at: string
+          id: string
+          mgmt_gains: string | null
+          mgmt_hears: string | null
+          mgmt_pains: string | null
+          mgmt_says: string | null
+          mgmt_sees: string | null
+          mgmt_thinks: string | null
+          person_id: string
+          source_table: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          account_id: string
+          angel_gains?: string | null
+          angel_hears?: string | null
+          angel_pains?: string | null
+          angel_says?: string | null
+          angel_sees?: string | null
+          angel_thinks?: string | null
+          created_at?: string
+          id?: string
+          mgmt_gains?: string | null
+          mgmt_hears?: string | null
+          mgmt_pains?: string | null
+          mgmt_says?: string | null
+          mgmt_sees?: string | null
+          mgmt_thinks?: string | null
+          person_id: string
+          source_table?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          account_id?: string
+          angel_gains?: string | null
+          angel_hears?: string | null
+          angel_pains?: string | null
+          angel_says?: string | null
+          angel_sees?: string | null
+          angel_thinks?: string | null
+          created_at?: string
+          id?: string
+          mgmt_gains?: string | null
+          mgmt_hears?: string | null
+          mgmt_pains?: string | null
+          mgmt_says?: string | null
+          mgmt_sees?: string | null
+          mgmt_thinks?: string | null
+          person_id?: string
+          source_table?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       hr_pda_field_history: {
         Row: {
           account_id: string
@@ -13990,6 +14203,54 @@ export type Database = {
           old_value?: string | null
           person_id?: string
           source_table?: string
+        }
+        Relationships: []
+      }
+      hr_pda_followups: {
+        Row: {
+          account_id: string
+          angel_feedback: string | null
+          attention_points: string | null
+          author_id: string | null
+          author_name: string | null
+          created_at: string
+          followup_date: string
+          id: string
+          kind: string
+          management_feedback: string | null
+          person_id: string
+          source_table: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          angel_feedback?: string | null
+          attention_points?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          created_at?: string
+          followup_date?: string
+          id?: string
+          kind?: string
+          management_feedback?: string | null
+          person_id: string
+          source_table?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          angel_feedback?: string | null
+          attention_points?: string | null
+          author_id?: string | null
+          author_name?: string | null
+          created_at?: string
+          followup_date?: string
+          id?: string
+          kind?: string
+          management_feedback?: string | null
+          person_id?: string
+          source_table?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -14043,13 +14304,18 @@ export type Database = {
           education_level: string | null
           experience_years: number | null
           id: string
+          ideal_primary_profile: string | null
+          ideal_secondary_profile: string | null
           is_active: boolean
           next_position_id: string | null
+          pda_hierarchy: string | null
+          profile_notes: string | null
           requirements: string | null
           responsibilities: string[] | null
           salary_max: number | null
           salary_min: number | null
           seniority: string | null
+          specific_knowledge: string | null
           technical_skills: string[] | null
           title: string
           updated_at: string
@@ -14064,13 +14330,18 @@ export type Database = {
           education_level?: string | null
           experience_years?: number | null
           id?: string
+          ideal_primary_profile?: string | null
+          ideal_secondary_profile?: string | null
           is_active?: boolean
           next_position_id?: string | null
+          pda_hierarchy?: string | null
+          profile_notes?: string | null
           requirements?: string | null
           responsibilities?: string[] | null
           salary_max?: number | null
           salary_min?: number | null
           seniority?: string | null
+          specific_knowledge?: string | null
           technical_skills?: string[] | null
           title: string
           updated_at?: string
@@ -14085,13 +14356,18 @@ export type Database = {
           education_level?: string | null
           experience_years?: number | null
           id?: string
+          ideal_primary_profile?: string | null
+          ideal_secondary_profile?: string | null
           is_active?: boolean
           next_position_id?: string | null
+          pda_hierarchy?: string | null
+          profile_notes?: string | null
           requirements?: string | null
           responsibilities?: string[] | null
           salary_max?: number | null
           salary_min?: number | null
           seniority?: string | null
+          specific_knowledge?: string | null
           technical_skills?: string[] | null
           title?: string
           updated_at?: string
@@ -14196,6 +14472,7 @@ export type Database = {
           account_id: string
           created_at: string
           created_by: string | null
+          decisions: string | null
           id: string
           notes: string | null
           participants: string[] | null
@@ -14207,6 +14484,7 @@ export type Database = {
           account_id: string
           created_at?: string
           created_by?: string | null
+          decisions?: string | null
           id?: string
           notes?: string | null
           participants?: string[] | null
@@ -14218,6 +14496,7 @@ export type Database = {
           account_id?: string
           created_at?: string
           created_by?: string | null
+          decisions?: string | null
           id?: string
           notes?: string | null
           participants?: string[] | null
@@ -14358,8 +14637,10 @@ export type Database = {
           pda_education: string | null
           pda_effort_level: string | null
           pda_hierarchy: string | null
+          pda_instagram: string | null
           pda_level: string | null
           pda_mental_model: string | null
+          pda_notes: string | null
           pda_pdi_delivered: boolean | null
           pda_pdi_done: boolean | null
           pda_phase: string | null
@@ -14434,8 +14715,10 @@ export type Database = {
           pda_education?: string | null
           pda_effort_level?: string | null
           pda_hierarchy?: string | null
+          pda_instagram?: string | null
           pda_level?: string | null
           pda_mental_model?: string | null
+          pda_notes?: string | null
           pda_pdi_delivered?: boolean | null
           pda_pdi_done?: boolean | null
           pda_phase?: string | null
@@ -14510,8 +14793,10 @@ export type Database = {
           pda_education?: string | null
           pda_effort_level?: string | null
           pda_hierarchy?: string | null
+          pda_instagram?: string | null
           pda_level?: string | null
           pda_mental_model?: string | null
+          pda_notes?: string | null
           pda_pdi_delivered?: boolean | null
           pda_pdi_done?: boolean | null
           pda_phase?: string | null
@@ -14558,6 +14843,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hr_team_alignments: {
+        Row: {
+          account_id: string
+          alignment_date: string | null
+          content: string | null
+          created_at: string
+          created_by: string | null
+          file_name: string | null
+          file_path: string | null
+          id: string
+          sector: string | null
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          alignment_date?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          sector?: string | null
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          alignment_date?: string | null
+          content?: string | null
+          created_at?: string
+          created_by?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          id?: string
+          sector?: string | null
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       hr_time_records: {
         Row: {
@@ -28580,6 +28907,7 @@ export type Database = {
         Returns: string
       }
       can_access_consultant_bonus: { Args: never; Returns: boolean }
+      can_access_pda: { Args: { _person_id: string }; Returns: boolean }
       can_manage_spiff_payments: {
         Args: { _auth_user_id: string }
         Returns: boolean
@@ -28982,6 +29310,7 @@ export type Database = {
       }
       normalize_invoice_status: { Args: { _status: string }; Returns: string }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
+      pda_is_hr_or_director: { Args: never; Returns: boolean }
       pda_synergy_pct: {
         Args: { _dominant: string; _role_profile: string; _secondary: string }
         Returns: number

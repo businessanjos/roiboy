@@ -34,6 +34,10 @@ import CollaboratorPayroll from "./components/CollaboratorPayroll";
 import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
 import CollaboratorPDA from "./components/CollaboratorPDA";
 import CollaboratorPdaTimeline from "./components/CollaboratorPdaTimeline";
+import PdaPdiTab from "./components/pda/PdaPdiTab";
+import PdaFollowupsTab from "./components/pda/PdaFollowupsTab";
+import PdaEmpathyMapTab from "./components/pda/PdaEmpathyMapTab";
+import PdaDocumentsTab from "./components/pda/PdaDocumentsTab";
 import { POSITION_OPTIONS } from "@/lib/rh/pda";
 import { Wallet, History, Sparkles } from "lucide-react";
 
@@ -498,19 +502,58 @@ export default function HRCollaboratorProfile() {
 
         {/* TAB: PDA */}
         <TabsContent value="pda" className="mt-4 space-y-4">
-          <CollaboratorPDA
-            form={form}
-            setField={setField}
-            collaboratorId={id}
-            accountId={currentUser?.account_id}
-          />
-          {id && (
-            <CollaboratorPdaTimeline
-              personId={id}
-              hireDate={form?.hire_date}
-              terminationDate={form?.termination_date}
-            />
-          )}
+          <Tabs defaultValue="profile">
+            <TabsList>
+              <TabsTrigger value="profile">Perfil</TabsTrigger>
+              <TabsTrigger value="pdi">PDI</TabsTrigger>
+              <TabsTrigger value="followups">Acompanhamentos</TabsTrigger>
+              <TabsTrigger value="empathy">Mapa de empatia</TabsTrigger>
+              <TabsTrigger value="docs">Documentos</TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="profile" className="mt-4 space-y-4">
+              <CollaboratorPDA
+                form={form}
+                setField={setField}
+                collaboratorId={id}
+                accountId={currentUser?.account_id}
+              />
+              {id && (
+                <CollaboratorPdaTimeline
+                  personId={id}
+                  hireDate={form?.hire_date}
+                  terminationDate={form?.termination_date}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="pdi" className="mt-4">
+              {id && (
+                <PdaPdiTab
+                  personId={id}
+                  accountId={collab.account_id}
+                  onSyncLatest={(v) => {
+                    setField("pda_pdi_done", v.pda_pdi_done);
+                    setField("pda_pdi_delivered", v.pda_pdi_delivered);
+                    setField("pda_effort_level", v.pda_effort_level);
+                    setField("pda_change_quality", v.pda_change_quality);
+                  }}
+                />
+              )}
+            </TabsContent>
+
+            <TabsContent value="followups" className="mt-4">
+              {id && <PdaFollowupsTab personId={id} accountId={collab.account_id} />}
+            </TabsContent>
+
+            <TabsContent value="empathy" className="mt-4">
+              {id && <PdaEmpathyMapTab personId={id} accountId={collab.account_id} gender={form.gender} />}
+            </TabsContent>
+
+            <TabsContent value="docs" className="mt-4">
+              {id && <PdaDocumentsTab personId={id} accountId={collab.account_id} />}
+            </TabsContent>
+          </Tabs>
         </TabsContent>
 
         {/* TAB: Auditoria */}

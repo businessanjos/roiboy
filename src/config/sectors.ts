@@ -273,6 +273,8 @@ export const sectors: Sector[] = [
       { to: "/rh/org-chart", icon: Network, label: "Organograma" },
       { to: "/rh/departments", icon: Building, label: "Departamentos" },
       { to: "/rh/job-descriptions", icon: FileText, label: "Cargos" },
+      { to: "/rh/behavior-profiles", icon: Sparkles, label: "Perfis Comportamentais" },
+      { to: "/rh/meetings", icon: CalendarDays, label: "Reuniões e Alinhamentos" },
       { to: "/rh/benefits", icon: Gift, label: "Benefícios" },
       { to: "/rh/vacancies", icon: UserPlus, label: "Vagas" },
       { to: "/rh/offers", icon: Sparkles, label: "Cartas-Proposta" },
