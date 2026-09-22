@@ -496,13 +496,20 @@ export default function HRCollaboratorProfile() {
         </TabsContent>
 
         {/* TAB: PDA */}
-        <TabsContent value="pda" className="mt-4">
+        <TabsContent value="pda" className="mt-4 space-y-4">
           <CollaboratorPDA
             form={form}
             setField={setField}
             collaboratorId={id}
             accountId={currentUser?.account_id}
           />
+          {id && (
+            <CollaboratorPdaTimeline
+              personId={id}
+              hireDate={form?.hire_date}
+              terminationDate={form?.termination_date}
+            />
+          )}
         </TabsContent>
 
         {/* TAB: Auditoria */}
