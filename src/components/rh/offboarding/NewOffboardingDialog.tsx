@@ -95,15 +95,46 @@ export default function NewOffboardingDialog({
         <DialogHeader><DialogTitle>Novo desligamento</DialogTitle></DialogHeader>
         <div className="space-y-3 py-2">
           <div>
-            <Label>Colaborador *</Label>
-            <Select value={form.collaborator_id} onValueChange={(v) => setForm({ ...form, collaborator_id: v })}>
-              <SelectTrigger><SelectValue placeholder="Selecione..." /></SelectTrigger>
-              <SelectContent>
-                {collabs.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.full_name}{c.position ? ` · ${c.position}` : ""}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Label>Pessoa *</Label>
+            <div className="mt-1 flex items-center gap-2">
+              <div className="relative flex-1">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input className="pl-8 h-9" placeholder="Buscar por nome ou cargo..." value={personSearch} onChange={(e) => setPersonSearch(e.target.value)} />
+              </div>
+              <Select value={bondFilter} onValueChange={(v) => setBondFilter(v as any)}>
+                <SelectTrigger className="h-9 w-[130px]"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="collaborator">CLT / Estágio</SelectItem>
+                  <SelectItem value="service_provider">PJ</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="mt-2 max-h-52 overflow-y-auto rounded-md border divide-y">
+              {filteredCollabs.length === 0 ? (
+                <p className="p-3 text-sm text-muted-foreground">Nenhuma pessoa encontrada.</p>
+              ) : filteredCollabs.map((c) => {
+                const key = `${c.kind}:${c.id}`;
+                const active = form.person_key === key;
+                return (
+                  <button
+                    type="button"
+                    key={key}
+                    onClick={() => setForm({ ...form, person_key: key })}
+                    className={`w-full text-left px-3 py-2 text-sm flex items-center justify-between gap-2 hover:bg-muted/60 ${active ? "bg-primary/10" : ""}`}
+                  >
+                    <span className="min-w-0">
+                      <span className="block truncate font-medium">{c.full_name}</span>
+                      {c.position && <span className="block truncate text-xs text-muted-foreground">{c.position}</span>}
+                    </span>
+                    <Badge variant="outline" className="text-[10px] shrink-0">{c.bond}</Badge>
+                  </button>
+                );
+              })}
+            </div>
+            {selectedPerson && (
+              <p className="mt-1.5 text-xs text-muted-foreground">Selecionado: <span className="font-medium text-foreground">{selectedPerson.full_name}</span> · {selectedPerson.bond}</p>
+            )}
           </div>
           <div>
             <Label>Tipo de desligamento *</Label>
