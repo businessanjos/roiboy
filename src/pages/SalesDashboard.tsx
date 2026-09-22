@@ -413,14 +413,16 @@ export default function SalesDashboard() {
 
   // Pipeline (open deals)
   const { data: openDeals, isLoading: openLoading } = useQuery({
-    queryKey: ["sales-dashboard-open", accountId],
+    queryKey: ["sales-dashboard-open", accountId, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select("id, value, stage_id, stage_changed_at, responsible_user_id")
         .eq("account_id", accountId!)
         .eq("status", "open");
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
