@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { OpenItemsViewerDialog } from "./OpenItemsViewerDialog";
 import { toast } from "sonner";
 import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
@@ -611,6 +612,17 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <OpenItemsViewerDialog
+        open={!!viewerKey}
+        onOpenChange={(v) => !v && setViewerKey(null)}
+        userId={user?.id || null}
+        userName={user?.name || user?.email || null}
+        itemKey={viewerKey}
+        itemLabel={viewerKey ? OPEN_ITEM_META[viewerKey]?.label || "Registros" : "Registros"}
+        itemRule={viewerKey ? OPEN_ITEM_RULE[viewerKey] : undefined}
+        totalCount={viewerKey ? counts?.[viewerKey] || 0 : 0}
+      />
     </Dialog>
   );
 }
