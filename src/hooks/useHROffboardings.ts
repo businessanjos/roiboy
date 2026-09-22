@@ -140,13 +140,15 @@ export function useHROffboardings() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (input: { collaborator_id: string; termination_type: TerminationType; reason?: string; notice_communicated_at?: string; will_replace?: boolean }) => {
+    mutationFn: async (input: { collaborator_id?: string | null; service_provider_id?: string | null; subject_type?: string; termination_type: TerminationType; reason?: string; notice_communicated_at?: string; will_replace?: boolean }) => {
       if (!currentUser?.account_id) throw new Error("Sem conta");
       const { data, error } = await supabase
         .from("hr_offboardings" as any)
         .insert({
           account_id: currentUser.account_id,
-          collaborator_id: input.collaborator_id,
+          collaborator_id: input.collaborator_id || null,
+          service_provider_id: input.service_provider_id || null,
+          subject_type: input.subject_type || (input.service_provider_id ? "service_provider" : "collaborator"),
           termination_type: input.termination_type,
           reason: input.reason,
           notice_communicated_at: input.notice_communicated_at,
