@@ -63,7 +63,7 @@ const COLUMNS: ColumnConfig[] = [
     headerColor: "from-warning to-warning",
     badgeColor: "bg-warning/15 text-warning-strong border-warning dark:text-warning dark:border-warning",
     gestorNames: ["jessica marcato"],
-    deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos"],
+    deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos", "suporte/atendimento", "suporte", "atendimento"],
   },
   {
     key: "administrativo",
