@@ -166,11 +166,19 @@ export function useHROffboardings() {
       // Se marcou para repor, criar vaga rascunho automaticamente
       if (created?.will_replace) {
         try {
-          const { data: collab } = await supabase
-            .from("hr_collaborators")
-            .select("position, department, employment_type, hr_department_id")
-            .eq("id", created.collaborator_id)
-            .single();
+          const collab = created.collaborator_id
+            ? (await supabase
+                .from("hr_collaborators")
+                .select("position, department, employment_type, hr_department_id")
+                .eq("id", created.collaborator_id)
+                .maybeSingle()).data
+            : (() => null)() || (created.service_provider_id
+              ? (await supabase
+                  .from("hr_service_providers")
+                  .select("position, department, hr_department_id")
+                  .eq("id", created.service_provider_id)
+                  .maybeSingle()).data as any
+              : null);
           const { data: job } = await supabase
             .from("hr_jobs")
             .insert({
