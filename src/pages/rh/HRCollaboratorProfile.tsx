@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -84,6 +85,7 @@ export default function HRCollaboratorProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { updateCollaborator, deleteCollaborator } = useHRCollaborators();
   const [collab, setCollab] = useState<HRCollaborator | null>(null);
   const [loading, setLoading] = useState(true);
@@ -201,7 +203,7 @@ export default function HRCollaboratorProfile() {
     setCpfLooking(false);
   };
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 

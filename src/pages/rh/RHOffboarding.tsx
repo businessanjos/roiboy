@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useMemo, useState } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
@@ -24,6 +25,7 @@ const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency"
 export default function RHOffboarding() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { offboardings, loading } = useHROffboardings();
   const [search, setSearch] = useState("");
   const [stageFilter, setStageFilter] = useState<string>("all");
@@ -33,7 +35,7 @@ export default function RHOffboarding() {
   const [selected, setSelected] = useState<HROffboarding | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 

@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useMemo } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -32,6 +33,7 @@ function getInitials(name: string) {
 export default function HRPartners() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { partners, loading, createPartner } = useHRPartners();
 
   const [search, setSearch] = useState("");
@@ -60,7 +62,7 @@ export default function HRPartners() {
     });
   }, [partners, search]);
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 

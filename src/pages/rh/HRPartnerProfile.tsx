@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -69,6 +70,7 @@ export default function HRPartnerProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { updatePartner, deletePartner } = useHRPartners();
   const [partner, setPartner] = useState<HRPartner | null>(null);
   const [loading, setLoading] = useState(true);
@@ -179,7 +181,7 @@ export default function HRPartnerProfile() {
     setCpfLooking(false);
   };
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 

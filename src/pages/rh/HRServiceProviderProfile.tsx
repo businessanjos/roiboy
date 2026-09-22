@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -61,6 +62,7 @@ export default function HRServiceProviderProfile() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { updateProvider, deleteProvider } = useHRServiceProviders();
   const { departments } = useHRDepartments();
   const [provider, setProvider] = useState<HRServiceProvider | null>(null);
@@ -234,7 +236,7 @@ export default function HRServiceProviderProfile() {
     setCnpjLooking(false);
   };
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 

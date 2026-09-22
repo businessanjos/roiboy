@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useMemo } from "react";
 import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -109,6 +110,7 @@ function useRHDashboardData(accountId: string | undefined) {
 
 export default function RHDashboard() {
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const accountId = currentUser?.account_id;
   const { data, isLoading } = useRHDashboardData(accountId);
 
@@ -254,7 +256,7 @@ export default function RHDashboard() {
     };
   }, [data]);
 
-  if (currentUser && !RH_ALLOWED_EMAILS.includes((currentUser.email || "").toLowerCase())) {
+  if (canHR === false) {
     return <Navigate to="/" replace />;
   }
 
