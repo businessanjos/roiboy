@@ -153,9 +153,19 @@ const KPI_TONE: Record<string, RykaTone> = {
   Outros: "neutral",
 };
 
-function getRange(period: PeriodKey): { start: Date; end: Date } {
+function getRange(
+  period: PeriodKey,
+  customStart?: Date | null,
+  customEnd?: Date | null
+): { start: Date; end: Date } {
   const now = new Date();
   switch (period) {
+    case "custom":
+      // Enquanto as duas datas não forem escolhidas, mantém o mês atual.
+      if (customStart && customEnd) {
+        return { start: startOfDay(customStart), end: endOfDay(customEnd) };
+      }
+      return { start: startOfMonth(now), end: endOfMonth(now) };
     case "this_month":
       return { start: startOfMonth(now), end: endOfMonth(now) };
     case "last_month": {
