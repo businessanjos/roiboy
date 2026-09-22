@@ -13,7 +13,10 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { OpenItemsViewerDialog } from "./OpenItemsViewerDialog";
+import {
+  ItemSelection, readSelection, selectionToPayload, SELECTION_CHANNEL,
+} from "@/lib/settings/openItemsSelection";
+
 import { toast } from "sonner";
 import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
@@ -191,7 +194,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
   const [owners, setOwners] = useState<Record<string, string>>({});
   const [defaultOwner, setDefaultOwner] = useState<string>("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [viewerKey, setViewerKey] = useState<string | null>(null);
+  const [selections, setSelections] = useState<Record<string, ItemSelection>>({});
   const [history, setHistory] = useState<AuditEntry[]>([]);
   const { currentUser } = useCurrentUser();
 
@@ -210,9 +213,16 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     () => availableKeys.filter((k) => selected[k]),
     [availableKeys, selected],
   );
+  /** Quantos registros daquele tipo o gestor deixou marcados na guia de conferência. */
+  const effectiveCount = (key: string) => {
+    const total = counts?.[key] || 0;
+    const sel = selections[key];
+    if (!sel || sel.mode === "all") return total;
+    return Math.min(sel.selectedCount, total);
+  };
   const selectedTotal = useMemo(
-    () => selectedKeys.reduce((s, k) => s + (counts?.[k] || 0), 0),
-    [selectedKeys, counts],
+    () => selectedKeys.reduce((s, k) => s + effectiveCount(k), 0),
+    [selectedKeys, counts, selections],
   );
   const ownerFor = (key: string) => owners[key] || defaultOwner || "";
   const readyKeys = useMemo(
@@ -228,17 +238,18 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     const map = new Map<string, number>();
     for (const key of readyKeys) {
       const id = ownerFor(key);
-      map.set(id, (map.get(id) || 0) + (counts?.[key] || 0));
+      map.set(id, (map.get(id) || 0) + effectiveCount(key));
     }
     return Array.from(map.entries()).map(([id, count]) => ({
       id, count, name: candidates.find((c) => c.id === id)?.name || "—",
     }));
-  }, [readyKeys, owners, defaultOwner, counts, candidates]);
+  }, [readyKeys, owners, defaultOwner, counts, selections, candidates]);
 
   const transferableTotal = useMemo(
-    () => readyKeys.reduce((s, k) => s + (counts?.[k] || 0), 0),
-    [readyKeys, counts],
+    () => readyKeys.reduce((s, k) => s + effectiveCount(k), 0),
+    [readyKeys, counts, selections],
   );
+
 
   useEffect(() => {
     if (!open || !user) return;
@@ -249,7 +260,12 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
       setDefaultOwner("");
       setOwners({});
       setCollapsed({});
-      setViewerKey(null);
+      setSelections(
+        Object.fromEntries(
+          OPEN_ITEM_KEYS.map((k) => [k, readSelection(user.id, k)]).filter(([, v]) => !!v),
+        ) as Record<string, ItemSelection>,
+      );
+
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
           body: { action: "count_open_items", user_id: user.id },
@@ -284,6 +300,30 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     load();
     return () => { cancelled = true; };
   }, [open, user?.id]);
+  /** Abre a guia dedicada de conferência das pendências. */
+  const openItemsTab = (key: string) => {
+    if (!user) return;
+    window.open(
+      `/settings/team/pendencias?user=${user.id}&item=${key}`,
+      `pendencias-${user.id}-${key}`,
+    );
+  };
+
+  /** Recebe de volta a seleção feita na outra guia. */
+  useEffect(() => {
+    if (!open || !user) return;
+    let ch: BroadcastChannel | null = null;
+    try {
+      ch = new BroadcastChannel(SELECTION_CHANNEL);
+      ch.onmessage = (ev) => {
+        const { userId, itemKey, selection } = ev.data || {};
+        if (userId !== user.id || !itemKey) return;
+        setSelections((s) => ({ ...s, [itemKey]: selection as ItemSelection }));
+      };
+    } catch { /* navegador sem BroadcastChannel */ }
+    return () => { ch?.close(); };
+  }, [open, user?.id]);
+
 
   const toggleGroup = (group: GroupKey, value: boolean) => {
     const keys = availableKeys.filter((k) => OPEN_ITEM_META[k].group === group);
@@ -299,7 +339,12 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
 
     setSubmitting(true);
     try {
-      const assignments = readyKeys.map((key) => ({ key, to_user_id: ownerFor(key) }));
+      const assignments = readyKeys.map((key) => ({
+        key,
+        to_user_id: ownerFor(key),
+        ...selectionToPayload(selections[key] || null),
+      }));
+
       const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
         body: {
           action: mode === "deactivate" ? "deactivate" : "transfer_open_items",
@@ -482,8 +527,11 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                         </span>
                                       </span>
                                       <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                        {count}
+                                        {effectiveCount(key) === count
+                                          ? count
+                                          : `${effectiveCount(key)} de ${count}`}
                                       </span>
+
                                     </label>
                                     <div className="flex items-center gap-2 sm:w-64">
                                       <Button
@@ -491,11 +539,12 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                         variant="ghost"
                                         size="sm"
                                         className="h-9 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                                        onClick={() => setViewerKey(key)}
+                                        onClick={() => openItemsTab(key)}
                                       >
                                         <Eye className="h-3.5 w-3.5" />
                                         <span className="ml-1 hidden sm:inline">Ver</span>
                                       </Button>
+
                                       <div className="flex-1">
                                         <OwnerSelect
                                           value={owners[key] || ""}
@@ -613,16 +662,6 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
         </DialogFooter>
       </DialogContent>
 
-      <OpenItemsViewerDialog
-        open={!!viewerKey}
-        onOpenChange={(v) => !v && setViewerKey(null)}
-        userId={user?.id || null}
-        userName={user?.name || user?.email || null}
-        itemKey={viewerKey}
-        itemLabel={viewerKey ? OPEN_ITEM_META[viewerKey]?.label || "Registros" : "Registros"}
-        itemRule={viewerKey ? OPEN_ITEM_RULE[viewerKey] : undefined}
-        totalCount={viewerKey ? counts?.[viewerKey] || 0 : 0}
-      />
     </Dialog>
   );
 }

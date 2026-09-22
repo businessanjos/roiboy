@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "count_open_items" | "list_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
+type Action = "count_open_items" | "list_open_items" | "title_groups" | "deactivate" | "reactivate" | "transfer_open_items";
 
 interface ItemDef {
   key: string;
@@ -150,7 +150,14 @@ const ITEM_BY_KEY: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((i) =>
 const ITEM_KEYS = ITEMS.map((i) => i.key);
 const ITEM_LABELS: Record<string, string> = Object.fromEntries(ITEMS.map((i) => [i.key, i.label]));
 
-interface Assignment { key: string; to_user_id: string }
+interface Assignment {
+  key: string;
+  to_user_id: string;
+  mode?: "all" | "only" | "except";
+  ids?: string[];
+  exclude_titles?: string[];
+}
+
 
 interface RequestBody {
   action: Action;
@@ -213,6 +220,22 @@ async function countOpenItems(admin: any, accountId: string, userId: string) {
   return counts;
 }
 
+interface Selection {
+  mode?: "all" | "only" | "except";
+  ids?: string[];
+  /** Títulos genéricos que o gestor decidiu não transferir (ex.: "Follow Up"). */
+  exclude_titles?: string[];
+}
+
+function chunk<T>(arr: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+  return out;
+}
+
+const quoteList = (values: string[]) =>
+  `(${values.map((v) => `"${String(v).replace(/"/g, '\\"')}"`).join(",")})`;
+
 /** Transfere um item para um destinatário. Retorna quantos registros mudaram de dono. */
 async function transferItem(
   admin: any,
@@ -220,7 +243,28 @@ async function transferItem(
   item: ItemDef,
   fromUserId: string,
   toUserId: string,
+  selection?: Selection,
 ): Promise<{ moved: number; error?: string }> {
+  const mode = selection?.mode || "all";
+  const selIds = Array.from(new Set(selection?.ids || []));
+  const excludeTitles = Array.from(new Set(selection?.exclude_titles || []))
+    .filter((t) => t && t !== "(sem título)");
+  const titleCol = (LIST_META[item.key]?.title || [])[0];
+  if (mode === "only" && selIds.length === 0) return { moved: 0 };
+
+  /** Aplica o recorte de ids/títulos escolhido pelo gestor. */
+  const applySelection = (q: any, ids: string[] | null) => {
+    if (mode === "only" && ids) return q.in("id", ids);
+    if (mode === "except" && selIds.length > 0) q = q.not("id", "in", `(${selIds.join(",")})`);
+    if (mode !== "only" && excludeTitles.length > 0 && titleCol) {
+      q = q.not(titleCol, "in", quoteList(excludeTitles));
+    }
+    return q;
+  };
+
+
+  const batches: (string[] | null)[] = mode === "only" ? chunk(selIds, 150) : [null];
+
   try {
     if (item.key === "conversations") {
       const fromAgents = await getAgentIds(admin, accountId, fromUserId);
@@ -230,28 +274,35 @@ async function transferItem(
       if (!toAgentId) {
         return { moved: 0, error: "O destinatário não tem agente no RoyZapp" };
       }
-      let q = admin.from(item.table).update({ agent_id: toAgentId })
-        .eq("account_id", accountId).in("agent_id", fromAgents);
-      q = item.apply(q);
-      const { data, error } = await q.select("id");
-      if (error) return { moved: 0, error: error.message };
-      return { moved: data?.length || 0 };
+      let moved = 0;
+      for (const ids of batches) {
+        let q = admin.from(item.table).update({ agent_id: toAgentId })
+          .eq("account_id", accountId).in("agent_id", fromAgents);
+        q = applySelection(item.apply(q), ids);
+        const { data, error } = await q.select("id");
+        if (error) return { moved, error: error.message };
+        moved += data?.length || 0;
+      }
+      return { moved };
     }
 
     const ids = new Set<string>();
     for (const col of item.columns) {
-      let q = admin.from(item.table).update({ [col]: toUserId });
-      if (!item.noAccount) q = q.eq("account_id", accountId);
-      q = item.apply(q).eq(col, fromUserId);
-      const { data, error } = await q.select("id");
-      if (error) return { moved: ids.size, error: error.message };
-      for (const row of data || []) ids.add(row.id);
+      for (const batch of batches) {
+        let q = admin.from(item.table).update({ [col]: toUserId });
+        if (!item.noAccount) q = q.eq("account_id", accountId);
+        q = applySelection(item.apply(q).eq(col, fromUserId), batch);
+        const { data, error } = await q.select("id");
+        if (error) return { moved: ids.size, error: error.message };
+        for (const row of data || []) ids.add(row.id);
+      }
     }
     return { moved: ids.size };
   } catch (err) {
     return { moved: 0, error: err instanceof Error ? err.message : "erro" };
   }
 }
+
 
 /** Como montar a descrição de cada registro na listagem detalhada. */
 const LIST_META: Record<string, {
@@ -288,13 +339,23 @@ const LIST_META: Record<string, {
   leader_actions: { title: ["title"], date: "due_date" },
 };
 
-/** Lista os registros em aberto de um item, para o gestor conferir um a um. */
-async function listOpenItems(
+interface ListOpts {
+  page?: number;
+  page_size?: number;
+  search?: string;
+  status?: string | null;
+  sort?: "recent" | "oldest" | "title" | "due";
+}
+
+/** Monta a query base (filtros de "em aberto" + dono + busca + situação). */
+async function buildListQuery(
   admin: any,
   accountId: string,
   userId: string,
   key: string,
-  limit = 300,
+  opts: ListOpts,
+  select: string,
+  count?: "exact",
 ) {
   const item = ITEM_BY_KEY[key];
   const meta = LIST_META[key] || {};
@@ -302,16 +363,12 @@ async function listOpenItems(
   let owners = [userId];
   if (item.key === "conversations") {
     owners = await getAgentIds(admin, accountId, userId);
-    if (owners.length === 0) return [];
+    if (owners.length === 0) return null;
   }
 
-  const cols = new Set<string>(["id", "created_at"]);
-  for (const c of meta.title || []) cols.add(c);
-  if (meta.status) cols.add(meta.status);
-  if (meta.date) cols.add(meta.date);
-  if (meta.ref) cols.add(meta.ref.col);
-
-  let q = admin.from(item.table).select(Array.from(cols).join(","));
+  let q = count
+    ? admin.from(item.table).select(select, { count })
+    : admin.from(item.table).select(select);
   if (!item.noAccount) q = q.eq("account_id", accountId);
   q = item.apply(q);
 
@@ -319,10 +376,77 @@ async function listOpenItems(
   for (const col of item.columns) for (const owner of owners) filters.push(`${col}.eq.${owner}`);
   q = filters.length === 1 ? q.eq(item.columns[0], owners[0]) : q.or(filters.join(","));
 
-  const { data, error } = await q.order("created_at", { ascending: false }).limit(limit);
+  const search = (opts.search || "").trim();
+  if (search && (meta.title || []).length > 0) {
+    const safe = search.replace(/[(),*]/g, " ").trim();
+    if (safe) {
+      q = q.or((meta.title || []).map((c) => `${c}.ilike.%${safe}%`).join(","));
+    }
+  }
+  if (opts.status && meta.status) q = q.eq(meta.status, opts.status);
+
+  // Embrulhado: o builder do PostgREST é "thenable" e seria executado pelo await.
+  return { q };
+
+}
+
+function sortColumn(key: string, sort: ListOpts["sort"]) {
+  const meta = LIST_META[key] || {};
+  if (sort === "title" && (meta.title || []).length > 0) {
+    return { col: meta.title![0], asc: true };
+  }
+  if (sort === "due" && meta.date) return { col: meta.date, asc: true };
+  if (sort === "oldest") return { col: "created_at", asc: true };
+  return { col: "created_at", asc: false };
+}
+
+function mapRows(rows: any[], meta: any, refNames: Record<string, string>) {
+  return rows.map((r) => {
+    const direct = (meta.title || []).map((c: string) => r[c]).find((v: any) => !!v);
+    const fromRef = meta.ref ? refNames[r[meta.ref.col]] : null;
+    return {
+      id: r.id,
+      title: direct || fromRef || "(sem título)",
+      status: meta.status ? r[meta.status] || null : null,
+      date: meta.date ? r[meta.date] || null : null,
+      created_at: r.created_at || null,
+    };
+  });
+}
+
+/** Lista paginada dos registros em aberto de um item. */
+async function listOpenItems(
+  admin: any,
+  accountId: string,
+  userId: string,
+  key: string,
+  opts: ListOpts = {},
+) {
+  const meta = LIST_META[key] || {};
+  const pageSize = Math.min(Math.max(opts.page_size || 50, 10), 200);
+  const page = Math.max(opts.page || 1, 1);
+
+  const cols = new Set<string>(["id", "created_at"]);
+  for (const c of meta.title || []) cols.add(c);
+  if (meta.status) cols.add(meta.status);
+  if (meta.date) cols.add(meta.date);
+  if (meta.ref) cols.add(meta.ref.col);
+
+  const built = await buildListQuery(
+    admin, accountId, userId, key, opts, Array.from(cols).join(","), "exact",
+  );
+  if (!built) return { rows: [], total: 0, page, page_size: pageSize };
+
+  const { col, asc } = sortColumn(key, opts.sort);
+  const from = (page - 1) * pageSize;
+  const { data, count, error } = await built.q
+    .order(col, { ascending: asc, nullsFirst: false })
+    .range(from, from + pageSize - 1);
+
+
   if (error) {
     console.error(`list ${key} failed:`, error.message);
-    return [];
+    return { rows: [], total: 0, page, page_size: pageSize, error: error.message };
   }
 
   const rows = (data || []) as any[];
@@ -340,18 +464,58 @@ async function listOpenItems(
     }
   }
 
-  return rows.map((r) => {
-    const direct = (meta.title || []).map((c) => r[c]).find((v) => !!v);
-    const fromRef = meta.ref ? refNames[r[meta.ref.col]] : null;
-    return {
-      id: r.id,
-      title: direct || fromRef || "(sem título)",
-      status: meta.status ? r[meta.status] || null : null,
-      date: meta.date ? r[meta.date] || null : null,
-      created_at: r.created_at || null,
-    };
-  });
+  return { rows: mapRows(rows, meta, refNames), total: count || 0, page, page_size: pageSize };
 }
+
+/** Agrupa os registros em aberto por título, para o gestor descartar blocos inteiros. */
+async function titleGroups(
+  admin: any,
+  accountId: string,
+  userId: string,
+  key: string,
+) {
+  const meta = LIST_META[key] || {};
+  const titleCol = (meta.title || [])[0];
+  if (!titleCol) return { groups: [], statuses: [] };
+
+  const statusCol = meta.status;
+  const cols = statusCol ? `${titleCol}, ${statusCol}` : titleCol;
+
+  const groups = new Map<string, number>();
+  const statuses = new Map<string, number>();
+  const pageSize = 1000;
+  for (let p = 0; p < 5; p++) {
+    const built = await buildListQuery(admin, accountId, userId, key, {}, cols);
+    if (!built) break;
+    const { data, error } = await built.q
+      .order("created_at", { ascending: false })
+      .range(p * pageSize, p * pageSize + pageSize - 1);
+
+    if (error) {
+      console.error(`title_groups ${key} failed:`, error.message);
+      break;
+    }
+    const rows = (data || []) as any[];
+    for (const r of rows) {
+      const t = (r[titleCol] || "(sem título)").toString().trim() || "(sem título)";
+      groups.set(t, (groups.get(t) || 0) + 1);
+      if (statusCol) {
+        const s = r[statusCol];
+        if (s) statuses.set(s, (statuses.get(s) || 0) + 1);
+      }
+    }
+    if (rows.length < pageSize) break;
+  }
+
+  return {
+    groups: Array.from(groups.entries())
+      .map(([title, count]) => ({ title, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 60),
+    statuses: Array.from(statuses.entries()).map(([status, count]) => ({ status, count })),
+  };
+}
+
 
 async function writeAuditLog(
   admin: any,
@@ -432,11 +596,26 @@ Deno.serve(async (req: Request) => {
     }
 
     if (action === "list_open_items") {
+      const b = body as any;
+      const key = b.item_key as string;
+      if (!key || !ITEM_BY_KEY[key]) return json(400, { error: "Item inválido" });
+      const res = await listOpenItems(admin, accountId, user_id, key, {
+        page: Number(b.page) || 1,
+        page_size: Number(b.page_size) || 50,
+        search: typeof b.search === "string" ? b.search : "",
+        status: typeof b.status === "string" && b.status ? b.status : null,
+        sort: b.sort,
+      });
+      return json(200, { ...res, label: ITEM_LABELS[key], target_name: target.name, target_email: target.email });
+    }
+
+    if (action === "title_groups") {
       const key = (body as any).item_key as string;
       if (!key || !ITEM_BY_KEY[key]) return json(400, { error: "Item inválido" });
-      const rows = await listOpenItems(admin, accountId, user_id, key);
-      return json(200, { rows, label: ITEM_LABELS[key] });
+      const res = await titleGroups(admin, accountId, user_id, key);
+      return json(200, res);
     }
+
 
     if (action === "reactivate") {
       if (target.auth_user_id) {
@@ -491,13 +670,24 @@ Deno.serve(async (req: Request) => {
 
       // Agrupa por destinatário para gerar um registro de auditoria por pessoa.
       for (const ownerId of ownerIds) {
-        const keys = assignments.filter((a) => a.to_user_id === ownerId).map((a) => a.key);
+        const group = assignments.filter((a) => a.to_user_id === ownerId);
+        const keys = group.map((a) => a.key);
         const movedByKey: Record<string, number> = {};
-        for (const key of keys) {
-          const res = await transferItem(admin, accountId, ITEM_BY_KEY[key], user_id, ownerId);
-          movedByKey[key] = res.moved;
-          transferred[key] = (transferred[key] || 0) + res.moved;
-          if (res.error) warnings.push(`${ITEM_LABELS[key]}: ${res.error}`);
+        const selectionByKey: Record<string, unknown> = {};
+        for (const a of group) {
+          const res = await transferItem(admin, accountId, ITEM_BY_KEY[a.key], user_id, ownerId, {
+            mode: a.mode,
+            ids: a.ids,
+            exclude_titles: a.exclude_titles,
+          });
+          movedByKey[a.key] = res.moved;
+          transferred[a.key] = (transferred[a.key] || 0) + res.moved;
+          selectionByKey[a.key] = {
+            mode: a.mode || "all",
+            ids_count: (a.ids || []).length,
+            excluded_titles: a.exclude_titles || [],
+          };
+          if (res.error) warnings.push(`${ITEM_LABELS[a.key]}: ${res.error}`);
         }
 
         await writeAuditLog(admin, {
@@ -510,10 +700,12 @@ Deno.serve(async (req: Request) => {
             to_user_name: ownerNames[ownerId],
             items: keys,
             moved: movedByKey,
+            selection: selectionByKey,
           },
           req,
         });
       }
+
     }
 
     if (action === "transfer_open_items") {
