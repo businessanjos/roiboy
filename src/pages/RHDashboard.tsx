@@ -135,7 +135,7 @@ function useRHDashboardData(accountId: string | undefined) {
           .select("id, full_name, status, employment_type, hire_date, termination_date, department, total_cost, base_salary, birth_date, avatar_url")
           .eq("account_id", accountId!),
         supabase.from("hr_service_providers")
-          .select("id, full_name, status")
+          .select("id, full_name, status, provider_kind")
           .eq("account_id", accountId!),
         supabase.from("hr_jobs")
           .select("id, title, status, created_at, openings_count, department")
