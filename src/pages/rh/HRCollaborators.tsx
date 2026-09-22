@@ -401,6 +401,14 @@ export default function HRCollaborators() {
         </Button>
       </div>
 
+      {/* View switch */}
+      <Tabs value={view} onValueChange={(v) => setView(v as "list" | "pda")}>
+        <TabsList>
+          <TabsTrigger value="list">Lista</TabsTrigger>
+          <TabsTrigger value="pda">PDA</TabsTrigger>
+        </TabsList>
+      </Tabs>
+
       {/* Filters */}
       <div className="flex flex-wrap gap-3 items-center">
         <div className="relative flex-1 min-w-[220px]">
@@ -466,6 +474,8 @@ export default function HRCollaborators() {
             </p>
           )}
         </div>
+      ) : view === "pda" ? (
+        <CollaboratorsPDATable collaborators={filtered} />
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full min-w-[1100px] text-sm">
