@@ -331,6 +331,13 @@ Deno.serve(async (req: Request) => {
       return json(200, { counts, labels: ITEM_LABELS });
     }
 
+    if (action === "list_open_items") {
+      const key = (body as any).item_key as string;
+      if (!key || !ITEM_BY_KEY[key]) return json(400, { error: "Item inválido" });
+      const rows = await listOpenItems(admin, accountId, user_id, key);
+      return json(200, { rows, label: ITEM_LABELS[key] });
+    }
+
     if (action === "reactivate") {
       if (target.auth_user_id) {
         await admin.auth.admin.updateUserById(target.auth_user_id, { ban_duration: "none" });
