@@ -440,10 +440,11 @@ export default function HRCollaborators() {
       </div>
 
       {/* View switch */}
-      <Tabs value={view} onValueChange={(v) => setView(v as "list" | "pda")}>
+      <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
         <TabsList>
-          <TabsTrigger value="list">Lista</TabsTrigger>
-          <TabsTrigger value="pda">PDA</TabsTrigger>
+          <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
+          <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
+          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaRows.length})</span></TabsTrigger>
         </TabsList>
       </Tabs>
 
