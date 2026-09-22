@@ -322,9 +322,9 @@ export default function OrgChart() {
 
   const renderPersonCard = (
     p: Person,
-    opts: { size?: "sm" | "md" | "lg"; badgeColor?: string; label?: string } = {}
+    opts: { size?: "sm" | "md" | "lg"; badgeColor?: string; label?: string; deptColor?: string | null } = {}
   ) => {
-    const { size = "md", badgeColor, label } = opts;
+    const { size = "md", badgeColor, label, deptColor } = opts;
     const dim = size === "lg" ? "h-16 w-16" : size === "sm" ? "h-10 w-10" : "h-12 w-12";
     const dimmed = !matchesSearch(p) && !!search.trim();
     const birthday = isBirthdayThisMonth(p.birth_date);
@@ -367,7 +367,12 @@ export default function OrgChart() {
         {p.position && (
           <Badge
             variant="outline"
-            className={`text-[9px] px-1.5 py-0 h-4 font-normal ${badgeColor ?? ""}`}
+            className={`text-[9px] px-1.5 py-0 h-4 font-normal ${deptColor ? "" : badgeColor ?? ""}`}
+            style={
+              deptColor
+                ? { backgroundColor: `${deptColor.replace(")", " / 0.15)")}`, color: deptColor, borderColor: deptColor }
+                : undefined
+            }
           >
             {p.position}
           </Badge>
