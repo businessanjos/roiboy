@@ -493,7 +493,7 @@ export default function SalesDashboard() {
   // ---------------------- NEW KPIs ----------------------
   // Reuniões realizadas no período (internal_tasks completadas com agendamento)
   const { data: heldMeetingsRows } = useQuery({
-    queryKey: ["sales-dashboard-held", accountId, period],
+    queryKey: ["sales-dashboard-held", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       // Paginar para evitar o limite default de 1000 linhas do PostgREST.
@@ -504,14 +504,15 @@ export default function SalesDashboard() {
       const all: any[] = [];
       // Hard cap de segurança em 50k linhas
       while (from < 50000) {
-        const { data, error } = await supabase
+        let q = supabase
           .from("internal_tasks")
           .select("id, assigned_to, title, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)")
           .eq("account_id", accountId!)
           .not("completed_at", "is", null)
           .gte("completed_at", start.toISOString())
-          .lte("completed_at", end.toISOString())
-          .range(from, from + PAGE - 1);
+          .lte("completed_at", end.toISOString());
+        if (repId) q = q.eq("assigned_to", repId);
+        const { data, error } = await q.range(from, from + PAGE - 1);
         if (error) throw error;
         const batch = data || [];
         all.push(...batch);
@@ -537,7 +538,7 @@ export default function SalesDashboard() {
 
   // Cancelamentos no período (Churn) — inclui dados do cliente p/ fallback de vendedor
   const { data: churnContracts } = useQuery({
-    queryKey: ["sales-dashboard-churn", accountId, period],
+    queryKey: ["sales-dashboard-churn", accountId, rangeKey],
     enabled: !!accountId && allowed,
     queryFn: async () => {
       const { data, error } = await supabase
