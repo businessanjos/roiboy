@@ -297,7 +297,9 @@ export default function OffboardingDrawer({
                 <Select value={form.termination_type} onValueChange={(v) => { setForm({ ...form, termination_type: v as any }); setCalcInput({ ...calcInput, terminationType: v as TerminationType }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TERMINATION_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {Object.entries(TERMINATION_TYPE_LABELS)
+                      .filter(([k]) => !isPJ || ["termino_contrato", "acordo", "pedido_demissao", "sem_justa_causa"].includes(k))
+                      .map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
