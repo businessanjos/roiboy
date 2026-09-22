@@ -175,7 +175,8 @@ export default function OrgChart() {
     });
   }, [people, ceo, coo]);
 
-  const others = useMemo(() => {
+  // Pessoas ainda não alocadas em nenhuma coluna fixa
+  const unassigned = useMemo(() => {
     const assigned = new Set<string>();
     if (ceo) assigned.add(ceo.id);
     if (coo) assigned.add(coo.id);
@@ -185,6 +186,71 @@ export default function OrgChart() {
     });
     return people.filter((p) => !assigned.has(p.id));
   }, [people, ceo, coo, columns]);
+
+  // Colunas geradas automaticamente para departamentos novos (ex.: Tecnologia)
+  const extraColumns = useMemo(() => {
+    const groups = new Map<string, { label: string; members: Person[] }>();
+    unassigned.forEach((p) => {
+      const key = norm(p.department);
+      if (!key) return;
+      if (!groups.has(key)) {
+        groups.set(key, { label: (p.department ?? "").trim(), members: [] });
+      }
+      groups.get(key)!.members.push(p);
+    });
+
+    const palette = [
+      {
+        headerColor: "from-chart-1 to-chart-1",
+        badgeColor: "bg-chart-1/15 text-foreground border-chart-1/40",
+      },
+      {
+        headerColor: "from-chart-2 to-chart-2",
+        badgeColor: "bg-chart-2/15 text-foreground border-chart-2/40",
+      },
+      {
+        headerColor: "from-chart-3 to-chart-3",
+        badgeColor: "bg-chart-3/15 text-foreground border-chart-3/40",
+      },
+      {
+        headerColor: "from-chart-4 to-chart-4",
+        badgeColor: "bg-chart-4/15 text-foreground border-chart-4/40",
+      },
+    ];
+
+    return Array.from(groups.entries())
+      .sort((a, b) => a[1].label.localeCompare(b[1].label, "pt-BR"))
+      .map(([key, group], i) => {
+        const gestor =
+          group.members.find((m) => {
+            const pos = norm(m.position);
+            return (
+              pos.includes("gestor") ||
+              pos.includes("gerente") ||
+              pos.includes("head") ||
+              pos.includes("coordenador") ||
+              pos.includes("diretor")
+            );
+          }) ?? null;
+        return {
+          key: `auto:${key}`,
+          label: group.label,
+          headerColor: palette[i % palette.length].headerColor,
+          badgeColor: palette[i % palette.length].badgeColor,
+          gestorNames: [] as string[],
+          deptMatches: [] as string[],
+          gestor,
+          members: group.members.filter((m) => m.id !== gestor?.id),
+        };
+      });
+  }, [unassigned]);
+
+  const allColumns = useMemo(() => [...columns, ...extraColumns], [columns, extraColumns]);
+
+  const others = useMemo(
+    () => unassigned.filter((p) => !norm(p.department)),
+    [unassigned]
+  );
 
   const matchesSearch = (p: Person) => {
     if (!search.trim()) return true;
