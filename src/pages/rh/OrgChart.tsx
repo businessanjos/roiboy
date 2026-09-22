@@ -22,6 +22,8 @@ interface Person {
   birth_date: string | null;
   status: string | null;
   employment_type: string | null;
+  hr_department_id?: string | null;
+
 }
 
 const norm = (v: string | null | undefined) =>
@@ -31,49 +33,34 @@ const norm = (v: string | null | undefined) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-interface ColumnConfig {
-  key: string;
-  label: string;
-  headerColor: string;
-  badgeColor: string;
-  gestorNames: string[]; // lower-cased partial match
-  deptMatches: string[]; // lower-cased dept names
+interface Dept {
+  id: string;
+  name: string;
+  color: string;
+  show: boolean;
+  parentId: string | null;
+  active: boolean;
 }
 
-const COLUMNS: ColumnConfig[] = [
-  {
-    key: "marketing",
-    label: "Marketing",
-    headerColor: "from-pink-500 to-pink-600",
-    badgeColor: "bg-pink-500/15 text-pink-700 border-pink-300 dark:text-pink-300 dark:border-pink-700",
-    gestorNames: [], // sem gestor — reporta direto à COO
-    deptMatches: ["marketing"],
-  },
-  {
-    key: "comercial",
-    label: "Comercial",
-    headerColor: "from-info to-info",
-    badgeColor: "bg-info/15 text-info-strong border-info dark:text-info dark:border-info",
-    gestorNames: ["jonathan marcato"],
-    deptMatches: ["comercial", "vendas"],
-  },
-  {
-    key: "operacao",
-    label: "Operações",
-    headerColor: "from-warning to-warning",
-    badgeColor: "bg-warning/15 text-warning-strong border-warning dark:text-warning dark:border-warning",
-    gestorNames: ["jessica marcato"],
-    deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos", "suporte/atendimento", "suporte", "atendimento"],
-  },
-  {
-    key: "administrativo",
-    label: "Administrativo",
-    headerColor: "from-muted-foreground to-muted-foreground",
-    badgeColor: "bg-muted-foreground/15 text-foreground border-border dark:text-muted-foreground dark:border-border",
-    gestorNames: ["arthur mudri"],
-    deptMatches: ["administrativo", "financeiro", "recursos humanos", "rh", "jurídico", "juridico"],
-  },
-];
+/** Nomes usados no cadastro das pessoas que correspondem a um departamento registrado. */
+const DEPT_ALIASES: Record<string, string> = {
+  "customer success": "cs",
+  "recursos humanos": "rh",
+  "suporte/atendimento": "operacoes",
+  "suporte": "operacoes",
+  "atendimento": "operacoes",
+};
+
+/** Ordem de importância do cargo para eleger o gestor da coluna. */
+const positionRank = (pos?: string | null) => {
+  const s = norm(pos);
+  if (!s) return 99;
+  if (s.includes("diretor") || s.includes("head")) return 0;
+  if (s.includes("gestor") || s.includes("gerente")) return 1;
+  if (s.includes("coordenador") || s.includes("lider") || s.includes("supervisor")) return 2;
+  return 99;
+};
+
 
 const tint = (color: string, alpha = 0.15) =>
   color.startsWith("hsl(") ? color.replace(")", ` / ${alpha})`) : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
@@ -103,7 +90,7 @@ export default function OrgChart() {
   const navigate = useNavigate();
   const orgRef = useRef<HTMLDivElement>(null);
   const [people, setPeople] = useState<Person[]>([]);
-  const [deptMeta, setDeptMeta] = useState<Map<string, { color: string; show: boolean }>>(new Map());
+  const [depts, setDepts] = useState<Dept[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -113,29 +100,34 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const [{ data: collabs }, { data: providers }, { data: depts }] = await Promise.all([
+    const [{ data: collabs }, { data: providers }, { data: deptRows }] = await Promise.all([
       supabase
         .from("hr_collaborators")
-        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
+        .select("id, full_name, department, hr_department_id, position, avatar_url, hire_date, birth_date, status, employment_type")
         .eq("status", "active")
         .order("full_name"),
       supabase
         .from("hr_service_providers")
-        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, provider_kind")
+        .select("id, full_name, department, hr_department_id, position, avatar_url, hire_date, birth_date, status, provider_kind")
         .in("provider_kind", ["director"])
         .eq("status", "active")
         .order("full_name"),
-      supabase.from("hr_departments").select("name, color, show_in_org_chart"),
+      supabase.from("hr_departments").select("id, name, color, show_in_org_chart, parent_department_id, is_active"),
     ]);
 
+    const deptList: Dept[] = (deptRows || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      color: getDepartmentColorHsl(d.color),
+      show: d.show_in_org_chart !== false,
+      parentId: d.parent_department_id ?? null,
+      active: d.is_active !== false,
+    }));
+    setDepts(deptList);
+
     const meta = new Map<string, { color: string; show: boolean }>();
-    (depts || []).forEach((d: any) => {
-      meta.set(norm(d.name), {
-        color: getDepartmentColorHsl(d.color),
-        show: d.show_in_org_chart !== false,
-      });
-    });
-    setDeptMeta(meta);
+    deptList.forEach((d) => meta.set(norm(d.name), { color: d.color, show: d.show }));
+
 
 
     const all: Person[] = [
@@ -144,6 +136,8 @@ export default function OrgChart() {
         id: `provider:${d.id}`,
         full_name: formatPersonName(d.full_name),
         department: d.department,
+        hr_department_id: d.hr_department_id ?? null,
+
         position: d.position,
         avatar_url: d.avatar_url,
         hire_date: d.hire_date,
@@ -195,6 +189,8 @@ export default function OrgChart() {
         hire_date: winner.hire_date || other.hire_date,
         position: winner.position || other.position,
         department: winner.department || other.department,
+        hr_department_id: winner.hr_department_id || other.hr_department_id,
+
       };
     });
 
@@ -212,118 +208,82 @@ export default function OrgChart() {
     [people]
   );
 
-  // Cor configurada no cadastro do departamento
-  const deptColorFor = useMemo(
-    () => (names: string[]) => {
-      for (const n of names) {
-        const info = deptMeta.get(norm(n));
-        if (info) return info.color;
+  // Colunas = departamentos raiz cadastrados (sub-departamentos entram na coluna do pai)
+  const allColumns = useMemo(() => {
+    const byId = new Map(depts.map((d) => [d.id, d]));
+    const byName = new Map(depts.map((d) => [norm(d.name), d]));
+
+    const rootOf = (dept: Dept | undefined): Dept | null => {
+      let cur = dept;
+      const seen = new Set<string>();
+      while (cur && cur.parentId && !seen.has(cur.id)) {
+        seen.add(cur.id);
+        const parent = byId.get(cur.parentId);
+        if (!parent) break;
+        cur = parent;
       }
-      return null;
-    },
-    [deptMeta]
-  );
+      return cur ?? null;
+    };
 
-  // Build columns
-  const columns = useMemo(() => {
-    const excludeIds = new Set<string>();
-    if (ceo) excludeIds.add(ceo.id);
-    if (coo) excludeIds.add(coo.id);
+    const resolveDept = (p: Person): Dept | null => {
+      const direct = p.hr_department_id ? byId.get(p.hr_department_id) : undefined;
+      if (direct) return rootOf(direct);
+      const key = norm(p.department);
+      if (!key) return null;
+      const aliased = DEPT_ALIASES[key];
+      const found = byName.get(key) ?? (aliased ? byName.get(aliased) : undefined);
+      return found ? rootOf(found) : null;
+    };
 
-    return COLUMNS.map((col) => {
-      const gestor = col.gestorNames.length
-        ? people.find((p) => col.gestorNames.some((n) => norm(p.full_name).includes(n))) ?? null
-        : null;
-      if (gestor) excludeIds.add(gestor.id);
+    const roots = depts
+      .filter((d) => !d.parentId && d.active && d.show)
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 
-      const members = people.filter((p) => {
-        if (excludeIds.has(p.id)) return false;
-        const d = norm(p.department);
-        return col.deptMatches.some((m) => d === m || d.includes(m));
-      });
-      members.forEach((m) => excludeIds.add(m.id));
+    const palette = [
+      "from-pink-500 to-pink-600",
+      "from-info to-info",
+      "from-warning to-warning",
+      "from-muted-foreground to-muted-foreground",
+      "from-primary to-primary",
+      "from-success to-success",
+    ];
 
-      return { ...col, gestor, members, deptColor: deptColorFor([col.label, ...col.deptMatches]) };
+    const used = new Set<string>();
+    if (ceo) used.add(ceo.id);
+    if (coo) used.add(coo.id);
+
+    return roots.map((root, i) => {
+      const inDept = people.filter((p) => !used.has(p.id) && resolveDept(p)?.id === root.id);
+      inDept.forEach((p) => used.add(p.id));
+
+      // Gestor da coluna vem do cargo cadastrado
+      const sorted = [...inDept].sort((a, b) => positionRank(a.position) - positionRank(b.position));
+      const gestor = sorted.length && positionRank(sorted[0].position) < 99 ? sorted[0] : null;
+
+      return {
+        key: root.id,
+        label: root.name,
+        headerColor: palette[i % palette.length],
+        badgeColor: "bg-muted-foreground/15 text-foreground border-border",
+        gestor,
+        members: inDept.filter((p) => p.id !== gestor?.id),
+        deptColor: root.color,
+      };
     });
-  }, [people, ceo, coo, deptColorFor]);
+  }, [people, depts, ceo, coo]);
 
-  // Pessoas ainda não alocadas em nenhuma coluna fixa
-  const unassigned = useMemo(() => {
+  // Pessoas cujo departamento não existe no cadastro
+  const others = useMemo(() => {
     const assigned = new Set<string>();
     if (ceo) assigned.add(ceo.id);
     if (coo) assigned.add(coo.id);
-    columns.forEach((c) => {
+    allColumns.forEach((c) => {
       if (c.gestor) assigned.add(c.gestor.id);
       c.members.forEach((m) => assigned.add(m.id));
     });
     return people.filter((p) => !assigned.has(p.id));
-  }, [people, ceo, coo, columns]);
+  }, [people, ceo, coo, allColumns]);
 
-  // Colunas geradas automaticamente para departamentos novos (ex.: Tecnologia)
-  const extraColumns = useMemo(() => {
-    const groups = new Map<string, { label: string; members: Person[] }>();
-    unassigned.forEach((p) => {
-      const key = norm(p.department);
-      if (!key) return;
-      if (!groups.has(key)) {
-        groups.set(key, { label: (p.department ?? "").trim(), members: [] });
-      }
-      groups.get(key)!.members.push(p);
-    });
-
-    const palette = [
-      {
-        headerColor: "from-primary to-primary",
-        badgeColor: "bg-primary/15 text-primary border-primary/40",
-      },
-      {
-        headerColor: "from-success to-success",
-        badgeColor: "bg-success/15 text-success-strong border-success/40",
-      },
-      {
-        headerColor: "from-accent to-accent",
-        badgeColor: "bg-accent/30 text-accent-foreground border-accent",
-      },
-      {
-        headerColor: "from-secondary to-secondary",
-        badgeColor: "bg-secondary/40 text-secondary-foreground border-secondary",
-      },
-    ];
-
-    return Array.from(groups.entries())
-      .sort((a, b) => a[1].label.localeCompare(b[1].label, "pt-BR"))
-      .map(([key, group], i) => {
-        const gestor =
-          group.members.find((m) => {
-            const pos = norm(m.position);
-            return (
-              pos.includes("gestor") ||
-              pos.includes("gerente") ||
-              pos.includes("head") ||
-              pos.includes("coordenador") ||
-              pos.includes("diretor")
-            );
-          }) ?? null;
-        return {
-          key: `auto:${key}`,
-          label: group.label,
-          headerColor: palette[i % palette.length].headerColor,
-          badgeColor: palette[i % palette.length].badgeColor,
-          gestorNames: [] as string[],
-          deptMatches: [] as string[],
-          gestor,
-          members: group.members.filter((m) => m.id !== gestor?.id),
-          deptColor: deptColorFor([group.label]),
-        };
-      });
-  }, [unassigned, deptColorFor]);
-
-  const allColumns = useMemo(() => [...columns, ...extraColumns], [columns, extraColumns]);
-
-  const others = useMemo(
-    () => unassigned.filter((p) => !norm(p.department)),
-    [unassigned]
-  );
 
   const matchesSearch = (p: Person) => {
     if (!search.trim()) return true;
@@ -513,7 +473,7 @@ export default function OrgChart() {
               {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
               <div className="grid gap-4 w-full relative" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
                 {allColumns.map((col) => {
-                  const isMarketing = col.key === "marketing";
+                  const isMarketing = norm(col.label) === "marketing";
                   const columnHead = col.gestor;
                   const headLabel = "Gestor";
                   return (
