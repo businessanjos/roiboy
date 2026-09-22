@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Network, Users, Search, Download, Cake, X } from "lucide-react";
 import html2canvas from "html2canvas";
+import { formatPersonName } from "@/lib/format/personName";
 
 interface Person {
   id: string;
