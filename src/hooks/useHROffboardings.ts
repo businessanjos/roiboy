@@ -131,7 +131,7 @@ export function useHROffboardings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hr_offboardings" as any)
-        .select(`*, collaborator:hr_collaborators(id, full_name, position, department, avatar_url, email, hire_date, base_salary, salary), replacement_job:hr_jobs(id, title, status)`)
+        .select(`*, collaborator:hr_collaborators(id, full_name, position, department, avatar_url, email, hire_date, base_salary, salary), service_provider:hr_service_providers(id, full_name, position, department, avatar_url, email, hire_date, fee_amount, provider_kind, company_name), replacement_job:hr_jobs(id, title, status)`)
         .eq("account_id", currentUser!.account_id!)
         .order("created_at", { ascending: false });
       if (error) throw error;
