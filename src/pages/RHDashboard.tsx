@@ -30,6 +30,18 @@ const CHART_COLORS = [
 ];
 const chartColor = (i: number) => CHART_COLORS[Math.abs(i) % CHART_COLORS.length];
 
+const STAGE_LABELS: Record<string, string> = {
+  applied: "Inscrito",
+  screening: "Triagem",
+  interview: "Entrevista",
+  test: "Teste",
+  offer: "Proposta",
+  hired: "Contratado",
+  rejected: "Reprovado",
+  withdrawn: "Desistiu",
+  talent_pool: "Banco de talentos",
+};
+
 const AXIS_PROPS = {
   stroke: "hsl(var(--muted-foreground))",
   tick: { fontSize: 11, fill: "hsl(var(--muted-foreground))" },
