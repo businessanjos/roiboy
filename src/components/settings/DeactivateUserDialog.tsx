@@ -498,13 +498,9 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                         variant="ghost"
                                         size="sm"
                                         className="h-9 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                                        onClick={() => toggleDetails(key)}
+                                        onClick={() => setViewerKey(key)}
                                       >
-                                        {loadingDetails === key ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        ) : (
-                                          <Eye className="h-3.5 w-3.5" />
-                                        )}
+                                        <Eye className="h-3.5 w-3.5" />
                                         <span className="ml-1 hidden sm:inline">Ver</span>
                                       </Button>
                                       <div className="flex-1">
