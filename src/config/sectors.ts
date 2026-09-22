@@ -265,11 +265,6 @@ export const sectors: Sector[] = [
     bgColor: "bg-rose-500/10",
     defaultRoute: "/rh",
     navItems: [
-      // Meu Espaço
-      { to: "/rh/my-profile", icon: UserCircle, label: "Meu Perfil", group: "Meu Espaço" },
-      { to: "/rh/profiler", icon: ScanFace, label: "Profiler" },
-      { to: "/rh/my-pdi", icon: Target, label: "Meu PDI" },
-      { to: "/rh/my-evaluations", icon: CircleDot, label: "Minhas Avaliações" },
       // Gestão de Pessoas
       { to: "/rh", icon: LayoutDashboard, label: "Dashboard", group: "Gestão de Pessoas" },
       { to: "/rh/partners", icon: Crown, label: "Quadro Societário" },
@@ -284,17 +279,6 @@ export const sectors: Sector[] = [
       { to: "/rh/admissions", icon: UserCheck, label: "Admissões" },
       { to: "/rh/resumes", icon: BookOpen, label: "Banco de Talentos" },
       { to: "/rh/offboarding", icon: UserMinus, label: "Desligamentos" },
-      // Desenvolvimento
-      { to: "/rh/performance", icon: Star, label: "Avaliação de Desempenho", group: "Desenvolvimento" },
-      { to: "/rh/feedback", icon: MessageCircle, label: "Feedbacks" },
-      { to: "/rh/vacation", icon: Palmtree, label: "Gestão de Férias" },
-      { to: "/rh/culture", icon: Heart, label: "Cultura" },
-      { to: "/rh/time-tracking", icon: Clock, label: "Gestão de Ponto" },
-      // Extras
-      { to: "/rh/tests", icon: Brain, label: "Testes Comportamentais", group: "Extras" },
-      { to: "/rh/development", icon: GraduationCap, label: "Desenvolvimento" },
-      { to: "/rh/procedures", icon: ClipboardList, label: "Procedimentos" },
-      { to: "/rh/interview-scripts", icon: ScrollText, label: "Entrevistas" },
       { to: "/notifications", icon: Bell, label: "Notificações" },
     ],
   },
