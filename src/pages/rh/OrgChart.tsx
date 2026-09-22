@@ -154,13 +154,36 @@ export default function OrgChart() {
       "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_collaborators)
       "provider:eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_service_providers)
     ]);
-    setPeople(
-      all.filter((p) => {
-        if (HIDDEN_IDS.has(p.id)) return false;
-        const info = meta.get(norm(p.department));
-        return info ? info.show : true;
-      })
-    );
+    const visible = all.filter((p) => {
+      if (HIDDEN_IDS.has(p.id)) return false;
+      const info = meta.get(norm(p.department));
+      return info ? info.show : true;
+    });
+
+    // Mesma pessoa cadastrada como colaborador e como PJ/diretor: manter só um card
+    const rank = (pos?: string | null) => {
+      const s = norm(pos);
+      if (s === "ceo") return 0;
+      if (s === "coo") return 1;
+      if (s.includes("head") || s.includes("diretor")) return 2;
+      if (["gestor", "gerente", "lider", "coordenador"].some((k) => s.includes(k))) return 3;
+      return 4;
+    };
+    const deduped: Person[] = [];
+    visible.forEach((p) => {
+      const n = norm(p.full_name);
+      const idx = deduped.findIndex((d) => {
+        const o = norm(d.full_name);
+        return o === n || o.startsWith(`${n} `) || n.startsWith(`${o} `);
+      });
+      if (idx === -1) {
+        deduped.push(p);
+        return;
+      }
+      if (rank(p.position) < rank(deduped[idx].position)) deduped[idx] = p;
+    });
+
+    setPeople(deduped);
     setLoading(false);
   }
 
