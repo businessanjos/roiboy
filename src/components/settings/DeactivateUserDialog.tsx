@@ -68,6 +68,30 @@ export const OPEN_ITEM_META: Record<OpenItemKey, ItemMeta> = {
 
 export const OPEN_ITEM_KEYS = Object.keys(OPEN_ITEM_META) as OpenItemKey[];
 
+/** Regra usada para considerar cada item "em aberto". */
+export const OPEN_ITEM_RULE: Record<OpenItemKey, string> = {
+  deals: "Situação Aberto, sem ganho/perda e não excluídos",
+  leads: "Situação Novo, Em contato ou Qualificado",
+  activities: "Com data agendada e ainda sem conclusão",
+  sales_meetings: "Agendada, pendente, confirmada ou remarcada",
+  clients_sales: "Clientes Ativo, Pausado ou Risco de churn",
+  clients: "Clientes Ativo, Pausado ou Risco de churn",
+  conversations: "Conversas em triagem, pendentes, ativas ou aguardando",
+  ruler: "Régua ativa, pendente ou pausada",
+  support_tickets: "Chamados ainda não resolvidos, fechados ou cancelados",
+  marketing_projects: "Projetos que não estão concluídos, cancelados ou arquivados",
+  content_pieces: "Peças que não foram publicadas, concluídas ou canceladas",
+  content_approvals: "Checklists de aprovação sob responsabilidade dele",
+  event_checklist: "Itens sem conclusão e fora de Feito/Cancelado",
+  event_deliverables: "Entregáveis fora de Entregue/Publicado/Cancelado",
+  event_briefings: "Briefings de evento sob responsabilidade dele",
+  dunning_cases: "Cobranças fora de recuperada, encerrada, cancelada ou perdida",
+  hr_admissions: "Admissões que ainda não foram concluídas ou canceladas",
+  hr_offboardings: "Desligamentos sem data de conclusão",
+  tasks: "Tarefas pendentes, em andamento ou atrasadas",
+  leader_actions: "Ações sem data de conclusão",
+};
+
 export type OpenItemCounts = Record<OpenItemKey, number>;
 
 export function totalOpenItems(counts?: OpenItemCounts | null): number {
