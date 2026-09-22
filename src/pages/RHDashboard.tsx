@@ -299,6 +299,7 @@ export default function RHDashboard() {
 
     return {
       headcount: active.length,
+      totalPeople: active.length + pj.length,
       inactive: inactive.length,
       clt: clt.length,
       pj: pj.length,
