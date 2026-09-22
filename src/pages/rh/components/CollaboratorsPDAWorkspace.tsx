@@ -1,9 +1,17 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { X } from "lucide-react";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { emailHasHRAccess } from "@/lib/access/hrAccess";
 import type { HRCollaborator } from "@/hooks/useHRCollaborators";
 import { useHRPdaOptions } from "@/hooks/useHRPdaOptions";
-import { applyPdaFilters, EMPTY_PDA_FILTERS, isPdaTerminated, type PdaFilters } from "@/lib/rh/pdaFilters";
+import { useHRPositions } from "@/hooks/useHRPositions";
+import { roleProfileFromPosition } from "@/lib/rh/pdaContent";
+import {
+  applyPdaFilters, EMPTY_PDA_FILTERS, hasActivePdaFilters, isPdaTerminated, type PdaFilters,
+} from "@/lib/rh/pdaFilters";
 import CollaboratorsPDATable from "./CollaboratorsPDATable";
 import PdaBoardView from "./PdaBoardView";
 import PdaCalendarView from "./PdaCalendarView";
@@ -23,13 +31,46 @@ export default function CollaboratorsPDAWorkspace({
   onChanged?: () => void;
 }) {
   const { optionsFor } = useHRPdaOptions();
+  const { currentUser } = useCurrentUser();
+  const { positions } = useHRPositions();
   const [view, setView] = useState<View>("list");
   const [filters, setFilters] = useState<PdaFilters>(EMPTY_PDA_FILTERS);
+
+  /** Perfil da Vaga herda do cargo quando a pessoa não tem valor próprio. */
+  const withInheritedProfile = useMemo(() => {
+    const byTitle = new Map(
+      positions.map(p => [
+        (p.title || "").trim().toLowerCase(),
+        roleProfileFromPosition((p as any).ideal_primary_profile, (p as any).ideal_secondary_profile),
+      ]),
+    );
+    return collaborators.map(c => {
+      if ((c as any).pda_role_profile) return c;
+      const inherited = byTitle.get(((c as any).position || "").trim().toLowerCase());
+      return inherited ? ({ ...c, pda_role_profile: inherited } as HRCollaborator) : c;
+    });
+  }, [collaborators, positions]);
 
   const setFilter = (key: keyof PdaFilters, value: string) =>
     setFilters(prev => ({ ...prev, [key]: value }));
 
-  const filtered = useMemo(() => applyPdaFilters(collaborators, filters), [collaborators, filters]);
+  /**
+   * RH/diretoria vê todo mundo; quem não é (ex.: gestor com acesso ao setor RH)
+   * vê apenas a própria equipe (pessoas cujo Gestor é ele) e a si mesmo.
+   */
+  const scoped = useMemo(() => {
+    const email = (currentUser?.email || "").toLowerCase();
+    const role = (currentUser as any)?.role as string | undefined;
+    const isHrOrDirector = emailHasHRAccess(email) || ["admin", "super_admin", "head"].includes(role || "");
+    if (isHrOrDirector) return withInheritedProfile;
+    const me = withInheritedProfile.find(
+      c => (c as any).user_id === currentUser?.id || (c.email || "").toLowerCase() === email,
+    );
+    if (!me) return [];
+    return withInheritedProfile.filter(c => c.id === me.id || (c as any).manager_id === me.id);
+  }, [withInheritedProfile, currentUser]);
+
+  const filtered = useMemo(() => applyPdaFilters(scoped, filters), [scoped, filters]);
   const dashboardRows = useMemo(() => filtered.filter(c => !isPdaTerminated(c)), [filtered]);
 
   return (
@@ -74,14 +115,17 @@ export default function CollaboratorsPDAWorkspace({
                 {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
               </SelectContent>
             </Select>
-            {view === "dashboard" && (
-              <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
-                <SelectTrigger className="w-[210px]"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as empresas</SelectItem>
-                  {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
+            <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
+              <SelectTrigger className="w-[210px]"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as empresas</SelectItem>
+                {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            {hasActivePdaFilters(filters) && (
+              <Button variant="ghost" size="sm" onClick={() => setFilters(EMPTY_PDA_FILTERS)}>
+                <X className="h-4 w-4 mr-1" /> Limpar filtros
+              </Button>
             )}
           </>
         )}
@@ -107,7 +151,7 @@ export default function CollaboratorsPDAWorkspace({
           }}
         />
       )}
-      {view === "calendar" && <PdaCalendarView collaborators={collaborators} />}
+      {view === "calendar" && <PdaCalendarView collaborators={scoped} />}
     </div>
   );
 }

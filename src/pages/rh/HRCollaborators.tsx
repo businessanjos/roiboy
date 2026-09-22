@@ -165,10 +165,44 @@ export default function HRCollaborators() {
     [filteredProviders],
   );
 
-  const pdaRows = useMemo(
-    () => [...filtered, ...providersAsCollaborators].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
-    [filtered, providersAsCollaborators],
-  );
+  /**
+   * O PDA agrupa Ativos e Desligados por conta própria, então ignora o filtro
+   * de situação da tela (que vem como "Ativo" por padrão) e o de vínculo.
+   */
+  const pdaRows = useMemo(() => {
+    const q = search.toLowerCase();
+    const matches = (hay: (string | null | undefined)[]) =>
+      !q || hay.filter(Boolean).join(" ").toLowerCase().includes(q);
+
+    const clt = collaborators.filter(c =>
+      matches([c.full_name, c.email, c.position, c.cpf, c.department, c.unit, c.registration_company])
+      && (deptFilter === "all" || c.department === deptFilter));
+
+    const pj = providers
+      .filter(p => matches([p.full_name, p.email, p.company_name, p.cnpj, p.cpf, p.position, p.department, p.service_type])
+        && (deptFilter === "all" || p.department === deptFilter))
+      .map(p => ({
+        ...(p as any),
+        id: p.id,
+        full_name: p.full_name,
+        email: p.email,
+        avatar_url: p.avatar_url,
+        department: p.department,
+        position: p.position || p.service_type,
+        hire_date: p.hire_date,
+        termination_date: p.termination_date,
+        employment_type: "pj",
+        status: p.status,
+        __route: `/rh/service-providers/${p.id}`,
+        __table: "hr_service_providers",
+      })) as unknown as HRCollaborator[];
+
+    // Quem já está como CLT não deve aparecer duplicado pelo cadastro PJ homônimo.
+    const cltNames = new Set(clt.map(c => c.full_name.trim().toLowerCase()));
+    const pjUnique = pj.filter(p => !cltNames.has((p.full_name || "").trim().toLowerCase()));
+
+    return [...clt, ...pjUnique].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+  }, [collaborators, providers, search, deptFilter]);
 
   const fetchTeamMembers = useCallback(async () => {
     if (!currentUser?.account_id) return;

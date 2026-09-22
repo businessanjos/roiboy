@@ -1,0 +1,1 @@
+UPDATE public.hr_collaborators SET pda_role_profile = 'Executor/Analítico' WHERE full_name = 'Laricia Vieira Sousa';

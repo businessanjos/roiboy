@@ -113,13 +113,22 @@ export const MENTAL_MODEL_OPTIONS: PdaOption[] = [
 ];
 
 /** "Filho de Lobo" / "Filha de Hiena" conforme o gênero da pessoa. */
-export function mentalModelLabel(value?: string | null, gender?: string | null): string | null {
+export function mentalModelLabel(
+  value?: string | null,
+  gender?: string | null,
+  fullName?: string | null,
+): string | null {
   if (!value) return null;
   const raw = value.trim();
   const base = /hiena/i.test(raw) ? "Hiena" : /lobo/i.test(raw) ? "Lobo" : null;
   if (!base) return raw;
   const g = (gender || "").trim().toLowerCase();
-  const female = g.startsWith("f") || g.startsWith("mulher");
+  let female = g.startsWith("f") || g.startsWith("mulher");
+  if (!g && fullName) {
+    // Sem gênero cadastrado, inferimos pelo primeiro nome (heurística pt-BR).
+    const first = fullName.trim().split(/\s+/)[0]?.toLowerCase() || "";
+    female = /(a|ana|ce|ice|elle|ete)$/.test(first) && !/^(joshua|josue|luca|noa|elias|isaias|jeremias|matias|tobias|dias|costa)$/.test(first);
+  }
   return `${female ? "Filha" : "Filho"} de ${base}`;
 }
 

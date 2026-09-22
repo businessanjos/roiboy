@@ -139,11 +139,11 @@ export default function PdaDocumentsTab({
                   {d.description && <p className="text-xs text-muted-foreground truncate">{d.description}</p>}
                 </div>
                 {d.file_path && (
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => download(d)}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" aria-label="Baixar documento" onClick={() => download(d)}>
                     <Download className="h-4 w-4" />
                   </Button>
                 )}
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => remove(d)}>
+                <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" aria-label="Excluir documento" onClick={() => remove(d)}>
                   <Trash2 className="h-4 w-4" />
                 </Button>
               </CardContent>

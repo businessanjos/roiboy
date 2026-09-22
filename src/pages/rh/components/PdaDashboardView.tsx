@@ -85,7 +85,10 @@ export default function PdaDashboardView({
 }: {
   collaborators: HRCollaborator[];
   canSeeSalary?: boolean;
-  onSlice?: (field: "sector" | "level" | "phase" | "thermo", value: string) => void;
+  onSlice?: (
+    field: "sector" | "level" | "phase" | "thermo" | "hierarchy" | "dominant" | "quality" | "synergy",
+    value: string,
+  ) => void;
 }) {
   const navigate = useNavigate();
   const { optionsFor } = useHRPdaOptions();
@@ -182,12 +185,12 @@ export default function PdaDashboardView({
       )}
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Donut title="Sinergia (perfil da vaga x perfil do Anjo)" data={synergySlices} />
-        <Donut title="Perfis Dominantes" data={byOption("pda_profile", c => (c as any).pda_dominant_profile)} />
+        <Donut title="Sinergia (perfil da vaga x perfil do Anjo)" data={synergySlices} onSlice={v => v && onSlice?.("synergy", v)} />
+        <Donut title="Perfis Dominantes" data={byOption("pda_profile", c => (c as any).pda_dominant_profile)} onSlice={v => v && onSlice?.("dominant", v)} />
         <Donut title="Nível dos colaboradores" data={byOption("pda_level", c => c.pda_level)} onSlice={v => v && onSlice?.("level", v)} />
-        <Donut title="QM - Qualidade da Mudança" data={byOption("pda_change_quality", c => (c as any).pda_change_quality)} />
+        <Donut title="QM - Qualidade da Mudança" data={byOption("pda_change_quality", c => (c as any).pda_change_quality)} onSlice={v => v && onSlice?.("quality", v)} />
         <Donut title="Fase do Anjo" data={byOption("pda_phase", c => (c as any).pda_phase)} onSlice={v => v && onSlice?.("phase", v)} />
-        <Donut title="Hierarquia" data={byOption("pda_hierarchy", c => (c as any).pda_hierarchy)} />
+        <Donut title="Hierarquia" data={byOption("pda_hierarchy", c => (c as any).pda_hierarchy)} onSlice={v => v && onSlice?.("hierarchy", v)} />
 
         <Stat
           title="% de Sinergia"

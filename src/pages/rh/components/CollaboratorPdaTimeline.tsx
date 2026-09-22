@@ -69,6 +69,21 @@ export default function CollaboratorPdaTimeline({
       ]);
       if (cancelled) return;
 
+      /** Deixa legível o valor bruto guardado no histórico (booleanos, listas JSON, vazio). */
+      const fmtValue = (v?: string | null) => {
+        const raw = (v ?? "").trim();
+        if (!raw || raw === "null") return "—";
+        if (raw === "true") return "SIM";
+        if (raw === "false") return "NÃO";
+        if (raw.startsWith("[")) {
+          try {
+            const arr = JSON.parse(raw);
+            return Array.isArray(arr) && arr.length ? arr.join(", ") : "—";
+          } catch { /* mantém o texto original */ }
+        }
+        return raw;
+      };
+
       const list: Item[] = [];
       if (hireDate) list.push({ id: "hire", at: hireDate, icon: "hire", title: "Admissão", detail: formatDateBR(hireDate) });
       if (terminationDate) list.push({ id: "exit", at: terminationDate, icon: "exit", title: "Desligamento", detail: formatDateBR(terminationDate) });
@@ -77,7 +92,7 @@ export default function CollaboratorPdaTimeline({
         at: h.created_at,
         icon: "change",
         title: FIELD_LABELS[h.field_key] || h.field_key,
-        detail: `${h.old_value || "—"} → ${h.new_value || "—"}${h.changed_by_name ? ` · por ${h.changed_by_name}` : ""}`,
+        detail: `${fmtValue(h.old_value)} → ${fmtValue(h.new_value)}${h.changed_by_name ? ` · por ${h.changed_by_name}` : ""}`,
       }));
       (checkins.data || []).forEach(k => list.push({
         id: k.id,
