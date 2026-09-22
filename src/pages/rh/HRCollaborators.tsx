@@ -198,11 +198,17 @@ export default function HRCollaborators() {
       })) as unknown as HRCollaborator[];
 
     // Quem já está como CLT não deve aparecer duplicado pelo cadastro PJ homônimo.
-    const cltNames = new Set(clt.map(c => c.full_name.trim().toLowerCase()));
-    const pjUnique = pj.filter(p => !cltNames.has((p.full_name || "").trim().toLowerCase()));
+    // Comparação sem acentos: "Jéssica" e "Jessica" são a mesma pessoa.
+    const nameKey = (n?: string | null) =>
+      (n || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim().toLowerCase().replace(/\s+/g, " ");
+    const cltNames = new Set(clt.map(c => nameKey(c.full_name)));
+    const pjUnique = pj.filter(p => !cltNames.has(nameKey(p.full_name)));
 
     return [...clt, ...pjUnique].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
   }, [collaborators, providers, search, deptFilter]);
+
+  /** O contador da aba PDA mostra só quem está ativo (desligados ficam no grupo recolhido). */
+  const pdaActiveCount = useMemo(() => pdaRows.filter(c => c.status === "active").length, [pdaRows]);
 
   const fetchTeamMembers = useCallback(async () => {
     if (!currentUser?.account_id) return;
