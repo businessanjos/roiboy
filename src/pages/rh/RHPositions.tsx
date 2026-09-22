@@ -683,6 +683,8 @@ export default function RHPositions() {
                   </SelectContent>
                 </Select>
               </div>
+            </TabsContent>
+
             <TabsContent value="pda" className="space-y-4 mt-3">
               <div className="grid grid-cols-2 gap-4">
                 <div>
