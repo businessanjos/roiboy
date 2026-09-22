@@ -13,7 +13,7 @@ import { UserMinus, Plus, Search, Briefcase, List, LayoutGrid, DollarSign, Clock
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useHROffboardings, OFFBOARDING_STAGE_LABELS, OFFBOARDING_STAGE_COLORS, OFFBOARDING_STAGES, type HROffboarding } from "@/hooks/useHROffboardings";
+import { useHROffboardings, getOffboardingPerson, OFFBOARDING_STAGE_LABELS, OFFBOARDING_STAGE_COLORS, OFFBOARDING_STAGES, type HROffboarding } from "@/hooks/useHROffboardings";
 import { TERMINATION_TYPE_LABELS } from "@/lib/rescissionCalc";
 import OffboardingDrawer from "@/components/rh/offboarding/OffboardingDrawer";
 import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDialog";
