@@ -1538,8 +1538,22 @@ export default function SalesPipeline() {
         return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
+    if (lostTitleTagFilter.length > 0) {
+      const selected = new Set(lostTitleTagFilter);
+      result = result.filter(deal => {
+        const info = getTitleTagInfo(deal.title);
+        return info ? selected.has(info.key) : false;
+      });
+    }
+    if (lostMqlFilter.length > 0) {
+      const selected = new Set(lostMqlFilter);
+      result = result.filter(deal => {
+        const label = dealMqlMap[deal.id]?.label;
+        return label ? selected.has(label) : false;
+      });
+    }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap, lostTitleTagFilter, lostMqlFilter, dealMqlMap]);
 
   // Cohort breakdown: created in the same month it was lost vs. carried over from previous months
   const lostCohortStats = useMemo(() => {
