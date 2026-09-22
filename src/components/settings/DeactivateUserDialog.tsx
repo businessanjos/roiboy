@@ -11,11 +11,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
-  UserPlus, Users, CheckSquare, CalendarClock, MessageSquare,
+  UserPlus, Users, CheckSquare, CalendarClock, MessageSquare, Search, Star,
 } from "lucide-react";
+
 
 export type OpenItemKey =
   | "deals" | "leads" | "clients" | "tasks" | "activities" | "conversations";
@@ -67,8 +70,28 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
   );
   const [newOwner, setNewOwner] = useState<string>("");
   const [history, setHistory] = useState<AuditEntry[]>([]);
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const { currentUser } = useCurrentUser();
+
+  const normalize = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const matchesSearch = (name: string) =>
+    normalize(name).includes(normalize(ownerSearch.trim()));
+
+  const selfCandidate = useMemo(
+    () => candidates.find((c) => c.id === currentUser?.id) || null,
+    [candidates, currentUser?.id],
+  );
+  const filteredCandidates = useMemo(
+    () =>
+      candidates
+        .filter((c) => c.id !== selfCandidate?.id)
+        .filter((c) => !ownerSearch.trim() || matchesSearch(c.name)),
+    [candidates, selfCandidate?.id, ownerSearch],
+  );
 
   const total = totalOpenItems(counts);
+
 
   const selectedKeys = useMemo(
     () => OPEN_ITEM_KEYS.filter((k) => selected[k] && (counts?.[k] || 0) > 0),
@@ -86,6 +109,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     const load = async () => {
       setLoading(true);
       setNewOwner("");
+      setOwnerSearch("");
       setSelected(Object.fromEntries(OPEN_ITEM_KEYS.map((k) => [k, true])) as Record<OpenItemKey, boolean>);
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
@@ -239,7 +263,34 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                     <SelectValue placeholder="Selecione quem vai receber os itens marcados" />
                   </SelectTrigger>
                   <SelectContent>
-                    {candidates.map((c) => (
+                    <div className="sticky top-0 z-10 bg-popover p-2 border-b">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          autoFocus
+                          value={ownerSearch}
+                          onChange={(e) => setOwnerSearch(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Buscar pessoa..."
+                          className="h-8 pl-7 text-sm"
+                        />
+                      </div>
+                    </div>
+                    {selfCandidate && (!ownerSearch.trim() || matchesSearch(selfCandidate.name)) && (
+                      <SelectItem
+                        value={selfCandidate.id}
+                        className="my-1 font-semibold text-primary data-[state=checked]:text-primary"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Star className="h-3.5 w-3.5 text-primary" />
+                          Para mim mesmo ({selfCandidate.name})
+                        </span>
+                      </SelectItem>
+                    )}
+                    {filteredCandidates.length === 0 && !selfCandidate && (
+                      <div className="px-3 py-4 text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
+                    )}
+                    {filteredCandidates.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -249,6 +300,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                 </p>
               </div>
             )}
+
 
             {mode === "deactivate" && total > 0 && selectedTotal < total && (
               <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
