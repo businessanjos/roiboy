@@ -33,6 +33,7 @@ import CollaboratorBenefits from "./components/CollaboratorBenefits";
 import CollaboratorPayroll from "./components/CollaboratorPayroll";
 import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
 import CollaboratorPDA from "./components/CollaboratorPDA";
+import CollaboratorPdaTimeline from "./components/CollaboratorPdaTimeline";
 import { POSITION_OPTIONS } from "@/lib/rh/pda";
 import { Wallet, History, Sparkles } from "lucide-react";
 
