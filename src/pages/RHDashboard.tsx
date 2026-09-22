@@ -299,6 +299,7 @@ export default function RHDashboard() {
 
     return {
       headcount: active.length,
+      totalPeople: active.length + pj.length,
       inactive: inactive.length,
       clt: clt.length,
       pj: pj.length,
@@ -342,7 +343,7 @@ export default function RHDashboard() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Headcount & Composição</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Kpi icon={Users} label="Colaboradores ativos" value={metrics.headcount} tone="primary" />
+              <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + prestadores PJ" tone="primary" />
               <Kpi icon={Building} label="CLT ativos" value={metrics.clt} />
               <Kpi icon={Handshake} label="Prestadores PJ" value={metrics.pj} />
               <Kpi icon={UserMinus} label="Inativos" value={metrics.inactive} tone="default" />
@@ -376,7 +377,7 @@ export default function RHDashboard() {
                         </ResponsiveContainer>
                         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                           <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.headcount}</span>
-                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">ativos</span>
+                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">CLT ativos</span>
                         </div>
                       </div>
                       <div className="max-h-52 overflow-auto pr-1">
