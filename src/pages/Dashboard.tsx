@@ -604,8 +604,13 @@ export default function Dashboard() {
     enabled: !!currentUser?.account_id,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const startStr = gestaoPeriodRange.periodStart.toISOString().slice(0, 10);
-      const endStr = gestaoPeriodRange.periodEnd.toISOString().slice(0, 10);
+      const toLocalISO = (d: Date) =>
+        `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+      const startStr = toLocalISO(gestaoPeriodRange.periodStart);
+      // Nunca considerar contratos que ainda nao venceram: a coorte para no dia de hoje
+      const rawEnd = gestaoPeriodRange.periodEnd;
+      const today = new Date();
+      const endStr = toLocalISO(rawEnd < today ? rawEnd : today);
 
       // 1) Coorte: contratos que vencem dentro do período
       const { data: expired, error: expErr } = await supabase

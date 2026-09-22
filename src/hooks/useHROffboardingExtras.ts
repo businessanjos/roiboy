@@ -171,7 +171,7 @@ export function useCollaboratorPendencies(collaboratorId: string | null | undefi
         (supabase.from("internal_tasks") as any).select("id", { count: "exact", head: true })
           .eq("assigned_to", userId).neq("status", "done").is("completed_at", null),
         (supabase.from("deals") as any).select("id", { count: "exact", head: true })
-          .or(`responsible_user_id.eq.${userId},sales_user_id.eq.${userId},sdr_user_id.eq.${userId}`)
+          .or(`responsible_user_id.eq.${userId},sdr_user_id.eq.${userId}`)
           .not("stage", "in", "(won,lost)").is("deleted_at", null),
         (supabase.from("clients") as any).select("id", { count: "exact", head: true })
           .eq("responsible_user_id", userId),
@@ -205,8 +205,8 @@ export async function reassignCollaboratorResources(
       .update({ responsible_user_id: toUserId }, { count: "exact" })
       .eq("responsible_user_id", fromUserId).not("stage", "in", "(won,lost)").is("deleted_at", null);
     const { count: c2 } = await (supabase.from("deals") as any)
-      .update({ sales_user_id: toUserId }, { count: "exact" })
-      .eq("sales_user_id", fromUserId).not("stage", "in", "(won,lost)").is("deleted_at", null);
+      .update({ sdr_user_id: toUserId }, { count: "exact" })
+      .eq("sdr_user_id", fromUserId).not("stage", "in", "(won,lost)").is("deleted_at", null);
     results.deals = (c1 || 0) + (c2 || 0);
   }
   if (scope.clients) {
