@@ -11,12 +11,15 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Building2, ChevronsUpDown, HelpCircle, SlidersHorizontal, Sparkles, Target, Wallet } from "lucide-react";
+import { Building2, ChevronsUpDown, HelpCircle, Instagram, SlidersHorizontal, Sparkles, Target, Wallet } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
 import { PdaBadge, YesNoBadge } from "@/components/rh/PdaBadge";
 import {
   computeSynergyPct, formatTenure, mentalModelLabel, normalizeMentalModel, synergyFromPct,
   tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
 } from "@/lib/rh/pda";
+import { roleProfileFromPosition } from "@/lib/rh/pdaContent";
+import HowToDealCard from "./pda/HowToDealCard";
 import { useHRPdaOptions } from "@/hooks/useHRPdaOptions";
 import PdaOptionsDialog from "./PdaOptionsDialog";
 
@@ -118,9 +121,28 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
     })();
   }, [accountId, collaboratorId]);
 
+  // Perfil da vaga herdado do cargo (usado quando não há valor próprio)
+  const [inheritedRoleProfile, setInheritedRoleProfile] = useState<string | null>(null);
+  useEffect(() => {
+    if (!form.position) { setInheritedRoleProfile(null); return; }
+    (async () => {
+      const { data } = await supabase
+        .from("hr_positions")
+        .select("ideal_primary_profile, ideal_secondary_profile")
+        .eq("title", form.position)
+        .limit(1)
+        .maybeSingle();
+      setInheritedRoleProfile(
+        roleProfileFromPosition((data as any)?.ideal_primary_profile, (data as any)?.ideal_secondary_profile),
+      );
+    })();
+  }, [form.position]);
+
+  const effectiveRoleProfile = form.pda_role_profile || inheritedRoleProfile;
+
   const synergyPct = useMemo(
-    () => computeSynergyPct(form.pda_role_profile, form.pda_dominant_profile, form.pda_secondary_profile),
-    [form.pda_role_profile, form.pda_dominant_profile, form.pda_secondary_profile],
+    () => computeSynergyPct(effectiveRoleProfile, form.pda_dominant_profile, form.pda_secondary_profile),
+    [effectiveRoleProfile, form.pda_dominant_profile, form.pda_secondary_profile],
   );
   const synergy = synergyFromPct(synergyPct);
   const months = tenureMonths(form.hire_date, form.termination_date);
@@ -249,7 +271,15 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Perfil da vaga</Label>
-            <OptionSelect value={form.pda_role_profile} onChange={(v) => setField("pda_role_profile", v)} options={optionsFor("pda_role_profile")} />
+            <OptionSelect
+              value={form.pda_role_profile}
+              onChange={(v) => setField("pda_role_profile", v)}
+              options={optionsFor("pda_role_profile")}
+              placeholder={inheritedRoleProfile ? `Herdado do cargo: ${inheritedRoleProfile}` : "Selecione"}
+            />
+            {!form.pda_role_profile && inheritedRoleProfile && (
+              <p className="text-[11px] text-muted-foreground mt-1">Herdado do cargo {form.position}</p>
+            )}
           </div>
           <div>
             <Label>Perfil dominante</Label>
