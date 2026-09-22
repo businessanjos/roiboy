@@ -11,11 +11,14 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
-  UserPlus, Users, CheckSquare, CalendarClock, MessageSquare,
+  UserPlus, Users, CheckSquare, CalendarClock, MessageSquare, Search, Star,
 } from "lucide-react";
+
 
 export type OpenItemKey =
   | "deals" | "leads" | "clients" | "tasks" | "activities" | "conversations";
