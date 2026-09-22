@@ -290,15 +290,20 @@ export default function SalesDashboard() {
     [currentUser, isSuperAdmin]
   );
 
-  const { start, end } = useMemo(() => getRange(period), [period]);
+  const { start, end } = useMemo(
+    () => getRange(period, customRange?.from ?? null, customRange?.to ?? null),
+    [period, customRange?.from, customRange?.to]
+  );
+  // Chave estável de período (cobre também o intervalo personalizado)
+  const rangeKey = `${start.toISOString()}|${end.toISOString()}`;
   const accountId = currentUser?.account_id;
 
   // ---------------------- DATA ----------------------
   const { data: deals, isLoading: dealsLoading } = useQuery({
-    queryKey: ["sales-dashboard-deals", accountId, period],
+    queryKey: ["sales-dashboard-deals", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select(
           "id, title, status, value, received_value, source, won_at, lost_at, created_at, lost_reason, loss_reason_id, responsible_user_id, sdr_user_id"
@@ -306,6 +311,8 @@ export default function SalesDashboard() {
         .eq("account_id", accountId!)
         .gte("created_at", start.toISOString())
         .lte("created_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
@@ -313,10 +320,10 @@ export default function SalesDashboard() {
 
   // Won deals in window — accept either won_at or created_at fall back
   const { data: wonDeals, isLoading: wonLoading } = useQuery({
-    queryKey: ["sales-dashboard-won", accountId, period],
+    queryKey: ["sales-dashboard-won", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
         .select(
           "id, title, value, received_value, source, won_at, responsible_user_id, sdr_user_id"
@@ -325,22 +332,26 @@ export default function SalesDashboard() {
         .eq("status", "won")
         .gte("won_at", start.toISOString())
         .lte("won_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
   });
 
   const { data: lostDeals, isLoading: lostLoading } = useQuery({
-    queryKey: ["sales-dashboard-lost", accountId, period],
+    queryKey: ["sales-dashboard-lost", accountId, rangeKey, repId],
     enabled: !!accountId && allowed,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("deals")
-        .select("id, lost_at, lost_reason, loss_reason_id, value")
+        .select("id, lost_at, lost_reason, loss_reason_id, value, responsible_user_id")
         .eq("account_id", accountId!)
         .eq("status", "lost")
         .gte("lost_at", start.toISOString())
         .lte("lost_at", end.toISOString());
+      if (repId) q = q.eq("responsible_user_id", repId);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
