@@ -209,6 +209,9 @@ export default function RHDepartments() {
                     {!dept.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>
                     )}
+                    {dept.show_in_org_chart === false && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">Fora do organograma</Badge>
+                    )}
                   </div>
                   {headName && (
                     <p className="text-xs text-muted-foreground">
@@ -238,7 +241,7 @@ export default function RHDepartments() {
                           className="h-7 gap-1 text-xs"
                           onClick={() => {
                             setEditingDept(null);
-                            setForm({ name: "", description: "", color: root.color, head_collaborator_id: "", parent_department_id: root.id });
+                            setForm({ name: "", description: "", color: root.color, head_collaborator_id: "", parent_department_id: root.id, show_in_org_chart: true });
                             setDialogOpen(true);
                           }}
                         >
