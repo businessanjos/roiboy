@@ -373,10 +373,15 @@ export default function SalesDashboard() {
   const { goal } = useCompanyGoals(year);
 
   // Team metrics
-  const { metrics: teamMetrics, loading: teamLoading } = useSalesTeamMetrics({
+  const { metrics: allTeamMetrics, loading: teamLoading } = useSalesTeamMetrics({
     startDate: start,
     endDate: end,
   });
+  // Filtro de vendedor: toda a tela passa a olhar apenas o vendedor escolhido
+  const teamMetrics = useMemo(
+    () => (repId ? allTeamMetrics.filter((m) => m.user_id === repId) : allTeamMetrics),
+    [allTeamMetrics, repId]
+  );
 
   // ---------------------- DERIVED ----------------------
   // Receita recebida = SOMENTE received_value (dinheiro efetivamente entrado).
