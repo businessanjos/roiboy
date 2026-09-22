@@ -89,7 +89,7 @@ function useRHDashboardData(accountId: string | undefined) {
           .select("id, status, start_date, end_date, collaborator_id")
           .eq("account_id", accountId!),
         supabase.from("hr_offboardings")
-          .select("id, status, created_at" as any)
+          .select("id, stage, created_at" as any)
           .eq("account_id", accountId!),
         supabase.from("hr_admissions")
           .select("id, stage, candidate_name, position_title, start_date, admitted_at")
@@ -235,7 +235,7 @@ export default function RHDashboard() {
 
     // Offboardings abertos
     const offboardingsOpen = offboardings.filter((o: any) => {
-      const st = (o.status || "").toLowerCase();
+      const st = (o.stage || "").toLowerCase();
       return st && st !== "completed" && st !== "finalizado" && st !== "concluido";
     }).length;
 
