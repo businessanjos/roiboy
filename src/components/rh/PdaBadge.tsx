@@ -17,7 +17,7 @@ export function PdaBadge({ value, options, color, label, className }: Props) {
     <Badge
       variant="outline"
       className={`text-xs font-medium whitespace-nowrap ${className || ""}`}
-      style={{ backgroundColor: `${c}20`, borderColor: c, color: c }}
+      style={{ backgroundColor: c, borderColor: c, color: PDA_CHIP_TEXT }}
     >
       {label ?? value}
     </Badge>
