@@ -568,6 +568,7 @@ export default function HRCollaborators() {
       ) : view === "pda" ? (
         <CollaboratorsPDATable
           collaborators={pdaRows}
+          canSeeSalary={RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())}
           onChanged={() => { refetch(); refetchProviders(); }}
         />
       ) : filtered.length === 0 ? (

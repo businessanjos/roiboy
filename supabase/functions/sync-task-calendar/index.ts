@@ -44,7 +44,7 @@ async function getGoogleAccessToken(supabase: any, userId: string): Promise<stri
   let accessToken = integration.access_token;
   const now = Math.floor(Date.now() / 1000);
 
-  if (integration.expires_at && integration.expires_at < now + 300 && integration.refresh_token) {
+  if ((!integration.expires_at || integration.expires_at < now + 300) && integration.refresh_token) {
     const newTokens = await refreshGoogleToken(integration.refresh_token);
     if (newTokens) {
       accessToken = newTokens.access_token;

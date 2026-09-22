@@ -27,7 +27,7 @@ import { CalendarClock, Loader2 } from "lucide-react";
 import type { RulerTemplate } from "@/hooks/useZappRulers";
 import { useSectorUsers } from "@/hooks/useSectorUsers";
 import { useActivityTypes } from "@/hooks/useActivityTypes";
-import { buildTouchRows, computeTouchDate } from "./rulerScheduling";
+import { buildTouchRows, computeTouchDate, computeCadenceShiftDays } from "./rulerScheduling";
 import { getHolidayName } from "@/lib/brazilianHolidays";
 
 
@@ -430,7 +430,8 @@ export function ZappRulerEnrollDialog({
               <ScrollArea className="h-48 rounded-lg border">
                 <div className="space-y-3 p-3 pr-4">
                   {template.steps.map((s, idx) => {
-                    const touchDate = computeTouchDate(startDate, s.offset_days, effectiveDueTime, skipWeekends);
+                    const previewShift = computeCadenceShiftDays(template.steps, startDate, effectiveDueTime);
+                    const touchDate = computeTouchDate(startDate, s.offset_days + previewShift, effectiveDueTime, skipWeekends);
                     const holiday = getHolidayName(touchDate);
                     return (
                     <div key={idx} className="space-y-1">

@@ -170,7 +170,7 @@ async function processAccount(supabase: any, accountId: string, payload: any) {
         .in("phone", chunk),
       supabase
         .from("clients")
-        .select("id, name, phone_e164")
+        .select("id, full_name, phone_e164")
         .eq("account_id", accountId)
         .in("phone_e164", chunk),
     ]);

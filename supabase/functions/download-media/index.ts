@@ -26,7 +26,7 @@ const corsHeaders = {
  */
 
 // Limite de tamanho por mídia (memória do isolate é compartilhada)
-const MAX_MEDIA_BYTES = 90 * 1024 * 1024;
+const MAX_MEDIA_BYTES = 45 * 1024 * 1024;
 
 const BodySchema = z.object({
   message_id: z.string().uuid().optional(),
@@ -231,7 +231,7 @@ Deno.serve(async (req) => {
       const last = chunks[chunks.length - 1];
       if (isHeavy(msg)) {
         chunks.push([msg]);
-      } else if (last && last.length < 8 && !isHeavy(last[0])) {
+      } else if (last && last.length < 4 && !isHeavy(last[0])) {
         last.push(msg);
       } else {
         chunks.push([msg]);

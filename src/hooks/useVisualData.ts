@@ -2112,7 +2112,7 @@ async function fetchTasksData(
   const [usersRes, dealsRes, clientsRes, leadsRes] = await Promise.all([
     userIds.length ? supabase.from('users').select('id, name').in('id', userIds) : Promise.resolve({ data: [] as any[] }),
     dealIds.length ? supabase.from('deals').select('id, title').in('id', dealIds) : Promise.resolve({ data: [] as any[] }),
-    clientIds.length ? supabase.from('clients').select('id, name').in('id', clientIds) : Promise.resolve({ data: [] as any[] }),
+    clientIds.length ? supabase.from('clients').select('id, name:full_name').in('id', clientIds) : Promise.resolve({ data: [] as any[] }),
     leadIds.length ? supabase.from('leads').select('id, name').in('id', leadIds) : Promise.resolve({ data: [] as any[] }),
   ]);
 

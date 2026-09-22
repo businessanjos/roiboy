@@ -1617,7 +1617,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           spiff={spiff}
           userId={salesDetail.uid}
           userName={salesDetail.name}
-          referenceDate={effectiveStart}
+          referenceDate={effectiveEnd}
         />
       )}
     </div>

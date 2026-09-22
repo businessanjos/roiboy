@@ -14,7 +14,8 @@ import {
 import { Building2, ChevronsUpDown, HelpCircle, SlidersHorizontal, Sparkles, Target, Wallet } from "lucide-react";
 import { PdaBadge, YesNoBadge } from "@/components/rh/PdaBadge";
 import {
-  computeSynergyPct, formatTenure, synergyFromPct, tenureMonths, type PdaOption,
+  computeSynergyPct, formatTenure, mentalModelLabel, normalizeMentalModel, synergyFromPct,
+  tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
 } from "@/lib/rh/pda";
 import { useHRPdaOptions } from "@/hooks/useHRPdaOptions";
 import PdaOptionsDialog from "./PdaOptionsDialog";
@@ -271,7 +272,11 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <Label>Modelo mental</Label>
-            <OptionSelect value={form.pda_mental_model} onChange={(v) => setField("pda_mental_model", v)} options={optionsFor("pda_mental_model")} />
+            <OptionSelect
+              value={normalizeMentalModel(form.pda_mental_model)}
+              onChange={(v) => setField("pda_mental_model", v)}
+              options={optionsFor("pda_mental_model").map((o) => ({ ...o, label: mentalModelLabel(o.value, form.gender) || o.label }))}
+            />
           </div>
         </CardContent>
       </Card>
@@ -306,7 +311,7 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <FieldLabel hint="Essa pessoa está mais próxima de:">Termômetro</FieldLabel>
-            <OptionSelect value={form.pda_thermometer} onChange={(v) => setField("pda_thermometer", v)} options={optionsFor("pda_thermometer")} />
+            <OptionSelect value={form.pda_thermometer || THERMOMETER_DEFAULT} onChange={(v) => setField("pda_thermometer", v)} options={optionsFor("pda_thermometer")} />
           </div>
         </CardContent>
       </Card>
