@@ -53,7 +53,7 @@ const RH_ALLOWED_EMAILS = [
   "diessica@consultoria-luma.com",
   "jaqueline@consultoria-luma.com",
   "brualmeida.est@hotmail.com",
-  "arthur.mudri@hotmail.com", "anjosgroup.dados@anjosbusiness.com",
+  "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com",
 ];
 
 interface SearchResult {
