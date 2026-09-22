@@ -39,6 +39,16 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
   const textSize = size === "sm" ? "text-xs" : "text-sm";
   const padding = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-1";
 
+  // Valores de produto podem estar gravados como UUID (negócios ganhos) enquanto
+  // as opções do campo usam slugs — resolvemos os dois formatos.
+  const rawSelect = field.field_type === "select" && typeof value === "string" ? value.trim() : "";
+  const directOption = rawSelect ? field.options?.find((o) => o.value === rawSelect) : undefined;
+  const mappedOptionValue = !directOption ? resolveItemVendaOptionValue(rawSelect, field.options) : "";
+  const mappedOption = mappedOptionValue ? field.options?.find((o) => o.value === mappedOptionValue) : undefined;
+  const needsProductLookup = !!rawSelect && !directOption && !mappedOption && UUID_RE.test(rawSelect);
+  const { data: productsLite } = useProductsLite(needsProductLookup);
+
+
   // Boolean field
   if (field.field_type === "boolean") {
     if (value === true) {
