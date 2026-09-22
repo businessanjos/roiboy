@@ -151,7 +151,13 @@ export default function OrgChart() {
       "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_collaborators)
       "provider:eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_service_providers)
     ]);
-    setPeople(all.filter((p) => !HIDDEN_IDS.has(p.id)));
+    setPeople(
+      all.filter((p) => {
+        if (HIDDEN_IDS.has(p.id)) return false;
+        const info = meta.get(norm(p.department));
+        return info ? info.show : true;
+      })
+    );
     setLoading(false);
   }
 
