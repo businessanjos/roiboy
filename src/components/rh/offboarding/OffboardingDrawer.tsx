@@ -91,7 +91,8 @@ export default function OffboardingDrawer({
         salary: offboarding.service_provider.fee_amount,
       } as any
     : null);
-  const deadlines = useMemo(() => computeLegalDeadlines(form.termination_date || offboarding.termination_date), [form.termination_date, offboarding.termination_date]);
+  const isPJ = !offboarding.collaborator && !!offboarding.service_provider;
+  const deadlines = useMemo(() => (isPJ ? [] : computeLegalDeadlines(form.termination_date || offboarding.termination_date)), [isPJ, form.termination_date, offboarding.termination_date]);
 
   // Rescissão calc inputs
   const [calcInput, setCalcInput] = useState(() => ({
@@ -247,7 +248,7 @@ export default function OffboardingDrawer({
         </SheetHeader>
 
         <Tabs value={tab} onValueChange={setTab} className="mt-4">
-          <TabsList className="grid grid-cols-7 w-full h-auto">
+          <TabsList className={`grid ${isPJ ? "grid-cols-6" : "grid-cols-7"} w-full h-auto`}>
             <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
             <TabsTrigger value="pendencias" className="text-xs">
               Pendências {totalPend > 0 && <Badge variant="destructive" className="ml-1 h-4 text-[9px] px-1">{totalPend}</Badge>}
@@ -255,7 +256,7 @@ export default function OffboardingDrawer({
             <TabsTrigger value="checklist" className="text-xs">
               Checklist {checklistProgress > 0 && <span className="ml-1 text-[9px]">{checklistProgress}%</span>}
             </TabsTrigger>
-            <TabsTrigger value="rescisao" className="text-xs">Rescisão</TabsTrigger>
+            {!isPJ && <TabsTrigger value="rescisao" className="text-xs">Rescisão</TabsTrigger>}
             <TabsTrigger value="documentos" className="text-xs">
               Docs {documents.length > 0 && <span className="ml-1 text-[9px]">{documents.length}</span>}
             </TabsTrigger>
@@ -296,7 +297,9 @@ export default function OffboardingDrawer({
                 <Select value={form.termination_type} onValueChange={(v) => { setForm({ ...form, termination_type: v as any }); setCalcInput({ ...calcInput, terminationType: v as TerminationType }); }}>
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
-                    {Object.entries(TERMINATION_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                    {Object.entries(TERMINATION_TYPE_LABELS)
+                      .filter(([k]) => !isPJ || ["termino_contrato", "acordo", "pedido_demissao", "sem_justa_causa"].includes(k))
+                      .map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
                   </SelectContent>
                 </Select>
               </div>
@@ -316,26 +319,30 @@ export default function OffboardingDrawer({
                 <Input type="date" value={form.notice_communicated_at || ""} onChange={(e) => setForm({ ...form, notice_communicated_at: e.target.value })} />
               </div>
               <div>
-                <Label>Último dia trabalhado</Label>
+                <Label>{isPJ ? "Último dia de prestação" : "Último dia trabalhado"}</Label>
                 <Input type="date" value={form.last_day_worked || ""} onChange={(e) => { setForm({ ...form, last_day_worked: e.target.value }); setCalcInput({ ...calcInput, lastDayWorked: e.target.value }); }} />
               </div>
               <div>
                 <Label>Data efetiva</Label>
                 <Input type="date" value={form.termination_date || ""} onChange={(e) => setForm({ ...form, termination_date: e.target.value })} />
               </div>
-              <div>
-                <Label>Aviso prévio</Label>
-                <Select value={form.notice_type} onValueChange={(v) => { setForm({ ...form, notice_type: v as any }); setCalcInput({ ...calcInput, noticeType: v as NoticeType }); }}>
-                  <SelectTrigger><SelectValue /></SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(NOTICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div>
-                <Label>Dias de aviso</Label>
-                <Input type="number" value={form.notice_days || 30} onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, notice_days: n }); setCalcInput({ ...calcInput, noticeDays: n }); }} />
-              </div>
+              {!isPJ && (
+                <>
+                  <div>
+                    <Label>Aviso prévio</Label>
+                    <Select value={form.notice_type} onValueChange={(v) => { setForm({ ...form, notice_type: v as any }); setCalcInput({ ...calcInput, noticeType: v as NoticeType }); }}>
+                      <SelectTrigger><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(NOTICE_TYPE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div>
+                    <Label>Dias de aviso</Label>
+                    <Input type="number" value={form.notice_days || 30} onChange={(e) => { const n = Number(e.target.value); setForm({ ...form, notice_days: n }); setCalcInput({ ...calcInput, noticeDays: n }); }} />
+                  </div>
+                </>
+              )}
             </div>
 
             <div>
@@ -450,7 +457,7 @@ export default function OffboardingDrawer({
           </TabsContent>
 
           {/* ====== RESCISÃO ====== */}
-          <TabsContent value="rescisao" className="space-y-4 mt-4">
+          <TabsContent value="rescisao" className={`space-y-4 mt-4 ${isPJ ? "hidden" : ""}`}>
             <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Calculator className="h-4 w-4" /> Calculadora de Rescisão (estimativa)</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
