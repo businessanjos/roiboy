@@ -323,97 +323,135 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     return `Transferiu para ${d.to_user_name || "outro responsável"}: ${parts.join(", ") || "nenhum item"}`;
   };
 
+  const initials = (user?.name || "?")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase())
+    .join("");
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            {mode === "deactivate" ? <UserMinus className="h-5 w-5 text-warning" /> : <ArrowRightLeft className="h-5 w-5 text-warning" />}
-            {mode === "deactivate"
-              ? `Inativar ${user?.name || "membro"}?`
-              : `Transferir pendências de ${user?.name || "membro"}`}
-          </DialogTitle>
-          <DialogDescription>
-            O histórico já registrado permanece no nome dele. Só muda quem é o responsável atual
-            dos itens que ainda estão em aberto.
-          </DialogDescription>
+      <DialogContent className="max-w-3xl p-0 gap-0 overflow-hidden max-h-[92vh] flex flex-col">
+        {/* Cabeçalho */}
+        <DialogHeader className="space-y-0 border-b border-border/60 bg-muted/30 px-6 py-5 text-left">
+          <div className="flex items-start gap-3">
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-semibold text-primary">
+              {initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                {mode === "deactivate"
+                  ? `Inativar ${user?.name || "membro"}`
+                  : `Transferir pendências de ${user?.name || "membro"}`}
+              </DialogTitle>
+              <DialogDescription className="mt-1 text-xs leading-relaxed">
+                {user?.email ? <span className="block text-muted-foreground/80">{user.email}</span> : null}
+                O histórico permanece no nome dele. Só muda quem é o responsável atual dos itens ainda em aberto.
+              </DialogDescription>
+            </div>
+            {!loading && total > 0 && (
+              <div className="hidden shrink-0 rounded-xl border border-border/60 bg-card px-4 py-2 text-center sm:block">
+                <p className="text-xl font-semibold leading-none">{total}</p>
+                <p className="mt-1 text-[10px] uppercase tracking-wide text-muted-foreground">em aberto</p>
+              </div>
+            )}
+          </div>
         </DialogHeader>
 
         {loading ? (
-          <div className="py-10 flex justify-center">
+          <div className="flex justify-center py-16">
             <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
           </div>
         ) : (
-          <div className="space-y-4">
+          <div className="flex-1 space-y-5 overflow-y-auto px-6 py-5">
             {total > 0 && (
-              <div className="rounded-lg border border-border bg-muted/30 p-3">
-                <Label className="text-xs font-semibold text-muted-foreground">
-                  Destinatário padrão (vale para as linhas sem escolha própria)
+              <div className="rounded-xl border border-primary/20 bg-primary/5 p-4">
+                <Label className="text-xs font-semibold text-foreground">
+                  Destinatário padrão
                 </Label>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  Vale para todas as linhas que não tiverem uma escolha própria.
+                </p>
                 <OwnerSelect
                   value={defaultOwner}
                   onChange={setDefaultOwner}
                   candidates={candidates}
                   selfId={currentUser?.id}
                   placeholder="Selecione quem recebe por padrão"
-                  className="mt-2 bg-card"
+                  className="mt-3 h-10 bg-card"
                 />
               </div>
             )}
 
             <div>
-              <p className="text-sm font-semibold mb-2">1. Revise os itens em aberto</p>
+              <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                Itens em aberto
+              </p>
               {total === 0 ? (
-                <div className="rounded-lg border border-border p-4 text-sm text-muted-foreground">
+                <div className="rounded-xl border border-dashed border-border bg-muted/20 px-4 py-8 text-center text-sm text-muted-foreground">
                   Nenhuma pendência em aberto neste momento.
                 </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {activeGroups.map((group) => {
                     const keys = availableKeys.filter((k) => OPEN_ITEM_META[k].group === group.key);
                     const groupTotal = keys.reduce((s, k) => s + (counts?.[k] || 0), 0);
                     const allOn = keys.every((k) => selected[k]);
                     const isCollapsed = !!collapsed[group.key];
                     return (
-                      <div key={group.key} className="rounded-lg border border-border overflow-hidden">
-                        <div className="flex items-center gap-2 bg-muted/40 px-3 py-2">
+                      <div
+                        key={group.key}
+                        className="overflow-hidden rounded-xl border border-border/60 bg-card shadow-sm"
+                      >
+                        <div className="flex items-center gap-2 border-b border-border/50 px-3 py-2.5">
                           <button
                             type="button"
                             onClick={() => setCollapsed((c) => ({ ...c, [group.key]: !isCollapsed }))}
-                            className="flex items-center gap-1.5 text-sm font-semibold flex-1 text-left"
+                            className="flex flex-1 items-center gap-2 text-left text-sm font-semibold text-foreground"
                           >
-                            {isCollapsed ? <ChevronRight className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                            {isCollapsed ? <ChevronRight className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
                             {group.label}
-                            <Badge variant="secondary" className="ml-1">{groupTotal}</Badge>
+                            <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                              {groupTotal}
+                            </span>
                           </button>
                           <Button
                             type="button"
                             variant="ghost"
                             size="sm"
-                            className="h-7 text-xs"
+                            className="h-7 text-[11px] text-muted-foreground hover:text-foreground"
                             onClick={() => toggleGroup(group.key, !allOn)}
                           >
                             {allOn ? "Desmarcar área" : "Marcar área"}
                           </Button>
                         </div>
                         {!isCollapsed && (
-                          <div className="divide-y divide-border">
+                          <div className="divide-y divide-border/50">
                             {keys.map((key) => {
                               const count = counts?.[key] || 0;
                               const Icon = OPEN_ITEM_META[key].icon;
                               const isOn = !!selected[key];
+                              const missing = isOn && !ownerFor(key);
                               return (
-                                <div key={key} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
-                                  <label className="flex items-center gap-3 flex-1 cursor-pointer">
+                                <div
+                                  key={key}
+                                  className={`flex flex-col gap-2 px-3 py-2.5 transition-colors sm:flex-row sm:items-center ${
+                                    isOn ? "hover:bg-muted/40" : "opacity-60 hover:opacity-100"
+                                  }`}
+                                >
+                                  <label className="flex flex-1 cursor-pointer items-center gap-3">
                                     <Checkbox
                                       checked={isOn}
                                       onCheckedChange={(v) => setSelected((s) => ({ ...s, [key]: !!v }))}
                                     />
-                                    <Icon className="h-4 w-4 text-muted-foreground shrink-0" />
-                                    <span className="text-sm flex-1">{OPEN_ITEM_META[key].label}</span>
-                                    <Badge variant="secondary">{count}</Badge>
+                                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
+                                    <span className="flex-1 text-sm">{OPEN_ITEM_META[key].label}</span>
+                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                      {count}
+                                    </span>
                                   </label>
-                                  <div className="sm:w-60">
+                                  <div className="sm:w-56">
                                     <OwnerSelect
                                       value={owners[key] || ""}
                                       onChange={(v) => setOwners((o) => ({ ...o, [key]: v }))}
@@ -424,7 +462,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                           ? `Padrão: ${candidates.find((c) => c.id === defaultOwner)?.name || ""}`
                                           : "Escolher destinatário"
                                       }
-                                      className={`h-8 text-xs bg-card ${isOn && !ownerFor(key) ? "border-warning" : ""}`}
+                                      className={`h-9 bg-background text-xs ${missing ? "border-warning/70" : "border-border/60"}`}
                                     />
                                   </div>
                                 </div>
@@ -440,18 +478,23 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
             </div>
 
             {total > 0 && (
-              <div className="rounded-lg border border-border p-3">
-                <p className="text-sm font-semibold mb-2">2. Resumo da transferência</p>
+              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                <p className="mb-2.5 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  Resumo da transferência
+                </p>
                 {summary.length === 0 ? (
                   <p className="text-xs text-muted-foreground">
                     Nenhum item pronto para transferir — escolha o destinatário.
                   </p>
                 ) : (
-                  <ul className="space-y-1 text-sm">
+                  <ul className="space-y-1.5 text-sm">
                     {summary.map((s) => (
-                      <li key={s.id} className="flex items-center justify-between">
+                      <li
+                        key={s.id}
+                        className="flex items-center justify-between rounded-lg bg-card px-3 py-2"
+                      >
                         <span className="flex items-center gap-2">
-                          <ArrowRightLeft className="h-3.5 w-3.5 text-muted-foreground" />
+                          <ArrowRightLeft className="h-3.5 w-3.5 text-primary" />
                           {s.name}
                         </span>
                         <Badge variant="outline">{s.count} item(ns)</Badge>
@@ -460,7 +503,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                   </ul>
                 )}
                 {pendingOwnerKeys.length > 0 && (
-                  <p className="text-xs text-warning mt-2">
+                  <p className="mt-2.5 text-xs text-warning">
                     {pendingOwnerKeys.length} linha(s) marcada(s) sem destinatário não serão transferidas.
                   </p>
                 )}
@@ -468,8 +511,8 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
             )}
 
             {mode === "deactivate" && total > 0 && transferableTotal < total && (
-              <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
-                <AlertTriangle className="h-4 w-4 text-warning shrink-0 mt-0.5" />
+              <div className="flex gap-2 rounded-xl border border-warning/30 bg-warning/10 p-4 text-sm">
+                <AlertTriangle className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
                 <span>
                   {total - transferableTotal} item(ns) ficarão sem responsável. O membro aparecerá
                   marcado em laranja na lista até que a transferência seja concluída.
@@ -479,15 +522,15 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
 
             {history.length > 0 && (
               <div>
-                <p className="text-sm font-semibold flex items-center gap-2 mb-2">
-                  <History className="h-4 w-4" /> Histórico deste membro
+                <p className="mb-2.5 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                  <History className="h-3.5 w-3.5" /> Histórico deste membro
                 </p>
-                <ScrollArea className="max-h-36 rounded-lg border border-border">
-                  <div className="divide-y divide-border">
+                <ScrollArea className="max-h-36 rounded-xl border border-border/60">
+                  <div className="divide-y divide-border/50">
                     {history.map((log) => (
                       <div key={log.id} className="p-3 text-xs">
                         <p className="text-foreground">{describeLog(log)}</p>
-                        <p className="text-muted-foreground mt-0.5">
+                        <p className="mt-0.5 text-muted-foreground">
                           {log.user_name || "Sistema"} ·{" "}
                           {new Date(log.created_at).toLocaleString("pt-BR")}
                         </p>
@@ -500,19 +543,26 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
           </div>
         )}
 
-        <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
-            Cancelar
-          </Button>
-          <Button onClick={handleConfirm} disabled={submitting || loading}>
-            {submitting ? (
-              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Processando...</>
-            ) : mode === "deactivate" ? (
-              <><UserMinus className="h-4 w-4 mr-2" /> Inativar membro</>
-            ) : (
-              <><ArrowRightLeft className="h-4 w-4 mr-2" /> Transferir</>
-            )}
-          </Button>
+        <DialogFooter className="flex-row items-center justify-between gap-3 border-t border-border/60 bg-muted/20 px-6 py-4">
+          <p className="hidden text-xs text-muted-foreground sm:block">
+            {transferableTotal > 0
+              ? `${transferableTotal} item(ns) prontos para transferir`
+              : "Nada marcado para transferir ainda"}
+          </p>
+          <div className="flex w-full justify-end gap-2 sm:w-auto">
+            <Button variant="outline" onClick={() => onOpenChange(false)} disabled={submitting}>
+              Cancelar
+            </Button>
+            <Button onClick={handleConfirm} disabled={submitting || loading}>
+              {submitting ? (
+                <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Processando...</>
+              ) : mode === "deactivate" ? (
+                <><UserMinus className="mr-2 h-4 w-4" /> Inativar membro</>
+              ) : (
+                <><ArrowRightLeft className="mr-2 h-4 w-4" /> Transferir</>
+              )}
+            </Button>
+          </div>
         </DialogFooter>
       </DialogContent>
     </Dialog>
