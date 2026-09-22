@@ -1,0 +1,31 @@
+CREATE TABLE public.pda_import_staging (
+  nome text,
+  status_asana text,
+  empresa text,
+  admissao text,
+  meses text,
+  cargo text,
+  hierarquia text,
+  setor text,
+  nivel text,
+  perfil_vaga text,
+  perfil_dominante text,
+  perfil_secundario text,
+  sinergia text,
+  sinergia_pct text,
+  pdi_feito text,
+  pdi_entregue text,
+  esforco text,
+  qm text,
+  fase text,
+  salario_liquido text,
+  salario_sem_encargos text,
+  salario_com_encargos text,
+  gestor text,
+  temperamento text,
+  modelo_mental text,
+  termometro text,
+  escolaridade text
+);
+GRANT ALL ON public.pda_import_staging TO service_role;
+ALTER TABLE public.pda_import_staging ENABLE ROW LEVEL SECURITY;
