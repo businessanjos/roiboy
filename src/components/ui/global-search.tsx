@@ -54,6 +54,7 @@ const RH_ALLOWED_EMAILS = [
   "jaqueline@consultoria-luma.com",
   "brualmeida.est@hotmail.com",
   "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com",
+  "rh2@eternumoficial.com",
 ];
 
 interface SearchResult {

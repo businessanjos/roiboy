@@ -32,6 +32,7 @@ const RH_ALLOWED_EMAILS = new Set([
   "jaqueline@consultoria-luma.com",
   "brualmeida.est@hotmail.com",
   "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com",
+  "rh2@eternumoficial.com",
 ]);
 
 /** Replica a proteção adicional por usuário aplicada às telas de RH. */

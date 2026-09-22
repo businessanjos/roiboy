@@ -22,6 +22,7 @@ const RH_ALERT_RECIPIENTS = [
   "jaqueline@consultoria-luma.com",
   "brualmeida.est@hotmail.com",
   "arthur.mudri@hotmail.com", "anjosgroup.dados@anjosbusiness.com",
+  "jessicamarcato@anjosbusiness.com", "rh2@eternumoficial.com",
 ];
 
 interface Props {
