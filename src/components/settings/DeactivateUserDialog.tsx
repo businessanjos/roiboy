@@ -239,7 +239,34 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                     <SelectValue placeholder="Selecione quem vai receber os itens marcados" />
                   </SelectTrigger>
                   <SelectContent>
-                    {candidates.map((c) => (
+                    <div className="sticky top-0 z-10 bg-popover p-2 border-b">
+                      <div className="relative">
+                        <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
+                        <Input
+                          autoFocus
+                          value={ownerSearch}
+                          onChange={(e) => setOwnerSearch(e.target.value)}
+                          onKeyDown={(e) => e.stopPropagation()}
+                          placeholder="Buscar pessoa..."
+                          className="h-8 pl-7 text-sm"
+                        />
+                      </div>
+                    </div>
+                    {selfCandidate && (!ownerSearch.trim() || matchesSearch(selfCandidate.name)) && (
+                      <SelectItem
+                        value={selfCandidate.id}
+                        className="my-1 font-semibold text-primary data-[state=checked]:text-primary"
+                      >
+                        <span className="flex items-center gap-2">
+                          <Star className="h-3.5 w-3.5 text-primary" />
+                          Para mim mesmo ({selfCandidate.name})
+                        </span>
+                      </SelectItem>
+                    )}
+                    {filteredCandidates.length === 0 && !selfCandidate && (
+                      <div className="px-3 py-4 text-sm text-muted-foreground">Nenhuma pessoa encontrada.</div>
+                    )}
+                    {filteredCandidates.map((c) => (
                       <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                     ))}
                   </SelectContent>
@@ -249,6 +276,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                 </p>
               </div>
             )}
+
 
             {mode === "deactivate" && total > 0 && selectedTotal < total && (
               <div className="flex gap-2 rounded-lg border border-warning/40 bg-warning/10 p-3 text-sm">
