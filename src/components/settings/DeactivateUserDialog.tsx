@@ -278,6 +278,8 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
       setDefaultOwner("");
       setOwners({});
       setCollapsed({});
+      setExpanded({});
+      setDetails({});
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
           body: { action: "count_open_items", user_id: user.id },
