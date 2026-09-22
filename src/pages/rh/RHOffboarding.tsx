@@ -191,8 +191,8 @@ export default function RHOffboarding() {
                 {items.map(o => (
                   <Card key={o.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelected(o)}>
                     <CardContent className="p-2.5">
-                      <p className="text-xs font-medium truncate">{o.collaborator?.full_name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{o.collaborator?.position || TERMINATION_TYPE_LABELS[o.termination_type]}</p>
+                      <p className="text-xs font-medium truncate">{getOffboardingPerson(o)?.full_name || "—"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{getOffboardingPerson(o)?.position || TERMINATION_TYPE_LABELS[o.termination_type]}</p>
                     </CardContent>
                   </Card>
                 ))}
