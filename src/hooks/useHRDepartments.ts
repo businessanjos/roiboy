@@ -12,6 +12,7 @@ export interface HRDepartment {
   head_collaborator_id: string | null;
   parent_department_id: string | null;
   is_active: boolean;
+  show_in_org_chart: boolean;
   created_at: string;
   updated_at: string;
 }

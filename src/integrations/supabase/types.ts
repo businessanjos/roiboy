@@ -12509,6 +12509,7 @@ export type Database = {
           is_active: boolean
           name: string
           parent_department_id: string | null
+          show_in_org_chart: boolean
           updated_at: string
         }
         Insert: {
@@ -12521,6 +12522,7 @@ export type Database = {
           is_active?: boolean
           name: string
           parent_department_id?: string | null
+          show_in_org_chart?: boolean
           updated_at?: string
         }
         Update: {
@@ -12533,6 +12535,7 @@ export type Database = {
           is_active?: boolean
           name?: string
           parent_department_id?: string | null
+          show_in_org_chart?: boolean
           updated_at?: string
         }
         Relationships: [

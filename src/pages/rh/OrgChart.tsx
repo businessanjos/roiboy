@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, Network, Users, Search, Download, Cake, X } from "lucide-react";
 import html2canvas from "html2canvas";
 import { formatPersonName } from "@/lib/format/personName";
+import { getDepartmentColorHsl } from "@/lib/rh/departmentColors";
 
 interface Person {
   id: string;
@@ -70,6 +71,9 @@ const COLUMNS: ColumnConfig[] = [
   },
 ];
 
+const tint = (color: string, alpha = 0.15) =>
+  color.startsWith("hsl(") ? color.replace(")", ` / ${alpha})`) : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
+
 function getInitials(name: string) {
   return name.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0]).join("").toUpperCase();
 }
@@ -95,6 +99,7 @@ export default function OrgChart() {
   const navigate = useNavigate();
   const orgRef = useRef<HTMLDivElement>(null);
   const [people, setPeople] = useState<Person[]>([]);
+  const [deptMeta, setDeptMeta] = useState<Map<string, { color: string; show: boolean }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -104,7 +109,7 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const [{ data: collabs }, { data: providers }] = await Promise.all([
+    const [{ data: collabs }, { data: providers }, { data: depts }] = await Promise.all([
       supabase
         .from("hr_collaborators")
         .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
@@ -116,7 +121,18 @@ export default function OrgChart() {
         .in("provider_kind", ["director"])
         .eq("status", "active")
         .order("full_name"),
+      supabase.from("hr_departments").select("name, color, show_in_org_chart"),
     ]);
+
+    const meta = new Map<string, { color: string; show: boolean }>();
+    (depts || []).forEach((d: any) => {
+      meta.set(norm(d.name), {
+        color: getDepartmentColorHsl(d.color),
+        show: d.show_in_org_chart !== false,
+      });
+    });
+    setDeptMeta(meta);
+
 
     const all: Person[] = [
       ...((collabs || []) as Person[]).map((c) => ({ ...c, full_name: formatPersonName(c.full_name) })),
@@ -138,7 +154,13 @@ export default function OrgChart() {
       "eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_collaborators)
       "provider:eb09d679-8bfb-408e-9c4e-cdba00ec5adb", // Maikol Quintana Parnow (hr_service_providers)
     ]);
-    setPeople(all.filter((p) => !HIDDEN_IDS.has(p.id)));
+    setPeople(
+      all.filter((p) => {
+        if (HIDDEN_IDS.has(p.id)) return false;
+        const info = meta.get(norm(p.department));
+        return info ? info.show : true;
+      })
+    );
     setLoading(false);
   }
 
@@ -150,6 +172,18 @@ export default function OrgChart() {
   const coo = useMemo(
     () => people.find((p) => norm(p.position) === "coo") ?? null,
     [people]
+  );
+
+  // Cor configurada no cadastro do departamento
+  const deptColorFor = useMemo(
+    () => (names: string[]) => {
+      for (const n of names) {
+        const info = deptMeta.get(norm(n));
+        if (info) return info.color;
+      }
+      return null;
+    },
+    [deptMeta]
   );
 
   // Build columns
@@ -171,9 +205,9 @@ export default function OrgChart() {
       });
       members.forEach((m) => excludeIds.add(m.id));
 
-      return { ...col, gestor, members };
+      return { ...col, gestor, members, deptColor: deptColorFor([col.label, ...col.deptMatches]) };
     });
-  }, [people, ceo, coo]);
+  }, [people, ceo, coo, deptColorFor]);
 
   // Pessoas ainda não alocadas em nenhuma coluna fixa
   const unassigned = useMemo(() => {
@@ -241,9 +275,10 @@ export default function OrgChart() {
           deptMatches: [] as string[],
           gestor,
           members: group.members.filter((m) => m.id !== gestor?.id),
+          deptColor: deptColorFor([group.label]),
         };
       });
-  }, [unassigned]);
+  }, [unassigned, deptColorFor]);
 
   const allColumns = useMemo(() => [...columns, ...extraColumns], [columns, extraColumns]);
 
@@ -290,9 +325,9 @@ export default function OrgChart() {
 
   const renderPersonCard = (
     p: Person,
-    opts: { size?: "sm" | "md" | "lg"; badgeColor?: string; label?: string } = {}
+    opts: { size?: "sm" | "md" | "lg"; badgeColor?: string; label?: string; deptColor?: string | null } = {}
   ) => {
-    const { size = "md", badgeColor, label } = opts;
+    const { size = "md", badgeColor, label, deptColor } = opts;
     const dim = size === "lg" ? "h-16 w-16" : size === "sm" ? "h-10 w-10" : "h-12 w-12";
     const dimmed = !matchesSearch(p) && !!search.trim();
     const birthday = isBirthdayThisMonth(p.birth_date);
@@ -335,7 +370,12 @@ export default function OrgChart() {
         {p.position && (
           <Badge
             variant="outline"
-            className={`text-[9px] px-1.5 py-0 h-4 font-normal ${badgeColor ?? ""}`}
+            className={`text-[9px] px-1.5 py-0 h-4 font-normal ${deptColor ? "" : badgeColor ?? ""}`}
+            style={
+              deptColor
+                ? { backgroundColor: tint(deptColor), color: deptColor, borderColor: deptColor }
+                : undefined
+            }
           >
             {p.position}
           </Badge>
@@ -444,7 +484,10 @@ export default function OrgChart() {
 
                       {/* Header */}
                       <div
-                        className={`w-full rounded-lg px-3 py-2 mb-3 bg-gradient-to-r ${col.headerColor} shadow-sm`}
+                        className={`w-full rounded-lg px-3 py-2 mb-3 shadow-sm ${
+                          col.deptColor ? "" : `bg-gradient-to-r ${col.headerColor}`
+                        }`}
+                        style={col.deptColor ? { backgroundColor: col.deptColor } : undefined}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -465,7 +508,7 @@ export default function OrgChart() {
                       {/* Head (Gestor ou COO no caso de Marketing) */}
                       {columnHead ? (
                         <div className="flex flex-col items-center">
-                          {renderPersonCard(columnHead, { size: "md", badgeColor: col.badgeColor, label: headLabel })}
+                          {renderPersonCard(columnHead, { size: "md", badgeColor: col.badgeColor, deptColor: col.deptColor, label: headLabel })}
                           {col.members.length > 0 && <div className="w-px h-6 bg-border" />}
                         </div>
                       ) : (
@@ -493,7 +536,7 @@ export default function OrgChart() {
                           </p>
                         ) : (
                           col.members.map((m) =>
-                            renderPersonCard(m, { size: "sm", badgeColor: col.badgeColor })
+                            renderPersonCard(m, { size: "sm", badgeColor: col.badgeColor, deptColor: col.deptColor })
                           )
                         )}
                       </div>

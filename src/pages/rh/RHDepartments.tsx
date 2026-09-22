@@ -18,24 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useHRDepartments, type HRDepartment } from "@/hooks/useHRDepartments";
 import { useHRCollaborators } from "@/hooks/useHRCollaborators";
+import { Switch } from "@/components/ui/switch";
+import { DEPARTMENT_COLOR_OPTIONS, getDepartmentColorHsl } from "@/lib/rh/departmentColors";
 
-const COLOR_OPTIONS = [
-  { value: "blue", label: "Azul", hsl: "hsl(217 91% 60%)" },
-  { value: "emerald", label: "Verde", hsl: "hsl(152 55% 45%)" },
-  { value: "amber", label: "Âmbar", hsl: "hsl(39 60% 55%)" },
-  { value: "purple", label: "Roxo", hsl: "hsl(271 81% 56%)" },
-  { value: "red", label: "Vermelho", hsl: "hsl(0 72% 51%)" },
-  { value: "teal", label: "Teal", hsl: "hsl(172 66% 50%)" },
-  { value: "pink", label: "Rosa", hsl: "hsl(330 81% 60%)" },
-  { value: "indigo", label: "Índigo", hsl: "hsl(239 84% 67%)" },
-  { value: "orange", label: "Laranja", hsl: "hsl(25 95% 53%)" },
-  { value: "slate", label: "Cinza", hsl: "hsl(215 20% 65%)" },
-];
-
-const getColorHsl = (color: string) => {
-  if (color.startsWith("hsl") || color.startsWith("#")) return color;
-  return COLOR_OPTIONS.find(c => c.value === color)?.hsl || "hsl(215 20% 65%)";
-};
+const COLOR_OPTIONS = DEPARTMENT_COLOR_OPTIONS;
+const getColorHsl = getDepartmentColorHsl;
 
 const normalizeDepartmentName = (value: string | null | undefined) =>
   value?.trim().toLocaleLowerCase("pt-BR") ?? "";
@@ -48,7 +35,7 @@ export default function RHDepartments() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<HRDepartment | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "" });
+  const [form, setForm] = useState({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "", show_in_org_chart: true });
   const [saving, setSaving] = useState(false);
 
   const filtered = departments.filter(d =>
@@ -82,10 +69,11 @@ export default function RHDepartments() {
         color: dept.color,
         head_collaborator_id: dept.head_collaborator_id || "",
         parent_department_id: dept.parent_department_id || "",
+        show_in_org_chart: dept.show_in_org_chart ?? true,
       });
     } else {
       setEditingDept(null);
-      setForm({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "" });
+      setForm({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "", show_in_org_chart: true });
     }
     setDialogOpen(true);
   };
@@ -99,6 +87,7 @@ export default function RHDepartments() {
       color: form.color,
       head_collaborator_id: form.head_collaborator_id || null,
       parent_department_id: form.parent_department_id || null,
+      show_in_org_chart: form.show_in_org_chart,
     };
 
     if (editingDept) {
@@ -220,6 +209,9 @@ export default function RHDepartments() {
                     {!dept.is_active && (
                       <Badge variant="outline" className="text-xs text-muted-foreground">Inativo</Badge>
                     )}
+                    {dept.show_in_org_chart === false && (
+                      <Badge variant="outline" className="text-xs text-muted-foreground">Fora do organograma</Badge>
+                    )}
                   </div>
                   {headName && (
                     <p className="text-xs text-muted-foreground">
@@ -249,7 +241,7 @@ export default function RHDepartments() {
                           className="h-7 gap-1 text-xs"
                           onClick={() => {
                             setEditingDept(null);
-                            setForm({ name: "", description: "", color: root.color, head_collaborator_id: "", parent_department_id: root.id });
+                            setForm({ name: "", description: "", color: root.color, head_collaborator_id: "", parent_department_id: root.id, show_in_org_chart: true });
                             setDialogOpen(true);
                           }}
                         >
@@ -349,6 +341,17 @@ export default function RHDepartments() {
                     ))}
                 </SelectContent>
               </Select>
+            </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label className="cursor-pointer">Aparecer no organograma</Label>
+                <p className="text-xs text-muted-foreground">Desative para ocultar este departamento e suas pessoas do organograma.</p>
+              </div>
+              <Switch
+                checked={form.show_in_org_chart}
+                onCheckedChange={v => setForm(f => ({ ...f, show_in_org_chart: v }))}
+              />
             </div>
           </div>
 
