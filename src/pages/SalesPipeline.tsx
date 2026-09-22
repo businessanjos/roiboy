@@ -1480,6 +1480,21 @@ export default function SalesPipeline() {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [lostDeals, dealProductMap]);
 
+  // Origem da venda (tag do título) disponível nos negócios perdidos
+  const lostTitleTagOptions = useMemo(() => buildTitleTagOptions(lostDeals), [lostDeals]);
+
+  // MQL disponível nos negócios perdidos (campo do deal)
+  const lostMqlOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    lostDeals.forEach((deal) => {
+      const label = dealMqlMap[deal.id]?.label;
+      if (!label) return;
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+  }, [lostDeals, dealMqlMap]);
+
   // Filter lost deals by selected month, reason, seller, and product
   const filteredLostDealsByMonth = useMemo(() => {
     let result = filteredLostDeals;
