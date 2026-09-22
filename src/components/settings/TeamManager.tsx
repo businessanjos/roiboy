@@ -185,6 +185,11 @@ export function TeamManager() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<TeamUser | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [deactivateTarget, setDeactivateTarget] = useState<TeamUser | null>(null);
+  const [deactivateMode, setDeactivateMode] = useState<"deactivate" | "transfer">("deactivate");
+  const [pendingByUser, setPendingByUser] = useState<Record<string, number>>({});
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<TeamRole | null>(null);
