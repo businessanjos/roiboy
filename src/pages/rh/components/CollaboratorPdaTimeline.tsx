@@ -64,7 +64,7 @@ export default function CollaboratorPdaTimeline({
           .select("id, followup_date, kind, angel_feedback, management_feedback, author_name")
           .eq("person_id", personId).order("followup_date", { ascending: false }).limit(100),
         supabase.from("hr_pda_cycles")
-          .select("id, label, created_at, cycle_done, cycle_delivered, effort_level, change_quality")
+          .select("id, label, created_at, pdi_done, pdi_delivered, effort_level, change_quality")
           .eq("person_id", personId).order("created_at", { ascending: false }).limit(100),
       ]);
       if (cancelled) return;
@@ -99,8 +99,8 @@ export default function CollaboratorPdaTimeline({
         icon: "change",
         title: `PDI ${c.label || ""}`.trim(),
         detail: [
-          c.cycle_done ? `Feito: ${c.cycle_done}` : null,
-          c.cycle_delivered ? `Entregue: ${c.cycle_delivered}` : null,
+          c.pdi_done == null ? null : `Feito: ${c.pdi_done ? "SIM" : "NÃO"}`,
+          c.pdi_delivered == null ? null : `Entregue: ${c.pdi_delivered ? "SIM" : "NÃO"}`,
           c.effort_level ? `Esforço: ${c.effort_level}` : null,
           c.change_quality ? `QM: ${c.change_quality}` : null,
         ].filter(Boolean).join(" · ") || undefined,
