@@ -118,10 +118,10 @@ export default function OrgChart() {
     ]);
 
     const all: Person[] = [
-      ...((collabs || []) as Person[]),
+      ...((collabs || []) as Person[]).map((c) => ({ ...c, full_name: formatPersonName(c.full_name) })),
       ...((providers || []).map((d: any) => ({
         id: `provider:${d.id}`,
-        full_name: d.full_name,
+        full_name: formatPersonName(d.full_name),
         department: d.department,
         position: d.position,
         avatar_url: d.avatar_url,
