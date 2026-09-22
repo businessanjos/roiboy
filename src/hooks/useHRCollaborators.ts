@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { formatPersonName } from "@/lib/format/personName";
 
 export interface HRCollaborator {
   id: string;
@@ -131,6 +132,7 @@ export function useHRCollaborators() {
         .from("hr_collaborators")
         .insert({
           ...data,
+          full_name: formatPersonName((data as any).full_name) || (data as any).full_name,
           account_id: currentUser.account_id,
           hr_department_id: hrDepartmentId,
         } as any)
@@ -156,6 +158,7 @@ export function useHRCollaborators() {
         .from("hr_collaborators")
         .insert({
           ...teamData,
+          full_name: formatPersonName((teamData as any).full_name) || (teamData as any).full_name,
           user_id: userId,
           account_id: currentUser.account_id,
           hr_department_id: hrDepartmentId,

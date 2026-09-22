@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { ArrowLeft, Network, Users, Search, Download, Cake, X } from "lucide-react";
 import html2canvas from "html2canvas";
+import { formatPersonName } from "@/lib/format/personName";
 
 interface Person {
   id: string;
@@ -118,10 +119,10 @@ export default function OrgChart() {
     ]);
 
     const all: Person[] = [
-      ...((collabs || []) as Person[]),
+      ...((collabs || []) as Person[]).map((c) => ({ ...c, full_name: formatPersonName(c.full_name) })),
       ...((providers || []).map((d: any) => ({
         id: `provider:${d.id}`,
-        full_name: d.full_name,
+        full_name: formatPersonName(d.full_name),
         department: d.department,
         position: d.position,
         avatar_url: d.avatar_url,
