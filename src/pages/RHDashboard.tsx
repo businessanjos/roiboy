@@ -135,7 +135,7 @@ function useRHDashboardData(accountId: string | undefined) {
           .select("id, full_name, status, employment_type, hire_date, termination_date, department, total_cost, base_salary, birth_date, avatar_url")
           .eq("account_id", accountId!),
         supabase.from("hr_service_providers")
-          .select("id, full_name, status, provider_kind")
+          .select("id, full_name, status, provider_kind, department")
           .eq("account_id", accountId!),
         supabase.from("hr_jobs")
           .select("id, title, status, created_at, openings_count, department")
@@ -188,9 +188,9 @@ export default function RHDashboard() {
     const pjDirectors = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() === "director");
     const pjOthers = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() !== "director");
 
-    // Composição por departamento
+    // Composição por departamento (CLT + PJ)
     const byDept: Record<string, number> = {};
-    active.forEach((c: any) => {
+    [...active, ...pj].forEach((c: any) => {
       const d = c.department || "Sem departamento";
       byDept[d] = (byDept[d] || 0) + 1;
     });
@@ -381,8 +381,8 @@ export default function RHDashboard() {
                           </PieChart>
                         </ResponsiveContainer>
                         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
-                          <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.headcount}</span>
-                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">CLT ativos</span>
+                          <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.totalPeople}</span>
+                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">Pessoas ativas</span>
                         </div>
                       </div>
                       <div className="max-h-52 overflow-auto pr-1">
