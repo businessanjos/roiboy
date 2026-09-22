@@ -164,7 +164,7 @@ export default function NewOffboardingDialog({
         </div>
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancelar</Button>
-          <Button onClick={handleCreate} disabled={!form.collaborator_id || loading}>Criar</Button>
+          <Button onClick={handleCreate} disabled={!selectedPerson || loading}>Criar</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
