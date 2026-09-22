@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
+import { forwardRef, useEffect, useState } from "react";
 
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -13,17 +12,24 @@ const YES_NO: PdaOption[] = [
   { value: "nao", label: "NÃO", color: "#dc2626" },
 ];
 
-function Trigger({ children }: { children: React.ReactNode }) {
-  return (
+/**
+ * Precisa encaminhar ref e props: é usado com <PopoverTrigger asChild>, que
+ * injeta os handlers de abertura do popover diretamente neste botão.
+ */
+const Trigger = forwardRef<HTMLButtonElement, React.ButtonHTMLAttributes<HTMLButtonElement>>(
+  ({ children, ...props }, ref) => (
     <button
+      {...props}
+      ref={ref}
       type="button"
       className="group flex w-full items-center gap-1.5 rounded-md px-1.5 py-1 -mx-1.5 text-left hover:bg-muted/60 transition-colors"
     >
       <span className="flex-1 min-w-0">{children}</span>
       <Pencil className="h-3 w-3 opacity-0 group-hover:opacity-60 shrink-0" />
     </button>
-  );
-}
+  ),
+);
+Trigger.displayName = "PdaCellTrigger";
 
 /** Célula de seleção única. */
 export function OptionCell({
@@ -89,7 +95,14 @@ export function MultiOptionCell({
               onClick={() => toggle(o.value)}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
             >
-              <Checkbox checked={list.includes(o.value)} className="pointer-events-none" tabIndex={-1} />
+              <span
+                aria-hidden
+                className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
+                  list.includes(o.value) ? "bg-primary border-primary text-primary-foreground" : "border-input"
+                }`}
+              >
+                {list.includes(o.value) && <Check className="h-3 w-3" />}
+              </span>
               <span className="h-2 w-2 rounded-full shrink-0" style={{ backgroundColor: o.color }} />
               <span className="flex-1 text-left">{o.label}</span>
             </button>

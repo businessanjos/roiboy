@@ -1,13 +1,12 @@
 import { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { ChevronDown, ChevronRight, Columns3, Eye, SlidersHorizontal } from "lucide-react";
+import { Check, ChevronDown, ChevronRight, Columns3, Eye, SlidersHorizontal } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { PdaBadge, YesNoBadge } from "@/components/rh/PdaBadge";
@@ -119,14 +118,15 @@ const COLUMNS: ColumnDef[] = [
     key: "pda_mental_model", label: "Modelo mental",
     render: (c, ctx) => {
       const gender = (c as any).gender as string | null | undefined;
+      const personName = c.full_name;
       const options = ctx.opt("pda_mental_model").map(o => ({
         ...o,
-        label: mentalModelLabel(o.value, gender) || o.label,
+        label: mentalModelLabel(o.value, gender, personName) || o.label,
       }));
       const value = normalizeMentalModel(c.pda_mental_model);
       return ctx.canEdit
         ? <OptionCell value={value} options={options} onSave={(v) => ctx.save(c, { pda_mental_model: v })} />
-        : <PdaBadge value={value} options={options} label={mentalModelLabel(value, gender) || undefined} />;
+        : <PdaBadge value={value} options={options} label={mentalModelLabel(value, gender, personName) || undefined} />;
     },
   },
   optionCol("pda_thermometer", "Termômetro", "pda_thermometer", THERMOMETER_DEFAULT),
@@ -350,7 +350,14 @@ export default function CollaboratorsPDATable({
                   onClick={() => toggleColumn(col.key)}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted"
                 >
-                  <Checkbox checked={visible.includes(col.key)} className="pointer-events-none" tabIndex={-1} />
+                  <span
+                    aria-hidden
+                    className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border ${
+                      visible.includes(col.key) ? "bg-primary border-primary text-primary-foreground" : "border-input"
+                    }`}
+                  >
+                    {visible.includes(col.key) && <Check className="h-3 w-3" />}
+                  </span>
                   {col.label}
                 </button>
               ))}

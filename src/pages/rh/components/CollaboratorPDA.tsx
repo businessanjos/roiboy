@@ -311,7 +311,7 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
             <OptionSelect
               value={normalizeMentalModel(form.pda_mental_model)}
               onChange={(v) => setField("pda_mental_model", v)}
-              options={optionsFor("pda_mental_model").map((o) => ({ ...o, label: mentalModelLabel(o.value, form.gender) || o.label }))}
+              options={optionsFor("pda_mental_model").map((o) => ({ ...o, label: mentalModelLabel(o.value, form.gender, form.full_name) || o.label }))}
             />
           </div>
         </CardContent>
