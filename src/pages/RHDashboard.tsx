@@ -377,7 +377,7 @@ export default function RHDashboard() {
                         </ResponsiveContainer>
                         <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
                           <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.headcount}</span>
-                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">ativos</span>
+                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">CLT ativos</span>
                         </div>
                       </div>
                       <div className="max-h-52 overflow-auto pr-1">
