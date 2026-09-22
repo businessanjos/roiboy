@@ -192,7 +192,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
             {field.options.map((option) => (
               <button
                 key={option.value}
-                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, currentValue === option.value)}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, selectedOptionValue === option.value)}`}
                 onClick={() => saveValue(option.value)}
                 disabled={saving}
               >
