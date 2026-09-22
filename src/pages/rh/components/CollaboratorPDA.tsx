@@ -289,6 +289,12 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
             <Label>Perfil secundário</Label>
             <OptionSelect value={form.pda_secondary_profile} onChange={(v) => setField("pda_secondary_profile", v)} options={optionsFor("pda_profile")} />
           </div>
+          {(form.pda_dominant_profile || form.pda_secondary_profile) && (
+            <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <HowToDealCard profileKey={form.pda_dominant_profile} title="Perfil dominante" />
+              <HowToDealCard profileKey={form.pda_secondary_profile} title="Perfil secundário" />
+            </div>
+          )}
           <div>
             <Label>Sinergia <span className="text-[10px] text-muted-foreground">(automático)</span></Label>
             <div className="h-10 flex items-center gap-2">
@@ -368,6 +374,32 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </CardContent>
         </Card>
       )}
+
+      {/* Complementos */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base flex items-center gap-2"><Instagram className="h-4 w-4" /> Complementos</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div>
+            <Label>Instagram</Label>
+            <Input
+              value={form.pda_instagram || ""}
+              onChange={(e) => setField("pda_instagram", e.target.value)}
+              placeholder="https://instagram.com/usuario"
+            />
+          </div>
+          <div>
+            <Label>Observações</Label>
+            <Textarea
+              rows={4}
+              value={form.pda_notes || ""}
+              onChange={(e) => setField("pda_notes", e.target.value)}
+              placeholder="Observações do PDA…"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       <PdaOptionsDialog open={optionsOpen} onOpenChange={setOptionsOpen} />
     </div>
