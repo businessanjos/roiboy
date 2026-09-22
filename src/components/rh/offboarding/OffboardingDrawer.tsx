@@ -319,7 +319,7 @@ export default function OffboardingDrawer({
                 <Input type="date" value={form.notice_communicated_at || ""} onChange={(e) => setForm({ ...form, notice_communicated_at: e.target.value })} />
               </div>
               <div>
-                <Label>Último dia trabalhado</Label>
+                <Label>{isPJ ? "Último dia de prestação" : "Último dia trabalhado"}</Label>
                 <Input type="date" value={form.last_day_worked || ""} onChange={(e) => { setForm({ ...form, last_day_worked: e.target.value }); setCalcInput({ ...calcInput, lastDayWorked: e.target.value }); }} />
               </div>
               <div>
