@@ -36,7 +36,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
-import CollaboratorsPDATable from "./components/CollaboratorsPDATable";
+import CollaboratorsPDAWorkspace from "./components/CollaboratorsPDAWorkspace";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
@@ -566,7 +566,7 @@ export default function HRCollaborators() {
       ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : view === "pda" ? (
-        <CollaboratorsPDATable
+        <CollaboratorsPDAWorkspace
           collaborators={pdaRows}
           canSeeSalary={RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())}
           onChanged={() => { refetch(); refetchProviders(); }}

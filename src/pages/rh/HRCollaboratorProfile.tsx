@@ -33,6 +33,7 @@ import CollaboratorBenefits from "./components/CollaboratorBenefits";
 import CollaboratorPayroll from "./components/CollaboratorPayroll";
 import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
 import CollaboratorPDA from "./components/CollaboratorPDA";
+import CollaboratorPdaTimeline from "./components/CollaboratorPdaTimeline";
 import { POSITION_OPTIONS } from "@/lib/rh/pda";
 import { Wallet, History, Sparkles } from "lucide-react";
 
@@ -496,13 +497,20 @@ export default function HRCollaboratorProfile() {
         </TabsContent>
 
         {/* TAB: PDA */}
-        <TabsContent value="pda" className="mt-4">
+        <TabsContent value="pda" className="mt-4 space-y-4">
           <CollaboratorPDA
             form={form}
             setField={setField}
             collaboratorId={id}
             accountId={currentUser?.account_id}
           />
+          {id && (
+            <CollaboratorPdaTimeline
+              personId={id}
+              hireDate={form?.hire_date}
+              terminationDate={form?.termination_date}
+            />
+          )}
         </TabsContent>
 
         {/* TAB: Auditoria */}

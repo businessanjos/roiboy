@@ -145,11 +145,13 @@ export default function CollaboratorsPDATable({
   canSeeSalary = true,
   canEdit = true,
   onChanged,
+  hideFilters = false,
 }: {
   collaborators: HRCollaborator[];
   canSeeSalary?: boolean;
   canEdit?: boolean;
   onChanged?: () => void;
+  hideFilters?: boolean;
 }) {
   const navigate = useNavigate();
   const { optionsFor } = useHRPdaOptions();
@@ -296,34 +298,38 @@ export default function CollaboratorsPDATable({
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Select value={sectorFilter} onValueChange={setSectorFilter}>
-          <SelectTrigger className="w-[190px]"><SelectValue placeholder="Setor" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os setores</SelectItem>
-            {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={levelFilter} onValueChange={setLevelFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Nível" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos os níveis</SelectItem>
-            {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={phaseFilter} onValueChange={setPhaseFilter}>
-          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Fase" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todas as fases</SelectItem>
-            {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={thermoFilter} onValueChange={setThermoFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Termômetro" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-          </SelectContent>
-        </Select>
+        {!hideFilters && (
+          <>
+            <Select value={sectorFilter} onValueChange={setSectorFilter}>
+              <SelectTrigger className="w-[190px]"><SelectValue placeholder="Setor" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os setores</SelectItem>
+                {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={levelFilter} onValueChange={setLevelFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Nível" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os níveis</SelectItem>
+                {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={phaseFilter} onValueChange={setPhaseFilter}>
+              <SelectTrigger className="w-[150px]"><SelectValue placeholder="Fase" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as fases</SelectItem>
+                {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+            <Select value={thermoFilter} onValueChange={setThermoFilter}>
+              <SelectTrigger className="w-[160px]"><SelectValue placeholder="Termômetro" /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </>
+        )}
         <div className="ml-auto flex items-center gap-2">
           {canEdit && (
             <Button variant="outline" onClick={() => setOptionsOpen(true)}>
