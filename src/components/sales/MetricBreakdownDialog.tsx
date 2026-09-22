@@ -40,7 +40,7 @@ const fmtDate = (d: string | null) =>
 async function fetchClientNames(ids: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();
   if (!ids.length) return map;
-  const { data } = await supabase.from("clients").select("id, name").in("id", ids);
+  const { data } = await supabase.from("clients").select("id, name:full_name").in("id", ids);
   (data || []).forEach((c: any) => map.set(c.id, c.name));
   return map;
 }

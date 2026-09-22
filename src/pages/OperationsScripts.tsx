@@ -306,10 +306,10 @@ function useMyClients() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("clients")
-        .select("id, name, logo_url")
+        .select("id, name:full_name, logo_url")
         .eq("account_id", currentUser!.account_id)
         .or(`responsible_user_id.eq.${currentUser!.id},sales_user_id.eq.${currentUser!.id}`)
-        .order("name");
+        .order("full_name");
       if (error) throw error;
       return data || [];
     },
