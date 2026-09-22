@@ -2,6 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X, Minus, User, Instagram, MapPin, ExternalLink } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
 import { formatLocalDate } from "@/lib/dateUtils";
+import { resolveItemVendaOptionValue } from "@/lib/sales/itemVendaResolver";
+import { useProductsLite } from "@/hooks/useProductsLite";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface TeamUser {
   id: string;
