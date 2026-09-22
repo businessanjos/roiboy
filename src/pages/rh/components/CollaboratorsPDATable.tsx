@@ -28,6 +28,7 @@ interface ColumnDef {
 const initials = (n: string) => n.split(" ").map(p => p[0]).join("").slice(0, 2).toUpperCase();
 
 const COLUMNS: ColumnDef[] = [
+  { key: "bond", label: "Vínculo", render: c => <span className="whitespace-nowrap">{c.employment_type === "pj" ? "PJ" : c.employment_type === "intern" ? "Estágio" : c.employment_type === "socio" ? "Sócio" : c.employment_type ? c.employment_type.toUpperCase() : "—"}</span> },
   { key: "registration_company", label: "Empresa de registro", render: c => <PdaBadge value={c.registration_company} options={REGISTRATION_COMPANY_OPTIONS} /> },
   { key: "department", label: "Departamento", render: c => c.department || "—" },
   { key: "position", label: "Cargo", render: c => c.position || "—" },
@@ -227,7 +228,7 @@ export default function CollaboratorsPDATable({
                     </td>
                   ))}
                   <td className="p-3 text-right">
-                    <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/collaborators/${c.id}`)} title="Abrir ficha">
+                    <Button variant="ghost" size="icon" onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)} title="Abrir ficha">
                       <Eye className="h-4 w-4" />
                     </Button>
                   </td>
