@@ -471,6 +471,7 @@ var RH_ALLOWED_EMAILS = /* @__PURE__ */ new Set([
   "jaqueline@consultoria-luma.com",
   "brualmeida.est@hotmail.com",
   "arthur.mudri@hotmail.com",
+  "jessicamarcato@anjosbusiness.com",
   "anjosgroup.dados@anjosbusiness.com"
 ]);
 async function requireRhAccess(ctx) {
