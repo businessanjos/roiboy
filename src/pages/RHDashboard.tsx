@@ -305,6 +305,8 @@ export default function RHDashboard() {
       inactive: inactive.length,
       clt: clt.length,
       pj: pj.length,
+      pjDirectors: pjDirectors.length,
+      pjOthers: pjOthers.length,
       deptChart,
       birthdays,
       hiresMonth, hiresYear, termsMonth, termsYear,
