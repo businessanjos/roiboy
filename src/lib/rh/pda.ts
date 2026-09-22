@@ -160,6 +160,9 @@ export const POSITION_OPTIONS: string[] = [
   "Analista de Sistemas",
   "CX - Customer Experience",
   "BPO",
+  "Contador",
+  "Copywriter",
+  "Redator Publicitário",
 ];
 
 export function optionColor(options: PdaOption[], value?: string | null): string {
