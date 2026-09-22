@@ -124,8 +124,16 @@ export default function RHOffboarding() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar colaborador..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Buscar por nome, cargo, setor ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <Select value={bondFilter} onValueChange={(v) => setBondFilter(v as any)}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os vínculos</SelectItem>
+            <SelectItem value="clt">CLT / Estágio</SelectItem>
+            <SelectItem value="pj">PJ</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={stageFilter} onValueChange={setStageFilter}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Etapa" /></SelectTrigger>
           <SelectContent>
