@@ -256,7 +256,7 @@ export default function OffboardingDrawer({
             <TabsTrigger value="checklist" className="text-xs">
               Checklist {checklistProgress > 0 && <span className="ml-1 text-[9px]">{checklistProgress}%</span>}
             </TabsTrigger>
-            <TabsTrigger value="rescisao" className="text-xs">Rescisão</TabsTrigger>
+            {!isPJ && <TabsTrigger value="rescisao" className="text-xs">Rescisão</TabsTrigger>}
             <TabsTrigger value="documentos" className="text-xs">
               Docs {documents.length > 0 && <span className="ml-1 text-[9px]">{documents.length}</span>}
             </TabsTrigger>
