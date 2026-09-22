@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { classifyMeetingTask, meetingDedupeKey } from "@/lib/sales/meetingMetrics";
@@ -13,6 +13,8 @@ import {
   subDays,
   subMonths,
   subQuarters,
+  startOfDay,
+  endOfDay,
   format,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -110,6 +112,10 @@ import {
 } from "@/components/ryka/snapshot";
 import { KpiPicker, type KpiOption } from "@/components/sales/KpiPicker";
 import { Settings2 } from "lucide-react";
+import { Calendar } from "@/components/ui/calendar";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import type { DateRange } from "react-day-picker";
+import { useActiveSalesClosers } from "@/lib/sales/salesClosers";
 
 type PeriodKey =
   | "this_month"
