@@ -519,36 +519,6 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                       </div>
                                     </div>
                                   </div>
-
-                                  {isOpenList && (
-                                    <div className="border-t border-border/50 bg-muted/20 px-3 py-2">
-                                      {!rows ? (
-                                        <p className="py-2 text-xs text-muted-foreground">Carregando registros...</p>
-                                      ) : rows.length === 0 ? (
-                                        <p className="py-2 text-xs text-muted-foreground">Nenhum registro encontrado.</p>
-                                      ) : (
-                                        <>
-                                          <p className="mb-1.5 text-[11px] text-muted-foreground">
-                                            Mostrando {rows.length} de {count} registro(s)
-                                          </p>
-                                          <ScrollArea className="max-h-48 rounded-lg border border-border/50 bg-card">
-                                            <ul className="divide-y divide-border/40">
-                                              {rows.map((r) => (
-                                                <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
-                                                  <span className="truncate">{r.title}</span>
-                                                  <span className="shrink-0 text-[10px] text-muted-foreground">
-                                                    {[r.status, r.date ? new Date(r.date).toLocaleDateString("pt-BR") : null]
-                                                      .filter(Boolean)
-                                                      .join(" · ")}
-                                                  </span>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </ScrollArea>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
