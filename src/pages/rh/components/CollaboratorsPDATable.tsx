@@ -145,11 +145,13 @@ export default function CollaboratorsPDATable({
   canSeeSalary = true,
   canEdit = true,
   onChanged,
+  hideFilters = false,
 }: {
   collaborators: HRCollaborator[];
   canSeeSalary?: boolean;
   canEdit?: boolean;
   onChanged?: () => void;
+  hideFilters?: boolean;
 }) {
   const navigate = useNavigate();
   const { optionsFor } = useHRPdaOptions();
