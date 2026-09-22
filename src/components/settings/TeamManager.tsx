@@ -1047,7 +1047,13 @@ export function TeamManager() {
                   {filteredUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                      className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group ${
+                        !isUserActive(user)
+                          ? (pendingByUser[user.id] || 0) > 0
+                            ? "bg-warning/5 border-l-4 border-l-warning"
+                            : "opacity-70"
+                          : ""
+                      }`}
                       onClick={() => openEditMemberDialog(user)}
                     >
                       <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
