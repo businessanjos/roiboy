@@ -109,6 +109,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
     const load = async () => {
       setLoading(true);
       setNewOwner("");
+      setOwnerSearch("");
       setSelected(Object.fromEntries(OPEN_ITEM_KEYS.map((k) => [k, true])) as Record<OpenItemKey, boolean>);
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
