@@ -342,6 +342,17 @@ export default function RHDepartments() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="flex items-center justify-between rounded-lg border p-3">
+              <div>
+                <Label className="cursor-pointer">Aparecer no organograma</Label>
+                <p className="text-xs text-muted-foreground">Desative para ocultar este departamento e suas pessoas do organograma.</p>
+              </div>
+              <Switch
+                checked={form.show_in_org_chart}
+                onCheckedChange={v => setForm(f => ({ ...f, show_in_org_chart: v }))}
+              />
+            </div>
           </div>
 
           <DialogFooter>
