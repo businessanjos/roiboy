@@ -25,7 +25,11 @@ interface Person {
 }
 
 const norm = (v: string | null | undefined) =>
-  (v ?? "").trim().toLocaleLowerCase("pt-BR");
+  (v ?? "")
+    .trim()
+    .toLocaleLowerCase("pt-BR")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
 
 interface ColumnConfig {
   key: string;
