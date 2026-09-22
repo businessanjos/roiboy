@@ -1892,6 +1892,15 @@ export function TeamManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeactivateUserDialog
+        open={!!deactivateTarget}
+        onOpenChange={(v) => { if (!v) setDeactivateTarget(null); }}
+        user={deactivateTarget}
+        candidates={transferCandidates.filter((c) => c.id !== deactivateTarget?.id)}
+        mode={deactivateMode}
+        onDone={() => { setDeactivateTarget(null); fetchData(); }}
+      />
     </div>
   );
 }
