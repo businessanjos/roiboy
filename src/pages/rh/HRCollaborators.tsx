@@ -132,6 +132,42 @@ export default function HRCollaborators() {
     });
   }, [collaborators, search, statusFilter, deptFilter, typeFilter]);
 
+  const filteredProviders = useMemo(() => {
+    const q = search.toLowerCase();
+    return providers.filter(p => {
+      if (q) {
+        const hay = [p.full_name, p.email, p.company_name, p.cnpj, p.cpf, p.position, p.department, p.service_type]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (deptFilter !== "all" && p.department !== deptFilter) return false;
+      return true;
+    });
+  }, [providers, search, statusFilter, deptFilter]);
+
+  const providersAsCollaborators = useMemo(
+    () => filteredProviders.map(p => ({
+      id: p.id,
+      full_name: p.full_name,
+      email: p.email,
+      avatar_url: p.avatar_url,
+      department: p.department,
+      position: p.position || p.service_type,
+      hire_date: p.hire_date,
+      termination_date: p.termination_date,
+      employment_type: "pj",
+      status: p.status,
+      __route: `/rh/service-providers/${p.id}`,
+    })) as unknown as HRCollaborator[],
+    [filteredProviders],
+  );
+
+  const pdaRows = useMemo(
+    () => [...filtered, ...providersAsCollaborators].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+    [filtered, providersAsCollaborators],
+  );
+
   const fetchTeamMembers = useCallback(async () => {
     if (!currentUser?.account_id) return;
     setTeamLoading(true);
