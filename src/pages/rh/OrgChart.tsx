@@ -31,49 +31,34 @@ const norm = (v: string | null | undefined) =>
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "");
 
-interface ColumnConfig {
-  key: string;
-  label: string;
-  headerColor: string;
-  badgeColor: string;
-  gestorNames: string[]; // lower-cased partial match
-  deptMatches: string[]; // lower-cased dept names
+interface Dept {
+  id: string;
+  name: string;
+  color: string;
+  show: boolean;
+  parentId: string | null;
+  active: boolean;
 }
 
-const COLUMNS: ColumnConfig[] = [
-  {
-    key: "marketing",
-    label: "Marketing",
-    headerColor: "from-pink-500 to-pink-600",
-    badgeColor: "bg-pink-500/15 text-pink-700 border-pink-300 dark:text-pink-300 dark:border-pink-700",
-    gestorNames: [], // sem gestor — reporta direto à COO
-    deptMatches: ["marketing"],
-  },
-  {
-    key: "comercial",
-    label: "Comercial",
-    headerColor: "from-info to-info",
-    badgeColor: "bg-info/15 text-info-strong border-info dark:text-info dark:border-info",
-    gestorNames: ["jonathan marcato"],
-    deptMatches: ["comercial", "vendas"],
-  },
-  {
-    key: "operacao",
-    label: "Operações",
-    headerColor: "from-warning to-warning",
-    badgeColor: "bg-warning/15 text-warning-strong border-warning dark:text-warning dark:border-warning",
-    gestorNames: ["jessica marcato"],
-    deptMatches: ["customer success", "cs", "operação", "operações", "operacao", "operacoes", "eventos", "suporte/atendimento", "suporte", "atendimento"],
-  },
-  {
-    key: "administrativo",
-    label: "Administrativo",
-    headerColor: "from-muted-foreground to-muted-foreground",
-    badgeColor: "bg-muted-foreground/15 text-foreground border-border dark:text-muted-foreground dark:border-border",
-    gestorNames: ["arthur mudri"],
-    deptMatches: ["administrativo", "financeiro", "recursos humanos", "rh", "jurídico", "juridico"],
-  },
-];
+/** Nomes usados no cadastro das pessoas que correspondem a um departamento registrado. */
+const DEPT_ALIASES: Record<string, string> = {
+  "customer success": "cs",
+  "recursos humanos": "rh",
+  "suporte/atendimento": "operacoes",
+  "suporte": "operacoes",
+  "atendimento": "operacoes",
+};
+
+/** Ordem de importância do cargo para eleger o gestor da coluna. */
+const positionRank = (pos?: string | null) => {
+  const s = norm(pos);
+  if (!s) return 99;
+  if (s.includes("diretor") || s.includes("head")) return 0;
+  if (s.includes("gestor") || s.includes("gerente")) return 1;
+  if (s.includes("coordenador") || s.includes("lider") || s.includes("supervisor")) return 2;
+  return 99;
+};
+
 
 const tint = (color: string, alpha = 0.15) =>
   color.startsWith("hsl(") ? color.replace(")", ` / ${alpha})`) : `color-mix(in srgb, ${color} ${alpha * 100}%, transparent)`;
