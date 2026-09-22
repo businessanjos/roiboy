@@ -484,7 +484,10 @@ export default function OrgChart() {
 
                       {/* Header */}
                       <div
-                        className={`w-full rounded-lg px-3 py-2 mb-3 bg-gradient-to-r ${col.headerColor} shadow-sm`}
+                        className={`w-full rounded-lg px-3 py-2 mb-3 shadow-sm ${
+                          col.deptColor ? "" : `bg-gradient-to-r ${col.headerColor}`
+                        }`}
+                        style={col.deptColor ? { backgroundColor: col.deptColor } : undefined}
                       >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-1.5">
@@ -505,7 +508,7 @@ export default function OrgChart() {
                       {/* Head (Gestor ou COO no caso de Marketing) */}
                       {columnHead ? (
                         <div className="flex flex-col items-center">
-                          {renderPersonCard(columnHead, { size: "md", badgeColor: col.badgeColor, label: headLabel })}
+                          {renderPersonCard(columnHead, { size: "md", badgeColor: col.badgeColor, deptColor: col.deptColor, label: headLabel })}
                           {col.members.length > 0 && <div className="w-px h-6 bg-border" />}
                         </div>
                       ) : (
@@ -533,7 +536,7 @@ export default function OrgChart() {
                           </p>
                         ) : (
                           col.members.map((m) =>
-                            renderPersonCard(m, { size: "sm", badgeColor: col.badgeColor })
+                            renderPersonCard(m, { size: "sm", badgeColor: col.badgeColor, deptColor: col.deptColor })
                           )
                         )}
                       </div>
