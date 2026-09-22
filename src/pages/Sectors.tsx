@@ -261,7 +261,7 @@ export default function Sectors() {
     }
 
     return filtered;
-  }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin, isAdmin]);
+  }, [hasSectorAccess, sectorAccessLoading, sectorAccess, currentUser, isSuperAdmin, isAdmin, canHR]);
 
   const coreAreas: SectorId[] = ["marketing", "vendas", "operacoes", "financeiro", "eventos", "royzapp", "gestao-tech", "rh"];
   const coreSectors = coreAreas.map(id => availableSectors.find(s => s.id === id)!).filter(Boolean);
