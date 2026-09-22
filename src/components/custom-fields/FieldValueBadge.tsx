@@ -71,8 +71,22 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
 
   // Select field
   if (field.field_type === "select") {
-    const option = field.options.find(opt => opt.value === value);
+    const option = directOption ?? mappedOption;
     if (!option) {
+      if (needsProductLookup) {
+        const product = productsLite?.find((p) => p.id === rawSelect);
+        if (product) {
+          const color = product.color || "#6b7280";
+          return (
+            <span
+              className={`inline-flex items-center ${padding} rounded border font-medium ${textSize} break-words whitespace-normal`}
+              style={{ backgroundColor: `${color}25`, color, borderColor: `${color}66` }}
+            >
+              {product.name}
+            </span>
+          );
+        }
+      }
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
