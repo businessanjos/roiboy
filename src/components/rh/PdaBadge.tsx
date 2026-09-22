@@ -13,6 +13,7 @@ interface Props {
 export function PdaBadge({ value, options, color, label, className }: Props) {
   if (!value && !label) return <span className="text-muted-foreground">—</span>;
   const c = color || (options ? optionColor(options, value) : PDA_COLORS.cinza);
+  const optionLabel = options?.find((o) => o.value === value)?.label;
   return (
     <Badge
       variant="outline"
