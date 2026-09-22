@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users, UserPlus, UserMinus, Briefcase, Palmtree, DollarSign,
-  Cake, Building, Handshake, TrendingUp, TrendingDown, Sparkles,
+  Cake, Building, Handshake, TrendingUp, TrendingDown, Sparkles, ShieldCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -135,7 +135,7 @@ function useRHDashboardData(accountId: string | undefined) {
           .select("id, full_name, status, employment_type, hire_date, termination_date, department, total_cost, base_salary, birth_date, avatar_url")
           .eq("account_id", accountId!),
         supabase.from("hr_service_providers")
-          .select("id, full_name, status")
+          .select("id, full_name, status, provider_kind")
           .eq("account_id", accountId!),
         supabase.from("hr_jobs")
           .select("id, title, status, created_at, openings_count, department")
@@ -185,6 +185,8 @@ export default function RHDashboard() {
     const inactive = collabs.filter((c: any) => c.status !== "active");
     const clt = active.filter((c: any) => (c.employment_type || "").toLowerCase() === "clt");
     const pj = providers.filter((p: any) => p.status !== "terminated");
+    const pjDirectors = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() === "director");
+    const pjOthers = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() !== "director");
 
     // Composição por departamento
     const byDept: Record<string, number> = {};
@@ -303,6 +305,8 @@ export default function RHDashboard() {
       inactive: inactive.length,
       clt: clt.length,
       pj: pj.length,
+      pjDirectors: pjDirectors.length,
+      pjOthers: pjOthers.length,
       deptChart,
       birthdays,
       hiresMonth, hiresYear, termsMonth, termsYear,
@@ -342,10 +346,11 @@ export default function RHDashboard() {
           {/* Headcount & composição */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Headcount & Composição</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + prestadores PJ" tone="primary" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + PJ" tone="primary" />
               <Kpi icon={Building} label="CLT ativos" value={metrics.clt} />
-              <Kpi icon={Handshake} label="Prestadores PJ" value={metrics.pj} />
+              <Kpi icon={ShieldCheck} label="PJ cargo de confiança" value={metrics.pjDirectors} hint="Diretoria / liderança PJ" />
+              <Kpi icon={Handshake} label="Prestadores de serviço" value={metrics.pjOthers} hint="PJ sob demanda" />
               <Kpi icon={UserMinus} label="Inativos" value={metrics.inactive} tone="default" />
             </div>
 
