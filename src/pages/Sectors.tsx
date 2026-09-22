@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -167,6 +168,7 @@ function SectorPattern({ sectorId }: { sectorId: string }) {
 export default function Sectors() {
   const navigate = useNavigate();
   const { currentUser, loading: userLoading, refetchUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { setCurrentSector } = useSector();
   const {
     hasSectorAccess,
@@ -239,7 +241,7 @@ export default function Sectors() {
     const bypassAccess = isSuperAdmin || isAdmin;
     let filtered = bypassAccess ? sectors.slice() : sectors.filter((s) => hasSectorAccess(s.id));
     // RH is only visible to the allowed email
-    if (!RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())) {
+    if (!canHR) {
       filtered = filtered.filter(s => s.id !== "rh");
     }
 

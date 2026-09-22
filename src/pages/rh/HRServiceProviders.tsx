@@ -1,3 +1,4 @@
+import { useCanAccessHR } from "@/lib/access/hrAccess";
 import { useState, useMemo } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -41,6 +42,7 @@ function getInitials(name: string) {
 export default function HRServiceProviders() {
   const navigate = useNavigate();
   const { currentUser } = useCurrentUser();
+  const canHR = useCanAccessHR();
   const { providers, loading, createProvider } = useHRServiceProviders();
 
   const [search, setSearch] = useState("");
