@@ -96,6 +96,9 @@ export default function HRCollaboratorProfile() {
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
   const [cpfLooking, setCpfLooking] = useState(false);
   const [salaryDisplay, setSalaryDisplay] = useState("");
+  const positionOptions = Array.from(
+    new Set([...POSITION_OPTIONS, ...(form.position ? [form.position] : [])]),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const initialLoad = useRef(true);
