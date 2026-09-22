@@ -1102,7 +1102,13 @@ export default function SalesDashboard() {
                 activeKpi
                   ? [
                       { label: "Categoria", value: KPI_CATEGORY[activeKpi.id] || "Outros" },
-                      { label: "Período", value: PERIOD_LABELS[period] },
+                      {
+                        label: "Período",
+                        value:
+                          period === "custom"
+                            ? `${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(end, "dd/MM/yyyy", { locale: ptBR })}`
+                            : PERIOD_LABELS[period],
+                      },
                     ]
                   : undefined
               }
