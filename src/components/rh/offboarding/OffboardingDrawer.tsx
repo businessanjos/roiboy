@@ -84,7 +84,13 @@ export default function OffboardingDrawer({
     setPublicToken(offboarding.exit_interview_token || null);
   }, [offboarding.id]);
 
-  const collab = offboarding.collaborator;
+  const collab = offboarding.collaborator || (offboarding.service_provider
+    ? {
+        ...offboarding.service_provider,
+        base_salary: offboarding.service_provider.fee_amount,
+        salary: offboarding.service_provider.fee_amount,
+      } as any
+    : null);
   const deadlines = useMemo(() => computeLegalDeadlines(form.termination_date || offboarding.termination_date), [form.termination_date, offboarding.termination_date]);
 
   // Rescissão calc inputs
