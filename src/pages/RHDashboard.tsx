@@ -412,7 +412,7 @@ export default function RHDashboard() {
               <Kpi icon={TrendingUp} label="Tempo médio de casa" value={`${metrics.avgTenure.toFixed(1)} anos`} />
             </div>
 
-            <Card>
+            <Card className="border-hairline shadow-none">
               <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Admissões vs Desligamentos (12 meses)</CardTitle></CardHeader>
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
