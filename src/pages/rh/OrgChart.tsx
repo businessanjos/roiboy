@@ -473,7 +473,7 @@ export default function OrgChart() {
               {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
               <div className="grid gap-4 w-full relative" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
                 {allColumns.map((col) => {
-                  const isMarketing = col.key === "marketing";
+                  const isMarketing = norm(col.label) === "marketing";
                   const columnHead = col.gestor;
                   const headLabel = "Gestor";
                   return (
