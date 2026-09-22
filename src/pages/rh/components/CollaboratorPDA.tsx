@@ -311,7 +311,7 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <FieldLabel hint="Essa pessoa está mais próxima de:">Termômetro</FieldLabel>
-            <OptionSelect value={form.pda_thermometer} onChange={(v) => setField("pda_thermometer", v)} options={optionsFor("pda_thermometer")} />
+            <OptionSelect value={form.pda_thermometer || THERMOMETER_DEFAULT} onChange={(v) => setField("pda_thermometer", v)} options={optionsFor("pda_thermometer")} />
           </div>
         </CardContent>
       </Card>
