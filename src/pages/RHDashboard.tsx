@@ -462,7 +462,7 @@ export default function RHDashboard() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Folha, Custos & Férias</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Kpi icon={DollarSign} label="Custo total (folha)" value={fmtBRL(metrics.totalCost)} hint="Soma de total_cost ativos" tone="primary" />
+              <Kpi icon={DollarSign} label="Custo total (folha)" value={fmtBRL(metrics.totalCost)} hint="Colaboradores ativos" tone="primary" />
               <Kpi icon={DollarSign} label="Salário base médio" value={fmtBRL(metrics.avgSalary)} />
               <Kpi icon={Palmtree} label="Em férias agora" value={metrics.onVacationNow} hint={`${metrics.upcomingVacations} nos próx. 30 dias`} tone="success" />
               <Kpi icon={Palmtree} label="Solicitações pendentes" value={metrics.pendingVacations} tone="warning" />
