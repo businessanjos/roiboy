@@ -136,6 +136,8 @@ export default function OrgChart() {
         id: `provider:${d.id}`,
         full_name: formatPersonName(d.full_name),
         department: d.department,
+        hr_department_id: d.hr_department_id ?? null,
+
         position: d.position,
         avatar_url: d.avatar_url,
         hire_date: d.hire_date,
