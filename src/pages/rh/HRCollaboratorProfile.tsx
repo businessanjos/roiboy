@@ -32,7 +32,9 @@ import CollaboratorTimeRecords from "./components/CollaboratorTimeRecords";
 import CollaboratorBenefits from "./components/CollaboratorBenefits";
 import CollaboratorPayroll from "./components/CollaboratorPayroll";
 import CollaboratorAuditLog from "./components/CollaboratorAuditLog";
-import { Wallet, History } from "lucide-react";
+import CollaboratorPDA from "./components/CollaboratorPDA";
+import { POSITION_OPTIONS } from "@/lib/rh/pda";
+import { Wallet, History, Sparkles } from "lucide-react";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
 
@@ -94,6 +96,9 @@ export default function HRCollaboratorProfile() {
   const [form, setForm] = useState<Partial<HRCollaborator>>({});
   const [cpfLooking, setCpfLooking] = useState(false);
   const [salaryDisplay, setSalaryDisplay] = useState("");
+  const positionOptions = Array.from(
+    new Set([...POSITION_OPTIONS, ...(form.position ? [form.position] : [])]),
+  ).sort((a, b) => a.localeCompare(b, "pt-BR"));
   const autosaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const formRef = useRef(form);
   const initialLoad = useRef(true);
@@ -287,6 +292,9 @@ export default function HRCollaboratorProfile() {
           <TabsTrigger value="payroll" className="gap-1.5 text-xs sm:text-sm">
             <Wallet className="h-4 w-4" /> Folha & Encargos
           </TabsTrigger>
+          <TabsTrigger value="pda" className="gap-1.5 text-xs sm:text-sm">
+            <Sparkles className="h-4 w-4" /> PDA
+          </TabsTrigger>
           <TabsTrigger value="audit" className="gap-1.5 text-xs sm:text-sm">
             <History className="h-4 w-4" /> Auditoria
           </TabsTrigger>
@@ -382,7 +390,15 @@ export default function HRCollaboratorProfile() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Cargo</Label><Input value={form.position || ""} onChange={e => setField("position", e.target.value)} /></div>
+              <div>
+                <Label>Cargo</Label>
+                <Select value={form.position || ""} onValueChange={v => setField("position", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+                  <SelectContent>
+                    {positionOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Data de admissão</Label><Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} /></div>
               <div><Label>Data de desligamento</Label><Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} /></div>
               <div>
@@ -477,6 +493,16 @@ export default function HRCollaboratorProfile() {
         {/* TAB: Folha & Encargos */}
         <TabsContent value="payroll" className="mt-4">
           <CollaboratorPayroll form={form} setField={setField} />
+        </TabsContent>
+
+        {/* TAB: PDA */}
+        <TabsContent value="pda" className="mt-4">
+          <CollaboratorPDA
+            form={form}
+            setField={setField}
+            collaboratorId={id}
+            accountId={currentUser?.account_id}
+          />
         </TabsContent>
 
         {/* TAB: Auditoria */}

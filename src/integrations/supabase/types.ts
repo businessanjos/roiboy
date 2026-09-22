@@ -12178,6 +12178,7 @@ export type Database = {
           inss_gilrat: number | null
           inss_third_parties: number | null
           life_insurance: number | null
+          manager_id: string | null
           marital_status: string | null
           meal_voucher: number | null
           monthly_total_cost: number | null
@@ -12186,11 +12187,30 @@ export type Database = {
           notes: string | null
           other_costs: number | null
           payroll_company: string | null
+          pda_change_quality: string | null
+          pda_dominant_profile: string | null
+          pda_education: string | null
+          pda_effort_level: string | null
+          pda_hierarchy: string | null
+          pda_level: string | null
+          pda_mental_model: string | null
+          pda_pdi_delivered: boolean | null
+          pda_pdi_done: boolean | null
+          pda_phase: string | null
+          pda_role_profile: string | null
+          pda_secondary_profile: string | null
+          pda_sectors: string[] | null
+          pda_synergy: boolean | null
+          pda_synergy_pct: number | null
+          pda_temperament: string | null
+          pda_thermometer: string | null
           phone: string | null
           position: string | null
           registration_company: string | null
           rg: string | null
           salary: number | null
+          salary_with_charges: number | null
+          salary_without_charges: number | null
           source_note: string | null
           state: string | null
           status: string | null
@@ -12241,6 +12261,7 @@ export type Database = {
           inss_gilrat?: number | null
           inss_third_parties?: number | null
           life_insurance?: number | null
+          manager_id?: string | null
           marital_status?: string | null
           meal_voucher?: number | null
           monthly_total_cost?: number | null
@@ -12249,11 +12270,30 @@ export type Database = {
           notes?: string | null
           other_costs?: number | null
           payroll_company?: string | null
+          pda_change_quality?: string | null
+          pda_dominant_profile?: string | null
+          pda_education?: string | null
+          pda_effort_level?: string | null
+          pda_hierarchy?: string | null
+          pda_level?: string | null
+          pda_mental_model?: string | null
+          pda_pdi_delivered?: boolean | null
+          pda_pdi_done?: boolean | null
+          pda_phase?: string | null
+          pda_role_profile?: string | null
+          pda_secondary_profile?: string | null
+          pda_sectors?: string[] | null
+          pda_synergy?: boolean | null
+          pda_synergy_pct?: number | null
+          pda_temperament?: string | null
+          pda_thermometer?: string | null
           phone?: string | null
           position?: string | null
           registration_company?: string | null
           rg?: string | null
           salary?: number | null
+          salary_with_charges?: number | null
+          salary_without_charges?: number | null
           source_note?: string | null
           state?: string | null
           status?: string | null
@@ -12304,6 +12344,7 @@ export type Database = {
           inss_gilrat?: number | null
           inss_third_parties?: number | null
           life_insurance?: number | null
+          manager_id?: string | null
           marital_status?: string | null
           meal_voucher?: number | null
           monthly_total_cost?: number | null
@@ -12312,11 +12353,30 @@ export type Database = {
           notes?: string | null
           other_costs?: number | null
           payroll_company?: string | null
+          pda_change_quality?: string | null
+          pda_dominant_profile?: string | null
+          pda_education?: string | null
+          pda_effort_level?: string | null
+          pda_hierarchy?: string | null
+          pda_level?: string | null
+          pda_mental_model?: string | null
+          pda_pdi_delivered?: boolean | null
+          pda_pdi_done?: boolean | null
+          pda_phase?: string | null
+          pda_role_profile?: string | null
+          pda_secondary_profile?: string | null
+          pda_sectors?: string[] | null
+          pda_synergy?: boolean | null
+          pda_synergy_pct?: number | null
+          pda_temperament?: string | null
+          pda_thermometer?: string | null
           phone?: string | null
           position?: string | null
           registration_company?: string | null
           rg?: string | null
           salary?: number | null
+          salary_with_charges?: number | null
+          salary_without_charges?: number | null
           source_note?: string | null
           state?: string | null
           status?: string | null
@@ -12348,6 +12408,13 @@ export type Database = {
             columns: ["hr_department_id"]
             isOneToOne: false
             referencedRelation: "hr_departments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "hr_collaborators_manager_id_fkey"
+            columns: ["manager_id"]
+            isOneToOne: false
+            referencedRelation: "hr_collaborators"
             referencedColumns: ["id"]
           },
           {
@@ -28690,6 +28757,10 @@ export type Database = {
       }
       normalize_invoice_status: { Args: { _status: string }; Returns: string }
       normalize_stage_name: { Args: { p_name: string }; Returns: string }
+      pda_synergy_pct: {
+        Args: { _dominant: string; _role_profile: string; _secondary: string }
+        Returns: number
+      }
       pretty_person_name: { Args: { _name: string }; Returns: string }
       private_get_tech_projects_key: { Args: never; Returns: string }
       process_recurring_entries: { Args: never; Returns: number }
