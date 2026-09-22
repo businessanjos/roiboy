@@ -13,6 +13,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CustomField } from "./CustomFieldsManager";
 import { FieldValueBadge } from "./FieldValueBadge";
+import { resolveItemVendaOptionValue } from "@/lib/sales/itemVendaResolver";
 
 interface DealFieldValueEditorProps {
   field: CustomField;
@@ -173,6 +174,12 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
 
   // Select field
   if (field.field_type === "select") {
+    // O valor pode estar gravado como UUID de produto; resolvemos para a opção
+    // equivalente para que a seleção atual apareça marcada.
+    const selectedOptionValue =
+      typeof currentValue === "string" && field.options?.some((o) => o.value === currentValue)
+        ? currentValue
+        : resolveItemVendaOptionValue(typeof currentValue === "string" ? currentValue : "", field.options);
     return (
       <Popover open={open} onOpenChange={setOpen} modal={true}>
         <PopoverTrigger asChild>
@@ -185,7 +192,7 @@ export function DealFieldValueEditor({ field, dealId, accountId, currentValue, o
             {field.options.map((option) => (
               <button
                 key={option.value}
-                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, currentValue === option.value)}`}
+                className={`flex items-center gap-2 px-3 py-2 rounded text-sm transition-colors ${getColorClasses(option.color, selectedOptionValue === option.value)}`}
                 onClick={() => saveValue(option.value)}
                 disabled={saving}
               >

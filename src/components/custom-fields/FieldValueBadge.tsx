@@ -2,6 +2,10 @@ import { Badge } from "@/components/ui/badge";
 import { Check, X, Minus, User, Instagram, MapPin, ExternalLink } from "lucide-react";
 import { CustomField, FieldOption } from "./CustomFieldsManager";
 import { formatLocalDate } from "@/lib/dateUtils";
+import { resolveItemVendaOptionValue } from "@/lib/sales/itemVendaResolver";
+import { useProductsLite } from "@/hooks/useProductsLite";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 interface TeamUser {
   id: string;
@@ -35,6 +39,16 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
   const textSize = size === "sm" ? "text-xs" : "text-sm";
   const padding = size === "sm" ? "px-1.5 py-0.5" : "px-2 py-1";
 
+  // Valores de produto podem estar gravados como UUID (negócios ganhos) enquanto
+  // as opções do campo usam slugs — resolvemos os dois formatos.
+  const rawSelect = field.field_type === "select" && typeof value === "string" ? value.trim() : "";
+  const directOption = rawSelect ? field.options?.find((o) => o.value === rawSelect) : undefined;
+  const mappedOptionValue = !directOption ? resolveItemVendaOptionValue(rawSelect, field.options) : "";
+  const mappedOption = mappedOptionValue ? field.options?.find((o) => o.value === mappedOptionValue) : undefined;
+  const needsProductLookup = !!rawSelect && !directOption && !mappedOption && UUID_RE.test(rawSelect);
+  const { data: productsLite } = useProductsLite(needsProductLookup);
+
+
   // Boolean field
   if (field.field_type === "boolean") {
     if (value === true) {
@@ -57,8 +71,22 @@ export function FieldValueBadge({ field, value, size = "sm", teamUsers, onRemove
 
   // Select field
   if (field.field_type === "select") {
-    const option = field.options.find(opt => opt.value === value);
+    const option = directOption ?? mappedOption;
     if (!option) {
+      if (needsProductLookup) {
+        const product = productsLite?.find((p) => p.id === rawSelect);
+        if (product) {
+          const color = product.color || "#6b7280";
+          return (
+            <span
+              className={`inline-flex items-center ${padding} rounded border font-medium ${textSize} break-words whitespace-normal`}
+              style={{ backgroundColor: `${color}25`, color, borderColor: `${color}66` }}
+            >
+              {product.name}
+            </span>
+          );
+        }
+      }
       return <span className={`text-muted-foreground ${textSize}`}>—</span>;
     }
     return (
