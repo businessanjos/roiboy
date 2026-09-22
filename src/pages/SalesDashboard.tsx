@@ -125,7 +125,8 @@ type PeriodKey =
   | "this_quarter"
   | "last_quarter"
   | "ytd"
-  | "last_year";
+  | "last_year"
+  | "custom";
 
 const PERIOD_LABELS: Record<PeriodKey, string> = {
   this_month: "Este mês",
@@ -136,7 +137,10 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   last_quarter: "Trimestre passado",
   ytd: "Ano atual",
   last_year: "Ano passado",
+  custom: "Personalizado",
 };
+
+const FILTERS_STORAGE_KEY = "sales-dashboard-filters-v1";
 
 const SNAPSHOT_PANEL_ID = "painel-comercial";
 
