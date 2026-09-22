@@ -12,35 +12,152 @@ const corsHeaders = {
 
 type Action = "count_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
 
-export type ItemKey =
-  | "deals"
-  | "leads"
-  | "clients"
-  | "tasks"
-  | "activities"
-  | "conversations";
-
-const ITEM_KEYS: ItemKey[] = ["deals", "leads", "clients", "tasks", "activities", "conversations"];
-
-const ITEM_LABELS: Record<ItemKey, string> = {
-  deals: "Negócios em aberto",
-  leads: "Leads em aberto",
-  clients: "Clientes da carteira",
-  tasks: "Tarefas pendentes",
-  activities: "Atividades não concluídas",
-  conversations: "Conversas do RoyZapp em aberto",
-};
+interface ItemDef {
+  key: string;
+  group: string;
+  label: string;
+  table: string;
+  /** Colunas de responsável atual (podem ser várias na mesma tabela). */
+  columns: string[];
+  /** Filtros de "em aberto" aplicados na contagem e na transferência. */
+  apply: (q: any) => any;
+  /** Tabelas sem account_id */
+  noAccount?: boolean;
+}
 
 const OPEN_LEAD_STATUSES = ["new", "contacted", "qualified"];
 const OPEN_TASK_STATUSES = ["pending", "in_progress", "overdue"];
 const OPEN_CLIENT_STATUSES = ["active", "paused", "churn_risk"];
 const OPEN_CONVERSATION_STATUSES = ["pending", "active", "waiting", "triage"];
 
+const ITEMS: ItemDef[] = [
+  // ---------- Vendas ----------
+  {
+    key: "deals", group: "sales", label: "Negócios em aberto",
+    table: "deals", columns: ["responsible_user_id", "sdr_user_id"],
+    apply: (q) => q.eq("status", "open").is("deleted_at", null),
+  },
+  {
+    key: "leads", group: "sales", label: "Leads em aberto",
+    table: "leads", columns: ["responsible_user_id"],
+    apply: (q) => q.in("status", OPEN_LEAD_STATUSES),
+  },
+  {
+    key: "activities", group: "sales", label: "Atividades agendadas não concluídas",
+    table: "deal_activities", columns: ["user_id"],
+    apply: (q) => q.not("scheduled_at", "is", null).is("completed_at", null),
+  },
+  {
+    key: "sales_meetings", group: "sales", label: "Reuniões de vendas agendadas",
+    table: "sales_meetings", columns: ["responsible_user_id"],
+    apply: (q) => q.in("status", ["scheduled", "pending", "confirmed", "rescheduled"]),
+  },
+  {
+    key: "clients_sales", group: "sales", label: "Clientes onde é o vendedor",
+    table: "clients", columns: ["sales_user_id"],
+    apply: (q) => q.in("status", OPEN_CLIENT_STATUSES),
+  },
+
+  // ---------- Atendimento / CS ----------
+  {
+    key: "clients", group: "cs", label: "Clientes da carteira (responsável)",
+    table: "clients", columns: ["responsible_user_id"],
+    apply: (q) => q.in("status", OPEN_CLIENT_STATUSES),
+  },
+  {
+    key: "conversations", group: "cs", label: "Conversas do RoyZapp em aberto",
+    table: "zapp_conversation_assignments", columns: ["agent_id"],
+    apply: (q) => q.in("status", OPEN_CONVERSATION_STATUSES),
+  },
+  {
+    key: "ruler", group: "cs", label: "Régua de relacionamento em andamento",
+    table: "zapp_ruler_enrollments", columns: ["assigned_to"],
+    apply: (q) => q.in("status", ["active", "pending", "paused"]),
+  },
+  {
+    key: "support_tickets", group: "cs", label: "Chamados de suporte em aberto",
+    table: "support_tickets", columns: ["assigned_to"],
+    apply: (q) => q.not("status", "in", "(closed,resolved,cancelled)"),
+  },
+
+  // ---------- Marketing ----------
+  {
+    key: "marketing_projects", group: "marketing", label: "Projetos de marketing que lidera",
+    table: "marketing_projects", columns: ["owner_user_id"],
+    apply: (q) => q.not("status", "in", "(done,completed,cancelled,archived)"),
+  },
+  {
+    key: "content_pieces", group: "marketing", label: "Peças de conteúdo atribuídas",
+    table: "content_pieces", columns: ["assigned_user_id"],
+    apply: (q) => q.not("status", "in", "(published,done,cancelled,archived)"),
+  },
+  {
+    key: "content_approvals", group: "marketing", label: "Aprovações de conteúdo sob responsabilidade",
+    table: "content_approval_checklists", columns: ["responsible_user_id"],
+    apply: (q) => q,
+  },
+
+  // ---------- Eventos ----------
+  {
+    key: "event_checklist", group: "events", label: "Itens de checklist de evento",
+    table: "event_checklist", columns: ["assigned_to"],
+    apply: (q) => q.is("completed_at", null).not("status", "in", "(done,cancelled)"),
+  },
+  {
+    key: "event_deliverables", group: "events", label: "Entregáveis de conteúdo de evento",
+    table: "event_content_deliverables", columns: ["assigned_to"],
+    apply: (q) => q.not("status", "in", "(done,delivered,published,cancelled)"),
+  },
+  {
+    key: "event_briefings", group: "events", label: "Briefings de evento sob responsabilidade",
+    table: "event_briefings", columns: ["responsible_user_id"],
+    apply: (q) => q,
+  },
+
+  // ---------- Financeiro ----------
+  {
+    key: "dunning_cases", group: "financial", label: "Cobranças / inadimplência em aberto",
+    table: "dunning_cases", columns: ["assigned_to"],
+    apply: (q) => q.not("stage", "in", "(recuperada,encerrada,cancelada,perdida)"),
+  },
+
+  // ---------- RH ----------
+  {
+    key: "hr_admissions", group: "hr", label: "Admissões que conduz",
+    table: "hr_admissions", columns: ["responsible_user_id"],
+    apply: (q) => q.not("stage", "in", "(admitted,completed,cancelled)"),
+  },
+  {
+    key: "hr_offboardings", group: "hr", label: "Desligamentos que conduz",
+    table: "hr_offboardings", columns: ["responsible_user_id"],
+    apply: (q) => q.is("completed_at", null),
+  },
+
+  // ---------- Geral ----------
+  {
+    key: "tasks", group: "general", label: "Tarefas pendentes",
+    table: "internal_tasks", columns: ["assigned_to"],
+    apply: (q) => q.in("status", OPEN_TASK_STATUSES),
+  },
+  {
+    key: "leader_actions", group: "general", label: "Ações da reunião de líderes",
+    table: "leader_meeting_actions", columns: ["owner_user_id"], noAccount: true,
+    apply: (q) => q.is("completed_at", null),
+  },
+];
+
+const ITEM_BY_KEY: Record<string, ItemDef> = Object.fromEntries(ITEMS.map((i) => [i.key, i]));
+const ITEM_KEYS = ITEMS.map((i) => i.key);
+const ITEM_LABELS: Record<string, string> = Object.fromEntries(ITEMS.map((i) => [i.key, i.label]));
+
+interface Assignment { key: string; to_user_id: string }
+
 interface RequestBody {
   action: Action;
   user_id: string;               // public.users.id do alvo
   new_owner_user_id?: string | null;
-  items?: ItemKey[];
+  items?: string[];
+  assignments?: Assignment[];
 }
 
 function json(status: number, body: Record<string, unknown>) {
@@ -50,142 +167,90 @@ function json(status: number, body: Record<string, unknown>) {
   });
 }
 
-async function countOpenItems(admin: any, accountId: string, userId: string) {
-  const counts: Record<ItemKey, number> = {
-    deals: 0, leads: 0, clients: 0, tasks: 0, activities: 0, conversations: 0,
-  };
-
-  const head = { count: "exact" as const, head: true };
-
-  const [deals, leads, clients, tasks, activities] = await Promise.all([
-    admin.from("deals").select("id", head)
-      .eq("account_id", accountId).eq("status", "open").is("deleted_at", null)
-      .or(`responsible_user_id.eq.${userId},sdr_user_id.eq.${userId}`),
-    admin.from("leads").select("id", head)
-      .eq("account_id", accountId).eq("responsible_user_id", userId)
-      .in("status", OPEN_LEAD_STATUSES),
-    admin.from("clients").select("id", head)
-      .eq("account_id", accountId).eq("responsible_user_id", userId)
-      .in("status", OPEN_CLIENT_STATUSES),
-    admin.from("internal_tasks").select("id", head)
-      .eq("account_id", accountId).eq("assigned_to", userId)
-      .in("status", OPEN_TASK_STATUSES),
-    admin.from("deal_activities").select("id", head)
-      .eq("account_id", accountId).eq("user_id", userId)
-      .not("scheduled_at", "is", null).is("completed_at", null),
-  ]);
-
-  counts.deals = deals.count || 0;
-  counts.leads = leads.count || 0;
-  counts.clients = clients.count || 0;
-  counts.tasks = tasks.count || 0;
-  counts.activities = activities.count || 0;
-
-  const agentIds = await getAgentIds(admin, accountId, userId);
-  if (agentIds.length > 0) {
-    const { count } = await admin.from("zapp_conversation_assignments")
-      .select("id", head)
-      .eq("account_id", accountId)
-      .in("agent_id", agentIds)
-      .in("status", OPEN_CONVERSATION_STATUSES);
-    counts.conversations = count || 0;
-  }
-
-  return counts;
-}
-
 async function getAgentIds(admin: any, accountId: string, userId: string): Promise<string[]> {
   const { data } = await admin.from("zapp_agents")
     .select("id").eq("account_id", accountId).eq("user_id", userId);
   return (data || []).map((r: { id: string }) => r.id);
 }
 
-// Executa a transferência dos itens marcados. Retorna a contagem real movida.
-async function transferItems(
+async function countOpenItems(admin: any, accountId: string, userId: string) {
+  const counts: Record<string, number> = {};
+  for (const key of ITEM_KEYS) counts[key] = 0;
+
+  const agentIds = await getAgentIds(admin, accountId, userId);
+
+  const results = await Promise.all(ITEMS.map(async (item) => {
+    try {
+      let owners = [userId];
+      if (item.key === "conversations") {
+        if (agentIds.length === 0) return [item.key, 0] as const;
+        owners = agentIds;
+      }
+
+      let q = admin.from(item.table).select("id", { count: "exact", head: true });
+      if (!item.noAccount) q = q.eq("account_id", accountId);
+      q = item.apply(q);
+
+      const filters: string[] = [];
+      for (const col of item.columns) {
+        for (const owner of owners) filters.push(`${col}.eq.${owner}`);
+      }
+      q = filters.length === 1 ? q.eq(item.columns[0], owners[0]) : q.or(filters.join(","));
+
+      const { count, error } = await q;
+      if (error) {
+        console.error(`count ${item.key} failed:`, error.message);
+        return [item.key, 0] as const;
+      }
+      return [item.key, count || 0] as const;
+    } catch (err) {
+      console.error(`count ${item.key} threw:`, err);
+      return [item.key, 0] as const;
+    }
+  }));
+
+  for (const [key, count] of results) counts[key] = count;
+  return counts;
+}
+
+/** Transfere um item para um destinatário. Retorna quantos registros mudaram de dono. */
+async function transferItem(
   admin: any,
   accountId: string,
+  item: ItemDef,
   fromUserId: string,
   toUserId: string,
-  items: ItemKey[],
-): Promise<Record<string, number>> {
-  const moved: Record<string, number> = {};
-
-  const countRows = (res: any) => (res?.data?.length ?? 0);
-
-  if (items.includes("deals")) {
-    const resp = await admin.from("deals")
-      .update({ responsible_user_id: toUserId })
-      .eq("account_id", accountId).eq("status", "open").is("deleted_at", null)
-      .eq("responsible_user_id", fromUserId)
-      .select("id");
-    const sdr = await admin.from("deals")
-      .update({ sdr_user_id: toUserId })
-      .eq("account_id", accountId).eq("status", "open").is("deleted_at", null)
-      .eq("sdr_user_id", fromUserId)
-      .select("id");
-    const ids = new Set<string>([
-      ...(resp.data || []).map((r: any) => r.id),
-      ...(sdr.data || []).map((r: any) => r.id),
-    ]);
-    moved.deals = ids.size;
-  }
-
-  if (items.includes("leads")) {
-    const res = await admin.from("leads")
-      .update({ responsible_user_id: toUserId })
-      .eq("account_id", accountId).eq("responsible_user_id", fromUserId)
-      .in("status", OPEN_LEAD_STATUSES)
-      .select("id");
-    moved.leads = countRows(res);
-  }
-
-  if (items.includes("clients")) {
-    const res = await admin.from("clients")
-      .update({ responsible_user_id: toUserId })
-      .eq("account_id", accountId).eq("responsible_user_id", fromUserId)
-      .in("status", OPEN_CLIENT_STATUSES)
-      .select("id");
-    moved.clients = countRows(res);
-  }
-
-  if (items.includes("tasks")) {
-    const res = await admin.from("internal_tasks")
-      .update({ assigned_to: toUserId })
-      .eq("account_id", accountId).eq("assigned_to", fromUserId)
-      .in("status", OPEN_TASK_STATUSES)
-      .select("id");
-    moved.tasks = countRows(res);
-  }
-
-  if (items.includes("activities")) {
-    const res = await admin.from("deal_activities")
-      .update({ user_id: toUserId })
-      .eq("account_id", accountId).eq("user_id", fromUserId)
-      .not("scheduled_at", "is", null).is("completed_at", null)
-      .select("id");
-    moved.activities = countRows(res);
-  }
-
-  if (items.includes("conversations")) {
-    const fromAgents = await getAgentIds(admin, accountId, fromUserId);
-    let toAgentId: string | null = null;
-    const toAgents = await getAgentIds(admin, accountId, toUserId);
-    toAgentId = toAgents[0] || null;
-
-    if (fromAgents.length > 0 && toAgentId) {
-      const res = await admin.from("zapp_conversation_assignments")
-        .update({ agent_id: toAgentId })
-        .eq("account_id", accountId)
-        .in("agent_id", fromAgents)
-        .in("status", OPEN_CONVERSATION_STATUSES)
-        .select("id");
-      moved.conversations = countRows(res);
-    } else {
-      moved.conversations = 0;
+): Promise<{ moved: number; error?: string }> {
+  try {
+    if (item.key === "conversations") {
+      const fromAgents = await getAgentIds(admin, accountId, fromUserId);
+      const toAgents = await getAgentIds(admin, accountId, toUserId);
+      const toAgentId = toAgents[0] || null;
+      if (fromAgents.length === 0) return { moved: 0 };
+      if (!toAgentId) {
+        return { moved: 0, error: "O destinatário não tem agente no RoyZapp" };
+      }
+      let q = admin.from(item.table).update({ agent_id: toAgentId })
+        .eq("account_id", accountId).in("agent_id", fromAgents);
+      q = item.apply(q);
+      const { data, error } = await q.select("id");
+      if (error) return { moved: 0, error: error.message };
+      return { moved: data?.length || 0 };
     }
-  }
 
-  return moved;
+    const ids = new Set<string>();
+    for (const col of item.columns) {
+      let q = admin.from(item.table).update({ [col]: toUserId });
+      if (!item.noAccount) q = q.eq("account_id", accountId);
+      q = item.apply(q).eq(col, fromUserId);
+      const { data, error } = await q.select("id");
+      if (error) return { moved: ids.size, error: error.message };
+      for (const row of data || []) ids.add(row.id);
+    }
+    return { moved: ids.size };
+  } catch (err) {
+    return { moved: 0, error: err instanceof Error ? err.message : "erro" };
+  }
 }
 
 async function writeAuditLog(
@@ -285,48 +350,74 @@ Deno.serve(async (req: Request) => {
     }
 
     // deactivate | transfer_open_items — ambos podem transferir itens
-    const requestedItems = (body.items || []).filter((i) => ITEM_KEYS.includes(i));
-    const newOwner = body.new_owner_user_id || null;
+    // Formato novo: assignments [{ key, to_user_id }]. Formato antigo: items[] + new_owner_user_id.
+    let assignments: Assignment[] = (body.assignments || [])
+      .filter((a) => a && ITEM_BY_KEY[a.key] && a.to_user_id);
+    if (assignments.length === 0 && (body.items || []).length > 0 && body.new_owner_user_id) {
+      assignments = (body.items || [])
+        .filter((k) => ITEM_BY_KEY[k])
+        .map((k) => ({ key: k, to_user_id: body.new_owner_user_id as string }));
+    }
 
-    let transferred: Record<string, number> = {};
-    let newOwnerName: string | null = null;
+    const transferred: Record<string, number> = {};
+    const warnings: string[] = [];
+    const ownerNames: Record<string, string> = {};
 
-    if (requestedItems.length > 0) {
-      if (!newOwner) return json(400, { error: "Selecione o novo responsável para transferir os itens" });
-      if (newOwner === user_id) return json(400, { error: "O novo responsável deve ser outra pessoa" });
-
-      const { data: owner } = await admin.from("users")
+    if (assignments.length > 0) {
+      const ownerIds = Array.from(new Set(assignments.map((a) => a.to_user_id)));
+      if (ownerIds.includes(user_id)) {
+        return json(400, { error: "O novo responsável deve ser outra pessoa" });
+      }
+      const { data: owners } = await admin.from("users")
         .select("id, name, account_id, is_active")
-        .eq("id", newOwner)
-        .maybeSingle();
-      if (!owner || owner.account_id !== accountId) {
-        return json(400, { error: "Novo responsável inválido" });
+        .in("id", ownerIds);
+      for (const id of ownerIds) {
+        const owner = (owners || []).find((o: any) => o.id === id);
+        if (!owner || owner.account_id !== accountId) {
+          return json(400, { error: "Novo responsável inválido" });
+        }
+        if (owner.is_active === false) {
+          return json(400, { error: `O responsável ${owner.name} está inativo` });
+        }
+        ownerNames[id] = owner.name;
       }
-      if (owner.is_active === false) {
-        return json(400, { error: "O novo responsável está inativo" });
+
+      // Agrupa por destinatário para gerar um registro de auditoria por pessoa.
+      for (const ownerId of ownerIds) {
+        const keys = assignments.filter((a) => a.to_user_id === ownerId).map((a) => a.key);
+        const movedByKey: Record<string, number> = {};
+        for (const key of keys) {
+          const res = await transferItem(admin, accountId, ITEM_BY_KEY[key], user_id, ownerId);
+          movedByKey[key] = res.moved;
+          transferred[key] = (transferred[key] || 0) + res.moved;
+          if (res.error) warnings.push(`${ITEM_LABELS[key]}: ${res.error}`);
+        }
+
+        await writeAuditLog(admin, {
+          account_id: accountId, actor, action: "user.open_items_transferred",
+          entity_id: user_id, entity_name: target.name,
+          details: {
+            from_user_id: user_id,
+            from_user_name: target.name,
+            to_user_id: ownerId,
+            to_user_name: ownerNames[ownerId],
+            items: keys,
+            moved: movedByKey,
+          },
+          req,
+        });
       }
-      newOwnerName = owner.name;
-
-      transferred = await transferItems(admin, accountId, user_id, newOwner, requestedItems);
-
-      await writeAuditLog(admin, {
-        account_id: accountId, actor, action: "user.open_items_transferred",
-        entity_id: user_id, entity_name: target.name,
-        details: {
-          from_user_id: user_id,
-          from_user_name: target.name,
-          to_user_id: newOwner,
-          to_user_name: newOwnerName,
-          items: requestedItems,
-          moved: transferred,
-        },
-        req,
-      });
     }
 
     if (action === "transfer_open_items") {
       const remaining = await countOpenItems(admin, accountId, user_id);
-      return json(200, { success: true, transferred, remaining, new_owner_name: newOwnerName });
+      return json(200, {
+        success: true,
+        transferred,
+        remaining,
+        warnings,
+        new_owner_name: Object.values(ownerNames).join(", ") || null,
+      });
     }
 
     if (action === "deactivate") {
@@ -349,7 +440,8 @@ Deno.serve(async (req: Request) => {
         entity_id: user_id, entity_name: target.name,
         details: {
           field: "is_active", from: true, to: false,
-          transferred_to: newOwnerName, transferred: transferred,
+          transferred_to: Object.values(ownerNames).join(", ") || null,
+          transferred,
           remaining_open_items: remaining,
         },
         req,
@@ -360,6 +452,7 @@ Deno.serve(async (req: Request) => {
         message: "Membro inativado.",
         transferred,
         remaining,
+        warnings,
       });
     }
 
