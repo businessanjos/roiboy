@@ -175,7 +175,8 @@ export default function OrgChart() {
     });
   }, [people, ceo, coo]);
 
-  const others = useMemo(() => {
+  // Pessoas ainda não alocadas em nenhuma coluna fixa
+  const unassigned = useMemo(() => {
     const assigned = new Set<string>();
     if (ceo) assigned.add(ceo.id);
     if (coo) assigned.add(coo.id);
@@ -186,6 +187,71 @@ export default function OrgChart() {
     return people.filter((p) => !assigned.has(p.id));
   }, [people, ceo, coo, columns]);
 
+  // Colunas geradas automaticamente para departamentos novos (ex.: Tecnologia)
+  const extraColumns = useMemo(() => {
+    const groups = new Map<string, { label: string; members: Person[] }>();
+    unassigned.forEach((p) => {
+      const key = norm(p.department);
+      if (!key) return;
+      if (!groups.has(key)) {
+        groups.set(key, { label: (p.department ?? "").trim(), members: [] });
+      }
+      groups.get(key)!.members.push(p);
+    });
+
+    const palette = [
+      {
+        headerColor: "from-primary to-primary",
+        badgeColor: "bg-primary/15 text-primary border-primary/40",
+      },
+      {
+        headerColor: "from-success to-success",
+        badgeColor: "bg-success/15 text-success-strong border-success/40",
+      },
+      {
+        headerColor: "from-accent to-accent",
+        badgeColor: "bg-accent/30 text-accent-foreground border-accent",
+      },
+      {
+        headerColor: "from-secondary to-secondary",
+        badgeColor: "bg-secondary/40 text-secondary-foreground border-secondary",
+      },
+    ];
+
+    return Array.from(groups.entries())
+      .sort((a, b) => a[1].label.localeCompare(b[1].label, "pt-BR"))
+      .map(([key, group], i) => {
+        const gestor =
+          group.members.find((m) => {
+            const pos = norm(m.position);
+            return (
+              pos.includes("gestor") ||
+              pos.includes("gerente") ||
+              pos.includes("head") ||
+              pos.includes("coordenador") ||
+              pos.includes("diretor")
+            );
+          }) ?? null;
+        return {
+          key: `auto:${key}`,
+          label: group.label,
+          headerColor: palette[i % palette.length].headerColor,
+          badgeColor: palette[i % palette.length].badgeColor,
+          gestorNames: [] as string[],
+          deptMatches: [] as string[],
+          gestor,
+          members: group.members.filter((m) => m.id !== gestor?.id),
+        };
+      });
+  }, [unassigned]);
+
+  const allColumns = useMemo(() => [...columns, ...extraColumns], [columns, extraColumns]);
+
+  const others = useMemo(
+    () => unassigned.filter((p) => !norm(p.department)),
+    [unassigned]
+  );
+
   const matchesSearch = (p: Person) => {
     if (!search.trim()) return true;
     const q = norm(search);
@@ -193,6 +259,9 @@ export default function OrgChart() {
   };
 
   const totalActive = people.length;
+
+  const gridTemplateColumns = `repeat(${Math.max(allColumns.length, 1)}, minmax(0, 1fr))`;
+  const gridMaxWidth = Math.max(1100, allColumns.length * 260);
 
   async function handleExport() {
     if (!orgRef.current) return;
@@ -341,28 +410,31 @@ export default function OrgChart() {
                 </div>
               )}
 
-              {/* Barra horizontal do CEO — vai do centro da coluna Marketing ao centro da Administrativo */}
-              <div className="relative w-full max-w-[1100px] h-px">
-                <div className="absolute top-0 left-[12.5%] right-[12.5%] h-px bg-border" />
+              {/* Barra horizontal do CEO — vai do centro da primeira ao centro da última coluna */}
+              <div className="relative w-full h-px" style={{ maxWidth: gridMaxWidth }}>
+                <div
+                  className="absolute top-0 h-px bg-border"
+                  style={{ left: `${50 / allColumns.length}%`, right: `${50 / allColumns.length}%` }}
+                />
               </div>
 
               {/* Tier intermediário: COO acima da coluna Marketing; demais colunas apenas propagam a linha */}
-              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px]">
+              <div className="grid gap-4 w-full" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
                 <div className="flex flex-col items-center">
                   <div className="w-px h-6 bg-border" />
                   {coo && renderPersonCard(coo, { size: "md", label: "COO" })}
                   <div className="w-px h-8 bg-border" />
                 </div>
-                {[0, 1, 2].map((i) => (
-                  <div key={i} className="flex justify-center">
+                {allColumns.slice(1).map((c) => (
+                  <div key={c.key} className="flex justify-center">
                     <div className="w-px h-full bg-border" />
                   </div>
                 ))}
               </div>
 
               {/* Columns — Marketing responde à COO; demais respondem ao CEO */}
-              <div className="grid grid-cols-4 gap-4 w-full max-w-[1100px] relative">
-                {columns.map((col) => {
+              <div className="grid gap-4 w-full relative" style={{ maxWidth: gridMaxWidth, gridTemplateColumns }}>
+                {allColumns.map((col) => {
                   const isMarketing = col.key === "marketing";
                   const columnHead = col.gestor;
                   const headLabel = "Gestor";
