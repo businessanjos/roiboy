@@ -302,6 +302,7 @@ export function TeamManager() {
       });
 
       setUsers(usersWithRoles);
+      void loadPendingCounts(usersWithRoles.filter((u: TeamUser) => u.is_active === false));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
