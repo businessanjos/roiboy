@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHRCollaborators, HRCollaborator } from "@/hooks/useHRCollaborators";
+import { useHRServiceProviders, HRServiceProvider } from "@/hooks/useHRServiceProviders";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -75,9 +76,10 @@ export default function HRCollaborators() {
   const { currentUser } = useCurrentUser();
   const canHR = useCanAccessHR();
   const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
+  const { providers, loading: providersLoading } = useHRServiceProviders();
 
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<"list" | "pda">("list");
+  const [view, setView] = useState<"clt" | "pj" | "pda">("clt");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
