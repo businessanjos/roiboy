@@ -11,7 +11,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHROffboardings, type HROffboarding } from "@/hooks/useHROffboardings";
 import { TERMINATION_TYPE_LABELS, type TerminationType } from "@/lib/rescissionCalc";
 
-interface CollabOpt { id: string; full_name: string; position: string | null }
+interface CollabOpt { id: string; full_name: string; position: string | null; kind: "collaborator" | "service_provider"; bond: string }
 
 export default function NewOffboardingDialog({
   open, onOpenChange, onCreated,
@@ -19,9 +19,11 @@ export default function NewOffboardingDialog({
   const { currentUser } = useCurrentUser();
   const { create } = useHROffboardings();
   const [collabs, setCollabs] = useState<CollabOpt[]>([]);
+  const [personSearch, setPersonSearch] = useState("");
+  const [bondFilter, setBondFilter] = useState<"all" | "collaborator" | "service_provider">("all");
   const [loading, setLoading] = useState(false);
   const [form, setForm] = useState({
-    collaborator_id: "",
+    person_key: "",
     termination_type: "sem_justa_causa" as TerminationType,
     notice_communicated_at: new Date().toISOString().slice(0, 10),
     reason: "",
@@ -30,19 +32,57 @@ export default function NewOffboardingDialog({
 
   useEffect(() => {
     if (!currentUser?.account_id || !open) return;
-    supabase.from("hr_collaborators")
-      .select("id, full_name, position")
-      .eq("account_id", currentUser.account_id)
-      .eq("status", "active")
-      .order("full_name")
-      .then(({ data }) => setCollabs((data || []) as any));
+    (async () => {
+      const [clt, pj] = await Promise.all([
+        supabase.from("hr_collaborators")
+          .select("id, full_name, position, employment_type")
+          .eq("account_id", currentUser.account_id)
+          .eq("status", "active")
+          .order("full_name"),
+        supabase.from("hr_service_providers")
+          .select("id, full_name, position, service_type, provider_kind")
+          .eq("account_id", currentUser.account_id)
+          .eq("status", "active")
+          .order("full_name"),
+      ]);
+      const list: CollabOpt[] = [
+        ...((clt.data || []) as any[]).map((c) => ({
+          id: c.id, full_name: c.full_name, position: c.position,
+          kind: "collaborator" as const,
+          bond: c.employment_type === "intern" ? "Estágio" : c.employment_type === "socio" ? "Sócio" : "CLT",
+        })),
+        ...((pj.data || []) as any[]).map((p) => ({
+          id: p.id, full_name: p.full_name, position: p.position || p.service_type,
+          kind: "service_provider" as const,
+          bond: p.provider_kind === "director" ? "PJ · Cargo de confiança" : "PJ",
+        })),
+      ].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR"));
+      setCollabs(list);
+    })();
   }, [currentUser?.account_id, open]);
 
+  const norm = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+  const filteredCollabs = collabs.filter((c) => {
+    if (bondFilter !== "all" && c.kind !== bondFilter) return false;
+    if (!personSearch.trim()) return true;
+    const q = norm(personSearch);
+    return norm(c.full_name).includes(q) || norm(c.position || "").includes(q);
+  });
+  const selectedPerson = collabs.find((c) => `${c.kind}:${c.id}` === form.person_key) || null;
+
   async function handleCreate() {
-    if (!form.collaborator_id) return;
+    if (!selectedPerson) return;
     setLoading(true);
     try {
-      const created = await create(form as any);
+      const created = await create({
+        collaborator_id: selectedPerson.kind === "collaborator" ? selectedPerson.id : null,
+        service_provider_id: selectedPerson.kind === "service_provider" ? selectedPerson.id : null,
+        subject_type: selectedPerson.kind,
+        termination_type: form.termination_type,
+        reason: form.reason,
+        notice_communicated_at: form.notice_communicated_at,
+        will_replace: form.will_replace,
+      } as any);
       onCreated(created as HROffboarding);
     } finally {
       setLoading(false);
