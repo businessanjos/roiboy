@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { ArrowLeft, Network, Users, Search, Download, Cake, X } from "lucide-react";
 import html2canvas from "html2canvas";
 import { formatPersonName } from "@/lib/format/personName";
+import { getDepartmentColorHsl } from "@/lib/rh/departmentColors";
 
 interface Person {
   id: string;
@@ -95,6 +96,7 @@ export default function OrgChart() {
   const navigate = useNavigate();
   const orgRef = useRef<HTMLDivElement>(null);
   const [people, setPeople] = useState<Person[]>([]);
+  const [deptMeta, setDeptMeta] = useState<Map<string, { color: string; show: boolean }>>(new Map());
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
