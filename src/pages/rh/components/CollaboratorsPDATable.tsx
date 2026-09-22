@@ -73,7 +73,7 @@ const COLUMNS: ColumnDef[] = [
 ];
 
 const DEFAULT_VISIBLE = [
-  "registration_company", "position", "pda_hierarchy", "pda_sectors", "pda_level",
+  "bond", "registration_company", "position", "pda_hierarchy", "pda_sectors", "pda_level",
   "manager", "tenure", "pda_dominant_profile", "synergy", "synergy_pct",
   "pda_phase", "pda_thermometer",
 ];
