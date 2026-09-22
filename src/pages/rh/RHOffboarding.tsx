@@ -64,7 +64,7 @@ export default function RHOffboarding() {
       }
       return true;
     });
-  }, [offboardings, search, stageFilter, typeFilter, periodFilter]);
+  }, [offboardings, search, stageFilter, typeFilter, periodFilter, bondFilter]);
 
   const stats = useMemo(() => {
     const active = offboardings.filter((o) => !["completed", "cancelled"].includes(o.stage));
