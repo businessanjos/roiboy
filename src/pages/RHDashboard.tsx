@@ -21,7 +21,65 @@ const RH_ALLOWED_EMAILS = [
   "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com",
 ];
 
-const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+const chartColor = (i: number) => CHART_COLORS[Math.abs(i) % CHART_COLORS.length];
+
+const STAGE_LABELS: Record<string, string> = {
+  applied: "Inscrito",
+  screening: "Triagem",
+  interview: "Entrevista",
+  test: "Teste",
+  offer: "Proposta",
+  hired: "Contratado",
+  rejected: "Reprovado",
+  withdrawn: "Desistiu",
+  talent_pool: "Banco de talentos",
+};
+
+const AXIS_PROPS = {
+  stroke: "hsl(var(--muted-foreground))",
+  tick: { fontSize: 11, fill: "hsl(var(--muted-foreground))" },
+  tickLine: false,
+  axisLine: false,
+} as const;
+
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-hairline bg-popover/95 px-3 py-2 shadow-md backdrop-blur">
+      {label != null && <p className="mb-1 text-xs font-medium text-foreground">{label}</p>}
+      <ul className="space-y-0.5">
+        {payload.map((p: any, i: number) => (
+          <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color || p.payload?.fill }} />
+            <span className="truncate">{p.name}</span>
+            <span className="ml-auto tabular-nums font-medium text-foreground">{p.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ChartLegendList({ items }: { items: { name: string; value: number; color: string }[] }) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {items.map((it) => (
+        <li key={it.name} className="flex items-center gap-2 text-xs">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: it.color }} />
+          <span className="truncate text-muted-foreground">{it.name}</span>
+          <span className="ml-auto tabular-nums font-medium text-foreground">{it.value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -38,20 +96,20 @@ function Kpi({ icon: Icon, label, value, hint, tone = "default" }: KpiProps) {
     default: { text: "text-foreground", bg: "bg-muted", icon: "text-muted-foreground" },
     success: { text: "text-success", bg: "bg-success/10", icon: "text-success" },
     warning: { text: "text-warning", bg: "bg-warning/10", icon: "text-warning" },
-    danger:  { text: "text-danger",    bg: "bg-danger/10",    icon: "text-danger" },
-    primary: { text: "text-indigo-600", bg: "bg-indigo-500/10", icon: "text-indigo-600" },
+    danger:  { text: "text-danger", bg: "bg-danger/10", icon: "text-danger" },
+    primary: { text: "text-primary", bg: "bg-primary/10", icon: "text-primary" },
   }[tone];
   return (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-start gap-4">
-          <div className={`p-2.5 rounded-lg ${toneMap.bg}`}>
-            <Icon className={`h-5 w-5 ${toneMap.icon}`} />
+    <Card className="border-hairline shadow-none transition-colors hover:border-border">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`rounded-lg p-2 ${toneMap.bg}`}>
+            <Icon className={`h-4 w-4 ${toneMap.icon}`} strokeWidth={1.75} />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-semibold ${toneMap.text} tabular-nums`}>{value}</p>
-            {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className={`mt-0.5 text-2xl font-semibold tabular-nums tracking-tight ${toneMap.text}`}>{value}</p>
+            {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
           </div>
         </div>
       </CardContent>
@@ -206,7 +264,7 @@ export default function RHDashboard() {
     const activeApps = apps.filter((a: any) => (a.status || "").toLowerCase() !== "rejected" && (a.status || "").toLowerCase() !== "withdrawn");
     const stageMap: Record<string, number> = {};
     activeApps.forEach((a: any) => {
-      const st = a.stage || "Inscrito";
+      const st = STAGE_LABELS[(a.stage || "").toLowerCase()] || a.stage || "Inscrito";
       stageMap[st] = (stageMap[st] || 0) + 1;
     });
     const stageChart = Object.entries(stageMap).map(([name, value]) => ({ name, value }));
@@ -291,37 +349,58 @@ export default function RHDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Por departamento</CardTitle></CardHeader>
-                <CardContent className="h-64">
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Por departamento</CardTitle></CardHeader>
+                <CardContent>
                   {metrics.deptChart.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Sem dados.</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={metrics.deptChart} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2}>
-                          {metrics.deptChart.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <div className="relative h-52">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={metrics.deptChart}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={58}
+                              outerRadius={82}
+                              paddingAngle={2}
+                              stroke="hsl(var(--card))"
+                              strokeWidth={2}
+                            >
+                              {metrics.deptChart.map((_, i) => <Cell key={i} fill={chartColor(i)} />)}
+                            </Pie>
+                            <Tooltip content={<ChartTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.headcount}</span>
+                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">ativos</span>
+                        </div>
+                      </div>
+                      <div className="max-h-52 overflow-auto pr-1">
+                        <ChartLegendList
+                          items={metrics.deptChart.map((d, i) => ({ name: d.name, value: d.value, color: chartColor(i) }))}
+                        />
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2"><Cake className="h-4 w-4 text-pink-600" />Aniversariantes do mês</CardTitle>
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Cake className="h-4 w-4 text-muted-foreground" />Aniversariantes do mês</CardTitle>
                   <Badge variant="secondary">{metrics.birthdays.length}</Badge>
                 </CardHeader>
                 <CardContent className="max-h-64 overflow-auto">
                   {metrics.birthdays.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum aniversariante neste mês.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="divide-y divide-hairline">
                       {metrics.birthdays.map((c: any) => (
-                        <li key={c.id} className="flex items-center justify-between text-sm">
+                        <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                           <span className="truncate">{c.full_name}</span>
                           <span className="text-muted-foreground tabular-nums">
                             {String(c._bd).padStart(2, "0")}/{String(c._bm + 1).padStart(2, "0")}
@@ -345,18 +424,18 @@ export default function RHDashboard() {
               <Kpi icon={TrendingUp} label="Tempo médio de casa" value={`${metrics.avgTenure.toFixed(1)} anos`} />
             </div>
 
-            <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Admissões vs Desligamentos (12 meses)</CardTitle></CardHeader>
+            <Card className="border-hairline shadow-none">
+              <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Admissões vs Desligamentos (12 meses)</CardTitle></CardHeader>
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.movSeries}>
-                    <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
-                    <XAxis dataKey="month" fontSize={11} />
-                    <YAxis fontSize={11} allowDecimals={false} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="Admissões" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Desligamentos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <BarChart data={metrics.movSeries} barGap={4} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--hairline))" />
+                    <XAxis dataKey="month" {...AXIS_PROPS} />
+                    <YAxis allowDecimals={false} {...AXIS_PROPS} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.5)" }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }} iconType="circle" iconSize={8} />
+                    <Bar dataKey="Admissões" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} maxBarSize={22} />
+                    <Bar dataKey="Desligamentos" fill="hsl(var(--danger))" radius={[4, 4, 0, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
@@ -374,16 +453,16 @@ export default function RHDashboard() {
             </div>
 
             {metrics.stageChart.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Candidatos por estágio</CardTitle></CardHeader>
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Candidatos por estágio</CardTitle></CardHeader>
                 <CardContent className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.stageChart} layout="vertical">
-                      <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
-                      <XAxis type="number" fontSize={11} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" fontSize={11} width={120} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                    <BarChart data={metrics.stageChart} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--hairline))" />
+                      <XAxis type="number" allowDecimals={false} {...AXIS_PROPS} />
+                      <YAxis type="category" dataKey="name" width={130} {...AXIS_PROPS} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.5)" }} />
+                      <Bar dataKey="value" name="Candidatos" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
@@ -395,7 +474,7 @@ export default function RHDashboard() {
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Folha, Custos & Férias</h2>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Kpi icon={DollarSign} label="Custo total (folha)" value={fmtBRL(metrics.totalCost)} hint="Soma de total_cost ativos" tone="primary" />
+              <Kpi icon={DollarSign} label="Custo total (folha)" value={fmtBRL(metrics.totalCost)} hint="Colaboradores ativos" tone="primary" />
               <Kpi icon={DollarSign} label="Salário base médio" value={fmtBRL(metrics.avgSalary)} />
               <Kpi icon={Palmtree} label="Em férias agora" value={metrics.onVacationNow} hint={`${metrics.upcomingVacations} nos próx. 30 dias`} tone="success" />
               <Kpi icon={Palmtree} label="Solicitações pendentes" value={metrics.pendingVacations} tone="warning" />
