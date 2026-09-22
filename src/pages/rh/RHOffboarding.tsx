@@ -13,7 +13,7 @@ import { UserMinus, Plus, Search, Briefcase, List, LayoutGrid, DollarSign, Clock
 import { format, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
-import { useHROffboardings, OFFBOARDING_STAGE_LABELS, OFFBOARDING_STAGE_COLORS, OFFBOARDING_STAGES, type HROffboarding } from "@/hooks/useHROffboardings";
+import { useHROffboardings, getOffboardingPerson, OFFBOARDING_STAGE_LABELS, OFFBOARDING_STAGE_COLORS, OFFBOARDING_STAGES, type HROffboarding } from "@/hooks/useHROffboardings";
 import { TERMINATION_TYPE_LABELS } from "@/lib/rescissionCalc";
 import OffboardingDrawer from "@/components/rh/offboarding/OffboardingDrawer";
 import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDialog";
@@ -21,6 +21,7 @@ import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDial
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
 
 const fmtBRL = (v: number) => new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 }).format(v || 0);
+const normalize = (s: string) => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
 export default function RHOffboarding() {
   const navigate = useNavigate();
@@ -31,6 +32,7 @@ export default function RHOffboarding() {
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [bondFilter, setBondFilter] = useState<"all" | "clt" | "pj">("all");
   const [view, setView] = useState<"list" | "kanban">("list");
   const [selected, setSelected] = useState<HROffboarding | null>(null);
   const [newOpen, setNewOpen] = useState(false);
@@ -44,7 +46,16 @@ export default function RHOffboarding() {
     return offboardings.filter((o) => {
       if (stageFilter !== "all" && o.stage !== stageFilter) return false;
       if (typeFilter !== "all" && o.termination_type !== typeFilter) return false;
-      if (search && !o.collaborator?.full_name.toLowerCase().includes(search.toLowerCase())) return false;
+      const person = getOffboardingPerson(o);
+      if (bondFilter !== "all") {
+        if (bondFilter === "pj" && !person?.isProvider) return false;
+        if (bondFilter === "clt" && person?.isProvider !== false) return false;
+      }
+      if (search) {
+        const q = normalize(search);
+        const hay = normalize(`${person?.full_name || ""} ${person?.position || ""} ${person?.department || ""} ${person?.email || ""}`);
+        if (!hay.includes(q)) return false;
+      }
       if (periodFilter !== "all") {
         const days = differenceInDays(now, new Date(o.created_at));
         if (periodFilter === "30" && days > 30) return false;
@@ -53,7 +64,7 @@ export default function RHOffboarding() {
       }
       return true;
     });
-  }, [offboardings, search, stageFilter, typeFilter, periodFilter]);
+  }, [offboardings, search, stageFilter, typeFilter, periodFilter, bondFilter]);
 
   const stats = useMemo(() => {
     const active = offboardings.filter((o) => !["completed", "cancelled"].includes(o.stage));
@@ -113,8 +124,16 @@ export default function RHOffboarding() {
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[240px]">
           <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-          <Input className="pl-9" placeholder="Buscar colaborador..." value={search} onChange={(e) => setSearch(e.target.value)} />
+          <Input className="pl-9" placeholder="Buscar por nome, cargo, setor ou e-mail..." value={search} onChange={(e) => setSearch(e.target.value)} />
         </div>
+        <Select value={bondFilter} onValueChange={(v) => setBondFilter(v as any)}>
+          <SelectTrigger className="w-[150px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os vínculos</SelectItem>
+            <SelectItem value="clt">CLT / Estágio</SelectItem>
+            <SelectItem value="pj">PJ</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={stageFilter} onValueChange={setStageFilter}>
           <SelectTrigger className="w-[180px]"><SelectValue placeholder="Etapa" /></SelectTrigger>
           <SelectContent>
@@ -172,8 +191,8 @@ export default function RHOffboarding() {
                 {items.map(o => (
                   <Card key={o.id} className="cursor-pointer hover:shadow-md transition-shadow" onClick={() => setSelected(o)}>
                     <CardContent className="p-2.5">
-                      <p className="text-xs font-medium truncate">{o.collaborator?.full_name}</p>
-                      <p className="text-[10px] text-muted-foreground truncate">{o.collaborator?.position || TERMINATION_TYPE_LABELS[o.termination_type]}</p>
+                      <p className="text-xs font-medium truncate">{getOffboardingPerson(o)?.full_name || "—"}</p>
+                      <p className="text-[10px] text-muted-foreground truncate">{getOffboardingPerson(o)?.position || TERMINATION_TYPE_LABELS[o.termination_type]}</p>
                     </CardContent>
                   </Card>
                 ))}
@@ -205,7 +224,7 @@ function StatCard({ label, value, color = "text-foreground", icon, small }: { la
 }
 
 function OffboardingRow({ o, onClick }: { o: HROffboarding; onClick: () => void }) {
-  const c = o.collaborator;
+  const c = getOffboardingPerson(o);
   const initials = (c?.full_name || "?").split(" ").slice(0,2).map(s=>s[0]).join("").toUpperCase();
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
@@ -217,6 +236,7 @@ function OffboardingRow({ o, onClick }: { o: HROffboarding; onClick: () => void 
         <div className="flex-1 min-w-0">
           <div className="flex items-center gap-2">
             <p className="font-medium truncate">{c?.full_name || "Colaborador"}</p>
+            {c && <Badge variant="outline" className="text-[10px]">{c.bondLabel}</Badge>}
             <Badge variant="outline" className={`text-[10px] ${OFFBOARDING_STAGE_COLORS[o.stage]}`}>
               {OFFBOARDING_STAGE_LABELS[o.stage]}
             </Badge>

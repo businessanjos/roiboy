@@ -71,7 +71,40 @@ export interface HROffboarding {
   created_at: string;
   updated_at: string;
   collaborator?: { id: string; full_name: string; position: string | null; department: string | null; avatar_url: string | null; email: string | null; hire_date: string | null; base_salary: number | null; salary: number | null };
+  service_provider?: { id: string; full_name: string; position: string | null; department: string | null; avatar_url: string | null; email: string | null; hire_date: string | null; fee_amount: number | null; provider_kind: string | null; company_name: string | null } | null;
   replacement_job?: { id: string; title: string; status: string } | null;
+}
+
+/** Pessoa do desligamento, seja CLT/estágio (hr_collaborators) ou PJ (hr_service_providers). */
+export function getOffboardingPerson(o: HROffboarding) {
+  if (o.collaborator) {
+    return {
+      id: o.collaborator.id,
+      full_name: o.collaborator.full_name,
+      position: o.collaborator.position,
+      department: o.collaborator.department,
+      avatar_url: o.collaborator.avatar_url,
+      email: o.collaborator.email,
+      hire_date: o.collaborator.hire_date,
+      salary: o.collaborator.base_salary ?? o.collaborator.salary ?? null,
+      isProvider: false,
+      bondLabel: "CLT",
+    };
+  }
+  const p = o.service_provider;
+  if (!p) return null;
+  return {
+    id: p.id,
+    full_name: p.full_name,
+    position: p.position,
+    department: p.department,
+    avatar_url: p.avatar_url,
+    email: p.email,
+    hire_date: p.hire_date,
+    salary: p.fee_amount ?? null,
+    isProvider: true,
+    bondLabel: p.provider_kind === "director" ? "PJ · Cargo de confiança" : "PJ",
+  };
 }
 
 export interface HROffboardingChecklistItem {
@@ -98,7 +131,7 @@ export function useHROffboardings() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("hr_offboardings" as any)
-        .select(`*, collaborator:hr_collaborators(id, full_name, position, department, avatar_url, email, hire_date, base_salary, salary), replacement_job:hr_jobs(id, title, status)`)
+        .select(`*, collaborator:hr_collaborators(id, full_name, position, department, avatar_url, email, hire_date, base_salary, salary), service_provider:hr_service_providers(id, full_name, position, department, avatar_url, email, hire_date, fee_amount, provider_kind, company_name), replacement_job:hr_jobs(id, title, status)`)
         .eq("account_id", currentUser!.account_id!)
         .order("created_at", { ascending: false });
       if (error) throw error;
@@ -107,13 +140,15 @@ export function useHROffboardings() {
   });
 
   const createMutation = useMutation({
-    mutationFn: async (input: { collaborator_id: string; termination_type: TerminationType; reason?: string; notice_communicated_at?: string; will_replace?: boolean }) => {
+    mutationFn: async (input: { collaborator_id?: string | null; service_provider_id?: string | null; subject_type?: string; termination_type: TerminationType; reason?: string; notice_communicated_at?: string; will_replace?: boolean }) => {
       if (!currentUser?.account_id) throw new Error("Sem conta");
       const { data, error } = await supabase
         .from("hr_offboardings" as any)
         .insert({
           account_id: currentUser.account_id,
-          collaborator_id: input.collaborator_id,
+          collaborator_id: input.collaborator_id || null,
+          service_provider_id: input.service_provider_id || null,
+          subject_type: input.subject_type || (input.service_provider_id ? "service_provider" : "collaborator"),
           termination_type: input.termination_type,
           reason: input.reason,
           notice_communicated_at: input.notice_communicated_at,
@@ -131,11 +166,22 @@ export function useHROffboardings() {
       // Se marcou para repor, criar vaga rascunho automaticamente
       if (created?.will_replace) {
         try {
-          const { data: collab } = await supabase
-            .from("hr_collaborators")
-            .select("position, department, employment_type, hr_department_id")
-            .eq("id", created.collaborator_id)
-            .single();
+          let collab: any = null;
+          if (created.collaborator_id) {
+            const { data } = await supabase
+              .from("hr_collaborators")
+              .select("position, department, employment_type, hr_department_id")
+              .eq("id", created.collaborator_id)
+              .maybeSingle();
+            collab = data;
+          } else if (created.service_provider_id) {
+            const { data } = await supabase
+              .from("hr_service_providers")
+              .select("position, department, hr_department_id")
+              .eq("id", created.service_provider_id)
+              .maybeSingle();
+            collab = data ? { ...data, employment_type: "pj" } : null;
+          }
           const { data: job } = await supabase
             .from("hr_jobs")
             .insert({
