@@ -29,8 +29,10 @@ import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles,
+  UserMinus, UserCheck, AlertTriangle, ArrowRightLeft
 } from "lucide-react";
+import { DeactivateUserDialog, totalOpenItems } from "@/components/settings/DeactivateUserDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 
@@ -131,6 +133,7 @@ interface TeamUser {
   team_role?: TeamRole;
   team_roles?: TeamRole[];
   is_also_admin?: boolean;
+  is_active?: boolean | null;
 }
 
 const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
@@ -184,6 +187,11 @@ export function TeamManager() {
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
   const [userToDelete, setUserToDelete] = useState<TeamUser | null>(null);
+  const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
+  const [deactivateTarget, setDeactivateTarget] = useState<TeamUser | null>(null);
+  const [deactivateMode, setDeactivateMode] = useState<"deactivate" | "transfer">("deactivate");
+  const [pendingByUser, setPendingByUser] = useState<Record<string, number>>({});
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   
   const [isRoleDialogOpen, setIsRoleDialogOpen] = useState(false);
   const [selectedRole, setSelectedRole] = useState<TeamRole | null>(null);
@@ -294,6 +302,7 @@ export function TeamManager() {
       });
 
       setUsers(usersWithRoles);
+      void loadPendingCounts(usersWithRoles.filter((u: TeamUser) => u.is_active === false));
     } catch (error) {
       console.error("Error fetching data:", error);
       toast.error("Erro ao carregar dados");
@@ -494,6 +503,51 @@ export function TeamManager() {
     e.stopPropagation();
     setUserToDelete(user);
     setIsDeleteDialogOpen(true);
+  };
+
+  // Conta pendências ainda sem dono dos membros inativos (badge laranja na lista).
+  const loadPendingCounts = async (inactiveUsers: TeamUser[]) => {
+    if (inactiveUsers.length === 0) {
+      setPendingByUser({});
+      return;
+    }
+    const results = await Promise.all(
+      inactiveUsers.map(async (u) => {
+        try {
+          const { data } = await supabase.functions.invoke("deactivate-team-user", {
+            body: { action: "count_open_items", user_id: u.id },
+          });
+          return [u.id, totalOpenItems(data?.counts)] as const;
+        } catch {
+          return [u.id, 0] as const;
+        }
+      }),
+    );
+    setPendingByUser(Object.fromEntries(results));
+  };
+
+  const openDeactivateDialog = (user: TeamUser, mode: "deactivate" | "transfer", e: React.MouseEvent) => {
+    e.stopPropagation();
+    setDeactivateTarget(user);
+    setDeactivateMode(mode);
+  };
+
+  const handleReactivate = async (user: TeamUser, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setReactivatingId(user.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
+        body: { action: "reactivate", user_id: user.id },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      toast.success(`${user.name} foi reativado.`);
+      fetchData();
+    } catch (err: any) {
+      toast.error(err.message || "Erro ao reativar membro");
+    } finally {
+      setReactivatingId(null);
+    }
   };
 
   const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -707,12 +761,20 @@ export function TeamManager() {
   };
 
   const visibleRoles = cxScopeOnly ? roles.filter(isCxScopedRole) : roles;
+  const isUserActive = (u: TeamUser) => u.is_active !== false;
+  const activeCount = users.filter(isUserActive).length;
+  const inactiveCount = users.length - activeCount;
+  const transferCandidates = users
+    .filter((u) => isUserActive(u))
+    .map((u) => ({ id: u.id, name: u.name }));
   const filteredUsers = users.filter((user) => {
     if (cxScopeOnly) {
       const userRoles = user.team_roles || (user.team_role ? [user.team_role] : []);
       if (userRoles.length === 0) return false;
       if (!userRoles.some(isCxScopedRole)) return false;
     }
+    if (statusFilter === "active" && !isUserActive(user)) return false;
+    if (statusFilter === "inactive" && isUserActive(user)) return false;
     return (
       user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -744,7 +806,10 @@ export function TeamManager() {
         <TabsContent value="members" className="space-y-6 mt-6">
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="shadow-card">
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "all" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("all")}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-primary/10">
@@ -757,7 +822,39 @@ export function TeamManager() {
                 </div>
               </CardContent>
             </Card>
-            {roles.slice(0, 3).map((role) => (
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "active" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("active")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-success/10">
+                    <UserCheck className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+                    <p className="text-xs text-muted-foreground">Ativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "inactive" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("inactive")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-muted">
+                    <UserMinus className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{inactiveCount}</p>
+                    <p className="text-xs text-muted-foreground">Inativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {roles.slice(0, 1).map((role) => (
               <Card key={role.id} className="shadow-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
@@ -829,7 +926,13 @@ export function TeamManager() {
               {filteredUsers.map((user) => (
                 <Card 
                   key={user.id} 
-                  className="group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card"
+                  className={`group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card ${
+                    !isUserActive(user)
+                      ? (pendingByUser[user.id] || 0) > 0
+                        ? "border-warning/60 bg-warning/5"
+                        : "opacity-70"
+                      : ""
+                  }`}
                   onClick={() => openEditMemberDialog(user)}
                 >
                   <CardContent className="p-5">
@@ -871,6 +974,21 @@ export function TeamManager() {
                             Admin
                           </Badge>
                         )}
+                        {!isUserActive(user) && (
+                          <div className="mt-2 flex flex-wrap items-center gap-1">
+                            <Badge variant="outline" className="text-xs">Inativo</Badge>
+                            {(pendingByUser[user.id] || 0) > 0 && (
+                              <button
+                                type="button"
+                                onClick={(e) => openDeactivateDialog(user, "transfer", e)}
+                                className="inline-flex items-center gap-1 rounded-md border border-warning/50 bg-warning/10 px-2 py-0.5 text-xs text-warning-foreground hover:bg-warning/20"
+                              >
+                                <AlertTriangle className="h-3 w-3 text-warning" />
+                                {pendingByUser[user.id]} pendência(s) sem responsável
+                              </button>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex gap-1">
                         <Button
@@ -884,6 +1002,30 @@ export function TeamManager() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {isUserActive(user) ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Inativar membro"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-warning hover:text-warning hover:bg-warning/10"
+                            onClick={(e) => openDeactivateDialog(user, "deactivate", e)}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Reativar membro"
+                            disabled={reactivatingId === user.id}
+                            className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            onClick={(e) => handleReactivate(user, e)}
+                          >
+                            {reactivatingId === user.id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <UserCheck className="h-4 w-4" />}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -905,7 +1047,13 @@ export function TeamManager() {
                   {filteredUsers.map((user) => (
                     <div
                       key={user.id}
-                      className="flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group"
+                      className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group ${
+                        !isUserActive(user)
+                          ? (pendingByUser[user.id] || 0) > 0
+                            ? "bg-warning/5 border-l-4 border-l-warning"
+                            : "opacity-70"
+                          : ""
+                      }`}
                       onClick={() => openEditMemberDialog(user)}
                     >
                       <Avatar className="h-10 w-10 ring-2 ring-background shadow-sm">
@@ -941,6 +1089,21 @@ export function TeamManager() {
                           Admin
                         </Badge>
                       )}
+                      {!isUserActive(user) && (
+                        <div className="flex items-center gap-1">
+                          <Badge variant="outline" className="text-xs">Inativo</Badge>
+                          {(pendingByUser[user.id] || 0) > 0 && (
+                            <button
+                              type="button"
+                              onClick={(e) => openDeactivateDialog(user, "transfer", e)}
+                              className="inline-flex items-center gap-1 rounded-md border border-warning/50 bg-warning/10 px-2 py-0.5 text-xs text-warning-foreground hover:bg-warning/20"
+                            >
+                              <AlertTriangle className="h-3 w-3 text-warning" />
+                              {pendingByUser[user.id]} pendência(s)
+                            </button>
+                          )}
+                        </div>
+                      )}
                       <div className="flex gap-1">
                         <Button
                           variant="ghost"
@@ -953,6 +1116,30 @@ export function TeamManager() {
                         >
                           <Pencil className="h-4 w-4" />
                         </Button>
+                        {isUserActive(user) ? (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Inativar membro"
+                            className="opacity-0 group-hover:opacity-100 transition-opacity h-8 w-8 text-warning hover:text-warning hover:bg-warning/10"
+                            onClick={(e) => openDeactivateDialog(user, "deactivate", e)}
+                          >
+                            <UserMinus className="h-4 w-4" />
+                          </Button>
+                        ) : (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            title="Reativar membro"
+                            disabled={reactivatingId === user.id}
+                            className="h-8 w-8 text-success hover:text-success hover:bg-success/10"
+                            onClick={(e) => handleReactivate(user, e)}
+                          >
+                            {reactivatingId === user.id
+                              ? <Loader2 className="h-4 w-4 animate-spin" />
+                              : <UserCheck className="h-4 w-4" />}
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -1705,6 +1892,15 @@ export function TeamManager() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <DeactivateUserDialog
+        open={!!deactivateTarget}
+        onOpenChange={(v) => { if (!v) setDeactivateTarget(null); }}
+        user={deactivateTarget}
+        candidates={transferCandidates.filter((c) => c.id !== deactivateTarget?.id)}
+        mode={deactivateMode}
+        onDone={() => { setDeactivateTarget(null); fetchData(); }}
+      />
     </div>
   );
 }
