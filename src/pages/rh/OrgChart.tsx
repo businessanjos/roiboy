@@ -180,7 +180,18 @@ export default function OrgChart() {
         deduped.push(p);
         return;
       }
-      if (rank(p.position) < rank(deduped[idx].position)) deduped[idx] = p;
+      const current = deduped[idx];
+      const winner = rank(p.position) < rank(current.position) ? p : current;
+      const other = winner === p ? current : p;
+      // Mantém o card vencedor, mas aproveita foto/datas que só existem no outro cadastro
+      deduped[idx] = {
+        ...winner,
+        avatar_url: winner.avatar_url || other.avatar_url,
+        birth_date: winner.birth_date || other.birth_date,
+        hire_date: winner.hire_date || other.hire_date,
+        position: winner.position || other.position,
+        department: winner.department || other.department,
+      };
     });
 
     setPeople(deduped);
