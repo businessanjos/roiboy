@@ -189,8 +189,32 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
   const [owners, setOwners] = useState<Record<string, string>>({});
   const [defaultOwner, setDefaultOwner] = useState<string>("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [details, setDetails] = useState<Record<string, DetailRow[] | undefined>>({});
+  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
   const [history, setHistory] = useState<AuditEntry[]>([]);
   const { currentUser } = useCurrentUser();
+
+  const toggleDetails = async (key: string) => {
+    const willOpen = !expanded[key];
+    setExpanded((e) => ({ ...e, [key]: willOpen }));
+    if (!willOpen || details[key] || !user) return;
+    setLoadingDetails(key);
+    try {
+      const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
+        body: { action: "list_open_items", user_id: user.id, item_key: key },
+      });
+      if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      setDetails((d) => ({ ...d, [key]: (data.rows || []) as DetailRow[] }));
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || "Não foi possível listar os registros");
+      setDetails((d) => ({ ...d, [key]: [] }));
+    } finally {
+      setLoadingDetails(null);
+    }
+  };
 
   const total = totalOpenItems(counts);
 
