@@ -441,16 +441,16 @@ export default function RHDashboard() {
             </div>
 
             {metrics.stageChart.length > 0 && (
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Candidatos por estágio</CardTitle></CardHeader>
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Candidatos por estágio</CardTitle></CardHeader>
                 <CardContent className="h-56">
                   <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={metrics.stageChart} layout="vertical">
-                      <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
-                      <XAxis type="number" fontSize={11} allowDecimals={false} />
-                      <YAxis type="category" dataKey="name" fontSize={11} width={120} />
-                      <Tooltip />
-                      <Bar dataKey="value" fill="#6366f1" radius={[0, 4, 4, 0]} />
+                    <BarChart data={metrics.stageChart} layout="vertical" margin={{ top: 4, right: 12, left: 0, bottom: 0 }}>
+                      <CartesianGrid horizontal={false} strokeDasharray="3 3" stroke="hsl(var(--hairline))" />
+                      <XAxis type="number" allowDecimals={false} {...AXIS_PROPS} />
+                      <YAxis type="category" dataKey="name" width={130} {...AXIS_PROPS} />
+                      <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.5)" }} />
+                      <Bar dataKey="value" name="Candidatos" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]} maxBarSize={18} />
                     </BarChart>
                   </ResponsiveContainer>
                 </CardContent>
