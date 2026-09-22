@@ -171,6 +171,18 @@ export default function OrgChart() {
     [people]
   );
 
+  // Cor configurada no cadastro do departamento
+  const deptColorFor = useMemo(
+    () => (names: string[]) => {
+      for (const n of names) {
+        const info = deptMeta.get(norm(n));
+        if (info) return info.color;
+      }
+      return null;
+    },
+    [deptMeta]
+  );
+
   // Build columns
   const columns = useMemo(() => {
     const excludeIds = new Set<string>();
