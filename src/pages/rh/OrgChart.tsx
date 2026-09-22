@@ -90,7 +90,7 @@ export default function OrgChart() {
   const navigate = useNavigate();
   const orgRef = useRef<HTMLDivElement>(null);
   const [people, setPeople] = useState<Person[]>([]);
-  const [deptMeta, setDeptMeta] = useState<Map<string, { color: string; show: boolean }>>(new Map());
+  const [depts, setDepts] = useState<Dept[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [exporting, setExporting] = useState(false);
@@ -100,29 +100,34 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const [{ data: collabs }, { data: providers }, { data: depts }] = await Promise.all([
+    const [{ data: collabs }, { data: providers }, { data: deptRows }] = await Promise.all([
       supabase
         .from("hr_collaborators")
-        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
+        .select("id, full_name, department, hr_department_id, position, avatar_url, hire_date, birth_date, status, employment_type")
         .eq("status", "active")
         .order("full_name"),
       supabase
         .from("hr_service_providers")
-        .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, provider_kind")
+        .select("id, full_name, department, hr_department_id, position, avatar_url, hire_date, birth_date, status, provider_kind")
         .in("provider_kind", ["director"])
         .eq("status", "active")
         .order("full_name"),
-      supabase.from("hr_departments").select("name, color, show_in_org_chart"),
+      supabase.from("hr_departments").select("id, name, color, show_in_org_chart, parent_department_id, is_active"),
     ]);
 
+    const deptList: Dept[] = (deptRows || []).map((d: any) => ({
+      id: d.id,
+      name: d.name,
+      color: getDepartmentColorHsl(d.color),
+      show: d.show_in_org_chart !== false,
+      parentId: d.parent_department_id ?? null,
+      active: d.is_active !== false,
+    }));
+    setDepts(deptList);
+
     const meta = new Map<string, { color: string; show: boolean }>();
-    (depts || []).forEach((d: any) => {
-      meta.set(norm(d.name), {
-        color: getDepartmentColorHsl(d.color),
-        show: d.show_in_org_chart !== false,
-      });
-    });
-    setDeptMeta(meta);
+    deptList.forEach((d) => meta.set(norm(d.name), { color: d.color, show: d.show }));
+
 
 
     const all: Person[] = [
