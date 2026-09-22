@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { optionColor, PDA_COLORS, type PdaOption } from "@/lib/rh/pda";
+import { optionColor, PDA_CHIP_TEXT, PDA_COLORS, type PdaOption } from "@/lib/rh/pda";
 
 interface Props {
   value?: string | null;
