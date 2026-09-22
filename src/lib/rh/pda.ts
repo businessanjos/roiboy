@@ -1,24 +1,28 @@
 /**
  * PDA — Programa de Desenvolvimento de Anjos.
  * Opções, cores e cálculos usados na ficha e na visão PDA do RH.
+ * As listas padrão espelham o projeto "RH - PDA ANJOS" do Asana.
  */
 
 export type PdaOption = { value: string; label: string; color: string };
 
-// Paleta do PDA (valores de dado, no mesmo padrão das badges coloridas do ROY)
+// Paleta do PDA (hex de fundo do chip — mesmas cores do Asana)
 export const PDA_COLORS = {
-  verde: "#16a34a",
-  verdeAmarelado: "#84cc16",
-  verdeAzulado: "#14b8a6",
-  amarelo: "#eab308",
-  laranja: "#f97316",
-  laranjaClaro: "#fb923c",
-  vermelho: "#dc2626",
-  roxo: "#a855f7",
-  aqua: "#06b6d4",
-  azul: "#3b82f6",
-  cinza: "#6b7280",
+  verde: "#7cc39a",
+  verdeAmarelado: "#aecf55",
+  verdeAzulado: "#4ecbc4",
+  amarelo: "#f8df72",
+  laranja: "#ec8d71",
+  laranjaClaro: "#f1bd6c",
+  vermelho: "#f06a6a",
+  roxo: "#c996e2",
+  aqua: "#9ee7e3",
+  azul: "#8fb0ee",
+  cinza: "#c6c3c0",
 } as const;
+
+/** Texto escuro usado sobre os chips coloridos do PDA. */
+export const PDA_CHIP_TEXT = "#27241f";
 
 const C = PDA_COLORS;
 
@@ -48,6 +52,9 @@ export const SECTOR_OPTIONS: PdaOption[] = [
   { value: "Bem estar", label: "Bem estar", color: C.verdeAzulado },
   { value: "Educacional", label: "Educacional", color: C.cinza },
   { value: "Administrativo", label: "Administrativo", color: C.vermelho },
+  // Departamentos que já existem no ROY
+  { value: "Customer Success", label: "CS - Customer Success", color: C.azul },
+  { value: "Operação", label: "Operação", color: C.laranja },
 ];
 
 export const LEVEL_OPTIONS: PdaOption[] = [
@@ -56,18 +63,19 @@ export const LEVEL_OPTIONS: PdaOption[] = [
   { value: "Sênior", label: "Sênior", color: C.verde },
 ];
 
-export const ROLE_PROFILE_OPTIONS: PdaOption[] = [
-  { value: "Executor/Comunicador", label: "Executor/Comunicador", color: C.cinza },
-  { value: "Executor/Analítico", label: "Executor/Analítico", color: C.cinza },
-  { value: "Analítico/Executor", label: "Analítico/Executor", color: C.cinza },
-  { value: "Analítico/Planejador", label: "Analítico/Planejador", color: C.cinza },
-];
-
 export const PROFILE_OPTIONS: PdaOption[] = [
   { value: "Executor", label: "Executor", color: C.vermelho },
   { value: "Comunicador", label: "Comunicador", color: C.amarelo },
   { value: "Analítico", label: "Analítico", color: C.laranja },
   { value: "Planejador", label: "Planejador", color: C.azul },
+];
+
+/** Perfil da vaga = par primário/secundário. */
+export const ROLE_PROFILE_OPTIONS: PdaOption[] = [
+  { value: "Executor/Comunicador", label: "Executor/Comunicador", color: C.vermelho },
+  { value: "Executor/Analítico", label: "Executor/Analítico", color: C.vermelho },
+  { value: "Analítico/Executor", label: "Analítico/Executor", color: C.laranja },
+  { value: "Analítico/Planejador", label: "Analítico/Planejador", color: C.laranja },
 ];
 
 export const EFFORT_OPTIONS: PdaOption[] = [
@@ -98,18 +106,38 @@ export const TEMPERAMENT_OPTIONS: PdaOption[] = [
   { value: "Melancólico", label: "Melancólico", color: C.vermelho },
 ];
 
+/** Guardamos só Lobo/Hiena — a exibição é flexionada pelo gênero. */
 export const MENTAL_MODEL_OPTIONS: PdaOption[] = [
-  { value: "Filho de Lobo", label: "Filho de Lobo", color: C.verde },
-  { value: "Filha de Lobo", label: "Filha de Lobo", color: C.verde },
-  { value: "Filho de Hiena", label: "Filho de Hiena", color: C.vermelho },
-  { value: "Filha de Hiena", label: "Filha de Hiena", color: C.vermelho },
+  { value: "Lobo", label: "Lobo", color: C.verde },
+  { value: "Hiena", label: "Hiena", color: C.vermelho },
 ];
+
+/** "Filho de Lobo" / "Filha de Hiena" conforme o gênero da pessoa. */
+export function mentalModelLabel(value?: string | null, gender?: string | null): string | null {
+  if (!value) return null;
+  const raw = value.trim();
+  const base = /hiena/i.test(raw) ? "Hiena" : /lobo/i.test(raw) ? "Lobo" : null;
+  if (!base) return raw;
+  const g = (gender || "").trim().toLowerCase();
+  const female = g.startsWith("f") || g.startsWith("mulher");
+  return `${female ? "Filha" : "Filho"} de ${base}`;
+}
+
+/** Normaliza valores antigos ("Filho de Lobo") para Lobo/Hiena. */
+export function normalizeMentalModel(value?: string | null): string | null {
+  if (!value) return null;
+  if (/hiena/i.test(value)) return "Hiena";
+  if (/lobo/i.test(value)) return "Lobo";
+  return value;
+}
 
 export const THERMOMETER_OPTIONS: PdaOption[] = [
   { value: "Promoção", label: "Promoção", color: C.verde },
   { value: "Neutro", label: "Neutro", color: C.amarelo },
   { value: "Demissão", label: "Demissão", color: C.vermelho },
 ];
+
+export const THERMOMETER_DEFAULT = "Neutro";
 
 export const EDUCATION_OPTIONS: PdaOption[] = [
   { value: "Ensino médio incompleto", label: "Ensino médio incompleto", color: C.laranja },
@@ -126,44 +154,50 @@ export const YES_NO_OPTIONS: PdaOption[] = [
   { value: "nao", label: "NÃO", color: C.vermelho },
 ];
 
-/** Cargos do PDA — combinados com os cargos já cadastrados no sistema. */
-export const POSITION_OPTIONS: string[] = [
+/** Cargos do PDA (Asana) + cargos que já existiam no ROY, sem duplicar. */
+export const POSITION_OPTIONS: string[] = Array.from(new Set([
   "CEO",
   "COO",
   "Gestor",
   "Coordenador",
   "Supervisor",
-  "Analista Rh",
+  "Analista RH",
   "Assistente",
   "Auxiliar",
-  "Anjo Consultor II",
   "Anjo Consultor I",
+  "Anjo Consultor II",
   "Anjo Backoffice",
   "Anjo Suporte",
+  "AnjoGuia",
   "Designer Instrucional",
   "Designer Gráfico",
   "Videomaker",
-  "Gestor de tráfego",
+  "Webdesigner",
+  "Social Media",
+  "Social Seller",
+  "Gestor de Tráfego",
+  "Gestor de Projetos",
   "Comercial 1",
   "Comercial 2",
   "Advogado",
-  "Social Media",
-  "Webdesigner",
-  "Gestor de Projetos",
-  "AnjoGuia",
-  "Planilhas",
   "Estagiário",
-  "Social Seller",
   "Analista Financeiro",
   "Analista Comercial",
   "Analista de Dados",
   "Analista de Sistemas",
   "CX - Customer Experience",
+  // Cargos já existentes no ROY
+  "SDR",
+  "Executivo Comercial",
+  "Customer Success Analyst",
+  "Video Maker Jr",
+  "Suporte de Tecnologia",
+  "Planilhas",
   "BPO",
   "Contador",
   "Copywriter",
   "Redator Publicitário",
-];
+]));
 
 /** Campos do PDA cujas opções são configuráveis pelo RH. */
 export type PdaFieldKey =
@@ -184,17 +218,17 @@ export type PdaFieldKey =
 export const PDA_FIELDS: { key: PdaFieldKey; label: string; defaults: PdaOption[]; hint?: string }[] = [
   { key: "registration_company", label: "Empresa de registro", defaults: REGISTRATION_COMPANY_OPTIONS },
   { key: "pda_hierarchy", label: "Hierarquia", defaults: HIERARCHY_OPTIONS },
-  { key: "pda_sectors", label: "Setores", defaults: SECTOR_OPTIONS },
+  { key: "pda_sectors", label: "Setores", defaults: SECTOR_OPTIONS, hint: "Seleção múltipla" },
   { key: "pda_level", label: "Nível", defaults: LEVEL_OPTIONS },
-  { key: "pda_role_profile", label: "Perfil da vaga", defaults: ROLE_PROFILE_OPTIONS },
+  { key: "pda_role_profile", label: "Perfil da vaga", defaults: ROLE_PROFILE_OPTIONS, hint: "Par primário/secundário entre Executor, Comunicador, Analítico e Planejador" },
   { key: "pda_profile", label: "Perfis (dominante e secundário)", defaults: PROFILE_OPTIONS, hint: "Usado nos campos Perfil dominante e Perfil secundário" },
-  { key: "pda_effort_level", label: "Nível de esforço", defaults: EFFORT_OPTIONS },
-  { key: "pda_change_quality", label: "Qualidade da mudança (QM)", defaults: CHANGE_QUALITY_OPTIONS },
+  { key: "pda_effort_level", label: "Nível de esforço", defaults: EFFORT_OPTIONS, hint: "Estime o esforço referente ao PDI" },
+  { key: "pda_change_quality", label: "QM - Qualidade da Mudança", defaults: CHANGE_QUALITY_OPTIONS, hint: "Classificar a qualidade da mudança do Anjo em relação ao PDI proposto" },
   { key: "pda_phase", label: "Fase", defaults: PHASE_OPTIONS },
   { key: "pda_temperament", label: "Temperamento", defaults: TEMPERAMENT_OPTIONS },
-  { key: "pda_mental_model", label: "Modelo mental", defaults: MENTAL_MODEL_OPTIONS },
-  { key: "pda_thermometer", label: "Termômetro", defaults: THERMOMETER_OPTIONS },
-  { key: "pda_education", label: "Escolaridade", defaults: EDUCATION_OPTIONS },
+  { key: "pda_mental_model", label: "Modelo mental", defaults: MENTAL_MODEL_OPTIONS, hint: "Exibido como Filho/Filha de Lobo ou de Hiena conforme o gênero" },
+  { key: "pda_thermometer", label: "Termômetro", defaults: THERMOMETER_OPTIONS, hint: "Essa pessoa está mais próxima de:" },
+  { key: "pda_education", label: "Grau de escolaridade", defaults: EDUCATION_OPTIONS },
 ];
 
 export const PDA_DEFAULTS_BY_FIELD: Record<PdaFieldKey, PdaOption[]> = PDA_FIELDS.reduce(
@@ -207,7 +241,11 @@ export function optionColor(options: PdaOption[], value?: string | null): string
   return options.find((o) => o.value === value)?.color || C.cinza;
 }
 
-/** % de sinergia entre o perfil da vaga ("Dominante/Secundário") e os perfis da pessoa. */
+/**
+ * % de sinergia entre o perfil da vaga ("Primário/Secundário") e os perfis da pessoa.
+ * 100 = os dois na ordem · 75 = os dois alternados · 50 = só o primário bate
+ * 25 = um perfil fora da ordem · 0 = nenhum bate · null = falta informação
+ */
 export function computeSynergyPct(
   roleProfile?: string | null,
   dominant?: string | null,
@@ -219,12 +257,12 @@ export function computeSynergyPct(
   const expSec = (expSecRaw || "").trim();
   const dom = (dominant || "").trim();
   const sec = (secondary || "").trim();
+  if (!dom && !sec) return null;
 
   if (dom && sec && dom === expDom && sec === expSec) return 100;
   if (dom && sec && dom === expSec && sec === expDom) return 75;
   if (dom && dom === expDom) return 50;
-  if (sec && sec === expSec) return 50;
-  if ((dom && dom === expSec) || (sec && sec === expDom)) return 25;
+  if ((dom && dom === expSec) || (sec && (sec === expDom || sec === expSec))) return 25;
   return 0;
 }
 
@@ -233,7 +271,7 @@ export function synergyFromPct(pct: number | null | undefined): boolean | null {
   return pct >= 75;
 }
 
-/** Tempo de casa em meses (até hoje ou até o desligamento). */
+/** Tempo de casa em meses completos (até hoje ou até o desligamento). */
 export function tenureMonths(
   hireDate?: string | null,
   terminationDate?: string | null,
@@ -265,4 +303,13 @@ export function formatMoney(value: number | null | undefined): string {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
+}
+
+/** Data em dd/mm/aaaa (sem deslocamento de fuso para datas puras). */
+export function formatDateBR(value?: string | null): string {
+  if (!value) return "—";
+  const iso = value.slice(0, 10);
+  const [y, m, d] = iso.split("-");
+  if (!y || !m || !d) return "—";
+  return `${d}/${m}/${y}`;
 }
