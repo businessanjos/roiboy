@@ -487,6 +487,7 @@ export default function HRCollaborators() {
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Unidade</th>
                 <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Vínculo</th>
                 <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Salário base</th>
+                <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Salário líquido</th>
                 <th className="text-right p-3 font-medium text-muted-foreground hidden lg:table-cell">Custo mensal</th>
                 <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
                 <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
@@ -533,6 +534,9 @@ export default function HRCollaborators() {
                     </td>
                     <td className="p-3 text-right text-muted-foreground hidden lg:table-cell tabular-nums">
                       {c.base_salary != null ? c.base_salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : (c.salary != null ? c.salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—")}
+                    </td>
+                    <td className="p-3 text-right text-muted-foreground hidden lg:table-cell tabular-nums">
+                      {c.net_salary != null ? c.net_salary.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
                     </td>
                     <td className="p-3 text-right font-medium hidden lg:table-cell tabular-nums">
                       {c.monthly_total_cost != null ? c.monthly_total_cost.toLocaleString("pt-BR", { style: "currency", currency: "BRL" }) : "—"}
