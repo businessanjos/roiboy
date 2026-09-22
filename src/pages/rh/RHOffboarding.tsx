@@ -32,6 +32,7 @@ export default function RHOffboarding() {
   const [stageFilter, setStageFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("all");
+  const [bondFilter, setBondFilter] = useState<"all" | "clt" | "pj">("all");
   const [view, setView] = useState<"list" | "kanban">("list");
   const [selected, setSelected] = useState<HROffboarding | null>(null);
   const [newOpen, setNewOpen] = useState(false);
