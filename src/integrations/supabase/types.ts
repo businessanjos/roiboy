@@ -13912,6 +13912,87 @@ export type Database = {
           },
         ]
       }
+      hr_pda_checkins: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          person_id: string
+          scheduled_at: string
+          source_table: string
+          status: string
+          title: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          person_id: string
+          scheduled_at: string
+          source_table?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          person_id?: string
+          scheduled_at?: string
+          source_table?: string
+          status?: string
+          title?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      hr_pda_field_history: {
+        Row: {
+          account_id: string
+          changed_by: string | null
+          changed_by_name: string | null
+          created_at: string
+          field_key: string
+          id: string
+          new_value: string | null
+          old_value: string | null
+          person_id: string
+          source_table: string
+        }
+        Insert: {
+          account_id: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_key: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          person_id: string
+          source_table: string
+        }
+        Update: {
+          account_id?: string
+          changed_by?: string | null
+          changed_by_name?: string | null
+          created_at?: string
+          field_key?: string
+          id?: string
+          new_value?: string | null
+          old_value?: string | null
+          person_id?: string
+          source_table?: string
+        }
+        Relationships: []
+      }
       hr_pda_options: {
         Row: {
           account_id: string
@@ -14109,6 +14190,42 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      hr_rh_meetings: {
+        Row: {
+          account_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          participants: string[] | null
+          scheduled_at: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          participants?: string[] | null
+          scheduled_at: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          participants?: string[] | null
+          scheduled_at?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
       }
       hr_salary_history: {
         Row: {
