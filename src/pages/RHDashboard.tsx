@@ -21,7 +21,53 @@ const RH_ALLOWED_EMAILS = [
   "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com",
 ];
 
-const PIE_COLORS = ["#6366f1", "#10b981", "#f59e0b", "#ef4444", "#06b6d4", "#8b5cf6", "#ec4899", "#84cc16"];
+const CHART_COLORS = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--chart-5))",
+];
+const chartColor = (i: number) => CHART_COLORS[Math.abs(i) % CHART_COLORS.length];
+
+const AXIS_PROPS = {
+  stroke: "hsl(var(--muted-foreground))",
+  tick: { fontSize: 11, fill: "hsl(var(--muted-foreground))" },
+  tickLine: false,
+  axisLine: false,
+} as const;
+
+function ChartTooltip({ active, payload, label }: any) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-hairline bg-popover/95 px-3 py-2 shadow-md backdrop-blur">
+      {label != null && <p className="mb-1 text-xs font-medium text-foreground">{label}</p>}
+      <ul className="space-y-0.5">
+        {payload.map((p: any, i: number) => (
+          <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
+            <span className="h-2 w-2 shrink-0 rounded-full" style={{ background: p.color || p.payload?.fill }} />
+            <span className="truncate">{p.name}</span>
+            <span className="ml-auto tabular-nums font-medium text-foreground">{p.value}</span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function ChartLegendList({ items }: { items: { name: string; value: number; color: string }[] }) {
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {items.map((it) => (
+        <li key={it.name} className="flex items-center gap-2 text-xs">
+          <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: it.color }} />
+          <span className="truncate text-muted-foreground">{it.name}</span>
+          <span className="ml-auto tabular-nums font-medium text-foreground">{it.value}</span>
+        </li>
+      ))}
+    </ul>
+  );
+}
 
 const fmtBRL = (n: number) =>
   n.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -38,20 +84,20 @@ function Kpi({ icon: Icon, label, value, hint, tone = "default" }: KpiProps) {
     default: { text: "text-foreground", bg: "bg-muted", icon: "text-muted-foreground" },
     success: { text: "text-success", bg: "bg-success/10", icon: "text-success" },
     warning: { text: "text-warning", bg: "bg-warning/10", icon: "text-warning" },
-    danger:  { text: "text-danger",    bg: "bg-danger/10",    icon: "text-danger" },
-    primary: { text: "text-indigo-600", bg: "bg-indigo-500/10", icon: "text-indigo-600" },
+    danger:  { text: "text-danger", bg: "bg-danger/10", icon: "text-danger" },
+    primary: { text: "text-primary", bg: "bg-primary/10", icon: "text-primary" },
   }[tone];
   return (
-    <Card className="border-0 shadow-sm">
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-start gap-4">
-          <div className={`p-2.5 rounded-lg ${toneMap.bg}`}>
-            <Icon className={`h-5 w-5 ${toneMap.icon}`} />
+    <Card className="border-hairline shadow-none transition-colors hover:border-border">
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`rounded-lg p-2 ${toneMap.bg}`}>
+            <Icon className={`h-4 w-4 ${toneMap.icon}`} strokeWidth={1.75} />
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
-            <p className={`text-2xl font-semibold ${toneMap.text} tabular-nums`}>{value}</p>
-            {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+          <div className="min-w-0 flex-1">
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
+            <p className={`mt-0.5 text-2xl font-semibold tabular-nums tracking-tight ${toneMap.text}`}>{value}</p>
+            {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
           </div>
         </div>
       </CardContent>
