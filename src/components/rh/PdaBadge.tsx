@@ -20,7 +20,7 @@ export function PdaBadge({ value, options, color, label, className }: Props) {
       className={`text-xs font-medium whitespace-nowrap ${className || ""}`}
       style={{ backgroundColor: c, borderColor: c, color: PDA_CHIP_TEXT }}
     >
-      {label ?? value}
+      {label ?? optionLabel ?? value}
     </Badge>
   );
 }
