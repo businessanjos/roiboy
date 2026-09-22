@@ -4,7 +4,7 @@ import { Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import {
   Users, UserPlus, UserMinus, Briefcase, Palmtree, DollarSign,
-  Cake, Building, Handshake, TrendingUp, TrendingDown, Sparkles,
+  Cake, Building, Handshake, TrendingUp, TrendingDown, Sparkles, ShieldCheck,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
