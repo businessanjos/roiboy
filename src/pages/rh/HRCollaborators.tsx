@@ -566,7 +566,7 @@ export default function HRCollaborators() {
       ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : view === "pda" ? (
-        <CollaboratorsPDATable
+        <CollaboratorsPDAWorkspace
           collaborators={pdaRows}
           canSeeSalary={RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())}
           onChanged={() => { refetch(); refetchProviders(); }}
