@@ -432,16 +432,17 @@ async function listOpenItems(
   if (meta.date) cols.add(meta.date);
   if (meta.ref) cols.add(meta.ref.col);
 
-  const q = await buildListQuery(
+  const built = await buildListQuery(
     admin, accountId, userId, key, opts, Array.from(cols).join(","), "exact",
   );
-  if (!q) return { rows: [], total: 0, page, page_size: pageSize };
+  if (!built) return { rows: [], total: 0, page, page_size: pageSize };
 
   const { col, asc } = sortColumn(key, opts.sort);
   const from = (page - 1) * pageSize;
-  const { data, count, error } = await q
+  const { data, count, error } = await built.q
     .order(col, { ascending: asc, nullsFirst: false })
     .range(from, from + pageSize - 1);
+
 
   if (error) {
     console.error(`list ${key} failed:`, error.message);
