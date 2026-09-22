@@ -468,8 +468,6 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                               const Icon = OPEN_ITEM_META[key].icon;
                               const isOn = !!selected[key];
                               const missing = isOn && !ownerFor(key);
-                              const isOpenList = !!expanded[key];
-                              const rows = details[key];
                               return (
                                 <div key={key}>
                                   <div
