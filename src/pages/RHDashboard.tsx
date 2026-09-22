@@ -413,17 +413,17 @@ export default function RHDashboard() {
             </div>
 
             <Card>
-              <CardHeader className="pb-2"><CardTitle className="text-sm">Admissões vs Desligamentos (12 meses)</CardTitle></CardHeader>
+              <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Admissões vs Desligamentos (12 meses)</CardTitle></CardHeader>
               <CardContent className="h-64">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={metrics.movSeries}>
-                    <CartesianGrid opacity={0.3} stroke="hsl(var(--hairline))" />
-                    <XAxis dataKey="month" fontSize={11} />
-                    <YAxis fontSize={11} allowDecimals={false} />
-                    <Tooltip />
-                    <Legend wrapperStyle={{ fontSize: 12 }} />
-                    <Bar dataKey="Admissões" fill="#10b981" radius={[4, 4, 0, 0]} />
-                    <Bar dataKey="Desligamentos" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  <BarChart data={metrics.movSeries} barGap={4} margin={{ top: 8, right: 8, left: -18, bottom: 0 }}>
+                    <CartesianGrid vertical={false} strokeDasharray="3 3" stroke="hsl(var(--hairline))" />
+                    <XAxis dataKey="month" {...AXIS_PROPS} />
+                    <YAxis allowDecimals={false} {...AXIS_PROPS} />
+                    <Tooltip content={<ChartTooltip />} cursor={{ fill: "hsl(var(--muted) / 0.5)" }} />
+                    <Legend wrapperStyle={{ fontSize: 12, color: "hsl(var(--muted-foreground))" }} iconType="circle" iconSize={8} />
+                    <Bar dataKey="Admissões" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} maxBarSize={22} />
+                    <Bar dataKey="Desligamentos" fill="hsl(var(--danger))" radius={[4, 4, 0, 0]} maxBarSize={22} />
                   </BarChart>
                 </ResponsiveContainer>
               </CardContent>
