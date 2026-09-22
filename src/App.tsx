@@ -132,6 +132,8 @@ const SalesScripts = lazyRetry(() => import("./pages/SalesScripts"));
 const Reminders = lazyRetry(() => import("./pages/Reminders"));
 const PublicDigitalContract = lazyRetry(() => import("./pages/PublicDigitalContract"));
 const ContractDefaultsSettings = lazyRetry(() => import("./pages/ContractDefaultsSettings"));
+const TeamOpenItems = lazyRetry(() => import("./pages/settings/TeamOpenItems"));
+
 const SalesDigitalContracts = lazyRetry(() => import("./pages/SalesDigitalContracts"));
 const SalesContractTemplates = lazyRetry(() => import("./pages/SalesContractTemplates"));
 
@@ -314,6 +316,8 @@ const App = () => (
                             <Route path="/operations/instagram-ranking" element={<InstagramRanking />} />
                             <Route path="/contracts" element={<Contracts />} />
                             <Route path="/settings/contract-defaults" element={<ContractDefaultsSettings />} />
+                            <Route path="/settings/team/pendencias" element={<TeamOpenItems />} />
+
                             <Route element={<SalesThemeLayout />}>
                               <Route path="/sales/contracts" element={<SalesDigitalContracts />} />
                               <Route path="/sales/contracts/templates" element={<SalesContractTemplates />} />
