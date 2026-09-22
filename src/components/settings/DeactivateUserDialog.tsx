@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { OpenItemsViewerDialog } from "./OpenItemsViewerDialog";
 import { toast } from "sonner";
 import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
@@ -109,13 +110,6 @@ interface AuditEntry {
 
 interface Candidate { id: string; name: string }
 
-interface DetailRow {
-  id: string;
-  title: string;
-  status: string | null;
-  date: string | null;
-  created_at: string | null;
-}
 
 interface Props {
   open: boolean;
@@ -197,32 +191,9 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
   const [owners, setOwners] = useState<Record<string, string>>({});
   const [defaultOwner, setDefaultOwner] = useState<string>("");
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
-  const [expanded, setExpanded] = useState<Record<string, boolean>>({});
-  const [details, setDetails] = useState<Record<string, DetailRow[] | undefined>>({});
-  const [loadingDetails, setLoadingDetails] = useState<string | null>(null);
+  const [viewerKey, setViewerKey] = useState<string | null>(null);
   const [history, setHistory] = useState<AuditEntry[]>([]);
   const { currentUser } = useCurrentUser();
-
-  const toggleDetails = async (key: string) => {
-    const willOpen = !expanded[key];
-    setExpanded((e) => ({ ...e, [key]: willOpen }));
-    if (!willOpen || details[key] || !user) return;
-    setLoadingDetails(key);
-    try {
-      const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
-        body: { action: "list_open_items", user_id: user.id, item_key: key },
-      });
-      if (error) throw error;
-      if (data?.error) throw new Error(data.error);
-      setDetails((d) => ({ ...d, [key]: (data.rows || []) as DetailRow[] }));
-    } catch (err: any) {
-      console.error(err);
-      toast.error(err.message || "Não foi possível listar os registros");
-      setDetails((d) => ({ ...d, [key]: [] }));
-    } finally {
-      setLoadingDetails(null);
-    }
-  };
 
   const total = totalOpenItems(counts);
 
@@ -278,8 +249,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
       setDefaultOwner("");
       setOwners({});
       setCollapsed({});
-      setExpanded({});
-      setDetails({});
+      setViewerKey(null);
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
           body: { action: "count_open_items", user_id: user.id },
@@ -491,8 +461,6 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                               const Icon = OPEN_ITEM_META[key].icon;
                               const isOn = !!selected[key];
                               const missing = isOn && !ownerFor(key);
-                              const isOpenList = !!expanded[key];
-                              const rows = details[key];
                               return (
                                 <div key={key}>
                                   <div
@@ -523,13 +491,9 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                         variant="ghost"
                                         size="sm"
                                         className="h-9 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                                        onClick={() => toggleDetails(key)}
+                                        onClick={() => setViewerKey(key)}
                                       >
-                                        {loadingDetails === key ? (
-                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                        ) : (
-                                          <Eye className="h-3.5 w-3.5" />
-                                        )}
+                                        <Eye className="h-3.5 w-3.5" />
                                         <span className="ml-1 hidden sm:inline">Ver</span>
                                       </Button>
                                       <div className="flex-1">
@@ -548,36 +512,6 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                                       </div>
                                     </div>
                                   </div>
-
-                                  {isOpenList && (
-                                    <div className="border-t border-border/50 bg-muted/20 px-3 py-2">
-                                      {!rows ? (
-                                        <p className="py-2 text-xs text-muted-foreground">Carregando registros...</p>
-                                      ) : rows.length === 0 ? (
-                                        <p className="py-2 text-xs text-muted-foreground">Nenhum registro encontrado.</p>
-                                      ) : (
-                                        <>
-                                          <p className="mb-1.5 text-[11px] text-muted-foreground">
-                                            Mostrando {rows.length} de {count} registro(s)
-                                          </p>
-                                          <ScrollArea className="max-h-48 rounded-lg border border-border/50 bg-card">
-                                            <ul className="divide-y divide-border/40">
-                                              {rows.map((r) => (
-                                                <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
-                                                  <span className="truncate">{r.title}</span>
-                                                  <span className="shrink-0 text-[10px] text-muted-foreground">
-                                                    {[r.status, r.date ? new Date(r.date).toLocaleDateString("pt-BR") : null]
-                                                      .filter(Boolean)
-                                                      .join(" · ")}
-                                                  </span>
-                                                </li>
-                                              ))}
-                                            </ul>
-                                          </ScrollArea>
-                                        </>
-                                      )}
-                                    </div>
-                                  )}
                                 </div>
                               );
                             })}
@@ -678,6 +612,17 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
           </div>
         </DialogFooter>
       </DialogContent>
+
+      <OpenItemsViewerDialog
+        open={!!viewerKey}
+        onOpenChange={(v) => !v && setViewerKey(null)}
+        userId={user?.id || null}
+        userName={user?.name || user?.email || null}
+        itemKey={viewerKey}
+        itemLabel={viewerKey ? OPEN_ITEM_META[viewerKey]?.label || "Registros" : "Registros"}
+        itemRule={viewerKey ? OPEN_ITEM_RULE[viewerKey] : undefined}
+        totalCount={viewerKey ? counts?.[viewerKey] || 0 : 0}
+      />
     </Dialog>
   );
 }
