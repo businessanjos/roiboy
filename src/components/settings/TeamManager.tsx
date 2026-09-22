@@ -926,7 +926,13 @@ export function TeamManager() {
               {filteredUsers.map((user) => (
                 <Card 
                   key={user.id} 
-                  className="group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card"
+                  className={`group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card ${
+                    !isUserActive(user)
+                      ? (pendingByUser[user.id] || 0) > 0
+                        ? "border-warning/60 bg-warning/5"
+                        : "opacity-70"
+                      : ""
+                  }`}
                   onClick={() => openEditMemberDialog(user)}
                 >
                   <CardContent className="p-5">
