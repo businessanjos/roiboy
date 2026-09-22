@@ -46,7 +46,7 @@ export default function HRServiceProviders() {
   const { providers, loading, createProvider } = useHRServiceProviders();
 
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [tab, setTab] = useState<"on_demand" | "director">("director");
   const [dialogOpen, setDialogOpen] = useState(false);
 

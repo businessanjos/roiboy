@@ -78,7 +78,7 @@ export default function HRCollaborators() {
 
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"list" | "pda">("list");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] = useState<string>("active");
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [dialogOpen, setDialogOpen] = useState(false);
