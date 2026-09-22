@@ -131,6 +131,7 @@ interface TeamUser {
   team_role?: TeamRole;
   team_roles?: TeamRole[];
   is_also_admin?: boolean;
+  is_active?: boolean | null;
 }
 
 const PERMISSION_LABELS: Record<string, { label: string; category: string }> = {
