@@ -13912,6 +13912,45 @@ export type Database = {
           },
         ]
       }
+      hr_pda_options: {
+        Row: {
+          account_id: string
+          color: string
+          created_at: string
+          field_key: string
+          id: string
+          is_active: boolean
+          label: string
+          sort_order: number
+          updated_at: string
+          value: string
+        }
+        Insert: {
+          account_id: string
+          color?: string
+          created_at?: string
+          field_key: string
+          id?: string
+          is_active?: boolean
+          label: string
+          sort_order?: number
+          updated_at?: string
+          value: string
+        }
+        Update: {
+          account_id?: string
+          color?: string
+          created_at?: string
+          field_key?: string
+          id?: string
+          is_active?: boolean
+          label?: string
+          sort_order?: number
+          updated_at?: string
+          value?: string
+        }
+        Relationships: []
+      }
       hr_positions: {
         Row: {
           account_id: string
@@ -14192,9 +14231,28 @@ export type Database = {
           hr_department_id: string | null
           id: string
           is_recruitment_partner: boolean
+          manager_id: string | null
           marital_status: string | null
+          net_salary: number | null
           notes: string | null
           payment_method: string | null
+          pda_change_quality: string | null
+          pda_dominant_profile: string | null
+          pda_education: string | null
+          pda_effort_level: string | null
+          pda_hierarchy: string | null
+          pda_level: string | null
+          pda_mental_model: string | null
+          pda_pdi_delivered: boolean | null
+          pda_pdi_done: boolean | null
+          pda_phase: string | null
+          pda_role_profile: string | null
+          pda_secondary_profile: string | null
+          pda_sectors: string[] | null
+          pda_synergy: boolean | null
+          pda_synergy_pct: number | null
+          pda_temperament: string | null
+          pda_thermometer: string | null
           phone: string | null
           portal_token: string | null
           position: string | null
@@ -14202,7 +14260,10 @@ export type Database = {
           provider_kind: string
           recruitment_commission_pct: number | null
           recruitment_notes: string | null
+          registration_company: string | null
           rg: string | null
+          salary_with_charges: number | null
+          salary_without_charges: number | null
           service_type: string | null
           state: string | null
           status: string | null
@@ -14246,9 +14307,28 @@ export type Database = {
           hr_department_id?: string | null
           id?: string
           is_recruitment_partner?: boolean
+          manager_id?: string | null
           marital_status?: string | null
+          net_salary?: number | null
           notes?: string | null
           payment_method?: string | null
+          pda_change_quality?: string | null
+          pda_dominant_profile?: string | null
+          pda_education?: string | null
+          pda_effort_level?: string | null
+          pda_hierarchy?: string | null
+          pda_level?: string | null
+          pda_mental_model?: string | null
+          pda_pdi_delivered?: boolean | null
+          pda_pdi_done?: boolean | null
+          pda_phase?: string | null
+          pda_role_profile?: string | null
+          pda_secondary_profile?: string | null
+          pda_sectors?: string[] | null
+          pda_synergy?: boolean | null
+          pda_synergy_pct?: number | null
+          pda_temperament?: string | null
+          pda_thermometer?: string | null
           phone?: string | null
           portal_token?: string | null
           position?: string | null
@@ -14256,7 +14336,10 @@ export type Database = {
           provider_kind?: string
           recruitment_commission_pct?: number | null
           recruitment_notes?: string | null
+          registration_company?: string | null
           rg?: string | null
+          salary_with_charges?: number | null
+          salary_without_charges?: number | null
           service_type?: string | null
           state?: string | null
           status?: string | null
@@ -14300,9 +14383,28 @@ export type Database = {
           hr_department_id?: string | null
           id?: string
           is_recruitment_partner?: boolean
+          manager_id?: string | null
           marital_status?: string | null
+          net_salary?: number | null
           notes?: string | null
           payment_method?: string | null
+          pda_change_quality?: string | null
+          pda_dominant_profile?: string | null
+          pda_education?: string | null
+          pda_effort_level?: string | null
+          pda_hierarchy?: string | null
+          pda_level?: string | null
+          pda_mental_model?: string | null
+          pda_pdi_delivered?: boolean | null
+          pda_pdi_done?: boolean | null
+          pda_phase?: string | null
+          pda_role_profile?: string | null
+          pda_secondary_profile?: string | null
+          pda_sectors?: string[] | null
+          pda_synergy?: boolean | null
+          pda_synergy_pct?: number | null
+          pda_temperament?: string | null
+          pda_thermometer?: string | null
           phone?: string | null
           portal_token?: string | null
           position?: string | null
@@ -14310,7 +14412,10 @@ export type Database = {
           provider_kind?: string
           recruitment_commission_pct?: number | null
           recruitment_notes?: string | null
+          registration_company?: string | null
           rg?: string | null
+          salary_with_charges?: number | null
+          salary_without_charges?: number | null
           service_type?: string | null
           state?: string | null
           status?: string | null
