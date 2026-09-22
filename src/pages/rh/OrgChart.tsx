@@ -22,6 +22,8 @@ interface Person {
   birth_date: string | null;
   status: string | null;
   employment_type: string | null;
+  hr_department_id?: string | null;
+
 }
 
 const norm = (v: string | null | undefined) =>
