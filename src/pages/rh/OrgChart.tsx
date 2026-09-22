@@ -272,9 +272,10 @@ export default function OrgChart() {
           deptMatches: [] as string[],
           gestor,
           members: group.members.filter((m) => m.id !== gestor?.id),
+          deptColor: deptColorFor([group.label]),
         };
       });
-  }, [unassigned]);
+  }, [unassigned, deptColorFor]);
 
   const allColumns = useMemo(() => [...columns, ...extraColumns], [columns, extraColumns]);
 
