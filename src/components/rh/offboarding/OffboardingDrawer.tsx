@@ -457,7 +457,7 @@ export default function OffboardingDrawer({
           </TabsContent>
 
           {/* ====== RESCISÃO ====== */}
-          <TabsContent value="rescisao" className="space-y-4 mt-4">
+          <TabsContent value="rescisao" className={`space-y-4 mt-4 ${isPJ ? "hidden" : ""}`}>
             <Card><CardHeader className="pb-2"><CardTitle className="text-base flex items-center gap-2"><Calculator className="h-4 w-4" /> Calculadora de Rescisão (estimativa)</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 <div className="grid grid-cols-2 gap-3">
