@@ -11,15 +11,13 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
-import { Building2, ChevronsUpDown, HelpCircle, Sparkles, Target, Wallet } from "lucide-react";
+import { Building2, ChevronsUpDown, HelpCircle, SlidersHorizontal, Sparkles, Target, Wallet } from "lucide-react";
 import { PdaBadge, YesNoBadge } from "@/components/rh/PdaBadge";
 import {
-  CHANGE_QUALITY_OPTIONS, EDUCATION_OPTIONS, EFFORT_OPTIONS, HIERARCHY_OPTIONS,
-  LEVEL_OPTIONS, MENTAL_MODEL_OPTIONS, PHASE_OPTIONS, PROFILE_OPTIONS,
-  REGISTRATION_COMPANY_OPTIONS, ROLE_PROFILE_OPTIONS, SECTOR_OPTIONS,
-  TEMPERAMENT_OPTIONS, THERMOMETER_OPTIONS, computeSynergyPct, formatTenure,
-  synergyFromPct, tenureMonths, type PdaOption,
+  computeSynergyPct, formatTenure, synergyFromPct, tenureMonths, type PdaOption,
 } from "@/lib/rh/pda";
+import { useHRPdaOptions } from "@/hooks/useHRPdaOptions";
+import PdaOptionsDialog from "./PdaOptionsDialog";
 
 interface Props {
   form: any;
@@ -102,6 +100,8 @@ function MoneyInput({ value, onChange }: { value?: number | null; onChange: (v: 
 }
 
 export default function CollaboratorPDA({ form, setField, collaboratorId, accountId, canSeeSalary = true }: Props) {
+  const { optionsFor } = useHRPdaOptions();
+  const [optionsOpen, setOptionsOpen] = useState(false);
   const [managers, setManagers] = useState<{ id: string; full_name: string; avatar_url: string | null }[]>([]);
   const sectors: string[] = Array.isArray(form.pda_sectors) ? form.pda_sectors : [];
 
@@ -135,7 +135,12 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
       {/* Posição */}
       <Card>
         <CardHeader className="pb-3">
-          <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Posição</CardTitle>
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base flex items-center gap-2"><Building2 className="h-4 w-4" /> Posição</CardTitle>
+            <Button type="button" variant="outline" size="sm" onClick={() => setOptionsOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4 mr-2" /> Opções
+            </Button>
+          </div>
         </CardHeader>
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
@@ -143,12 +148,12 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
             <OptionSelect
               value={form.registration_company}
               onChange={(v) => setField("registration_company", v)}
-              options={REGISTRATION_COMPANY_OPTIONS}
+              options={optionsFor("registration_company")}
             />
           </div>
           <div>
             <Label>Hierarquia</Label>
-            <OptionSelect value={form.pda_hierarchy} onChange={(v) => setField("pda_hierarchy", v)} options={HIERARCHY_OPTIONS} />
+            <OptionSelect value={form.pda_hierarchy} onChange={(v) => setField("pda_hierarchy", v)} options={optionsFor("pda_hierarchy")} />
           </div>
           <div className="md:col-span-2">
             <Label>Setores</Label>
@@ -158,14 +163,14 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
                   <div className="flex flex-wrap gap-1 items-center">
                     {sectors.length === 0
                       ? <span className="text-muted-foreground">Selecione os setores</span>
-                      : sectors.map((s) => <PdaBadge key={s} value={s} options={SECTOR_OPTIONS} />)}
+                      : sectors.map((s) => <PdaBadge key={s} value={s} options={optionsFor("pda_sectors")} />)}
                   </div>
                   <ChevronsUpDown className="h-4 w-4 opacity-50 shrink-0" />
                 </Button>
               </PopoverTrigger>
               <PopoverContent className="w-[--radix-popover-trigger-width] p-2" align="start">
                 <div className="space-y-1">
-                  {SECTOR_OPTIONS.map((o) => (
+                  {optionsFor("pda_sectors").map((o) => (
                     <button
                       key={o.value}
                       type="button"
@@ -183,7 +188,7 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <Label>Nível</Label>
-            <OptionSelect value={form.pda_level} onChange={(v) => setField("pda_level", v)} options={LEVEL_OPTIONS} />
+            <OptionSelect value={form.pda_level} onChange={(v) => setField("pda_level", v)} options={optionsFor("pda_level")} />
           </div>
           <div>
             <Label>Gestor</Label>
@@ -222,7 +227,7 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <Label>Escolaridade</Label>
-            <OptionSelect value={form.pda_education} onChange={(v) => setField("pda_education", v)} options={EDUCATION_OPTIONS} />
+            <OptionSelect value={form.pda_education} onChange={(v) => setField("pda_education", v)} options={optionsFor("pda_education")} />
           </div>
           <div>
             <Label>Tempo de casa</Label>
@@ -243,15 +248,15 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
         <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
             <Label>Perfil da vaga</Label>
-            <OptionSelect value={form.pda_role_profile} onChange={(v) => setField("pda_role_profile", v)} options={ROLE_PROFILE_OPTIONS} />
+            <OptionSelect value={form.pda_role_profile} onChange={(v) => setField("pda_role_profile", v)} options={optionsFor("pda_role_profile")} />
           </div>
           <div>
             <Label>Perfil dominante</Label>
-            <OptionSelect value={form.pda_dominant_profile} onChange={(v) => setField("pda_dominant_profile", v)} options={PROFILE_OPTIONS} />
+            <OptionSelect value={form.pda_dominant_profile} onChange={(v) => setField("pda_dominant_profile", v)} options={optionsFor("pda_profile")} />
           </div>
           <div>
             <Label>Perfil secundário</Label>
-            <OptionSelect value={form.pda_secondary_profile} onChange={(v) => setField("pda_secondary_profile", v)} options={PROFILE_OPTIONS} />
+            <OptionSelect value={form.pda_secondary_profile} onChange={(v) => setField("pda_secondary_profile", v)} options={optionsFor("pda_profile")} />
           </div>
           <div>
             <Label>Sinergia <span className="text-[10px] text-muted-foreground">(automático)</span></Label>
@@ -262,11 +267,11 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <Label>Temperamento</Label>
-            <OptionSelect value={form.pda_temperament} onChange={(v) => setField("pda_temperament", v)} options={TEMPERAMENT_OPTIONS} />
+            <OptionSelect value={form.pda_temperament} onChange={(v) => setField("pda_temperament", v)} options={optionsFor("pda_temperament")} />
           </div>
           <div>
             <Label>Modelo mental</Label>
-            <OptionSelect value={form.pda_mental_model} onChange={(v) => setField("pda_mental_model", v)} options={MENTAL_MODEL_OPTIONS} />
+            <OptionSelect value={form.pda_mental_model} onChange={(v) => setField("pda_mental_model", v)} options={optionsFor("pda_mental_model")} />
           </div>
         </CardContent>
       </Card>
@@ -287,21 +292,21 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </div>
           <div>
             <FieldLabel hint="Estime o esforço referente ao PDI">Nível de esforço</FieldLabel>
-            <OptionSelect value={form.pda_effort_level} onChange={(v) => setField("pda_effort_level", v)} options={EFFORT_OPTIONS} />
+            <OptionSelect value={form.pda_effort_level} onChange={(v) => setField("pda_effort_level", v)} options={optionsFor("pda_effort_level")} />
           </div>
           <div>
             <FieldLabel hint="Classificar a qualidade da mudança do Anjo em relação ao PDI proposto">
               QM - Qualidade da Mudança
             </FieldLabel>
-            <OptionSelect value={form.pda_change_quality} onChange={(v) => setField("pda_change_quality", v)} options={CHANGE_QUALITY_OPTIONS} />
+            <OptionSelect value={form.pda_change_quality} onChange={(v) => setField("pda_change_quality", v)} options={optionsFor("pda_change_quality")} />
           </div>
           <div>
             <Label>Fase</Label>
-            <OptionSelect value={form.pda_phase} onChange={(v) => setField("pda_phase", v)} options={PHASE_OPTIONS} />
+            <OptionSelect value={form.pda_phase} onChange={(v) => setField("pda_phase", v)} options={optionsFor("pda_phase")} />
           </div>
           <div>
             <FieldLabel hint="Essa pessoa está mais próxima de:">Termômetro</FieldLabel>
-            <OptionSelect value={form.pda_thermometer} onChange={(v) => setField("pda_thermometer", v)} options={THERMOMETER_OPTIONS} />
+            <OptionSelect value={form.pda_thermometer} onChange={(v) => setField("pda_thermometer", v)} options={optionsFor("pda_thermometer")} />
           </div>
         </CardContent>
       </Card>
@@ -328,6 +333,8 @@ export default function CollaboratorPDA({ form, setField, collaboratorId, accoun
           </CardContent>
         </Card>
       )}
+
+      <PdaOptionsDialog open={optionsOpen} onOpenChange={setOptionsOpen} />
     </div>
   );
 }

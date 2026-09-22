@@ -76,7 +76,7 @@ export default function HRCollaborators() {
   const { currentUser } = useCurrentUser();
   const canHR = useCanAccessHR();
   const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
-  const { providers, loading: providersLoading } = useHRServiceProviders();
+  const { providers, loading: providersLoading, refetch: refetchProviders } = useHRServiceProviders();
 
   const [search, setSearch] = useState("");
   const [view, setView] = useState<"clt" | "pj" | "pda">("clt");
@@ -148,6 +148,7 @@ export default function HRCollaborators() {
 
   const providersAsCollaborators = useMemo(
     () => filteredProviders.map(p => ({
+      ...(p as any),
       id: p.id,
       full_name: p.full_name,
       email: p.email,
@@ -159,6 +160,7 @@ export default function HRCollaborators() {
       employment_type: "pj",
       status: p.status,
       __route: `/rh/service-providers/${p.id}`,
+      __table: "hr_service_providers",
     })) as unknown as HRCollaborator[],
     [filteredProviders],
   );
@@ -564,7 +566,10 @@ export default function HRCollaborators() {
       ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
       ) : view === "pda" ? (
-        <CollaboratorsPDATable collaborators={pdaRows} />
+        <CollaboratorsPDATable
+          collaborators={pdaRows}
+          onChanged={() => { refetch(); refetchProviders(); }}
+        />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <UsersRound className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
