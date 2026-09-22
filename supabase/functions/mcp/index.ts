@@ -472,7 +472,8 @@ var RH_ALLOWED_EMAILS = /* @__PURE__ */ new Set([
   "brualmeida.est@hotmail.com",
   "arthur.mudri@hotmail.com",
   "jessicamarcato@anjosbusiness.com",
-  "anjosgroup.dados@anjosbusiness.com"
+  "anjosgroup.dados@anjosbusiness.com",
+  "rh2@eternumoficial.com"
 ]);
 async function requireRhAccess(ctx) {
   const email = (ctx.getUserEmail?.() ?? "").toLowerCase();

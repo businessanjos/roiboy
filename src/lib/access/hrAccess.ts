@@ -16,6 +16,7 @@ export const RH_ALLOWED_EMAILS = [
   "arthur.mudri@hotmail.com",
   "jessicamarcato@anjosbusiness.com",
   "anjosgroup.dados@anjosbusiness.com",
+  "rh2@eternumoficial.com",
 ];
 
 export function emailHasHRAccess(email?: string | null): boolean {
