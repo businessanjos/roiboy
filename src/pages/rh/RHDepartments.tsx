@@ -18,24 +18,11 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useHRDepartments, type HRDepartment } from "@/hooks/useHRDepartments";
 import { useHRCollaborators } from "@/hooks/useHRCollaborators";
+import { Switch } from "@/components/ui/switch";
+import { DEPARTMENT_COLOR_OPTIONS, getDepartmentColorHsl } from "@/lib/rh/departmentColors";
 
-const COLOR_OPTIONS = [
-  { value: "blue", label: "Azul", hsl: "hsl(217 91% 60%)" },
-  { value: "emerald", label: "Verde", hsl: "hsl(152 55% 45%)" },
-  { value: "amber", label: "Âmbar", hsl: "hsl(39 60% 55%)" },
-  { value: "purple", label: "Roxo", hsl: "hsl(271 81% 56%)" },
-  { value: "red", label: "Vermelho", hsl: "hsl(0 72% 51%)" },
-  { value: "teal", label: "Teal", hsl: "hsl(172 66% 50%)" },
-  { value: "pink", label: "Rosa", hsl: "hsl(330 81% 60%)" },
-  { value: "indigo", label: "Índigo", hsl: "hsl(239 84% 67%)" },
-  { value: "orange", label: "Laranja", hsl: "hsl(25 95% 53%)" },
-  { value: "slate", label: "Cinza", hsl: "hsl(215 20% 65%)" },
-];
-
-const getColorHsl = (color: string) => {
-  if (color.startsWith("hsl") || color.startsWith("#")) return color;
-  return COLOR_OPTIONS.find(c => c.value === color)?.hsl || "hsl(215 20% 65%)";
-};
+const COLOR_OPTIONS = DEPARTMENT_COLOR_OPTIONS;
+const getColorHsl = getDepartmentColorHsl;
 
 const normalizeDepartmentName = (value: string | null | undefined) =>
   value?.trim().toLocaleLowerCase("pt-BR") ?? "";
