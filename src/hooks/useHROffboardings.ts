@@ -166,19 +166,22 @@ export function useHROffboardings() {
       // Se marcou para repor, criar vaga rascunho automaticamente
       if (created?.will_replace) {
         try {
-          const collab = created.collaborator_id
-            ? (await supabase
-                .from("hr_collaborators")
-                .select("position, department, employment_type, hr_department_id")
-                .eq("id", created.collaborator_id)
-                .maybeSingle()).data
-            : (() => null)() || (created.service_provider_id
-              ? (await supabase
-                  .from("hr_service_providers")
-                  .select("position, department, hr_department_id")
-                  .eq("id", created.service_provider_id)
-                  .maybeSingle()).data as any
-              : null);
+          let collab: any = null;
+          if (created.collaborator_id) {
+            const { data } = await supabase
+              .from("hr_collaborators")
+              .select("position, department, employment_type, hr_department_id")
+              .eq("id", created.collaborator_id)
+              .maybeSingle();
+            collab = data;
+          } else if (created.service_provider_id) {
+            const { data } = await supabase
+              .from("hr_service_providers")
+              .select("position, department, hr_department_id")
+              .eq("id", created.service_provider_id)
+              .maybeSingle();
+            collab = data ? { ...data, employment_type: "pj" } : null;
+          }
           const { data: job } = await supabase
             .from("hr_jobs")
             .insert({
