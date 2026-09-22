@@ -485,11 +485,12 @@ async function titleGroups(
   const statuses = new Map<string, number>();
   const pageSize = 1000;
   for (let p = 0; p < 5; p++) {
-    const q = await buildListQuery(admin, accountId, userId, key, {}, cols);
-    if (!q) break;
-    const { data, error } = await q
+    const built = await buildListQuery(admin, accountId, userId, key, {}, cols);
+    if (!built) break;
+    const { data, error } = await built.q
       .order("created_at", { ascending: false })
       .range(p * pageSize, p * pageSize + pageSize - 1);
+
     if (error) {
       console.error(`title_groups ${key} failed:`, error.message);
       break;
