@@ -70,8 +70,28 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
   );
   const [newOwner, setNewOwner] = useState<string>("");
   const [history, setHistory] = useState<AuditEntry[]>([]);
+  const [ownerSearch, setOwnerSearch] = useState("");
+  const { currentUser } = useCurrentUser();
+
+  const normalize = (s: string) =>
+    s.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+  const matchesSearch = (name: string) =>
+    normalize(name).includes(normalize(ownerSearch.trim()));
+
+  const selfCandidate = useMemo(
+    () => candidates.find((c) => c.id === currentUser?.id) || null,
+    [candidates, currentUser?.id],
+  );
+  const filteredCandidates = useMemo(
+    () =>
+      candidates
+        .filter((c) => c.id !== selfCandidate?.id)
+        .filter((c) => !ownerSearch.trim() || matchesSearch(c.name)),
+    [candidates, selfCandidate?.id, ownerSearch],
+  );
 
   const total = totalOpenItems(counts);
+
 
   const selectedKeys = useMemo(
     () => OPEN_ITEM_KEYS.filter((k) => selected[k] && (counts?.[k] || 0) > 0),
