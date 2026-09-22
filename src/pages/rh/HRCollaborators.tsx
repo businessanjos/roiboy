@@ -486,7 +486,7 @@ export default function HRCollaborators() {
         <TabsList>
           <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
           <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
-          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaRows.length})</span></TabsTrigger>
+          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
         </TabsList>
       </Tabs>
 
