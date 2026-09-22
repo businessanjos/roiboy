@@ -188,9 +188,9 @@ export default function RHDashboard() {
     const pjDirectors = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() === "director");
     const pjOthers = pj.filter((p: any) => (p.provider_kind || "").toLowerCase() !== "director");
 
-    // Composição por departamento
+    // Composição por departamento (CLT + PJ)
     const byDept: Record<string, number> = {};
-    active.forEach((c: any) => {
+    [...active, ...pj].forEach((c: any) => {
       const d = c.department || "Sem departamento";
       byDept[d] = (byDept[d] || 0) + 1;
     });
