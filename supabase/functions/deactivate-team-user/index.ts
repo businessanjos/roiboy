@@ -10,7 +10,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-type Action = "count_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
+type Action = "count_open_items" | "list_open_items" | "deactivate" | "reactivate" | "transfer_open_items";
 
 interface ItemDef {
   key: string;
