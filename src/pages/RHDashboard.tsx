@@ -337,37 +337,58 @@ export default function RHDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-              <Card>
-                <CardHeader className="pb-2"><CardTitle className="text-sm">Por departamento</CardTitle></CardHeader>
-                <CardContent className="h-64">
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1"><CardTitle className="text-sm font-medium">Por departamento</CardTitle></CardHeader>
+                <CardContent>
                   {metrics.deptChart.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Sem dados.</p>
                   ) : (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <PieChart>
-                        <Pie data={metrics.deptChart} dataKey="value" nameKey="name" innerRadius={50} outerRadius={85} paddingAngle={2}>
-                          {metrics.deptChart.map((_, i) => <Cell key={i} fill={PIE_COLORS[i % PIE_COLORS.length]} />)}
-                        </Pie>
-                        <Tooltip />
-                        <Legend wrapperStyle={{ fontSize: 12 }} />
-                      </PieChart>
-                    </ResponsiveContainer>
+                    <div className="grid grid-cols-1 items-center gap-4 sm:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+                      <div className="relative h-52">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={metrics.deptChart}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={58}
+                              outerRadius={82}
+                              paddingAngle={2}
+                              stroke="hsl(var(--card))"
+                              strokeWidth={2}
+                            >
+                              {metrics.deptChart.map((_, i) => <Cell key={i} fill={chartColor(i)} />)}
+                            </Pie>
+                            <Tooltip content={<ChartTooltip />} />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="text-2xl font-semibold tabular-nums tracking-tight">{metrics.headcount}</span>
+                          <span className="text-[11px] uppercase tracking-wide text-muted-foreground">ativos</span>
+                        </div>
+                      </div>
+                      <div className="max-h-52 overflow-auto pr-1">
+                        <ChartLegendList
+                          items={metrics.deptChart.map((d, i) => ({ name: d.name, value: d.value, color: chartColor(i) }))}
+                        />
+                      </div>
+                    </div>
                   )}
                 </CardContent>
               </Card>
 
-              <Card>
-                <CardHeader className="pb-2 flex flex-row items-center justify-between">
-                  <CardTitle className="text-sm flex items-center gap-2"><Cake className="h-4 w-4 text-pink-600" />Aniversariantes do mês</CardTitle>
+              <Card className="border-hairline shadow-none">
+                <CardHeader className="pb-1 flex flex-row items-center justify-between">
+                  <CardTitle className="text-sm font-medium flex items-center gap-2"><Cake className="h-4 w-4 text-muted-foreground" />Aniversariantes do mês</CardTitle>
                   <Badge variant="secondary">{metrics.birthdays.length}</Badge>
                 </CardHeader>
                 <CardContent className="max-h-64 overflow-auto">
                   {metrics.birthdays.length === 0 ? (
                     <p className="text-sm text-muted-foreground">Nenhum aniversariante neste mês.</p>
                   ) : (
-                    <ul className="space-y-2">
+                    <ul className="divide-y divide-hairline">
                       {metrics.birthdays.map((c: any) => (
-                        <li key={c.id} className="flex items-center justify-between text-sm">
+                        <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                           <span className="truncate">{c.full_name}</span>
                           <span className="text-muted-foreground tabular-nums">
                             {String(c._bd).padStart(2, "0")}/{String(c._bm + 1).padStart(2, "0")}
