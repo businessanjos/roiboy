@@ -35,6 +35,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
+import CollaboratorsPDATable from "./components/CollaboratorsPDATable";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
@@ -75,6 +77,7 @@ export default function HRCollaborators() {
   const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
 
   const [search, setSearch] = useState("");
+  const [view, setView] = useState<"list" | "pda">("list");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
