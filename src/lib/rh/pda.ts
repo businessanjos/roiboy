@@ -165,6 +165,43 @@ export const POSITION_OPTIONS: string[] = [
   "Redator Publicitário",
 ];
 
+/** Campos do PDA cujas opções são configuráveis pelo RH. */
+export type PdaFieldKey =
+  | "registration_company"
+  | "pda_hierarchy"
+  | "pda_sectors"
+  | "pda_level"
+  | "pda_role_profile"
+  | "pda_profile"
+  | "pda_effort_level"
+  | "pda_change_quality"
+  | "pda_phase"
+  | "pda_temperament"
+  | "pda_mental_model"
+  | "pda_thermometer"
+  | "pda_education";
+
+export const PDA_FIELDS: { key: PdaFieldKey; label: string; defaults: PdaOption[]; hint?: string }[] = [
+  { key: "registration_company", label: "Empresa de registro", defaults: REGISTRATION_COMPANY_OPTIONS },
+  { key: "pda_hierarchy", label: "Hierarquia", defaults: HIERARCHY_OPTIONS },
+  { key: "pda_sectors", label: "Setores", defaults: SECTOR_OPTIONS },
+  { key: "pda_level", label: "Nível", defaults: LEVEL_OPTIONS },
+  { key: "pda_role_profile", label: "Perfil da vaga", defaults: ROLE_PROFILE_OPTIONS },
+  { key: "pda_profile", label: "Perfis (dominante e secundário)", defaults: PROFILE_OPTIONS, hint: "Usado nos campos Perfil dominante e Perfil secundário" },
+  { key: "pda_effort_level", label: "Nível de esforço", defaults: EFFORT_OPTIONS },
+  { key: "pda_change_quality", label: "Qualidade da mudança (QM)", defaults: CHANGE_QUALITY_OPTIONS },
+  { key: "pda_phase", label: "Fase", defaults: PHASE_OPTIONS },
+  { key: "pda_temperament", label: "Temperamento", defaults: TEMPERAMENT_OPTIONS },
+  { key: "pda_mental_model", label: "Modelo mental", defaults: MENTAL_MODEL_OPTIONS },
+  { key: "pda_thermometer", label: "Termômetro", defaults: THERMOMETER_OPTIONS },
+  { key: "pda_education", label: "Escolaridade", defaults: EDUCATION_OPTIONS },
+];
+
+export const PDA_DEFAULTS_BY_FIELD: Record<PdaFieldKey, PdaOption[]> = PDA_FIELDS.reduce(
+  (acc, f) => ({ ...acc, [f.key]: f.defaults }),
+  {} as Record<PdaFieldKey, PdaOption[]>,
+);
+
 export function optionColor(options: PdaOption[], value?: string | null): string {
   if (!value) return C.cinza;
   return options.find((o) => o.value === value)?.color || C.cinza;
