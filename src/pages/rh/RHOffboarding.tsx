@@ -224,7 +224,7 @@ function StatCard({ label, value, color = "text-foreground", icon, small }: { la
 }
 
 function OffboardingRow({ o, onClick }: { o: HROffboarding; onClick: () => void }) {
-  const c = o.collaborator;
+  const c = getOffboardingPerson(o);
   const initials = (c?.full_name || "?").split(" ").slice(0,2).map(s=>s[0]).join("").toUpperCase();
   return (
     <Card className="cursor-pointer hover:shadow-md transition-shadow" onClick={onClick}>
