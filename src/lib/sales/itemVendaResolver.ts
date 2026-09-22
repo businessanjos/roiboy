@@ -71,6 +71,26 @@ const PRODUCT_SLUG_TO_ID: Record<string, string> = {
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+/**
+ * Caminho inverso: dado o valor gravado (slug OU UUID de produto), devolve o
+ * `option.value` correspondente na lista de opções do campo "Item da Venda".
+ * Necessário porque negócios ganhos gravam o UUID do produto, enquanto as
+ * opções do campo usam slugs — sem isso a badge fica vazia ("—").
+ */
+export function resolveItemVendaOptionValue(
+  raw: string | null | undefined,
+  options: { value: string }[] | null | undefined,
+): string {
+  if (!raw) return "";
+  const trimmed = raw.trim();
+  if (!trimmed) return "";
+  const opts = options ?? [];
+  if (opts.some((o) => o.value === trimmed)) return trimmed;
+  if (!UUID_RE.test(trimmed)) return "";
+  const match = opts.find((o) => PRODUCT_SLUG_TO_ID[o.value?.toLowerCase()] === trimmed);
+  return match?.value ?? "";
+}
+
 export function resolveItemVendaToProductId(raw: string | null | undefined): string {
   if (!raw) return "";
   const trimmed = raw.trim();
