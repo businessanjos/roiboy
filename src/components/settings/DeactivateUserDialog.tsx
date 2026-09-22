@@ -18,7 +18,7 @@ import {
   AlertTriangle, Loader2, UserMinus, ArrowRightLeft, History, Briefcase,
   UserPlus, Users, CheckSquare, CalendarClock, MessageSquare, Search, Star,
   Megaphone, CalendarDays, Wallet, IdCard, LifeBuoy, ClipboardList, FileText,
-  Handshake, Route, ChevronDown, ChevronRight,
+  Handshake, Route, ChevronDown, ChevronRight, Eye,
 } from "lucide-react";
 
 export type OpenItemKey = string;
@@ -108,6 +108,14 @@ interface AuditEntry {
 }
 
 interface Candidate { id: string; name: string }
+
+interface DetailRow {
+  id: string;
+  title: string;
+  status: string | null;
+  date: string | null;
+  created_at: string | null;
+}
 
 interface Props {
   open: boolean;
