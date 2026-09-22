@@ -806,7 +806,10 @@ export function TeamManager() {
         <TabsContent value="members" className="space-y-6 mt-6">
           {/* Stats */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-            <Card className="shadow-card">
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "all" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("all")}
+            >
               <CardContent className="p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2.5 rounded-xl bg-primary/10">
@@ -819,7 +822,39 @@ export function TeamManager() {
                 </div>
               </CardContent>
             </Card>
-            {roles.slice(0, 3).map((role) => (
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "active" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("active")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-success/10">
+                    <UserCheck className="h-5 w-5 text-success" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{activeCount}</p>
+                    <p className="text-xs text-muted-foreground">Ativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card
+              className={`shadow-card cursor-pointer transition-colors ${statusFilter === "inactive" ? "ring-2 ring-primary" : ""}`}
+              onClick={() => setStatusFilter("inactive")}
+            >
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-muted">
+                    <UserMinus className="h-5 w-5 text-muted-foreground" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-foreground">{inactiveCount}</p>
+                    <p className="text-xs text-muted-foreground">Inativos</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            {roles.slice(0, 1).map((role) => (
               <Card key={role.id} className="shadow-card">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
