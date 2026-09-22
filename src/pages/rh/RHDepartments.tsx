@@ -35,7 +35,7 @@ export default function RHDepartments() {
   const [search, setSearch] = useState("");
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDept, setEditingDept] = useState<HRDepartment | null>(null);
-  const [form, setForm] = useState({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "" });
+  const [form, setForm] = useState({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "", show_in_org_chart: true });
   const [saving, setSaving] = useState(false);
 
   const filtered = departments.filter(d =>
@@ -69,10 +69,11 @@ export default function RHDepartments() {
         color: dept.color,
         head_collaborator_id: dept.head_collaborator_id || "",
         parent_department_id: dept.parent_department_id || "",
+        show_in_org_chart: dept.show_in_org_chart ?? true,
       });
     } else {
       setEditingDept(null);
-      setForm({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "" });
+      setForm({ name: "", description: "", color: "blue", head_collaborator_id: "", parent_department_id: "", show_in_org_chart: true });
     }
     setDialogOpen(true);
   };
@@ -86,6 +87,7 @@ export default function RHDepartments() {
       color: form.color,
       head_collaborator_id: form.head_collaborator_id || null,
       parent_department_id: form.parent_department_id || null,
+      show_in_org_chart: form.show_in_org_chart,
     };
 
     if (editingDept) {
