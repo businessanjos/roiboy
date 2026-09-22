@@ -248,7 +248,7 @@ export default function OffboardingDrawer({
         </SheetHeader>
 
         <Tabs value={tab} onValueChange={setTab} className="mt-4">
-          <TabsList className="grid grid-cols-7 w-full h-auto">
+          <TabsList className={`grid ${isPJ ? "grid-cols-6" : "grid-cols-7"} w-full h-auto`}>
             <TabsTrigger value="resumo" className="text-xs">Resumo</TabsTrigger>
             <TabsTrigger value="pendencias" className="text-xs">
               Pendências {totalPend > 0 && <Badge variant="destructive" className="ml-1 h-4 text-[9px] px-1">{totalPend}</Badge>}
