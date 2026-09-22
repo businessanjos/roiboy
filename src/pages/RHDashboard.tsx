@@ -346,10 +346,11 @@ export default function RHDashboard() {
           {/* Headcount & composição */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Headcount & Composição</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + prestadores PJ" tone="primary" />
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+              <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + PJ" tone="primary" />
               <Kpi icon={Building} label="CLT ativos" value={metrics.clt} />
-              <Kpi icon={Handshake} label="Prestadores PJ" value={metrics.pj} />
+              <Kpi icon={ShieldCheck} label="PJ cargo de confiança" value={metrics.pjDirectors} hint="Diretoria / liderança PJ" />
+              <Kpi icon={Handshake} label="Prestadores de serviço" value={metrics.pjOthers} hint="PJ sob demanda" />
               <Kpi icon={UserMinus} label="Inativos" value={metrics.inactive} tone="default" />
             </div>
 
