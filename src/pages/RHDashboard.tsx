@@ -252,7 +252,7 @@ export default function RHDashboard() {
     const activeApps = apps.filter((a: any) => (a.status || "").toLowerCase() !== "rejected" && (a.status || "").toLowerCase() !== "withdrawn");
     const stageMap: Record<string, number> = {};
     activeApps.forEach((a: any) => {
-      const st = a.stage || "Inscrito";
+      const st = STAGE_LABELS[(a.stage || "").toLowerCase()] || a.stage || "Inscrito";
       stageMap[st] = (stageMap[st] || 0) + 1;
     });
     const stageChart = Object.entries(stageMap).map(([name, value]) => ({ name, value }));
