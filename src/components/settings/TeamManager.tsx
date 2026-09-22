@@ -29,8 +29,10 @@ import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import { 
   Plus, Search, Pencil, User, Users, Camera, Loader2, 
-  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles
+  Shield, Trash2, Settings, Check, Mail, LayoutGrid, List, Eye, EyeOff, Lock, Sparkles,
+  UserMinus, UserCheck, AlertTriangle, ArrowRightLeft
 } from "lucide-react";
+import { DeactivateUserDialog, totalOpenItems } from "@/components/settings/DeactivateUserDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
 
