@@ -382,7 +382,15 @@ export default function HRCollaboratorProfile() {
                   </SelectContent>
                 </Select>
               </div>
-              <div><Label>Cargo</Label><Input value={form.position || ""} onChange={e => setField("position", e.target.value)} /></div>
+              <div>
+                <Label>Cargo</Label>
+                <Select value={form.position || ""} onValueChange={v => setField("position", v)}>
+                  <SelectTrigger><SelectValue placeholder="Selecione o cargo" /></SelectTrigger>
+                  <SelectContent>
+                    {positionOptions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
               <div><Label>Data de admissão</Label><Input type="date" value={form.hire_date || ""} onChange={e => setField("hire_date", e.target.value)} /></div>
               <div><Label>Data de desligamento</Label><Input type="date" value={form.termination_date || ""} onChange={e => setField("termination_date", e.target.value)} /></div>
               <div>

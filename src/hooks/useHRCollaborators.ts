@@ -65,6 +65,27 @@ export interface HRCollaborator {
   monthly_total_cost?: number | null;
   annual_total_cost?: number | null;
   source_note?: string | null;
+  // PDA — Programa de Desenvolvimento de Anjos
+  pda_hierarchy?: string | null;
+  pda_sectors?: string[] | null;
+  pda_level?: string | null;
+  pda_role_profile?: string | null;
+  pda_dominant_profile?: string | null;
+  pda_secondary_profile?: string | null;
+  pda_synergy?: boolean | null;
+  pda_synergy_pct?: number | null;
+  pda_pdi_done?: boolean | null;
+  pda_pdi_delivered?: boolean | null;
+  pda_effort_level?: string | null;
+  pda_change_quality?: string | null;
+  pda_phase?: string | null;
+  pda_temperament?: string | null;
+  pda_mental_model?: string | null;
+  pda_thermometer?: string | null;
+  pda_education?: string | null;
+  salary_without_charges?: number | null;
+  salary_with_charges?: number | null;
+  manager_id?: string | null;
   created_at: string;
   updated_at: string;
   // Extra fields from users table (when source is 'team')
