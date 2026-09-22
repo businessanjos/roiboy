@@ -284,6 +284,8 @@ export default function SalesPipeline() {
   const [lostReasonFilter, setLostReasonFilter] = usePersistedFilter<string>("salesPipeline", "lostReasonFilter", "all");
   const [lostSellerFilter, setLostSellerFilter] = usePersistedFilter<string[]>("salesPipeline", "lostSellerFilterMulti", []);
   const [lostProductFilter, setLostProductFilter] = usePersistedFilter<string[]>("salesPipeline", "lostProductFilterMulti", []);
+  const [lostTitleTagFilter, setLostTitleTagFilter] = usePersistedFilter<string[]>("salesPipeline", "lostTitleTagFilterMulti", []);
+  const [lostMqlFilter, setLostMqlFilter] = usePersistedFilter<string[]>("salesPipeline", "lostMqlFilterMulti", []);
   
   // Fetch deal→product mapping from contracts for won AND lost deals
   const [dealProductMap, setDealProductMap] = useState<Record<string, { productId: string; productName: string; isUpsell?: boolean }>>({});
@@ -1478,6 +1480,21 @@ export default function SalesPipeline() {
       .sort((a, b) => a[1].localeCompare(b[1]));
   }, [lostDeals, dealProductMap]);
 
+  // Origem da venda (tag do título) disponível nos negócios perdidos
+  const lostTitleTagOptions = useMemo(() => buildTitleTagOptions(lostDeals), [lostDeals]);
+
+  // MQL disponível nos negócios perdidos (campo do deal)
+  const lostMqlOptions = useMemo(() => {
+    const counts = new Map<string, number>();
+    lostDeals.forEach((deal) => {
+      const label = dealMqlMap[deal.id]?.label;
+      if (!label) return;
+      counts.set(label, (counts.get(label) || 0) + 1);
+    });
+    return Array.from(counts.entries())
+      .sort((a, b) => a[0].localeCompare(b[0], 'pt-BR'));
+  }, [lostDeals, dealMqlMap]);
+
   // Filter lost deals by selected month, reason, seller, and product
   const filteredLostDealsByMonth = useMemo(() => {
     let result = filteredLostDeals;
@@ -1521,8 +1538,22 @@ export default function SalesPipeline() {
         return selectedIds.has(product.productId) || selectedNames.has(product.productName.trim().toLowerCase());
       });
     }
+    if (lostTitleTagFilter.length > 0) {
+      const selected = new Set(lostTitleTagFilter);
+      result = result.filter(deal => {
+        const info = getTitleTagInfo(deal.title);
+        return info ? selected.has(info.key) : false;
+      });
+    }
+    if (lostMqlFilter.length > 0) {
+      const selected = new Set(lostMqlFilter);
+      result = result.filter(deal => {
+        const label = dealMqlMap[deal.id]?.label;
+        return label ? selected.has(label) : false;
+      });
+    }
     return result;
-  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap]);
+  }, [filteredLostDeals, lostMonthFilter, lostCreatedMonthFilter, lostReasonFilter, lossReasons, lostSellerFilter, lostProductFilter, availableLostProducts, dealProductMap, lostTitleTagFilter, lostMqlFilter, dealMqlMap]);
 
   // Cohort breakdown: created in the same month it was lost vs. carried over from previous months
   const lostCohortStats = useMemo(() => {
@@ -2853,6 +2884,26 @@ export default function SalesPipeline() {
                       selected={lostProductFilter}
                       onChange={setLostProductFilter}
                     />
+                    {lostTitleTagOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label=""
+                        placeholder="Todas as origens"
+                        width="w-full sm:w-[190px]"
+                        options={lostTitleTagOptions.map(o => ({ value: o.value, label: `${o.label} (${o.count})` }))}
+                        selected={lostTitleTagFilter}
+                        onChange={setLostTitleTagFilter}
+                      />
+                    )}
+                    {lostMqlOptions.length > 0 && (
+                      <MultiSelectFilter
+                        label=""
+                        placeholder="Todos os MQL"
+                        width="w-full sm:w-[190px]"
+                        options={lostMqlOptions.map(([label, count]) => ({ value: label, label: `${label} (${count})` }))}
+                        selected={lostMqlFilter}
+                        onChange={setLostMqlFilter}
+                      />
+                    )}
                     {(lostCreatedMonthFilter !== 'all' || lostMonthFilter !== 'all') && (
                       <Button
                         variant="ghost"
