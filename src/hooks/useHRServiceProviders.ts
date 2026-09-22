@@ -93,6 +93,7 @@ export function useHRServiceProviders() {
         .from("hr_service_providers")
         .insert({
           ...data,
+          full_name: formatPersonName((data as any).full_name) || (data as any).full_name,
           account_id: currentUser.account_id,
         } as any)
         .select()
