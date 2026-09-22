@@ -383,6 +383,20 @@ export default function SalesDashboard() {
     [allTeamMetrics, repId]
   );
 
+  // Opções do filtro de vendedor: closers ativos + quem aparece nas métricas do time
+  const repOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const c of salesClosers || []) {
+      if (c.user_id) map.set(c.user_id, c.full_name || c.name);
+    }
+    for (const m of allTeamMetrics) {
+      if (m.user_id && !map.has(m.user_id)) map.set(m.user_id, m.user_name);
+    }
+    return Array.from(map.entries())
+      .map(([id, name]) => ({ id, name }))
+      .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
+  }, [salesClosers, allTeamMetrics]);
+
   // ---------------------- DERIVED ----------------------
   // Receita recebida = SOMENTE received_value (dinheiro efetivamente entrado).
   // Nunca cai em `value`, senão parcelas futuras/à vencer contam como recebidas.
