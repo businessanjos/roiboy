@@ -4,8 +4,8 @@
  */
 
 export interface ItemSelection {
-  /** "all" = tudo; "except" = tudo menos os ids/títulos abaixo. */
-  mode: "all" | "except";
+  /** "all" = tudo; "except" = tudo menos os ids/títulos abaixo; "none" = nada. */
+  mode: "all" | "except" | "none";
   /** Ids desmarcados individualmente. */
   excludedIds: string[];
   /** Blocos de título desmarcados inteiros (ex.: "Follow Up"). */
@@ -36,7 +36,7 @@ export function readSelection(userId: string, itemKey: string): ItemSelection | 
     const parsed = JSON.parse(raw) as ItemSelection;
     if (!parsed || typeof parsed !== "object") return null;
     return {
-      mode: parsed.mode === "except" ? "except" : "all",
+      mode: parsed.mode === "except" || parsed.mode === "none" ? parsed.mode : "all",
       excludedIds: Array.isArray(parsed.excludedIds) ? parsed.excludedIds : [],
       excludedTitles: Array.isArray(parsed.excludedTitles) ? parsed.excludedTitles : [],
       selectedCount: Number(parsed.selectedCount) || 0,
@@ -94,6 +94,7 @@ export function isRoutineTitle(title: string): boolean {
 /** Converte a seleção no formato aceito pela edge function. */
 export function selectionToPayload(selection: ItemSelection | null) {
   if (!selection || selection.mode === "all") return {};
+  if (selection.mode === "none") return { mode: "only" as const, ids: [], exclude_titles: [] };
   return {
     mode: "except" as const,
     ids: selection.excludedIds,

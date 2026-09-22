@@ -161,11 +161,25 @@ export default function TeamOpenItems() {
     return groups.filter((g) => set.has(g.title)).reduce((s, g) => s + g.count, 0);
   }, [groups, selection.excludedTitles]);
 
-  const selectedCount = Math.max(total - excludedTitleCount - selection.excludedIds.length, 0);
+  const selectedCount =
+    selection.mode === "none"
+      ? 0
+      : Math.max(total - excludedTitleCount - selection.excludedIds.length, 0);
 
   const isTitleExcluded = (t: string) => selection.excludedTitles.includes(t);
   const isRowSelected = (r: Row) =>
-    !isTitleExcluded(r.title) && !selection.excludedIds.includes(r.id);
+    selection.mode !== "none" && !isTitleExcluded(r.title) && !selection.excludedIds.includes(r.id);
+
+  /** Sai do estado "nada marcado" mantendo apenas o título reativado. */
+  const reviveFrom = (title: string) => {
+    setSelection({
+      ...emptySelection(total),
+      mode: "except",
+      excludedTitles: groups.map((g) => g.title).filter((t) => t !== title),
+      total,
+    });
+    setDirty(true);
+  };
 
   const update = (patch: Partial<ItemSelection>) => {
     setSelection((s) => ({ ...s, ...patch, mode: "except" }));
@@ -173,6 +187,7 @@ export default function TeamOpenItems() {
   };
 
   const toggleRow = (r: Row, on: boolean) => {
+    if (on && selection.mode === "none") return reviveFrom(r.title);
     if (on) {
       update({
         excludedIds: selection.excludedIds.filter((id) => id !== r.id),
@@ -197,6 +212,7 @@ export default function TeamOpenItems() {
   };
 
   const toggleTitle = (title: string, on: boolean) => {
+    if (on && selection.mode === "none") return reviveFrom(title);
     if (on) {
       update({ excludedTitles: selection.excludedTitles.filter((t) => t !== title) });
     } else {
@@ -417,8 +433,9 @@ export default function TeamOpenItems() {
                 onClick={() => {
                   setSelection({
                     ...emptySelection(total),
-                    mode: "except",
-                    excludedTitles: groups.map((g) => g.title),
+                    mode: "none",
+                    total,
+                    selectedCount: 0,
                   });
                   setDirty(true);
                 }}
