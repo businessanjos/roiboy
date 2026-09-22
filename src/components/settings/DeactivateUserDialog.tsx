@@ -109,13 +109,6 @@ interface AuditEntry {
 
 interface Candidate { id: string; name: string }
 
-interface DetailRow {
-  id: string;
-  title: string;
-  status: string | null;
-  date: string | null;
-  created_at: string | null;
-}
 
 interface Props {
   open: boolean;
@@ -255,8 +248,7 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
       setDefaultOwner("");
       setOwners({});
       setCollapsed({});
-      setExpanded({});
-      setDetails({});
+      setViewerKey(null);
       try {
         const { data, error } = await supabase.functions.invoke("deactivate-team-user", {
           body: { action: "count_open_items", user_id: user.id },
