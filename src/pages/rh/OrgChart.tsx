@@ -189,6 +189,8 @@ export default function OrgChart() {
         hire_date: winner.hire_date || other.hire_date,
         position: winner.position || other.position,
         department: winner.department || other.department,
+        hr_department_id: winner.hr_department_id || other.hr_department_id,
+
       };
     });
 
