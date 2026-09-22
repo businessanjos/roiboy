@@ -106,7 +106,7 @@ export default function OrgChart() {
   }, []);
 
   async function loadData() {
-    const [{ data: collabs }, { data: providers }] = await Promise.all([
+    const [{ data: collabs }, { data: providers }, { data: depts }] = await Promise.all([
       supabase
         .from("hr_collaborators")
         .select("id, full_name, department, position, avatar_url, hire_date, birth_date, status, employment_type")
@@ -118,7 +118,18 @@ export default function OrgChart() {
         .in("provider_kind", ["director"])
         .eq("status", "active")
         .order("full_name"),
+      supabase.from("hr_departments").select("name, color, show_in_org_chart"),
     ]);
+
+    const meta = new Map<string, { color: string; show: boolean }>();
+    (depts || []).forEach((d: any) => {
+      meta.set(norm(d.name), {
+        color: getDepartmentColorHsl(d.color),
+        show: d.show_in_org_chart !== false,
+      });
+    });
+    setDeptMeta(meta);
+
 
     const all: Person[] = [
       ...((collabs || []) as Person[]).map((c) => ({ ...c, full_name: formatPersonName(c.full_name) })),
