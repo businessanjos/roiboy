@@ -260,6 +260,9 @@ export default function OrgChart() {
 
   const totalActive = people.length;
 
+  const gridTemplateColumns = `repeat(${Math.max(allColumns.length, 1)}, minmax(0, 1fr))`;
+  const gridMaxWidth = Math.max(1100, allColumns.length * 260);
+
   async function handleExport() {
     if (!orgRef.current) return;
     setExporting(true);
