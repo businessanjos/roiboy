@@ -201,20 +201,20 @@ export default function OrgChart() {
 
     const palette = [
       {
-        headerColor: "from-chart-1 to-chart-1",
-        badgeColor: "bg-chart-1/15 text-foreground border-chart-1/40",
+        headerColor: "from-primary to-primary",
+        badgeColor: "bg-primary/15 text-primary border-primary/40",
       },
       {
-        headerColor: "from-chart-2 to-chart-2",
-        badgeColor: "bg-chart-2/15 text-foreground border-chart-2/40",
+        headerColor: "from-success to-success",
+        badgeColor: "bg-success/15 text-success-strong border-success/40",
       },
       {
-        headerColor: "from-chart-3 to-chart-3",
-        badgeColor: "bg-chart-3/15 text-foreground border-chart-3/40",
+        headerColor: "from-accent to-accent",
+        badgeColor: "bg-accent/30 text-accent-foreground border-accent",
       },
       {
-        headerColor: "from-chart-4 to-chart-4",
-        badgeColor: "bg-chart-4/15 text-foreground border-chart-4/40",
+        headerColor: "from-secondary to-secondary",
+        badgeColor: "bg-secondary/40 text-secondary-foreground border-secondary",
       },
     ];
 
