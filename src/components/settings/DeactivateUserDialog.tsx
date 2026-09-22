@@ -433,38 +433,93 @@ export function DeactivateUserDialog({ open, onOpenChange, user, candidates, mod
                               const Icon = OPEN_ITEM_META[key].icon;
                               const isOn = !!selected[key];
                               const missing = isOn && !ownerFor(key);
+                              const isOpenList = !!expanded[key];
+                              const rows = details[key];
                               return (
-                                <div
-                                  key={key}
-                                  className={`flex flex-col gap-2 px-3 py-2.5 transition-colors sm:flex-row sm:items-center ${
-                                    isOn ? "hover:bg-muted/40" : "opacity-60 hover:opacity-100"
-                                  }`}
-                                >
-                                  <label className="flex flex-1 cursor-pointer items-center gap-3">
-                                    <Checkbox
-                                      checked={isOn}
-                                      onCheckedChange={(v) => setSelected((s) => ({ ...s, [key]: !!v }))}
-                                    />
-                                    <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-                                    <span className="flex-1 text-sm">{OPEN_ITEM_META[key].label}</span>
-                                    <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
-                                      {count}
-                                    </span>
-                                  </label>
-                                  <div className="sm:w-56">
-                                    <OwnerSelect
-                                      value={owners[key] || ""}
-                                      onChange={(v) => setOwners((o) => ({ ...o, [key]: v }))}
-                                      candidates={candidates}
-                                      selfId={currentUser?.id}
-                                      placeholder={
-                                        defaultOwner
-                                          ? `Padrão: ${candidates.find((c) => c.id === defaultOwner)?.name || ""}`
-                                          : "Escolher destinatário"
-                                      }
-                                      className={`h-9 bg-background text-xs ${missing ? "border-warning/70" : "border-border/60"}`}
-                                    />
+                                <div key={key}>
+                                  <div
+                                    className={`flex flex-col gap-2 px-3 py-2.5 transition-colors sm:flex-row sm:items-center ${
+                                      isOn ? "hover:bg-muted/40" : "opacity-60 hover:opacity-100"
+                                    }`}
+                                  >
+                                    <label className="flex flex-1 cursor-pointer items-start gap-3">
+                                      <Checkbox
+                                        className="mt-0.5"
+                                        checked={isOn}
+                                        onCheckedChange={(v) => setSelected((s) => ({ ...s, [key]: !!v }))}
+                                      />
+                                      <Icon className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                                      <span className="flex-1">
+                                        <span className="block text-sm">{OPEN_ITEM_META[key].label}</span>
+                                        <span className="block text-[11px] text-muted-foreground">
+                                          {OPEN_ITEM_RULE[key]}
+                                        </span>
+                                      </span>
+                                      <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                                        {count}
+                                      </span>
+                                    </label>
+                                    <div className="flex items-center gap-2 sm:w-64">
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        className="h-9 shrink-0 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+                                        onClick={() => toggleDetails(key)}
+                                      >
+                                        {loadingDetails === key ? (
+                                          <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                        ) : (
+                                          <Eye className="h-3.5 w-3.5" />
+                                        )}
+                                        <span className="ml-1 hidden sm:inline">Ver</span>
+                                      </Button>
+                                      <div className="flex-1">
+                                        <OwnerSelect
+                                          value={owners[key] || ""}
+                                          onChange={(v) => setOwners((o) => ({ ...o, [key]: v }))}
+                                          candidates={candidates}
+                                          selfId={currentUser?.id}
+                                          placeholder={
+                                            defaultOwner
+                                              ? `Padrão: ${candidates.find((c) => c.id === defaultOwner)?.name || ""}`
+                                              : "Escolher destinatário"
+                                          }
+                                          className={`h-9 bg-background text-xs ${missing ? "border-warning/70" : "border-border/60"}`}
+                                        />
+                                      </div>
+                                    </div>
                                   </div>
+
+                                  {isOpenList && (
+                                    <div className="border-t border-border/50 bg-muted/20 px-3 py-2">
+                                      {!rows ? (
+                                        <p className="py-2 text-xs text-muted-foreground">Carregando registros...</p>
+                                      ) : rows.length === 0 ? (
+                                        <p className="py-2 text-xs text-muted-foreground">Nenhum registro encontrado.</p>
+                                      ) : (
+                                        <>
+                                          <p className="mb-1.5 text-[11px] text-muted-foreground">
+                                            Mostrando {rows.length} de {count} registro(s)
+                                          </p>
+                                          <ScrollArea className="max-h-48 rounded-lg border border-border/50 bg-card">
+                                            <ul className="divide-y divide-border/40">
+                                              {rows.map((r) => (
+                                                <li key={r.id} className="flex items-center justify-between gap-3 px-3 py-1.5 text-xs">
+                                                  <span className="truncate">{r.title}</span>
+                                                  <span className="shrink-0 text-[10px] text-muted-foreground">
+                                                    {[r.status, r.date ? new Date(r.date).toLocaleDateString("pt-BR") : null]
+                                                      .filter(Boolean)
+                                                      .join(" · ")}
+                                                  </span>
+                                                </li>
+                                              ))}
+                                            </ul>
+                                          </ScrollArea>
+                                        </>
+                                      )}
+                                    </div>
+                                  )}
                                 </div>
                               );
                             })}
