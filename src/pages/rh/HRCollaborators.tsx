@@ -3,6 +3,7 @@ import { useState, useMemo, useCallback, useEffect } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHRCollaborators, HRCollaborator } from "@/hooks/useHRCollaborators";
+import { useHRServiceProviders, HRServiceProvider } from "@/hooks/useHRServiceProviders";
 import { supabase } from "@/integrations/supabase/client";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -75,9 +76,10 @@ export default function HRCollaborators() {
   const { currentUser } = useCurrentUser();
   const canHR = useCanAccessHR();
   const { collaborators, loading, createCollaborator, importFromTeam, updateCollaborator, refetch } = useHRCollaborators();
+  const { providers, loading: providersLoading } = useHRServiceProviders();
 
   const [search, setSearch] = useState("");
-  const [view, setView] = useState<"list" | "pda">("list");
+  const [view, setView] = useState<"clt" | "pj" | "pda">("clt");
   const [statusFilter, setStatusFilter] = useState<string>("active");
   const [deptFilter, setDeptFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -129,6 +131,42 @@ export default function HRCollaborators() {
       return true;
     });
   }, [collaborators, search, statusFilter, deptFilter, typeFilter]);
+
+  const filteredProviders = useMemo(() => {
+    const q = search.toLowerCase();
+    return providers.filter(p => {
+      if (q) {
+        const hay = [p.full_name, p.email, p.company_name, p.cnpj, p.cpf, p.position, p.department, p.service_type]
+          .filter(Boolean).join(" ").toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (statusFilter !== "all" && p.status !== statusFilter) return false;
+      if (deptFilter !== "all" && p.department !== deptFilter) return false;
+      return true;
+    });
+  }, [providers, search, statusFilter, deptFilter]);
+
+  const providersAsCollaborators = useMemo(
+    () => filteredProviders.map(p => ({
+      id: p.id,
+      full_name: p.full_name,
+      email: p.email,
+      avatar_url: p.avatar_url,
+      department: p.department,
+      position: p.position || p.service_type,
+      hire_date: p.hire_date,
+      termination_date: p.termination_date,
+      employment_type: "pj",
+      status: p.status,
+      __route: `/rh/service-providers/${p.id}`,
+    })) as unknown as HRCollaborator[],
+    [filteredProviders],
+  );
+
+  const pdaRows = useMemo(
+    () => [...filtered, ...providersAsCollaborators].sort((a, b) => a.full_name.localeCompare(b.full_name, "pt-BR")),
+    [filtered, providersAsCollaborators],
+  );
 
   const fetchTeamMembers = useCallback(async () => {
     if (!currentUser?.account_id) return;
@@ -402,10 +440,11 @@ export default function HRCollaborators() {
       </div>
 
       {/* View switch */}
-      <Tabs value={view} onValueChange={(v) => setView(v as "list" | "pda")}>
+      <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
         <TabsList>
-          <TabsTrigger value="list">Lista</TabsTrigger>
-          <TabsTrigger value="pda">PDA</TabsTrigger>
+          <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
+          <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
+          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaRows.length})</span></TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -460,8 +499,72 @@ export default function HRCollaborators() {
       )}
 
       {/* Table */}
-      {loading ? (
+      {view === "pj" ? (
+        providersLoading ? (
+          <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+        ) : filteredProviders.length === 0 ? (
+          <div className="text-center py-16">
+            <UsersRound className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-muted-foreground">Nenhum PJ encontrado</p>
+          </div>
+        ) : (
+          <div className="border rounded-lg overflow-x-auto">
+            <table className="w-full min-w-[900px] text-sm">
+              <thead>
+                <tr className="bg-muted/50 border-b">
+                  <th className="text-left p-3 font-medium text-muted-foreground">Pessoa</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Empresa</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden md:table-cell">Departamento</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Cargo / Serviço</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground hidden lg:table-cell">Tipo</th>
+                  <th className="text-left p-3 font-medium text-muted-foreground">Status</th>
+                  <th className="text-right p-3 font-medium text-muted-foreground">Ações</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredProviders.map(p => {
+                  const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
+                  return (
+                    <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
+                      <td className="p-3">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9">
+                            <AvatarImage src={p.avatar_url || undefined} />
+                            <AvatarFallback className="bg-warning/10 text-warning text-xs font-medium">
+                              {getInitials(p.full_name)}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium text-foreground">{p.full_name}</p>
+                            <p className="text-xs text-muted-foreground">{p.email || "—"}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="p-3 hidden md:table-cell">{p.company_name || "—"}</td>
+                      <td className="p-3 hidden md:table-cell">{p.department || "—"}</td>
+                      <td className="p-3 hidden lg:table-cell">{p.position || p.service_type || "—"}</td>
+                      <td className="p-3 hidden lg:table-cell">
+                        <Badge variant="outline" className="text-xs">
+                          {(p as any).provider_kind === "director" ? "Cargo de confiança" : "Prestador"}
+                        </Badge>
+                      </td>
+                      <td className="p-3"><Badge variant={st.variant}>{st.label}</Badge></td>
+                      <td className="p-3 text-right">
+                        <Button variant="ghost" size="icon" onClick={() => navigate(`/rh/service-providers/${p.id}`)} title="Abrir ficha">
+                          <Eye className="h-4 w-4" />
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )
+      ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
+      ) : view === "pda" ? (
+        <CollaboratorsPDATable collaborators={pdaRows} />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           <UsersRound className="h-12 w-12 text-muted-foreground/40 mx-auto mb-3" />
@@ -474,8 +577,6 @@ export default function HRCollaborators() {
             </p>
           )}
         </div>
-      ) : view === "pda" ? (
-        <CollaboratorsPDATable collaborators={filtered} />
       ) : (
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full min-w-[1100px] text-sm">
