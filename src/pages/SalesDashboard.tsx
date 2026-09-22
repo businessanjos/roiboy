@@ -975,16 +975,65 @@ export default function SalesDashboard() {
         title="Dashboard Comercial"
         description="Visão executiva de receita, funil, equipe e origem dos ganhos."
         actions={
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[190px] h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {Object.entries(PERIOD_LABELS).map(([k, label]) => (
                   <SelectItem key={k} value={k}>
                     {label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {period === "custom" && (
+              <Popover open={rangeOpen} onOpenChange={setRangeOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className={cn(
+                      "h-9 rounded-xl justify-start text-left font-normal bg-card ring-1 ring-hairline",
+                      !customRange?.from && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarDays className="w-4 h-4 mr-2" />
+                    {customRange?.from
+                      ? customRange.to
+                        ? `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} → ${format(customRange.to, "dd/MM/yyyy", { locale: ptBR })}`
+                        : `${format(customRange.from, "dd/MM/yyyy", { locale: ptBR })} → ...`
+                      : "Escolher datas"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="end">
+                  <Calendar
+                    mode="range"
+                    selected={customRange}
+                    onSelect={(r) => {
+                      setCustomRange(r);
+                      if (r?.from && r?.to) setRangeOpen(false);
+                    }}
+                    numberOfMonths={2}
+                    locale={ptBR}
+                    initialFocus
+                    className={cn("p-3 pointer-events-auto")}
+                  />
+                </PopoverContent>
+              </Popover>
+            )}
+
+            <Select value={repFilter} onValueChange={setRepFilter}>
+              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+                <SelectValue placeholder="Todos os vendedores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os vendedores</SelectItem>
+                {repOptions.map((r) => (
+                  <SelectItem key={r.id} value={r.id}>
+                    {r.name}
                   </SelectItem>
                 ))}
               </SelectContent>
