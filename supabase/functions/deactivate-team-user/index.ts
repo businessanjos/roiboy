@@ -182,9 +182,6 @@ async function transferItems(
       moved.conversations = countRows(res);
     } else {
       moved.conversations = 0;
-      if (fromAgents.length > 0 && !toAgentId) {
-        moved.conversations_skipped_reason = 0 as unknown as number;
-      }
     }
   }
 
