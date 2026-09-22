@@ -71,7 +71,40 @@ export interface HROffboarding {
   created_at: string;
   updated_at: string;
   collaborator?: { id: string; full_name: string; position: string | null; department: string | null; avatar_url: string | null; email: string | null; hire_date: string | null; base_salary: number | null; salary: number | null };
+  service_provider?: { id: string; full_name: string; position: string | null; department: string | null; avatar_url: string | null; email: string | null; hire_date: string | null; fee_amount: number | null; provider_kind: string | null; company_name: string | null } | null;
   replacement_job?: { id: string; title: string; status: string } | null;
+}
+
+/** Pessoa do desligamento, seja CLT/estágio (hr_collaborators) ou PJ (hr_service_providers). */
+export function getOffboardingPerson(o: HROffboarding) {
+  if (o.collaborator) {
+    return {
+      id: o.collaborator.id,
+      full_name: o.collaborator.full_name,
+      position: o.collaborator.position,
+      department: o.collaborator.department,
+      avatar_url: o.collaborator.avatar_url,
+      email: o.collaborator.email,
+      hire_date: o.collaborator.hire_date,
+      salary: o.collaborator.base_salary ?? o.collaborator.salary ?? null,
+      isProvider: false,
+      bondLabel: "CLT",
+    };
+  }
+  const p = o.service_provider;
+  if (!p) return null;
+  return {
+    id: p.id,
+    full_name: p.full_name,
+    position: p.position,
+    department: p.department,
+    avatar_url: p.avatar_url,
+    email: p.email,
+    hire_date: p.hire_date,
+    salary: p.fee_amount ?? null,
+    isProvider: true,
+    bondLabel: p.provider_kind === "director" ? "PJ · Cargo de confiança" : "PJ",
+  };
 }
 
 export interface HROffboardingChecklistItem {
