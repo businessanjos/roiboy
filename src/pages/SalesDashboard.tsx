@@ -215,7 +215,42 @@ const COLORS = [
 export default function SalesDashboard() {
   const { currentUser, loading: userLoading } = useCurrentUser();
   const { isSuperAdmin } = useSuperAdmin();
-  const [period, setPeriod] = useState<PeriodKey>("this_month");
+  // ---------- Filtros (período + vendedor), persistidos no navegador ----------
+  const storedFilters = (() => {
+    try {
+      const raw = localStorage.getItem(FILTERS_STORAGE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  })();
+  const [period, setPeriod] = useState<PeriodKey>(
+    (storedFilters?.period as PeriodKey) || "this_month"
+  );
+  const [customRange, setCustomRange] = useState<DateRange | undefined>(() => {
+    const from = storedFilters?.customFrom ? new Date(storedFilters.customFrom) : undefined;
+    const to = storedFilters?.customTo ? new Date(storedFilters.customTo) : undefined;
+    return from || to ? { from, to } : undefined;
+  });
+  const [repFilter, setRepFilter] = useState<string>(storedFilters?.rep || "all");
+  const [rangeOpen, setRangeOpen] = useState(false);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        FILTERS_STORAGE_KEY,
+        JSON.stringify({
+          period,
+          rep: repFilter,
+          customFrom: customRange?.from ? customRange.from.toISOString() : null,
+          customTo: customRange?.to ? customRange.to.toISOString() : null,
+        })
+      );
+    } catch {}
+  }, [period, repFilter, customRange]);
+
+  const repId = repFilter !== "all" ? repFilter : null;
+  const { data: salesClosers } = useActiveSalesClosers();
   const [churnDetailRep, setChurnDetailRep] = useState<{ name: string; contracts: any[] } | null>(null);
 
   // ---------- KPI customization (per section, persisted in localStorage) ----------
