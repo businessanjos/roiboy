@@ -1,0 +1,2 @@
+ALTER TABLE public.video_call_sessions ADD COLUMN IF NOT EXISTS product_id uuid REFERENCES public.products(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_video_call_sessions_product ON public.video_call_sessions(product_id);

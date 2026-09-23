@@ -26717,6 +26717,7 @@ export type Database = {
           notes: string | null
           participant_name: string | null
           participant_phone: string | null
+          product_id: string | null
           recording_id: string | null
           recording_url: string | null
           scheduled_at: string | null
@@ -26746,6 +26747,7 @@ export type Database = {
           notes?: string | null
           participant_name?: string | null
           participant_phone?: string | null
+          product_id?: string | null
           recording_id?: string | null
           recording_url?: string | null
           scheduled_at?: string | null
@@ -26775,6 +26777,7 @@ export type Database = {
           notes?: string | null
           participant_name?: string | null
           participant_phone?: string | null
+          product_id?: string | null
           recording_id?: string | null
           recording_url?: string | null
           scheduled_at?: string | null
@@ -26827,6 +26830,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "video_call_sessions_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
             referencedColumns: ["id"]
           },
           {
