@@ -437,8 +437,17 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           .eq("id", task.id);
         if (error) throw error;
         
-        // Sync meeting with Google Calendar / Zoom if date/time changed
-        if (task.meeting_url) {
+        const tl = taskTitle.toLowerCase();
+        const isOutcome = tl.includes("no-show") || tl.includes("no show") || tl.includes("call comercial conclu");
+        if (isOutcome && isCompleted && dueDate && formData.assigned_to) {
+          try {
+            await supabase.functions.invoke("sync-noshow-calendar", {
+              body: { task_id: task.id, user_id: currentUser.id },
+            });
+          } catch (syncErr) {
+            console.error("Error syncing outcome to calendar (non-blocking):", syncErr);
+          }
+        } else if (task.meeting_url) {
           const dateChanged = dueDate !== (task.due_date || null);
           const timeChanged = dueTime !== (task.due_time ? task.due_time.slice(0, 5) : null);
           
@@ -513,8 +522,10 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         if (error) throw error;
         
         // Sync No-Show activities to Google Calendar (estilizado em vermelho)
-        const isNoShow = taskTitle.toLowerCase().includes("no-show") || taskTitle.toLowerCase().includes("no show");
-        if (isNoShow) {
+        const tlc = taskTitle.toLowerCase();
+        const isNoShow = tlc.includes("no-show") || tlc.includes("no show");
+        const isConcluded = tlc.includes("call comercial conclu");
+        if (isNoShow || (isConcluded && isCompleted)) {
           try {
             await supabase.functions.invoke("sync-noshow-calendar", {
               body: { task_id: newTask.id, user_id: currentUser.id },
