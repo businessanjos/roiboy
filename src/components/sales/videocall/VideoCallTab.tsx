@@ -451,9 +451,17 @@ export function VideoCallTab() {
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                          <Checkbox
+                            checked={selected.has(session.id)}
+                            onCheckedChange={() => toggleSelected(session.id)}
+                            aria-label="Selecionar call"
+                          />
+                        </div>
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <Video className="h-5 w-5 text-primary" />
                         </div>
+
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium truncate">
