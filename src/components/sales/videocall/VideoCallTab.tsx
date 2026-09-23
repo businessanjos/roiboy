@@ -346,7 +346,7 @@ export function VideoCallTab() {
               <SellerSelector
                 value={sellerId}
                 onChange={setSellerId}
-                sellers={sellers}
+                sellers={callSellers}
                 loading={loadingSellers}
                 allowAll
                 allLabel="Todos os vendedores"
