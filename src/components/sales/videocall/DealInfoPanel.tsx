@@ -1,8 +1,10 @@
 import { useEffect, useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Loader2, ExternalLink } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "@/components/ui/button";
+import { FieldValueBadge } from "@/components/custom-fields/FieldValueBadge";
+import type { CustomField } from "@/components/custom-fields/CustomFieldsManager";
 
 interface DealInfo {
   id: string;
@@ -10,44 +12,63 @@ interface DealInfo {
   value: number | null;
   status: string | null;
   stage: string | null;
-  fields: { name: string; value: string }[];
 }
 
-function formatValue(row: Record<string, unknown>): string {
-  if (row.value_text) return String(row.value_text);
-  if (row.value_number !== null && row.value_number !== undefined)
-    return Number(row.value_number).toLocaleString("pt-BR");
-  if (row.value_date) return new Date(String(row.value_date)).toLocaleDateString("pt-BR");
-  if (row.value_boolean !== null && row.value_boolean !== undefined)
-    return row.value_boolean ? "Sim" : "Não";
-  if (row.value_json) {
-    const j = row.value_json;
-    if (Array.isArray(j)) return j.join(", ");
-    return typeof j === "string" ? j : JSON.stringify(j);
+interface FieldEntry {
+  field: CustomField;
+  value: unknown;
+}
+
+function pickValue(field: CustomField, row: Record<string, unknown>): unknown {
+  switch (field.field_type) {
+    case "boolean":
+      return row.value_boolean;
+    case "number":
+    case "currency":
+      return row.value_number;
+    case "date":
+      return row.value_date;
+    case "multi_select":
+    case "user":
+    case "multi_instagram":
+    case "location":
+      return row.value_json;
+    default:
+      return row.value_text ?? row.value_json;
   }
-  return "";
+}
+
+function hasValue(v: unknown): boolean {
+  if (v === null || v === undefined || v === "") return false;
+  if (Array.isArray(v)) return v.length > 0;
+  return true;
 }
 
 export function DealInfoPanel({ dealId }: { dealId: string }) {
   const [loading, setLoading] = useState(true);
   const [deal, setDeal] = useState<DealInfo | null>(null);
+  const [entries, setEntries] = useState<FieldEntry[]>([]);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
     (async () => {
-      const [{ data: d }, { data: fv }] = await Promise.all([
+      const [{ data: d }, { data: fv }, { data: cf }] = await Promise.all([
         supabase
           .from("deals")
-          .select("id, title, value, status, deal_stages(name)")
+          .select("id, title, value, status, stage_id")
           .eq("id", dealId)
           .maybeSingle(),
         supabase
           .from("deal_field_values")
-          .select(
-            "value_text, value_number, value_boolean, value_date, value_json, custom_fields(name, display_order, is_active)"
-          )
+          .select("field_id, value_text, value_number, value_boolean, value_date, value_json")
           .eq("deal_id", dealId),
+        supabase
+          .from("custom_fields")
+          .select("*")
+          .eq("show_in_deals", true)
+          .eq("is_active", true)
+          .order("display_order", { ascending: true }),
       ]);
       if (cancelled) return;
       if (!d) {
@@ -56,29 +77,38 @@ export function DealInfoPanel({ dealId }: { dealId: string }) {
         return;
       }
       const row = d as Record<string, unknown>;
-      const stageRel = row.deal_stages as { name?: string } | null;
-      const fields = ((fv as Record<string, unknown>[]) ?? [])
-        .map((f) => {
-          const cf = f.custom_fields as { name?: string; display_order?: number; is_active?: boolean } | null;
-          return {
-            name: cf?.name ?? "",
-            order: cf?.display_order ?? 999,
-            active: cf?.is_active !== false,
-            value: formatValue(f),
-          };
+
+      let stage: string | null = null;
+      if (row.stage_id) {
+        const { data: st } = await supabase
+          .from("deal_stages")
+          .select("name")
+          .eq("id", row.stage_id as string)
+          .maybeSingle();
+        stage = (st as { name?: string } | null)?.name ?? null;
+      }
+      if (cancelled) return;
+
+      const byId = new Map<string, Record<string, unknown>>();
+      ((fv as Record<string, unknown>[]) ?? []).forEach((f) =>
+        byId.set(f.field_id as string, f)
+      );
+
+      const list: FieldEntry[] = ((cf as unknown as CustomField[]) ?? [])
+        .map((field) => {
+          const raw = byId.get(field.id);
+          return raw ? { field, value: pickValue(field, raw) } : null;
         })
-        .filter((f) => f.name && f.value && f.active)
-        .sort((a, b) => a.order - b.order)
-        .map(({ name, value }) => ({ name, value }));
+        .filter((e): e is FieldEntry => !!e && hasValue(e.value));
 
       setDeal({
         id: row.id as string,
         title: (row.title as string) ?? null,
         value: (row.value as number) ?? null,
         status: (row.status as string) ?? null,
-        stage: stageRel?.name ?? null,
-        fields,
+        stage,
       });
+      setEntries(list);
       setLoading(false);
     })();
     return () => {
@@ -108,11 +138,6 @@ export function DealInfoPanel({ dealId }: { dealId: string }) {
                 {deal.stage}
               </Badge>
             )}
-            {deal.status && (
-              <Badge variant="outline" className="text-[11px]">
-                {deal.status}
-              </Badge>
-            )}
             {deal.value ? (
               <Badge variant="outline" className="text-[11px]">
                 {Number(deal.value).toLocaleString("pt-BR", {
@@ -129,19 +154,23 @@ export function DealInfoPanel({ dealId }: { dealId: string }) {
           variant="ghost"
           size="sm"
           className="shrink-0 gap-1 text-xs"
-          onClick={() => window.open(`/deals/${deal.id}`, "_blank", "noopener")}
+          onClick={() => window.open(`/deals?deal=${deal.id}`, "_blank", "noopener")}
         >
           <ExternalLink className="h-3.5 w-3.5" />
           Abrir
         </Button>
       </div>
 
-      {deal.fields.length > 0 && (
+      {entries.length > 0 && (
         <div className="grid gap-2 sm:grid-cols-2">
-          {deal.fields.map((f) => (
-            <div key={f.name} className="rounded-md bg-muted/40 px-2.5 py-1.5">
-              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">{f.name}</p>
-              <p className="text-xs font-medium break-words">{f.value}</p>
+          {entries.map(({ field, value }) => (
+            <div key={field.id} className="rounded-md bg-muted/40 px-2.5 py-1.5 min-w-0">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                {field.name}
+              </p>
+              <div className="mt-0.5">
+                <FieldValueBadge field={field} value={value} />
+              </div>
             </div>
           ))}
         </div>
