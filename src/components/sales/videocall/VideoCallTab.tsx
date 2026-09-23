@@ -447,11 +447,11 @@ export function VideoCallTab() {
                         )}
                         {!session.transcription && (
                           <span onClick={(e) => e.stopPropagation()}>
-                            <ImportTranscriptDialog
-                              session={session}
-                              onCreated={handleImported}
-                              trigger={
-                                <Tooltip>
+                            <Tooltip>
+                              <ImportTranscriptDialog
+                                session={session}
+                                onCreated={handleImported}
+                                trigger={
                                   <TooltipTrigger asChild>
                                     <Button
                                       variant="ghost"
@@ -462,10 +462,10 @@ export function VideoCallTab() {
                                       <Upload className="h-4 w-4" />
                                     </Button>
                                   </TooltipTrigger>
-                                  <TooltipContent>Importar transcrição</TooltipContent>
-                                </Tooltip>
-                              }
-                            />
+                                }
+                              />
+                              <TooltipContent>Importar transcrição</TooltipContent>
+                            </Tooltip>
                           </span>
                         )}
                         {session.meeting_url && (
