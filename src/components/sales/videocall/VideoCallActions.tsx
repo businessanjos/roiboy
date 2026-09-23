@@ -49,6 +49,7 @@ import { toast } from "sonner";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
 import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
+import { ProductSelector, useCallProducts } from "./ProductSelector";
 
 interface VideoCallActionsProps {
   session: VideoCallSession;
@@ -81,6 +82,8 @@ export function VideoCallActions({
   const [notes, setNotes] = useState(session.notes ?? "");
   const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session.user_id ?? null);
+  const [productId, setProductId] = useState<string | null>(session.product_id ?? null);
+  const products = useCallProducts();
 
   const handleSave = async () => {
     setSaving(true);
@@ -90,6 +93,7 @@ export function VideoCallActions({
         participant_name: participantName.trim() || null,
         participant_phone: participantPhone.trim() || null,
         notes: notes.trim() || null,
+        product_id: productId,
         ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
         ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
 
@@ -240,6 +244,11 @@ export function VideoCallActions({
                 className="w-full"
                 placeholder="Selecionar quem conduziu a call"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label>Produto (Item da Venda)</Label>
+              <ProductSelector value={productId} onChange={setProductId} products={products} className="w-full" />
             </div>
 
             <div className="space-y-2">

@@ -65,6 +65,7 @@ import { VideoCallDialog } from "./VideoCallDialog";
 import { VideoCallActions } from "./VideoCallActions";
 import { ImportTranscriptDialog } from "./ImportTranscriptDialog";
 import { SellerSelector, useAccountSellers, initials } from "./SellerSelector";
+import { ProductSelector, useCallProducts } from "./ProductSelector";
 import MarkdownRenderer from "@/components/sales/MarkdownRenderer";
 
 function formatDuration(seconds: number): string {
@@ -187,6 +188,8 @@ export function VideoCallTab() {
   const [filter, setFilter] = useState<FilterKey>("all");
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
+  const [productId, setProductId] = useState<string | null>(null);
+  const products = useCallProducts();
   const [analyzing, setAnalyzing] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -271,14 +274,24 @@ export function VideoCallTab() {
   };
 
   /** Base do período + vendedor — os contadores de status usam esta base. */
+  const productMap = useMemo(() => new Map(products.map((p) => [p.id, p])), [products]);
+  const productCounts = useMemo(() => {
+    const m = new Map<string, number>();
+    sessions.forEach((s) => {
+      if (s.product_id) m.set(s.product_id, (m.get(s.product_id) ?? 0) + 1);
+    });
+    return m;
+  }, [sessions]);
+
   const scoped = useMemo(() => {
     const start = periodStart(period);
     return sessions.filter((s) => {
       if (sellerId && s.user_id !== sellerId) return false;
+      if (productId && s.product_id !== productId) return false;
       if (start && new Date(s.created_at) < start) return false;
       return true;
     });
-  }, [sessions, period, sellerId]);
+  }, [sessions, period, sellerId, productId]);
 
   const filtered = useMemo(() => {
     const term = search.trim().toLowerCase();
@@ -394,7 +407,7 @@ export function VideoCallTab() {
         {/* Filtros */}
         <Card>
           <CardContent className="p-3">
-            <div className="grid gap-2 md:grid-cols-[minmax(200px,1fr)_180px_190px_210px]">
+            <div className="grid gap-2 md:grid-cols-[minmax(180px,1fr)_150px_180px_190px_200px]">
               <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -427,6 +440,16 @@ export function VideoCallTab() {
                 allLabel="Todos os vendedores"
                 className="w-full"
               />
+
+              <ProductSelector
+                value={productId}
+                onChange={setProductId}
+                products={products}
+                counts={productCounts}
+                allLabel="Todos os produtos"
+                className="w-full"
+              />
+
 
               <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
                 <SelectTrigger>
@@ -605,6 +628,17 @@ export function VideoCallTab() {
                             <StatusBadge status={session.status} />
                             {session.source === "imported" && (
                               <Badge variant="outline">Importada</Badge>
+                            )}
+                            {session.product_id && productMap.get(session.product_id) && (
+                              <Badge
+                                className="border-0 text-[10px]"
+                                style={{
+                                  backgroundColor: productMap.get(session.product_id)!.color || "#6b7280",
+                                  color: "#fff",
+                                }}
+                              >
+                                {productMap.get(session.product_id)!.name}
+                              </Badge>
                             )}
                           </div>
                           <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground mt-1">

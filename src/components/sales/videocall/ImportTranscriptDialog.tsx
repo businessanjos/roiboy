@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { CallLinkSelector, LinkedRecord, findDealForCall } from "./CallLinkSelector";
 import { DealInfoPanel } from "./DealInfoPanel";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
+import { ProductSelector, useCallProducts } from "./ProductSelector";
 import { DateTimePicker } from "./DateTimePicker";
 
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
@@ -67,6 +68,8 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
   const [phone, setPhone] = useState(session?.participant_phone ?? "");
   const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session?.user_id ?? null);
+  const [productId, setProductId] = useState<string | null>(session?.product_id ?? null);
+  const products = useCallProducts();
   const [meetingUrl, setMeetingUrl] = useState(session?.meeting_url ?? "");
   const [when, setWhen] = useState(toLocalInput(session?.created_at));
   const [fileName, setFileName] = useState<string | null>(null);
@@ -162,6 +165,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
       ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
 
       ...(sellerId ? { user_id: sellerId } : {}),
+      product_id: productId,
     };
 
     let id = session?.id ?? "";
@@ -265,6 +269,11 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
               <p className="text-xs text-muted-foreground">
                 Usado para filtrar as calls por vendedor.
               </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Produto (Item da Venda)</Label>
+              <ProductSelector value={productId} onChange={setProductId} products={products} className="w-full" />
             </div>
 
             <div className="grid gap-4 sm:grid-cols-2">
