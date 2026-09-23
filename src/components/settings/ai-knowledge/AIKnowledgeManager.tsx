@@ -62,7 +62,7 @@ function ListEditor({
 
 export function AIKnowledgeManager() {
   const { settings, isLoading, save } = useKnowledgeSettings();
-  const { documents, upload, remove, download } = useKnowledgeDocuments();
+  const { documents, upload, reprocess, remove, download } = useKnowledgeDocuments();
   const { corrections, upsert, toggle, remove: removeCorrection } = useKnowledgeCorrections();
 
   const [form, setForm] = useState<KnowledgeSettings>(EMPTY_SETTINGS);
