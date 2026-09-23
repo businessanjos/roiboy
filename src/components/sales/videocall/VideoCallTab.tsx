@@ -52,6 +52,8 @@ import {
   Upload,
   Sparkles,
   Trash2,
+  Star,
+
 } from "lucide-react";
 import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSessions";
 import { format } from "date-fns";
@@ -100,7 +102,7 @@ function AnalysisStatusBadge({ status }: { status: string }) {
   return <Badge variant={info.variant}>{info.label}</Badge>;
 }
 
-type FilterKey = "all" | "with_analysis" | "pending" | "no_transcription";
+type FilterKey = "all" | "favorites" | "with_analysis" | "pending" | "no_transcription";
 type PeriodKey = "today" | "week" | "month" | "quarter" | "year" | "all";
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
@@ -186,6 +188,7 @@ export function VideoCallTab() {
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -196,6 +199,20 @@ export function VideoCallTab() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  const toggleFavorite = async (session: VideoCallSession) => {
+    const next = !session.is_favorite;
+    const { error } = await supabase
+      .from("video_call_sessions")
+      .update({ is_favorite: next })
+      .eq("id", session.id);
+    if (error) {
+      toast.error("Não foi possível atualizar os favoritos");
+      return;
+    }
+    refetch();
+  };
+
 
 
   const selectedSession = sessions.find((s) => s.id === selectedId) ?? null;
@@ -272,6 +289,7 @@ export function VideoCallTab() {
         !(s.seller?.name ?? "").toLowerCase().includes(term)
       )
         return false;
+      if (filter === "favorites") return !!s.is_favorite;
       if (filter === "with_analysis") return !!s.analysis;
       if (filter === "pending") return !s.analysis && !!s.transcription;
       if (filter === "no_transcription") return !s.transcription;
@@ -282,6 +300,7 @@ export function VideoCallTab() {
   const counts = useMemo(
     () => ({
       all: scoped.length,
+      favorites: scoped.filter((s) => s.is_favorite).length,
       with_analysis: scoped.filter((s) => s.analysis).length,
       pending: scoped.filter((s) => !s.analysis && s.transcription).length,
       no_transcription: scoped.filter((s) => !s.transcription).length,
@@ -291,10 +310,12 @@ export function VideoCallTab() {
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "all", label: "Todas" },
+    { key: "favorites", label: "Favoritas" },
     { key: "with_analysis", label: "Com análise" },
     { key: "pending", label: "Aguardando análise" },
     { key: "no_transcription", label: "Sem transcrição" },
   ];
+
 
   /** Só quem realmente tem videochamada registrada aparece no filtro de vendedor. */
   const callSellers = useMemo(() => {
@@ -484,42 +505,59 @@ export function VideoCallTab() {
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-0.5">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleAll}
-                  aria-label="Selecionar todas as calls"
-                  className="h-3.5 w-3.5"
-                />
-                {selected.size > 0
-                  ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
-                  : "Selecionar"}
-              </label>
-              {selected.size > 0 && (
+              {selectionMode ? (
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Selecionar todas as calls"
+                    className="h-3.5 w-3.5"
+                  />
+                  {selected.size > 0
+                    ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
+                    : "Selecionar todas"}
+                </label>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setSelectionMode(true)}
+                >
+                  Selecionar
+                </Button>
+              )}
+              {selectionMode && (
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs text-muted-foreground"
-                    onClick={() => setSelected(new Set())}
+                    onClick={() => {
+                      setSelected(new Set());
+                      setSelectionMode(false);
+                    }}
                   >
-                    Limpar
+                    Cancelar
                   </Button>
-                  <IconAction
-                    label="Excluir selecionadas"
-                    onClick={() => setBulkDeleteOpen(true)}
-                    disabled={deleting}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {deleting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </IconAction>
+                  {selected.size > 0 && (
+                    <IconAction
+                      label="Excluir selecionadas"
+                      onClick={() => setBulkDeleteOpen(true)}
+                      disabled={deleting}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </IconAction>
+                  )}
                 </div>
               )}
             </div>
+
 
 
             {filtered.map((session) => {
@@ -534,13 +572,16 @@ export function VideoCallTab() {
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
-                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
-                          <Checkbox
-                            checked={selected.has(session.id)}
-                            onCheckedChange={() => toggleSelected(session.id)}
-                            aria-label="Selecionar call"
-                          />
-                        </div>
+                        {selectionMode && (
+                          <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                            <Checkbox
+                              checked={selected.has(session.id)}
+                              onCheckedChange={() => toggleSelected(session.id)}
+                              aria-label="Selecionar call"
+                            />
+                          </div>
+                        )}
+
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <Video className="h-5 w-5 text-primary" />
                         </div>
@@ -587,6 +628,22 @@ export function VideoCallTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        <IconAction
+                          label={session.is_favorite ? "Remover dos favoritos" : "Favoritar call"}
+                          className={session.is_favorite ? "text-primary" : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(session);
+                          }}
+                        >
+                          <Star
+                            className={cn(
+                              "h-4 w-4",
+                              session.is_favorite && "fill-current"
+                            )}
+                          />
+                        </IconAction>
+
                         {!session.analysis && (
                           <AnalysisStatusBadge
                             status={isAnalyzing ? "analyzing" : session.analysis_status}

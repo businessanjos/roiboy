@@ -26711,6 +26711,7 @@ export type Database = {
           duration_seconds: number | null
           ended_at: string | null
           id: string
+          is_favorite: boolean
           lead_id: string | null
           meeting_url: string | null
           notes: string | null
@@ -26739,6 +26740,7 @@ export type Database = {
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
+          is_favorite?: boolean
           lead_id?: string | null
           meeting_url?: string | null
           notes?: string | null
@@ -26767,6 +26769,7 @@ export type Database = {
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
+          is_favorite?: boolean
           lead_id?: string | null
           meeting_url?: string | null
           notes?: string | null

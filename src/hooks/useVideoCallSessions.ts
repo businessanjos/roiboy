@@ -21,6 +21,8 @@ export interface VideoCallSession {
   meeting_url: string | null;
   source: string | null;
   transcript_file_name: string | null;
+  is_favorite?: boolean | null;
+
   created_at: string;
   /** Vendedor responsável pela call (join com users) */
   seller?: { id: string; name: string | null; avatar_url: string | null } | null;
