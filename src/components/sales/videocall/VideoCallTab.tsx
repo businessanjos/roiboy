@@ -626,6 +626,22 @@ export function VideoCallTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
+                        <IconAction
+                          label={session.is_favorite ? "Remover dos favoritos" : "Favoritar call"}
+                          className={session.is_favorite ? "text-primary" : undefined}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleFavorite(session);
+                          }}
+                        >
+                          <Star
+                            className={cn(
+                              "h-4 w-4",
+                              session.is_favorite && "fill-current"
+                            )}
+                          />
+                        </IconAction>
+
                         {!session.analysis && (
                           <AnalysisStatusBadge
                             status={isAnalyzing ? "analyzing" : session.analysis_status}
