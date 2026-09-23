@@ -262,6 +262,32 @@ export function VideoCallTab() {
     { key: "no_transcription", label: "Sem transcrição" },
   ];
 
+  /** Só quem realmente tem videochamada registrada aparece no filtro de vendedor. */
+  const callSellers = useMemo(() => {
+    const totals = new Map<string, number>();
+    sessions.forEach((s) => {
+      if (!s.user_id) return;
+      totals.set(s.user_id, (totals.get(s.user_id) ?? 0) + 1);
+    });
+    return sellers
+      .filter((s) => totals.has(s.id))
+      .map((s) => ({ ...s, name: `${s.name} (${totals.get(s.id)})` }))
+      .sort(
+        (a, b) => (totals.get(b.id) ?? 0) - (totals.get(a.id) ?? 0)
+      );
+  }, [sellers, sessions]);
+
+  const activeSeller = sellers.find((s) => s.id === sellerId) ?? null;
+
+  const periodLabel = PERIODS.find((p) => p.key === period)?.label ?? "Tudo";
+
+  const summary = [
+    { label: "Calls no filtro", value: counts.all },
+    { label: "Com análise", value: counts.with_analysis },
+    { label: "Aguardando análise", value: counts.pending },
+    { label: "Sem transcrição", value: counts.no_transcription },
+  ];
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
