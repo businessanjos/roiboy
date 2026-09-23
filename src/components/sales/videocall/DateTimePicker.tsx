@@ -3,7 +3,7 @@ import { ptBR } from "date-fns/locale";
 import { CalendarIcon, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
-import { Input } from "@/components/ui/input";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 
@@ -29,8 +29,13 @@ function build(date: Date | undefined, time: string): string {
   return `${d}T${time || "09:00"}`;
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
 export function DateTimePicker({ value, onChange, className }: DateTimePickerProps) {
   const { date, time } = parse(value);
+  const [hour = "09", minute = "00"] = (time || "09:00").split(":");
+
 
   return (
     <div className={cn("flex flex-col gap-2 sm:flex-row", className)}>
@@ -80,15 +85,73 @@ export function DateTimePicker({ value, onChange, className }: DateTimePickerPro
         </PopoverContent>
       </Popover>
 
-      <div className="relative sm:w-[140px]">
-        <Clock className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground pointer-events-none" />
-        <Input
-          type="time"
-          value={time}
-          onChange={(e) => onChange(build(date ?? new Date(), e.target.value))}
-          className="pl-8"
-        />
-      </div>
+      <Popover>
+        <PopoverTrigger asChild>
+          <Button
+            variant="outline"
+            className={cn(
+              "justify-start text-left font-normal sm:w-[140px]",
+              !time && "text-muted-foreground"
+            )}
+          >
+            <Clock className="mr-2 h-4 w-4 shrink-0" />
+            {time || "Horário"}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent className="w-auto p-0" align="start">
+          <div className="flex divide-x">
+            <ScrollArea className="h-56 w-20">
+              <div className="p-1">
+                {HOURS.map((h) => (
+                  <button
+                    key={h}
+                    type="button"
+                    onClick={() => onChange(build(date ?? new Date(), `${h}:${minute}`))}
+                    className={cn(
+                      "w-full rounded-md px-2 py-1.5 text-center text-sm hover:bg-accent",
+                      hour === h && "bg-primary text-primary-foreground hover:bg-primary"
+                    )}
+                  >
+                    {h}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+            <ScrollArea className="h-56 w-20">
+              <div className="p-1">
+                {MINUTES.map((m) => (
+                  <button
+                    key={m}
+                    type="button"
+                    onClick={() => onChange(build(date ?? new Date(), `${hour}:${m}`))}
+                    className={cn(
+                      "w-full rounded-md px-2 py-1.5 text-center text-sm hover:bg-accent",
+                      minute === m && "bg-primary text-primary-foreground hover:bg-primary"
+                    )}
+                  >
+                    {m}
+                  </button>
+                ))}
+              </div>
+            </ScrollArea>
+          </div>
+          <div className="border-t p-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              className="w-full text-xs"
+              onClick={() => {
+                const now = new Date();
+                const pad = (n: number) => String(n).padStart(2, "0");
+                onChange(build(date ?? now, `${pad(now.getHours())}:${pad(now.getMinutes())}`));
+              }}
+            >
+              Agora
+            </Button>
+          </div>
+        </PopoverContent>
+      </Popover>
     </div>
   );
 }
+
