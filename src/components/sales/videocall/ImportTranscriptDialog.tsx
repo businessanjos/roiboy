@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,7 +16,8 @@ import { Upload, Loader2, FileText, Link2, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
+import { CallLinkSelector, LinkedRecord, findDealForCall } from "./CallLinkSelector";
+import { DealInfoPanel } from "./DealInfoPanel";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { DateTimePicker } from "./DateTimePicker";
 
@@ -92,7 +93,27 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     }
   };
 
-
+  // Ao abrir, tenta vincular sozinho o negócio da call (por vínculo existente, telefone ou nome).
+  useEffect(() => {
+    if (!open || lead) return;
+    let cancelled = false;
+    (async () => {
+      const found = await findDealForCall({
+        dealId: (session as unknown as { deal_id?: string | null })?.deal_id ?? null,
+        name: session?.participant_name ?? name,
+        phone: session?.participant_phone ?? phone,
+      });
+      if (!cancelled && found) {
+        setLead(found);
+        if (!sellerId && found.responsible_user_id) setSellerId(found.responsible_user_id);
+        if (!phone && found.phone) setPhone(found.phone);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
@@ -224,6 +245,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
             <div className="space-y-2">
               <Label>Negócio vinculado</Label>
               <CallLinkSelector value={lead} onChange={handleLead} />
+              {lead?.kind === "deal" && <DealInfoPanel dealId={lead.id} />}
             </div>
 
 
