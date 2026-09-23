@@ -9,6 +9,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
+interface ZappAIAssistBarProps {
+  correction: string | null;
+  isCheckingSpelling: boolean;
+  onApplyCorrection: () => void;
+  onDismissCorrection: () => void;
+  spellingEnabled: boolean;
+  // Reply suggestions (commercial only)
+  suggestions?: string[];
+  isLoadingSuggestions?: boolean;
+  suggestionsAvailable?: boolean;
   suggestionsOpen?: boolean;
   onSelectSuggestion?: (text: string) => void;
   onRefreshSuggestions?: () => void;
