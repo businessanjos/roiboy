@@ -137,7 +137,9 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
       meeting_url: meetingUrl.trim() || null,
       transcript_file_name: fileName,
       transcription: transcript.trim(),
-      ...(lead ? { lead_id: lead.id } : {}),
+      ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+      ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
+
       ...(sellerId ? { user_id: sellerId } : {}),
     };
 
