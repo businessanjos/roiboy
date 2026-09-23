@@ -31,7 +31,7 @@ import { MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 
 interface VideoCallActionsProps {
