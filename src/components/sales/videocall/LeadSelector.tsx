@@ -35,7 +35,7 @@ export function LeadSelector({ value, onChange }: Props) {
     const t = setTimeout(async () => {
       let query = supabase
         .from("leads")
-        .select("id, full_name, phone, company_name, status")
+        .select("id, full_name, phone, company_name, status, responsible_user_id")
         .order("created_at", { ascending: false })
         .limit(50);
       const s = term.trim();
