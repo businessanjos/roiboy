@@ -202,6 +202,10 @@ interface ZappMessageInputProps {
   onOpenPlaybook?: () => void;
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
+  showSuggestionsButton?: boolean;
+  suggestionsOpen?: boolean;
+  isLoadingSuggestions?: boolean;
+  onToggleSuggestions?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
