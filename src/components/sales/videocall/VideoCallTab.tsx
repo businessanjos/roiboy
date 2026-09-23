@@ -483,39 +483,44 @@ export function VideoCallTab() {
           </Card>
         ) : (
           <div className="space-y-2">
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
-              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-0.5">
+              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                 <Checkbox
                   checked={allSelected}
                   onCheckedChange={toggleAll}
                   aria-label="Selecionar todas as calls"
+                  className="h-3.5 w-3.5"
                 />
                 {selected.size > 0
                   ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
-                  : "Selecionar todas"}
+                  : "Selecionar"}
               </label>
               {selected.size > 0 && (
-                <div className="flex items-center gap-2">
-                  <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
-                    Limpar seleção
-                  </Button>
+                <div className="flex items-center gap-1">
                   <Button
-                    variant="destructive"
+                    variant="ghost"
                     size="sm"
-                    className="gap-1.5"
-                    disabled={deleting}
+                    className="h-7 text-xs text-muted-foreground"
+                    onClick={() => setSelected(new Set())}
+                  >
+                    Limpar
+                  </Button>
+                  <IconAction
+                    label="Excluir selecionadas"
                     onClick={() => setBulkDeleteOpen(true)}
+                    disabled={deleting}
+                    className="text-muted-foreground hover:text-destructive"
                   >
                     {deleting ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      <Loader2 className="h-4 w-4 animate-spin" />
                     ) : (
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     )}
-                    Excluir selecionadas
-                  </Button>
+                  </IconAction>
                 </div>
               )}
             </div>
+
 
             {filtered.map((session) => {
               const isAnalyzing =
