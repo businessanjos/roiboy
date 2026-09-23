@@ -470,6 +470,7 @@ export function ZappChatView({
         suggestions={suggestions}
         isLoadingSuggestions={isLoadingSuggestions}
         suggestionsAvailable={suggestionsAvailable}
+        suggestionsOpen={suggestionsOpen}
         onSelectSuggestion={handleSelectSuggestion}
         onRefreshSuggestions={refreshSuggestions}
         onDismissSuggestions={dismissSuggestions}
