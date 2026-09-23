@@ -79,8 +79,6 @@ AUDITORIA OBRIGATÓRIA: avalie se o vendedor seguiu as etapas do processo comerc
           { role: "system", content: auditPrompt },
           { role: "user", content: `Analise esta transcrição de call de vendas:\n\n${transcript}` },
         ],
-          { role: "user", content: `Analise esta transcrição de call de vendas:\n\n${transcript}` },
-        ],
         max_tokens: 4000,
       }),
     });
