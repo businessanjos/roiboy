@@ -47,7 +47,7 @@ import {
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
-import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
+import { CallLinkSelector, LinkedRecord, findDealForCall, findDealProductId } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { ProductSelector, useCallProducts } from "./ProductSelector";
 
@@ -84,6 +84,30 @@ export function VideoCallActions({
   const [sellerId, setSellerId] = useState<string | null>(session.user_id ?? null);
   const [productId, setProductId] = useState<string | null>(session.product_id ?? null);
   const products = useCallProducts();
+
+  // Ao abrir a edição, vincula sozinho o negócio e puxa o Item da Venda dele.
+  useEffect(() => {
+    if (!editOpen || lead) return;
+    let cancelled = false;
+    (async () => {
+      const found = await findDealForCall({
+        dealId: (session as unknown as { deal_id?: string | null }).deal_id ?? null,
+        name: participantName,
+        phone: participantPhone,
+      });
+      if (cancelled || !found) return;
+      setLead(found);
+      if (!sellerId && found.responsible_user_id) setSellerId(found.responsible_user_id);
+      if (!productId) {
+        const pid = await findDealProductId(found.id);
+        if (!cancelled && pid) setProductId(pid);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editOpen]);
 
   const handleSave = async () => {
     setSaving(true);
@@ -229,6 +253,7 @@ export function VideoCallActions({
                   setLead(l);
                   if (l?.name) setParticipantName(l.name);
                   if (l?.phone) setParticipantPhone(l.phone);
+                  if (l?.kind === "deal") findDealProductId(l.id).then((pid) => pid && setProductId(pid));
                   if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                 }}
               />

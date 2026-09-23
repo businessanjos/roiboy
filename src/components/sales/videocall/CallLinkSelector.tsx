@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Check, ChevronsUpDown, Loader2, Search, Target, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
 export type LinkKind = "deal" | "lead";
 
@@ -87,6 +88,26 @@ export async function findDealForCall(opts: {
   }
 
   return null;
+}
+
+/** Produto (Item da Venda) gravado no negócio, já resolvido para o id do produto. */
+export async function findDealProductId(dealId: string): Promise<string | null> {
+  const { data: fields } = await supabase
+    .from("custom_fields")
+    .select("id")
+    .eq("name", "Item da Venda")
+    .eq("show_in_deals", true);
+  const ids = (fields ?? []).map((f: { id: string }) => f.id);
+  if (!ids.length) return null;
+  const { data } = await supabase
+    .from("deal_field_values")
+    .select("value_text")
+    .eq("deal_id", dealId)
+    .in("field_id", ids)
+    .not("value_text", "is", null)
+    .limit(1);
+  const raw = (data as { value_text: string | null }[] | null)?.[0]?.value_text;
+  return resolveItemVendaToProductId(raw) || null;
 }
 
 interface Props {
