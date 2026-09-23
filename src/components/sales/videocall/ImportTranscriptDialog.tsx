@@ -245,6 +245,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
             <div className="space-y-2">
               <Label>Negócio vinculado</Label>
               <CallLinkSelector value={lead} onChange={handleLead} />
+              {lead?.kind === "deal" && <DealInfoPanel dealId={lead.id} />}
             </div>
 
 
