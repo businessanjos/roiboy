@@ -25,14 +25,9 @@ interface Props {
   defaultKind?: LinkKind;
 }
 
-const MODES: { key: LinkKind; label: string }[] = [
-  { key: "deal", label: "Funil de negócios" },
-  { key: "lead", label: "Leads" },
-];
-
-export function CallLinkSelector({ value, onChange, defaultKind = "deal" }: Props) {
+export function CallLinkSelector({ value, onChange }: Props) {
   const [open, setOpen] = useState(false);
-  const [kind, setKind] = useState<LinkKind>(value?.kind ?? defaultKind);
+  const kind: LinkKind = "deal";
   const [term, setTerm] = useState("");
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<LinkedRecord[]>([]);
