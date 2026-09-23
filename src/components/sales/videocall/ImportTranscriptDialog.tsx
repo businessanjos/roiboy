@@ -16,6 +16,8 @@ import { Upload, Loader2, FileText, Link2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { LeadSelector, LeadOption } from "./LeadSelector";
+import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
 
 const ACCEPTED = ".txt,.vtt,.srt,.md,.csv,.json,.log";
 
@@ -36,28 +38,50 @@ function cleanTranscript(raw: string): string {
   return out.join("\n");
 }
 
+function toLocalInput(iso: string | null | undefined): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 interface Props {
+  /** Quando informado, a transcrição é anexada a esta chamada existente. */
+  session?: VideoCallSession;
   onCreated?: (id: string, analyzeNow: boolean) => void;
   trigger?: React.ReactNode;
 }
 
-export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
+export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
   const { currentUser } = useCurrentUser();
+  const isAttach = !!session;
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
-  const [name, setName] = useState("");
-  const [meetingUrl, setMeetingUrl] = useState("");
-  const [when, setWhen] = useState("");
+  const [name, setName] = useState(session?.participant_name ?? "");
+  const [phone, setPhone] = useState(session?.participant_phone ?? "");
+  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [meetingUrl, setMeetingUrl] = useState(session?.meeting_url ?? "");
+  const [when, setWhen] = useState(toLocalInput(session?.created_at));
   const [fileName, setFileName] = useState<string | null>(null);
-  const [transcript, setTranscript] = useState("");
+  const [transcript, setTranscript] = useState(session?.transcription ?? "");
   const fileRef = useRef<HTMLInputElement>(null);
 
   const reset = () => {
-    setName("");
-    setMeetingUrl("");
-    setWhen("");
+    setName(session?.participant_name ?? "");
+    setPhone(session?.participant_phone ?? "");
+    setLead(null);
+    setMeetingUrl(session?.meeting_url ?? "");
+    setWhen(toLocalInput(session?.created_at));
     setFileName(null);
-    setTranscript("");
+    setTranscript(session?.transcription ?? "");
+  };
+
+  const handleLead = (l: LeadOption | null) => {
+    setLead(l);
+    if (l) {
+      if (!name.trim() || l.full_name) setName(l.full_name ?? name);
+      if (l.phone) setPhone(l.phone);
+    }
   };
 
   const handleFile = async (file: File | undefined) => {
@@ -96,34 +120,55 @@ export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
       return;
     }
     setSaving(true);
-    const { data, error } = await supabase
-      .from("video_call_sessions")
-      .insert({
-        account_id: currentUser.account_id,
-        user_id: currentUser.id,
-        source: "imported",
-        status: "completed",
-        analysis_status: "pending",
-        participant_name: name.trim() || "Call importada",
-        meeting_url: meetingUrl.trim() || null,
-        transcript_file_name: fileName,
-        transcription: transcript.trim(),
-        created_at: when ? new Date(when).toISOString() : undefined,
-        started_at: when ? new Date(when).toISOString() : null,
-      } as never)
-      .select("id")
-      .single();
+
+    const common = {
+      participant_name: name.trim() || "Call importada",
+      participant_phone: phone.trim() || null,
+      meeting_url: meetingUrl.trim() || null,
+      transcript_file_name: fileName,
+      transcription: transcript.trim(),
+      ...(lead ? { lead_id: lead.id } : {}),
+    };
+
+    let id = session?.id ?? "";
+    let error = null;
+
+    if (isAttach) {
+      const res = await supabase
+        .from("video_call_sessions")
+        .update({ ...common, status: "completed" } as never)
+        .eq("id", session!.id);
+      error = res.error;
+    } else {
+      const res = await supabase
+        .from("video_call_sessions")
+        .insert({
+          ...common,
+          account_id: currentUser.account_id,
+          user_id: currentUser.id,
+          source: "imported",
+          status: "completed",
+          analysis_status: "pending",
+          created_at: when ? new Date(when).toISOString() : undefined,
+          started_at: when ? new Date(when).toISOString() : null,
+        } as never)
+        .select("id")
+        .single();
+      error = res.error;
+      id = (res.data as { id: string } | null)?.id ?? "";
+    }
+
     setSaving(false);
 
-    if (error || !data) {
+    if (error || !id) {
       toast.error("Erro ao salvar", { description: error?.message });
       return;
     }
 
-    toast.success("Transcrição importada");
+    toast.success(isAttach ? "Transcrição anexada" : "Transcrição importada");
     setOpen(false);
-    reset();
-    onCreated?.((data as { id: string }).id, analyzeNow);
+    setFileName(null);
+    onCreated?.(id, analyzeNow);
   };
 
   return (
@@ -142,19 +187,27 @@ export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
           </Button>
         )}
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[620px] max-h-[85vh] overflow-y-auto">
+      <DialogContent
+        className="sm:max-w-[620px] max-h-[85vh] overflow-y-auto"
+        onClick={(e) => e.stopPropagation()}
+      >
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <FileText className="h-5 w-5" />
-            Importar transcrição da call
+            {isAttach ? "Importar transcrição desta call" : "Importar transcrição da call"}
           </DialogTitle>
           <DialogDescription>
-            Envie a transcrição do Zoom ou do Meet, guarde o link da gravação e gere a análise
-            com base no manual de vendas.
+            Envie a transcrição do Zoom ou do Meet, vincule o lead, guarde o link da gravação e
+            gere a análise com base no manual de vendas.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-1">
+          <div className="space-y-2">
+            <Label>Lead vinculado</Label>
+            <LeadSelector value={lead} onChange={handleLead} />
+          </div>
+
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="imp-name">Nome do lead / cliente</Label>
@@ -166,6 +219,18 @@ export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
               />
             </div>
             <div className="space-y-2">
+              <Label htmlFor="imp-phone">Telefone</Label>
+              <Input
+                id="imp-phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Ex: 11 99999-9999"
+              />
+            </div>
+          </div>
+
+          {!isAttach && (
+            <div className="space-y-2">
               <Label htmlFor="imp-when">Data e hora da call</Label>
               <Input
                 id="imp-when"
@@ -174,7 +239,7 @@ export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
                 onChange={(e) => setWhen(e.target.value)}
               />
             </div>
-          </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="imp-url" className="flex items-center gap-1.5">
