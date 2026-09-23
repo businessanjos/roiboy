@@ -196,46 +196,22 @@ export function VideoCallTab() {
   const [exportingPdf, setExportingPdf] = useState(false);
 
   const exportAnalysisPdf = async (s: VideoCallSession) => {
-    const el = analysisRef.current;
-    if (!el) return;
+    if (!s.analysis) return;
     setExportingPdf(true);
     try {
-      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
-        import("html2canvas"),
-        import("jspdf"),
-      ]);
-      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
-      const pdf = new jsPDF({ unit: "mm", format: "a4" });
-      const pageW = pdf.internal.pageSize.getWidth();
-      const pageH = pdf.internal.pageSize.getHeight();
-      const margin = 12;
-      const headerH = 18;
-      const imgW = pageW - margin * 2;
-      const pxPerMm = canvas.width / imgW;
-      const date = format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
-      let y = 0;
-      let page = 0;
-      while (y < canvas.height) {
-        if (page > 0) pdf.addPage();
-        const top = page === 0 ? margin + headerH : margin;
-        if (page === 0) {
-          pdf.setFontSize(14);
-          pdf.text(s.participant_name || "Videochamada", margin, margin + 5);
-          pdf.setFontSize(9);
-          pdf.text(`${s.seller?.name ?? "Sem vendedor"} · ${date}`, margin, margin + 11);
-        }
-        const sliceMm = pageH - top - margin;
-        const slicePx = Math.min(Math.floor(sliceMm * pxPerMm), canvas.height - y);
-        const c = document.createElement("canvas");
-        c.width = canvas.width;
-        c.height = slicePx;
-        c.getContext("2d")!.drawImage(canvas, 0, y, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
-        pdf.addImage(c.toDataURL("image/jpeg", 0.92), "JPEG", margin, top, imgW, slicePx / pxPerMm);
-        y += slicePx;
-        page++;
-      }
-      const safe = (s.participant_name || "call").replace(/[^\w\-]+/g, "_").slice(0, 60);
-      pdf.save(`analise-${safe}.pdf`);
+      const { exportVideoCallAnalysisPDF } = await import("@/lib/exportVideoCallAnalysisPDF");
+      const product = s.product_id ? products.find((p) => p.id === s.product_id) : null;
+      exportVideoCallAnalysisPDF({
+        participantName: s.participant_name || "Videochamada",
+        sellerName: s.seller?.name ?? null,
+        productName: product?.name ?? null,
+        phone: s.participant_phone,
+        dateLabel: format(new Date(s.started_at || s.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR }),
+        durationLabel: s.duration_seconds > 0 ? formatDuration(s.duration_seconds) : null,
+        meetingUrl: s.meeting_url,
+        source: s.source === "imported" ? "Transcrição importada" : s.source ? "Videochamada ROY" : null,
+        analysis: s.analysis,
+      });
     } catch (e) {
       toast.error("Não foi possível gerar o PDF");
       console.error(e);
