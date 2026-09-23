@@ -13,7 +13,9 @@ export interface LeadOption {
   phone: string | null;
   company_name: string | null;
   status: string | null;
+  responsible_user_id?: string | null;
 }
+
 
 interface Props {
   value: LeadOption | null;
