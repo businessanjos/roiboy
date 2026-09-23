@@ -524,6 +524,10 @@ export function ZappChatView({
         onOpenPlaybook={onOpenPlaybook}
         isMetaChannel={isMetaChannel}
         onOpenTemplates={onOpenTemplates}
+        showSuggestionsButton={suggestionsAvailable}
+        suggestionsOpen={suggestionsOpen}
+        isLoadingSuggestions={isLoadingSuggestions}
+        onToggleSuggestions={toggleSuggestions}
       />
       )}
 
