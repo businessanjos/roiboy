@@ -703,7 +703,17 @@ export function VideoCallTab() {
                             Ver análise
                           </Button>
                         )}
-                        <VideoCallActions session={session} onChanged={refetch} />
+                        <VideoCallActions
+                          session={session}
+                          onChanged={refetch}
+                          onToggleFavorite={() => toggleFavorite(session)}
+                          onAnalyze={() => analyze(session)}
+                          onViewAnalysis={() => {
+                            setViewMode("analysis");
+                            setSelectedId(session.id);
+                          }}
+                          isAnalyzing={isAnalyzing}
+                        />
                       </div>
                     </div>
                   </CardContent>
