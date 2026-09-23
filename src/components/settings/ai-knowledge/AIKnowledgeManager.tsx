@@ -11,8 +11,9 @@ import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import {
   Brain, FileText, MessageSquareWarning, ShieldCheck, Upload, Trash2,
-  Download, Plus, Save, AlertTriangle, CheckCircle2,
+  Download, Plus, Save, AlertTriangle, CheckCircle2, RefreshCw,
 } from "lucide-react";
+
 import {
   EMPTY_SETTINGS, KnowledgeSettings, useKnowledgeCorrections,
   useKnowledgeDocuments, useKnowledgeSettings,
