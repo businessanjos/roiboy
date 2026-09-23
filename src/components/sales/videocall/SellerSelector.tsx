@@ -21,7 +21,14 @@ export function initials(name?: string | null) {
   return (parts[0][0] + (parts[1]?.[0] ?? "")).toUpperCase();
 }
 
-/** Lista usuários ativos da conta (vendedores/closers) para atribuir a call. */
+/** Vendedores/closers que conduzem videochamadas. */
+export const SELLER_IDS = [
+  "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan Marcato
+  "1d090543-1853-4cd0-bdb4-02e17a5df4d8", // Darlan Ferreira
+  "a19843c8-3790-41b3-9b3d-4490b385316d", // Kleberson Alves
+];
+
+/** Lista apenas os vendedores comerciais para atribuir a call. */
 export function useAccountSellers() {
   const [sellers, setSellers] = useState<SellerOption[]>([]);
   const [loading, setLoading] = useState(true);
@@ -31,10 +38,11 @@ export function useAccountSellers() {
     (async () => {
       const { data } = await supabase
         .from("users")
-        .select("id, name, email, avatar_url, is_active")
+        .select("id, name, email, avatar_url")
+        .in("id", SELLER_IDS)
         .order("name");
       if (!cancelled) {
-        setSellers(((data as (SellerOption & { is_active: boolean })[]) ?? []) as SellerOption[]);
+        setSellers((data as SellerOption[]) ?? []);
         setLoading(false);
       }
     })();
@@ -45,6 +53,7 @@ export function useAccountSellers() {
 
   return { sellers, loading };
 }
+
 
 interface Props {
   value: string | null;
