@@ -262,15 +262,11 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
 
             {!isAttach && (
               <div className="space-y-2">
-                <Label htmlFor="imp-when">Data e hora da call</Label>
-                <Input
-                  id="imp-when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
+                <Label>Data e hora da call</Label>
+                <DateTimePicker value={when} onChange={setWhen} />
               </div>
             )}
+
           </section>
 
 
