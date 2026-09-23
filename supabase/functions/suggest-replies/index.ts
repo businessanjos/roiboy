@@ -15,10 +15,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, draft, sectorId } = await req.json() as {
+    const { messages, draft, sectorId, manual } = await req.json() as {
       messages: RecentMessage[];
       draft?: string;
       sectorId?: string;
+      manual?: boolean;
     };
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -36,9 +37,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Only suggest when the last message is from the client (avoids interrupting the agent)
+    // Automatic mode only suggests when the last message is from the client
+    // (avoids interrupting the agent). Manual mode always answers.
     const lastMessage = messages[messages.length - 1];
-    if (!lastMessage?.is_from_client || !lastMessage.content?.trim()) {
+    if (!manual && (!lastMessage?.is_from_client || !lastMessage.content?.trim())) {
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
