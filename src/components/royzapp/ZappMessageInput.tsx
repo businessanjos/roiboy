@@ -464,6 +464,24 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 Playbook
               </button>
             )}
+            {showSuggestionsButton && onToggleSuggestions && (
+              <button
+                type="button"
+                onClick={onToggleSuggestions}
+                disabled={isLoadingSuggestions}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
+                  suggestionsOpen ? "bg-violet-500/15 text-violet-500" : "bg-zapp-hover text-zapp-text",
+                )}
+              >
+                {isLoadingSuggestions ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                )}
+                Sugestões
+              </button>
+            )}
             <button
               type="button"
               onClick={() => imageInputRef?.current?.click()}
