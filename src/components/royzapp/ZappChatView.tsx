@@ -261,6 +261,8 @@ export function ZappChatView({
     refreshSuggestions,
     dismissSuggestions,
     suggestionsAvailable,
+    suggestionsOpen,
+    toggleSuggestions,
   } = useMessageAssistant({
     messageInput,
     sectorId: sectorId || "operacoes",
