@@ -274,58 +274,65 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
           </section>
 
 
-          <div className="space-y-2">
-            <Label htmlFor="imp-url" className="flex items-center gap-1.5">
-              <Link2 className="h-3.5 w-3.5" />
-              Link da reunião / gravação (Zoom, Meet)
-            </Label>
-            <Input
-              id="imp-url"
-              value={meetingUrl}
-              onChange={(e) => setMeetingUrl(e.target.value)}
-              placeholder="https://zoom.us/rec/... ou https://meet.google.com/..."
-            />
-          </div>
+          <section className="rounded-lg border p-4 space-y-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Conteúdo da call
+            </p>
 
-          <div className="space-y-2">
-            <Label>Arquivo da transcrição</Label>
-            <div className="flex items-center gap-2">
-              <input
-                ref={fileRef}
-                type="file"
-                accept={ACCEPTED}
-                className="hidden"
-                onChange={(e) => {
-                  handleFile(e.target.files?.[0]);
-                  e.target.value = "";
-                }}
+            <div className="space-y-2">
+              <Label htmlFor="imp-url" className="flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" />
+                Link da reunião / gravação (Zoom, Meet)
+              </Label>
+              <Input
+                id="imp-url"
+                value={meetingUrl}
+                onChange={(e) => setMeetingUrl(e.target.value)}
+                placeholder="https://zoom.us/rec/... ou https://meet.google.com/..."
               />
-              <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
-                <Upload className="h-4 w-4 mr-2" />
-                Escolher arquivo
-              </Button>
-              <span className="text-xs text-muted-foreground truncate">
-                {fileName ?? "Aceita .txt, .vtt, .srt, .md, .csv — até 10 MB"}
-              </span>
             </div>
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="imp-text">Transcrição</Label>
-            <Textarea
-              id="imp-text"
-              value={transcript}
-              onChange={(e) => setTranscript(e.target.value)}
-              rows={10}
-              placeholder="Cole aqui a transcrição da call, se preferir."
-              className="font-mono text-xs"
-            />
-            {transcript && (
-              <p className="text-xs text-muted-foreground">
-                {transcript.length.toLocaleString("pt-BR")} caracteres
-              </p>
-            )}
-          </div>
+            <div className="space-y-2">
+              <Label>Arquivo da transcrição</Label>
+              <div className="flex items-center gap-2">
+                <input
+                  ref={fileRef}
+                  type="file"
+                  accept={ACCEPTED}
+                  className="hidden"
+                  onChange={(e) => {
+                    handleFile(e.target.files?.[0]);
+                    e.target.value = "";
+                  }}
+                />
+                <Button type="button" variant="outline" onClick={() => fileRef.current?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Escolher arquivo
+                </Button>
+                <span className="text-xs text-muted-foreground truncate">
+                  {fileName ?? "Aceita .txt, .vtt, .srt, .md, .csv — até 10 MB"}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="imp-text">Transcrição</Label>
+              <Textarea
+                id="imp-text"
+                value={transcript}
+                onChange={(e) => setTranscript(e.target.value)}
+                rows={10}
+                placeholder="Cole aqui a transcrição da call, se preferir."
+                className="font-mono text-xs"
+              />
+              {transcript && (
+                <p className="text-xs text-muted-foreground">
+                  {transcript.length.toLocaleString("pt-BR")} caracteres
+                </p>
+              )}
+            </div>
+          </section>
+
         </div>
 
         <DialogFooter className="gap-2">
