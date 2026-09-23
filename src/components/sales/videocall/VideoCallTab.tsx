@@ -503,42 +503,59 @@ export function VideoCallTab() {
         ) : (
           <div className="space-y-2">
             <div className="flex flex-wrap items-center justify-between gap-2 px-1 py-0.5">
-              <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
-                <Checkbox
-                  checked={allSelected}
-                  onCheckedChange={toggleAll}
-                  aria-label="Selecionar todas as calls"
-                  className="h-3.5 w-3.5"
-                />
-                {selected.size > 0
-                  ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
-                  : "Selecionar"}
-              </label>
-              {selected.size > 0 && (
+              {selectionMode ? (
+                <label className="flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
+                  <Checkbox
+                    checked={allSelected}
+                    onCheckedChange={toggleAll}
+                    aria-label="Selecionar todas as calls"
+                    className="h-3.5 w-3.5"
+                  />
+                  {selected.size > 0
+                    ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
+                    : "Selecionar todas"}
+                </label>
+              ) : (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs text-muted-foreground"
+                  onClick={() => setSelectionMode(true)}
+                >
+                  Selecionar
+                </Button>
+              )}
+              {selectionMode && (
                 <div className="flex items-center gap-1">
                   <Button
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs text-muted-foreground"
-                    onClick={() => setSelected(new Set())}
+                    onClick={() => {
+                      setSelected(new Set());
+                      setSelectionMode(false);
+                    }}
                   >
-                    Limpar
+                    Cancelar
                   </Button>
-                  <IconAction
-                    label="Excluir selecionadas"
-                    onClick={() => setBulkDeleteOpen(true)}
-                    disabled={deleting}
-                    className="text-muted-foreground hover:text-destructive"
-                  >
-                    {deleting ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      <Trash2 className="h-4 w-4" />
-                    )}
-                  </IconAction>
+                  {selected.size > 0 && (
+                    <IconAction
+                      label="Excluir selecionadas"
+                      onClick={() => setBulkDeleteOpen(true)}
+                      disabled={deleting}
+                      className="text-muted-foreground hover:text-destructive"
+                    >
+                      {deleting ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-4 w-4" />
+                      )}
+                    </IconAction>
+                  )}
                 </div>
               )}
             </div>
+
 
 
             {filtered.map((session) => {
