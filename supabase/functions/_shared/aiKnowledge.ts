@@ -46,10 +46,11 @@ export async function buildKnowledgeBlock(req: Request): Promise<string> {
         .limit(30),
       admin
         .from("ai_knowledge_documents")
-        .select("title, extracted_text")
+        .select("id, title, extracted_text, chunks_count")
         .eq("account_id", accountId)
         .eq("status", "completed")
-        .limit(10),
+        .limit(20),
+
     ]);
 
     const s = settingsRes.data as Record<string, unknown> | null;
