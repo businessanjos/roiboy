@@ -283,10 +283,10 @@ export function VideoCallTab() {
         </div>
 
         {/* Filtros */}
-        <Card className="border-dashed">
-          <CardContent className="p-3 space-y-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="relative flex-1 min-w-[220px]">
+        <Card>
+          <CardContent className="p-3">
+            <div className="grid gap-2 md:grid-cols-[minmax(200px,1fr)_180px_190px_210px]">
+              <div className="relative">
                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                 <Input
                   value={search}
@@ -295,6 +295,20 @@ export function VideoCallTab() {
                   className="pl-8"
                 />
               </div>
+
+              <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERIODS.map((p) => (
+                    <SelectItem key={p.key} value={p.key}>
+                      {p.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <SellerSelector
                 value={sellerId}
                 onChange={setSellerId}
@@ -302,41 +316,25 @@ export function VideoCallTab() {
                 loading={loadingSellers}
                 allowAll
                 allLabel="Todos os vendedores"
-                className="w-[230px]"
+                className="w-full"
               />
-            </div>
 
-            <div className="flex flex-wrap items-center gap-3">
-              <div className="flex flex-wrap items-center gap-1 rounded-lg bg-muted/60 p-1">
-                {PERIODS.map((p) => (
-                  <Button
-                    key={p.key}
-                    size="sm"
-                    variant={period === p.key ? "default" : "ghost"}
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setPeriod(p.key)}
-                  >
-                    {p.label}
-                  </Button>
-                ))}
-              </div>
-              <div className="flex flex-wrap items-center gap-1">
-                {filters.map((f) => (
-                  <Button
-                    key={f.key}
-                    size="sm"
-                    variant={filter === f.key ? "secondary" : "ghost"}
-                    className="h-7 px-2.5 text-xs"
-                    onClick={() => setFilter(f.key)}
-                  >
-                    {f.label}
-                    <span className="ml-1.5 opacity-60">{counts[f.key]}</span>
-                  </Button>
-                ))}
-              </div>
+              <Select value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {filters.map((f) => (
+                    <SelectItem key={f.key} value={f.key}>
+                      {f.label} ({counts[f.key]})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardContent>
         </Card>
+
 
         {/* Sessions list */}
         {isLoading ? (
