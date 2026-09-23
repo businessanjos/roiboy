@@ -186,6 +186,7 @@ export function VideoCallTab() {
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
+  const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -196,6 +197,20 @@ export function VideoCallTab() {
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  const toggleFavorite = async (session: VideoCallSession) => {
+    const next = !session.is_favorite;
+    const { error } = await supabase
+      .from("video_call_sessions")
+      .update({ is_favorite: next })
+      .eq("id", session.id);
+    if (error) {
+      toast.error("Não foi possível atualizar os favoritos");
+      return;
+    }
+    refetch();
+  };
+
 
 
   const selectedSession = sessions.find((s) => s.id === selectedId) ?? null;
