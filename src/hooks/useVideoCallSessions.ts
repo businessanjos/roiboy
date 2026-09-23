@@ -17,6 +17,9 @@ export interface VideoCallSession {
   participant_name: string | null;
   participant_phone: string | null;
   notes: string | null;
+  meeting_url: string | null;
+  source: string | null;
+  transcript_file_name: string | null;
   created_at: string;
 }
 
