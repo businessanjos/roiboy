@@ -287,6 +287,7 @@ export function VideoCallTab() {
         !(s.seller?.name ?? "").toLowerCase().includes(term)
       )
         return false;
+      if (filter === "favorites") return !!s.is_favorite;
       if (filter === "with_analysis") return !!s.analysis;
       if (filter === "pending") return !s.analysis && !!s.transcription;
       if (filter === "no_transcription") return !s.transcription;
@@ -297,6 +298,7 @@ export function VideoCallTab() {
   const counts = useMemo(
     () => ({
       all: scoped.length,
+      favorites: scoped.filter((s) => s.is_favorite).length,
       with_analysis: scoped.filter((s) => s.analysis).length,
       pending: scoped.filter((s) => !s.analysis && s.transcription).length,
       no_transcription: scoped.filter((s) => !s.transcription).length,
@@ -306,10 +308,12 @@ export function VideoCallTab() {
 
   const filters: { key: FilterKey; label: string }[] = [
     { key: "all", label: "Todas" },
+    { key: "favorites", label: "Favoritas" },
     { key: "with_analysis", label: "Com análise" },
     { key: "pending", label: "Aguardando análise" },
     { key: "no_transcription", label: "Sem transcrição" },
   ];
+
 
   /** Só quem realmente tem videochamada registrada aparece no filtro de vendedor. */
   const callSellers = useMemo(() => {
