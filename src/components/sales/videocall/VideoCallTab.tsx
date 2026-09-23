@@ -51,6 +51,7 @@ import {
   ExternalLink,
   Upload,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSessions";
 import { format } from "date-fns";
