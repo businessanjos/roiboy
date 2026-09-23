@@ -31,6 +31,7 @@ import { MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
+import { LeadSelector, LeadOption } from "./LeadSelector";
 
 interface VideoCallActionsProps {
   session: VideoCallSession;
@@ -46,6 +47,7 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
   const [participantName, setParticipantName] = useState(session.participant_name ?? "");
   const [participantPhone, setParticipantPhone] = useState(session.participant_phone ?? "");
   const [notes, setNotes] = useState(session.notes ?? "");
+  const [lead, setLead] = useState<LeadOption | null>(null);
 
   const handleSave = async () => {
     setSaving(true);
@@ -55,7 +57,8 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
         participant_name: participantName.trim() || null,
         participant_phone: participantPhone.trim() || null,
         notes: notes.trim() || null,
-      })
+        ...(lead ? { lead_id: lead.id } : {}),
+      } as never)
       .eq("id", session.id);
     setSaving(false);
 
@@ -126,6 +129,17 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
             <DialogTitle>Editar videochamada</DialogTitle>
           </DialogHeader>
           <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label>Lead vinculado</Label>
+              <LeadSelector
+                value={lead}
+                onChange={(l) => {
+                  setLead(l);
+                  if (l?.full_name) setParticipantName(l.full_name);
+                  if (l?.phone) setParticipantPhone(l.phone);
+                }}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="participant_name">Nome do participante</Label>
               <Input
