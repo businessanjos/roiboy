@@ -15,6 +15,7 @@ import {
   Plus,
   Send,
   Smile,
+  Sparkles,
   Square,
   Strikethrough,
   Trash2,
