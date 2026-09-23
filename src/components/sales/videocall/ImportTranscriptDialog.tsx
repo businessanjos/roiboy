@@ -135,6 +135,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
       transcript_file_name: fileName,
       transcription: transcript.trim(),
       ...(lead ? { lead_id: lead.id } : {}),
+      ...(sellerId ? { user_id: sellerId } : {}),
     };
 
     let id = session?.id ?? "";
@@ -152,7 +153,8 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
         .insert({
           ...common,
           account_id: currentUser.account_id,
-          user_id: currentUser.id,
+          user_id: sellerId ?? currentUser.id,
+
           source: "imported",
           status: "completed",
           analysis_status: "pending",
