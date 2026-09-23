@@ -729,6 +729,7 @@ export function VideoCallTab() {
                     </div>
                   </CardContent>
                 </Card>
+                </VideoCallActions>
               );
             })}
           </div>
