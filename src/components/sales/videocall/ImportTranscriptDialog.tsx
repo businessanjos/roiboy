@@ -93,7 +93,27 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     }
   };
 
-
+  // Ao abrir, tenta vincular sozinho o negócio da call (por vínculo existente, telefone ou nome).
+  useEffect(() => {
+    if (!open || lead) return;
+    let cancelled = false;
+    (async () => {
+      const found = await findDealForCall({
+        dealId: (session as unknown as { deal_id?: string | null })?.deal_id ?? null,
+        name: session?.participant_name ?? name,
+        phone: session?.participant_phone ?? phone,
+      });
+      if (!cancelled && found) {
+        setLead(found);
+        if (!sellerId && found.responsible_user_id) setSellerId(found.responsible_user_id);
+        if (!phone && found.phone) setPhone(found.phone);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
