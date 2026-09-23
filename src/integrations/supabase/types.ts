@@ -26705,21 +26705,24 @@ export type Database = {
           analysis_status: string | null
           client_id: string | null
           created_at: string
-          daily_room_name: string
-          daily_room_url: string
+          daily_room_name: string | null
+          daily_room_url: string | null
           deal_id: string | null
           duration_seconds: number | null
           ended_at: string | null
           id: string
           lead_id: string | null
+          meeting_url: string | null
           notes: string | null
           participant_name: string | null
           participant_phone: string | null
           recording_id: string | null
           recording_url: string | null
           scheduled_at: string | null
+          source: string
           started_at: string | null
           status: string
+          transcript_file_name: string | null
           transcription: string | null
           updated_at: string
           user_id: string
@@ -26730,21 +26733,24 @@ export type Database = {
           analysis_status?: string | null
           client_id?: string | null
           created_at?: string
-          daily_room_name: string
-          daily_room_url: string
+          daily_room_name?: string | null
+          daily_room_url?: string | null
           deal_id?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
           lead_id?: string | null
+          meeting_url?: string | null
           notes?: string | null
           participant_name?: string | null
           participant_phone?: string | null
           recording_id?: string | null
           recording_url?: string | null
           scheduled_at?: string | null
+          source?: string
           started_at?: string | null
           status?: string
+          transcript_file_name?: string | null
           transcription?: string | null
           updated_at?: string
           user_id: string
@@ -26755,21 +26761,24 @@ export type Database = {
           analysis_status?: string | null
           client_id?: string | null
           created_at?: string
-          daily_room_name?: string
-          daily_room_url?: string
+          daily_room_name?: string | null
+          daily_room_url?: string | null
           deal_id?: string | null
           duration_seconds?: number | null
           ended_at?: string | null
           id?: string
           lead_id?: string | null
+          meeting_url?: string | null
           notes?: string | null
           participant_name?: string | null
           participant_phone?: string | null
           recording_id?: string | null
           recording_url?: string | null
           scheduled_at?: string | null
+          source?: string
           started_at?: string | null
           status?: string
+          transcript_file_name?: string | null
           transcription?: string | null
           updated_at?: string
           user_id?: string
