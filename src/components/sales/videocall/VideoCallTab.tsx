@@ -439,6 +439,40 @@ export function VideoCallTab() {
           </Card>
         ) : (
           <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Selecionar todas as calls"
+                />
+                {selected.size > 0
+                  ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
+                  : "Selecionar todas"}
+              </label>
+              {selected.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={deleting}
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Excluir selecionadas
+                  </Button>
+                </div>
+              )}
+            </div>
+
             {filtered.map((session) => {
               const isAnalyzing =
                 analyzing.includes(session.id) || session.analysis_status === "analyzing";
