@@ -145,18 +145,43 @@ export function VideoCallDialog({
         </DialogHeader>
 
         {!isActive ? (
-          <div className="flex-1 flex items-center justify-center p-6">
-            <div className="max-w-md w-full space-y-4">
-              <div className="text-center space-y-2 mb-6">
-                <Video className="h-16 w-16 mx-auto text-muted-foreground" />
-                <h3 className="text-lg font-semibold">Iniciar Videochamada</h3>
+          <div className="flex-1 overflow-y-auto flex items-start justify-center p-6">
+            <div className="max-w-md w-full space-y-5">
+              <div className="text-center space-y-2">
+                <div className="mx-auto h-14 w-14 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <Video className="h-7 w-7 text-primary" />
+                </div>
+                <h3 className="text-lg font-semibold">Iniciar videochamada</h3>
                 <p className="text-sm text-muted-foreground">
-                  Crie uma sala de vídeo, grave a chamada e receba análise automática ao final.
+                  Crie a sala, grave a conversa e vincule a call ao lead e ao vendedor.
                 </p>
               </div>
 
-              <div className="space-y-3">
-                <div>
+              <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
+                <div className="space-y-2">
+                  <Label>Lead vinculado</Label>
+                  <LeadSelector
+                    value={lead}
+                    onChange={(l) => {
+                      setLead(l);
+                      if (l?.full_name) setParticipantName(l.full_name);
+                      if (l?.phone) setParticipantPhone(l.phone);
+                      if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
+                    }}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Vendedor responsável</Label>
+                  <SellerSelector
+                    value={sellerId ?? currentUser?.id ?? null}
+                    onChange={setSellerId}
+                    sellers={sellers}
+                    loading={loadingSellers}
+                    className="w-full"
+                    placeholder="Selecionar quem vai conduzir a call"
+                  />
+                </div>
+                <div className="space-y-2">
                   <Label htmlFor="participant-name">Nome do participante</Label>
                   <Input
                     id="participant-name"
@@ -165,7 +190,7 @@ export function VideoCallDialog({
                     placeholder="Ex: João Silva"
                   />
                 </div>
-                <div>
+                <div className="space-y-2">
                   <Label htmlFor="participant-phone">Telefone (opcional)</Label>
                   <Input
                     id="participant-phone"
@@ -175,6 +200,7 @@ export function VideoCallDialog({
                   />
                 </div>
               </div>
+
 
               <Button
                 onClick={handleCreateRoom}
