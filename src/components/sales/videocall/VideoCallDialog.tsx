@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -49,7 +49,7 @@ export function VideoCallDialog({
   const [open, setOpen] = useState(false);
   const [participantName, setParticipantName] = useState(initialName || "");
   const [participantPhone, setParticipantPhone] = useState(initialPhone || "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const { currentUser } = useCurrentUser();
   const { sellers, loading: loadingSellers } = useAccountSellers();
   const [sellerId, setSellerId] = useState<string | null>(null);
