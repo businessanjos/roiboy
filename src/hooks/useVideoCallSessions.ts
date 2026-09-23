@@ -22,6 +22,8 @@ export interface VideoCallSession {
   source: string | null;
   transcript_file_name: string | null;
   created_at: string;
+  /** Vendedor responsável pela call (join com users) */
+  seller?: { id: string; name: string | null; avatar_url: string | null } | null;
 }
 
 export function useVideoCallSessions() {
@@ -32,9 +34,9 @@ export function useVideoCallSessions() {
     setIsLoading(true);
     const { data, error } = await supabase
       .from("video_call_sessions")
-      .select("*")
+      .select("*, seller:users!video_call_sessions_user_id_fkey(id, name, avatar_url)")
       .order("created_at", { ascending: false })
-      .limit(50);
+      .limit(300);
 
     if (!error && data) {
       setSessions(data as unknown as VideoCallSession[]);
