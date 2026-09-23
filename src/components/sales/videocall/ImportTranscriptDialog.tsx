@@ -64,7 +64,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(session?.participant_name ?? "");
   const [phone, setPhone] = useState(session?.participant_phone ?? "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session?.user_id ?? null);
   const [meetingUrl, setMeetingUrl] = useState(session?.meeting_url ?? "");
   const [when, setWhen] = useState(toLocalInput(session?.created_at));
@@ -83,14 +83,15 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     setTranscript(session?.transcription ?? "");
   };
 
-  const handleLead = (l: LeadOption | null) => {
+  const handleLead = (l: LinkedRecord | null) => {
     setLead(l);
     if (l) {
-      if (!name.trim() || l.full_name) setName(l.full_name ?? name);
+      if (l.name) setName(l.name);
       if (l.phone) setPhone(l.phone);
       if (!sellerId && l.responsible_user_id) setSellerId(l.responsible_user_id);
     }
   };
+
 
 
   const handleFile = async (file: File | undefined) => {
