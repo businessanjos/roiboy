@@ -16,7 +16,7 @@ import { Upload, Loader2, FileText, Link2, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { CallLinkSelector, LinkedRecord, findDealForCall } from "./CallLinkSelector";
+import { CallLinkSelector, LinkedRecord, findDealForCall, findDealProductId } from "./CallLinkSelector";
 import { DealInfoPanel } from "./DealInfoPanel";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { ProductSelector, useCallProducts } from "./ProductSelector";
@@ -93,6 +93,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
       if (l.name) setName(l.name);
       if (l.phone) setPhone(l.phone);
       if (!sellerId && l.responsible_user_id) setSellerId(l.responsible_user_id);
+      if (l.kind === "deal") findDealProductId(l.id).then((pid) => pid && setProductId(pid));
     }
   };
 
@@ -110,6 +111,10 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
         setLead(found);
         if (!sellerId && found.responsible_user_id) setSellerId(found.responsible_user_id);
         if (!phone && found.phone) setPhone(found.phone);
+        if (!productId) {
+          const pid = await findDealProductId(found.id);
+          if (!cancelled && pid) setProductId(pid);
+        }
       }
     })();
     return () => {
