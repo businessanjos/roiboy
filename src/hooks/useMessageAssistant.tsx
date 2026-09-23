@@ -26,6 +26,8 @@ interface UseMessageAssistantReturn {
   refreshSuggestions: () => void;
   dismissSuggestions: () => void;
   suggestionsAvailable: boolean;
+  suggestionsOpen: boolean;
+  toggleSuggestions: () => void;
 }
 
 // ====== RATE LIMITING AFTER 402 ERROR ======
