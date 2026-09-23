@@ -173,6 +173,17 @@ export function VideoCallTab() {
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
 
   const selectedSession = sessions.find((s) => s.id === selectedId) ?? null;
 
