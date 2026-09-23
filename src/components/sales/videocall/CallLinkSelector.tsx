@@ -18,6 +18,77 @@ export interface LinkedRecord {
   responsible_user_id: string | null;
 }
 
+function dealToRecord(d: Record<string, unknown>): LinkedRecord {
+  return {
+    kind: "deal",
+    id: d.id as string,
+    name: (d.contact_name as string) || (d.title as string) || "Negócio sem nome",
+    phone: (d.contact_phone as string) ?? null,
+    subtitle:
+      [
+        d.title as string,
+        d.value
+          ? Number(d.value).toLocaleString("pt-BR", {
+              style: "currency",
+              currency: "BRL",
+              maximumFractionDigits: 0,
+            })
+          : null,
+        d.status as string,
+      ]
+        .filter(Boolean)
+        .join(" · ") || null,
+    responsible_user_id: (d.responsible_user_id as string) ?? null,
+  };
+}
+
+const DEAL_COLUMNS = "id, title, contact_name, contact_phone, status, value, responsible_user_id";
+
+/** Busca o negócio já vinculado ou tenta casar por nome/telefone do participante. */
+export async function findDealForCall(opts: {
+  dealId?: string | null;
+  name?: string | null;
+  phone?: string | null;
+}): Promise<LinkedRecord | null> {
+  if (opts.dealId) {
+    const { data } = await supabase
+      .from("deals")
+      .select(DEAL_COLUMNS)
+      .eq("id", opts.dealId)
+      .maybeSingle();
+    if (data) return dealToRecord(data as Record<string, unknown>);
+  }
+
+  const phone = (opts.phone ?? "").replace(/\D/g, "");
+  if (phone.length >= 8) {
+    const tail = phone.slice(-8);
+    const { data } = await supabase
+      .from("deals")
+      .select(DEAL_COLUMNS)
+      .is("deleted_at", null)
+      .ilike("contact_phone", `%${tail}%`)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = (data as Record<string, unknown>[])?.[0];
+    if (row) return dealToRecord(row);
+  }
+
+  const name = (opts.name ?? "").trim();
+  if (name.length >= 4) {
+    const { data } = await supabase
+      .from("deals")
+      .select(DEAL_COLUMNS)
+      .is("deleted_at", null)
+      .or(`contact_name.ilike.${name},title.ilike.%${name}%`)
+      .order("created_at", { ascending: false })
+      .limit(1);
+    const row = (data as Record<string, unknown>[])?.[0];
+    if (row) return dealToRecord(row);
+  }
+
+  return null;
+}
+
 interface Props {
   value: LinkedRecord | null;
   onChange: (record: LinkedRecord | null) => void;
