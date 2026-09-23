@@ -190,6 +190,57 @@ export function VideoCallTab() {
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [productId, setProductId] = useState<string | null>(null);
   const products = useCallProducts();
+  const analysisRef = useRef<HTMLDivElement>(null);
+  const [exportingPdf, setExportingPdf] = useState(false);
+
+  const exportAnalysisPdf = async (s: VideoCallSession) => {
+    const el = analysisRef.current;
+    if (!el) return;
+    setExportingPdf(true);
+    try {
+      const [{ default: html2canvas }, { jsPDF }] = await Promise.all([
+        import("html2canvas"),
+        import("jspdf"),
+      ]);
+      const canvas = await html2canvas(el, { scale: 2, backgroundColor: "#ffffff", useCORS: true });
+      const pdf = new jsPDF({ unit: "mm", format: "a4" });
+      const pageW = pdf.internal.pageSize.getWidth();
+      const pageH = pdf.internal.pageSize.getHeight();
+      const margin = 12;
+      const headerH = 18;
+      const imgW = pageW - margin * 2;
+      const pxPerMm = canvas.width / imgW;
+      const date = format(new Date(s.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR });
+      let y = 0;
+      let page = 0;
+      while (y < canvas.height) {
+        if (page > 0) pdf.addPage();
+        const top = page === 0 ? margin + headerH : margin;
+        if (page === 0) {
+          pdf.setFontSize(14);
+          pdf.text(s.participant_name || "Videochamada", margin, margin + 5);
+          pdf.setFontSize(9);
+          pdf.text(`${s.seller?.name ?? "Sem vendedor"} · ${date}`, margin, margin + 11);
+        }
+        const sliceMm = pageH - top - margin;
+        const slicePx = Math.min(Math.floor(sliceMm * pxPerMm), canvas.height - y);
+        const c = document.createElement("canvas");
+        c.width = canvas.width;
+        c.height = slicePx;
+        c.getContext("2d")!.drawImage(canvas, 0, y, canvas.width, slicePx, 0, 0, canvas.width, slicePx);
+        pdf.addImage(c.toDataURL("image/jpeg", 0.92), "JPEG", margin, top, imgW, slicePx / pxPerMm);
+        y += slicePx;
+        page++;
+      }
+      const safe = (s.participant_name || "call").replace(/[^\w\-]+/g, "_").slice(0, 60);
+      pdf.save(`analise-${safe}.pdf`);
+    } catch (e) {
+      toast.error("Não foi possível gerar o PDF");
+      console.error(e);
+    } finally {
+      setExportingPdf(false);
+    }
+  };
   const [analyzing, setAnalyzing] = useState<string[]>([]);
   const [selectionMode, setSelectionMode] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
@@ -860,10 +911,26 @@ export function VideoCallTab() {
                       />
                     </span>
                   )}
+                  {selectedSession.analysis && viewMode === "analysis" && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5 ml-auto"
+                      disabled={exportingPdf}
+                      onClick={() => exportAnalysisPdf(selectedSession)}
+                    >
+                      {exportingPdf ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Download className="h-3.5 w-3.5" />
+                      )}
+                      Exportar PDF
+                    </Button>
+                  )}
                   {selectedSession.transcription && (
                     <Button
                       size="sm"
-                      className="gap-1.5 ml-auto"
+                      className={`gap-1.5 ${selectedSession.analysis && viewMode === "analysis" ? "" : "ml-auto"}`}
                       disabled={
                         analyzing.includes(selectedSession.id) ||
                         selectedSession.analysis_status === "analyzing"
@@ -881,10 +948,12 @@ export function VideoCallTab() {
                 </div>
 
                 {/* Content */}
-                <ScrollArea className="flex-1 min-h-0 max-h-[55vh]">
+                <div className="flex-1 min-h-0 max-h-[55vh] overflow-y-auto overscroll-contain pr-2">
                   {viewMode === "analysis" ? (
                     selectedSession.analysis ? (
-                      <MarkdownRenderer content={selectedSession.analysis} />
+                      <div ref={analysisRef} className="bg-background p-1">
+                        <MarkdownRenderer content={selectedSession.analysis} />
+                      </div>
                     ) : (
                       <div className="flex flex-col items-center justify-center py-8 text-center">
                         {analyzing.includes(selectedSession.id) ||
@@ -920,7 +989,7 @@ export function VideoCallTab() {
                       </p>
                     </div>
                   )}
-                </ScrollArea>
+                </div>
               </div>
             )}
           </DialogContent>
