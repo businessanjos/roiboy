@@ -60,7 +60,9 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
         participant_name: participantName.trim() || null,
         participant_phone: participantPhone.trim() || null,
         notes: notes.trim() || null,
-        ...(lead ? { lead_id: lead.id } : {}),
+        ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+        ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
+
         ...(sellerId ? { user_id: sellerId } : {}),
       } as never)
       .eq("id", session.id);
