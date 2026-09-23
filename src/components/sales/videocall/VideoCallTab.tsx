@@ -564,8 +564,19 @@ export function VideoCallTab() {
               const isAnalyzing =
                 analyzing.includes(session.id) || session.analysis_status === "analyzing";
               return (
-                <Card
+                <VideoCallActions
                   key={session.id}
+                  session={session}
+                  onChanged={refetch}
+                  onToggleFavorite={() => toggleFavorite(session)}
+                  onAnalyze={() => analyze(session)}
+                  onViewAnalysis={() => {
+                    setViewMode("analysis");
+                    setSelectedId(session.id);
+                  }}
+                  isAnalyzing={isAnalyzing}
+                >
+                <Card
                   className="cursor-pointer hover:bg-accent/40 transition-colors"
                   onClick={() => setSelectedId(session.id)}
                 >
@@ -628,21 +639,9 @@ export function VideoCallTab() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <IconAction
-                          label={session.is_favorite ? "Remover dos favoritos" : "Favoritar call"}
-                          className={session.is_favorite ? "text-primary" : undefined}
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleFavorite(session);
-                          }}
-                        >
-                          <Star
-                            className={cn(
-                              "h-4 w-4",
-                              session.is_favorite && "fill-current"
-                            )}
-                          />
-                        </IconAction>
+                        {session.is_favorite && (
+                          <Star className="h-4 w-4 text-primary fill-current" />
+                        )}
 
                         {!session.analysis && (
                           <AnalysisStatusBadge
@@ -715,11 +714,22 @@ export function VideoCallTab() {
                             Ver análise
                           </Button>
                         )}
-                        <VideoCallActions session={session} onChanged={refetch} />
+                        <VideoCallActions
+                          session={session}
+                          onChanged={refetch}
+                          onToggleFavorite={() => toggleFavorite(session)}
+                          onAnalyze={() => analyze(session)}
+                          onViewAnalysis={() => {
+                            setViewMode("analysis");
+                            setSelectedId(session.id);
+                          }}
+                          isAnalyzing={isAnalyzing}
+                        />
                       </div>
                     </div>
                   </CardContent>
                 </Card>
+                </VideoCallActions>
               );
             })}
           </div>
