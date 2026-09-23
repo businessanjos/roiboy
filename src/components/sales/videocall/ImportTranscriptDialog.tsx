@@ -16,7 +16,7 @@ import { Upload, Loader2, FileText, Link2, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { DateTimePicker } from "./DateTimePicker";
 
