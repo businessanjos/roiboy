@@ -669,6 +669,189 @@ export type Database = {
           },
         ]
       }
+      ai_knowledge_corrections: {
+        Row: {
+          account_id: string
+          action_type: string
+          created_at: string
+          created_by: string | null
+          expected_response: string
+          id: string
+          incorrect_response: string | null
+          is_active: boolean
+          lead_message: string | null
+          problem_identified: string | null
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          action_type?: string
+          created_at?: string
+          created_by?: string | null
+          expected_response: string
+          id?: string
+          incorrect_response?: string | null
+          is_active?: boolean
+          lead_message?: string | null
+          problem_identified?: string | null
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          action_type?: string
+          created_at?: string
+          created_by?: string | null
+          expected_response?: string
+          id?: string
+          incorrect_response?: string | null
+          is_active?: boolean
+          lead_message?: string | null
+          problem_identified?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_corrections_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_knowledge_documents: {
+        Row: {
+          account_id: string
+          chunks_count: number
+          created_at: string
+          created_by: string | null
+          error_message: string | null
+          extracted_text: string | null
+          file_name: string | null
+          file_path: string | null
+          file_size: number | null
+          file_type: string | null
+          id: string
+          source_type: string
+          source_url: string | null
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          chunks_count?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          extracted_text?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          chunks_count?: number
+          created_at?: string
+          created_by?: string | null
+          error_message?: string | null
+          extracted_text?: string | null
+          file_name?: string | null
+          file_path?: string | null
+          file_size?: number | null
+          file_type?: string | null
+          id?: string
+          source_type?: string
+          source_url?: string | null
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_documents_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      ai_knowledge_settings: {
+        Row: {
+          account_id: string
+          average_ticket: string | null
+          business_summary: string | null
+          competitors: string[]
+          created_at: string
+          discovery_questions: Json
+          id: string
+          offer_type: string | null
+          opening_scripts: Json
+          qualification_criteria: Json
+          selling_to: string | null
+          stages: Json
+          target_audience: string | null
+          tone_of_voice: string | null
+          updated_at: string
+          updated_by: string | null
+          web_sources: Json
+        }
+        Insert: {
+          account_id: string
+          average_ticket?: string | null
+          business_summary?: string | null
+          competitors?: string[]
+          created_at?: string
+          discovery_questions?: Json
+          id?: string
+          offer_type?: string | null
+          opening_scripts?: Json
+          qualification_criteria?: Json
+          selling_to?: string | null
+          stages?: Json
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          web_sources?: Json
+        }
+        Update: {
+          account_id?: string
+          average_ticket?: string | null
+          business_summary?: string | null
+          competitors?: string[]
+          created_at?: string
+          discovery_questions?: Json
+          id?: string
+          offer_type?: string | null
+          opening_scripts?: Json
+          qualification_criteria?: Json
+          selling_to?: string | null
+          stages?: Json
+          target_audience?: string | null
+          tone_of_voice?: string | null
+          updated_at?: string
+          updated_by?: string | null
+          web_sources?: Json
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_settings_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_sector_agents: {
         Row: {
           avatar_url: string | null

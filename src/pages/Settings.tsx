@@ -20,6 +20,7 @@ import { PlanUsageCard } from "@/components/plan";
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
 import { CompaniesManager } from "@/components/settings/CompaniesManager";
+import { AIKnowledgeManager } from "@/components/settings/ai-knowledge/AIKnowledgeManager";
 
 export default function Settings() {
   const [searchParams] = useSearchParams();
@@ -50,6 +51,8 @@ export default function Settings() {
         return canManageTeam ? <TeamManager /> : null;
       case "companies":
         return canEditSettings ? <CompaniesManager /> : null;
+      case "ai-knowledge":
+        return canEditSettings ? <AIKnowledgeManager /> : null;
       case "sectors":
         return isAdmin ? (
           <div className="space-y-4">
