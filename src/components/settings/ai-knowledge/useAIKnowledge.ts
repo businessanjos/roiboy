@@ -236,7 +236,7 @@ export function useKnowledgeDocuments() {
     window.open(data.signedUrl, "_blank");
   };
 
-  return { documents: query.data ?? [], isLoading: query.isLoading, upload, remove, download };
+  return { documents: query.data ?? [], isLoading: query.isLoading, upload, reprocess, remove, download };
 }
 
 export function useKnowledgeCorrections() {
