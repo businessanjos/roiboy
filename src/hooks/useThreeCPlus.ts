@@ -154,9 +154,21 @@ export function useThreeCPlus() {
     if (!sessionData.session) {
       throw new Error("Sessão expirada. Faça login novamente para usar o discador.");
     }
-    const { data, error } = await supabase.functions.invoke("threecplus-agent", {
-      body: { action, ...body },
-    });
+    const call = () => supabase.functions.invoke("threecplus-agent", { body: { action, ...body } });
+    let { data, error } = await call();
+    const status = (error as { context?: { status?: number } } | null)?.context?.status;
+    if (error && status === 401) {
+      // Token recusado: tenta renovar a sessão uma vez antes de desistir.
+      const { data: refreshed } = await supabase.auth.refreshSession();
+      if (!refreshed.session) {
+        throw new Error("Sessão expirada. Faça login novamente para usar o discador.");
+      }
+      ({ data, error } = await call());
+      const retryStatus = (error as { context?: { status?: number } } | null)?.context?.status;
+      if (error && retryStatus === 401) {
+        throw new Error("Sessão expirada. Faça login novamente para usar o discador.");
+      }
+    }
     if (error) throw error;
     return data;
   }, []);
