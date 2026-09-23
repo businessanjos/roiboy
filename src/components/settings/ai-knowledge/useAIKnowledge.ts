@@ -132,35 +132,85 @@ export function useKnowledgeDocuments() {
       if (error) throw error;
       return data ?? [];
     },
+    // enquanto houver arquivo em processamento, atualiza sozinho
+    refetchInterval: (q) =>
+      (q.state.data ?? []).some(
+        (d: { status: string }) => d.status === "pending" || d.status === "processing",
+      )
+        ? 4000
+        : false,
   });
+
+  const MAX_UPLOAD_BYTES = 50 * 1024 * 1024;
+
+  const process = async (documentId: string) => {
+    const { error } = await supabase.functions.invoke("process-knowledge-doc", {
+      body: { documentId },
+    });
+    if (error) {
+      await supabase
+        .from("ai_knowledge_documents")
+        .update({ status: "error", error_message: error.message })
+        .eq("id", documentId);
+      throw error;
+    }
+  };
 
   const upload = useMutation({
     mutationFn: async (file: File) => {
       if (!accountId) throw new Error("Conta não encontrada");
-      const path = `${accountId}/${crypto.randomUUID()}-${file.name}`;
+      if (file.size > MAX_UPLOAD_BYTES) {
+        throw new Error("Arquivo maior que 50 MB. Envie um arquivo menor.");
+      }
+      const safeName = file.name.replace(/[^\w.\- ]+/g, "_").slice(-120);
+      const path = `${accountId}/${crypto.randomUUID()}-${safeName}`;
       const { error: upErr } = await supabase.storage
         .from("ai-knowledge-docs")
         .upload(path, file);
       if (upErr) throw upErr;
-      const { error } = await supabase.from("ai_knowledge_documents").insert({
-        account_id: accountId,
-        title: file.name,
-        file_name: file.name,
-        file_path: path,
-        file_type: file.type,
-        file_size: file.size,
-        source_type: "upload",
-        status: "completed",
-        created_by: currentUser?.id ?? null,
-      });
+      const { data: inserted, error } = await supabase
+        .from("ai_knowledge_documents")
+        .insert({
+          account_id: accountId,
+          title: file.name,
+          file_name: file.name,
+          file_path: path,
+          file_type: file.type,
+          file_size: file.size,
+          source_type: "upload",
+          status: "processing",
+          created_by: currentUser?.id ?? null,
+        })
+        .select("id")
+        .single();
       if (error) throw error;
+      queryClient.invalidateQueries({ queryKey: ["ai-knowledge-documents"] });
+      await process(inserted.id);
     },
     onSuccess: () => {
-      toast.success("Documento enviado");
+      toast.success("Documento enviado — lendo o conteúdo");
       queryClient.invalidateQueries({ queryKey: ["ai-knowledge-documents"] });
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error(e.message);
+      queryClient.invalidateQueries({ queryKey: ["ai-knowledge-documents"] });
+    },
   });
+
+  const reprocess = useMutation({
+    mutationFn: async (documentId: string) => {
+      await process(documentId);
+    },
+    onSuccess: () => {
+      toast.success("Arquivo reprocessado");
+      queryClient.invalidateQueries({ queryKey: ["ai-knowledge-documents"] });
+    },
+    onError: (e: Error) => {
+      toast.error(e.message);
+      queryClient.invalidateQueries({ queryKey: ["ai-knowledge-documents"] });
+    },
+  });
+
 
   const remove = useMutation({
     mutationFn: async (doc: { id: string; file_path: string | null }) => {
@@ -186,7 +236,7 @@ export function useKnowledgeDocuments() {
     window.open(data.signedUrl, "_blank");
   };
 
-  return { documents: query.data ?? [], isLoading: query.isLoading, upload, remove, download };
+  return { documents: query.data ?? [], isLoading: query.isLoading, upload, reprocess, remove, download };
 }
 
 export function useKnowledgeCorrections() {

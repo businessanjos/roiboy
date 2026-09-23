@@ -1,0 +1,1 @@
+DELETE FROM public.ai_knowledge_documents WHERE file_name = 'teste-qa-material.pdf';

@@ -669,6 +669,48 @@ export type Database = {
           },
         ]
       }
+      ai_knowledge_chunks: {
+        Row: {
+          account_id: string
+          chunk_index: number
+          content: string
+          created_at: string
+          document_id: string
+          id: string
+        }
+        Insert: {
+          account_id: string
+          chunk_index?: number
+          content: string
+          created_at?: string
+          document_id: string
+          id?: string
+        }
+        Update: {
+          account_id?: string
+          chunk_index?: number
+          content?: string
+          created_at?: string
+          document_id?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_knowledge_chunks_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_knowledge_chunks_document_id_fkey"
+            columns: ["document_id"]
+            isOneToOne: false
+            referencedRelation: "ai_knowledge_documents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ai_knowledge_corrections: {
         Row: {
           account_id: string

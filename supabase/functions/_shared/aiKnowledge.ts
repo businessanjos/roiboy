@@ -46,10 +46,11 @@ export async function buildKnowledgeBlock(req: Request): Promise<string> {
         .limit(30),
       admin
         .from("ai_knowledge_documents")
-        .select("title, extracted_text")
+        .select("id, title, extracted_text, chunks_count")
         .eq("account_id", accountId)
         .eq("status", "completed")
-        .limit(10),
+        .limit(20),
+
     ]);
 
     const s = settingsRes.data as Record<string, unknown> | null;
@@ -99,16 +100,40 @@ export async function buildKnowledgeBlock(req: Request): Promise<string> {
     }
 
     if (docs.length) {
-      const withText = docs.filter((d) => d.extracted_text);
-      if (withText.length) {
+      // Preferir os fragmentos indexados (arquivos grandes), com fallback no texto bruto.
+      const docIds = docs.map((d) => d.id);
+      const { data: chunkRows } = await admin
+        .from("ai_knowledge_chunks")
+        .select("document_id, chunk_index, content")
+        .in("document_id", docIds)
+        .order("chunk_index", { ascending: true })
+        .limit(40);
+
+      const titleById = new Map(docs.map((d) => [d.id, d.title]));
+      const chunks = chunkRows ?? [];
+
+      if (chunks.length) {
         parts.push("Trechos de materiais oficiais:");
-        withText.forEach((d) =>
-          parts.push(`- ${d.title}: ${String(d.extracted_text).slice(0, 1500)}`)
-        );
+        let budget = 24000;
+        for (const c of chunks) {
+          if (budget <= 0) break;
+          const text = String(c.content).slice(0, Math.min(1500, budget));
+          budget -= text.length;
+          parts.push(`- [${titleById.get(c.document_id) ?? "Material"}] ${text}`);
+        }
       } else {
-        parts.push(`Materiais cadastrados: ${docs.map((d) => d.title).join(", ")}`);
+        const withText = docs.filter((d) => d.extracted_text);
+        if (withText.length) {
+          parts.push("Trechos de materiais oficiais:");
+          withText.forEach((d) =>
+            parts.push(`- ${d.title}: ${String(d.extracted_text).slice(0, 1500)}`)
+          );
+        } else {
+          parts.push(`Materiais cadastrados: ${docs.map((d) => d.title).join(", ")}`);
+        }
       }
     }
+
 
     parts.push("=== FIM DO MANUAL ===");
     return parts.join("\n");
