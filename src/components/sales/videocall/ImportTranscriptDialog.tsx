@@ -211,44 +211,68 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-1">
-          <div className="space-y-2">
-            <Label>Lead vinculado</Label>
-            <LeadSelector value={lead} onChange={handleLead} />
-          </div>
+        <div className="space-y-5 py-1">
+          <section className="rounded-lg border bg-muted/30 p-4 space-y-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+              Quem participou
+            </p>
+            <div className="space-y-2">
+              <Label>Lead vinculado</Label>
+              <LeadSelector value={lead} onChange={handleLead} />
+            </div>
 
-          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="imp-name">Nome do lead / cliente</Label>
-              <Input
-                id="imp-name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                placeholder="Ex: Maria Silva"
+              <Label className="flex items-center gap-1.5">
+                <UserRound className="h-3.5 w-3.5" />
+                Vendedor responsável
+              </Label>
+              <SellerSelector
+                value={sellerId}
+                onChange={setSellerId}
+                sellers={sellers}
+                loading={loadingSellers}
+                className="w-full"
+                placeholder="Selecionar quem conduziu a call"
               />
+              <p className="text-xs text-muted-foreground">
+                Usado para filtrar as calls por vendedor.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="imp-phone">Telefone</Label>
-              <Input
-                id="imp-phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Ex: 11 99999-9999"
-              />
-            </div>
-          </div>
 
-          {!isAttach && (
-            <div className="space-y-2">
-              <Label htmlFor="imp-when">Data e hora da call</Label>
-              <Input
-                id="imp-when"
-                type="datetime-local"
-                value={when}
-                onChange={(e) => setWhen(e.target.value)}
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="imp-name">Nome do lead / cliente</Label>
+                <Input
+                  id="imp-name"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Ex: Maria Silva"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="imp-phone">Telefone</Label>
+                <Input
+                  id="imp-phone"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="Ex: 11 99999-9999"
+                />
+              </div>
             </div>
-          )}
+
+            {!isAttach && (
+              <div className="space-y-2">
+                <Label htmlFor="imp-when">Data e hora da call</Label>
+                <Input
+                  id="imp-when"
+                  type="datetime-local"
+                  value={when}
+                  onChange={(e) => setWhen(e.target.value)}
+                />
+              </div>
+            )}
+          </section>
+
 
           <div className="space-y-2">
             <Label htmlFor="imp-url" className="flex items-center gap-1.5">
