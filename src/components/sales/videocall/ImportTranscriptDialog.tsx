@@ -12,14 +12,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { Upload, Loader2, FileText, Link2 } from "lucide-react";
+import { Upload, Loader2, FileText, Link2, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { LeadSelector, LeadOption } from "./LeadSelector";
+import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
 
 const ACCEPTED = ".txt,.vtt,.srt,.md,.csv,.json,.log";
+
 
 /** Limpa marcações de legenda (VTT/SRT) deixando só as falas. */
 function cleanTranscript(raw: string): string {
