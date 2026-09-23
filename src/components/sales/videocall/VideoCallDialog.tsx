@@ -155,24 +155,25 @@ export function VideoCallDialog({
                 </div>
                 <h3 className="text-lg font-semibold">Iniciar videochamada</h3>
                 <p className="text-sm text-muted-foreground">
-                  Crie a sala, grave a conversa e vincule a call ao lead e ao vendedor.
+                  Crie a sala, grave a conversa e vincule a call ao negócio e ao vendedor.
                 </p>
               </div>
 
               <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
                 <div className="space-y-2">
-                  <Label>Lead vinculado</Label>
-                  <LeadSelector
+                  <Label>Negócio vinculado</Label>
+                  <CallLinkSelector
                     value={lead}
                     onChange={(l) => {
                       setLead(l);
-                      if (l?.full_name) setParticipantName(l.full_name);
+                      if (l?.name) setParticipantName(l.name);
                       if (l?.phone) setParticipantPhone(l.phone);
                       if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                     }}
                   />
                 </div>
                 <div className="space-y-2">
+
                   <Label>Vendedor responsável</Label>
                   <SellerSelector
                     value={sellerId ?? currentUser?.id ?? null}
