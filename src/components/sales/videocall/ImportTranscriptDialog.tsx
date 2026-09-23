@@ -222,9 +222,10 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
               Quem participou
             </p>
             <div className="space-y-2">
-              <Label>Lead vinculado</Label>
-              <LeadSelector value={lead} onChange={handleLead} />
+              <Label>Negócio vinculado</Label>
+              <CallLinkSelector value={lead} onChange={handleLead} />
             </div>
+
 
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">
