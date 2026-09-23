@@ -2,7 +2,7 @@ import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
   Shield, Book, Plug, Users, UserCircle, Target, User,
-  CreditCard, Video, Key, ArrowLeft, Activity, Building2,
+  CreditCard, Video, Key, ArrowLeft, Activity, Building2, Brain,
 } from "lucide-react";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { PERMISSIONS, usePermissions } from "@/hooks/usePermissions";
@@ -63,6 +63,9 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
       }
       if (hasVendasAccess && canEditSettings) {
         adminItems.push({ id: "sales", label: "Vendas", icon: Target });
+      }
+      if (canEditSettings) {
+        adminItems.push({ id: "ai-knowledge", label: "Base de Conhecimento IA", icon: Brain });
       }
       groups.push({ title: "Gestão", items: adminItems });
     }
