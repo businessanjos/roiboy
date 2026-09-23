@@ -56,12 +56,14 @@ interface Props {
 
 export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
   const { currentUser } = useCurrentUser();
+  const { sellers, loading: loadingSellers } = useAccountSellers();
   const isAttach = !!session;
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(session?.participant_name ?? "");
   const [phone, setPhone] = useState(session?.participant_phone ?? "");
   const [lead, setLead] = useState<LeadOption | null>(null);
+  const [sellerId, setSellerId] = useState<string | null>(session?.user_id ?? null);
   const [meetingUrl, setMeetingUrl] = useState(session?.meeting_url ?? "");
   const [when, setWhen] = useState(toLocalInput(session?.created_at));
   const [fileName, setFileName] = useState<string | null>(null);
@@ -72,6 +74,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     setName(session?.participant_name ?? "");
     setPhone(session?.participant_phone ?? "");
     setLead(null);
+    setSellerId(session?.user_id ?? null);
     setMeetingUrl(session?.meeting_url ?? "");
     setWhen(toLocalInput(session?.created_at));
     setFileName(null);
@@ -83,8 +86,10 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     if (l) {
       if (!name.trim() || l.full_name) setName(l.full_name ?? name);
       if (l.phone) setPhone(l.phone);
+      if (!sellerId && l.responsible_user_id) setSellerId(l.responsible_user_id);
     }
   };
+
 
   const handleFile = async (file: File | undefined) => {
     if (!file) return;
