@@ -55,6 +55,7 @@ import {
   Star,
 
   Download,
+  Copy,
 } from "lucide-react";
 import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSessions";
 import { format } from "date-fns";
@@ -885,6 +886,30 @@ export function VideoCallTab() {
                     <FileText className="h-3.5 w-3.5" />
                     Transcrição
                   </Button>
+                  {(viewMode === "analysis" ? selectedSession.analysis : selectedSession.transcription) && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="gap-1.5"
+                      onClick={async () => {
+                        const text =
+                          (viewMode === "analysis"
+                            ? selectedSession.analysis
+                            : selectedSession.transcription) ?? "";
+                        try {
+                          await navigator.clipboard.writeText(text);
+                          toast.success(
+                            viewMode === "analysis" ? "Análise copiada" : "Transcrição copiada"
+                          );
+                        } catch {
+                          toast.error("Não foi possível copiar");
+                        }
+                      }}
+                    >
+                      <Copy className="h-3.5 w-3.5" />
+                      {viewMode === "analysis" ? "Copiar análise" : "Copiar transcrição"}
+                    </Button>
+                  )}
                   {selectedSession.meeting_url && (
                     <Button
                       variant="outline"
