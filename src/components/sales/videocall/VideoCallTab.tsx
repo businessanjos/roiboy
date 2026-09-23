@@ -806,7 +806,32 @@ export function VideoCallTab() {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir as chamadas selecionadas?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {selected.size} chamada{selected.size > 1 ? "s serão removidas" : " será removida"}{" "}
+                junto com a transcrição e a análise. Essa ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBulkDelete();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
+
   );
 }
