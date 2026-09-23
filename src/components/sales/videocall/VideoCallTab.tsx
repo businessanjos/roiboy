@@ -444,7 +444,7 @@ export function VideoCallTab() {
               <ProductSelector
                 value={productId}
                 onChange={setProductId}
-                products={products.filter((p) => productCounts.has(p.id))}
+                products={products}
                 counts={productCounts}
                 allLabel="Todos os produtos"
                 className="w-full"
