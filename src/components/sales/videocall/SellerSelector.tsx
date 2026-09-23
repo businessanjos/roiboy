@@ -126,7 +126,7 @@ export function SellerSelector({
             className="pl-8 border-0 focus-visible:ring-0"
           />
         </div>
-        <ScrollArea className="h-60">
+        <ScrollArea className="max-h-60">
           {loading ? (
             <div className="flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
               <Loader2 className="h-4 w-4 animate-spin" />
