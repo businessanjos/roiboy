@@ -60,6 +60,13 @@ Ações práticas e específicas para a próxima call.
 
 IMPORTANTE: Seja DIRETO e ESPECÍFICO. Use exemplos reais da transcrição.`;
 
+    const knowledgeBlock = await buildKnowledgeBlock(req);
+    const auditPrompt = knowledgeBlock
+      ? `${systemPrompt}${knowledgeBlock}
+
+AUDITORIA OBRIGATÓRIA: avalie se o vendedor seguiu as etapas do processo comercial do manual, se fez as perguntas de descoberta obrigatórias, se checou os critérios de qualificação e se respeitou as correções aprendidas. Cite explicitamente as etapas cumpridas e as puladas, e reduza a nota quando o vendedor usar uma abordagem marcada como incorreta.`
+      : systemPrompt;
+
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: {
@@ -69,7 +76,9 @@ IMPORTANTE: Seja DIRETO e ESPECÍFICO. Use exemplos reais da transcrição.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: auditPrompt },
+          { role: "user", content: `Analise esta transcrição de call de vendas:\n\n${transcript}` },
+        ],
           { role: "user", content: `Analise esta transcrição de call de vendas:\n\n${transcript}` },
         ],
         max_tokens: 4000,
