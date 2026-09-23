@@ -72,14 +72,27 @@ export function VideoCallDialog({
   } = useVideoCall();
 
   const handleCreateRoom = async () => {
-    await createRoom({
+    const data = await createRoom({
       participant_name: participantName,
       participant_phone: participantPhone,
-      lead_id: leadId,
+      lead_id: lead?.id ?? leadId,
       client_id: clientId,
       deal_id: dealId,
     });
+
+    const sessionId = (data as { session_id?: string } | undefined)?.session_id;
+    const seller = sellerId ?? currentUser?.id ?? null;
+    if (sessionId && (seller || lead)) {
+      await supabase
+        .from("video_call_sessions")
+        .update({
+          ...(seller ? { user_id: seller } : {}),
+          ...(lead ? { lead_id: lead.id } : {}),
+        } as never)
+        .eq("id", sessionId);
+    }
   };
+
 
   const handleGetGuestLink = async () => {
     const link = await getGuestLink(participantName || "Convidado");
