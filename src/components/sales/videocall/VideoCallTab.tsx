@@ -25,6 +25,18 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+
 
 import {
   Video,
@@ -39,6 +51,7 @@ import {
   ExternalLink,
   Upload,
   Sparkles,
+  Trash2,
 } from "lucide-react";
 import { useVideoCallSessions, VideoCallSession } from "@/hooks/useVideoCallSessions";
 import { format } from "date-fns";
@@ -173,6 +186,17 @@ export function VideoCallTab() {
   const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkDeleteOpen, setBulkDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
+
+  const toggleSelected = (id: string) =>
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+
 
   const selectedSession = sessions.find((s) => s.id === selectedId) ?? null;
 
@@ -298,7 +322,27 @@ export function VideoCallTab() {
     { label: "Sem transcrição", value: counts.no_transcription },
   ];
 
+  const allSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(filtered.map((s) => s.id)));
+
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("video_call_sessions").delete().in("id", ids);
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) {
+      toast.error("Não foi possível excluir as chamadas selecionadas");
+      return;
+    }
+    toast.success(`${ids.length} chamada${ids.length > 1 ? "s" : ""} excluída${ids.length > 1 ? "s" : ""}`);
+    setSelected(new Set());
+    refetch();
+  };
+
   return (
+
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
         {/* Header */}
@@ -439,6 +483,40 @@ export function VideoCallTab() {
           </Card>
         ) : (
           <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2">
+              <label className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer">
+                <Checkbox
+                  checked={allSelected}
+                  onCheckedChange={toggleAll}
+                  aria-label="Selecionar todas as calls"
+                />
+                {selected.size > 0
+                  ? `${selected.size} selecionada${selected.size > 1 ? "s" : ""}`
+                  : "Selecionar todas"}
+              </label>
+              {selected.size > 0 && (
+                <div className="flex items-center gap-2">
+                  <Button variant="ghost" size="sm" onClick={() => setSelected(new Set())}>
+                    Limpar seleção
+                  </Button>
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    className="gap-1.5"
+                    disabled={deleting}
+                    onClick={() => setBulkDeleteOpen(true)}
+                  >
+                    {deleting ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Trash2 className="h-3.5 w-3.5" />
+                    )}
+                    Excluir selecionadas
+                  </Button>
+                </div>
+              )}
+            </div>
+
             {filtered.map((session) => {
               const isAnalyzing =
                 analyzing.includes(session.id) || session.analysis_status === "analyzing";
@@ -451,9 +529,17 @@ export function VideoCallTab() {
                   <CardContent className="p-4">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
+                        <div onClick={(e) => e.stopPropagation()} className="shrink-0">
+                          <Checkbox
+                            checked={selected.has(session.id)}
+                            onCheckedChange={() => toggleSelected(session.id)}
+                            aria-label="Selecionar call"
+                          />
+                        </div>
                         <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
                           <Video className="h-5 w-5 text-primary" />
                         </div>
+
                         <div className="min-w-0">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="font-medium truncate">
@@ -733,7 +819,32 @@ export function VideoCallTab() {
             )}
           </DialogContent>
         </Dialog>
+
+        <AlertDialog open={bulkDeleteOpen} onOpenChange={setBulkDeleteOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir as chamadas selecionadas?</AlertDialogTitle>
+              <AlertDialogDescription>
+                {selected.size} chamada{selected.size > 1 ? "s serão removidas" : " será removida"}{" "}
+                junto com a transcrição e a análise. Essa ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleBulkDelete();
+                }}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </div>
     </TooltipProvider>
+
   );
 }
