@@ -153,8 +153,18 @@ function IconAction({
   );
 }
 
+/** Usuários que não fazem parte da equipe de vendas — calls ocultas da aba. */
+const HIDDEN_SELLER_IDS = new Set([
+  "cefc44c7-d2e2-4937-94ac-069c1c94731b", // George Oliveira
+  "1ac1c97c-bff6-4174-b48c-9b524b404ce6", // Vanessa Minelli
+]);
+
 export function VideoCallTab() {
-  const { sessions, isLoading, refetch } = useVideoCallSessions();
+  const { sessions: allSessions, isLoading, refetch } = useVideoCallSessions();
+  const sessions = useMemo(
+    () => allSessions.filter((s) => !s.user_id || !HIDDEN_SELLER_IDS.has(s.user_id)),
+    [allSessions]
+  );
   const { sellers, loading: loadingSellers } = useAccountSellers();
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [viewMode, setViewMode] = useState<"analysis" | "transcription">("analysis");
