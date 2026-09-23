@@ -309,7 +309,27 @@ export function VideoCallTab() {
     { label: "Sem transcrição", value: counts.no_transcription },
   ];
 
+  const allSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.id));
+  const toggleAll = () =>
+    setSelected(allSelected ? new Set() : new Set(filtered.map((s) => s.id)));
+
+  const handleBulkDelete = async () => {
+    setDeleting(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("video_call_sessions").delete().in("id", ids);
+    setDeleting(false);
+    setBulkDeleteOpen(false);
+    if (error) {
+      toast.error("Não foi possível excluir as chamadas selecionadas");
+      return;
+    }
+    toast.success(`${ids.length} chamada${ids.length > 1 ? "s" : ""} excluída${ids.length > 1 ? "s" : ""}`);
+    setSelected(new Set());
+    refetch();
+  };
+
   return (
+
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
         {/* Header */}
