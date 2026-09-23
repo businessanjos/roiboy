@@ -132,29 +132,80 @@ export function VideoCallActions({
     onChanged();
   };
 
+  const renderItems = (
+    Item: typeof DropdownMenuItem | typeof ContextMenuItem,
+    Separator: typeof DropdownMenuSeparator | typeof ContextMenuSeparator
+  ) => (
+    <>
+      {onToggleFavorite && (
+        <Item onClick={() => onToggleFavorite()}>
+          <Star
+            className={`h-4 w-4 mr-2 ${session.is_favorite ? "fill-current text-primary" : ""}`}
+          />
+          {session.is_favorite ? "Remover dos favoritos" : "Favoritar"}
+        </Item>
+      )}
+      {session.analysis && onViewAnalysis && (
+        <Item onClick={() => onViewAnalysis()}>
+          <Brain className="h-4 w-4 mr-2" />
+          Ver análise
+        </Item>
+      )}
+      {session.transcription && onAnalyze && (
+        <Item onClick={() => onAnalyze()} disabled={isAnalyzing}>
+          <Sparkles className="h-4 w-4 mr-2" />
+          {session.analysis ? "Refazer análise" : "Gerar análise"}
+        </Item>
+      )}
+      {session.meeting_url && (
+        <Item
+          onClick={() => window.open(session.meeting_url!, "_blank", "noopener")}
+        >
+          <ExternalLink className="h-4 w-4 mr-2" />
+          Abrir gravação
+        </Item>
+      )}
+      <Item onClick={() => setEditOpen(true)}>
+        <Pencil className="h-4 w-4 mr-2" />
+        Editar
+      </Item>
+      <Separator />
+      <Item
+        className="text-destructive focus:text-destructive"
+        onClick={() => setDeleteOpen(true)}
+      >
+        <Trash2 className="h-4 w-4 mr-2" />
+        Excluir
+      </Item>
+    </>
+  );
+
   return (
     <>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-          <Button variant="ghost" size="icon" className="h-8 w-8">
-            <MoreVertical className="h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
-          <DropdownMenuItem onClick={() => setEditOpen(true)}>
-            <Pencil className="h-4 w-4 mr-2" />
-            Editar
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            className="text-destructive focus:text-destructive"
-            onClick={() => setDeleteOpen(true)}
+      {children ? (
+        <ContextMenu>
+          <ContextMenuTrigger asChild>{children}</ContextMenuTrigger>
+          <ContextMenuContent className="w-52">
+            {renderItems(ContextMenuItem, ContextMenuSeparator)}
+          </ContextMenuContent>
+        </ContextMenu>
+      ) : (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+            <Button variant="ghost" size="icon" className="h-8 w-8">
+              <MoreVertical className="h-4 w-4" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent
+            align="end"
+            className="w-52"
+            onClick={(e) => e.stopPropagation()}
           >
-            <Trash2 className="h-4 w-4 mr-2" />
-            Excluir
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+            {renderItems(DropdownMenuItem, DropdownMenuSeparator)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      )}
+
 
       {/* Edit Dialog */}
       <Dialog open={editOpen} onOpenChange={setEditOpen}>
