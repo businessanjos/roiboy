@@ -369,6 +369,26 @@ export function VideoCallTab() {
           </CardContent>
         </Card>
 
+        {/* Resumo do filtro */}
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {summary.map((item, i) => (
+            <Card key={item.label}>
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground truncate">
+                  {i === 0
+                    ? `${activeSeller ? activeSeller.name : "Todos os vendedores"} · ${periodLabel}`
+                    : item.label}
+                </p>
+                <p className="text-2xl font-semibold leading-tight">{item.value}</p>
+                {i === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {item.value === 1 ? "videochamada" : "videochamadas"}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {/* Sessions list */}
         {isLoading ? (
