@@ -160,7 +160,7 @@ export function VideoCallTab() {
   const [viewMode, setViewMode] = useState<"analysis" | "transcription">("analysis");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [period, setPeriod] = useState<PeriodKey>("quarter");
+  const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
 
@@ -262,6 +262,32 @@ export function VideoCallTab() {
     { key: "no_transcription", label: "Sem transcrição" },
   ];
 
+  /** Só quem realmente tem videochamada registrada aparece no filtro de vendedor. */
+  const callSellers = useMemo(() => {
+    const totals = new Map<string, number>();
+    sessions.forEach((s) => {
+      if (!s.user_id) return;
+      totals.set(s.user_id, (totals.get(s.user_id) ?? 0) + 1);
+    });
+    return sellers
+      .filter((s) => totals.has(s.id))
+      .map((s) => ({ ...s, name: `${s.name} (${totals.get(s.id)})` }))
+      .sort(
+        (a, b) => (totals.get(b.id) ?? 0) - (totals.get(a.id) ?? 0)
+      );
+  }, [sellers, sessions]);
+
+  const activeSeller = sellers.find((s) => s.id === sellerId) ?? null;
+
+  const periodLabel = PERIODS.find((p) => p.key === period)?.label ?? "Tudo";
+
+  const summary = [
+    { label: "Calls no filtro", value: counts.all },
+    { label: "Com análise", value: counts.with_analysis },
+    { label: "Aguardando análise", value: counts.pending },
+    { label: "Sem transcrição", value: counts.no_transcription },
+  ];
+
   return (
     <TooltipProvider delayDuration={200}>
       <div className="space-y-4">
@@ -320,7 +346,7 @@ export function VideoCallTab() {
               <SellerSelector
                 value={sellerId}
                 onChange={setSellerId}
-                sellers={sellers}
+                sellers={callSellers}
                 loading={loadingSellers}
                 allowAll
                 allLabel="Todos os vendedores"
@@ -343,6 +369,26 @@ export function VideoCallTab() {
           </CardContent>
         </Card>
 
+        {/* Resumo do filtro */}
+        <div className="grid grid-cols-2 gap-2 lg:grid-cols-4">
+          {summary.map((item, i) => (
+            <Card key={item.label}>
+              <CardContent className="p-3">
+                <p className="text-xs text-muted-foreground truncate">
+                  {i === 0
+                    ? `${activeSeller ? activeSeller.name : "Todos os vendedores"} · ${periodLabel}`
+                    : item.label}
+                </p>
+                <p className="text-2xl font-semibold leading-tight">{item.value}</p>
+                {i === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    {item.value === 1 ? "videochamada" : "videochamadas"}
+                  </p>
+                )}
+              </CardContent>
+            </Card>
+          ))}
+        </div>
 
         {/* Sessions list */}
         {isLoading ? (
