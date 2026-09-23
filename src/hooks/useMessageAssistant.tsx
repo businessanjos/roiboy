@@ -117,6 +117,12 @@ export function useMessageAssistant({
     };
   }, [messageInput, spellingEnabled, sectorId]);
 
+  // Keep latest draft without retriggering fetches
+  const draftRef = useRef<string>(messageInput);
+  useEffect(() => {
+    draftRef.current = messageInput;
+  }, [messageInput]);
+
   // Reset dismissed / suggestions when conversation changes
   useEffect(() => {
     setDismissed(false);
@@ -124,66 +130,68 @@ export function useMessageAssistant({
     lastSignatureRef.current = "";
   }, [conversationId]);
 
-  // Fetch reply suggestions when the last message is from the client (commercial only)
-  const fetchSuggestions = useCallback(async (force = false) => {
-    if (!suggestionsAvailable || !suggestionsEnabled) return;
-    if (isRateLimited()) return;
-    if (!messages || messages.length === 0) return;
+  // Fetch reply suggestions. Manual mode works at any point of the conversation.
+  const fetchSuggestions = useCallback(
+    async (force = false, manual = false) => {
+      if (!suggestionsAvailable || !suggestionsEnabled) return;
+      if (isRateLimited()) return;
+      if (!messages || messages.length === 0) return;
 
-    const last = messages[messages.length - 1];
-    if (!last?.is_from_client || !last.content?.trim()) {
-      setSuggestions([]);
-      return;
-    }
-
-    // Signature avoids re-fetching for the same context repeatedly
-    const signature = messages
-      .slice(-5)
-      .map((m) => `${m.is_from_client ? "c" : "a"}:${(m.content ?? "").slice(0, 80)}`)
-      .join("|");
-
-    if (!force && signature === lastSignatureRef.current) return;
-    lastSignatureRef.current = signature;
-
-    setIsLoadingSuggestions(true);
-    try {
-      const payload = messages.slice(-10).map((m) => ({
-        content: m.content,
-        is_from_client: m.is_from_client,
-        sender_name: m.sender_name ?? null,
-      }));
-
-      const { data, error } = await supabase.functions.invoke("suggest-replies", {
-        body: { messages: payload, draft: messageInput, sectorId },
-      });
-
-      if (error) {
-        if (error.message?.includes("402") || error.message?.includes("Payment")) {
-          setRateLimited();
-        }
-        console.error("[useMessageAssistant] suggest-replies error:", error);
+      const last = messages[messages.length - 1];
+      if (!manual && (!last?.is_from_client || !last.content?.trim())) {
+        // Auto mode only reacts to a new incoming client message
         return;
       }
 
-      if (Array.isArray(data?.suggestions)) {
-        setSuggestions(data.suggestions);
-        setDismissed(false);
+      // Signature avoids re-fetching for the same context repeatedly
+      const signature = messages
+        .slice(-5)
+        .map((m) => `${m.is_from_client ? "c" : "a"}:${(m.content ?? "").slice(0, 80)}`)
+        .join("|");
+
+      if (!force && signature === lastSignatureRef.current) return;
+      lastSignatureRef.current = signature;
+
+      setIsLoadingSuggestions(true);
+      try {
+        const payload = messages.slice(-10).map((m) => ({
+          content: m.content,
+          is_from_client: m.is_from_client,
+          sender_name: m.sender_name ?? null,
+        }));
+
+        const { data, error } = await supabase.functions.invoke("suggest-replies", {
+          body: { messages: payload, draft: draftRef.current, sectorId, manual },
+        });
+
+        if (error) {
+          if (error.message?.includes("402") || error.message?.includes("Payment")) {
+            setRateLimited();
+          }
+          console.error("[useMessageAssistant] suggest-replies error:", error);
+          return;
+        }
+
+        if (Array.isArray(data?.suggestions)) {
+          setSuggestions(data.suggestions);
+          if (manual) setDismissed(false);
+        }
+      } catch (err) {
+        console.error("[useMessageAssistant] suggest-replies exception:", err);
+      } finally {
+        setIsLoadingSuggestions(false);
       }
-    } catch (err) {
-      console.error("[useMessageAssistant] suggest-replies exception:", err);
-    } finally {
-      setIsLoadingSuggestions(false);
-    }
-    // messageInput intentionally excluded — user typing shouldn't refetch
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [messages, suggestionsAvailable, suggestionsEnabled, sectorId]);
+    },
+    [messages, suggestionsAvailable, suggestionsEnabled, sectorId],
+  );
 
   // Debounced auto-fetch when new client message arrives
   useEffect(() => {
     if (!suggestionsAvailable || !suggestionsEnabled) return;
-    const t = setTimeout(() => fetchSuggestions(false), 800);
+    if (dismissed) return;
+    const t = setTimeout(() => fetchSuggestions(false, false), 800);
     return () => clearTimeout(t);
-  }, [fetchSuggestions, suggestionsAvailable, suggestionsEnabled]);
+  }, [fetchSuggestions, suggestionsAvailable, suggestionsEnabled, dismissed]);
 
   const applyCorrection = useCallback(() => {
     const correctedText = correction;
@@ -196,14 +204,27 @@ export function useMessageAssistant({
     setCorrection(null);
   }, []);
 
+  // Closing only collapses the box; suggestions stay in memory for reopening
   const dismissSuggestions = useCallback(() => {
     setDismissed(true);
-    setSuggestions([]);
   }, []);
 
   const refreshSuggestions = useCallback(() => {
-    fetchSuggestions(true);
+    fetchSuggestions(true, true);
   }, [fetchSuggestions]);
+
+  const suggestionsOpen = !dismissed && (suggestions.length > 0 || isLoadingSuggestions);
+
+  const toggleSuggestions = useCallback(() => {
+    if (suggestionsOpen) {
+      setDismissed(true);
+      return;
+    }
+    setDismissed(false);
+    if (suggestions.length === 0) {
+      fetchSuggestions(true, true);
+    }
+  }, [suggestionsOpen, suggestions.length, fetchSuggestions]);
 
   return {
     correction,
@@ -215,5 +236,7 @@ export function useMessageAssistant({
     refreshSuggestions,
     dismissSuggestions,
     suggestionsAvailable,
+    suggestionsOpen,
+    toggleSuggestions,
   };
 }
