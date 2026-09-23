@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 
@@ -49,7 +49,7 @@ export function VideoCallDialog({
   const [open, setOpen] = useState(false);
   const [participantName, setParticipantName] = useState(initialName || "");
   const [participantPhone, setParticipantPhone] = useState(initialPhone || "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const { currentUser } = useCurrentUser();
   const { sellers, loading: loadingSellers } = useAccountSellers();
   const [sellerId, setSellerId] = useState<string | null>(null);
@@ -75,9 +75,9 @@ export function VideoCallDialog({
     const data = await createRoom({
       participant_name: participantName,
       participant_phone: participantPhone,
-      lead_id: lead?.id ?? leadId,
+      lead_id: lead?.kind === "lead" ? lead.id : leadId,
       client_id: clientId,
-      deal_id: dealId,
+      deal_id: lead?.kind === "deal" ? lead.id : dealId,
     });
 
     const sessionId = (data as { session_id?: string } | undefined)?.session_id;
@@ -87,11 +87,13 @@ export function VideoCallDialog({
         .from("video_call_sessions")
         .update({
           ...(seller ? { user_id: seller } : {}),
-          ...(lead ? { lead_id: lead.id } : {}),
+          ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+          ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
         } as never)
         .eq("id", sessionId);
     }
   };
+
 
 
   const handleGetGuestLink = async () => {
@@ -153,24 +155,25 @@ export function VideoCallDialog({
                 </div>
                 <h3 className="text-lg font-semibold">Iniciar videochamada</h3>
                 <p className="text-sm text-muted-foreground">
-                  Crie a sala, grave a conversa e vincule a call ao lead e ao vendedor.
+                  Crie a sala, grave a conversa e vincule a call ao negócio e ao vendedor.
                 </p>
               </div>
 
               <div className="rounded-lg border bg-muted/30 p-4 space-y-4">
                 <div className="space-y-2">
-                  <Label>Lead vinculado</Label>
-                  <LeadSelector
+                  <Label>Negócio vinculado</Label>
+                  <CallLinkSelector
                     value={lead}
                     onChange={(l) => {
                       setLead(l);
-                      if (l?.full_name) setParticipantName(l.full_name);
+                      if (l?.name) setParticipantName(l.name);
                       if (l?.phone) setParticipantPhone(l.phone);
                       if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                     }}
                   />
                 </div>
                 <div className="space-y-2">
+
                   <Label>Vendedor responsável</Label>
                   <SellerSelector
                     value={sellerId ?? currentUser?.id ?? null}

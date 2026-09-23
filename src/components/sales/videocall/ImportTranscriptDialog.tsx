@@ -16,7 +16,7 @@ import { Upload, Loader2, FileText, Link2, UserRound } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 import { DateTimePicker } from "./DateTimePicker";
 
@@ -64,7 +64,7 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
   const [saving, setSaving] = useState(false);
   const [name, setName] = useState(session?.participant_name ?? "");
   const [phone, setPhone] = useState(session?.participant_phone ?? "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session?.user_id ?? null);
   const [meetingUrl, setMeetingUrl] = useState(session?.meeting_url ?? "");
   const [when, setWhen] = useState(toLocalInput(session?.created_at));
@@ -83,14 +83,15 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
     setTranscript(session?.transcription ?? "");
   };
 
-  const handleLead = (l: LeadOption | null) => {
+  const handleLead = (l: LinkedRecord | null) => {
     setLead(l);
     if (l) {
-      if (!name.trim() || l.full_name) setName(l.full_name ?? name);
+      if (l.name) setName(l.name);
       if (l.phone) setPhone(l.phone);
       if (!sellerId && l.responsible_user_id) setSellerId(l.responsible_user_id);
     }
   };
+
 
 
   const handleFile = async (file: File | undefined) => {
@@ -136,7 +137,9 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
       meeting_url: meetingUrl.trim() || null,
       transcript_file_name: fileName,
       transcription: transcript.trim(),
-      ...(lead ? { lead_id: lead.id } : {}),
+      ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+      ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
+
       ...(sellerId ? { user_id: sellerId } : {}),
     };
 
@@ -219,9 +222,10 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
               Quem participou
             </p>
             <div className="space-y-2">
-              <Label>Lead vinculado</Label>
-              <LeadSelector value={lead} onChange={handleLead} />
+              <Label>Negócio vinculado</Label>
+              <CallLinkSelector value={lead} onChange={handleLead} />
             </div>
+
 
             <div className="space-y-2">
               <Label className="flex items-center gap-1.5">

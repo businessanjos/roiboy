@@ -31,7 +31,7 @@ import { MoreVertical, Pencil, Trash2, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
-import { LeadSelector, LeadOption } from "./LeadSelector";
+import { CallLinkSelector, LinkedRecord } from "./CallLinkSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
 
 interface VideoCallActionsProps {
@@ -49,7 +49,7 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
   const [participantName, setParticipantName] = useState(session.participant_name ?? "");
   const [participantPhone, setParticipantPhone] = useState(session.participant_phone ?? "");
   const [notes, setNotes] = useState(session.notes ?? "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session.user_id ?? null);
 
   const handleSave = async () => {
@@ -60,7 +60,9 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
         participant_name: participantName.trim() || null,
         participant_phone: participantPhone.trim() || null,
         notes: notes.trim() || null,
-        ...(lead ? { lead_id: lead.id } : {}),
+        ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+        ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
+
         ...(sellerId ? { user_id: sellerId } : {}),
       } as never)
       .eq("id", session.id);
@@ -135,17 +137,18 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Lead vinculado</Label>
-              <LeadSelector
+              <Label>Negócio vinculado</Label>
+              <CallLinkSelector
                 value={lead}
                 onChange={(l) => {
                   setLead(l);
-                  if (l?.full_name) setParticipantName(l.full_name);
+                  if (l?.name) setParticipantName(l.name);
                   if (l?.phone) setParticipantPhone(l.phone);
                   if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                 }}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Vendedor responsável</Label>
               <SellerSelector
