@@ -129,20 +129,10 @@ export function CallLinkSelector({ value, onChange }: Props) {
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-          <div className="flex items-center gap-1 border-b p-1">
-            {MODES.map((m) => (
-              <Button
-                key={m.key}
-                type="button"
-                size="sm"
-                variant={kind === m.key ? "secondary" : "ghost"}
-                className="h-7 flex-1 text-xs"
-                onClick={() => setKind(m.key)}
-              >
-                {m.label}
-              </Button>
-            ))}
+          <div className="border-b px-3 py-2 text-xs font-medium text-muted-foreground">
+            Funil de negócios
           </div>
+
           <div className="relative border-b">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
