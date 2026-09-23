@@ -632,6 +632,31 @@ export const ZappMessageInput = memo(function ZappMessageInput({
           </Tooltip>
         )}
 
+        {/* AI reply suggestions toggle (commercial) */}
+        {showSuggestionsButton && onToggleSuggestions && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "hidden sm:flex hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10",
+                  suggestionsOpen ? "text-violet-500 bg-violet-500/10" : "text-zapp-text-muted",
+                )}
+                onClick={onToggleSuggestions}
+                disabled={isLoadingSuggestions}
+              >
+                {isLoadingSuggestions ? (
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Sugestões de resposta</TooltipContent>
+          </Tooltip>
+        )}
+
         {/* Meta templates button - only on Meta Cloud API channel */}
         {isMetaChannel && onOpenTemplates && (
           <Tooltip>
