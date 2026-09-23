@@ -70,7 +70,12 @@ REGRAS:
 - Use SPIN/consultivo: perguntas de descoberta, reforço de valor, quebra de objeção, próximo passo agendado
 - Não use emojis excessivos (no máximo 1 quando fizer sentido)
 - Se houver rascunho do consultor, refine-o ao invés de ignorar
-- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}`;
+- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}${
+      manual
+        ? `
+- A última mensagem pode ter sido do próprio CONSULTOR. Nesse caso, proponha a PRÓXIMA mensagem dele para retomar, avançar ou fazer follow-up da conversa, sem soar repetitivo.`
+        : ""
+    }`;
 
     const userPrompt = `Conversa recente:
 ${transcript}
