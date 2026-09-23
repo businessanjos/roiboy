@@ -1,0 +1,1 @@
+REVOKE EXECUTE ON FUNCTION public.vcs_autofill_deal_product() FROM PUBLIC, anon, authenticated;
