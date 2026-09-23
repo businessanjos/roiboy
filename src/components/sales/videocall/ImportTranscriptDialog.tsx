@@ -18,6 +18,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { LeadSelector, LeadOption } from "./LeadSelector";
 import { SellerSelector, useAccountSellers } from "./SellerSelector";
+import { DateTimePicker } from "./DateTimePicker";
+
 import type { VideoCallSession } from "@/hooks/useVideoCallSessions";
 
 const ACCEPTED = ".txt,.vtt,.srt,.md,.csv,.json,.log";
@@ -262,15 +264,11 @@ export function ImportTranscriptDialog({ session, onCreated, trigger }: Props) {
 
             {!isAttach && (
               <div className="space-y-2">
-                <Label htmlFor="imp-when">Data e hora da call</Label>
-                <Input
-                  id="imp-when"
-                  type="datetime-local"
-                  value={when}
-                  onChange={(e) => setWhen(e.target.value)}
-                />
+                <Label>Data e hora da call</Label>
+                <DateTimePicker value={when} onChange={setWhen} />
               </div>
             )}
+
           </section>
 
 
