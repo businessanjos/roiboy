@@ -15,6 +15,7 @@ import {
   Plus,
   Send,
   Smile,
+  Sparkles,
   Square,
   Strikethrough,
   Trash2,
@@ -202,6 +203,10 @@ interface ZappMessageInputProps {
   onOpenPlaybook?: () => void;
   isMetaChannel?: boolean;
   onOpenTemplates?: () => void;
+  showSuggestionsButton?: boolean;
+  suggestionsOpen?: boolean;
+  isLoadingSuggestions?: boolean;
+  onToggleSuggestions?: () => void;
 }
 
 const formatRecordingDuration = (seconds: number): string => {
@@ -250,6 +255,10 @@ export const ZappMessageInput = memo(function ZappMessageInput({
   onOpenPlaybook,
   isMetaChannel,
   onOpenTemplates,
+  showSuggestionsButton,
+  suggestionsOpen,
+  isLoadingSuggestions,
+  onToggleSuggestions,
 }: ZappMessageInputProps) {
   const audioPreviewRef = useRef<HTMLAudioElement | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -456,6 +465,24 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 Playbook
               </button>
             )}
+            {showSuggestionsButton && onToggleSuggestions && (
+              <button
+                type="button"
+                onClick={onToggleSuggestions}
+                disabled={isLoadingSuggestions}
+                className={cn(
+                  "flex items-center gap-1.5 whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium active:scale-95 transition-transform",
+                  suggestionsOpen ? "bg-violet-500/15 text-violet-500" : "bg-zapp-hover text-zapp-text",
+                )}
+              >
+                {isLoadingSuggestions ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-500" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5 text-violet-500" />
+                )}
+                Sugestões
+              </button>
+            )}
             <button
               type="button"
               onClick={() => imageInputRef?.current?.click()}
@@ -621,6 +648,31 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               </Button>
             </TooltipTrigger>
             <TooltipContent side="top">Playbook</TooltipContent>
+          </Tooltip>
+        )}
+
+        {/* AI reply suggestions toggle (commercial) */}
+        {showSuggestionsButton && onToggleSuggestions && (
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                className={cn(
+                  "hidden sm:flex hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10",
+                  suggestionsOpen ? "text-violet-500 bg-violet-500/10" : "text-zapp-text-muted",
+                )}
+                onClick={onToggleSuggestions}
+                disabled={isLoadingSuggestions}
+              >
+                {isLoadingSuggestions ? (
+                  <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4 sm:h-5 sm:w-5" />
+                )}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent side="top">Sugestões de resposta</TooltipContent>
           </Tooltip>
         )}
 

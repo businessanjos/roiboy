@@ -15,10 +15,11 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { messages, draft, sectorId } = await req.json() as {
+    const { messages, draft, sectorId, manual } = await req.json() as {
       messages: RecentMessage[];
       draft?: string;
       sectorId?: string;
+      manual?: boolean;
     };
 
     if (!Array.isArray(messages) || messages.length === 0) {
@@ -36,9 +37,10 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Only suggest when the last message is from the client (avoids interrupting the agent)
+    // Automatic mode only suggests when the last message is from the client
+    // (avoids interrupting the agent). Manual mode always answers.
     const lastMessage = messages[messages.length - 1];
-    if (!lastMessage?.is_from_client || !lastMessage.content?.trim()) {
+    if (!manual && (!lastMessage?.is_from_client || !lastMessage.content?.trim())) {
       return new Response(
         JSON.stringify({ suggestions: [] }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
@@ -68,7 +70,12 @@ REGRAS:
 - Use SPIN/consultivo: perguntas de descoberta, reforço de valor, quebra de objeção, próximo passo agendado
 - Não use emojis excessivos (no máximo 1 quando fizer sentido)
 - Se houver rascunho do consultor, refine-o ao invés de ignorar
-- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}`;
+- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}${
+      manual
+        ? `
+- A última mensagem pode ter sido do próprio CONSULTOR. Nesse caso, proponha a PRÓXIMA mensagem dele para retomar, avançar ou fazer follow-up da conversa, sem soar repetitivo.`
+        : ""
+    }`;
 
     const userPrompt = `Conversa recente:
 ${transcript}

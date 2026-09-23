@@ -261,6 +261,8 @@ export function ZappChatView({
     refreshSuggestions,
     dismissSuggestions,
     suggestionsAvailable,
+    suggestionsOpen,
+    toggleSuggestions,
   } = useMessageAssistant({
     messageInput,
     sectorId: sectorId || "operacoes",
@@ -468,6 +470,7 @@ export function ZappChatView({
         suggestions={suggestions}
         isLoadingSuggestions={isLoadingSuggestions}
         suggestionsAvailable={suggestionsAvailable}
+        suggestionsOpen={suggestionsOpen}
         onSelectSuggestion={handleSelectSuggestion}
         onRefreshSuggestions={refreshSuggestions}
         onDismissSuggestions={dismissSuggestions}
@@ -521,6 +524,10 @@ export function ZappChatView({
         onOpenPlaybook={onOpenPlaybook}
         isMetaChannel={isMetaChannel}
         onOpenTemplates={onOpenTemplates}
+        showSuggestionsButton={suggestionsAvailable}
+        suggestionsOpen={suggestionsOpen}
+        isLoadingSuggestions={isLoadingSuggestions}
+        onToggleSuggestions={toggleSuggestions}
       />
       )}
 

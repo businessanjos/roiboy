@@ -19,6 +19,7 @@ interface ZappAIAssistBarProps {
   suggestions?: string[];
   isLoadingSuggestions?: boolean;
   suggestionsAvailable?: boolean;
+  suggestionsOpen?: boolean;
   onSelectSuggestion?: (text: string) => void;
   onRefreshSuggestions?: () => void;
   onDismissSuggestions?: () => void;
@@ -33,13 +34,15 @@ export const ZappAIAssistBar = memo(function ZappAIAssistBar({
   suggestions = [],
   isLoadingSuggestions = false,
   suggestionsAvailable = false,
+  suggestionsOpen = true,
   onSelectSuggestion,
   onRefreshSuggestions,
   onDismissSuggestions,
 }: ZappAIAssistBarProps) {
   const hasCorrection = !!(correction && spellingEnabled);
-  const hasSuggestions = suggestionsAvailable && suggestions.length > 0;
-  const showSuggestionsLoader = suggestionsAvailable && isLoadingSuggestions && !hasSuggestions;
+  const hasSuggestions = suggestionsAvailable && suggestionsOpen && suggestions.length > 0;
+  const showSuggestionsLoader =
+    suggestionsAvailable && suggestionsOpen && isLoadingSuggestions && !hasSuggestions;
 
   if (!hasCorrection && !isCheckingSpelling && !hasSuggestions && !showSuggestionsLoader) {
     return null;
