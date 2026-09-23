@@ -86,7 +86,7 @@ Deno.serve(async (req) => {
       .from("internal_tasks")
       .select(`
         id, title, description, due_date, due_time, assigned_to,
-        lead_id, client_id, deal_id
+        lead_id, client_id, deal_id, google_calendar_event_id
       `)
       .eq("id", task_id)
       .single();
@@ -107,6 +107,10 @@ Deno.serve(async (req) => {
         .eq("id", task.lead_id)
         .maybeSingle();
       if (lead?.full_name) contextName = lead.full_name;
+    } else if (task.deal_id) {
+      const { data: deal } = await supabase
+        .from("deals").select("contact_name, title").eq("id", task.deal_id).maybeSingle();
+      contextName = deal?.contact_name || deal?.title || "";
     } else if (task.client_id) {
       const { data: client } = await supabase
         .from("clients")
@@ -117,9 +121,9 @@ Deno.serve(async (req) => {
     }
 
     // Build calendar event
-    const eventTitle = contextName
-      ? `❌ No-Show - ${contextName}`
-      : `❌ No-Show`;
+    const isConcluded = /call comercial conclu/i.test(task.title || "");
+    const label = isConcluded ? "✅ Call Comercial Concluída" : "❌ No-Show";
+    const eventTitle = contextName ? `${label} - ${contextName}` : label;
 
     // Use task's date/time for the calendar event
     const startTime = task.due_time
@@ -149,15 +153,25 @@ Deno.serve(async (req) => {
     // Create Google Calendar event
     const calendarBody = {
       summary: eventTitle,
-      description: task.description || `Atividade de No-Show registrada${contextName ? ` para ${contextName}` : ""}`,
+      description: task.description || `${isConcluded ? "Call comercial concluída" : "Atividade de No-Show registrada"}${contextName ? ` para ${contextName}` : ""}`,
       start: { dateTime: formatISO(startDate), timeZone: "America/Sao_Paulo" },
       end: { dateTime: formatISO(endDate), timeZone: "America/Sao_Paulo" },
-      colorId: "11", // Red color in Google Calendar
+      colorId: isConcluded ? "10" : "11",
       reminders: { useDefault: false, overrides: [] },
     };
 
-    const calResp = await fetch(
-      "https://www.googleapis.com/calendar/v3/calendars/primary/events",
+    const base = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+    let calResp: Response | null = null;
+    if (task.google_calendar_event_id) {
+      calResp = await fetch(`${base}/${task.google_calendar_event_id}`, {
+        method: "PATCH",
+        headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+        body: JSON.stringify(calendarBody),
+      });
+      if (calResp.status === 404 || calResp.status === 410) calResp = null;
+    }
+    if (!calResp) calResp = await fetch(
+      base,
       {
         method: "POST",
         headers: {
