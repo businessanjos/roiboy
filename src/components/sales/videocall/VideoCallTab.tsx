@@ -295,9 +295,25 @@ export function VideoCallTab() {
                       </div>
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <AnalysisStatusBadge
-                        status={isAnalyzing ? "analyzing" : session.analysis_status}
-                      />
+                      {!session.analysis && (
+                        <AnalysisStatusBadge
+                          status={isAnalyzing ? "analyzing" : session.analysis_status}
+                        />
+                      )}
+                      {!session.transcription && (
+                        <span onClick={(e) => e.stopPropagation()}>
+                          <ImportTranscriptDialog
+                            session={session}
+                            onCreated={handleImported}
+                            trigger={
+                              <Button variant="outline" size="sm" className="gap-1.5">
+                                <Upload className="h-3.5 w-3.5" />
+                                Importar transcrição
+                              </Button>
+                            }
+                          />
+                        </span>
+                      )}
                       {session.meeting_url && (
                         <Button
                           variant="outline"
@@ -423,6 +439,20 @@ export function VideoCallTab() {
                     <ExternalLink className="h-3.5 w-3.5" />
                     Abrir call
                   </Button>
+                )}
+                {!selectedSession.transcription && (
+                  <span className="ml-auto">
+                    <ImportTranscriptDialog
+                      session={selectedSession}
+                      onCreated={handleImported}
+                      trigger={
+                        <Button size="sm" className="gap-1.5">
+                          <Upload className="h-3.5 w-3.5" />
+                          Importar transcrição
+                        </Button>
+                      }
+                    />
+                  </span>
                 )}
                 {selectedSession.transcription && (
                   <Button
