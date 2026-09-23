@@ -53,9 +53,23 @@ import { SellerSelector, useAccountSellers } from "./SellerSelector";
 interface VideoCallActionsProps {
   session: VideoCallSession;
   onChanged: () => void;
+  /** Quando informado, as ações abrem com o botão direito sobre este conteúdo. */
+  children?: React.ReactNode;
+  onToggleFavorite?: () => void;
+  onAnalyze?: () => void;
+  onViewAnalysis?: () => void;
+  isAnalyzing?: boolean;
 }
 
-export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) {
+export function VideoCallActions({
+  session,
+  onChanged,
+  children,
+  onToggleFavorite,
+  onAnalyze,
+  onViewAnalysis,
+  isAnalyzing,
+}: VideoCallActionsProps) {
   const { sellers, loading: loadingSellers } = useAccountSellers();
   const [editOpen, setEditOpen] = useState(false);
   const [deleteOpen, setDeleteOpen] = useState(false);
