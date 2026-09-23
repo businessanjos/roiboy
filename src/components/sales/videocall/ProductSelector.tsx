@@ -1,6 +1,17 @@
 import { useEffect, useState } from "react";
+import { Check, ChevronsUpDown, Package } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { cn } from "@/lib/utils";
 
 export interface CallProduct {
   id: string;
@@ -21,8 +32,6 @@ export function useCallProducts() {
   return products;
 }
 
-const NONE = "__none__";
-
 interface Props {
   value: string | null;
   onChange: (id: string | null) => void;
@@ -32,24 +41,77 @@ interface Props {
   className?: string;
 }
 
+const Dot = ({ color }: { color: string | null }) => (
+  <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ backgroundColor: color || "#6b7280" }} />
+);
+
 export function ProductSelector({ value, onChange, products, allLabel, counts, className }: Props) {
+  const [open, setOpen] = useState(false);
+  const selected = products.find((p) => p.id === value) ?? null;
+  const emptyLabel = allLabel ?? "Sem produto";
+
   return (
-    <Select value={value ?? NONE} onValueChange={(v) => onChange(v === NONE ? null : v)}>
-      <SelectTrigger className={className}>
-        <SelectValue placeholder="Selecionar produto" />
-      </SelectTrigger>
-      <SelectContent>
-        <SelectItem value={NONE}>{allLabel ?? "Sem produto"}</SelectItem>
-        {products.map((p) => (
-          <SelectItem key={p.id} value={p.id}>
-            <span className="flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: p.color || "#6b7280" }} />
-              {p.name}
-              {counts && ` (${counts.get(p.id) ?? 0})`}
-            </span>
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          role="combobox"
+          className={cn("justify-between font-normal", className)}
+        >
+          <span className="flex min-w-0 items-center gap-2 truncate">
+            {selected ? (
+              <>
+                <Dot color={selected.color} />
+                <span className="truncate">{selected.name}</span>
+              </>
+            ) : (
+              <>
+                <Package className="h-4 w-4 text-muted-foreground" />
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              </>
+            )}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] min-w-[260px] p-0" align="start">
+        <Command>
+          <CommandInput placeholder="Buscar produto..." />
+          <CommandList className="max-h-64">
+            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            <CommandGroup>
+              <CommandItem
+                value={`__none__ ${emptyLabel}`}
+                onSelect={() => {
+                  onChange(null);
+                  setOpen(false);
+                }}
+              >
+                <Check className={cn("mr-2 h-4 w-4", !value ? "opacity-100" : "opacity-0")} />
+                <span className="text-muted-foreground">{emptyLabel}</span>
+              </CommandItem>
+              {products.map((p) => (
+                <CommandItem
+                  key={p.id}
+                  value={`${p.name} ${p.id}`}
+                  onSelect={() => {
+                    onChange(p.id);
+                    setOpen(false);
+                  }}
+                >
+                  <Check className={cn("mr-2 h-4 w-4", value === p.id ? "opacity-100" : "opacity-0")} />
+                  <Dot color={p.color} />
+                  <span className="ml-2 flex-1 truncate">{p.name}</span>
+                  {counts && (
+                    <span className="ml-2 text-xs text-muted-foreground">{counts.get(p.id) ?? 0}</span>
+                  )}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }
