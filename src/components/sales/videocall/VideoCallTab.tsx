@@ -160,7 +160,7 @@ export function VideoCallTab() {
   const [viewMode, setViewMode] = useState<"analysis" | "transcription">("analysis");
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<FilterKey>("all");
-  const [period, setPeriod] = useState<PeriodKey>("quarter");
+  const [period, setPeriod] = useState<PeriodKey>("all");
   const [sellerId, setSellerId] = useState<string | null>(null);
   const [analyzing, setAnalyzing] = useState<string[]>([]);
 
