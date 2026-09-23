@@ -564,8 +564,19 @@ export function VideoCallTab() {
               const isAnalyzing =
                 analyzing.includes(session.id) || session.analysis_status === "analyzing";
               return (
-                <Card
+                <VideoCallActions
                   key={session.id}
+                  session={session}
+                  onChanged={refetch}
+                  onToggleFavorite={() => toggleFavorite(session)}
+                  onAnalyze={() => analyze(session)}
+                  onViewAnalysis={() => {
+                    setViewMode("analysis");
+                    setSelectedId(session.id);
+                  }}
+                  isAnalyzing={isAnalyzing}
+                >
+                <Card
                   className="cursor-pointer hover:bg-accent/40 transition-colors"
                   onClick={() => setSelectedId(session.id)}
                 >
