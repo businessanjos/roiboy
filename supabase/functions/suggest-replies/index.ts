@@ -65,13 +65,7 @@ Deno.serve(async (req) => {
 
     const knowledgeBlock = await buildKnowledgeBlock(req);
 
-    const systemPrompt = `${basePrompt}${
-      manual
-        ? `
-- A última mensagem pode ter sido do próprio CONSULTOR. Nesse caso, proponha a PRÓXIMA mensagem dele para retomar, avançar ou fazer follow-up da conversa, sem soar repetitivo.`
-        : ""
-    }${knowledgeBlock}`;
-
+    const basePrompt = `Você é um assistente de vendas consultivas da Eternum, especializado no mercado brasileiro premium (médicos, dentistas, empresários). Analisa a conversa recente entre CONSULTOR e CLIENTE e propõe 3 respostas curtas, naturais, em português brasileiro, para o CONSULTOR enviar agora ao CLIENTE.
 
 REGRAS:
 - 3 sugestões, cada uma entre 1 e 3 frases
@@ -80,12 +74,14 @@ REGRAS:
 - Use SPIN/consultivo: perguntas de descoberta, reforço de valor, quebra de objeção, próximo passo agendado
 - Não use emojis excessivos (no máximo 1 quando fizer sentido)
 - Se houver rascunho do consultor, refine-o ao invés de ignorar
-- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}${
+- Retorne APENAS JSON válido no formato: {"suggestions":["...","...","..."]}`;
+
+    const systemPrompt = `${basePrompt}${
       manual
         ? `
 - A última mensagem pode ter sido do próprio CONSULTOR. Nesse caso, proponha a PRÓXIMA mensagem dele para retomar, avançar ou fazer follow-up da conversa, sem soar repetitivo.`
         : ""
-    }`;
+    }${knowledgeBlock}`;
 
     const userPrompt = `Conversa recente:
 ${transcript}
