@@ -135,17 +135,18 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="space-y-2">
-              <Label>Lead vinculado</Label>
-              <LeadSelector
+              <Label>Negócio vinculado</Label>
+              <CallLinkSelector
                 value={lead}
                 onChange={(l) => {
                   setLead(l);
-                  if (l?.full_name) setParticipantName(l.full_name);
+                  if (l?.name) setParticipantName(l.name);
                   if (l?.phone) setParticipantPhone(l.phone);
                   if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                 }}
               />
             </div>
+
             <div className="space-y-2">
               <Label>Vendedor responsável</Label>
               <SellerSelector
