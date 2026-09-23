@@ -100,7 +100,7 @@ function AnalysisStatusBadge({ status }: { status: string }) {
   return <Badge variant={info.variant}>{info.label}</Badge>;
 }
 
-type FilterKey = "all" | "with_analysis" | "pending" | "no_transcription";
+type FilterKey = "all" | "favorites" | "with_analysis" | "pending" | "no_transcription";
 type PeriodKey = "today" | "week" | "month" | "quarter" | "year" | "all";
 
 const PERIODS: { key: PeriodKey; label: string }[] = [
