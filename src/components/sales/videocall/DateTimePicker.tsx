@@ -29,8 +29,13 @@ function build(date: Date | undefined, time: string): string {
   return `${d}T${time || "09:00"}`;
 }
 
+const HOURS = Array.from({ length: 24 }, (_, i) => String(i).padStart(2, "0"));
+const MINUTES = Array.from({ length: 12 }, (_, i) => String(i * 5).padStart(2, "0"));
+
 export function DateTimePicker({ value, onChange, className }: DateTimePickerProps) {
   const { date, time } = parse(value);
+  const [hour = "09", minute = "00"] = (time || "09:00").split(":");
+
 
   return (
     <div className={cn("flex flex-col gap-2 sm:flex-row", className)}>
