@@ -312,11 +312,17 @@ export function AIKnowledgeManager() {
               <CardDescription>Manuais, lâminas, apresentações e transcrições.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
-              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground hover:bg-muted/50">
-                <Upload className="h-4 w-4" />
-                {upload.isPending ? "Enviando…" : "Clique para enviar um arquivo"}
+              <label className="flex cursor-pointer flex-col items-center justify-center gap-1 rounded-lg border border-dashed border-border p-6 text-sm text-muted-foreground hover:bg-muted/50">
+                <span className="flex items-center gap-2">
+                  <Upload className="h-4 w-4" />
+                  {upload.isPending ? "Enviando…" : "Clique para enviar um arquivo"}
+                </span>
+                <span className="text-xs">
+                  PDF, Word (.docx), texto, .md, .csv, legendas (.vtt/.srt) — até 50 MB. O conteúdo é lido e dividido em fragmentos automaticamente.
+                </span>
                 <input
                   type="file" className="hidden"
+                  accept=".pdf,.docx,.txt,.md,.markdown,.csv,.json,.vtt,.srt,.html,.log"
                   onChange={(e) => {
                     const file = e.target.files?.[0];
                     if (file) upload.mutate(file);
@@ -336,10 +342,20 @@ export function AIKnowledgeManager() {
                         {doc.file_size ? `${Math.round(Number(doc.file_size) / 1024)} KB` : "—"} ·{" "}
                         {doc.chunks_count} fragmentos
                       </p>
+                      {doc.error_message && (
+                        <p className="mt-1 text-xs text-amber-600">{doc.error_message}</p>
+                      )}
                     </div>
                     <Badge variant={doc.status === "error" ? "destructive" : "secondary"}>
                       {doc.status === "completed" ? "Pronto" : doc.status === "error" ? "Erro" : "Processando"}
                     </Badge>
+                    <Button
+                      size="icon" variant="ghost" title="Ler o conteúdo de novo"
+                      disabled={reprocess.isPending || doc.status === "processing"}
+                      onClick={() => reprocess.mutate(doc.id)}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${doc.status === "processing" ? "animate-spin" : ""}`} />
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={() => download(doc)}>
                       <Download className="h-4 w-4" />
                     </Button>
@@ -348,6 +364,7 @@ export function AIKnowledgeManager() {
                     </Button>
                   </div>
                 ))}
+
                 {documents.length === 0 && (
                   <p className="text-sm text-muted-foreground">Nenhum material enviado ainda.</p>
                 )}
