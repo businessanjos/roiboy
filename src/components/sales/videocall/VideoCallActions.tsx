@@ -137,9 +137,22 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
                   setLead(l);
                   if (l?.full_name) setParticipantName(l.full_name);
                   if (l?.phone) setParticipantPhone(l.phone);
+                  if (l?.responsible_user_id) setSellerId(l.responsible_user_id);
                 }}
               />
             </div>
+            <div className="space-y-2">
+              <Label>Vendedor responsável</Label>
+              <SellerSelector
+                value={sellerId}
+                onChange={setSellerId}
+                sellers={sellers}
+                loading={loadingSellers}
+                className="w-full"
+                placeholder="Selecionar quem conduziu a call"
+              />
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="participant_name">Nome do participante</Label>
               <Input
