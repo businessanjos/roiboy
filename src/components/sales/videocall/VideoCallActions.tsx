@@ -49,7 +49,7 @@ export function VideoCallActions({ session, onChanged }: VideoCallActionsProps) 
   const [participantName, setParticipantName] = useState(session.participant_name ?? "");
   const [participantPhone, setParticipantPhone] = useState(session.participant_phone ?? "");
   const [notes, setNotes] = useState(session.notes ?? "");
-  const [lead, setLead] = useState<LeadOption | null>(null);
+  const [lead, setLead] = useState<LinkedRecord | null>(null);
   const [sellerId, setSellerId] = useState<string | null>(session.user_id ?? null);
 
   const handleSave = async () => {
