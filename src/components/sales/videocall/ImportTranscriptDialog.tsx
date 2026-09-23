@@ -37,7 +37,7 @@ function cleanTranscript(raw: string): string {
 }
 
 interface Props {
-  onCreated?: () => void;
+  onCreated?: (id: string, analyzeNow: boolean) => void;
   trigger?: React.ReactNode;
 }
 
@@ -123,13 +123,7 @@ export function ImportTranscriptDialog({ onCreated, trigger }: Props) {
     toast.success("Transcrição importada");
     setOpen(false);
     reset();
-    onCreated?.();
-
-    if (analyzeNow) {
-      window.dispatchEvent(
-        new CustomEvent("roy:analyze-call", { detail: { id: (data as { id: string }).id } })
-      );
-    }
+    onCreated?.((data as { id: string }).id, analyzeNow);
   };
 
   return (
