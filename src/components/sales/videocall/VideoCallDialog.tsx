@@ -75,9 +75,9 @@ export function VideoCallDialog({
     const data = await createRoom({
       participant_name: participantName,
       participant_phone: participantPhone,
-      lead_id: lead?.id ?? leadId,
+      lead_id: lead?.kind === "lead" ? lead.id : leadId,
       client_id: clientId,
-      deal_id: dealId,
+      deal_id: lead?.kind === "deal" ? lead.id : dealId,
     });
 
     const sessionId = (data as { session_id?: string } | undefined)?.session_id;
@@ -87,11 +87,13 @@ export function VideoCallDialog({
         .from("video_call_sessions")
         .update({
           ...(seller ? { user_id: seller } : {}),
-          ...(lead ? { lead_id: lead.id } : {}),
+          ...(lead?.kind === "deal" ? { deal_id: lead.id } : {}),
+          ...(lead?.kind === "lead" ? { lead_id: lead.id } : {}),
         } as never)
         .eq("id", sessionId);
     }
   };
+
 
 
   const handleGetGuestLink = async () => {
