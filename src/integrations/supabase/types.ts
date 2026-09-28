@@ -24238,6 +24238,58 @@ export type Database = {
         }
         Relationships: []
       }
+      spiff_spin_deals: {
+        Row: {
+          account_id: string
+          captured_amount: number
+          created_at: string
+          deal_id: string
+          id: string
+          spiff_id: string
+          spin_id: string
+        }
+        Insert: {
+          account_id: string
+          captured_amount?: number
+          created_at?: string
+          deal_id: string
+          id?: string
+          spiff_id: string
+          spin_id: string
+        }
+        Update: {
+          account_id?: string
+          captured_amount?: number
+          created_at?: string
+          deal_id?: string
+          id?: string
+          spiff_id?: string
+          spin_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "spiff_spin_deals_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spin_deals_deal_id_fkey"
+            columns: ["deal_id"]
+            isOneToOne: false
+            referencedRelation: "deals"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "spiff_spin_deals_spin_id_fkey"
+            columns: ["spin_id"]
+            isOneToOne: false
+            referencedRelation: "spiff_spins"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       spiff_spin_requests: {
         Row: {
           account_id: string

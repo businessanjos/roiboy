@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
 import { RouletteCardShuffle, ShuffleCard } from "./RouletteCardShuffle";
 
 const formatBRL = (v: number) =>
@@ -25,11 +26,26 @@ interface Props {
   };
   user: { uid: string; name: string };
   pendingSpins: number;
+  /** Vendas ganhas disponíveis (ainda não usadas) — quando informado, o vendedor marca quais usa no giro. */
+  availableDeals?: { id: string; title: string; won_at: string | null; amount: number }[];
+  triggerPerValue?: number;
 }
 
 type Phase = "idle" | "awaiting_approval" | "spinning" | "result";
 
-export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpins }: Props) {
+export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpins, availableDeals, triggerPerValue = 0 }: Props) {
+  const requiresDeals = !!availableDeals && triggerPerValue > 0;
+  const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
+  const selectedTotal = (availableDeals ?? [])
+    .filter((d) => selectedDeals.has(d.id))
+    .reduce((a, d) => a + d.amount, 0);
+  const dealsOk = !requiresDeals || selectedTotal >= triggerPerValue;
+  const toggleDeal = (id: string) =>
+    setSelectedDeals((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
   const { currentUser } = useCurrentUser();
   const queryClient = useQueryClient();
 
@@ -104,6 +120,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
     setTvMode(false);
     setApprover(null);
     setRequestId(null);
+    setSelectedDeals(new Set());
 
     // Retoma solicitação pendente já enviada (o pedido continua na fila
     // do gestor mesmo se o vendedor fechar a tela).
@@ -159,6 +176,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
 
   const requestApproval = async () => {
     if (phase !== "idle" || pendingSpins <= 0) return;
+    if (!dealsOk) {
+      toast.error(`Marque as vendas que somam pelo menos R$ ${formatBRL(triggerPerValue)}`);
+      return;
+    }
     if (!currentUser?.account_id) return;
     if (usingPool && (prizesQuery.data?.length ?? 0) === 0) {
       toast.error("Nenhum prêmio configurado nesta roleta.");
@@ -243,6 +264,10 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       toast.error("Aprovação do gestor é obrigatória");
       return;
     }
+    if (!dealsOk) {
+      toast.error(`Marque as vendas referentes a este giro (mín. R$ ${formatBRL(triggerPerValue)})`);
+      return;
+    }
     setSaving(true);
     const { data: spinRow, error } = await supabase
       .from("spiff_spins")
@@ -263,6 +288,20 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
       setSaving(false);
       toast.error("Erro ao registrar giro: " + error.message);
       return;
+    }
+    // Vincular as vendas ganhas marcadas a este giro
+    if (requiresDeals && spinRow) {
+      const rows = (availableDeals ?? [])
+        .filter((d) => selectedDeals.has(d.id))
+        .map((d) => ({
+          account_id: currentUser.account_id,
+          spin_id: (spinRow as any).id,
+          spiff_id: spiff.id,
+          deal_id: d.id,
+          captured_amount: d.amount,
+        }));
+      const { error: linkErr } = await supabase.from("spiff_spin_deals" as any).insert(rows);
+      if (linkErr) toast.error("Giro salvo, mas falhou ao vincular as vendas: " + linkErr.message);
     }
     // Marcar request como consumed
     if (requestId && spinRow) {
@@ -428,6 +467,35 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
         </DialogHeader>
 
         <div className="py-4 space-y-4">
+          {requiresDeals && (phase === "idle" || phase === "result" || (phase === "awaiting_approval" && selectedDeals.size === 0)) && (
+            <div className="rounded-lg border bg-muted/20">
+              <div className="flex items-center justify-between px-3 py-2 border-b">
+                <p className="text-xs font-medium">Qual venda gerou este giro?</p>
+                <span className={`text-[11px] tabular-nums ${dealsOk ? "text-success" : "text-muted-foreground"}`}>
+                  R$ {formatBRL(selectedTotal)} / R$ {formatBRL(triggerPerValue)}
+                </span>
+              </div>
+              <div className="max-h-48 overflow-y-auto divide-y">
+                {(availableDeals ?? []).length === 0 ? (
+                  <p className="text-xs text-muted-foreground p-3">Nenhuma venda disponível no período.</p>
+                ) : (
+                  (availableDeals ?? []).map((d) => (
+                    <label key={d.id} className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-muted/40">
+                      <Checkbox checked={selectedDeals.has(d.id)} onCheckedChange={() => toggleDeal(d.id)} />
+                      <span className="flex-1 truncate">{d.title}</span>
+                      <span className="text-muted-foreground tabular-nums">
+                        {d.won_at ? new Date(d.won_at).toLocaleDateString("pt-BR") : "—"}
+                      </span>
+                      <span className="tabular-nums font-medium w-20 text-right">R$ {formatBRL(d.amount)}</span>
+                    </label>
+                  ))
+                )}
+              </div>
+              <p className="text-[10px] text-muted-foreground px-3 py-1.5 border-t">
+                As vendas marcadas ficam vinculadas a este giro e não contam para outro.
+              </p>
+            </div>
+          )}
           {(phase === "idle" || phase === "awaiting_approval") && renderIdleOrAwaiting()}
 
           {(phase === "spinning" || phase === "result") && finalOption && (
@@ -448,7 +516,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
                 onClick={requestApproval}
                 size="lg"
                 className="w-full gap-2 bg-warning hover:bg-warning text-white"
-                disabled={pendingSpins <= 0 || requesting || (usingPool && prizesQuery.isLoading)}
+                disabled={pendingSpins <= 0 || requesting || !dealsOk || (usingPool && prizesQuery.isLoading)}
               >
                 <ShieldCheck className="h-5 w-5" />
                 {requesting ? "Enviando solicitação..." : "Solicitar Giro ao Gestor"}
@@ -460,7 +528,7 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
               </Button>
             )}
             {phase === "result" && finalOption && (
-              <Button onClick={handleSave} size="lg" className="w-full gap-2" disabled={saving}>
+              <Button onClick={handleSave} size="lg" className="w-full gap-2" disabled={saving || !dealsOk}>
                 <Trophy className="h-5 w-5" />
                 {saving ? "Salvando..." : `Confirmar: ${finalOption.label}`}
               </Button>
