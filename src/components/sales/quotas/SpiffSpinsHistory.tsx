@@ -50,12 +50,18 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
   const [payDialog, setPayDialog] = useState<SpinRow | null>(null);
   const [payNotes, setPayNotes] = useState("");
 
-  // Verifica permissão (espelha a função SQL can_manage_spiff_payments)
-  const canManagePayments = useMemo(() => {
-    const role = (currentUser as any)?.role;
-    if (["admin", "head", "gestor", "leader", "mentor"].includes(role)) return true;
-    return false;
-  }, [currentUser]);
+  // Permissão vem direto da função do banco (mesma regra que libera a gravação)
+  const permQ = useQuery({
+    queryKey: ["can-manage-spiff-payments", (currentUser as any)?.auth_user_id],
+    enabled: !!(currentUser as any)?.auth_user_id,
+    queryFn: async () => {
+      const { data } = await (supabase as any).rpc("can_manage_spiff_payments", {
+        _auth_user_id: (currentUser as any).auth_user_id,
+      });
+      return !!data;
+    },
+  });
+  const canManagePayments = !!permQ.data;
 
   const spinsQ = useQuery({
     queryKey: ["spiff-spins-history", accountId],
