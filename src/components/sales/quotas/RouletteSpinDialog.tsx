@@ -431,9 +431,9 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   // ───────────── Modal padrão ─────────────
   return (
     <Dialog open={open} onOpenChange={(o) => !o && handleCancel()}>
-      <DialogContent className="sm:max-w-lg">
-        <DialogHeader>
-          <div className="flex items-center justify-between gap-2">
+      <DialogContent className="sm:max-w-lg w-[calc(100vw-2rem)] max-h-[90vh] overflow-y-auto overflow-x-hidden">
+        <DialogHeader className="min-w-0">
+          <div className="flex items-center justify-between gap-2 pr-8">
             <DialogTitle className="flex items-center gap-2">
               <Dice5 className="h-5 w-5 text-warning" />
               Roleta da Sorte — {spiff.name}
@@ -466,27 +466,27 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
           </DialogDescription>
         </DialogHeader>
 
-        <div className="py-4 space-y-4">
+        <div className="py-4 space-y-4 min-w-0 w-full overflow-hidden">
           {requiresDeals && (phase === "idle" || phase === "result" || (phase === "awaiting_approval" && selectedDeals.size === 0)) && (
-            <div className="rounded-lg border bg-muted/20">
-              <div className="flex items-center justify-between px-3 py-2 border-b">
-                <p className="text-xs font-medium">Qual venda gerou este giro?</p>
-                <span className={`text-[11px] tabular-nums ${dealsOk ? "text-success" : "text-muted-foreground"}`}>
+            <div className="rounded-lg border bg-muted/20 min-w-0 overflow-hidden">
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b">
+                <p className="text-xs font-medium truncate">Qual venda gerou este giro?</p>
+                <span className={`text-[11px] tabular-nums shrink-0 ${dealsOk ? "text-success" : "text-muted-foreground"}`}>
                   R$ {formatBRL(selectedTotal)} / R$ {formatBRL(triggerPerValue)}
                 </span>
               </div>
-              <div className="max-h-48 overflow-y-auto divide-y">
+              <div className="max-h-48 overflow-y-auto overflow-x-hidden divide-y">
                 {(availableDeals ?? []).length === 0 ? (
                   <p className="text-xs text-muted-foreground p-3">Nenhuma venda disponível no período.</p>
                 ) : (
                   (availableDeals ?? []).map((d) => (
-                    <label key={d.id} className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-muted/40">
-                      <Checkbox checked={selectedDeals.has(d.id)} onCheckedChange={() => toggleDeal(d.id)} />
-                      <span className="flex-1 truncate">{d.title}</span>
-                      <span className="text-muted-foreground tabular-nums">
+                    <label key={d.id} className="flex items-center gap-2 px-3 py-2 text-xs cursor-pointer hover:bg-muted/40 min-w-0">
+                      <Checkbox className="shrink-0" checked={selectedDeals.has(d.id)} onCheckedChange={() => toggleDeal(d.id)} />
+                      <span className="flex-1 min-w-0 truncate" title={d.title}>{d.title}</span>
+                      <span className="text-muted-foreground tabular-nums shrink-0">
                         {d.won_at ? new Date(d.won_at).toLocaleDateString("pt-BR") : "—"}
                       </span>
-                      <span className="tabular-nums font-medium w-20 text-right">R$ {formatBRL(d.amount)}</span>
+                      <span className="tabular-nums font-medium shrink-0 text-right whitespace-nowrap">R$ {formatBRL(d.amount)}</span>
                     </label>
                   ))
                 )}
