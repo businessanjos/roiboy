@@ -1149,8 +1149,19 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
-    // Giros pendentes = só vendas do período ainda NÃO vinculadas a um giro
-    const availableDeals = userDeals.filter((d) => !usedDealIds.has(d.id) && capturedAmount(d) > 0);
+    // Giros pendentes = só vendas do mês atual ainda NÃO vinculadas a um giro.
+    // Vendas de meses anteriores são consideradas já resgatadas.
+    const nowD = new Date();
+    const monthStart = new Date(nowD.getFullYear(), nowD.getMonth(), 1).getTime();
+    const availableDeals = userDeals
+      .filter(
+        (d) =>
+          !usedDealIds.has(d.id) &&
+          capturedAmount(d) > 0 &&
+          !!d.won_at &&
+          new Date(d.won_at).getTime() >= monthStart,
+      )
+      .sort((a, b) => new Date(a.won_at ?? 0).getTime() - new Date(b.won_at ?? 0).getTime());
     const availableTotal = availableDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const pendingSpins = triggerPerValue > 0 ? Math.floor(availableTotal / triggerPerValue) : 0;
     const remainder = triggerPerValue > 0 ? availableTotal - pendingSpins * triggerPerValue : 0;
