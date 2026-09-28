@@ -1122,6 +1122,21 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     enabled: !!accountId,
   });
 
+  // Vendas ganhas já usadas em giros (vínculo venda → giro)
+  const usedDealsQuery = useQuery({
+    queryKey: ["spiff-spins", "deals", accountId, spiff.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("spiff_spin_deals" as any)
+        .select("deal_id")
+        .eq("spiff_id", spiff.id);
+      if (error) throw error;
+      return (data ?? []) as any[];
+    },
+    enabled: !!accountId,
+  });
+  const usedDealIds = new Set((usedDealsQuery.data ?? []).map((r: any) => r.deal_id as string));
+
   const consumedByUser = new Map<string, { count: number; total: number }>();
   for (const log of spinsLogQuery.data ?? []) {
     const cur = consumedByUser.get(log.user_id) ?? { count: 0, total: 0 };
@@ -1134,10 +1149,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     const userDeals = (dealsQuery.data ?? []).filter((d) => d.responsible_user_id === uid);
     const total = userDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
     const earnedSpins = triggerPerValue > 0 ? Math.floor(total / triggerPerValue) : 0;
-    const remainder = triggerPerValue > 0 ? total - earnedSpins * triggerPerValue : 0;
+    // Giros pendentes = só vendas do período ainda NÃO vinculadas a um giro
+    const availableDeals = userDeals.filter((d) => !usedDealIds.has(d.id) && capturedAmount(d) > 0);
+    const availableTotal = availableDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
+    const pendingSpins = triggerPerValue > 0 ? Math.floor(availableTotal / triggerPerValue) : 0;
+    const remainder = triggerPerValue > 0 ? availableTotal - pendingSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
     const consumed = consumedByUser.get(uid) ?? { count: 0, total: 0 };
-    const pendingSpins = Math.max(0, earnedSpins - consumed.count);
     const user = usersQuery.data?.find((u) => u.id === uid);
     const collab = (salesTeamQuery.data ?? []).find((c) => c.user_id === uid);
     return {
@@ -1147,6 +1165,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       deals: userDeals,
       earnedSpins,
       pendingSpins,
+      availableDeals,
       consumedCount: consumed.count,
       consumedTotal: consumed.total,
       toNextSpin,
@@ -1161,7 +1180,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       ? summary.filter((s) => sellerFilter.includes(s.uid))
       : summary;
 
-  const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
+  const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number; deals: CapturedDeal[] } | null>(null);
   const [capturedDetail, setCapturedDetail] = useState<
     { name: string; deals: CapturedDeal[]; total: number; earnedSpins: number } | null
   >(null);
@@ -1193,7 +1212,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           </TooltipTrigger>
           <TooltipContent className="max-w-xs">
             <p className="text-xs">
-              Soma o campo "Entrada" dos negócios ganhos por cada vendedor no período e divide por R$ {formatBRL(triggerPerValue)} para calcular os giros. Clique em "Girar" para sortear o prêmio entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))} e registrar o resultado.
+              Soma o valor captado das vendas ganhas no período (pela data do ganho) e divide por R$ {formatBRL(triggerPerValue)}. Ao girar, o vendedor marca quais vendas está usando — elas ficam vinculadas ao giro e não contam de novo. Clique em "Girar" para sortear o prêmio entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))} e registrar o resultado.
             </p>
           </TooltipContent>
         </Tooltip>
@@ -1252,7 +1271,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                     size="sm"
                     variant={s.pendingSpins > 0 ? "default" : "outline"}
                     disabled={s.pendingSpins <= 0}
-                    onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.pendingSpins })}
+                    onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.pendingSpins, deals: s.availableDeals })}
                     className="h-7 gap-1.5 text-xs"
                   >
                     <Dice5 className="h-3.5 w-3.5" />
@@ -1272,6 +1291,13 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           spiff={spiff}
           user={{ uid: spinUser.uid, name: spinUser.name }}
           pendingSpins={spinUser.pending}
+          availableDeals={spinUser.deals.map((d) => ({
+            id: d.id,
+            title: d.title || d.contact_name || "Negócio",
+            won_at: d.won_at,
+            amount: capturedAmount(d),
+          }))}
+          triggerPerValue={triggerPerValue}
         />
       )}
 
