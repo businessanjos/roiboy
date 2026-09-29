@@ -20,6 +20,7 @@ import { PlanUsageCard } from "@/components/plan";
 import { ApiKeyTab } from "@/components/profile/ApiKeyTab";
 import { TechProjectsTokensManager } from "@/components/settings/TechProjectsTokensManager";
 import { CompaniesManager } from "@/components/settings/CompaniesManager";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { AIKnowledgeManager } from "@/components/settings/ai-knowledge/AIKnowledgeManager";
 
 export default function Settings() {
@@ -29,7 +30,8 @@ export default function Settings() {
   const { isAdmin, hasPermission } = usePermissions();
   const canViewSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_VIEW);
   const canEditSettings = isAdmin || hasPermission(PERMISSIONS.SETTINGS_EDIT);
-  const canManageTeam = isAdmin || hasPermission(PERMISSIONS.TEAM_EDIT_CX);
+  const { denied: profileDenied } = useUserPermissions();
+  const canManageTeam = (isAdmin || hasPermission(PERMISSIONS.TEAM_EDIT_CX)) && !profileDenied("gestao", "team");
 
   const activeTab = searchParams.get("tab") || "profile";
 

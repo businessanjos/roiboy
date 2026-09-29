@@ -25,6 +25,19 @@ export const PROFILE_ROUTE_RULES: RouteRule[] = [
   { prefix: "/sales-dashboard", items: [{ module: "comercial", sub: "sales_dashboard" }], label: "Dashboard de vendas" },
   { prefix: "/sales/contracts", items: [{ module: "comercial", sub: "digital_contracts" }], label: "Contratos digitais" },
   { prefix: "/sales/logs", items: [{ module: "gestao", sub: "logs" }], label: "Logs" },
+  { prefix: "/roy-zapp/atendimentos", items: [{ module: "royzapp", sub: "analytics" }], label: "Análises do RoyZapp" },
+  {
+    prefix: "/roy-zapp",
+    items: [
+      { module: "royzapp", sub: "conversations" },
+      { module: "comercial", sub: "calls" },
+      { module: "royzapp", sub: "analytics" },
+    ],
+    label: "RoyZapp",
+  },
+  { prefix: "/insights/goals", items: [{ module: "gestao", sub: "goals" }], label: "Metas" },
+  { prefix: "/financial/commissions", items: [{ module: "gestao", sub: "commissions" }], label: "Comissões" },
+  { prefix: "/settings/team/pendencias", items: [{ module: "gestao", sub: "team" }], label: "Equipe" },
   { prefix: "/leads", items: [{ module: "comercial", sub: "leads" }], label: "Leads" },
   {
     prefix: "/pipeline",

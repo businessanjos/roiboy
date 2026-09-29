@@ -14,6 +14,7 @@ import {
   type ZappWhatsAppSector,
 } from "@/lib/royZappAccess";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 
 interface ZappAccessRow {
   views: ZappView[];
@@ -64,11 +65,21 @@ export function useRoyZappViewAccess() {
     },
   });
 
-  const canSeeAnalytics = canViewZappAnalytics(currentUser);
+  const { perms: profilePerms, isAdmin: profileAdmin } = useUserPermissions();
+  // Permissões por pessoa: "Sem acesso" tira a tela; "Visualizar/Editar" libera.
+  const profileLevel = (module: string, sub: string) =>
+    profileAdmin ? undefined : profilePerms.find((p) => p.module === module && p.sub_item === sub)?.access_level;
+  const analyticsLevel = profileLevel("royzapp", "analytics");
+  const callsLevel = profileLevel("comercial", "calls");
+  const canSeeAnalytics = analyticsLevel === "none"
+    ? false
+    : analyticsLevel === "view" || analyticsLevel === "manage" || canViewZappAnalytics(currentUser);
 
   const allowedViews = useMemo<ZappView[]>(() => {
     const withAnalytics = (list: ZappView[]): ZappView[] => {
-      const base = list.filter((v) => v !== "analytics");
+      let base = list.filter((v) => v !== "analytics");
+      if (callsLevel === "none") base = base.filter((v) => v !== "meetings");
+      else if ((callsLevel === "view" || callsLevel === "manage") && !base.includes("meetings")) base = [...base, "meetings"];
       return canSeeAnalytics ? [...base, "analytics"] : base;
     };
     if (unrestricted) return withAnalytics([...ALL_ZAPP_VIEWS]);
@@ -76,7 +87,7 @@ export function useRoyZappViewAccess() {
     if (!views || views.length === 0) return withAnalytics([...DEFAULT_ZAPP_VIEWS]);
     // Conversas é sempre necessária para operar o atendimento.
     return withAnalytics(views.includes("inbox") ? views : ["inbox", ...views]);
-  }, [unrestricted, data, canSeeAnalytics]);
+  }, [unrestricted, data, canSeeAnalytics, callsLevel]);
 
   /** `null` = sem restrição específica do RoyZapp (herda os setores gerais). */
   const allowedZappSectors = useMemo<ZappWhatsAppSector[] | null>(() => {
