@@ -187,6 +187,7 @@ export function TeamManager() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
+  const [myAccountId, setMyAccountId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<TeamUser | null>(null);
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
   const [deactivateTarget, setDeactivateTarget] = useState<TeamUser | null>(null);
@@ -256,6 +257,7 @@ export function TeamManager() {
 
       if (currentUserError) throw currentUserError;
       if (!currentUser) return;
+      setMyAccountId(currentUser.account_id);
 
       const { data: rolesData, error: rolesError } = await supabase
         .from("team_roles")
@@ -1648,9 +1650,9 @@ export function TeamManager() {
                 </div>
               </div>
             )}
-            {selectedUser && currentUser?.account_id && (
+            {selectedUser && myAccountId && (
               <div className="pt-4 border-t">
-                <UserPermissionsEditor userId={selectedUser.id} accountId={currentUser.account_id} />
+                <UserPermissionsEditor userId={selectedUser.id} accountId={myAccountId} />
               </div>
             )}
           </div>
