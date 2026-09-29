@@ -148,12 +148,32 @@ export function RenewalResponsibleDialog({
   const filteredManage = allUsers.filter((u) => u.name.toLowerCase().includes(manageQuery.trim().toLowerCase()));
   const selectedFirst = [...filteredManage].sort((a, b) => Number(draft.includes(b.id)) - Number(draft.includes(a.id)));
 
+  const [dealQuery, setDealQuery] = useState("");
+
+  const personScoped = useMemo(
+    () => deals.filter((d) => personFilter === "all" || d.renewal_responsible_user_id === personFilter),
+    [deals, personFilter],
+  );
+  const statusTotals = useMemo(() => ({
+    open: personScoped.filter((d) => d.status === "open").length,
+    won: personScoped.filter((d) => d.status === "won").length,
+    lost: personScoped.filter((d) => d.status === "lost").length,
+    all: personScoped.length,
+  }), [personScoped]);
+
+  const byPersonAll = useMemo(() => {
+    const m: Record<string, number> = {};
+    deals.filter((d) => statusFilter === "all" || d.status === statusFilter)
+      .forEach((d) => { m[d.renewal_responsible_user_id] = (m[d.renewal_responsible_user_id] || 0) + 1; });
+    return Object.entries(m).sort((a, b) => b[1] - a[1]);
+  }, [deals, statusFilter]);
+  const maxPerson = byPersonAll[0]?.[1] ?? 0;
+
   const statsRows = useMemo(() => {
-    const list = deals.filter((d) => (statusFilter === "all" || d.status === statusFilter) && (personFilter === "all" || d.renewal_responsible_user_id === personFilter));
-    const byPerson: Record<string, number> = {};
-    list.forEach((d) => { byPerson[d.renewal_responsible_user_id] = (byPerson[d.renewal_responsible_user_id] || 0) + 1; });
-    return { list, byPerson: Object.entries(byPerson).sort((a, b) => b[1] - a[1]) };
-  }, [deals, statusFilter, personFilter]);
+    const q = dealQuery.trim().toLowerCase();
+    const list = personScoped.filter((d) => (statusFilter === "all" || d.status === statusFilter) && (!q || (d.title ?? "").toLowerCase().includes(q)));
+    return { list };
+  }, [personScoped, statusFilter, dealQuery]);
 
   const title = mode === "manage" ? "Quem aparece na lista de responsáveis?" : mode === "stats" ? "Renovações por responsável" : "Quem é o responsável pela renovação?";
   const desc = mode === "manage" ? "Marque as pessoas que devem aparecer na lista principal." : mode === "stats" ? "Veja quantas renovações cada pessoa está cuidando." : "Escolha quem vai cuidar desta renovação.";
@@ -222,44 +242,87 @@ export function RenewalResponsibleDialog({
         )}
 
         {mode === "stats" && (
-          <>
-            <div className="grid grid-cols-2 gap-2">
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="open">Em aberto</SelectItem>
-                  <SelectItem value="won">Ganhas</SelectItem>
-                  <SelectItem value="lost">Perdidas</SelectItem>
-                  <SelectItem value="all">Todas</SelectItem>
-                </SelectContent>
-              </Select>
-              <Select value={personFilter} onValueChange={setPersonFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas as pessoas</SelectItem>
-                  {Array.from(new Set(deals.map((d) => d.renewal_responsible_user_id))).map((id) => (
-                    <SelectItem key={id} value={id}>{nameOf(id)}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {statsRows.byPerson.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma renovação encontrada.</p>}
-              {statsRows.byPerson.map(([id, n]) => (
-                <Badge key={id} variant="secondary" className="cursor-pointer" onClick={() => setPersonFilter(id)}>{nameOf(id)}: {n}</Badge>
+          <div className="flex flex-col gap-3 min-h-0">
+            {/* Resumo por situação (clicável) */}
+            <div className="grid grid-cols-4 gap-2">
+              {([
+                ["open", "Em aberto", statusTotals.open],
+                ["won", "Ganhas", statusTotals.won],
+                ["lost", "Perdidas", statusTotals.lost],
+                ["all", "Todas", statusTotals.all],
+              ] as const).map(([key, label, n]) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setStatusFilter(key)}
+                  className={`rounded-lg border px-2 py-2 text-left transition-colors ${statusFilter === key ? "border-primary bg-primary/10" : "hover:bg-accent"}`}
+                >
+                  <p className="text-[11px] text-muted-foreground truncate">{label}</p>
+                  <p className="text-lg font-semibold leading-tight">{n}</p>
+                </button>
               ))}
             </div>
-            <div className="border rounded-md max-h-64 overflow-y-auto divide-y">
-              {statsRows.list.map((d) => (
-                <div key={d.id} className="flex items-center gap-2 px-3 py-2 text-sm min-w-0">
-                  <span className="flex-1 truncate" title={d.title ?? ""}>{d.title || "Sem título"}</span>
-                  <span className="text-xs text-muted-foreground shrink-0">{nameOf(d.renewal_responsible_user_id)}</span>
-                  <Badge variant="outline" className="shrink-0">{STATUS_LABEL[d.status ?? ""] ?? d.status}</Badge>
-                </div>
-              ))}
+
+            {/* Por responsável */}
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <p className="text-xs font-medium text-muted-foreground">Por responsável</p>
+                {personFilter !== "all" && (
+                  <button type="button" className="text-xs text-primary hover:underline" onClick={() => setPersonFilter("all")}>Ver todas as pessoas</button>
+                )}
+              </div>
+              <div className="space-y-1 max-h-40 overflow-y-auto pr-1">
+                {byPersonAll.length === 0 && <p className="text-sm text-muted-foreground py-2">Nenhuma renovação nesta situação.</p>}
+                {byPersonAll.map(([id, n]) => {
+                  const active = personFilter === id;
+                  const pct = maxPerson ? Math.round((n / maxPerson) * 100) : 0;
+                  return (
+                    <button
+                      key={id}
+                      type="button"
+                      onClick={() => setPersonFilter(active ? "all" : id)}
+                      className={`w-full rounded-md border px-3 py-1.5 text-left transition-colors ${active ? "border-primary bg-primary/10" : "hover:bg-accent"}`}
+                    >
+                      <div className="flex items-center justify-between gap-2 text-sm min-w-0">
+                        <span className="truncate">{nameOf(id)}</span>
+                        <span className="font-semibold shrink-0">{n}</span>
+                      </div>
+                      <div className="mt-1 h-1 rounded-full bg-muted overflow-hidden">
+                        <div className="h-full bg-primary" style={{ width: `${pct}%` }} />
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
+
+            {/* Lista de negócios */}
+            <div className="flex flex-col gap-1.5 min-h-0">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-xs font-medium text-muted-foreground">Negócios ({statsRows.list.length})</p>
+              </div>
+              <div className="relative">
+                <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input value={dealQuery} onChange={(e) => setDealQuery(e.target.value)} placeholder="Buscar negócio..." className="pl-8 h-9" />
+              </div>
+              <div className="border rounded-md max-h-56 overflow-y-auto divide-y">
+                {statsRows.list.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Nenhum negócio encontrado.</p>}
+                {statsRows.list.map((d) => (
+                  <div key={d.id} className="px-3 py-2 text-sm min-w-0">
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="flex-1 truncate font-medium" title={d.title ?? ""}>{d.title || "Sem título"}</span>
+                      <Badge variant="outline" className="shrink-0 text-[11px]">{STATUS_LABEL[d.status ?? ""] ?? d.status}</Badge>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate mt-0.5">
+                      {nameOf(d.renewal_responsible_user_id)} · {new Date(d.created_at).toLocaleDateString("pt-BR")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
             <Button variant="ghost" size="sm" className="self-start" onClick={() => setMode("pick")}><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Button>
-          </>
+          </div>
         )}
       </DialogContent>
     </Dialog>
