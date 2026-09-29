@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Ban, Eye, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
@@ -366,20 +367,30 @@ export function UserPipelineAccessEditor({ userId, accountId }: { userId: string
   return (
     <div className="space-y-1.5">
       <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Funis</p>
-      <p className="text-xs text-muted-foreground">Funil novo entra como "Só os dele". "Todos do funil" libera a equipe inteira só naquele funil.</p>
+      <p className="text-xs text-muted-foreground">Ligue os funis que a pessoa acessa e escolha, em cada um, se ela vê só os negócios dela ou todos do funil. Funil novo entra ligado com "Só os dele".</p>
       {pipelines.map((p) => {
         const cur = rows.find((r) => r.pipeline_id === p.id)?.access ?? "own";
+        const on = cur !== "none";
         return (
-          <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-1.5">
-            <span className="text-sm min-w-0 flex-1 truncate" title={p.name}>{p.name}</span>
-            <Select value={cur} onValueChange={(v) => save(p.id, v as PipelineAccess)}>
-              <SelectTrigger className="h-8 w-[150px] shrink-0"><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="own">Só os dele</SelectItem>
-                <SelectItem value="all">Todos do funil</SelectItem>
-                <SelectItem value="none">Sem acesso</SelectItem>
-              </SelectContent>
-            </Select>
+          <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
+            <Switch checked={on} onCheckedChange={(v) => save(p.id, v ? "own" : "none")} aria-label={`Acesso ao funil ${p.name}`} />
+            <span className={`text-sm min-w-0 flex-1 truncate ${on ? "" : "text-muted-foreground line-through"}`} title={p.name}>{p.name}</span>
+            {on ? (
+              <div className="flex shrink-0 rounded-md border p-0.5">
+                {(["own", "all"] as const).map((opt) => (
+                  <button
+                    key={opt}
+                    type="button"
+                    onClick={() => cur !== opt && save(p.id, opt)}
+                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${cur === opt ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                  >
+                    {opt === "own" ? "Só os dele" : "Todos do funil"}
+                  </button>
+                ))}
+              </div>
+            ) : (
+              <span className="text-xs text-muted-foreground shrink-0">Sem acesso</span>
+            )}
           </div>
         );
       })}
