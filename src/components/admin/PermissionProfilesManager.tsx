@@ -12,6 +12,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Ban, Eye, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { CopyPermissionsButton } from "./CopyPermissionsDialog";
+import { UserAccessHistory } from "./UserAccessHistory";
 import {
   LEVEL_LABELS,
   PERMISSION_CATALOG,
@@ -279,6 +280,7 @@ export function UserPermissionsEditor({ userId, accountId }: { userId: string; a
     if (error) return toast.error("Não foi possível salvar a permissão.");
     qc.invalidateQueries({ queryKey: qk });
     qc.invalidateQueries({ queryKey: ["user-profile-permissions"] });
+    qc.invalidateQueries({ queryKey: ["user-access-history"] });
   };
 
   return (
@@ -327,6 +329,7 @@ export function UserPermissionsEditor({ userId, accountId }: { userId: string; a
         </div>
       ))}
       <UserPipelineAccessEditor userId={userId} accountId={accountId} />
+      <UserAccessHistory userId={userId} accountId={accountId} />
     </div>
   );
 }
@@ -365,6 +368,7 @@ export function UserPipelineAccessEditor({ userId, accountId }: { userId: string
     if (error) return toast.error("Não foi possível salvar o acesso ao funil.");
     qc.invalidateQueries({ queryKey: qk });
     qc.invalidateQueries({ queryKey: ["my-pipeline-access"] });
+    qc.invalidateQueries({ queryKey: ["user-access-history"] });
   };
 
   if (pipelines.length === 0) return null;
