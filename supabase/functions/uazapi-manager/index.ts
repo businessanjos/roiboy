@@ -1140,7 +1140,7 @@ Deno.serve(async (req) => {
       const thirtyMinAgo = new Date(Date.now() - 30 * 60 * 1000).toISOString();
       const { data: duplicateCheck } = await supabase
         .from("zapp_messages")
-        .select("id, phone_e164")
+        .select("id, zapp_conversations!inner(phone_e164)")
         .eq("account_id", accountId)
         .eq("sender_user_id", userData.id)
         .eq("direction", "outbound")
@@ -1148,7 +1148,7 @@ Deno.serve(async (req) => {
         .gte("created_at", thirtyMinAgo)
         .limit(10);
       
-      const uniquePhones = new Set((duplicateCheck || []).map((m: any) => m.phone_e164));
+      const uniquePhones = new Set((duplicateCheck || []).map((m: any) => m.zapp_conversations?.phone_e164));
       // Don't count the current phone - we're checking OTHER recipients
       uniquePhones.delete(cleanPhoneCheck);
       uniquePhones.delete(`+${cleanPhoneCheck}`);
