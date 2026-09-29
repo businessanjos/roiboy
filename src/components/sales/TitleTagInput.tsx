@@ -48,7 +48,7 @@ export const TitleTagInput = forwardRef<HTMLInputElement, Props>(
 
     const suggestions = useMemo(() => {
       const q = norm(currentQuery(v));
-      if (!q) return TITLE_TAGS;
+      if (!q) return [];
       // Prefixo de qualquer parte (CART, EC, ORG, IND, TRAF, STUDIO...)
       return TITLE_TAGS.filter((t) => {
         const parts = t.split("-");
