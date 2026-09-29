@@ -276,7 +276,7 @@ export function UserPermissionsEditor({ userId, accountId }: { userId: string; a
           { onConflict: "user_id,module,sub_item" });
     if (error) return toast.error("Não foi possível salvar a permissão.");
     qc.invalidateQueries({ queryKey: qk });
-    qc.invalidateQueries({ queryKey: ["user-permissions"] });
+    qc.invalidateQueries({ queryKey: ["user-profile-permissions"] });
   };
 
   return (
