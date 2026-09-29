@@ -1163,7 +1163,18 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       )
       .sort((a, b) => new Date(a.won_at ?? 0).getTime() - new Date(b.won_at ?? 0).getTime());
     const availableTotal = availableDeals.reduce((acc, d) => acc + capturedAmount(d), 0);
-    const pendingSpins = triggerPerValue > 0 ? Math.floor(availableTotal / triggerPerValue) : 0;
+    // Também desconta giros deste mês sem vendas vinculadas (anteriores à lista de checks
+    // ou com falha no vínculo), para não permitir girar duas vezes pelas mesmas vendas.
+    const monthTotal = userDeals
+      .filter((d) => !!d.won_at && new Date(d.won_at).getTime() >= monthStart)
+      .reduce((acc, d) => acc + capturedAmount(d), 0);
+    const monthEarned = triggerPerValue > 0 ? Math.floor(monthTotal / triggerPerValue) : 0;
+    const monthSpins = (spinsLogQuery.data ?? []).filter(
+      (l: any) => l.user_id === uid && l.spun_at && new Date(l.spun_at).getTime() >= monthStart,
+    ).length;
+    const pendingSpins = triggerPerValue > 0
+      ? Math.max(0, Math.min(Math.floor(availableTotal / triggerPerValue), monthEarned - monthSpins))
+      : 0;
     const remainder = triggerPerValue > 0 ? availableTotal - pendingSpins * triggerPerValue : 0;
     const toNextSpin = triggerPerValue > 0 ? triggerPerValue - remainder : 0;
     const consumed = consumedByUser.get(uid) ?? { count: 0, total: 0 };

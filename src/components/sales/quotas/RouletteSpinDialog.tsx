@@ -43,7 +43,13 @@ export function RouletteSpinDialog({ open, onOpenChange, spiff, user, pendingSpi
   const toggleDeal = (id: string) =>
     setSelectedDeals((prev) => {
       const n = new Set(prev);
-      n.has(id) ? n.delete(id) : n.add(id);
+      if (n.has(id)) n.delete(id);
+      else {
+        // Não deixa marcar além do necessário para um giro (a sobra fica para o próximo).
+        const cur = (availableDeals ?? []).filter((d) => n.has(d.id)).reduce((a, d) => a + d.amount, 0);
+        if (triggerPerValue > 0 && cur >= triggerPerValue) return prev;
+        n.add(id);
+      }
       return n;
     });
   const { currentUser } = useCurrentUser();
