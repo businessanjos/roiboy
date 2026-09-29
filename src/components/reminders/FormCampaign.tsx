@@ -101,7 +101,7 @@ export default function FormCampaign() {
     queryKey: ["clients-for-form-campaign"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("clients" as any)
+        .from("event_active_clients" as any)
         .select("id, full_name, phone_e164, status, tags")
         .order("full_name");
       if (error) throw error;
