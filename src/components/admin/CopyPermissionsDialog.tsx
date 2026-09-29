@@ -72,9 +72,14 @@ export function CopyPermissionsButton({ userId, accountId }: { userId: string; a
 
   return (
     <>
-      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setOpen(true)}>
-        <Copy className="h-3.5 w-3.5" /> Copiar para outras pessoas
-      </Button>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        title="Copiar estas permissões para outras pessoas"
+        className="inline-flex items-center gap-1 text-xs font-medium text-muted-foreground transition-colors hover:text-primary"
+      >
+        <Copy className="h-3 w-3" /> Copiar
+      </button>
       <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSelected(new Set()); setSearch(""); } }}>
         <DialogContent className="max-w-md">
           <DialogHeader>
