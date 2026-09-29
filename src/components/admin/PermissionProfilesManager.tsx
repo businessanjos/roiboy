@@ -365,35 +365,44 @@ export function UserPipelineAccessEditor({ userId, accountId }: { userId: string
 
   if (pipelines.length === 0) return null;
   return (
-    <div className="space-y-1.5">
-      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Funis</p>
-      <p className="text-xs text-muted-foreground">Ligue os funis que a pessoa acessa e escolha, em cada um, se ela vê só os negócios dela ou todos do funil. Funil novo entra ligado com "Só os dele".</p>
-      {pipelines.map((p) => {
-        const cur = rows.find((r) => r.pipeline_id === p.id)?.access ?? "own";
-        const on = cur !== "none";
-        return (
-          <div key={p.id} className="flex flex-wrap items-center gap-3 rounded-md border px-3 py-2">
-            <Switch checked={on} onCheckedChange={(v) => save(p.id, v ? "own" : "none")} aria-label={`Acesso ao funil ${p.name}`} />
-            <span className={`text-sm min-w-0 flex-1 truncate ${on ? "" : "text-muted-foreground line-through"}`} title={p.name}>{p.name}</span>
-            {on ? (
-              <div className="flex shrink-0 rounded-md border p-0.5">
-                {(["own", "all"] as const).map((opt) => (
-                  <button
-                    key={opt}
-                    type="button"
-                    onClick={() => cur !== opt && save(p.id, opt)}
-                    className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${cur === opt ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
-                  >
-                    {opt === "own" ? "Só os dele" : "Todos do funil"}
-                  </button>
-                ))}
+    <div className="space-y-3">
+      <div className="space-y-1">
+        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Funis</p>
+        <p className="text-xs leading-relaxed text-muted-foreground">Escolha em quais funis a pessoa entra e o que ela vê em cada um. Funil novo entra com "Só os dele".</p>
+      </div>
+      <div className="divide-y overflow-hidden rounded-lg border bg-card">
+        {pipelines.map((p) => {
+          const cur = rows.find((r) => r.pipeline_id === p.id)?.access ?? "own";
+          const on = cur !== "none";
+          return (
+            <div key={p.id} className={`flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3 ${on ? "" : "bg-muted/40"}`}>
+              <div className="flex min-w-0 flex-1 items-center gap-3">
+                <Switch checked={on} onCheckedChange={(v) => save(p.id, v ? "own" : "none")} aria-label={`Acesso ao funil ${p.name}`} />
+                <div className="min-w-0">
+                  <p className={`truncate text-sm font-medium ${on ? "text-foreground" : "text-muted-foreground"}`} title={p.name}>{p.name}</p>
+                  <p className="text-[11px] text-muted-foreground">
+                    {!on ? "Sem acesso a este funil" : cur === "all" ? "Vê todos os negócios do funil" : "Vê só os negócios dele"}
+                  </p>
+                </div>
               </div>
-            ) : (
-              <span className="text-xs text-muted-foreground shrink-0">Sem acesso</span>
-            )}
-          </div>
-        );
-      })}
+              {on && (
+                <div className="grid shrink-0 grid-cols-2 rounded-full bg-muted p-0.5 sm:w-[210px]">
+                  {(["own", "all"] as const).map((opt) => (
+                    <button
+                      key={opt}
+                      type="button"
+                      onClick={() => cur !== opt && save(p.id, opt)}
+                      className={`rounded-full px-3 py-1 text-xs font-medium transition-all ${cur === opt ? "bg-background text-foreground shadow-sm" : "text-muted-foreground hover:text-foreground"}`}
+                    >
+                      {opt === "own" ? "Só os dele" : "Todos do funil"}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
     </div>
   );
 }
