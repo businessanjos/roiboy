@@ -251,3 +251,76 @@ export function UserProfileSelector({ userId, accountId }: { userId: string; acc
     </div>
   );
 }
+
+/** Permissões individuais da pessoa (sem precisar de perfil). "Padrão" = sem regra própria. */
+export function UserPermissionsEditor({ userId, accountId }: { userId: string; accountId: string }) {
+  const qc = useQueryClient();
+  const qk = ["user-permission-overrides", accountId, userId];
+  const { data: rows = [] } = useQuery({
+    queryKey: qk,
+    enabled: !!userId && !!accountId,
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from("user_permission_overrides").select("module, sub_item, access_level, scope").eq("user_id", userId);
+      return (data ?? []) as { module: string; sub_item: string; access_level: AccessLevel; scope: AccessScope }[];
+    },
+  });
+  const find = (m: string, s: string) => rows.find((r) => r.module === m && r.sub_item === s);
+
+  const save = async (module: string, sub_item: string, level: AccessLevel | "default", scope?: AccessScope) => {
+    const db = supabase as any;
+    const { error } = level === "default"
+      ? await db.from("user_permission_overrides").delete().eq("user_id", userId).eq("module", module).eq("sub_item", sub_item)
+      : await db.from("user_permission_overrides").upsert(
+          { user_id: userId, account_id: accountId, module, sub_item, access_level: level, scope: scope ?? find(module, sub_item)?.scope ?? "own" },
+          { onConflict: "user_id,module,sub_item" });
+    if (error) return toast.error("Não foi possível salvar a permissão.");
+    qc.invalidateQueries({ queryKey: qk });
+    qc.invalidateQueries({ queryKey: ["user-profile-permissions"] });
+  };
+
+  return (
+    <div className="space-y-3">
+      <div>
+        <div className="flex items-center gap-2">
+          <ShieldCheck className="h-4 w-4 text-primary" />
+          <h4 className="text-sm font-semibold">Permissões desta pessoa</h4>
+        </div>
+        <p className="text-xs text-muted-foreground mt-0.5">"Padrão" mantém o acesso normal do cargo. Salva na hora.</p>
+      </div>
+      {PERMISSION_CATALOG.map((mod) => (
+        <div key={mod.module} className="space-y-1.5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{mod.label}</p>
+          {mod.items.map((it) => {
+            const cur = find(mod.module, it.sub);
+            return (
+              <div key={it.sub} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-1.5">
+                <span className="text-sm min-w-0 flex-1">{it.label}</span>
+                <div className="flex gap-2 shrink-0">
+                  {it.scoped && cur && cur.access_level !== "none" && (
+                    <Select value={cur.scope} onValueChange={(s) => save(mod.module, it.sub, cur.access_level, s as AccessScope)}>
+                      <SelectTrigger className="h-8 w-[140px]"><SelectValue /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="own">Só os próprios</SelectItem>
+                        <SelectItem value="all">Toda a equipe</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                  <Select value={cur?.access_level ?? "default"} onValueChange={(l) => save(mod.module, it.sub, l as AccessLevel | "default")}>
+                    <SelectTrigger className="h-8 w-[130px]"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="default">Padrão</SelectItem>
+                      {(Object.keys(LEVEL_LABELS) as AccessLevel[]).map((l) => (
+                        <SelectItem key={l} value={l}>{LEVEL_LABELS[l]}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ))}
+    </div>
+  );
+}
