@@ -1,3 +1,4 @@
+import { UserPermissionsEditor } from "@/components/admin/PermissionProfilesManager";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -1518,7 +1519,7 @@ export function TeamManager() {
 
       {/* Edit Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Membro</DialogTitle>
           </DialogHeader>
@@ -1645,6 +1646,11 @@ export function TeamManager() {
                     Pode visualizar e editar tudo no sistema
                   </p>
                 </div>
+              </div>
+            )}
+            {selectedUser && currentUser?.account_id && (
+              <div className="pt-4 border-t">
+                <UserPermissionsEditor userId={selectedUser.id} accountId={currentUser.account_id} />
               </div>
             )}
           </div>
