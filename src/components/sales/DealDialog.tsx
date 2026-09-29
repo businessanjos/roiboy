@@ -151,6 +151,7 @@ export function DealDialog({
   onReopen,
 }: DealDialogProps) {
   const { currentUser } = useCurrentUser();
+  const { pipelines } = usePipelines();
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
