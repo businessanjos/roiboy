@@ -10,13 +10,8 @@ export function useCsTeamUsers() {
   return useQuery({
     queryKey: ["cs-team-users"],
     queryFn: async (): Promise<CsUser[]> => {
-      const { data: access } = await supabase
-        .from("user_sector_access")
-        .select("user_id")
-        .eq("sector_id", "operacoes")
-        .eq("is_active", true);
-      const ids = Array.from(new Set((access || []).map((a: any) => a.user_id).filter(Boolean)));
-      if (!ids.length) return [];
+      // Lista fixa: Camila Menaldo e Andréia Barros
+      const ids = ["95828516-4536-45ab-93a2-4aa278081d33", "e0017d78-21d4-413a-befc-5197df7ad666"];
       const { data: users } = await supabase.from("users").select("id, name, is_active").in("id", ids);
       return (users || [])
         .filter((u: any) => u.is_active !== false && u.name && !/tester|suporte/i.test(u.name))
