@@ -11,6 +11,7 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Ban, Eye, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { CopyPermissionsButton } from "./CopyPermissionsDialog";
 import {
   LEVEL_LABELS,
   PERMISSION_CATALOG,
@@ -282,12 +283,15 @@ export function UserPermissionsEditor({ userId, accountId }: { userId: string; a
 
   return (
     <div className="space-y-3">
-      <div>
-        <div className="flex items-center gap-2">
-          <ShieldCheck className="h-4 w-4 text-primary" />
-          <h4 className="text-sm font-semibold">Permissões desta pessoa</h4>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2">
+            <ShieldCheck className="h-4 w-4 text-primary" />
+            <h4 className="text-sm font-semibold">Permissões desta pessoa</h4>
+          </div>
+          <p className="text-xs text-muted-foreground mt-0.5">"Padrão" mantém o acesso normal do cargo. Salva na hora.</p>
         </div>
-        <p className="text-xs text-muted-foreground mt-0.5">"Padrão" mantém o acesso normal do cargo. Salva na hora.</p>
+        <CopyPermissionsButton userId={userId} accountId={accountId} />
       </div>
       {PERMISSION_CATALOG.map((mod) => (
         <div key={mod.module} className="space-y-1.5">

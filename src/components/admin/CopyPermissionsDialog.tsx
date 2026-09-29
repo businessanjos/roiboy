@@ -1,0 +1,113 @@
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Copy, Loader2, Search } from "lucide-react";
+import { toast } from "sonner";
+
+/** Replica exatamente as permissões e o acesso por funil de uma pessoa para outras. */
+export function CopyPermissionsButton({ userId, accountId }: { userId: string; accountId: string }) {
+  const qc = useQueryClient();
+  const [open, setOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
+
+  const { data: users = [] } = useQuery({
+    queryKey: ["copy-perm-users", accountId],
+    enabled: open && !!accountId,
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("users").select("id, name, email").eq("account_id", accountId).eq("is_active", true).order("name");
+      return (data ?? []) as { id: string; name: string | null; email: string | null }[];
+    },
+  });
+
+  const list = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return users.filter((u) => u.id !== userId && (!q || `${u.name ?? ""} ${u.email ?? ""}`.toLowerCase().includes(q)));
+  }, [users, search, userId]);
+
+  const toggle = (id: string) => setSelected((s) => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
+
+  const apply = async () => {
+    const targets = [...selected];
+    if (!targets.length) return;
+    setSaving(true);
+    try {
+      const db = supabase as any;
+      const [{ data: perms, error: e1 }, { data: pipes, error: e2 }] = await Promise.all([
+        db.from("user_permission_overrides").select("module, sub_item, access_level, scope").eq("user_id", userId),
+        db.from("user_pipeline_access").select("pipeline_id, access").eq("user_id", userId),
+      ]);
+      if (e1 || e2) throw e1 || e2;
+
+      for (const t of targets) {
+        const d1 = await db.from("user_permission_overrides").delete().eq("user_id", t);
+        if (d1.error) throw d1.error;
+        const d2 = await db.from("user_pipeline_access").delete().eq("user_id", t);
+        if (d2.error) throw d2.error;
+      }
+      const permRows = targets.flatMap((t) => (perms ?? []).map((p: any) => ({ ...p, user_id: t, account_id: accountId })));
+      const pipeRows = targets.flatMap((t) => (pipes ?? []).map((p: any) => ({ ...p, user_id: t, account_id: accountId, updated_at: new Date().toISOString() })));
+      if (permRows.length) { const r = await db.from("user_permission_overrides").insert(permRows); if (r.error) throw r.error; }
+      if (pipeRows.length) { const r = await db.from("user_pipeline_access").insert(pipeRows); if (r.error) throw r.error; }
+
+      qc.invalidateQueries({ queryKey: ["user-permission-overrides"] });
+      qc.invalidateQueries({ queryKey: ["user-pipeline-access"] });
+      qc.invalidateQueries({ queryKey: ["user-profile-permissions"] });
+      qc.invalidateQueries({ queryKey: ["my-pipeline-access"] });
+      toast.success(`Permissões copiadas para ${targets.length} pessoa${targets.length > 1 ? "s" : ""}.`);
+      setOpen(false);
+      setSelected(new Set());
+    } catch {
+      toast.error("Não foi possível copiar as permissões.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <>
+      <Button type="button" variant="outline" size="sm" className="h-8 gap-1.5" onClick={() => setOpen(true)}>
+        <Copy className="h-3.5 w-3.5" /> Copiar para outras pessoas
+      </Button>
+      <Dialog open={open} onOpenChange={(o) => { setOpen(o); if (!o) { setSelected(new Set()); setSearch(""); } }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Copiar permissões</DialogTitle>
+            <DialogDescription>
+              As pessoas marcadas ficam com exatamente as mesmas permissões e funis desta pessoa. O que elas tinham antes é substituído.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="relative">
+            <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+            <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Buscar pessoa..." className="pl-8" />
+          </div>
+          <div className="max-h-72 overflow-y-auto rounded-md border divide-y">
+            {list.length === 0 && <p className="p-4 text-center text-sm text-muted-foreground">Ninguém encontrado</p>}
+            {list.map((u) => (
+              <label key={u.id} className="flex cursor-pointer items-center gap-3 px-3 py-2 hover:bg-muted/50">
+                <Checkbox checked={selected.has(u.id)} onCheckedChange={() => toggle(u.id)} />
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-medium">{u.name || u.email}</p>
+                  {u.name && u.email && <p className="truncate text-xs text-muted-foreground">{u.email}</p>}
+                </div>
+              </label>
+            ))}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setOpen(false)} disabled={saving}>Cancelar</Button>
+            <Button onClick={apply} disabled={saving || selected.size === 0}>
+              {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Copiar para {selected.size || ""} {selected.size === 1 ? "pessoa" : "pessoas"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
