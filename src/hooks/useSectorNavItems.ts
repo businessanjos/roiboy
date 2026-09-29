@@ -9,6 +9,8 @@ import { isManagementUser } from "@/lib/access/managementRoles";
 import { isTrafficAgencyUser } from "@/lib/agency";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import type { NavItem } from "@/config/sectors";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
+import { isRouteBlockedByProfile } from "@/lib/access/profileGate";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 export const SDR_ROLES = ["SDR"];
@@ -39,6 +41,7 @@ export function useSectorNavItems(): NavItem[] {
   const { isSuperAdmin } = useSuperAdmin();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
   const { currentSector } = useSector();
+  const { perms: profilePerms, isAdmin: profileIsAdmin } = useUserPermissions();
 
   return useMemo(() => {
     const teamRoleName = currentUser?.team_role_name;
@@ -103,6 +106,10 @@ export function useSectorNavItems(): NavItem[] {
 
     if (showAllItems) return sectorItems;
 
+    // Perfis de Permissão: esconde o que estiver explicitamente em "Sem acesso".
+    sectorItems = sectorItems.filter(
+      (item) => !isRouteBlockedByProfile(item.to.split("?")[0], profilePerms, profileIsAdmin),
+    );
 
     return sectorItems.filter((item) => {
       if (isSalesRepUser && item.to === "/sales-team") return false;
@@ -112,6 +119,8 @@ export function useSectorNavItems(): NavItem[] {
       return hasPermission(item.permission);
     });
   }, [
+    profilePerms,
+    profileIsAdmin,
     hasPermission,
     permissionsLoading,
     isSuperAdmin,
