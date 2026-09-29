@@ -1,3 +1,4 @@
+import { UserPermissionsEditor } from "@/components/admin/PermissionProfilesManager";
 import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -186,6 +187,7 @@ export function TeamManager() {
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<TeamUser | null>(null);
+  const [myAccountId, setMyAccountId] = useState<string | null>(null);
   const [userToDelete, setUserToDelete] = useState<TeamUser | null>(null);
   const [statusFilter, setStatusFilter] = useState<"active" | "inactive" | "all">("active");
   const [deactivateTarget, setDeactivateTarget] = useState<TeamUser | null>(null);
@@ -255,6 +257,7 @@ export function TeamManager() {
 
       if (currentUserError) throw currentUserError;
       if (!currentUser) return;
+      setMyAccountId(currentUser.account_id);
 
       const { data: rolesData, error: rolesError } = await supabase
         .from("team_roles")
@@ -1518,7 +1521,7 @@ export function TeamManager() {
 
       {/* Edit Member Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="w-[calc(100vw-2rem)] sm:max-w-xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Membro</DialogTitle>
           </DialogHeader>
@@ -1645,6 +1648,11 @@ export function TeamManager() {
                     Pode visualizar e editar tudo no sistema
                   </p>
                 </div>
+              </div>
+            )}
+            {selectedUser && myAccountId && (
+              <div className="pt-4 border-t">
+                <UserPermissionsEditor userId={selectedUser.id} accountId={myAccountId} />
               </div>
             )}
           </div>
