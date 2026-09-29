@@ -29923,6 +29923,10 @@ export type Database = {
         }
         Returns: Json
       }
+      replicate_user_access: {
+        Args: { _source: string; _targets: string[] }
+        Returns: number
+      }
       request_integration_access: {
         Args: { _platform: string; _reason?: string }
         Returns: Json
