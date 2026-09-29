@@ -24,6 +24,8 @@ import { getSectorByRoute, routeBelongsToSector } from "@/config/sectors";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { usePermissions } from "@/hooks/usePermissions";
 import { isSkippedRoute } from "@/lib/access/routeAccess";
+import { isRouteBlockedByProfile } from "@/lib/access/profileGate";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
 
@@ -39,6 +41,7 @@ export function AppLayout() {
   const { currentUser } = useCurrentUser();
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
+  const { perms: profilePerms, isAdmin: profileIsAdmin, loading: profileLoading } = useUserPermissions();
 
   // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
@@ -151,6 +154,9 @@ export function AppLayout() {
     .filter((item) => location.pathname === item.to || location.pathname.startsWith(item.to + "/") || location.pathname.startsWith(item.to))
     .sort((a, b) => b.to.length - a.to.length)[0];
   if (!permissionsLoading && routeSector && !skipSectorGuard && routeItem?.permission && !hasPermission(routeItem.permission)) {
+    return <Navigate to="/setores" replace />;
+  }
+  if (!profileLoading && !skipSectorGuard && isRouteBlockedByProfile(location.pathname, profilePerms, profileIsAdmin)) {
     return <Navigate to="/setores" replace />;
   }
 
