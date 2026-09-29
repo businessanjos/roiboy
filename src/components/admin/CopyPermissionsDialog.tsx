@@ -39,37 +39,8 @@ export function CopyPermissionsButton({ userId, accountId }: { userId: string; a
     if (!targets.length) return;
     setSaving(true);
     try {
-      const db = supabase as any;
-      const [{ data: perms, error: e1 }, { data: pipes, error: e2 }, { data: sectors, error: e3 }, { data: roles, error: e4 }, { data: vis, error: e5 }] = await Promise.all([
-        db.from("user_permission_overrides").select("module, sub_item, access_level, scope").eq("user_id", userId),
-        db.from("user_pipeline_access").select("pipeline_id, access").eq("user_id", userId),
-        db.from("user_sector_access").select("sector_id, role_in_sector, is_active").eq("user_id", userId).eq("account_id", accountId),
-        db.from("user_team_roles").select("team_role_id").eq("user_id", userId),
-        db.from("user_deal_visibility").select("can_view_open, can_view_won, can_view_lost").eq("user_id", userId).eq("account_id", accountId).maybeSingle(),
-      ]);
-      if (e1 || e2 || e3 || e4 || e5) throw e1 || e2 || e3 || e4 || e5;
-
-      for (const t of targets) {
-        const d1 = await db.from("user_permission_overrides").delete().eq("user_id", t);
-        if (d1.error) throw d1.error;
-        const d2 = await db.from("user_pipeline_access").delete().eq("user_id", t);
-        if (d2.error) throw d2.error;
-        const d3 = await db.from("user_sector_access").delete().eq("user_id", t).eq("account_id", accountId);
-        if (d3.error) throw d3.error;
-        const d4 = await db.from("user_team_roles").delete().eq("user_id", t);
-        if (d4.error) throw d4.error;
-        const d5 = await db.from("user_deal_visibility").delete().eq("user_id", t).eq("account_id", accountId);
-        if (d5.error) throw d5.error;
-      }
-      const secRows = targets.flatMap((t) => (sectors ?? []).map((r: any) => ({ ...r, user_id: t, account_id: accountId })));
-      const roleRows = targets.flatMap((t) => (roles ?? []).map((r: any) => ({ ...r, user_id: t })));
-      if (secRows.length) { const r = await db.from("user_sector_access").insert(secRows); if (r.error) throw r.error; }
-      if (roleRows.length) { const r = await db.from("user_team_roles").insert(roleRows); if (r.error) throw r.error; }
-      if (vis) { const r = await db.from("user_deal_visibility").insert(targets.map((t) => ({ ...vis, user_id: t, account_id: accountId }))); if (r.error) throw r.error; }
-      const permRows = targets.flatMap((t) => (perms ?? []).map((p: any) => ({ ...p, user_id: t, account_id: accountId })));
-      const pipeRows = targets.flatMap((t) => (pipes ?? []).map((p: any) => ({ ...p, user_id: t, account_id: accountId, updated_at: new Date().toISOString() })));
-      if (permRows.length) { const r = await db.from("user_permission_overrides").insert(permRows); if (r.error) throw r.error; }
-      if (pipeRows.length) { const r = await db.from("user_pipeline_access").insert(pipeRows); if (r.error) throw r.error; }
+      const { error } = await (supabase as any).rpc("replicate_user_access", { _source: userId, _targets: targets });
+      if (error) throw error;
 
       qc.invalidateQueries({ queryKey: ["user-permission-overrides"] });
       qc.invalidateQueries({ queryKey: ["user-pipeline-access"] });
