@@ -1,3 +1,4 @@
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -334,6 +335,7 @@ export default function RoyZapp() {
     return sectors.find(s => s.id === selectedSectorId);
   }, [selectedSectorId]);
 
+  const { denied: profileDenied } = useUserPermissions();
   // Papel efetivo do usuário DENTRO do WhatsApp deste setor (admin/manager/member/viewer)
   const zappRole = useMemo(
     () =>
@@ -350,11 +352,15 @@ export default function RoyZapp() {
     // O toggle "Acesso global" (zapp_agents.has_global_access) libera enxergar e
     // puxar QUALQUER conversa do setor, mesmo para quem é apenas "member".
     // Viewer continua somente leitura.
+    let caps = base;
     if (hasGlobalVisibility && zappRole !== "viewer") {
-      return { ...base, canSeeAllSectorConversations: true, canClaim: true };
+      caps = { ...base, canSeeAllSectorConversations: true, canClaim: true };
     }
-    return base;
-  }, [zappRole, hasGlobalVisibility]);
+    // Perfis de Permissão: "Sem acesso" explícito vence o papel no setor.
+    if (profileDenied("royzapp", "transfer")) caps = { ...caps, canTransfer: false };
+    if (profileDenied("royzapp", "sector_queue")) caps = { ...caps, canSeeAllSectorConversations: false };
+    return caps;
+  }, [zappRole, hasGlobalVisibility, profileDenied]);
 
 
 
