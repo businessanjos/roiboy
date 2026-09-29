@@ -88,6 +88,7 @@ export type Database = {
           onboarding_completed_at: string | null
           onboarding_step: number
           payer_required_in_won: boolean
+          renewal_responsible_user_ids: string[] | null
           threshold_engagement_drop_percent: number
           threshold_low_escore: number
           threshold_low_roizometer: number
@@ -132,6 +133,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number
           payer_required_in_won?: boolean
+          renewal_responsible_user_ids?: string[] | null
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number
@@ -176,6 +178,7 @@ export type Database = {
           onboarding_completed_at?: string | null
           onboarding_step?: number
           payer_required_in_won?: boolean
+          renewal_responsible_user_ids?: string[] | null
           threshold_engagement_drop_percent?: number
           threshold_low_escore?: number
           threshold_low_roizometer?: number

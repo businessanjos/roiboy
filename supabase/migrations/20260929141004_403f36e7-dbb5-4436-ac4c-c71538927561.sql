@@ -1,0 +1,1 @@
+ALTER TABLE public.account_settings ADD COLUMN IF NOT EXISTS renewal_responsible_user_ids uuid[];
