@@ -743,7 +743,7 @@ Deno.serve(async (req) => {
               // O webhook pode inserir a mesma mensagem em paralelo: ignorar duplicadas
               const { error: insertError } = await supabase
                 .from("zapp_messages")
-                .upsert(rows, { onConflict: "external_id", ignoreDuplicates: true });
+                .upsert(rows, { onConflict: "external_message_id", ignoreDuplicates: true });
               if (insertError && (insertError as any).code !== "23505") throw insertError;
               stats.messagesInserted += rows.length;
               syncedThisChat = true;
