@@ -15,6 +15,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { TitleTagInput } from "@/components/sales/TitleTagInput";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -584,10 +585,10 @@ export function ClientDeals({ clientId, clientName }: ClientDealsProps) {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label htmlFor="title">Título *</Label>
-              <Input
+              <TitleTagInput
                 id="title"
                 value={formData.title}
-                onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                onValueChange={(v) => setFormData({ ...formData, title: v })}
                 placeholder={`Negócio com ${clientName || "cliente"}`}
               />
             </div>

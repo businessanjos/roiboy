@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TitleTagInput } from "@/components/sales/TitleTagInput";
 import { Badge } from "@/components/ui/badge";
 import { useLeadDuplicateDetection, LeadDuplicateMatch } from "@/hooks/useLeadDuplicateDetection";
 import { LeadDuplicateAlert } from "@/components/leads/LeadDuplicateAlert";
@@ -1464,12 +1465,10 @@ export default function LeadsTab() {
               )}
               <div className="space-y-2">
                 <Label>Título do Negócio</Label>
-                <Input
-                  placeholder="Ex: Consultoria - João"
+                <TitleTagInput
+                  placeholder="Ex: [CARTEIRA-EM] João"
                   value={dealFormData.title}
-                  onChange={(e) =>
-                    setDealFormData({ ...dealFormData, title: e.target.value })
-                  }
+                  onValueChange={(v) => setDealFormData({ ...dealFormData, title: v })}
                 />
               </div>
               {/* Item da Venda + Valor em grid de 2 colunas */}

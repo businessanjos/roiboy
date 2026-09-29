@@ -12,6 +12,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TitleTagInput } from "@/components/sales/TitleTagInput";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
@@ -787,9 +788,9 @@ export function ZappCRMPanel({
               <div className="space-y-3">
                 <div>
                   <Label className="text-xs text-zapp-text-muted">Título</Label>
-                  <Input
+                  <TitleTagInput
                     value={newDealTitle}
-                    onChange={(e) => setNewDealTitle(e.target.value)}
+                    onValueChange={setNewDealTitle}
                     placeholder={conversationContactName || "Nome do negócio"}
                     className="h-8 text-sm bg-zapp-bg border-zapp-border text-zapp-text mt-1"
                   />
