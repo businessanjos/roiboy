@@ -321,6 +321,68 @@ export function UserPermissionsEditor({ userId, accountId }: { userId: string; a
           })}
         </div>
       ))}
+      <UserPipelineAccessEditor userId={userId} accountId={accountId} />
+    </div>
+  );
+}
+
+type PipelineAccess = "none" | "own" | "all";
+
+/** Acesso por funil: sem linha = "Só os dele" (funil novo já nasce assim). */
+export function UserPipelineAccessEditor({ userId, accountId }: { userId: string; accountId: string }) {
+  const qc = useQueryClient();
+  const qk = ["user-pipeline-access", accountId, userId];
+  const { data: pipelines = [] } = useQuery({
+    queryKey: ["pipelines-for-permissions", accountId],
+    enabled: !!accountId,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("pipelines").select("id, name, is_active")
+        .eq("account_id", accountId).eq("is_active", true).order("created_at");
+      return (data ?? []) as { id: string; name: string }[];
+    },
+  });
+  const { data: rows = [] } = useQuery({
+    queryKey: qk,
+    enabled: !!userId && !!accountId,
+    queryFn: async () => {
+      const { data } = await (supabase as any).from("user_pipeline_access").select("pipeline_id, access").eq("user_id", userId);
+      return (data ?? []) as { pipeline_id: string; access: PipelineAccess }[];
+    },
+  });
+
+  const save = async (pipelineId: string, access: PipelineAccess) => {
+    const db = supabase as any;
+    const { error } = access === "own"
+      ? await db.from("user_pipeline_access").delete().eq("user_id", userId).eq("pipeline_id", pipelineId)
+      : await db.from("user_pipeline_access").upsert(
+          { user_id: userId, account_id: accountId, pipeline_id: pipelineId, access, updated_at: new Date().toISOString() },
+          { onConflict: "user_id,pipeline_id" });
+    if (error) return toast.error("Não foi possível salvar o acesso ao funil.");
+    qc.invalidateQueries({ queryKey: qk });
+    qc.invalidateQueries({ queryKey: ["my-pipeline-access"] });
+  };
+
+  if (pipelines.length === 0) return null;
+  return (
+    <div className="space-y-1.5">
+      <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Funis</p>
+      <p className="text-xs text-muted-foreground">Funil novo entra como "Só os dele". "Todos do funil" libera a equipe inteira só naquele funil.</p>
+      {pipelines.map((p) => {
+        const cur = rows.find((r) => r.pipeline_id === p.id)?.access ?? "own";
+        return (
+          <div key={p.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border px-3 py-1.5">
+            <span className="text-sm min-w-0 flex-1 truncate" title={p.name}>{p.name}</span>
+            <Select value={cur} onValueChange={(v) => save(p.id, v as PipelineAccess)}>
+              <SelectTrigger className="h-8 w-[150px] shrink-0"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="own">Só os dele</SelectItem>
+                <SelectItem value="all">Todos do funil</SelectItem>
+                <SelectItem value="none">Sem acesso</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        );
+      })}
     </div>
   );
 }

@@ -26630,6 +26630,65 @@ export type Database = {
           },
         ]
       }
+      user_pipeline_access: {
+        Row: {
+          access: string
+          account_id: string
+          created_at: string
+          id: string
+          pipeline_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access: string
+          account_id: string
+          created_at?: string
+          id?: string
+          pipeline_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access?: string
+          account_id?: string
+          created_at?: string
+          id?: string
+          pipeline_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_pipeline_access_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_pipeline_access_pipeline_id_fkey"
+            columns: ["pipeline_id"]
+            isOneToOne: false
+            referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_pipeline_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_pipeline_access_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_royzapp_views: {
         Row: {
           account_id: string
@@ -29388,6 +29447,7 @@ export type Database = {
       can_view_deal: {
         Args: {
           _created_by: string
+          _pipeline: string
           _renewal: string
           _responsible: string
           _sdr: string
