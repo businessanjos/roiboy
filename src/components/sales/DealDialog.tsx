@@ -27,10 +27,14 @@ import {
 import {
   Select,
   SelectContent,
+  SelectGroup,
   SelectItem,
+  SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { usePipelines } from "@/hooks/usePipelines";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -147,6 +151,7 @@ export function DealDialog({
   onReopen,
 }: DealDialogProps) {
   const { currentUser } = useCurrentUser();
+  const { pipelines } = usePipelines();
   const [saving, setSaving] = useState(false);
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
   const [lostDialogOpen, setLostDialogOpen] = useState(false);
@@ -643,18 +648,49 @@ export function DealDialog({
                                 <SelectValue placeholder="Selecione a etapa" />
                               </SelectTrigger>
                             </FormControl>
-                            <SelectContent>
-                              {stages.map(stage => (
-                                <SelectItem key={stage.id} value={stage.id}>
-                                  <div className="flex items-center gap-2">
-                                    <div 
-                                      className="w-2 h-2 rounded-full"
-                                      style={{ backgroundColor: stage.color }}
-                                    />
-                                    {stage.name}
-                                  </div>
-                                </SelectItem>
-                              ))}
+                            <SelectContent className="max-h-80">
+                              {(() => {
+                                const groups = new Map<string, DealStage[]>();
+                                stages.forEach((s) => {
+                                  const pid = (s as DealStage & { pipeline_id?: string | null }).pipeline_id || "__none__";
+                                  if (!groups.has(pid)) groups.set(pid, []);
+                                  groups.get(pid)!.push(s);
+                                });
+                                const ordered = [...groups.entries()].sort((a, b) => {
+                                  const ia = pipelines.findIndex((p) => p.id === a[0]);
+                                  const ib = pipelines.findIndex((p) => p.id === b[0]);
+                                  return (ia < 0 ? 999 : ia) - (ib < 0 ? 999 : ib);
+                                });
+                                return ordered.map(([pid, list], gi) => {
+                                  const pipe = pipelines.find((p) => p.id === pid);
+                                  return (
+                                    <SelectGroup key={pid}>
+                                      {gi > 0 && <SelectSeparator />}
+                                      <SelectLabel className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+                                        <span
+                                          className="h-2.5 w-1 rounded-full"
+                                          style={{ backgroundColor: pipe?.color || "hsl(var(--muted-foreground))" }}
+                                        />
+                                        {pipe?.name || "Sem funil"}
+                                      </SelectLabel>
+                                      {list.map((stage) => (
+                                        <SelectItem key={stage.id} value={stage.id}>
+                                          <div className="flex items-center gap-2">
+                                            <div
+                                              className="w-2 h-2 rounded-full"
+                                              style={{ backgroundColor: stage.color }}
+                                            />
+                                            {stage.name}
+                                            {pipe && (
+                                              <span className="text-[10px] text-muted-foreground">· {pipe.name}</span>
+                                            )}
+                                          </div>
+                                        </SelectItem>
+                                      ))}
+                                    </SelectGroup>
+                                  );
+                                });
+                              })()}
                             </SelectContent>
                           </Select>
                           <FormMessage />
