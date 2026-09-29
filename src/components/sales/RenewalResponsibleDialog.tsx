@@ -1,14 +1,20 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Button } from "@/components/ui/button";
-import { Check, Plus, ArrowLeft } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Check, Plus, ArrowLeft, BarChart3, Search } from "lucide-react";
+import { toast } from "sonner";
 
 export type CsUser = { id: string; name: string };
 
-// Lista padrão: Camila Menaldo, Andréia Barros, Everton Pieri, Jonathan Marcato
+// Lista padrão (quando a empresa ainda não escolheu): Camila, Andréia, Everton, Jonathan
 const DEFAULT_IDS = [
   "95828516-4536-45ab-93a2-4aa278081d33",
   "e0017d78-21d4-413a-befc-5197df7ad666",
@@ -23,11 +29,31 @@ function normalize(list: any[]): CsUser[] {
     .sort((a, b) => a.name.localeCompare(b.name, "pt-BR"));
 }
 
-export function useCsTeamUsers() {
+function useResponsibleIds() {
+  const { currentUser } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   return useQuery({
-    queryKey: ["cs-team-users", DEFAULT_IDS],
+    queryKey: ["renewal-responsible-ids", accountId],
+    enabled: !!accountId,
+    queryFn: async (): Promise<string[]> => {
+      const { data } = await (supabase as any)
+        .from("account_settings")
+        .select("renewal_responsible_user_ids")
+        .eq("account_id", accountId)
+        .maybeSingle();
+      const ids = data?.renewal_responsible_user_ids as string[] | null;
+      return ids && ids.length ? ids : DEFAULT_IDS;
+    },
+  });
+}
+
+export function useCsTeamUsers() {
+  const { data: ids } = useResponsibleIds();
+  return useQuery({
+    queryKey: ["cs-team-users", ids],
+    enabled: !!ids,
     queryFn: async (): Promise<CsUser[]> => {
-      const { data } = await supabase.from("users").select("id, name, is_active").in("id", DEFAULT_IDS);
+      const { data } = await supabase.from("users").select("id, name, is_active").in("id", ids!);
       return normalize(data || []);
     },
   });
@@ -44,6 +70,29 @@ function useAllActiveUsers(enabled: boolean) {
   });
 }
 
+type RenewalDeal = { id: string; title: string | null; status: string | null; renewal_responsible_user_id: string; created_at: string };
+
+function useRenewalDeals(enabled: boolean) {
+  return useQuery({
+    queryKey: ["renewal-deals-by-responsible"],
+    enabled,
+    queryFn: async (): Promise<RenewalDeal[]> => {
+      const { data } = await (supabase as any)
+        .from("deals")
+        .select("id, title, status, renewal_responsible_user_id, created_at")
+        .not("renewal_responsible_user_id", "is", null)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(2000);
+      return data || [];
+    },
+  });
+}
+
+const STATUS_LABEL: Record<string, string> = { open: "Em aberto", won: "Ganha", lost: "Perdida" };
+
+type Mode = "pick" | "manage" | "stats";
+
 export function RenewalResponsibleDialog({
   open,
   currentId,
@@ -55,41 +104,163 @@ export function RenewalResponsibleDialog({
   onCancel: () => void;
   onConfirm: (user: CsUser) => void;
 }) {
-  const [showAll, setShowAll] = useState(false);
+  const qc = useQueryClient();
+  const { currentUser } = useCurrentUser();
+  const [mode, setMode] = useState<Mode>("pick");
+  const { data: ids = [] } = useResponsibleIds();
   const { data: users = [], isLoading } = useCsTeamUsers();
-  const { data: allUsers = [], isLoading: loadingAll } = useAllActiveUsers(showAll);
-  const others = allUsers.filter((u) => !DEFAULT_IDS.includes(u.id));
-  const list = showAll ? others : users;
-  const loading = showAll ? loadingAll : isLoading;
+  const { data: allUsers = [], isLoading: loadingAll } = useAllActiveUsers(open);
+  const { data: deals = [] } = useRenewalDeals(open);
 
-  const close = () => { setShowAll(false); onCancel(); };
+  const [draft, setDraft] = useState<string[]>([]);
+  const [manageQuery, setManageQuery] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("open");
+  const [personFilter, setPersonFilter] = useState("all");
+
+  const counts = useMemo(() => {
+    const m: Record<string, number> = {};
+    deals.filter((d) => d.status === "open").forEach((d) => { m[d.renewal_responsible_user_id] = (m[d.renewal_responsible_user_id] || 0) + 1; });
+    return m;
+  }, [deals]);
+
+  const nameOf = (id: string) => allUsers.find((u) => u.id === id)?.name ?? users.find((u) => u.id === id)?.name ?? "—";
+
+  const close = () => { setMode("pick"); onCancel(); };
+
+  const openManage = () => { setDraft(ids); setManageQuery(""); setMode("manage"); };
+
+  const saveManage = async () => {
+    if (!currentUser?.account_id) return;
+    if (draft.length === 0) { toast.error("Escolha pelo menos uma pessoa."); return; }
+    setSaving(true);
+    const { data: existing } = await (supabase as any).from("account_settings").select("id").eq("account_id", currentUser.account_id).maybeSingle();
+    const res = existing
+      ? await (supabase as any).from("account_settings").update({ renewal_responsible_user_ids: draft }).eq("id", existing.id)
+      : await (supabase as any).from("account_settings").insert({ account_id: currentUser.account_id, renewal_responsible_user_ids: draft });
+    setSaving(false);
+    if (res.error) { toast.error("Não foi possível salvar a lista."); return; }
+    toast.success("Lista de responsáveis atualizada");
+    await qc.invalidateQueries({ queryKey: ["renewal-responsible-ids"] });
+    setMode("pick");
+  };
+
+  const filteredManage = allUsers.filter((u) => u.name.toLowerCase().includes(manageQuery.trim().toLowerCase()));
+  const selectedFirst = [...filteredManage].sort((a, b) => Number(draft.includes(b.id)) - Number(draft.includes(a.id)));
+
+  const statsRows = useMemo(() => {
+    const list = deals.filter((d) => (statusFilter === "all" || d.status === statusFilter) && (personFilter === "all" || d.renewal_responsible_user_id === personFilter));
+    const byPerson: Record<string, number> = {};
+    list.forEach((d) => { byPerson[d.renewal_responsible_user_id] = (byPerson[d.renewal_responsible_user_id] || 0) + 1; });
+    return { list, byPerson: Object.entries(byPerson).sort((a, b) => b[1] - a[1]) };
+  }, [deals, statusFilter, personFilter]);
+
+  const title = mode === "manage" ? "Quem aparece na lista de responsáveis?" : mode === "stats" ? "Renovações por responsável" : "Quem é o responsável pela renovação?";
+  const desc = mode === "manage" ? "Marque as pessoas que devem aparecer na lista principal." : mode === "stats" ? "Veja quantas renovações cada pessoa está cuidando." : "Escolha quem vai cuidar desta renovação.";
 
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
-      <DialogContent className="max-w-md">
-        <DialogHeader>
-          <DialogTitle>Quem é o responsável pela renovação?</DialogTitle>
-          <DialogDescription>
-            {showAll ? "Escolha outra pessoa da equipe." : "Escolha quem vai cuidar desta renovação."}
-          </DialogDescription>
+      <DialogContent className="max-w-md w-[calc(100vw-2rem)] max-h-[90vh] flex flex-col overflow-hidden">
+        <DialogHeader className="pr-8">
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription>{desc}</DialogDescription>
         </DialogHeader>
-        <Command className="border rounded-md">
-          <CommandInput placeholder="Buscar pessoa..." />
-          <CommandList className="max-h-64">
-            <CommandEmpty>{loading ? "Carregando..." : "Ninguém encontrado."}</CommandEmpty>
-            <CommandGroup>
-              {list.map((u) => (
-                <CommandItem key={u.id} value={u.name} onSelect={() => { setShowAll(false); onConfirm(u); }}>
-                  <Check className={`mr-2 h-4 w-4 ${currentId === u.id ? "opacity-100" : "opacity-0"}`} />
-                  {u.name}
-                </CommandItem>
+
+        {mode === "pick" && (
+          <>
+            <Command className="border rounded-md">
+              <CommandInput placeholder="Buscar pessoa..." />
+              <CommandList className="max-h-64 overflow-y-auto">
+                <CommandEmpty>{isLoading ? "Carregando..." : "Ninguém encontrado."}</CommandEmpty>
+                <CommandGroup>
+                  {users.map((u) => (
+                    <CommandItem key={u.id} value={u.name} onSelect={() => { setMode("pick"); onConfirm(u); }}>
+                      <Check className={`mr-2 h-4 w-4 ${currentId === u.id ? "opacity-100" : "opacity-0"}`} />
+                      <span className="flex-1 truncate">{u.name}</span>
+                      <span className="text-xs text-muted-foreground" title="Renovações em aberto">{counts[u.id] || 0}</span>
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+            <div className="flex items-center justify-between gap-2">
+              <Button variant="ghost" size="sm" onClick={openManage}>
+                <Plus className="mr-1 h-4 w-4" /> Adicionar outra pessoa
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setMode("stats")}>
+                <BarChart3 className="mr-1 h-4 w-4" /> Ver renovações
+              </Button>
+            </div>
+          </>
+        )}
+
+        {mode === "manage" && (
+          <>
+            <div className="relative">
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input autoFocus value={manageQuery} onChange={(e) => setManageQuery(e.target.value)} placeholder="Buscar pessoa..." className="pl-8" />
+            </div>
+            <p className="text-xs text-muted-foreground">{draft.length} selecionada{draft.length === 1 ? "" : "s"}</p>
+            <div className="border rounded-md max-h-72 overflow-y-auto p-1">
+              {loadingAll && <p className="text-sm text-muted-foreground text-center py-6">Carregando...</p>}
+              {!loadingAll && selectedFirst.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Ninguém encontrado.</p>}
+              {selectedFirst.map((u) => {
+                const on = draft.includes(u.id);
+                return (
+                  <label key={u.id} className="flex items-center gap-2 px-2 py-1.5 rounded-md text-sm hover:bg-accent cursor-pointer min-w-0">
+                    <Checkbox checked={on} onCheckedChange={() => setDraft((d) => on ? d.filter((x) => x !== u.id) : [...d, u.id])} className="shrink-0" />
+                    <span className="truncate">{u.name}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="flex justify-between gap-2">
+              <Button variant="ghost" size="sm" onClick={() => setMode("pick")}><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Button>
+              <Button size="sm" onClick={saveManage} disabled={saving}>{saving ? "Salvando..." : "Salvar lista"}</Button>
+            </div>
+          </>
+        )}
+
+        {mode === "stats" && (
+          <>
+            <div className="grid grid-cols-2 gap-2">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="open">Em aberto</SelectItem>
+                  <SelectItem value="won">Ganhas</SelectItem>
+                  <SelectItem value="lost">Perdidas</SelectItem>
+                  <SelectItem value="all">Todas</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={personFilter} onValueChange={setPersonFilter}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as pessoas</SelectItem>
+                  {Array.from(new Set(deals.map((d) => d.renewal_responsible_user_id))).map((id) => (
+                    <SelectItem key={id} value={id}>{nameOf(id)}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {statsRows.byPerson.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma renovação encontrada.</p>}
+              {statsRows.byPerson.map(([id, n]) => (
+                <Badge key={id} variant="secondary" className="cursor-pointer" onClick={() => setPersonFilter(id)}>{nameOf(id)}: {n}</Badge>
               ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-        <Button variant="ghost" size="sm" className="self-start" onClick={() => setShowAll((v) => !v)}>
-          {showAll ? <><ArrowLeft className="mr-1 h-4 w-4" /> Voltar à lista principal</> : <><Plus className="mr-1 h-4 w-4" /> Adicionar outra pessoa</>}
-        </Button>
+            </div>
+            <div className="border rounded-md max-h-64 overflow-y-auto divide-y">
+              {statsRows.list.map((d) => (
+                <div key={d.id} className="flex items-center gap-2 px-3 py-2 text-sm min-w-0">
+                  <span className="flex-1 truncate" title={d.title ?? ""}>{d.title || "Sem título"}</span>
+                  <span className="text-xs text-muted-foreground shrink-0">{nameOf(d.renewal_responsible_user_id)}</span>
+                  <Badge variant="outline" className="shrink-0">{STATUS_LABEL[d.status ?? ""] ?? d.status}</Badge>
+                </div>
+              ))}
+            </div>
+            <Button variant="ghost" size="sm" className="self-start" onClick={() => setMode("pick")}><ArrowLeft className="mr-1 h-4 w-4" /> Voltar</Button>
+          </>
+        )}
       </DialogContent>
     </Dialog>
   );
