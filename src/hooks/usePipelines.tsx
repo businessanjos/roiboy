@@ -58,9 +58,13 @@ export function usePipelines() {
           .from('user_pipeline_access').select('pipeline_id')
           .eq('user_id', currentUser.id).eq('access', 'none');
         const blockedIds = new Set(((blocked ?? []) as { pipeline_id: string }[]).map(b => b.pipeline_id));
-        const visible = data.filter(p => !blockedIds.has(p.id));
-        data = visible.length > 0 ? visible : data;
+        data = data.filter(p => !blockedIds.has(p.id));
         setPipelines(data);
+        if (data.length === 0) {
+          // Sem acesso a nenhum funil: não mostra nenhum.
+          setActivePipelineId(null as any);
+          return;
+        }
         // Read the persisted value directly from localStorage to avoid stale closure
         const userId = currentUser?.id;
         let persistedId: string | null = null;
