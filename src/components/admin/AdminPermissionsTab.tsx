@@ -14,6 +14,7 @@ import { Loader2, Save, RefreshCw, Search, Shield, Users, Building2, ShieldCheck
 import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
 import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessManager";
+import { DealVisibilityManager } from "@/components/admin/DealVisibilityManager";
 import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
 import { UserManagementPanel } from "./UserManagementPanel";
 
@@ -542,6 +543,17 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                       );
                     })}
                   </div>
+
+                  {/* Visibilidade de negócios */}
+                  {accountId && (
+                    <div className="mt-4 pt-4 border-t">
+                      <DealVisibilityManager
+                        userId={user.id}
+                        accountId={accountId}
+                        isAccountAdmin={user.role === "admin" || user.role === "super_admin"}
+                      />
+                    </div>
+                  )}
 
                   {/* Telas liberadas no ROY zAPP */}
                   <div className="mt-4 pt-4 border-t">
