@@ -20769,6 +20769,68 @@ export type Database = {
         }
         Relationships: []
       }
+      permission_profile_items: {
+        Row: {
+          access_level: string
+          id: string
+          module: string
+          profile_id: string
+          scope: string
+          sub_item: string
+        }
+        Insert: {
+          access_level?: string
+          id?: string
+          module: string
+          profile_id: string
+          scope?: string
+          sub_item: string
+        }
+        Update: {
+          access_level?: string
+          id?: string
+          module?: string
+          profile_id?: string
+          scope?: string
+          sub_item?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "permission_profile_items_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      permission_profiles: {
+        Row: {
+          account_id: string
+          created_at: string
+          description: string | null
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       pipeline_filters: {
         Row: {
           account_id: string
@@ -26509,6 +26571,65 @@ export type Database = {
         }
         Relationships: []
       }
+      user_permission_overrides: {
+        Row: {
+          access_level: string
+          account_id: string
+          id: string
+          module: string
+          scope: string
+          sub_item: string
+          user_id: string
+        }
+        Insert: {
+          access_level: string
+          account_id: string
+          id?: string
+          module: string
+          scope?: string
+          sub_item: string
+          user_id: string
+        }
+        Update: {
+          access_level?: string
+          account_id?: string
+          id?: string
+          module?: string
+          scope?: string
+          sub_item?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_permission_profiles: {
+        Row: {
+          account_id: string
+          created_at: string
+          profile_id: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          profile_id: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          profile_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "user_permission_profiles_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "permission_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_royzapp_views: {
         Row: {
           account_id: string
@@ -29627,6 +29748,7 @@ export type Database = {
         Returns: string[]
       }
       get_user_account_id: { Args: never; Returns: string }
+      get_user_permissions: { Args: never; Returns: Json }
       heal_pending_life_events_for_today: {
         Args: { p_today_mmdd: string }
         Returns: number

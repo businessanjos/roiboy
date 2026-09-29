@@ -15,6 +15,7 @@ import { sectors } from "@/config/sectors";
 import { cn } from "@/lib/utils";
 import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessManager";
 import { DealVisibilityManager } from "@/components/admin/DealVisibilityManager";
+import { PermissionProfilesManager, UserProfileSelector } from "@/components/admin/PermissionProfilesManager";
 import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
 import { UserManagementPanel } from "./UserManagementPanel";
 
@@ -273,6 +274,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
 
   return (
     <div className="space-y-4">
+      {accountId && <PermissionProfilesManager accountId={accountId} />}
       <Card className="border-0 shadow-sm">
         <CardHeader className="pb-4">
           <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -544,9 +546,10 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                     })}
                   </div>
 
-                  {/* Visibilidade de negócios */}
+                  {/* Perfil + visibilidade de negócios */}
                   {accountId && (
-                    <div className="mt-4 pt-4 border-t">
+                    <div className="mt-4 pt-4 border-t space-y-4">
+                      <UserProfileSelector userId={user.id} accountId={accountId} />
                       <DealVisibilityManager
                         userId={user.id}
                         accountId={accountId}
