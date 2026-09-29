@@ -7501,6 +7501,7 @@ export type Database = {
           pipeline_id: string | null
           probability: number | null
           received_value: number | null
+          renewal_responsible_user_id: string | null
           responsible_user_id: string | null
           sdr_user_id: string | null
           second_seat_name: string | null
@@ -7545,6 +7546,7 @@ export type Database = {
           pipeline_id?: string | null
           probability?: number | null
           received_value?: number | null
+          renewal_responsible_user_id?: string | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
           second_seat_name?: string | null
@@ -7589,6 +7591,7 @@ export type Database = {
           pipeline_id?: string | null
           probability?: number | null
           received_value?: number | null
+          renewal_responsible_user_id?: string | null
           responsible_user_id?: string | null
           sdr_user_id?: string | null
           second_seat_name?: string | null
@@ -7672,6 +7675,20 @@ export type Database = {
             columns: ["pipeline_id"]
             isOneToOne: false
             referencedRelation: "pipelines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_renewal_responsible_user_id_fkey"
+            columns: ["renewal_responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "active_users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "deals_renewal_responsible_user_id_fkey"
+            columns: ["renewal_responsible_user_id"]
+            isOneToOne: false
+            referencedRelation: "users"
             referencedColumns: ["id"]
           },
           {

@@ -10,6 +10,7 @@ import {
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { RequiredFieldsModal } from "@/components/sales/RequiredFieldsModal";
 import { MarkAsLostDialog } from "@/components/sales/MarkAsLostDialog";
+import { RenewalResponsibleDialog, useCsTeamUsers, type CsUser } from "@/components/sales/RenewalResponsibleDialog";
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -303,28 +304,85 @@ export function DealDetailSheet({
     setLocalWonAt(deal?.won_at || null);
   }, [deal?.won_at]);
 
+  const [renewalResp, setRenewalResp] = useState<CsUser | null>(null);
+  const [renewalDialogOpen, setRenewalDialogOpen] = useState(false);
+  const { data: csUsers = [] } = useCsTeamUsers();
+
   useEffect(() => {
     setIsRenewalDeal(!!(deal as any)?.is_renewal);
   }, [deal?.id, (deal as any)?.is_renewal]);
 
-  const handleToggleRenewal = async (checked: boolean) => {
+  useEffect(() => {
+    const id = (deal as any)?.renewal_responsible_user_id as string | null;
+    if (!id) return setRenewalResp(null);
+    const found = csUsers.find((u) => u.id === id);
+    if (found) return setRenewalResp(found);
+    supabase.from("users").select("id, name").eq("id", id).maybeSingle().then(({ data }) => {
+      if (data) setRenewalResp({ id: data.id, name: (data as any).name || "—" });
+    });
+  }, [deal?.id, (deal as any)?.renewal_responsible_user_id, csUsers.length]);
+
+  const logRenewalActivity = async (title: string, oldV: string | null, newV: string | null) => {
+    if (!deal) return;
+    const { data: auth } = await supabase.auth.getUser();
+    const { data: me } = await supabase.from("users").select("id").eq("auth_user_id", auth.user?.id ?? "").maybeSingle();
+    await supabase.from("deal_activities").insert({
+      account_id: (deal as any).account_id,
+      deal_id: deal.id,
+      type: "note",
+      title,
+      content: title,
+      old_value: oldV,
+      new_value: newV,
+      user_id: (me as any)?.id ?? null,
+    } as any);
+  };
+
+  const saveRenewal = async (checked: boolean, resp: CsUser | null) => {
     if (!deal) return;
     setSavingRenewal(true);
-    const prev = isRenewalDeal;
-    setIsRenewalDeal(checked);
+    const prevOn = isRenewalDeal;
+    const prevResp = renewalResp;
     const { error } = await supabase
       .from("deals")
-      .update({ is_renewal: checked } as any)
+      .update({ is_renewal: checked, renewal_responsible_user_id: resp?.id ?? null } as any)
       .eq("id", deal.id);
     setSavingRenewal(false);
     if (error) {
-      setIsRenewalDeal(prev);
       toast.error("Erro ao atualizar marcação de renovação");
       return;
     }
+    setIsRenewalDeal(checked);
+    setRenewalResp(resp);
     (deal as any).is_renewal = checked;
-    toast.success(checked ? "Marcado como renovação — briefing não será exigido" : "Renovação desmarcada");
+    (deal as any).renewal_responsible_user_id = resp?.id ?? null;
+    if (checked && !prevOn) {
+      await logRenewalActivity(`Marcou como renovação · Responsável: ${resp?.name}`, null, resp?.name ?? null);
+    } else if (checked && prevOn) {
+      await logRenewalActivity(
+        `Trocou o responsável pela renovação: ${prevResp?.name ?? "—"} → ${resp?.name}`,
+        prevResp?.name ?? null,
+        resp?.name ?? null,
+      );
+    } else {
+      await logRenewalActivity(
+        `Desmarcou renovação${prevResp ? ` (responsável anterior: ${prevResp.name})` : ""}`,
+        prevResp?.name ?? null,
+        null,
+      );
+    }
+    toast.success(checked ? "Renovação salva — briefing não será exigido" : "Renovação desmarcada");
+    queryClient.invalidateQueries({ queryKey: ["deal-activities"] });
     onDealUpdated?.();
+  };
+
+  const handleToggleRenewal = async (checked: boolean) => {
+    if (!deal) return;
+    if (checked) {
+      setRenewalDialogOpen(true);
+      return;
+    }
+    await saveRenewal(false, null);
   };
 
 
@@ -1329,6 +1387,31 @@ export function DealDetailSheet({
                       onCheckedChange={handleToggleRenewal}
                     />
                   </div>
+                  {isRenewalDeal && (
+                    <div className="mt-2 flex items-center justify-between gap-2 text-[11px]">
+                      <span className="text-muted-foreground truncate">
+                        Responsável pela renovação:{" "}
+                        <span className="font-semibold text-foreground">{renewalResp?.name ?? "não definido"}</span>
+                      </span>
+                      <button
+                        type="button"
+                        className="text-primary hover:underline shrink-0"
+                        onClick={() => setRenewalDialogOpen(true)}
+                      >
+                        {renewalResp ? "Trocar" : "Definir"}
+                      </button>
+                    </div>
+                  )}
+                  <RenewalResponsibleDialog
+                    open={renewalDialogOpen}
+                    currentId={renewalResp?.id}
+                    onCancel={() => setRenewalDialogOpen(false)}
+                    onConfirm={async (u) => {
+                      setRenewalDialogOpen(false);
+                      if (isRenewalDeal && renewalResp?.id === u.id) return;
+                      await saveRenewal(true, u);
+                    }}
+                  />
                 </div>
 
                 {/* Valor Recebido (alimenta SPIFFs de cash collect) */}
