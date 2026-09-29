@@ -1,0 +1,2 @@
+ALTER TABLE public.deals ADD COLUMN IF NOT EXISTS renewal_responsible_user_id uuid REFERENCES public.users(id) ON DELETE SET NULL;
+CREATE INDEX IF NOT EXISTS idx_deals_renewal_responsible ON public.deals(renewal_responsible_user_id);
