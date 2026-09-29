@@ -46,6 +46,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { TitleTagInput } from "@/components/sales/TitleTagInput";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
@@ -552,9 +553,13 @@ export function DealDialog({
                       <FormItem>
                         <FormLabel>Título da Negociação *</FormLabel>
                         <FormControl>
-                          <Input 
-                            placeholder="Ex: Consultoria para Empresa XYZ" 
-                            {...field} 
+                          <TitleTagInput
+                            placeholder="Ex: [CARTEIRA-EM] João"
+                            ref={field.ref}
+                            name={field.name}
+                            value={field.value ?? ""}
+                            onValueChange={field.onChange}
+                            onBlur={field.onBlur}
                             disabled={isClosed}
                           />
                         </FormControl>

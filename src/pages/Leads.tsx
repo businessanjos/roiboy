@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { TitleTagInput } from "@/components/sales/TitleTagInput";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -1851,11 +1852,11 @@ export default function Leads() {
 
               <div className="space-y-2">
                 <Label htmlFor="deal_title">Título do Negócio</Label>
-                <Input
+                <TitleTagInput
                   id="deal_title"
                   value={dealFormData.title}
-                  onChange={(e) => setDealFormData({ ...dealFormData, title: e.target.value })}
-                  placeholder="Ex: Consultoria inicial"
+                  onValueChange={(v) => setDealFormData({ ...dealFormData, title: v })}
+                  placeholder="Ex: [CARTEIRA-EM] João"
                 />
               </div>
 
