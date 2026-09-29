@@ -26314,6 +26314,39 @@ export type Database = {
           },
         ]
       }
+      user_deal_visibility: {
+        Row: {
+          account_id: string
+          can_view_lost: boolean
+          can_view_open: boolean
+          can_view_won: boolean
+          created_at: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          account_id: string
+          can_view_lost?: boolean
+          can_view_open?: boolean
+          can_view_won?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          account_id?: string
+          can_view_lost?: boolean
+          can_view_open?: boolean
+          can_view_won?: boolean
+          created_at?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_instance_preferences: {
         Row: {
           account_id: string
@@ -29231,6 +29264,17 @@ export type Database = {
         Args: { _auth_user_id: string }
         Returns: boolean
       }
+      can_view_deal: {
+        Args: {
+          _created_by: string
+          _renewal: string
+          _responsible: string
+          _sdr: string
+          _status: string
+        }
+        Returns: boolean
+      }
+      can_view_deal_id: { Args: { _deal_id: string }; Returns: boolean }
       cancel_fiscal_invoice: {
         Args: { p_invoice_id: string; p_reason: string }
         Returns: string
