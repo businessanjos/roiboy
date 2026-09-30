@@ -20,6 +20,7 @@ export interface RouteRule {
 
 // Mais específico primeiro.
 export const PROFILE_ROUTE_RULES: RouteRule[] = [
+  { prefix: "/sales-team/incentive-presentation", items: [{ module: "comercial", sub: "accelerometer" }], label: "Acelerômetro" },
   { prefix: "/sales-team/spiffs", items: [{ module: "comercial", sub: "spiffs" }], label: "SPIFFs" },
   { prefix: "/sales-team", items: [{ module: "comercial", sub: "ranking" }], label: "Ranking" },
   { prefix: "/sales-dashboard", items: [{ module: "comercial", sub: "sales_dashboard" }], label: "Dashboard de vendas" },
@@ -66,4 +67,14 @@ export function isRouteBlockedByProfile(pathname: string, perms: ProfilePerm[], 
   const rule = findRouteRule(pathname);
   if (!rule) return false;
   return rule.items.every((i) => isExplicitlyDenied(perms, i.module, i.sub));
+}
+
+/** true quando algum item da rota foi liberado explicitamente (Visualizar/Editar). */
+export function isRouteGrantedByProfile(pathname: string, perms: ProfilePerm[]): boolean {
+  const rule = findRouteRule(pathname);
+  if (!rule) return false;
+  return rule.items.some((i) => {
+    const p = perms.find((x) => x.module === i.module && x.sub_item === i.sub);
+    return p?.access_level === "view" || p?.access_level === "manage";
+  });
 }

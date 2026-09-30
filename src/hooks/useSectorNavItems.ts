@@ -10,7 +10,7 @@ import { isTrafficAgencyUser } from "@/lib/agency";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
 import type { NavItem } from "@/config/sectors";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
-import { isRouteBlockedByProfile } from "@/lib/access/profileGate";
+import { isRouteBlockedByProfile, isRouteGrantedByProfile } from "@/lib/access/profileGate";
 
 export const SALES_REP_ROLES = ["SDR", "Closer", "Vendas", "Vendedor"];
 export const SDR_ROLES = ["SDR"];
@@ -68,8 +68,10 @@ export function useSectorNavItems(): NavItem[] {
 
     let sectorItems = currentSector.navItems.filter((item) => item.to !== "/notifications");
 
+    const granted = (to: string) => isRouteGrantedByProfile(to.split("?")[0], profilePerms);
+
     if (isSdrUser && currentSector.id === "vendas") {
-      sectorItems = sectorItems.filter((item) => SDR_VENDAS_ALLOWED_ROUTES.has(item.to));
+      sectorItems = sectorItems.filter((item) => SDR_VENDAS_ALLOWED_ROUTES.has(item.to) || granted(item.to));
     }
 
 
@@ -115,6 +117,7 @@ export function useSectorNavItems(): NavItem[] {
       if (isSalesRepUser && item.to === "/sales-team") return false;
       if (isSalesRepUser && item.to === "/insights") return false;
       if (!item.permission) return true;
+      if (granted(item.to)) return true;
       if (permissionsLoading) return false;
       return hasPermission(item.permission);
     });
