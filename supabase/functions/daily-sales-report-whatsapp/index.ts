@@ -114,7 +114,19 @@ Deno.serve(async (req) => {
     const rankingSdr = [...bySdr.entries()].sort((a, b) => b[1].valor - a[1].valor).slice(0, 5);
 
     // Meta do mês
-    const goalValue = (goals || []).reduce((s: number, g: any) => s + Number(g.goal_value || 0), 0);
+    let goalValue = (goals || []).reduce((s: number, g: any) => s + Number(g.goal_value || 0), 0);
+    if (!(goalValue > 0)) {
+      // Meta oficial da empresa (Metas & Incentivos) — company_goals.monthly_goals["MM"]
+      const [yy, mm] = ym.split("-");
+      const { data: cg } = await supabase
+        .from("company_goals")
+        .select("monthly_goals")
+        .eq("year", Number(yy))
+        .eq("goal_type", "revenue")
+        .limit(1)
+        .maybeSingle();
+      goalValue = Number((cg as any)?.monthly_goals?.[mm] || 0);
+    }
 
     const agendaRows = (meetingsToday || []) as any[];
     const isDone = (t: any) => !!t.completed_at || !!t.custom_status?.is_completed_status;
