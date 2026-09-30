@@ -71,7 +71,7 @@ Deno.serve(async (req) => {
         supabase.from("deals").select("id, value").is("deleted_at", null).eq("status", "open"),
         supabase.from("users").select("id, name"),
         supabase.from("internal_tasks").select("id, completed_at, activity_types!inner(name), custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)").not("deal_id", "is", null).eq("due_date", localDate(startUtc)).in("activity_types.name", ["Call Comercial Agendada", "Call Comercial Concluída", "No-Show"]),
-        supabase.from("internal_tasks").select("id, activity_types!inner(name)").not("deal_id", "is", null).eq("due_date", localDate(endUtc)).eq("activity_types.name", "Call Comercial Agendada"),
+        supabase.from("internal_tasks").select("id, completed_at, activity_types!inner(name), custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)").not("deal_id", "is", null).eq("due_date", localDate(endUtc)).eq("activity_types.name", "Call Comercial Agendada"),
         supabase.from("sales_monthly_goals").select("goal_value, super_goal_value, cargo, user_id").eq("year_month", ym),
       ]);
 
@@ -132,7 +132,8 @@ Deno.serve(async (req) => {
     const isDone = (t: any) => !!t.completed_at || !!t.custom_status?.is_completed_status;
     const scheduledToday = agendaRows.filter((t) => t.activity_types?.name === "Call Comercial Agendada");
     const concludedToday = agendaRows.filter((t) => t.activity_types?.name === "Call Comercial Concluída" && isDone(t)).length;
-    const noShowToday = agendaRows.filter((t) => t.activity_types?.name === "No-Show").length;
+    const noShowToday = agendaRows.filter((t) => t.activity_types?.name === "No-Show" && isDone(t)).length;
+    const tomorrowPending = ((meetingsTomorrow || []) as any[]).filter((t) => !isDone(t)).length;
 
     // Canais de leads do dia
     const byChannel = new Map<string, number>();
@@ -155,10 +156,9 @@ Deno.serve(async (req) => {
     }
     lines.push("");
     lines.push(`*AGENDA COMERCIAL*`);
-    lines.push(`• Calls agendadas do dia: *${scheduledToday.length}*`);
-    lines.push(`• Calls concluídas: *${concludedToday}*`);
-    lines.push(`• No-shows: *${noShowToday}*`);
-    lines.push(`• Agendadas para amanhã: *${(meetingsTomorrow || []).length}*`);
+    lines.push(`• Calls marcadas no dia: *${scheduledToday.length}*`);
+    lines.push(`   ↳ Concluídas: *${concludedToday}* | No-shows: *${noShowToday}*`);
+    lines.push(`• Agendadas para amanhã: *${tomorrowPending}*`);
     lines.push("");
     lines.push(`*FECHAMENTO DO DIA*`);
     lines.push(`• Vendas: *${won.length}*`);
