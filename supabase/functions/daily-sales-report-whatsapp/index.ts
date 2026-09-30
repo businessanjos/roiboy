@@ -38,6 +38,8 @@ function normalizePhone(raw: string) {
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
+  const localDate = (d: Date) => new Date(d.getTime() + TZ_OFFSET_MINUTES * 60_000).toISOString().slice(0, 10);
+
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL")!,
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
@@ -68,8 +70,8 @@ Deno.serve(async (req) => {
         supabase.from("deals").select("id, value, responsible_user_id, sdr_user_id").is("deleted_at", null).eq("status", "won").gte("won_at", monthIso).lt("won_at", endIso),
         supabase.from("deals").select("id, value").is("deleted_at", null).eq("status", "open"),
         supabase.from("users").select("id, name"),
-        supabase.from("sales_meetings").select("id, status").gte("scheduled_at", startIso).lt("scheduled_at", endIso),
-        supabase.from("sales_meetings").select("id").gte("scheduled_at", endIso).lt("scheduled_at", tomorrowEndIso),
+        supabase.from("internal_tasks").select("id, completed_at, activity_types!inner(name), custom_status:task_statuses!internal_tasks_custom_status_id_fkey(is_completed_status)").not("deal_id", "is", null).eq("due_date", localDate(startUtc)).in("activity_types.name", ["Call Comercial Agendada", "Call Comercial Concluída", "No-Show"]),
+        supabase.from("internal_tasks").select("id, activity_types!inner(name)").not("deal_id", "is", null).eq("due_date", localDate(endUtc)).eq("activity_types.name", "Call Comercial Agendada"),
         supabase.from("sales_monthly_goals").select("goal_value, super_goal_value, cargo, user_id").eq("year_month", ym),
       ]);
 
@@ -114,7 +116,11 @@ Deno.serve(async (req) => {
     // Meta do mês
     const goalValue = (goals || []).reduce((s: number, g: any) => s + Number(g.goal_value || 0), 0);
 
-    const meetingsDone = (meetingsToday || []).filter((m: any) => ["done", "completed", "realizada"].includes(String(m.status || "").toLowerCase())).length;
+    const agendaRows = (meetingsToday || []) as any[];
+    const isDone = (t: any) => !!t.completed_at || !!t.custom_status?.is_completed_status;
+    const scheduledToday = agendaRows.filter((t) => t.activity_types?.name === "Call Comercial Agendada");
+    const concludedToday = agendaRows.filter((t) => t.activity_types?.name === "Call Comercial Concluída" && isDone(t)).length;
+    const noShowToday = agendaRows.filter((t) => t.activity_types?.name === "No-Show").length;
 
     // Canais de leads do dia
     const byChannel = new Map<string, number>();
@@ -137,7 +143,9 @@ Deno.serve(async (req) => {
     }
     lines.push("");
     lines.push(`*AGENDA COMERCIAL*`);
-    lines.push(`• Reuniões do dia: *${(meetingsToday || []).length}*` + (meetingsDone ? ` (realizadas: ${meetingsDone})` : ""));
+    lines.push(`• Calls agendadas do dia: *${scheduledToday.length}*`);
+    lines.push(`• Calls concluídas: *${concludedToday}*`);
+    lines.push(`• No-shows: *${noShowToday}*`);
     lines.push(`• Agendadas para amanhã: *${(meetingsTomorrow || []).length}*`);
     lines.push("");
     lines.push(`*FECHAMENTO DO DIA*`);
