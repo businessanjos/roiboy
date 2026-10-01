@@ -25,7 +25,7 @@ import { cn } from "@/lib/utils";
 function fmtDate(v?: string | null): string {
   if (!v) return "—";
   const d = parseISO(v);
-  if (isNaN(d.getTime()) || d.getFullYear() < 1900) return "—";
+  if (isNaN(d.getTime()) || d.getFullYear() < 1900 || d.getFullYear() > 2200) return "—";
   return format(d, "dd/MM/yyyy", { locale: ptBR });
 }
 
