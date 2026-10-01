@@ -22,6 +22,13 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
+function fmtDate(v?: string | null): string {
+  if (!v) return "—";
+  const d = parseISO(v);
+  if (isNaN(d.getTime()) || d.getFullYear() < 1900) return "—";
+  return format(d, "dd/MM/yyyy", { locale: ptBR });
+}
+
 // O filtro de programa usa o id do produto (montado dinamicamente a partir da carteira ativa)
 type ProgramFilter = string; // "all" | productId | "__none__"
 
@@ -630,7 +637,7 @@ export default function MentoriaEC() {
                       )}
                     </TableCell>
                     <TableCell>
-                      {m.contractEnd ? format(parseISO(m.contractEnd), "dd/MM/yyyy", { locale: ptBR }) : "—"}
+                      {m.contractEnd ? fmtDate(m.contractEnd) : "—"}
                     </TableCell>
                     <TableCell>
                       <Select
@@ -652,19 +659,19 @@ export default function MentoriaEC() {
                         <div className="flex flex-col gap-1">
                           <span className={cn("text-sm", m.nextScheduled ? "text-violet-600 dark:text-violet-300 font-medium" : "text-muted-foreground")}>
                             {m.nextScheduled
-                              ? format(parseISO(m.nextScheduled), "dd/MM/yyyy", { locale: ptBR })
+                              ? fmtDate(m.nextScheduled)
                               : "Sem data marcada"}
                           </span>
                           {m.lastAttendance && (
                             <span className="text-xs text-muted-foreground">
-                              Última: {format(parseISO(m.lastAttendance), "dd/MM/yyyy", { locale: ptBR })}
+                              Última: {fmtDate(m.lastAttendance)}
                             </span>
                           )}
                         </div>
                       ) : (
                         <div className="flex items-center gap-2">
                           <span className="text-sm font-medium">
-                            {format(parseISO(m.lastAttendance!), "dd/MM/yyyy", { locale: ptBR })}
+                            {fmtDate(m.lastAttendance!)}
                           </span>
                           {m.attendanceCount > 0 && (
                             <span className="text-muted-foreground text-xs">({m.attendanceCount}x)</span>
@@ -786,7 +793,7 @@ export default function MentoriaEC() {
                 <div key={r.id} className="flex items-center justify-between gap-3 rounded-md border p-2">
                   <div className="min-w-0">
                     <div className="text-sm font-medium">
-                      {format(parseISO(r.session_date), "dd/MM/yyyy", { locale: ptBR })}{" "}
+                      {fmtDate(r.session_date)}{" "}
                       <span className="text-xs text-muted-foreground">{future ? "(agendada)" : "(realizada)"}</span>
                     </div>
                     {r.notes && <div className="text-xs text-muted-foreground truncate">{r.notes}</div>}
