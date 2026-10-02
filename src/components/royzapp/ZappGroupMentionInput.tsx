@@ -27,10 +27,11 @@ interface ZappGroupMentionInputProps {
   disabled?: boolean;
   groupJid: string | null;
   sectorId?: string;
+  onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
 export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMentionInputProps>(
-  ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid, sectorId }, ref) => {
+  ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid, sectorId, onPaste }, ref) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [participants, setParticipants] = useState<GroupParticipant[]>([]);
     const [filteredParticipants, setFilteredParticipants] = useState<GroupParticipant[]>([]);
@@ -234,6 +235,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
           }}
           onKeyDown={handleKeyDown}
+          onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
           rows={2}
