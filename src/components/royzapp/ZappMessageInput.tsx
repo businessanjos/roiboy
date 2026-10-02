@@ -903,6 +903,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   }
                 }}
                 onKeyDown={onKeyPress}
+                onPaste={handlePaste}
                 disabled={sendingMessage}
                 groupJid={groupJid}
                 sectorId={sectorId}
