@@ -926,27 +926,32 @@ export function useZappMessaging({
         if (event.data.size > 0) audioChunksRef.current.push(event.data);
       };
       
+      // Detect a muted/disconnected microphone during recording
+      const track = stream.getAudioTracks()[0];
+      if (track) {
+        track.onended = () => toast.error("O microfone foi desconectado durante a gravação.");
+      }
+
       mediaRecorder.onstop = async () => {
         stream.getTracks().forEach(track => track.stop());
-        if (audioChunksRef.current.length > 0) {
-          const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
-          let audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
-          
-          // Calculate actual duration from wall clock (avoids stale closure on state)
-          const elapsedMs = Date.now() - recordingStartTimeRef.current;
-          const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
-          
-          // NOTE: We intentionally do NOT run fixWebmDuration here.
-          // The provider (uazapi) transcodes the audio to OGG via FFmpeg, and
-          // rewriting the EBML container to inject duration was causing
-          // "FFmpeg failed on attempt 3: exit status 183" on outbound audios.
-          // We already send audio_duration_sec separately, so the WhatsApp
-          // client shows the correct duration without needing container metadata.
+        const elapsedMs = Date.now() - recordingStartTimeRef.current;
+        const elapsedSec = Math.max(1, Math.round(elapsedMs / 1000));
+        const totalBytes = audioChunksRef.current.reduce((s, c) => s + c.size, 0);
 
-          
-          const audioUrl = URL.createObjectURL(audioBlob);
-          setAudioPreview({ blob: audioBlob, url: audioUrl, duration: elapsedSec });
+        // Empty/silent capture guard: a real Opus recording produces well over
+        // 1KB per second. Header-only files (~110 bytes) make the provider's
+        // FFmpeg fail (exit 187) and arrive broken to the client.
+        if (totalBytes < Math.max(2048, elapsedSec * 400)) {
+          audioChunksRef.current = [];
+          toast.error("Não detectamos som do microfone. Verifique se ele está conectado e não está mudo, e grave novamente.", { duration: 8000 });
+          return;
         }
+
+        const actualMimeType = mediaRecorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: actualMimeType });
+        // NOTE: fixWebmDuration intentionally not used (caused FFmpeg exit 183).
+        const audioUrl = URL.createObjectURL(audioBlob);
+        setAudioPreview({ blob: audioBlob, url: audioUrl, duration: elapsedSec });
       };
       
       // No timeslice: request a single final blob at stop().
@@ -971,6 +976,7 @@ export function useZappMessaging({
 
   const stopRecording = () => {
     if (mediaRecorderRef.current && isRecording) {
+      try { if (mediaRecorderRef.current.state === "recording") mediaRecorderRef.current.requestData(); } catch { /* ignore */ }
       mediaRecorderRef.current.stop();
       setIsRecording(false);
       if (recordingIntervalRef.current) {
@@ -1017,6 +1023,10 @@ export function useZappMessaging({
   // Send audio message
   const sendAudioMessage = async (audioBlob: Blob, duration?: number) => {
     if (!selectedConversation || uploadingMedia) return;
+    if (audioBlob.size < 2048) {
+      toast.error("Este áudio está vazio. Grave novamente verificando o microfone.");
+      return;
+    }
     
     const contactInfo = getContactInfo(selectedConversation);
     const phone = contactInfo.phone;
