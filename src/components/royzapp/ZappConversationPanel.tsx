@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
@@ -13,6 +14,7 @@ import {
   Users,
 
   RefreshCw,
+  ChevronLeft,
 } from "lucide-react";
 import { getContactInfo } from "./types";
 import { Button } from "@/components/ui/button";
@@ -282,6 +284,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 }: ZappConversationPanelProps) {
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
+  const navigate = useNavigate();
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
