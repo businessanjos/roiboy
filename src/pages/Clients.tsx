@@ -3455,10 +3455,13 @@ export default function Clients() {
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage <= 1 || loading}
           >
-            <ChevronLeft className="h-4 w-4 mr-1" />
-            Anterior
+            <ChevronLeft className="h-4 w-4 sm:mr-1" />
+            <span className="hidden sm:inline">Anterior</span>
           </Button>
-          <div className="flex items-center gap-1">
+          <span className="text-sm tabular-nums text-muted-foreground sm:hidden">
+            {currentPage} / {Math.ceil(totalClients / pageSize)}
+          </span>
+          <div className="hidden items-center gap-1 sm:flex">
             {Array.from({ length: Math.min(Math.ceil(totalClients / pageSize), 7) }, (_, i) => {
               const totalPages = Math.ceil(totalClients / pageSize);
               let pageNum: number;
@@ -3493,8 +3496,8 @@ export default function Clients() {
             onClick={() => setCurrentPage(p => Math.min(Math.ceil(totalClients / pageSize), p + 1))}
             disabled={currentPage >= Math.ceil(totalClients / pageSize) || loading}
           >
-            Próximo
-            <ChevronRight className="h-4 w-4 ml-1" />
+            <span className="hidden sm:inline">Próximo</span>
+            <ChevronRight className="h-4 w-4 sm:ml-1" />
           </Button>
         </div>
       )}
