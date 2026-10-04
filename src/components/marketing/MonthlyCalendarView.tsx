@@ -116,8 +116,8 @@ export function MonthlyCalendarView({
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col h-[calc(100vh-220px)] space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 flex-shrink-0">
+          <div className="flex min-w-0 items-center gap-1 sm:gap-2">
             <Button 
               variant="outline" 
               size="sm"
@@ -126,17 +126,17 @@ export function MonthlyCalendarView({
             >
               Hoje
             </Button>
-            <Button variant="ghost" size="icon" onClick={handlePrevMonth}>
+            <Button variant="ghost" size="icon" onClick={handlePrevMonth} aria-label="Mês anterior">
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="icon" onClick={handleNextMonth}>
+            <Button variant="ghost" size="icon" onClick={handleNextMonth} aria-label="Próximo mês">
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <h2 className="text-xl font-semibold capitalize">
+            <h2 className="whitespace-nowrap text-lg font-semibold capitalize sm:text-xl">
               {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
             </h2>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             {toolbarExtra}
             <Button onClick={() => onAddEvent()}>
               <Plus className="h-4 w-4 mr-2" />
