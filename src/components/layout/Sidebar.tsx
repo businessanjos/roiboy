@@ -1,4 +1,5 @@
-import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { Link, NavLink, useLocation, useNavigate } from "react-router-dom";
+import { resolveActiveTarget } from "@/lib/navigation/activeNav";
 import { cn } from "@/lib/utils";
 import {
   LogOut,
@@ -236,6 +237,13 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
   };
 
   // Route-specific sidebar navigation
+  // Um único item atual, decidido sobre todos os itens do setor (inclui filhos
+  // sem permissão, para não marcar o pai numa rota filha) + query string.
+  const activeNavTo = resolveActiveTarget(
+    Array.from(new Set([...(currentSector?.navItems ?? []).map((i) => i.to), ...filteredNavItems.map((i) => i.to)])),
+    location.pathname,
+    location.search,
+  );
   const isOnSettings = location.pathname === "/settings";
   const isOnAdmin = location.pathname === "/admin";
   const clientDetailMatch = isClientDetailRoute(location.pathname);
@@ -292,27 +300,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
           />
         ) : (
           filteredNavItems.map((item, idx) => {
-          const [itemPath, itemSearch = ""] = item.to.split("?");
-          const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
-          const hasSearchSibling = filteredNavItems.some(other => {
-            const [otherPath, otherSearch = ""] = other.to.split("?");
-            return otherPath === itemPath && !!otherSearch;
-          });
-          // Compare against ALL sector items (not only the visible/permitted ones),
-          // so a hidden child route (ex.: /clients/checkpoints) still prevents the
-          // parent (/clients) from being highlighted on that route.
-          const allItems = currentSector?.navItems ?? filteredNavItems;
-          const hasMoreSpecificMatch = allItems.some(other => {
-            const [otherPath] = other.to.split("?");
-            return (
-              otherPath !== itemPath &&
-              otherPath.startsWith(itemPath + "/") &&
-              (location.pathname === otherPath || location.pathname.startsWith(otherPath + "/"))
-            );
-          });
-          const isActive = itemSearchValue
-            ? location.pathname === itemPath && searchParamsMatch(itemSearchValue, location.search)
-            : (location.pathname === itemPath && (!hasSearchSibling || !location.search)) || (itemPath !== "/" && location.pathname.startsWith(itemPath + "/") && !hasMoreSpecificMatch);
+          const isActive = item.to === activeNavTo;
           const isHighlighted = item.to === "/sales-team";
           const showGroupHeader = item.group && !collapsed;
           return (
@@ -328,9 +316,10 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
               {item.group && collapsed && (
                 <div className="my-1.5 border-t border-border/50 mx-1" />
               )}
-              <NavLink
+              <Link
                 to={item.to}
                 onClick={onNavigate}
+                aria-current={isActive ? "page" : undefined}
                 className={cn(
                   "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                   isHighlighted
@@ -353,7 +342,7 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
                     {pendingOnboardingCount > 99 ? "99+" : pendingOnboardingCount}
                   </Badge>
                 )}
-              </NavLink>
+              </Link>
               {isHighlighted && <div className={cn("my-1.5 border-t border-border/50", collapsed && "mx-1")} />}
             </div>
           );
@@ -649,19 +638,22 @@ function FinancialGroupedNav({
   const toggleGroup = (name: string) =>
     setOpenState((prev) => ({ ...prev, [name]: !isGroupOpen(name) }));
 
+  const activeTo = resolveActiveTarget(items.map((i) => i.to), pathname, search);
+
   if (collapsed) {
     // Collapsed: flat list of icons (no headers)
     return (
       <div className="space-y-1">
         {items.map((item) => {
-          const [itemPath] = item.to.split("?");
-          const isActive = pathname === itemPath || pathname.startsWith(itemPath + "/");
+          const isActive = item.to === activeTo;
           return (
-            <NavLink
+            <Link
               key={item.to}
               to={item.to}
               onClick={onNavigate}
               title={item.label}
+              aria-label={item.label}
+              aria-current={isActive ? "page" : undefined}
               className={cn(
                 "flex items-center justify-center px-2 py-2.5 rounded-lg text-sm transition-all",
                 isActive
@@ -671,7 +663,7 @@ function FinancialGroupedNav({
               )}
             >
               <item.icon className="h-5 w-5 flex-shrink-0" />
-            </NavLink>
+            </Link>
           );
         })}
       </div>
@@ -702,16 +694,13 @@ function FinancialGroupedNav({
             </CollapsibleTrigger>
             <CollapsibleContent className="pt-1 space-y-1">
               {g.items.map((item) => {
-                const [itemPath, itemSearch = ""] = item.to.split("?");
-                const itemSearchValue = itemSearch ? `?${itemSearch}` : "";
-                const isActive = itemSearchValue
-                  ? pathname === itemPath && searchParamsMatch(itemSearchValue, search)
-                  : pathname === itemPath || (itemPath !== "/" && pathname.startsWith(itemPath + "/"));
+                const isActive = item.to === activeTo;
                 return (
-                  <NavLink
+                  <Link
                     key={item.to}
                     to={item.to}
                     onClick={onNavigate}
+                    aria-current={isActive ? "page" : undefined}
                     className={cn(
                       "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all",
                       isActive
@@ -730,7 +719,7 @@ function FinancialGroupedNav({
                         Em breve
                       </Badge>
                     )}
-                  </NavLink>
+                  </Link>
                 );
               })}
             </CollapsibleContent>

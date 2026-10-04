@@ -1,3 +1,4 @@
+import { pickActiveNavIndex } from "@/lib/navigation/activeNav";
 import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, ChevronLeft, Search } from "lucide-react";
@@ -41,12 +42,8 @@ export function MobileAppHeader() {
 
   const { title, parent } = useMemo(() => {
     const path = location.pathname;
-    const match = navItems
-      .filter((item) => {
-        const p = item.to.split("?")[0];
-        return path === p || path.startsWith(p + "/");
-      })
-      .sort((a, b) => b.to.length - a.to.length)[0];
+    const idx = pickActiveNavIndex(navItems.map((i) => i.to), path, location.search);
+    const match = idx === -1 ? undefined : navItems[idx];
     const global = GLOBAL_TITLES.find(([p]) => path === p || path.startsWith(p + "/"));
     if (match) {
       const base = match.to.split("?")[0];
@@ -56,7 +53,7 @@ export function MobileAppHeader() {
     }
     if (global) return { title: global[1], parent: null };
     return { title: currentSector?.name || "ROY", parent: null };
-  }, [navItems, currentSector, location.pathname]);
+  }, [navItems, currentSector, location.pathname, location.search]);
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);

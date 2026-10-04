@@ -41,7 +41,7 @@ Sessão real **somente leitura** (`lovable auth-session --self`), Chromium/Playw
 ## Método
 - Script mede `scrollWidth` do documento **e** do container de rolagem `#app-main-scroll` (o shell tem `overflow-hidden`, então medir só o documento escondia problemas — falha da rodada 1).
 - Para cada transbordo, um probe lista os elementos que passam da borda sem ancestral com rolagem própria.
-- Capturas em `docs/mobile-qa/` (só telas sem nomes/telefones de clientes).
+- Capturas em ` (só telas sem nomes/telefones de clientes).
 
 ## Matriz (largura do conteúdo / viewport)
 | Rota | 390 antes | 390 depois | 320 | 390 escuro | 1440 |
@@ -88,3 +88,19 @@ Sem erros de página em nenhuma passada.
 - Tabelas largas (RH, Financeiro) seguem com rolagem lateral contida, não viraram cartões.
 - Modo escuro conferido nas telas listadas; dados do RoyZapp escuro ainda carregando na captura.
 - Commit é feito pelo histórico do Lovable.
+
+## Rodada 3 — revisão do commit 72c06fd
+
+| Item | Correção | Evidência |
+|---|---|---|
+| Colunas fixas `grid-cols-5` | `gridTemplateColumns: repeat(n+1)` com destinos reais + Mais | teste DOM `MobileTabBar.test.tsx` (2 destinos → 3 colunas) |
+| `aria-current` automático do NavLink | Barra e SidebarContent usam `Link` com `aria-current` controlado | Playwright 390px: `/marketing/content-hq?tab=redes` → só "Social Media"; sem query → só "Conteúdo"; `/clients/checkpoints` → só "Checkpoints"; drawer → 1 item atual |
+| Ativo só entre os 4 atalhos | `resolveActiveTarget` na lista completa do setor, depois mapeia para atalho ou Mais | `/clients/medicos` → nenhum atalho marcado (Mais ativo); testes unitários com `/rh/benefits`, `/clients/medicos` |
+| Título do topo por pathname | `MobileAppHeader` usa `pickActiveNavIndex` + `location.search` | teste unitário de query |
+| Sem botão de fechar no sheet | `DrawerClose` 44×44 "Fechar menu"; fecha ao mudar rota e ao passar de 1024px | Playwright: fecha pelo botão (0 dialogs); abrir e redimensionar para 1440 → 0 dialogs |
+| Sidebar/financeiro com dois atuais | Ativo único via `resolveActiveTarget` (inclui filhos sem permissão) | drawer com 1 `aria-current` |
+| Tablist `justify-center` em overflow | `justify-content: flex-start; safe center` só em tablists não verticais | CSS |
+| Screenshots com dados | Pasta `docs/mobile-qa/` removida; capturas só temporárias e privadas | — |
+
+Checks: `tsgo` saída 0, `vite build` saída 0, vitest 13/13 (activeNav, clientRoutes, MobileTabBar).
+Limitações: iPhone real não testado; abas com overflow conferidas por regra CSS, sem auditoria visual tela a tela.

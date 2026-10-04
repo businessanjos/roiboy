@@ -17,3 +17,17 @@ describe("pickActiveNavIndex", () => {
     expect(pickActiveNavIndex(["/pipe"], "/pipeline", "")).toBe(-1);
   });
 });
+
+import { resolveActiveTarget } from "./activeNav";
+describe("resolveActiveTarget", () => {
+  const all = ["/clients", "/clients/medicos", "/clients/checkpoints", "/marketing/content-hq", "/marketing/content-hq?tab=redes", "/rh", "/rh/benefits"];
+  it("filho mais específico vence o pai", () => {
+    expect(resolveActiveTarget(all, "/clients/medicos", "")).toBe("/clients/medicos");
+    expect(resolveActiveTarget(all, "/rh/benefits", "")).toBe("/rh/benefits");
+    expect(resolveActiveTarget(all, "/clients/123", "")).toBe("/clients");
+  });
+  it("query decide entre irmãos", () => {
+    expect(resolveActiveTarget(all, "/marketing/content-hq", "")).toBe("/marketing/content-hq");
+    expect(resolveActiveTarget(all, "/marketing/content-hq", "?tab=redes&x=1")).toBe("/marketing/content-hq?tab=redes");
+  });
+});
