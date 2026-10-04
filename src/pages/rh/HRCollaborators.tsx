@@ -557,6 +557,7 @@ export default function HRCollaborators() {
             <p className="text-muted-foreground">Nenhum PJ encontrado</p>
           </div>
         ) : (
+          <>
           <div className="border rounded-lg overflow-x-auto">
             <table className="w-full min-w-[900px] text-sm">
               <thead>
@@ -610,6 +611,7 @@ export default function HRCollaborators() {
             </table>
           </div>
           <PagerFor state={pgProviders} itemLabel="prestadores" />
+          </>
         )
       ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
@@ -632,6 +634,7 @@ export default function HRCollaborators() {
           )}
         </div>
       ) : (
+        <>
         <div className="border rounded-lg overflow-x-auto">
           <table className="w-full min-w-[1100px] text-sm">
             <thead>
@@ -737,6 +740,7 @@ export default function HRCollaborators() {
           </table>
         </div>
           <PagerFor state={pgCollaborators} itemLabel="colaboradores" />
+        </>
       )}
 
       {/* New Collaborator Dialog */}
