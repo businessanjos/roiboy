@@ -181,3 +181,9 @@ Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estav
 - Primeiro card em y≈221 (393×852). Nenhum onboarding iniciado nem registro alterado.
 - Clientes 393px reconferido com sessão: largura 393, linha de pendências exibida (inadimplência visível; contrato/formulários aparecem quando existem).
 - Final: tsgo OK; `vite build` OK (só avisos de chunks preexistentes); vitest layout+hooks 45/45 OK.
+
+## Rodada 7d — Tarefas: legibilidade de concluídas e áreas de toque
+- `src/pages/Tasks.tsx` (lista mobile): removido `opacity-60` da linha inteira; concluída indicada por círculo verde com check + título riscado em cor secundária; metadados e menu com contraste normal.
+- Concluir/Reabrir: botão `role="checkbox"` com `aria-checked`, área clicável real 44×44 (medido) e visual 20px; mesmo handler (`customStatuses` → `handleStatusChange(UUID)`, follow-up preservado). Conclusão real não testada.
+- "Mostrar indicadores": 32→44px (medido).
+- 393px: largura 393, primeira tarefa y≈221, 0 linhas com opacidade global. Final: tsgo OK; `vite build` OK; vitest layout+hooks 45/45 OK.
