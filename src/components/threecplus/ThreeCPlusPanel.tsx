@@ -95,6 +95,8 @@ function readLauncherPosition(): Position {
     ? clampLauncherPosition({ x: window.innerWidth - 120 - MARGIN, y: window.innerHeight - 52 - 180 }, 120)
     : clampLauncherPosition({ x: window.innerWidth - 330 - MARGIN, y: 80 });
   try {
+    // No celular ignora posição salva (arrastada no desktop) para nunca cobrir o topo.
+    if (isMobile) return fallback;
     const raw = window.localStorage.getItem(LAUNCHER_POSITION_STORAGE_KEY);
     if (!raw) return fallback;
     const parsed = JSON.parse(raw) as Partial<Position>;
@@ -575,7 +577,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           ref={launcherRef}
           style={{ left: Math.round(launcherPosition.x), top: Math.round(launcherPosition.y) }}
           onPointerDown={startLauncherDrag}
-          className="pointer-events-auto fixed z-[60] flex touch-none select-none items-center rounded-md border border-border bg-card shadow-lg cursor-grab active:cursor-grabbing"
+          className="pointer-events-auto fixed z-40 lg:z-[60] flex touch-none select-none items-center rounded-md border border-border bg-card shadow-lg cursor-grab active:cursor-grabbing"
           title="Arraste para mover o Discador 3C"
         >
           <GripVertical className="ml-2 h-4 w-4 shrink-0 text-muted-foreground" aria-hidden="true" />

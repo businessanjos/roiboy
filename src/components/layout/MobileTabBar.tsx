@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { MoreHorizontal, MessageSquare, X } from "lucide-react";
 import { buildRoyZappUrl } from "@/lib/royZappRoutes";
@@ -47,6 +47,7 @@ export function MobileTabBar() {
   const location = useLocation();
   const navItems = useSectorNavItems();
   const [moreOpen, setMoreOpen] = useState(false);
+  const closeRef = useRef<HTMLButtonElement>(null);
   const visible = useMobileTabBarVisible();
 
   // Na barra inferior priorizamos "Insights" no lugar do Dashboard (o Dashboard
@@ -152,7 +153,9 @@ export function MobileTabBar() {
                 <span className={cn("text-[10px] leading-none", moreActive ? "font-semibold" : "font-medium")}>Mais</span>
               </button>
             </DrawerTrigger>
-            <DrawerContent className="max-h-[88dvh] rounded-t-[24px] border-border/60 bg-background lg:hidden">
+            <DrawerContent
+              onOpenAutoFocus={(e) => { e.preventDefault(); closeRef.current?.focus(); }}
+              className="max-h-[88dvh] rounded-t-[24px] border-border/60 bg-background lg:hidden">
               <div className="flex items-center gap-2.5 px-5 pb-2 pt-3">
                 <RoyLogo size="md" />
                 <div className="min-w-0">
@@ -163,6 +166,7 @@ export function MobileTabBar() {
                 </div>
                 <DrawerClose asChild>
                   <button
+                    ref={closeRef}
                     type="button"
                     aria-label="Fechar menu"
                     className="touch-press ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
