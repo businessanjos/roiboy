@@ -26,3 +26,13 @@ export function pickActiveNavIndex(targets: string[], pathname: string, search: 
   });
   return best;
 }
+
+/**
+ * Destino ativo único dentro de uma lista completa (ex.: todos os itens do
+ * setor). Retorna o `to` vencedor ou null. Use a lista completa para que uma
+ * rota filha mais específica (ex.: /clients/medicos) nunca marque o pai.
+ */
+export function resolveActiveTarget(targets: string[], pathname: string, search: string): string | null {
+  const idx = pickActiveNavIndex(targets, pathname, search);
+  return idx === -1 ? null : targets[idx];
+}
