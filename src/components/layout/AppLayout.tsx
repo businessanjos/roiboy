@@ -167,7 +167,7 @@ export function AppLayout() {
   return (
     <PlanLimitsProvider>
       <NotificationsProvider>
-        <div className="flex flex-col h-[100dvh] w-full bg-background overflow-hidden">
+        <div className="flex flex-col h-[var(--app-vh,100dvh)] lg:h-[100dvh] w-full bg-background overflow-hidden">
           <div className="hidden lg:block">
             <GlobalHeader />
           </div>

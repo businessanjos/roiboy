@@ -1,4 +1,23 @@
-# QA de design mobile — ROY Eternum
+# QA mobile — ROY Eternum
+
+## Conclusão atual (rodada 4)
+
+**Verificado de fato**
+- Tipos (`tsgo`) e `vite build`: saída 0.
+- Vitest 16/16: `activeNav` (query, filho mais específico), `clientRoutes`, `MobileTabBar` (1 `aria-current`, colunas reais + Mais, botão "Fechar menu", filho fora dos atalhos → Mais), `useVisualViewportHeight` (teclado aplica/limpa altura; zoom não altera nem rola; desktop nunca aplica).
+- Playwright autenticado, só leitura, 390px (Chromium): overflow 390 em /marketing, /marketing/content-hq?tab=redes, /financial/dashboard; foco do menu Mais preso (Tab/Shift+Tab), Esc e Fechar devolvem foco; fecha ao ir para 1440px; discador abaixo do overlay; /setores sem voltar/subtítulo. Matriz das 17 rotas na rodada 2.
+- Altura com teclado: `AppLayout` consome `h-[var(--app-vh,100dvh)] lg:h-[100dvh]`; o hook só define a variável quando `visualViewport.height < innerHeight` em largura < 1024 e escala 1; não força scroll.
+
+**Não verificado / limitações**
+- Nenhum iPhone físico: teclado virtual, safe areas e rolagem elástica não testados (Chromium não abre teclado; altura com teclado coberta apenas por teste unitário).
+- Tabelas largas de RH/Financeiro continuam com rolagem lateral contida.
+- Abas com overflow: regra `safe center` sem auditoria visual tela a tela.
+- Capturas com dados reais só temporárias e privadas; nenhuma versionada.
+
+
+## Histórico (rodadas 1–3b)
+
+As seções abaixo registram as rodadas anteriores; valem as conclusões acima quando houver conflito.
 
 ## Referências 21st realmente usadas
 - **21st.dev — @shadcnui-blocks/tabs-08 "Mobile Navigation Tabs" (MIT)**, fonte baixada de `https://shadcnui-blocks.com/r/tabs-08.json`.
@@ -64,7 +83,7 @@ Sem erros de página em nenhuma passada.
 
 ## Correções
 - **Discador 3C** (`ThreeCPlusPanel`): no celular nasce compacto (ícone + status) no canto inferior direito, acima da barra de abas e do composer; antes ficava no topo cobrindo títulos e botões. Desktop igual.
-- **Altura com teclado no iPhone**: novo `useVisualViewportHeight` publica `--app-vh` a partir de `visualViewport` (resize/scroll); o shell usa `h-[var(--app-vh,100dvh)]`. `interactive-widget` sozinho não funciona no Safari. Não havia implementação anterior de visualViewport.
+- **Altura com teclado no iPhone**: novo `useVisualViewportHeight` publica `--app-vh` a partir de `visualViewport` (resize/scroll); **[corrigido na rodada 4: nessa época o shell ainda não consumia a variável]**. `interactive-widget` sozinho não funciona no Safari. Não havia implementação anterior de visualViewport.
 - **RoyZapp**: botão Voltar no topo da lista (celular), emoji/+/microfone e controles de gravação com 44px. Envio/recebimento intocados.
 - **Colaboradores (RH)**: ações quebram linha, "Novo Colaborador" vira CTA de largura total; voltar duplicado escondido no celular.
 - **Calendário Marketing** e **Calendário Vendas**: barras com quebra de linha em vez de cortar; removido `pb-24` duplicado.
