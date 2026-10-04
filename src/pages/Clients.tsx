@@ -20,8 +20,10 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { Plus, Search, ArrowRight, ArrowUp, ArrowDown, ArrowUpDown, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft, Target, GraduationCap, TrendingUp, TrendingDown, Trophy, Building2, CalendarDays } from "lucide-react";
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Search, ArrowRight, ArrowUp, ArrowDown, ArrowUpDown, Upload, FileSpreadsheet, AlertCircle, CheckCircle2, Loader2, Download, Package, ChevronRight, RefreshCw, MessageCircle, Settings2, LayoutGrid, List, User, Camera, X, Layers, Check, Clock, AlertTriangle, CalendarIcon, Pencil, FileText, Filter, ChevronDown, XCircle, Lock, Trash2, Kanban, PauseCircle, Ban, GitMerge, ChevronLeft, Target, GraduationCap, TrendingUp, TrendingDown, Trophy, Building2, CalendarDays, MoreHorizontal, SlidersHorizontal, RotateCw } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { MobileListGroup, MobileListRow, MobileIconButtonClass } from "@/components/mobile/MobileListGroup";
 import * as XLSX from "xlsx";
 import { ClientKanban } from "@/components/client/ClientKanban";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
@@ -1803,6 +1805,386 @@ export default function Clients() {
 
 
   </>);
+  // ===== Mobile (<1024px) composition — reuses the same state/handlers as desktop =====
+  const STATUS_OPTIONS: { value: string; label: string }[] = [
+    { value: "active", label: "Ativos" },
+    { value: "awaiting", label: "Aguardando contrato" },
+    { value: "hold", label: "Hold" },
+    { value: "cancelled", label: "Cancelados" },
+  ];
+  const SORT_OPTIONS: { value: string; label: string }[] = [
+    { value: "recent", label: "Mais recentes" },
+    { value: "alphabetical", label: "Nome (A–Z)" },
+    { value: "initial_desc", label: "Faturamento inicial (maior)" },
+    { value: "initial_asc", label: "Faturamento inicial (menor)" },
+    { value: "current_desc", label: "Faturamento atual (maior)" },
+    { value: "current_asc", label: "Faturamento atual (menor)" },
+    { value: "evolution_desc", label: "Evolução (maior)" },
+    { value: "evolution_asc", label: "Evolução (menor)" },
+    { value: "record_desc", label: "Recorde (maior)" },
+    { value: "record_asc", label: "Recorde (menor)" },
+  ];
+  const RISK_LABELS: Record<string, string> = {
+    critical: "Inadimplente", high: "Em atraso", warning: "Vence em até 7 dias", ok: "Em dia",
+  };
+  const openFromMenu = (fn: () => void) => () => setTimeout(fn, 0);
+
+  const renderMobileView = () => {
+    const statusLabel = STATUS_OPTIONS.find((s) => s.value === activeTab)?.label ?? "Ativos";
+    const totalPages = Math.max(1, Math.ceil(totalClients / pageSize));
+    const chips: { key: string; label: string; clear: () => void }[] = [];
+    if (sortOrder !== "recent") chips.push({ key: "sort", label: SORT_OPTIONS.find((o) => o.value === sortOrder)?.label ?? sortOrder, clear: () => setSortOrder("recent") });
+    if (filterRevenueMissing !== "all") chips.push({ key: "rev", label: filterRevenueMissing === "initial" ? "Sem fat. inicial" : filterRevenueMissing === "current" ? "Sem fat. atual" : "Sem faturamento", clear: () => setFilterRevenueMissing("all") });
+    if (periodRange) chips.push({ key: "period", label: `Período: ${periodLabel}`, clear: () => { setFilterPeriod("all"); setFilterPeriodStart(""); setFilterPeriodEnd(""); } });
+    if (filterClientStatus !== "all") chips.push({ key: "cs", label: filterClientStatus === "active" ? "Status: Ativo" : filterClientStatus === "churn_risk" ? "Risco de churn" : filterClientStatus === "no_contract" ? "Sem contrato" : "Churned", clear: () => setFilterClientStatus("all") });
+    if (filterProduct !== "all") chips.push({ key: "prod", label: products.find((p) => p.id === filterProduct)?.name || "Produto", clear: () => setFilterProduct("all") });
+    if (filterContract !== "all") chips.push({ key: "ct", label: `Contrato: ${({ active: "Ativo", expired: "Expirado", urgent: "30 dias", warning: "60 dias", pending: "Pendente", cancelled: "Cancelado", suspended: "Suspenso", none: "Sem contrato" } as Record<string, string>)[filterContract] ?? filterContract}`, clear: () => setFilterContract("all") });
+    if (filterResponsible !== "all") chips.push({ key: "resp", label: filterResponsible === "none" ? "Sem responsável" : teamUsers.find((u) => u.id === filterResponsible)?.name || "Responsável", clear: () => setFilterResponsible("all") });
+    if (filterLinks !== "all") chips.push({ key: "links", label: "Com vínculos", clear: () => setFilterLinks("all") });
+    if (filterRisk !== "all") chips.push({ key: "risk", label: RISK_LABELS[filterRisk] ?? filterRisk, clear: () => setFilterRisk("all") });
+    if (filterCountry !== "all") chips.push({ key: "country", label: countryOptions.find((o) => o.code === filterCountry)?.name || filterCountry, clear: () => setFilterCountry("all") });
+    if (filterEducation !== "all") chips.push({ key: "edu", label: filterEducation === "none" ? "Sem formação" : filterEducation, clear: () => setFilterEducation("all") });
+    if (filterArea !== "all") chips.push({ key: "area", label: filterArea === "none" ? "Sem área" : filterArea, clear: () => setFilterArea("all") });
+    if (filterSpecialty !== "all") chips.push({ key: "spec", label: filterSpecialty === "none" ? "Sem especialidade" : filterSpecialty, clear: () => setFilterSpecialty("all") });
+    const filterBadge = activeFilterCount + (sortOrder !== "recent" ? 1 : 0);
+
+    return (
+      <div className="lg:hidden space-y-3">
+        {/* Linha de ações: status + novo + mais */}
+        <div className="flex items-center gap-1 -mx-1">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                className="inline-flex h-11 min-w-0 items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold text-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-press"
+                aria-label={`Status: ${statusLabel}, ${tabCounts[activeTab] ?? 0} clientes. Trocar status`}
+              >
+                <span className="truncate">{statusLabel}</span>
+                <span className="text-muted-foreground font-normal tabular-nums">· {tabCounts[activeTab] ?? 0}</span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start" className="w-64">
+              <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Status do cliente</DropdownMenuLabel>
+              {STATUS_OPTIONS.map((s) => (
+                <DropdownMenuItem key={s.value} className="h-11 justify-between" onSelect={() => setActiveTab(s.value)}>
+                  <span className="flex items-center gap-2">
+                    <Check className={cn("h-4 w-4", activeTab === s.value ? "text-accent" : "opacity-0")} />
+                    {s.label}
+                  </span>
+                  <span className="tabular-nums text-muted-foreground">{tabCounts[s.value] ?? 0}</span>
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="ml-auto flex items-center gap-1">
+            <button
+              type="button"
+              className={cn(MobileIconButtonClass(), "bg-primary text-primary-foreground hover:bg-primary/90")}
+              onClick={() => setDialogOpen(true)}
+              disabled={!canCreate("clients")}
+              aria-label={canCreate("clients") ? "Novo cliente" : "Limite de clientes atingido"}
+              title={!canCreate("clients") ? "Limite de clientes atingido. Faça upgrade do plano." : undefined}
+            >
+              {canCreate("clients") ? <Plus className="h-5 w-5" /> : <Lock className="h-4 w-4" />}
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Mais ações">
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-72 max-h-[70dvh] overflow-y-auto">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Visualização</DropdownMenuLabel>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("cards")}>
+                  <Check className={cn("h-4 w-4 mr-2", viewMode !== "onboarding" ? "text-accent" : "opacity-0")} />Lista de clientes
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("onboarding")}>
+                  <Check className={cn("h-4 w-4 mr-2", viewMode === "onboarding" ? "text-accent" : "opacity-0")} />Onboarding orquestrado
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem className="h-11" onSelect={() => { fetchClients(); fetchTabCounts(); }}>
+                  <RotateCw className="h-4 w-4 mr-2" />Atualizar lista
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={openFromMenu(() => setFieldsDialogOpen(true))}>
+                  <Settings2 className="h-4 w-4 mr-2" />Campos personalizados
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" disabled={syncingProducts} onSelect={() => syncProductsFromContracts()}>
+                  {syncingProducts ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                  Sincronizar produtos dos contratos
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Exportar base de clientes</DropdownMenuLabel>
+                <DropdownMenuItem className="h-11" disabled={exporting} onSelect={() => exportClients("csv")}>
+                  <FileText className="h-4 w-4 mr-2" />Exportar CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" disabled={exporting} onSelect={() => exportClients("xlsx")}>
+                  <FileSpreadsheet className="h-4 w-4 mr-2" />Exportar Excel (XLSX)
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Importar</DropdownMenuLabel>
+                <DropdownMenuItem className="h-11" onSelect={openFromMenu(() => setImportDialogOpen(true))}>
+                  <Upload className="h-4 w-4 mr-2" />Importar clientes (CSV)
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={openFromMenu(() => setRevenueOpen(true))}>
+                  <TrendingUp className="h-4 w-4 mr-2" />Importar faturamento mensal
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        {/* Busca + filtros */}
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input
+              type="search"
+              aria-label="Buscar clientes"
+              placeholder="Buscar clientes"
+              className="h-11 rounded-xl border-transparent bg-muted/70 pl-10 shadow-none focus-visible:bg-card"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+          <button
+            type="button"
+            onClick={() => setMobileFiltersOpen(true)}
+            className={cn(MobileIconButtonClass(filterBadge > 0), "relative rounded-xl bg-muted/70")}
+            aria-label={filterBadge > 0 ? `Filtros e ordenação (${filterBadge} ativos)` : "Filtros e ordenação"}
+          >
+            <SlidersHorizontal className="h-5 w-5" />
+            {filterBadge > 0 && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent ring-2 ring-background" aria-hidden />}
+          </button>
+        </div>
+
+        {/* Resumo + critérios ativos */}
+        <div className="flex items-center gap-2 text-[13px] text-muted-foreground min-h-[20px]">
+          <span className="shrink-0 tabular-nums">
+            {loading ? "Carregando…" : filterRisk !== "all"
+              ? `${filtered.length} nesta página · ${RISK_LABELS[filterRisk]}`
+              : `${totalClients} cliente${totalClients !== 1 ? "s" : ""}`}
+          </span>
+          {chips.length > 0 && (
+            <button type="button" onClick={() => { clearAllFilters(); setSortOrder("recent"); }} className="ml-auto shrink-0 font-medium text-foreground underline-offset-2 hover:underline h-8">
+              Limpar
+            </button>
+          )}
+        </div>
+        {chips.length > 0 && (
+          <div className="-mx-4 flex gap-2 overflow-x-auto px-4 pb-1 [scrollbar-width:none]">
+            {chips.map((c) => (
+              <button
+                key={c.key}
+                type="button"
+                onClick={c.clear}
+                className="inline-flex h-8 shrink-0 items-center gap-1 rounded-full bg-muted px-3 text-xs text-foreground"
+                aria-label={`Remover filtro ${c.label}`}
+              >
+                <span className="max-w-[180px] truncate">{c.label}</span>
+                <X className="h-3.5 w-3.5 text-muted-foreground" />
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Lista */}
+        {viewMode !== "onboarding" && (
+          loading && clients.length === 0 ? (
+            <MobileListGroup aria-busy="true" aria-label="Carregando clientes">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <MobileListRow key={i} className="gap-3 px-4">
+                  <div className="h-9 w-9 rounded-full bg-muted animate-pulse" />
+                  <div className="flex-1 space-y-2">
+                    <div className="h-3.5 w-2/3 rounded bg-muted animate-pulse" />
+                    <div className="h-3 w-1/2 rounded bg-muted animate-pulse" />
+                  </div>
+                </MobileListRow>
+              ))}
+            </MobileListGroup>
+          ) : filtered.length === 0 ? (
+            <div className="rounded-[20px] bg-card px-6 py-10 text-center shadow-ios">
+              <Search className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+              <p className="font-medium">Nenhum cliente encontrado</p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                {searchQuery || chips.length > 0 ? "Tente outra busca ou remova filtros." : `Não há clientes em “${statusLabel}”.`}
+              </p>
+              {(searchQuery || chips.length > 0) && (
+                <Button variant="outline" className="mt-4 h-11" onClick={() => { setSearchQuery(""); clearAllFilters(); setSortOrder("recent"); }}>
+                  Limpar busca e filtros
+                </Button>
+              )}
+            </div>
+          ) : (
+            <MobileListGroup aria-label="Clientes" className={cn(loading && "opacity-60 transition-opacity")}>
+              {filtered.map((client: any) => {
+                const prods = (client.client_products || []).filter((cp: any) => cp.is_active !== false);
+                const prod = prods[0]?.products;
+                const fin = financialStatusMap?.get(client.id);
+                const alert = fin && (fin.risk === "critical" || fin.risk === "high") ? RISK_LABELS[fin.risk] : null;
+                const place = [client.city, client.state].filter(Boolean).join(" · ");
+                const line2 = [place, client.phone_e164].filter(Boolean).join("  ·  ");
+                return (
+                  <MobileListRow key={client.id}>
+                    <Link
+                      to={`/clients/${client.id}`}
+                      className="flex min-w-0 flex-1 items-center gap-3 self-stretch py-3 pl-4 pr-1 active:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                    >
+                      <Avatar className="h-9 w-9 shrink-0">
+                        {client.avatar_url ? <AvatarImage src={client.avatar_url} alt="" /> : null}
+                        <AvatarFallback className="bg-muted text-xs font-medium text-muted-foreground">{getInitials(client.full_name)}</AvatarFallback>
+                      </Avatar>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <span className="truncate text-base font-semibold leading-tight">{client.full_name}</span>
+                          <VipBadge clientId={client.id} />
+                        </div>
+                        {prod?.name && (
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                            <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: prod.color || "#6b7280" }} aria-hidden />
+                            <span className="truncate">{prod.name}{prods.length > 1 ? ` +${prods.length - 1}` : ""}</span>
+                          </div>
+                        )}
+                        {(line2 || alert) && (
+                          <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
+                            {alert && <span className="shrink-0 font-medium text-destructive">{alert}</span>}
+                            {alert && line2 && <span aria-hidden>·</span>}
+                            {line2 && <span className="truncate tabular-nums">{line2}</span>}
+                          </div>
+                        )}
+                      </div>
+                      <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground/60" aria-hidden />
+                    </Link>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className={cn(MobileIconButtonClass(), "mr-1 text-muted-foreground")} aria-label={`Ações para ${client.full_name}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-56">
+                        <DropdownMenuItem asChild className="h-11">
+                          <Link to={`/clients/${client.id}`}><ArrowRight className="h-4 w-4 mr-2" />Abrir ficha</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="h-11" onSelect={openFromMenu(() => { setClientToMerge(client); setMergeDialogOpen(true); })}>
+                          <GitMerge className="h-4 w-4 mr-2" />Mesclar cliente
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem className="h-11 text-destructive focus:text-destructive" onSelect={openFromMenu(() => { setClientToDelete({ id: client.id, name: client.full_name }); setDeleteDialogOpen(true); })}>
+                          <Trash2 className="h-4 w-4 mr-2" />Excluir cliente
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </MobileListRow>
+                );
+              })}
+            </MobileListGroup>
+          )
+        )}
+
+        {/* Paginação no fim */}
+        {viewMode !== "onboarding" && totalClients > pageSize && (
+          <nav className="flex items-center justify-between gap-2 pt-1" aria-label="Paginação">
+            <Button variant="ghost" className="h-11 px-3" onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} disabled={currentPage <= 1 || loading}>
+              <ChevronLeft className="h-4 w-4 mr-1" />Anterior
+            </Button>
+            <span className="text-sm tabular-nums text-muted-foreground">Página {currentPage} de {totalPages}</span>
+            <Button variant="ghost" className="h-11 px-3" onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))} disabled={currentPage >= totalPages || loading}>
+              Próxima<ChevronRight className="h-4 w-4 ml-1" />
+            </Button>
+          </nav>
+        )}
+
+        {/* Painel inferior de filtros */}
+        <Drawer open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen} shouldScaleBackground={false}>
+          <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined}>
+            <DrawerHeader className="flex items-center justify-between px-4 py-2 text-left">
+              <DrawerTitle className="text-[17px] font-semibold">Filtros e ordenação</DrawerTitle>
+              <DrawerClose asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Fechar filtros">
+                  <X className="h-5 w-5" />
+                </button>
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-4 space-y-5 [&_button[role=combobox]]:h-11 [&_button[role=combobox]]:bg-card">
+              <section className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Ordenar por</Label>
+                <Select value={sortOrder} onValueChange={setSortOrder}>
+                  <SelectTrigger aria-label="Ordenar por"><SelectValue /></SelectTrigger>
+                  <SelectContent>{SORT_OPTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </section>
+              <section className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Faturamento</Label>
+                <Select value={filterRevenueMissing} onValueChange={setFilterRevenueMissing}>
+                  <SelectTrigger aria-label="Faturamento"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="any">Sem faturamento (inicial ou atual)</SelectItem>
+                    <SelectItem value="initial">Sem faturamento inicial</SelectItem>
+                    <SelectItem value="current">Sem faturamento atual</SelectItem>
+                  </SelectContent>
+                </Select>
+              </section>
+              <section className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Período de entrada</Label>
+                <Select value={filterPeriod} onValueChange={setFilterPeriod}>
+                  <SelectTrigger aria-label="Período"><SelectValue /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todo o período</SelectItem>
+                    <SelectItem value="today">Hoje</SelectItem>
+                    <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                    <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                    <SelectItem value="this_month">Mês atual</SelectItem>
+                    <SelectItem value="last_month">Mês passado</SelectItem>
+                    <SelectItem value="custom">Personalizado</SelectItem>
+                  </SelectContent>
+                </Select>
+                {filterPeriod === "custom" && (
+                  <div className="mt-2 flex justify-center rounded-2xl bg-card">
+                    <Calendar
+                      mode="range"
+                      numberOfMonths={1}
+                      locale={ptBR}
+                      defaultMonth={filterPeriodStart ? new Date(filterPeriodStart) : undefined}
+                      selected={{ from: filterPeriodStart ? new Date(filterPeriodStart) : undefined, to: filterPeriodEnd ? new Date(filterPeriodEnd) : undefined }}
+                      onSelect={(r: any) => { setFilterPeriodStart(r?.from ? r.from.toISOString() : ""); setFilterPeriodEnd(r?.to ? r.to.toISOString() : ""); }}
+                      className="pointer-events-auto p-2"
+                    />
+                  </div>
+                )}
+              </section>
+              <div className="grid grid-cols-1 gap-4 [&>div]:min-w-0 [&>div]:w-full">{filterFields}</div>
+              <section className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Clientes por página</Label>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Clientes por página">
+                  {[20, 50, 100].map((size) => (
+                    <button
+                      key={size}
+                      type="button"
+                      role="radio"
+                      aria-checked={pageSize === size}
+                      onClick={() => { setPageSize(size); setCurrentPage(1); }}
+                      className={cn("h-10 rounded-lg text-sm font-medium", pageSize === size ? "bg-card shadow-sm text-foreground" : "text-muted-foreground")}
+                    >
+                      {size}
+                    </button>
+                  ))}
+                </div>
+              </section>
+            </div>
+            <DrawerFooter className="flex-row gap-2 border-t border-border/60 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="ghost" className="h-11 flex-1" onClick={() => { clearAllFilters(); setSortOrder("recent"); }} disabled={filterBadge === 0}>
+                Limpar tudo
+              </Button>
+              <DrawerClose asChild>
+                <Button className="h-11 flex-[2]">Ver {totalClients} resultado{totalClients !== 1 ? "s" : ""}</Button>
+              </DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    );
+  };
   const mobileView = renderMobileView();
 
   return (
