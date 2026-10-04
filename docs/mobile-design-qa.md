@@ -145,3 +145,13 @@ Capturas desta rodada ficaram só em pasta temporária privada (não versionadas
 | /clients/:id | "Reprocessar mensagens faltantes" ao lado do título; data dos eventos `whitespace-nowrap` sem quebra; topo com fotos + dados; cabeçalhos "Perfil do Negócio" e "Checkpoints" | título/ação empilhados no celular (botão largura total); linha do evento com `flex-wrap` e data à direita; topo quebra abaixo das fotos quando falta espaço; cabeçalhos com quebra | 385→320 / 400→393 / 1168 |
 
 Medido com Playwright autenticado, sem clicar em ações. Tipos e build: saída 0.
+
+## Rodada 6 — Clientes mobile refeito (<1024px)
+
+Referências 21st usadas: shadcn Item/Item Group (lista agrupada) e Drawer (painel inferior), ambos MIT, adaptados com `vaul` e componentes existentes.
+
+Arquivos: `src/pages/Clients.tsx` (composição mobile `renderMobileView`, filtros extraídos para `filterFields` compartilhado com desktop; `filterRisk` agora conta em `activeFilterCount` e é limpo por `clearAllFilters`, com chip "Risco (nesta página)" no desktop), `src/components/mobile/MobileListGroup.tsx` (padrão reutilizável: `MobileListGroup`, `MobileListRow`, `MobileIconButtonClass`), `src/components/client/RevenueImportDialog.tsx` (`open`/`onOpenChange` opcionais, reset ao fechar preservado).
+
+Mobile: um só título (header global); linha "Ativos · N ⌄" (4 status com contagem) + "+" (respeita `canCreate`) + "…" (visualização, Atualizar lista = só fetchClients/fetchTabCounts, Campos personalizados, Sincronizar produtos dos contratos, Exportar base CSV/XLSX, Importar clientes CSV, Importar faturamento mensal); busca 44px + Filtros 44px com ponto; resumo + chips removíveis; lista agrupada (avatar 36, nome 16 semibold, produto, alerta financeiro discreto, cidade/telefone, chevron, menu por cliente com Abrir/Mesclar/Excluir — mesmos gates do desktop); paginação só no fim; Drawer com as 10 ordenações, faturamento, período (calendário de 1 mês), todos os filtros, itens por página, rodapé "Limpar tudo"/"Ver N resultados" com safe area e fechar 44px. Desktop ≥1024 inalterado.
+
+Verificado (Playwright, sessão real, somente leitura): 1º cliente em y=209 em 393×852 (≈6 clientes visíveis), também 320/430/768/1023; scrollWidth = largura em todos; 1 h1 visível; dark e light; 1440 sem mudança. Menu "…" abre/fecha com Esc e foco volta ao gatilho; diálogos Importar CSV, Importar faturamento e Novo cliente abrem e cancelam (sem pointer-events preso); troca de status (Hold → Ativos); busca vazia mostra estado vazio com "Limpar busca e filtros"; filtro de risco aparece como chip e "Limpar" o remove (inclusive do armazenamento); período personalizado mostra 1 mês; paginação no fim. Nenhuma importação, sincronização, criação ou exclusão executada. Limitação: sem iPhone físico.

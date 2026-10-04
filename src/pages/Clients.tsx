@@ -2047,7 +2047,7 @@ export default function Clients() {
                         )}
                         {(line2 || alert) && (
                           <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                            {alert && <span className="shrink-0 font-medium text-destructive">{alert}</span>}
+                            {alert && <span className="shrink-0 text-destructive/90">{alert}</span>}
                             {alert && line2 && <span aria-hidden>·</span>}
                             {line2 && <span className="truncate tabular-nums">{line2}</span>}
                           </div>
