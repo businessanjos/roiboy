@@ -99,7 +99,7 @@ export function AppLayout() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
+      <div className="flex flex-col items-center justify-center h-[100dvh] gap-4">
         <LoadingScreen message="Carregando..." />
         {loadingTimeout && (
           <Button variant="outline" onClick={() => window.location.reload()}>
