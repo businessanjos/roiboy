@@ -3019,6 +3019,14 @@ export default function Clients() {
                     </button>
                   </Badge>
                 )}
+                {filterRisk !== "all" && (
+                  <Badge variant="secondary" className="text-xs gap-1 px-2 py-0.5">
+                    Risco: {RISK_LABELS[filterRisk] ?? filterRisk} (nesta página)
+                    <button onClick={() => setFilterRisk("all")} className="hover:text-destructive" aria-label="Remover filtro de risco">
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
               </div>
             )}
           </Card>
