@@ -237,6 +237,9 @@ export default function Tasks() {
   const [loadedChunks, setLoadedChunks] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
+  const [tasksFiltersOpen, setTasksFiltersOpen] = useState(false);
+  const [showTaskIndicators, setShowTaskIndicators] = useState(false);
+  const tasksFiltersBtnRef = useRef<HTMLButtonElement>(null);
 
   // Busca incremental: só consulta o servidor após o usuário parar de digitar.
   useEffect(() => {
@@ -1787,6 +1790,162 @@ export default function Tasks() {
     </Card>
     </>
   );
+
+  const renderTasksMobileHeader = () => {
+    const statusOpts = [
+      { value: "all", label: "Todas", count: baseFilteredTasks.length, color: undefined as string | undefined },
+      ...customStatuses.filter((s) => !s.name.toLowerCase().includes("cancel")).map((s) => ({ value: s.id, label: s.name, count: statusCounts[s.id] || 0, color: s.color })),
+      { value: "__overdue__", label: "Atrasadas", count: overdueCount, color: "hsl(var(--destructive))" },
+    ];
+    const current = statusOpts.find((o) => o.value === (activeTab || "all")) ?? statusOpts[0];
+    return (
+      <div className="lg:hidden space-y-3">
+        <div className="-mx-1 flex items-center gap-1">
+          {viewMode === "list" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="inline-flex h-11 min-w-0 items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-press" aria-label={`Status: ${current.label}, ${current.count} tarefas. Trocar status`}>
+                  <span className="truncate">{current.label}</span>
+                  <span className="font-normal tabular-nums text-muted-foreground">· {current.count}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64 max-h-[60dvh] overflow-y-auto">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Status da tarefa</DropdownMenuLabel>
+                {statusOpts.map((o) => (
+                  <DropdownMenuItem key={o.value} className="h-11 justify-between" onSelect={() => setActiveTab(o.value === "all" ? null : o.value)}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Check className={cn("h-4 w-4 shrink-0", current.value === o.value ? "text-accent" : "opacity-0")} />
+                      {o.color && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: o.color }} />}
+                      <span className="truncate">{o.label}</span>
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">{o.count}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="px-3 text-[15px] font-semibold">Kanban</span>
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" className={cn(MobileIconButtonClass(), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => openNewTaskDialog()} aria-label="Nova tarefa">
+              <Plus className="h-5 w-5" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Mais ações">
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Visualização</DropdownMenuLabel>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("list")}>
+                  <Check className={cn("mr-2 h-4 w-4", viewMode === "list" ? "text-accent" : "opacity-0")} />Lista
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("kanban")}>
+                  <Check className={cn("mr-2 h-4 w-4", viewMode === "kanban" ? "text-accent" : "opacity-0")} />Kanban
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {canExportTasks && (
+                  <DropdownMenuItem className="h-11" onSelect={() => handleExportTasks()}>
+                    <Download className="mr-2 h-4 w-4" />Exportar tarefas
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => setRulerLaunchOpen(true), 0)}>
+                  <CalendarClock className="mr-2 h-4 w-4" />Régua de relacionamento
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => setStatusManagerOpen(true), 0)}>
+                  <Settings className="mr-2 h-4 w-4" />Personalizar status
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input type="search" aria-label="Buscar tarefas" placeholder="Buscar tarefas" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-11 rounded-xl border-transparent bg-muted/70 pl-10 shadow-none focus-visible:bg-card" />
+          </div>
+          <button ref={tasksFiltersBtnRef} type="button" onClick={() => setTasksFiltersOpen(true)} className={cn(MobileIconButtonClass(tasksFiltersActive), "relative rounded-xl bg-muted/70")} aria-label={tasksFiltersActive ? "Filtros (ativos)" : "Filtros"}>
+            <SlidersHorizontal className="h-5 w-5" />
+            {tasksFiltersActive && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent ring-2 ring-background" aria-hidden />}
+          </button>
+        </div>
+
+        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} className="flex min-h-[32px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+          <span>Pendentes <b className="font-semibold text-foreground">{pendingCount}</b></span>
+          <span aria-hidden>·</span>
+          <span>Atrasadas <b className={cn("font-semibold", overdueCount > 0 ? "text-destructive" : "text-foreground")}>{overdueCount}</b></span>
+          <span aria-hidden>·</span>
+          <span>Concluídas <b className="font-semibold text-foreground">{doneCount}</b></span>
+          {tasksFiltersActive && <button type="button" onClick={(e) => { e.stopPropagation(); clearTaskFilters(); }} className="ml-auto h-8 font-medium text-foreground">Limpar</button>}
+          {!tasksFiltersActive && <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", showTaskIndicators && "rotate-180")} />}
+        </button>
+        {showTaskIndicators && (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Pendentes", value: pendingCount, cls: "" },
+              { label: "Atrasadas", value: overdueCount, cls: overdueCount > 0 ? "text-destructive" : "" },
+              { label: "Concluídas", value: doneCount, cls: "" },
+            ].map((k) => (
+              <div key={k.label} className="rounded-2xl bg-card px-3 py-2.5 shadow-ios">
+                <p className="text-[11px] text-muted-foreground">{k.label}</p>
+                <p className={cn("text-xl font-semibold tabular-nums", k.cls)}>{k.value}</p>
+              </div>
+            ))}
+            <p className="col-span-3 text-[11px] text-muted-foreground">Concluídas contam pela data de conclusão no período; as demais, pelo prazo.</p>
+          </div>
+        )}
+
+        <Drawer open={tasksFiltersOpen} onOpenChange={(o) => { setTasksFiltersOpen(o); if (!o) setTimeout(() => tasksFiltersBtnRef.current?.focus(), 350); }} shouldScaleBackground={false}>
+          <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined} onCloseAutoFocus={(e) => { e.preventDefault(); tasksFiltersBtnRef.current?.focus(); }}>
+            <DrawerHeader className="flex items-center justify-between px-4 py-2 text-left">
+              <DrawerTitle className="text-[17px] font-semibold">Filtros e ordenação</DrawerTitle>
+              <DrawerClose asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Fechar filtros"><X className="h-5 w-5" /></button>
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-4 [&>div]:!w-full [&_button[role=combobox]]:!h-11 [&_button[role=combobox]]:!w-full [&_button[role=combobox]]:bg-card">
+              {taskFilterItems}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tasks-m-start" className="text-xs text-muted-foreground">De</Label>
+                  <Input id="tasks-m-start" type="date" value={filterDateStart} onChange={(e) => setFilterDateStart(e.target.value)} className="h-11 bg-card" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tasks-m-end" className="text-xs text-muted-foreground">Até</Label>
+                  <Input id="tasks-m-end" type="date" value={filterDateEnd} onChange={(e) => setFilterDateEnd(e.target.value)} className="h-11 bg-card" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Direção da ordenação</Label>
+                <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Direção da ordenação">
+                  {(["asc", "desc"] as SortDirection[]).map((d) => (
+                    <button key={d} type="button" role="radio" aria-checked={sortDirection === d} onClick={() => setSortDirection(d)} className={cn("h-10 rounded-lg text-sm font-medium", sortDirection === d ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>
+                      {d === "asc" ? "Crescente" : "Decrescente"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Tarefas por página</Label>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Tarefas por página">
+                  {[20, 50, 100].map((n) => (
+                    <button key={n} type="button" role="radio" aria-checked={pageSize === n} onClick={() => { setPageSize(n); setCurrentPage(1); }} className={cn("h-10 rounded-lg text-sm font-medium", pageSize === n ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{n}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DrawerFooter className="flex-row gap-2 border-t border-border/60 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="ghost" className="h-11 flex-1" onClick={clearTaskFilters} disabled={!tasksFiltersActive}>Limpar tudo</Button>
+              <DrawerClose asChild><Button className="h-11 flex-[2]">Ver tarefas</Button></DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    );
+  };
 
   const tasksFiltersActive = filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all";
   const clearTaskFilters = () => {
