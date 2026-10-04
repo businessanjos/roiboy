@@ -370,7 +370,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
           )}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           {currentProfile && (
             <Button
               variant="outline"
@@ -456,7 +456,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
         <Tabs defaultValue="list" className="w-full">
           <CardHeader className="pb-3">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-              <div className="flex items-center gap-4">
+              <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-2">
                 <CardTitle className="text-lg font-semibold flex items-center gap-2">
                   Análise de Conteúdos
                   <Badge variant="secondary" className="font-normal">

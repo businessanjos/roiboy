@@ -79,8 +79,9 @@ export function FinancialSyncIssuesAlert() {
   return (
     <>
       <Card className="border-warning/40 bg-warning/5">
-        <CardContent className="p-4 flex items-center gap-4">
-          <div className="rounded-full bg-warning/15 p-2">
+        <CardContent className="p-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-4">
+          <div className="flex min-w-0 flex-1 items-start gap-3 sm:items-center sm:gap-4">
+          <div className="shrink-0 rounded-full bg-warning/15 p-2">
             <AlertTriangle className="h-5 w-5 text-warning" />
           </div>
           <div className="flex-1 min-w-0">
@@ -109,9 +110,12 @@ export function FinancialSyncIssuesAlert() {
               Registros em que o status da parcela do contrato não bate com o do lançamento financeiro.
             </p>
           </div>
+          </div>
+          <div className="flex items-center justify-end gap-2 border-t border-warning/20 pt-3 sm:border-0 sm:pt-0">
           <Button
             variant="ghost"
             size="icon"
+            aria-label="Recarregar divergências"
             onClick={() => refetch()}
             disabled={isFetching}
             title="Recarregar"
@@ -121,6 +125,7 @@ export function FinancialSyncIssuesAlert() {
           <Button variant="outline" size="sm" onClick={() => setOpen(true)}>
             Revisar
           </Button>
+          </div>
         </CardContent>
       </Card>
 

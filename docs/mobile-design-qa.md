@@ -104,3 +104,16 @@ Sem erros de página em nenhuma passada.
 
 Checks: `tsgo` saída 0, `vite build` saída 0, vitest 13/13 (activeNav, clientRoutes, MobileTabBar).
 Limitações: iPhone real não testado; abas com overflow conferidas por regra CSS, sem auditoria visual tela a tela.
+
+## Rodada 3b — achados da QA autenticada (390×844)
+
+| # | Rota / item | Origem | Correção | Verificado (localhost, 390px) |
+|---|---|---|---|---|
+| 1 | /marketing toolbar do calendário | toolbar sem quebra | já em flex-wrap desde a rodada 2 (o preview testado era anterior) | main.scrollWidth = 390 |
+| 2 | /marketing/content-hq?tab=redes | ações "Configurar Meta API / Sincronizar / Conectar Novo Perfil" e título + abas Lista/Semanal/Insights sem quebra (`SocialMediaTab`) | `flex-wrap` + `min-w-0` | main.scrollWidth 535 → 390; 1 `aria-current` |
+| 3 | Discador 3C no /pipeline | posição salva do desktop reaplicada no celular; `z-[60]` acima do drawer (z-50) | no celular sempre canto inferior direito; `z-40 lg:z-[60]`; estado/chamada intactos | botão em y=612, abaixo do overlay |
+| 4 | Foco do menu Mais | foco ficava no gatilho | `onOpenAutoFocus` → "Fechar menu"; trap do Radix | ao abrir: "Fechar menu"; 40 Tab + 5 Shift+Tab sempre dentro do diálogo; Esc e Fechar devolvem foco ao "Mais" |
+| 5 | Alerta de divergências /financial/dashboard | ícone, texto e ações na mesma linha | empilhado no celular, ações numa faixa inferior; refresh com aria-label | captura privada temporária |
+| 6 | /setores com setor salvo | header mostrava voltar e subtítulo | `isSectors`: título "Áreas", sem voltar/subtítulo | 0 botões "Voltar para as áreas" |
+
+Capturas desta rodada ficaram só em pasta temporária privada (não versionadas).

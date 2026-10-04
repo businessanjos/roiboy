@@ -69,8 +69,10 @@ export function MobileAppHeader() {
     navigate("/setores");
   };
 
-  const showBack = !!currentSector || !!parent;
-  const subtitle = parent ? parent.label : currentSector?.name;
+  // Em /setores (mesmo com setor salvo) a tela já é "Áreas": sem voltar nem subtítulo.
+  const isSectors = location.pathname === "/setores";
+  const showBack = !isSectors && (!!currentSector || !!parent);
+  const subtitle = isSectors ? undefined : parent ? parent.label : currentSector?.name;
 
   return (
     <header
@@ -95,7 +97,7 @@ export function MobileAppHeader() {
 
         <div className="min-w-0 flex-1 px-1">
           <h1 className="truncate text-[17px] font-semibold leading-tight tracking-tight text-foreground">
-            {title}
+            {isSectors ? "Áreas" : title}
           </h1>
           {subtitle && subtitle !== title && (
             <p className="truncate text-[12px] leading-tight text-muted-foreground">{subtitle}</p>
