@@ -38,8 +38,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MobileListGroup, MobileListRow, MobileIconButtonClass } from "@/components/mobile/MobileListGroup";
 import {
   Tooltip,
   TooltipContent,
@@ -74,7 +83,10 @@ import {
   ChevronRight,
   Download,
   CalendarClock,
-
+  MoreHorizontal,
+  SlidersHorizontal,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -1179,8 +1191,158 @@ export default function Tasks() {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
   }
 
+  // ===== Mobile (<1024px): lista derivada da mesma lógica da TaskTable =====
+  const resolveTaskStatus = (task: Task) => {
+    let taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+    if (!taskStatus && task.completed_at) taskStatus = customStatuses.find(s => s.is_completed_status);
+    if (!taskStatus && !task.completed_at) {
+      taskStatus = customStatuses.find(s => s.is_default)
+        ?? customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
+    }
+    return taskStatus;
+  };
+  const isoInDays = (days: number, months = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    if (months) d.setMonth(d.getMonth() + months);
+    return d.toISOString().split('T')[0];
+  };
+
+  const TaskMobileList = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => {
+    if (isLoading && tasks.length === 0) {
+      return (
+        <MobileListGroup className="lg:hidden" aria-busy="true" aria-label="Carregando tarefas">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MobileListRow key={i} className="gap-3 px-4">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <div className="flex-1 space-y-2"><Skeleton className="h-3.5 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
+            </MobileListRow>
+          ))}
+        </MobileListGroup>
+      );
+    }
+    if (tasks.length === 0) {
+      return (
+        <div className="lg:hidden rounded-[20px] bg-card px-6 py-10 text-center shadow-ios">
+          <ClipboardList className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+          <p className="font-medium">Nenhuma tarefa encontrada</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {searchTerm || tasksFiltersActive ? "Tente outra busca ou limpe os filtros." : "Toque em + para criar uma tarefa."}
+          </p>
+          {(searchTerm || tasksFiltersActive) && (
+            <Button variant="outline" className="mt-4 h-11" onClick={() => { setSearchTerm(""); clearTaskFilters(); }}>Limpar busca e filtros</Button>
+          )}
+        </div>
+      );
+    }
+    return (
+      <MobileListGroup className={cn("lg:hidden", isLoading && "opacity-60")} aria-label="Tarefas">
+        {tasks.map((task) => {
+          const taskStatus = resolveTaskStatus(task);
+          const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
+          const dueDateInfo = getDueDateInfo(task);
+          const priorityConfig = PRIORITY_CONFIG[task.priority];
+          const context = (isInVendasSector && task.deals?.title) || (isInVendasSector && task.leads?.full_name) || task.clients?.full_name || null;
+          const contactInfo = getContactInfoFromTask(task);
+          const title = task.activity_type?.name || task.title;
+          return (
+            <MobileListRow key={task.id} className={cn(isCompleted && "opacity-60")}>
+              <div className="flex h-11 w-12 shrink-0 items-center justify-center self-center">
+                <Checkbox
+                  checked={isCompleted}
+                  aria-label={isCompleted ? `Reabrir ${title}` : `Concluir ${title}`}
+                  onCheckedChange={() => {
+                    const completedStatus = customStatuses.find(s => s.is_completed_status);
+                    const pendingStatus = customStatuses.find(s => !s.is_completed_status);
+                    const newStatusId = isCompleted ? pendingStatus?.id : completedStatus?.id;
+                    if (newStatusId) handleStatusChange(task.id, newStatusId as Task["status"]);
+                  }}
+                  className={cn("h-5 w-5 rounded-full border after:absolute after:-inset-3 relative", isCompleted ? "bg-success border-success text-white" : "border-muted-foreground/40")}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTaskRowClick(task)}
+                className="flex min-w-0 flex-1 flex-col items-start self-stretch justify-center py-3 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <span className={cn("w-full truncate text-base font-semibold leading-tight", isCompleted && "line-through text-muted-foreground")}>{title}</span>
+                {context && <span className="mt-0.5 w-full truncate text-[13px] text-muted-foreground">{context}</span>}
+                <span className="mt-1 flex w-full min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: taskStatus?.color }} aria-hidden />
+                  <span className="shrink-0">{taskStatus?.name || "Sem status"}</span>
+                  {dueDateInfo && <><span aria-hidden>·</span><span className={cn("shrink-0", dueDateInfo.className)}>{dueDateInfo.text}</span></>}
+                  {(task.priority === "urgent" || task.priority === "high") && <><span aria-hidden>·</span><span className="shrink-0">{priorityConfig.label}</span></>}
+                  {task.assigned_user && <span className="ml-auto truncate pl-1">{task.assigned_user.name?.split(" ")[0]}{task.assigned_user.is_active === false ? " (inativo)" : ""}</span>}
+                </span>
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className={cn(MobileIconButtonClass(), "mr-1 text-muted-foreground")} aria-label={`Ações para ${title}`}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Status: {taskStatus?.name || "—"}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {customStatuses.map((status) => (
+                        <DropdownMenuItem key={status.id} className="h-11" onSelect={() => handleStatusChange(task.id, status.id as Task["status"])}>
+                          <span className="mr-2 h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />{status.name}
+                          {task.custom_status_id === status.id && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Prioridade: {priorityConfig.label}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {Object.entries(PRIORITY_CONFIG).map(([priority, config]) => (
+                        <DropdownMenuItem key={priority} className="h-11" onSelect={() => handlePriorityChange(task.id, priority as Task["priority"])}>
+                          {config.label}{task.priority === priority && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Prazo: {dueDateInfo ? dueDateInfo.text : "definir"}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(0))}>Hoje</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(1))}>Amanhã</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(7))}>Em 1 semana</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(0, 1))}>Em 1 mês</DropdownMenuItem>
+                      {task.due_date && <DropdownMenuItem className="h-11 text-destructive" onSelect={() => handleDueDateChange(task.id, null)}>Remover prazo</DropdownMenuItem>}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  {contactInfo && (
+                    <DropdownMenuItem className="h-11" disabled={zappLoading} onSelect={() => openZappConversation({ phone: contactInfo.phone, clientId: contactInfo.clientId, leadId: contactInfo.leadId, name: contactInfo.name || undefined })}>
+                      <MessageCircle className="mr-2 h-4 w-4" />Conversar
+                    </DropdownMenuItem>
+                  )}
+                  {task.deals && task.deal_id && (
+                    <DropdownMenuItem className="h-11" onSelect={() => navigate(`/pipeline?deal=${task.deal_id}`)}>
+                      <TrendingUp className="mr-2 h-4 w-4" />Ver negócio
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => openEditDialog(task), 0)}>
+                    <Pencil className="mr-2 h-4 w-4" />Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="h-11 text-destructive focus:text-destructive" onSelect={() => setTimeout(() => openDeleteDialog(task), 0)}>
+                    <Trash2 className="mr-2 h-4 w-4" />Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </MobileListRow>
+          );
+        })}
+      </MobileListGroup>
+    );
+  };
+
   const TaskTable = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => (
-    <Card className="shadow-card overflow-hidden">
+    <>
+    <TaskMobileList tasks={tasks} isLoading={isLoading} />
+    <Card className="hidden lg:block shadow-card overflow-hidden">
       <ScrollArea className="w-full">
         <div className="min-w-max">
           <Table>
@@ -1623,194 +1785,19 @@ export default function Tasks() {
         </div>
       </ScrollArea>
     </Card>
+    </>
   );
 
-  return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
-      {/* Header */}
-      <div className="flex flex-col gap-6">
-        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
-          <div className="space-y-1">
-            <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
-                <ListTodo className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-bold tracking-tight">Tarefas</h1>
-                <p className="text-sm text-muted-foreground">
-                  Gerencie suas tarefas e acompanhe o progresso
-                </p>
-              </div>
-            </div>
-          </div>
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Date Range Filter */}
-            <div className="flex w-full items-center gap-1.5 sm:w-auto">
-              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
-              <input
-                type="date"
-                value={filterDateStart}
-                onChange={(e) => setFilterDateStart(e.target.value)}
-                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
-              <input
-                type="date"
-                value={filterDateEnd}
-                onChange={(e) => setFilterDateEnd(e.target.value)}
-                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-              />
-              {(filterDateStart || filterDateEnd) && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => { setFilterDateStart(""); setFilterDateEnd(""); }}
-                >
-                  <XCircle className="h-4 w-4 text-muted-foreground" />
-                </Button>
-              )}
-            </div>
-
-            {/* View Mode Toggle */}
-            <div className="flex items-center border rounded-lg p-1 bg-muted/50">
-              <Button
-                variant={viewMode === "list" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("list")}
-                className="h-8 px-3"
-              >
-                <List className="h-4 w-4 mr-1.5" />
-                Lista
-              </Button>
-              <Button
-                variant={viewMode === "kanban" ? "secondary" : "ghost"}
-                size="sm"
-                onClick={() => setViewMode("kanban")}
-                className="h-8 px-3"
-              >
-                <LayoutGrid className="h-4 w-4 mr-1.5" />
-                Kanban
-              </Button>
-            </div>
-            {canExportTasks && (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleExportTasks}
-                className="h-9"
-              >
-                <Download className="h-4 w-4 mr-1.5" />
-                Exportar
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setRulerLaunchOpen(true)}
-              className="h-9"
-            >
-              <CalendarClock className="h-4 w-4 mr-1.5" />
-              Régua
-            </Button>
-
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => setStatusManagerOpen(true)}
-              className="h-9"
-            >
-              <Settings className="h-4 w-4 mr-1.5" />
-              Personalizar
-            </Button>
-
-
-            <Button 
-              onClick={() => openNewTaskDialog()}
-              className="shadow-sm"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Nova Tarefa
-            </Button>
-          </div>
-        </div>
-
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-warning/5 to-transparent">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pendentes</p>
-                  <p className="text-3xl font-bold mt-1">{pendingCount}</p>
-                </div>
-                <div className="p-2.5 rounded-full bg-warning/10">
-                  <Clock className="h-5 w-5 text-warning" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-
-          <Card className={cn(
-            "border-l-4 bg-gradient-to-r to-transparent",
-            overdueCount > 0 
-              ? "border-l-destructive from-destructive/5" 
-              : "border-l-muted from-muted/5"
-          )}>
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Atrasadas</p>
-                  <p className={cn(
-                    "text-3xl font-bold mt-1",
-                    overdueCount > 0 && "text-destructive"
-                  )}>{overdueCount}</p>
-                </div>
-                <div className={cn(
-                  "p-2.5 rounded-full",
-                  overdueCount > 0 ? "bg-destructive/10" : "bg-muted"
-                )}>
-                  <AlertTriangle className={cn(
-                    "h-5 w-5",
-                    overdueCount > 0 ? "text-destructive" : "text-muted-foreground"
-                  )} />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-success/5 to-transparent">
-            <CardContent className="p-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Concluídas</p>
-                  <p className="text-3xl font-bold mt-1">{doneCount}</p>
-                </div>
-                <div className="p-2.5 rounded-full bg-success/10">
-                  <CheckCircle2 className="h-5 w-5 text-success" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <FilterBar
-        searchValue={searchTerm}
-        onSearchChange={setSearchTerm}
-        searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all"}
-        onClearFilters={() => {
-          setFilterUser("all");
-          setFilterActivityType("all");
-          setFilterDateStart("");
-          setFilterDateEnd("");
-          setFilterStage("all");
-          setFilterLead("all");
-        }}
-      >
+  const tasksFiltersActive = filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all";
+  const clearTaskFilters = () => {
+    setFilterUser("all");
+    setFilterActivityType("all");
+    setFilterDateStart("");
+    setFilterDateEnd("");
+    setFilterStage("all");
+    setFilterLead("all");
+  };
+  const taskFilterItems = (<>
         <FilterItem>
           <Select value={filterUser} onValueChange={handleUserFilterChange}>
             <SelectTrigger className="w-full sm:w-[180px] h-10">
@@ -1985,6 +1972,190 @@ export default function Tasks() {
             </SelectContent>
           </Select>
         </FilterItem>
+  </>);
+
+  return (
+    <div className="px-4 pt-2 pb-6 sm:px-6 lg:p-8 space-y-3 lg:space-y-6 animate-fade-in">
+      {renderTasksMobileHeader()}
+      {/* Header */}
+      <div className="hidden lg:flex flex-col gap-6">
+        <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
+          <div className="space-y-1">
+            <div className="flex items-center gap-3">
+              <div className="p-2.5 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 border border-primary/10">
+                <ListTodo className="h-6 w-6 text-primary" />
+              </div>
+              <div>
+                <h1 className="text-2xl font-bold tracking-tight">Tarefas</h1>
+                <p className="text-sm text-muted-foreground">
+                  Gerencie suas tarefas e acompanhe o progresso
+                </p>
+              </div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Date Range Filter */}
+            <div className="flex w-full items-center gap-1.5 sm:w-auto">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
+              <input
+                type="date"
+                value={filterDateStart}
+                onChange={(e) => setFilterDateStart(e.target.value)}
+                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
+              <input
+                type="date"
+                value={filterDateEnd}
+                onChange={(e) => setFilterDateEnd(e.target.value)}
+                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+              />
+              {(filterDateStart || filterDateEnd) && (
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => { setFilterDateStart(""); setFilterDateEnd(""); }}
+                >
+                  <XCircle className="h-4 w-4 text-muted-foreground" />
+                </Button>
+              )}
+            </div>
+
+            {/* View Mode Toggle */}
+            <div className="flex items-center border rounded-lg p-1 bg-muted/50">
+              <Button
+                variant={viewMode === "list" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("list")}
+                className="h-8 px-3"
+              >
+                <List className="h-4 w-4 mr-1.5" />
+                Lista
+              </Button>
+              <Button
+                variant={viewMode === "kanban" ? "secondary" : "ghost"}
+                size="sm"
+                onClick={() => setViewMode("kanban")}
+                className="h-8 px-3"
+              >
+                <LayoutGrid className="h-4 w-4 mr-1.5" />
+                Kanban
+              </Button>
+            </div>
+            {canExportTasks && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportTasks}
+                className="h-9"
+              >
+                <Download className="h-4 w-4 mr-1.5" />
+                Exportar
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setRulerLaunchOpen(true)}
+              className="h-9"
+            >
+              <CalendarClock className="h-4 w-4 mr-1.5" />
+              Régua
+            </Button>
+
+            <Button 
+              variant="outline"
+              size="sm"
+              onClick={() => setStatusManagerOpen(true)}
+              className="h-9"
+            >
+              <Settings className="h-4 w-4 mr-1.5" />
+              Personalizar
+            </Button>
+
+
+            <Button 
+              onClick={() => openNewTaskDialog()}
+              className="shadow-sm"
+            >
+              <Plus className="h-4 w-4 mr-2" />
+              Nova Tarefa
+            </Button>
+          </div>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <Card className="border-l-4 border-l-amber-500 bg-gradient-to-r from-warning/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Pendentes</p>
+                  <p className="text-3xl font-bold mt-1">{pendingCount}</p>
+                </div>
+                <div className="p-2.5 rounded-full bg-warning/10">
+                  <Clock className="h-5 w-5 text-warning" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+
+          <Card className={cn(
+            "border-l-4 bg-gradient-to-r to-transparent",
+            overdueCount > 0 
+              ? "border-l-destructive from-destructive/5" 
+              : "border-l-muted from-muted/5"
+          )}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Atrasadas</p>
+                  <p className={cn(
+                    "text-3xl font-bold mt-1",
+                    overdueCount > 0 && "text-destructive"
+                  )}>{overdueCount}</p>
+                </div>
+                <div className={cn(
+                  "p-2.5 rounded-full",
+                  overdueCount > 0 ? "bg-destructive/10" : "bg-muted"
+                )}>
+                  <AlertTriangle className={cn(
+                    "h-5 w-5",
+                    overdueCount > 0 ? "text-destructive" : "text-muted-foreground"
+                  )} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-l-4 border-l-green-500 bg-gradient-to-r from-success/5 to-transparent">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Concluídas</p>
+                  <p className="text-3xl font-bold mt-1">{doneCount}</p>
+                </div>
+                <div className="p-2.5 rounded-full bg-success/10">
+                  <CheckCircle2 className="h-5 w-5 text-success" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
+      {/* Filters */}
+      <FilterBar
+        className="hidden lg:flex"
+        searchValue={searchTerm}
+        onSearchChange={setSearchTerm}
+        searchPlaceholder="Buscar por título, descrição ou cliente..."
+        filtersActive={tasksFiltersActive}
+        onClearFilters={clearTaskFilters}
+      >
+        {taskFilterItems}
       </FilterBar>
 
       {/* Content based on view mode */}
@@ -2007,8 +2178,8 @@ export default function Tasks() {
           onAddTask={openNewTaskDialog}
         />
       ) : (
-        <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-4">
-          <TabsList className="bg-muted/50 p-1 flex-wrap h-auto gap-1">
+        <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-3 lg:space-y-4">
+          <TabsList className="hidden lg:flex bg-muted/50 p-1 flex-wrap h-auto gap-1">
             <TabsTrigger 
               value="all" 
               className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -2054,15 +2225,15 @@ export default function Tasks() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="mt-6">
+          <TabsContent value="all" className="mt-0 lg:mt-6">
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
-            <TabsContent key={status.id} value={status.id} className="mt-6">
+            <TabsContent key={status.id} value={status.id} className="mt-0 lg:mt-6">
               <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
             </TabsContent>
           ))}
-          <TabsContent value="__overdue__" className="mt-6">
+          <TabsContent value="__overdue__" className="mt-0 lg:mt-6">
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
@@ -2102,8 +2273,8 @@ export default function Tasks() {
 
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
-            <div className="flex items-center justify-between px-2 py-3">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <p className="text-sm text-muted-foreground">
                   Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, sortedTasks.length)} de {sortedTasks.length} tarefas
                 </p>
