@@ -557,7 +557,7 @@ export function ClientBusinessProfile({
       <>
       <Card className="shadow-card border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
         <CardHeader className="pb-3">
-          <div className="flex items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <div className="p-1.5 rounded-md bg-primary/10 text-primary">
                 <Briefcase className="h-4 w-4" />
