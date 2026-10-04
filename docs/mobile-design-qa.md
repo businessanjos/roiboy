@@ -168,3 +168,9 @@ Verificado (Playwright, sessão real, somente leitura; nenhuma tarefa/cliente al
 - Clientes: 0 combobox sem nome no Drawer; foco retorna ao botão de filtros por "Fechar filtros" e por Esc.
 - `tsgo` OK (0), `vite build` completo OK (0; só avisos de chunks grandes preexistentes), vitest navegação/viewport/layout 16/16.
 Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estava; filtros do Drawer de Tarefas usam ícone + valor (rótulo acessível, sem legenda visível).
+
+## Rodada 7b — Correções da lista mobile de Clientes (revisão diff 308fa4)
+- `src/pages/Clients.tsx`: rótulo do período no Drawer renomeado para "Última atualização" (lógica `applyPeriodParams` com `updated_from/updated_to` inalterada).
+- Lista mobile: restaurados os alertas de contrato (`getContractExpiryStatus`: vencido / vence em ≤30d / ≤60d) e formulários pendentes (`pendingFormSends`) numa linha discreta de pendências por cliente, junto ao risco financeiro, com `aria-label` "Pendências: …" e `title` com detalhes. Sem cards altos nem botões extras.
+- Verificações: tsgo OK; `vite build` completo OK (apenas avisos de chunks grandes preexistentes); vitest `src/components/layout` + `src/hooks` 45/45 OK.
+- Limitação: verificação visual não executada nesta rodada — sessão do navegador de testes não estava disponível (tela de login).
