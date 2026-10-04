@@ -1645,20 +1645,20 @@ export default function Tasks() {
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {/* Date Range Filter */}
-            <div className="flex items-center gap-1.5">
+            <div className="flex w-full items-center gap-1.5 sm:w-auto">
               <label className="text-xs text-muted-foreground whitespace-nowrap">De</label>
               <input
                 type="date"
                 value={filterDateStart}
                 onChange={(e) => setFilterDateStart(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
               <label className="text-xs text-muted-foreground whitespace-nowrap">Até</label>
               <input
                 type="date"
                 value={filterDateEnd}
                 onChange={(e) => setFilterDateEnd(e.target.value)}
-                className="h-9 rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+                className="h-9 min-w-0 flex-1 sm:flex-none rounded-md border border-input bg-background px-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
               />
               {(filterDateStart || filterDateEnd) && (
                 <Button
@@ -2127,6 +2127,7 @@ export default function Tasks() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
+                <span className="px-2 text-xs tabular-nums text-muted-foreground sm:hidden">{safePage} / {totalPages}</span>
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
                   let page: number;
                   if (totalPages <= 7) {
@@ -2144,7 +2145,7 @@ export default function Tasks() {
                       variant={safePage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="h-8 w-8 p-0 text-xs"
+                      className="hidden h-8 w-8 p-0 text-xs sm:inline-flex"
                     >
                       {page}
                     </Button>

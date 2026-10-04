@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useNavigate } from "react-router-dom";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 import {
@@ -13,6 +14,7 @@ import {
   Users,
 
   RefreshCw,
+  ChevronLeft,
 } from "lucide-react";
 import { getContactInfo } from "./types";
 import { Button } from "@/components/ui/button";
@@ -282,11 +284,21 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 }: ZappConversationPanelProps) {
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
+  const navigate = useNavigate();
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
       <div className="bg-zapp-panel-header px-4 py-3 flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0 flex-1">
+          {/* No celular o RoyZapp não tem tab bar: este é o caminho de volta. */}
+          <button
+            type="button"
+            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/setores"))}
+            aria-label="Voltar"
+            className="touch-press -ml-2 -mr-1 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-zapp-text hover:bg-zapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+          >
+            <ChevronLeft className="h-6 w-6" aria-hidden />
+          </button>
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
             <AvatarFallback className="bg-zapp-accent text-white text-sm">

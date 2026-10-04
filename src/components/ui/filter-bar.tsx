@@ -69,7 +69,7 @@ export function FilterBar({
                 >
                   <SlidersHorizontal className="h-4 w-4" />
                   {filtersActive && (
-                    <span className="absolute -top-1 -right-1 h-2 w-2 rounded-full bg-primary" />
+                    <span className="absolute right-0.5 top-0.5 h-2 w-2 rounded-full bg-primary" />
                   )}
                 </Button>
               </PopoverTrigger>

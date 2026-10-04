@@ -103,7 +103,7 @@ function AttachmentMenu({
         <Button
           variant="ghost"
           size="icon"
-          className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+          className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
           disabled={uploadingMedia}
         >
           {uploadingMedia ? (
@@ -576,7 +576,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button 
                   variant="ghost" 
                   size="icon" 
-                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+                  className="text-zapp-text-muted hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
                 >
                   <Smile className="h-4 w-4 sm:h-5 sm:w-5" />
                 </Button>
@@ -683,7 +683,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
               <Button
                 variant="ghost"
                 size="icon"
-                className="flex text-success hover:bg-zapp-hover flex-shrink-0 h-8 w-8 sm:h-10 sm:w-10"
+                className="flex text-success hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10"
                 onClick={onOpenTemplates}
               >
                 <BadgeCheck className="h-4 w-4 sm:h-5 sm:w-5" />
@@ -710,7 +710,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
                   onClick={discardImagePreview}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -723,7 +723,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
                   onClick={onSendMessage}
                   disabled={uploadingMedia}
                 >
@@ -758,7 +758,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
                   onClick={discardFilePreview}
                 >
                   <Trash2 className="h-4 w-4" />
@@ -771,7 +771,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
                   onClick={onSendMessage}
                   disabled={uploadingMedia}
                 >
@@ -797,7 +797,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             <Button
               variant="ghost"
               size="icon"
-              className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+              className="text-zapp-accent hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
               onClick={toggleAudioPreview}
             >
               <Play className="h-5 w-5" />
@@ -813,7 +813,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-8 w-8"
+                  className="text-destructive hover:bg-zapp-hover flex-shrink-0 h-11 w-11 sm:h-8 sm:w-8"
                   onClick={onDiscardAudioPreview}
                 >
                   <Trash2 className="h-4 w-4" />
