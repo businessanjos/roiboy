@@ -2097,7 +2097,7 @@ export default function Clients() {
         )}
 
         {/* Painel inferior de filtros */}
-        <Drawer open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen} shouldScaleBackground={false}>
+        <Drawer open={mobileFiltersOpen} onOpenChange={(o) => { setMobileFiltersOpen(o); if (!o) setTimeout(() => mobileFiltersBtnRef.current?.focus(), 350); }} shouldScaleBackground={false}>
           <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined} onCloseAutoFocus={(e) => { e.preventDefault(); mobileFiltersBtnRef.current?.focus(); }}>
             <DrawerHeader className="flex items-center justify-between px-4 py-2 text-left">
               <DrawerTitle className="text-[17px] font-semibold">Filtros e ordenação</DrawerTitle>
