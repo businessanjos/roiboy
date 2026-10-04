@@ -437,21 +437,22 @@ export default function HRCollaborators() {
   }
 
   return (
-    <div className="p-6 w-full max-w-[1600px] mx-auto space-y-6">
+    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="shrink-0">
+      <div className="flex flex-wrap items-center gap-3">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="hidden shrink-0 lg:inline-flex" aria-label="Voltar para o RH">
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="p-2.5 rounded-xl bg-info/10">
           <UsersRound className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1">
           <h1 className="text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
           <p className="text-sm text-muted-foreground">
             {collaborators.length} colaborador{collaborators.length !== 1 ? "es" : ""} cadastrado{collaborators.length !== 1 ? "s" : ""}
           </p>
         </div>
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" disabled={filtered.length === 0}>
@@ -475,10 +476,11 @@ export default function HRCollaborators() {
           <Download className="h-4 w-4 mr-2" />
           Importar da Equipe
         </Button>
-        <Button onClick={() => setDialogOpen(true)}>
+        <Button onClick={() => setDialogOpen(true)} className="order-first w-full sm:order-none sm:w-auto">
           <Plus className="h-4 w-4 mr-2" />
           Novo Colaborador
         </Button>
+        </div>
       </div>
 
       {/* View switch */}
