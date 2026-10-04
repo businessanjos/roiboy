@@ -1873,15 +1873,17 @@ export default function Tasks() {
           </button>
         </div>
 
-        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} className="flex min-h-[32px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+        <div className="flex min-h-[32px] items-center gap-2">
+        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} aria-label="Mostrar indicadores" className="flex min-h-[32px] min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
           <span>Pendentes <b className="font-semibold text-foreground">{pendingCount}</b></span>
           <span aria-hidden>·</span>
           <span>Atrasadas <b className={cn("font-semibold", overdueCount > 0 ? "text-destructive" : "text-foreground")}>{overdueCount}</b></span>
           <span aria-hidden>·</span>
           <span>Concluídas <b className="font-semibold text-foreground">{doneCount}</b></span>
-          {tasksFiltersActive && <button type="button" onClick={(e) => { e.stopPropagation(); clearTaskFilters(); }} className="ml-auto h-8 font-medium text-foreground">Limpar</button>}
-          {!tasksFiltersActive && <ChevronDown className={cn("ml-auto h-4 w-4 transition-transform", showTaskIndicators && "rotate-180")} />}
+          <ChevronDown className={cn("ml-auto h-4 w-4 shrink-0 transition-transform", showTaskIndicators && "rotate-180")} />
         </button>
+        {tasksFiltersActive && <button type="button" onClick={clearTaskFilters} className="h-8 shrink-0 text-[13px] font-medium text-foreground">Limpar filtros</button>}
+        </div>
         {showTaskIndicators && (
           <div className="grid grid-cols-3 gap-2">
             {[
@@ -1959,7 +1961,7 @@ export default function Tasks() {
   const taskFilterItems = (<>
         <FilterItem>
           <Select value={filterUser} onValueChange={handleUserFilterChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10">
+            <SelectTrigger aria-label="Pessoa vinculada" className="w-full sm:w-[180px] h-10">
               <div className="flex items-center gap-2">
                 <Filter className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Pessoa vinculada" />
@@ -1991,7 +1993,7 @@ export default function Tasks() {
         </FilterItem>
         <FilterItem>
           <Select value={filterActivityType} onValueChange={setFilterActivityType}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10">
+            <SelectTrigger aria-label="Tipo de tarefa" className="w-full sm:w-[180px] h-10">
               <div className="flex items-center gap-2">
                 <ClipboardList className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Tipo de Tarefa" />
@@ -2016,7 +2018,7 @@ export default function Tasks() {
         {isInVendasSector && (
           <FilterItem>
             <Select value={filterStage} onValueChange={setFilterStage}>
-              <SelectTrigger className="w-full sm:w-[180px] h-10">
+              <SelectTrigger aria-label="Etapa do funil" className="w-full sm:w-[180px] h-10">
                 <div className="flex items-center gap-2">
                   <TrendingUp className="h-4 w-4 text-muted-foreground" />
                   <SelectValue placeholder="Etapa do Funil" />
@@ -2045,6 +2047,7 @@ export default function Tasks() {
               <Button
                 variant="outline"
                 role="combobox"
+                aria-label="Negociação"
                 aria-expanded={leadFilterOpen}
                 className="w-full sm:w-[240px] h-10 justify-between font-normal"
               >
@@ -2117,7 +2120,7 @@ export default function Tasks() {
         )}
         <FilterItem>
           <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-full sm:w-[160px] h-10">
+            <SelectTrigger aria-label="Ordenar por" className="w-full sm:w-[160px] h-10">
               <div className="flex items-center gap-2">
                 <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
                 <SelectValue placeholder="Ordenar por" />
