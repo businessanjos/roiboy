@@ -2127,6 +2127,7 @@ export default function Tasks() {
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
+                <span className="px-2 text-xs tabular-nums text-muted-foreground sm:hidden">{safePage} / {totalPages}</span>
                 {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
                   let page: number;
                   if (totalPages <= 7) {
@@ -2144,7 +2145,7 @@ export default function Tasks() {
                       variant={safePage === page ? "default" : "outline"}
                       size="sm"
                       onClick={() => setCurrentPage(page)}
-                      className="h-8 w-8 p-0 text-xs"
+                      className="hidden h-8 w-8 p-0 text-xs sm:inline-flex"
                     >
                       {page}
                     </Button>
