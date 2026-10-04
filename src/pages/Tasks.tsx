@@ -1249,20 +1249,24 @@ export default function Tasks() {
           const contactInfo = getContactInfoFromTask(task);
           const title = task.activity_type?.name || task.title;
           return (
-            <MobileListRow key={task.id} className={cn(isCompleted && "opacity-60")}>
-              <div className="flex h-11 w-12 shrink-0 items-center justify-center self-center">
-                <Checkbox
-                  checked={isCompleted}
-                  aria-label={isCompleted ? `Reabrir ${title}` : `Concluir ${title}`}
-                  onCheckedChange={() => {
-                    const completedStatus = customStatuses.find(s => s.is_completed_status);
-                    const pendingStatus = customStatuses.find(s => !s.is_completed_status);
-                    const newStatusId = isCompleted ? pendingStatus?.id : completedStatus?.id;
-                    if (newStatusId) handleStatusChange(task.id, newStatusId as Task["status"]);
-                  }}
-                  className={cn("h-5 w-5 rounded-full border after:absolute after:-inset-3 relative", isCompleted ? "bg-success border-success text-white" : "border-muted-foreground/40")}
-                />
-              </div>
+            <MobileListRow key={task.id}>
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={isCompleted}
+                aria-label={isCompleted ? `Reabrir ${title}` : `Concluir ${title}`}
+                onClick={() => {
+                  const completedStatus = customStatuses.find(s => s.is_completed_status);
+                  const pendingStatus = customStatuses.find(s => !s.is_completed_status);
+                  const newStatusId = isCompleted ? pendingStatus?.id : completedStatus?.id;
+                  if (newStatusId) handleStatusChange(task.id, newStatusId as Task["status"]);
+                }}
+                className="ml-1 flex h-11 w-11 shrink-0 items-center justify-center self-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              >
+                <span aria-hidden className={cn("flex h-5 w-5 items-center justify-center rounded-full border", isCompleted ? "border-success bg-success text-success-foreground" : "border-muted-foreground/50")}>
+                  {isCompleted && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                </span>
+              </button>
               <button
                 type="button"
                 onClick={() => handleTaskRowClick(task)}
@@ -1873,8 +1877,8 @@ export default function Tasks() {
           </button>
         </div>
 
-        <div className="flex min-h-[32px] items-center gap-2">
-        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} aria-label="Mostrar indicadores" className="flex min-h-[32px] min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+        <div className="flex min-h-[44px] items-center gap-2">
+        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} aria-label="Mostrar indicadores" className="flex min-h-[44px] min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
           <span>Pendentes <b className="font-semibold text-foreground">{pendingCount}</b></span>
           <span aria-hidden>·</span>
           <span>Atrasadas <b className={cn("font-semibold", overdueCount > 0 ? "text-destructive" : "text-foreground")}>{overdueCount}</b></span>
