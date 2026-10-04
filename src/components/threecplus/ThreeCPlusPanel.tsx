@@ -92,7 +92,7 @@ function readLauncherPosition(): Position {
   // barra de abas, para não cobrir o topo nem as ações das telas.
   const isMobile = window.innerWidth < 1024;
   const fallback = isMobile
-    ? clampLauncherPosition({ x: window.innerWidth - 120 - MARGIN, y: window.innerHeight - 52 - 96 }, 120)
+    ? clampLauncherPosition({ x: window.innerWidth - 120 - MARGIN, y: window.innerHeight - 52 - 180 }, 120)
     : clampLauncherPosition({ x: window.innerWidth - 330 - MARGIN, y: 80 });
   try {
     const raw = window.localStorage.getItem(LAUNCHER_POSITION_STORAGE_KEY);
