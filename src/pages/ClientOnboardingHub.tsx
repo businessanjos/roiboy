@@ -10,8 +10,11 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LoadingScreen } from "@/components/ui/loading-screen";
 import {
   Rocket, Search, Sparkles, Users, AlertCircle, RefreshCw, Settings2,
-  Brain, Activity, AlertTriangle, Timer, TrendingUp, Play, ArrowRight, CheckSquare,
+  Brain, Activity, AlertTriangle, Timer, TrendingUp, Play, ArrowRight, CheckSquare, MoreHorizontal, ChevronDown,
 } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MobileIconButtonClass } from "@/components/mobile/MobileListGroup";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrated";
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
@@ -32,6 +35,8 @@ export default function ClientOnboardingHub() {
   const [search, setSearch] = useState("");
   const [editorOpen, setEditorOpen] = useState(false);
   const [drawerClient, setDrawerClient] = useState<OnboardingClient | null>(null);
+  const [tab, setTab] = useState<"pipeline" | "health">("pipeline");
+  const [showKpis, setShowKpis] = useState(false);
   const accountId = currentUser?.account_id;
 
 
@@ -70,9 +75,54 @@ export default function ClientOnboardingHub() {
   if (loading && clients.length === 0) return <LoadingScreen />;
 
   return (
-    <div className="container mx-auto p-4 md:p-6 space-y-6 max-w-[1600px]">
+    <div className="container mx-auto px-4 pt-2 pb-6 lg:p-6 space-y-3 lg:space-y-6 max-w-[1600px]">
+      {/* Mobile header (<1024): segmento Pipeline/Saúde + menu, resumo recolhível */}
+      <div className="lg:hidden space-y-3">
+        <div className="flex items-center gap-2">
+          <div className="grid flex-1 grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Visão do onboarding">
+            {([["pipeline", "Clientes"], ["health", "Saúde por etapa"]] as const).map(([v, l]) => (
+              <button key={v} type="button" role="tab" aria-selected={tab === v} onClick={() => setTab(v)} className={cn("h-9 truncate rounded-lg px-2 text-sm font-medium", tab === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{l}</button>
+            ))}
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button type="button" className={MobileIconButtonClass()} aria-label="Mais ações"><MoreHorizontal className="h-5 w-5" /></button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-60">
+              <DropdownMenuItem className="h-11" onSelect={() => refetch()}><RefreshCw className="mr-2 h-4 w-4" />Atualizar lista</DropdownMenuItem>
+              <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => setEditorOpen(true), 0)}><Settings2 className="mr-2 h-4 w-4" />Configurar etapas</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <button type="button" onClick={() => setShowKpis(v => !v)} aria-expanded={showKpis} className="flex min-h-[32px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+          <span>Aguardando <b className={cn("font-semibold", summary.newCount > 0 ? "text-warning-strong dark:text-warning" : "text-foreground")}>{summary.newCount}</b></span>
+          <span aria-hidden>·</span>
+          <span>Em andamento <b className="font-semibold text-foreground">{summary.inProgress}</b></span>
+          <span aria-hidden>·</span>
+          <span>Atrasados <b className={cn("font-semibold", summary.overdue > 0 ? "text-destructive" : "text-foreground")}>{summary.overdue}</b></span>
+          <ChevronDown className={cn("ml-auto h-4 w-4 shrink-0 transition-transform", showKpis && "rotate-180")} />
+          <span className="sr-only">Indicadores</span>
+        </button>
+        {showKpis && (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { l: "Aguardando início", v: summary.newCount },
+              { l: "Em andamento", v: summary.inProgress },
+              { l: "Atrasados", v: summary.overdue },
+              { l: "Em risco", v: summary.atRisk },
+              { l: "Tempo médio", v: `${summary.avgDays}d` },
+            ].map(k => (
+              <div key={k.l} className="rounded-2xl bg-card px-3 py-2.5 shadow-ios">
+                <p className="truncate text-[11px] text-muted-foreground">{k.l}</p>
+                <p className="text-xl font-semibold tabular-nums">{k.v}</p>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+      <div className="hidden lg:flex lg:items-center lg:justify-between gap-3">
         <div className="flex items-center gap-3">
           <div className="rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 p-2.5 border border-primary/20">
             <Rocket className="h-6 w-6 text-primary" />
@@ -100,7 +150,7 @@ export default function ClientOnboardingHub() {
       </div>
 
       {/* KPIs */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+      <div className="hidden lg:grid grid-cols-5 gap-3">
         <KpiCard
           icon={Sparkles}
           value={summary.newCount}
@@ -115,8 +165,8 @@ export default function ClientOnboardingHub() {
       </div>
 
       {/* Tabs */}
-      <Tabs defaultValue="pipeline" className="space-y-4">
-        <TabsList>
+      <Tabs value={tab} onValueChange={(v) => setTab(v as "pipeline" | "health")} className="space-y-3 lg:space-y-4">
+        <TabsList className="hidden lg:inline-flex">
           <TabsTrigger value="pipeline" className="gap-1.5">
             <Users className="h-3.5 w-3.5" /> Pipeline
           </TabsTrigger>
@@ -125,14 +175,16 @@ export default function ClientOnboardingHub() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="pipeline" className="space-y-4">
-          <div className="relative max-w-md">
+        <TabsContent value="pipeline" className="mt-0 lg:mt-2 space-y-3 lg:space-y-4">
+          <div className="relative lg:max-w-md">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              type="search"
+              aria-label="Buscar cliente, empresa ou telefone"
               placeholder="Buscar cliente, empresa ou telefone..."
               value={search}
               onChange={e => setSearch(e.target.value)}
-              className="pl-9"
+              className="pl-9 h-11 rounded-xl border-transparent bg-muted/70 shadow-none lg:h-10 lg:rounded-md lg:border-input lg:bg-background"
             />
           </div>
 
@@ -156,8 +208,8 @@ export default function ClientOnboardingHub() {
           />
 
           {/* Orquestrador completo (mantido para gerenciar checklist) */}
-          <details className="rounded-lg border p-4">
-            <summary className="cursor-pointer text-sm font-medium text-muted-foreground hover:text-foreground">
+          <details className="rounded-[20px] lg:rounded-lg border p-4">
+            <summary className="cursor-pointer min-h-[44px] flex items-center text-sm font-medium text-muted-foreground hover:text-foreground">
               Visão completa do orquestrador (checklist por etapa)
             </summary>
             <div className="mt-4">
@@ -174,13 +226,13 @@ export default function ClientOnboardingHub() {
           </details>
         </TabsContent>
 
-        <TabsContent value="health" className="space-y-3">
+        <TabsContent value="health" className="mt-0 lg:mt-2 space-y-3">
           {stageHealth.map(({ stage, total, onTrack, atRisk, overdue, avgDays }) => {
             const totalSafe = Math.max(total, 1);
             return (
               <Card key={stage.id} className="overflow-hidden">
                 <CardContent className="p-4">
-                  <div className="flex items-center justify-between mb-2 gap-3">
+                  <div className="flex flex-wrap items-center justify-between mb-2 gap-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div
                         className="h-3 w-3 rounded-full shrink-0"
@@ -211,7 +263,7 @@ export default function ClientOnboardingHub() {
                     <div className="bg-warning" style={{ width: `${(atRisk / totalSafe) * 100}%` }} />
                     <div className="bg-danger" style={{ width: `${(overdue / totalSafe) * 100}%` }} />
                   </div>
-                  <div className="flex gap-4 mt-2 text-[11px] text-muted-foreground">
+                  <div className="flex flex-wrap gap-x-4 gap-y-1 mt-2 text-[11px] text-muted-foreground">
                     <span><span className="text-success font-medium">●</span> {onTrack} no prazo</span>
                     <span><span className="text-warning font-medium">●</span> {atRisk} em risco</span>
                     <span><span className="text-danger font-medium">●</span> {overdue} atrasados</span>
@@ -343,11 +395,11 @@ function SmartClientList({
           .filter(p => p.client_id === c.id && p.completed_at !== null)
           .map(p => p.checklist_item_id);
         return (
-          <Card key={c.id} className={`border-l-4 ${healthColor}`}>
-            <CardContent className="p-3 flex items-center gap-3">
-              <div className="flex-1 min-w-0">
+          <Card key={c.id} className={`border-l-4 ${healthColor} rounded-2xl lg:rounded-lg shadow-ios lg:shadow-sm`}>
+            <CardContent className="p-3 pl-4 lg:pl-3 flex flex-col gap-2.5 lg:flex-row lg:items-center lg:gap-3">
+              <button type="button" onClick={() => onOpenClient(c)} className="flex-1 min-w-0 text-left rounded-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <span className="font-medium text-sm truncate">{c.full_name}</span>
+                  <span className="font-semibold text-base lg:font-medium lg:text-sm truncate max-w-full">{c.full_name}</span>
                   {product && (
                     <Badge
                       variant="outline"
@@ -367,7 +419,7 @@ function SmartClientList({
                     </Badge>
                   )}
                 </div>
-                <div className="text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
+                <div className="text-[13px] lg:text-xs text-muted-foreground mt-0.5 flex items-center gap-2 flex-wrap">
                   <span>{stage?.name || "Sem etapa"}</span>
                   <span>•</span>
                   <span className={
@@ -379,13 +431,15 @@ function SmartClientList({
                   </span>
                   {c.ai_next_step && <Badge variant="outline" className="text-[9px] gap-0.5"><Brain className="h-2.5 w-2.5" />IA</Badge>}
                 </div>
-              </div>
+              </button>
+
+              <div className="flex items-center gap-2 border-t border-border/60 pt-2.5 lg:contents">
 
               {/* Checklist inline: dar baixa sem sair da lista */}
               {!notStarted && stageItems.length > 0 && accountId && (
                 <Popover>
                   <PopoverTrigger asChild>
-                    <Button variant="ghost" size="sm" className="gap-1.5 shrink-0">
+                    <Button variant="ghost" size="sm" className="gap-1.5 shrink-0 h-11 lg:h-9" aria-label={`Checklist da etapa: ${status.completed} de ${status.total}`}>
                       <CheckSquare className="h-4 w-4" />
                       <span className="text-xs">{status.completed}/{status.total}</span>
                     </Button>
@@ -438,15 +492,16 @@ function SmartClientList({
                 <Button
                   size="sm"
                   onClick={() => onStart(c.id, firstActiveStage.id)}
-                  className="gap-1.5 bg-warning hover:bg-warning text-white"
+                  className="gap-1.5 bg-warning hover:bg-warning text-white ml-auto h-11 lg:h-9 lg:ml-0"
                 >
                   <Play className="h-3.5 w-3.5" /> Iniciar Onboarding
                 </Button>
               ) : (
-                <Button size="sm" variant="outline" onClick={() => onOpenClient(c)} className="gap-1.5">
+                <Button size="sm" variant="outline" onClick={() => onOpenClient(c)} className="gap-1.5 ml-auto h-11 lg:h-9 lg:ml-0">
                   Continuar <ArrowRight className="h-3.5 w-3.5" />
                 </Button>
               )}
+              </div>
 
             </CardContent>
           </Card>
