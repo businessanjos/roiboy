@@ -94,7 +94,7 @@ export default function ClientOnboardingHub() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <button type="button" onClick={() => setShowKpis(v => !v)} aria-expanded={showKpis} className="flex min-h-[44px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+        <button type="button" onClick={() => setShowKpis(v => !v)} aria-expanded={showKpis} className="flex min-h-[44px] w-full flex-wrap items-center gap-x-1.5 text-left text-[13px] text-muted-foreground tabular-nums [&>span]:whitespace-nowrap">
           <span>Aguardando <b className={cn("font-semibold", summary.newCount > 0 ? "text-warning-strong dark:text-warning" : "text-foreground")}>{summary.newCount}</b></span>
           <span aria-hidden>·</span>
           <span>Em andamento <b className="font-semibold text-foreground">{summary.inProgress}</b></span>
