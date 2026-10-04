@@ -2026,6 +2026,12 @@ export default function Clients() {
                 const alert = fin && (fin.risk === "critical" || fin.risk === "high") ? RISK_LABELS[fin.risk] : null;
                 const place = [client.city, client.state].filter(Boolean).join(" · ");
                 const line2 = [place, client.phone_e164].filter(Boolean).join("  ·  ");
+                const expiry = getContractExpiryStatus(client.contract_end_date);
+                const pendingForms = pendingFormSends[client.id]?.length ?? 0;
+                const flags: { text: string; cls: string; title?: string }[] = [];
+                if (alert) flags.push({ text: alert, cls: "text-destructive/90" });
+                if (expiry) flags.push({ text: expiry.type === "expired" ? `Contrato vencido há ${expiry.days}d` : `Contrato vence em ${expiry.days}d`, cls: expiry.type === "warning" ? "text-muted-foreground" : expiry.type === "urgent" ? "text-warning-strong dark:text-warning" : "text-destructive/90", title: expiry.label });
+                if (pendingForms > 0) flags.push({ text: `${pendingForms} formulário${pendingForms > 1 ? "s" : ""} pendente${pendingForms > 1 ? "s" : ""}`, cls: "text-info", title: pendingFormSends[client.id].map((f) => f.formTitle).join(", ") });
                 return (
                   <MobileListRow key={client.id}>
                     <Link
@@ -2047,11 +2053,17 @@ export default function Clients() {
                             <span className="truncate">{prod.name}{prods.length > 1 ? ` +${prods.length - 1}` : ""}</span>
                           </div>
                         )}
-                        {(line2 || alert) && (
-                          <div className="mt-0.5 flex items-center gap-1.5 text-[13px] text-muted-foreground">
-                            {alert && <span className="shrink-0 text-destructive/90">{alert}</span>}
-                            {alert && line2 && <span aria-hidden>·</span>}
-                            {line2 && <span className="truncate tabular-nums">{line2}</span>}
+                        {line2 && (
+                          <div className="mt-0.5 truncate text-[13px] tabular-nums text-muted-foreground">{line2}</div>
+                        )}
+                        {flags.length > 0 && (
+                          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-1.5 text-[13px]" aria-label={`Pendências: ${flags.map((f) => f.title ? `${f.text} (${f.title})` : f.text).join("; ")}`}>
+                            {flags.map((f, i) => (
+                              <span key={i} className="inline-flex items-center gap-1.5">
+                                {i > 0 && <span aria-hidden className="text-muted-foreground">·</span>}
+                                <span className={f.cls} title={f.title}>{f.text}</span>
+                              </span>
+                            ))}
                           </div>
                         )}
                       </div>
@@ -2128,7 +2140,7 @@ export default function Clients() {
                 </Select>
               </section>
               <section className="space-y-1.5">
-                <Label className="text-xs text-muted-foreground">Período de entrada</Label>
+                <Label className="text-xs text-muted-foreground">Última atualização</Label>
                 <Select value={filterPeriod} onValueChange={setFilterPeriod}>
                   <SelectTrigger aria-label="Período"><SelectValue /></SelectTrigger>
                   <SelectContent>
