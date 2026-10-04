@@ -494,7 +494,7 @@ function SmartClientList({
                   onClick={() => onStart(c.id, firstActiveStage.id)}
                   className="gap-1.5 bg-warning hover:bg-warning text-white ml-auto h-11 lg:h-9 lg:ml-0"
                 >
-                  <Play className="h-3.5 w-3.5" /> Iniciar Onboarding
+                  <Play className="h-3.5 w-3.5" /> Iniciar<span className="hidden lg:inline"> Onboarding</span>
                 </Button>
               ) : (
                 <Button size="sm" variant="outline" onClick={() => onOpenClient(c)} className="gap-1.5 ml-auto h-11 lg:h-9 lg:ml-0">
