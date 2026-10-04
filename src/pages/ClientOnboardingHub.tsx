@@ -374,7 +374,7 @@ function SmartClientList({
 
 
   return (
-    <div className="grid gap-2">
+    <div className="grid grid-cols-1 gap-2 [&>*]:min-w-0">
       {clients.slice(0, 50).map(c => {
         const stage = c.stage_id ? stageById.get(c.stage_id) : null;
         const notStarted = !stage || stage.display_order === 0;
