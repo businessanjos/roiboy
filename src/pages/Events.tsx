@@ -820,6 +820,15 @@ export default function Events() {
 
   const hasActiveFilters = filterEventType !== "all" || filterModality !== "all" || filterStatus !== "all";
 
+  const eventsPg = usePagedList(filteredEvents, {
+    resetKey: [searchTerm, filterEventType, filterModality, modalityTab, filterStatus, sortOrder, viewMode],
+    isLoading: loading,
+  });
+  const attendancePg = usePagedList(attendance, {
+    resetKey: selectedEventForAttendance?.id,
+    isLoading: loadingAttendance,
+  });
+
   const clearFilters = () => {
     setFilterEventType("all");
     setFilterModality("all");
@@ -1561,7 +1570,7 @@ export default function Events() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {eventsPg.items.map((event) => (
                     <TableRow 
                       key={event.id} 
                       className="cursor-pointer hover:bg-muted/50"
@@ -1782,6 +1791,7 @@ export default function Events() {
                   ))}
                 </TableBody>
               </Table>
+              <PagerFor state={eventsPg} itemLabel="eventos" />
             </div>
           )}
         </CardContent>

@@ -37,6 +37,8 @@ import {
 import { toast } from "sonner";
 import CollaboratorsBulkEditDialog from "./components/CollaboratorsBulkEditDialog";
 import CollaboratorsPDAWorkspace from "./components/CollaboratorsPDAWorkspace";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { exportPayrollCSV, exportPayrollXLSX } from "./components/payrollExport";
 
@@ -209,6 +211,9 @@ export default function HRCollaborators() {
 
   /** O contador da aba PDA mostra só quem está ativo (desligados ficam no grupo recolhido). */
   const pdaActiveCount = useMemo(() => pdaRows.filter(c => c.status === "active").length, [pdaRows]);
+
+  const pgCollaborators = usePagedList(filtered, { resetKey: [search, statusFilter, deptFilter, typeFilter, view], isLoading: loading });
+  const pgProviders = usePagedList(filteredProviders, { resetKey: [search, statusFilter, deptFilter, view], isLoading: providersLoading });
 
   const fetchTeamMembers = useCallback(async () => {
     if (!currentUser?.account_id) return;
@@ -566,7 +571,7 @@ export default function HRCollaborators() {
                 </tr>
               </thead>
               <tbody>
-                {filteredProviders.map(p => {
+                {pgProviders.items.map(p => {
                   const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
                   return (
                     <tr key={p.id} className="border-b last:border-0 hover:bg-muted/30 transition-colors">
@@ -604,6 +609,7 @@ export default function HRCollaborators() {
               </tbody>
             </table>
           </div>
+          <PagerFor state={pgProviders} itemLabel="prestadores" />
         )
       ) : loading ? (
         <div className="text-center py-12 text-muted-foreground">Carregando...</div>
@@ -656,7 +662,7 @@ export default function HRCollaborators() {
               </tr>
             </thead>
             <tbody>
-              {filtered.map(c => {
+              {pgCollaborators.items.map(c => {
                 const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
                 return (
                   <tr key={c.id} className={`border-b last:border-0 transition-colors ${selectedRows.has(c.id) ? "bg-primary/5" : "hover:bg-muted/30"}`}>
@@ -730,6 +736,7 @@ export default function HRCollaborators() {
             </tbody>
           </table>
         </div>
+          <PagerFor state={pgCollaborators} itemLabel="colaboradores" />
       )}
 
       {/* New Collaborator Dialog */}

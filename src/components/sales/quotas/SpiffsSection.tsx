@@ -25,6 +25,8 @@ import { isManagementUser } from "@/lib/access/managementRoles";
 import { AlertTriangle } from "lucide-react";
 import { MultiCheckCombobox } from "@/components/sales/MultiCheckCombobox";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const formatBRL = (v: number) => v.toLocaleString("pt-BR");
 const parseBRL = (s: string) => {
