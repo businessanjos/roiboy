@@ -92,9 +92,24 @@ function pick(row: Record<string, unknown>, keys: string[]): unknown {
   return undefined;
 }
 
-export function RevenueImportDialog({ onImported }: { onImported?: () => void }) {
+export function RevenueImportDialog({
+  onImported,
+  open: controlledOpen,
+  onOpenChange,
+  triggerClassName,
+}: {
+  onImported?: () => void;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  triggerClassName?: string;
+}) {
   const { currentUser } = useCurrentUser();
-  const [open, setOpen] = useState(false);
+  const [internalOpen, setInternalOpen] = useState(false);
+  const open = controlledOpen ?? internalOpen;
+  const setOpen = (o: boolean) => {
+    if (controlledOpen === undefined) setInternalOpen(o);
+    onOpenChange?.(o);
+  };
   const [rows, setRows] = useState<ParsedRow[]>([]);
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -280,7 +295,7 @@ export function RevenueImportDialog({ onImported }: { onImported?: () => void })
       }}
     >
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="sm:size-default">
+        <Button variant="outline" size="sm" className={triggerClassName ?? "sm:size-default"}>
           <TrendingUp className="h-4 w-4 sm:mr-2" />
           <span className="hidden sm:inline">Importar faturamento</span>
         </Button>
