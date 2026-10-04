@@ -374,6 +374,8 @@ export default function Clients() {
   const [showOnlyInvalid, setShowOnlyInvalid] = useState(false);
 
   const [syncingProducts, setSyncingProducts] = useState(false);
+  const [revenueOpen, setRevenueOpen] = useState(false);
+  const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Custom fields state
@@ -1470,6 +1472,7 @@ export default function Clients() {
     filterArea !== "all",
     filterSpecialty !== "all",
     filterRevenueMissing !== "all",
+    filterRisk !== "all",
     !!periodRange,
   ].filter(Boolean).length;
 
@@ -1484,6 +1487,7 @@ export default function Clients() {
     setFilterRevenueMissing("all");
     setFilterArea("all");
     setFilterSpecialty("all");
+    setFilterRisk("all");
     setFilterPeriod("all");
     setFilterPeriodStart("");
     setFilterPeriodEnd("");
@@ -1602,9 +1606,209 @@ export default function Clients() {
     }
   };
 
+  const filterFields = (<>
+              {/* Client Status Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Status do Cliente</Label>
+                <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="churn_risk">Risco de Churn</SelectItem>
+                    <SelectItem value="churned">Churned</SelectItem>
+                    <SelectItem value="no_contract">Sem contrato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Product Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Produto</Label>
+                <Select value={filterProduct} onValueChange={setFilterProduct}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os produtos</SelectItem>
+                    {products.map(p => (
+                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Contract Filter */}
+              {!["awaiting", "hold", "cancelled"].includes(activeTab) && (
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Contrato</Label>
+                <Select value={filterContract} onValueChange={setFilterContract}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="active">Ativo</SelectItem>
+                    <SelectItem value="expired">Expirado</SelectItem>
+                    <SelectItem value="urgent">Expira em 30 dias</SelectItem>
+                    <SelectItem value="warning">Expira em 60 dias</SelectItem>
+                    
+                    <SelectItem value="pending">Pendente</SelectItem>
+                    <SelectItem value="cancelled">Cancelado</SelectItem>
+                    <SelectItem value="suspended">Suspenso</SelectItem>
+                    <SelectItem value="none">Sem contrato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              )}
+
+              {/* Responsible Filter */}
+              {teamUsers.length > 0 && (
+                <div className="space-y-1.5 min-w-[160px]">
+                  <Label className="text-xs text-muted-foreground">Responsável</Label>
+                  <Select value={filterResponsible} onValueChange={setFilterResponsible}>
+                    <SelectTrigger className="h-9 bg-background">
+                      <SelectValue placeholder="Todos" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {teamUsers.map(u => (
+                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                      ))}
+                      <SelectItem value="none">Sem responsável</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Vínculos Filter */}
+              <div className="space-y-1.5 min-w-[160px]">
+                <Label className="text-xs text-muted-foreground">Vínculos</Label>
+                <Select value={filterLinks} onValueChange={setFilterLinks}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="with">Com vínculos</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Risco financeiro */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Risco financeiro</Label>
+                <Select value={filterRisk} onValueChange={setFilterRisk}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    <SelectItem value="critical">🔴 Inadimplente (&gt;30d ou &gt;R$5k)</SelectItem>
+                    <SelectItem value="high">🟠 Em atraso</SelectItem>
+                    <SelectItem value="warning">🟡 Vence ≤7 dias</SelectItem>
+                    <SelectItem value="ok">🟢 Em dia</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">País (DDI)</Label>
+                <Select value={filterCountry} onValueChange={setFilterCountry}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todos os países</SelectItem>
+                    {countryOptions.map((opt) => (
+                      <SelectItem key={opt.code} value={opt.code}>
+                        <span className="inline-flex items-center gap-2">
+                          <span>{opt.flag}</span>
+                          <span>{opt.name}</span>
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Formação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Formação</Label>
+                <Select value={filterEducation} onValueChange={setFilterEducation}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as formações</SelectItem>
+                    <SelectItem value="Médico">Médico</SelectItem>
+                    <SelectItem value="Dentista">Dentista</SelectItem>
+                    <SelectItem value="Nutricionista">Nutricionista</SelectItem>
+                    <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
+                    <SelectItem value="Psicólogo">Psicólogo</SelectItem>
+                    <SelectItem value="Veterinário">Veterinário</SelectItem>
+                    <SelectItem value="Biomédico">Biomédico</SelectItem>
+                    <SelectItem value="Enfermeiro">Enfermeiro</SelectItem>
+                    <SelectItem value="Farmacêutico">Farmacêutico</SelectItem>
+                    <SelectItem value="Fonoaudiólogo">Fonoaudiólogo</SelectItem>
+                    <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
+                    <SelectItem value="Educador Físico">Educador Físico</SelectItem>
+                    <SelectItem value="Esteticista">Esteticista</SelectItem>
+                    <SelectItem value="Outro">Outro</SelectItem>
+                    <SelectItem value="none">Sem formação</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Área de Atuação Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Área de Atuação</Label>
+                <Select value={filterArea} onValueChange={setFilterArea}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as áreas</SelectItem>
+                    {areaOptions.map((a) => (
+                      <SelectItem key={a} value={a}>{a}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem área</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Especialidade Filter */}
+              <div className="space-y-1.5 min-w-[180px]">
+                <Label className="text-xs text-muted-foreground">Especialidade</Label>
+                <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
+                  <SelectTrigger className="h-9 bg-background">
+                    <SelectValue placeholder="Todas" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[300px]">
+                    <SelectItem value="all">Todas as especialidades</SelectItem>
+                    {specialtyOptions.map((s) => (
+                      <SelectItem key={s} value={s}>{s}</SelectItem>
+                    ))}
+                    <SelectItem value="none">Sem especialidade</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+
+
+
+
+
+
+
+  </>);
+  const mobileView = renderMobileView();
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
-      <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3">
+    <div className="px-4 pt-2 pb-6 sm:px-6 lg:p-8 space-y-3 lg:space-y-6 animate-fade-in">
+      {mobileView}
+      <div className="hidden lg:flex lg:justify-between lg:items-center gap-3">
         <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-xl sm:text-2xl font-bold">Clientes</h1>
           <span className="inline-flex items-baseline gap-1.5 text-sm text-muted-foreground">
@@ -1716,7 +1920,7 @@ export default function Clients() {
           </DropdownMenu>
 
           {/* Monthly revenue importer */}
-          <RevenueImportDialog onImported={() => fetchClients()} />
+          <RevenueImportDialog onImported={() => fetchClients()} open={revenueOpen} onOpenChange={setRevenueOpen} />
 
           {/* Import CSV Dialog */}
           <Dialog open={importDialogOpen} onOpenChange={(open) => {
@@ -2156,7 +2360,7 @@ export default function Clients() {
       </div>
 
       {/* Status tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="hidden lg:block w-full">
         <TabsList className="h-auto w-full flex-wrap justify-start bg-transparent border-b border-border rounded-none p-0 gap-6">
           <TabsTrigger
             value="active"
@@ -2202,7 +2406,7 @@ export default function Clients() {
       </Tabs>
 
       {/* Search and Filters */}
-      <div className="space-y-3">
+      <div className="hidden lg:block space-y-3">
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative flex-1 min-w-[200px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
@@ -2312,201 +2516,7 @@ export default function Clients() {
         {showFilters && (
           <Card className="p-4 bg-muted/30 border-dashed animate-fade-in">
             <div className="flex flex-wrap gap-3">
-              {/* Client Status Filter */}
-              <div className="space-y-1.5 min-w-[160px]">
-                <Label className="text-xs text-muted-foreground">Status do Cliente</Label>
-                <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="churn_risk">Risco de Churn</SelectItem>
-                    <SelectItem value="churned">Churned</SelectItem>
-                    <SelectItem value="no_contract">Sem contrato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Product Filter */}
-              <div className="space-y-1.5 min-w-[160px]">
-                <Label className="text-xs text-muted-foreground">Produto</Label>
-                <Select value={filterProduct} onValueChange={setFilterProduct}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos os produtos</SelectItem>
-                    {products.map(p => (
-                      <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Contract Filter */}
-              {!["awaiting", "hold", "cancelled"].includes(activeTab) && (
-              <div className="space-y-1.5 min-w-[160px]">
-                <Label className="text-xs text-muted-foreground">Contrato</Label>
-                <Select value={filterContract} onValueChange={setFilterContract}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="active">Ativo</SelectItem>
-                    <SelectItem value="expired">Expirado</SelectItem>
-                    <SelectItem value="urgent">Expira em 30 dias</SelectItem>
-                    <SelectItem value="warning">Expira em 60 dias</SelectItem>
-                    
-                    <SelectItem value="pending">Pendente</SelectItem>
-                    <SelectItem value="cancelled">Cancelado</SelectItem>
-                    <SelectItem value="suspended">Suspenso</SelectItem>
-                    <SelectItem value="none">Sem contrato</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              )}
-
-              {/* Responsible Filter */}
-              {teamUsers.length > 0 && (
-                <div className="space-y-1.5 min-w-[160px]">
-                  <Label className="text-xs text-muted-foreground">Responsável</Label>
-                  <Select value={filterResponsible} onValueChange={setFilterResponsible}>
-                    <SelectTrigger className="h-9 bg-background">
-                      <SelectValue placeholder="Todos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {teamUsers.map(u => (
-                        <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
-                      ))}
-                      <SelectItem value="none">Sem responsável</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Vínculos Filter */}
-              <div className="space-y-1.5 min-w-[160px]">
-                <Label className="text-xs text-muted-foreground">Vínculos</Label>
-                <Select value={filterLinks} onValueChange={setFilterLinks}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="with">Com vínculos</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Risco financeiro */}
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">Risco financeiro</Label>
-                <Select value={filterRisk} onValueChange={setFilterRisk}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Todos</SelectItem>
-                    <SelectItem value="critical">🔴 Inadimplente (&gt;30d ou &gt;R$5k)</SelectItem>
-                    <SelectItem value="high">🟠 Em atraso</SelectItem>
-                    <SelectItem value="warning">🟡 Vence ≤7 dias</SelectItem>
-                    <SelectItem value="ok">🟢 Em dia</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">País (DDI)</Label>
-                <Select value={filterCountry} onValueChange={setFilterCountry}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todos" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="all">Todos os países</SelectItem>
-                    {countryOptions.map((opt) => (
-                      <SelectItem key={opt.code} value={opt.code}>
-                        <span className="inline-flex items-center gap-2">
-                          <span>{opt.flag}</span>
-                          <span>{opt.name}</span>
-                        </span>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Formação Filter */}
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">Formação</Label>
-                <Select value={filterEducation} onValueChange={setFilterEducation}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="all">Todas as formações</SelectItem>
-                    <SelectItem value="Médico">Médico</SelectItem>
-                    <SelectItem value="Dentista">Dentista</SelectItem>
-                    <SelectItem value="Nutricionista">Nutricionista</SelectItem>
-                    <SelectItem value="Fisioterapeuta">Fisioterapeuta</SelectItem>
-                    <SelectItem value="Psicólogo">Psicólogo</SelectItem>
-                    <SelectItem value="Veterinário">Veterinário</SelectItem>
-                    <SelectItem value="Biomédico">Biomédico</SelectItem>
-                    <SelectItem value="Enfermeiro">Enfermeiro</SelectItem>
-                    <SelectItem value="Farmacêutico">Farmacêutico</SelectItem>
-                    <SelectItem value="Fonoaudiólogo">Fonoaudiólogo</SelectItem>
-                    <SelectItem value="Terapeuta Ocupacional">Terapeuta Ocupacional</SelectItem>
-                    <SelectItem value="Educador Físico">Educador Físico</SelectItem>
-                    <SelectItem value="Esteticista">Esteticista</SelectItem>
-                    <SelectItem value="Outro">Outro</SelectItem>
-                    <SelectItem value="none">Sem formação</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Área de Atuação Filter */}
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">Área de Atuação</Label>
-                <Select value={filterArea} onValueChange={setFilterArea}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="all">Todas as áreas</SelectItem>
-                    {areaOptions.map((a) => (
-                      <SelectItem key={a} value={a}>{a}</SelectItem>
-                    ))}
-                    <SelectItem value="none">Sem área</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Especialidade Filter */}
-              <div className="space-y-1.5 min-w-[180px]">
-                <Label className="text-xs text-muted-foreground">Especialidade</Label>
-                <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
-                  <SelectTrigger className="h-9 bg-background">
-                    <SelectValue placeholder="Todas" />
-                  </SelectTrigger>
-                  <SelectContent className="max-h-[300px]">
-                    <SelectItem value="all">Todas as especialidades</SelectItem>
-                    {specialtyOptions.map((s) => (
-                      <SelectItem key={s} value={s}>{s}</SelectItem>
-                    ))}
-                    <SelectItem value="none">Sem especialidade</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-
-
-
-
-
-
-
+              {filterFields}
 
               {/* Clear Filters Button */}
               {activeFilterCount > 0 && (
@@ -2662,7 +2672,7 @@ export default function Clients() {
 
 
       {viewMode === "table" ? (
-        <Card className="shadow-card flex-1 overflow-hidden">
+        <Card className="hidden lg:block shadow-card flex-1 overflow-hidden">
           <div className="h-[calc(100vh-260px)] overflow-auto">
             <table className="caption-bottom text-sm min-w-max">
                 <TableHeader className="sticky top-0 z-30">
@@ -3243,7 +3253,7 @@ export default function Clients() {
           </div>
         </Card>
       ) : viewMode === "cards" ? (
-        <div className="grid grid-cols-1 gap-3 [&>*]:min-w-0">
+        <div className="hidden lg:grid grid-cols-1 gap-3 [&>*]:min-w-0">
           {filtered.map((client) => {
             const clientProductsData = (client.client_products || []).filter((cp: any) => cp.is_active !== false);
             
@@ -3448,7 +3458,7 @@ export default function Clients() {
 
       {/* Pagination Controls */}
       {(viewMode === "table" || viewMode === "cards") && totalClients > pageSize && (
-        <div className="flex items-center justify-center gap-2 py-4">
+        <div className="hidden lg:flex items-center justify-center gap-2 py-4">
           <Button
             variant="outline"
             size="sm"
