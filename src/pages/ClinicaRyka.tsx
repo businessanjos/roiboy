@@ -170,8 +170,6 @@ export default function ClinicaRyka() {
     return { total, provisioned, pending, failed, rykaActive, rykaInactive };
   }, [enriched]);
 
-  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading: loading });
-
   const handleProvision = async (clientId: string) => {
     setProvisioningId(clientId);
     try {
@@ -221,6 +219,7 @@ export default function ClinicaRyka() {
   };
 
   const loading = clientsQuery.isLoading || provisionsQuery.isLoading;
+  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading: loading });
 
   return (
     <div className="container mx-auto py-6 space-y-6">

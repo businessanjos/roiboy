@@ -39,6 +39,7 @@ export function SpiffsSection() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
   const { spiffs, activePlan, saveSpiff, deleteSpiff } = useQuotasIncentives(now.getFullYear(), now.getMonth() + 1);
+  const spiffsPg = usePagedList(spiffs, { resetKey: spiffs.length });
   const [open, setOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [productAuditOpen, setProductAuditOpen] = useState(false);
@@ -669,7 +670,7 @@ export function SpiffsSection() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {spiffs.map((spiff) => {
+                {spiffsPg.items.map((spiff) => {
                   const product = products.find((p) => p.id === spiff.product_id);
                   const expired = isExpired(spiff.end_date);
                   const isRoulette = (spiff as any).prize_type === "roulette";
@@ -768,6 +769,7 @@ export function SpiffsSection() {
               </TableBody>
             </Table></div>
           )}
+          {spiffs.length > 0 && <PagerFor state={spiffsPg} itemLabel="SPIFFs" />}
         </CardContent>
       </Card>
     </TooltipProvider>

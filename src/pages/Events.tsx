@@ -1914,7 +1914,7 @@ export default function Events() {
                 </div>
                 
                 <div className="divide-y max-h-[300px] overflow-y-auto">
-                  {attendance.map((a) => {
+                  {attendancePg.items.map((a) => {
                     const displayName = a.clients?.full_name || a.guest_name || 'Convidado';
                     const displayPhone = a.clients?.phone_e164 || a.guest_phone || '';
                     const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -1954,6 +1954,7 @@ export default function Events() {
                     );
                   })}
                 </div>
+                <PagerFor state={attendancePg} itemLabel="participantes" />
               </div>
             )}
           </div>
