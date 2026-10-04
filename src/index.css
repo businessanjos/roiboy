@@ -425,6 +425,12 @@
     overflow-x: auto;
     scrollbar-width: none;
   }
+  /* Em overflow, "center" esconde as primeiras abas à esquerda: usa
+     "safe center" (fallback flex-start). Tablists verticais ficam intactos. */
+  [role="tablist"]:not([aria-orientation="vertical"]) {
+    justify-content: flex-start;
+    justify-content: safe center;
+  }
   [role="tablist"]::-webkit-scrollbar {
     display: none;
   }

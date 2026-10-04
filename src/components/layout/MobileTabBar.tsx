@@ -1,6 +1,6 @@
-import { useMemo, useState } from "react";
-import { NavLink, useLocation } from "react-router-dom";
-import { MoreHorizontal, MessageSquare } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { Link, useLocation } from "react-router-dom";
+import { MoreHorizontal, MessageSquare, X } from "lucide-react";
 import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 
 import { cn } from "@/lib/utils";
@@ -8,6 +8,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
   Drawer,
+  DrawerClose,
   DrawerContent,
   DrawerDescription,
   DrawerTitle,
@@ -15,7 +16,7 @@ import {
 } from "@/components/ui/drawer";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { SidebarContent } from "./Sidebar";
-import { pickActiveNavIndex } from "@/lib/navigation/activeNav";
+import { resolveActiveTarget } from "@/lib/navigation/activeNav";
 
 /** Rotas onde a barra inferior nunca aparece. */
 export const TAB_BAR_HIDDEN_ROUTES = ["/setores", "/", "/auth", "/choose-plan"];
@@ -39,7 +40,7 @@ export function useMobileTabBarVisible(): boolean {
  *
  * Estrutura de ícone + rótulo + estado ativo adaptada visualmente do bloco
  * "Mobile Navigation Tabs" (tabs-08) do shadcnui-blocks no 21st.dev (MIT).
- * Não é cópia do componente: usa NavLink/rotas e os tokens do ROY.
+ * Não é cópia do componente: usa Link com aria-current controlado e os tokens do ROY.
  */
 export function MobileTabBar() {
   const { currentSector } = useSector();
@@ -70,10 +71,27 @@ export function MobileTabBar() {
     return list.slice(0, 4);
   }, [navItems, currentSector?.id]);
 
-  const activeIndex = useMemo(
-    () => pickActiveNavIndex(primary.map((i) => i.to), location.pathname, location.search),
-    [primary, location.pathname, location.search],
-  );
+  // Ativo decidido sobre a lista completa do setor (inclui filhos sem atalho,
+  // ex.: /clients/medicos) e só então mapeado para um atalho ou "Mais".
+  const activeIndex = useMemo(() => {
+    const all = Array.from(new Set([
+      ...primary.map((i) => i.to),
+      ...navItems.map((i) => i.to),
+      ...(currentSector?.navItems ?? []).map((i) => i.to),
+    ]));
+    const target = resolveActiveTarget(all, location.pathname, location.search);
+    return target ? primary.findIndex((i) => i.to === target) : -1;
+  }, [primary, navItems, currentSector?.navItems, location.pathname, location.search]);
+
+  // Fecha o menu ao mudar de rota e ao crescer para desktop (sem overlay preso).
+  useEffect(() => { setMoreOpen(false); }, [location.pathname, location.search]);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const onChange = () => { if (mq.matches) setMoreOpen(false); };
+    onChange();
+    mq.addEventListener("change", onChange);
+    return () => mq.removeEventListener("change", onChange);
+  }, []);
 
   if (!visible || !currentSector || primary.length === 0) return null;
 
@@ -86,12 +104,12 @@ export function MobileTabBar() {
       className="lg:hidden fixed bottom-0 inset-x-0 z-40 border-t border-border/60 bg-background/85 backdrop-blur-xl backdrop-saturate-150"
       style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
     >
-      <ul className="grid grid-cols-5 px-1">
+      <ul className="grid px-1" style={{ gridTemplateColumns: `repeat(${primary.length + 1}, minmax(0, 1fr))` }}>
         {primary.map((item, idx) => {
           const active = idx === activeIndex;
           return (
             <li key={item.to} className="min-w-0">
-              <NavLink
+              <Link
                 to={item.to}
                 aria-current={active ? "page" : undefined}
                 className={cn(
@@ -110,7 +128,7 @@ export function MobileTabBar() {
                 <span className={cn("max-w-full truncate px-0.5 text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>
                   {item.label}
                 </span>
-              </NavLink>
+              </Link>
             </li>
           );
         })}
@@ -143,6 +161,15 @@ export function MobileTabBar() {
                   </DrawerTitle>
                   <DrawerDescription className="text-[13px]">Todas as telas deste setor</DrawerDescription>
                 </div>
+                <DrawerClose asChild>
+                  <button
+                    type="button"
+                    aria-label="Fechar menu"
+                    className="touch-press ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                  >
+                    <X className="h-5 w-5" aria-hidden />
+                  </button>
+                </DrawerClose>
               </div>
               <div
                 className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]"
