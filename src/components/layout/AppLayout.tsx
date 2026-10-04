@@ -3,7 +3,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MAIN_SCROLL_ID } from "@/lib/navigation/scrollMain";
 import { MobileAppHeader } from "./MobileAppHeader";
-import { MobileTabBar } from "./MobileTabBar";
+import { MobileTabBar, useMobileTabBarVisible } from "./MobileTabBar";
 import { GlobalHeader } from "./GlobalHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
@@ -42,6 +42,8 @@ export function AppLayout() {
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { perms: profilePerms, isAdmin: profileIsAdmin, loading: profileLoading } = useUserPermissions();
+  const tabBarVisible = useMobileTabBarVisible();
+  const isRoyZapp = location.pathname.startsWith("/roy-zapp");
 
   // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
