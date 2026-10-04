@@ -2078,7 +2078,7 @@ export default function ClientDetail() {
             onLogoChange={(url) => setClient({ ...client, logo_url: url })}
             size="lg"
           />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-[140px]">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate flex items-center gap-2">
                 <span className="truncate">{client.full_name}</span>
