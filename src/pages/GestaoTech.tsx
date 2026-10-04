@@ -227,9 +227,9 @@ export default function GestaoTech() {
             Painel centralizado de faturamento, custos e métricas dos seus projetos.
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
           <Select value={filter} onValueChange={setFilter}>
-            <SelectTrigger className="w-[220px]">
+            <SelectTrigger className="min-w-0 flex-1 sm:w-[220px] sm:flex-none">
               <SelectValue placeholder="Filtrar projeto" />
             </SelectTrigger>
             <SelectContent>
@@ -241,6 +241,7 @@ export default function GestaoTech() {
           </Select>
           {isAdmin && (
             <Button
+              className="shrink-0"
               onClick={() => { setEditing(null); setDialogOpen(true); }}
             >
               <Plus className="h-4 w-4 mr-1.5" /> Novo projeto
