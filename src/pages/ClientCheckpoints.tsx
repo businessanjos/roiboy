@@ -35,6 +35,8 @@ import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { ClientCheckinDialog } from "@/components/client/ClientCheckinDialog";
 import { ClientCheckinsReportDialog } from "@/components/client/ClientCheckinsReportDialog";
 import {
@@ -136,6 +138,8 @@ export default function ClientCheckpoints() {
       (r.consultant_name || "").toLowerCase().includes(q)
     );
   });
+
+  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading });
 
   const exportPanel = () => {
     const csv = buildCsv(
@@ -304,7 +308,7 @@ export default function ClientCheckpoints() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => (
+                  {pg.items.map((r) => (
                     <TableRow key={r.client_id}>
                       <TableCell className="font-medium">
                         <Link to={`/clients/${r.client_id}${clientDetailSearch}`} className="hover:underline">
@@ -382,6 +386,7 @@ export default function ClientCheckpoints() {
               </Table>
             </div>
           )}
+          {!isLoading && !error && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
       </Card>
 
