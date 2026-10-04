@@ -18,6 +18,8 @@ import { getPublicOrigin } from "@/lib/publicLink";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type OfferRow = {
   id: string;
@@ -70,6 +72,7 @@ export default function RHOffers() {
 
   const templates = offers.filter((o) => o.is_template);
   const realOffers = offers.filter((o) => !o.is_template);
+  const pgOffers = usePagedList(realOffers, { isLoading: loading });
 
   const copyLink = (token: string) => {
     const url = `${getPublicOrigin()}/oferta/${token}`;
@@ -251,7 +254,7 @@ export default function RHOffers() {
             <span className="text-xs text-muted-foreground">({realOffers.length})</span>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {realOffers.map((o) => {
+          {pgOffers.items.map((o) => {
             const status = STATUS_MAP[o.status] || STATUS_MAP.draft;
             const StatusIcon = status.icon;
             return (
@@ -341,6 +344,7 @@ export default function RHOffers() {
             );
           })}
           </div>
+          <PagerFor state={pgOffers} itemLabel="offers" />
         </div>
       )}
 

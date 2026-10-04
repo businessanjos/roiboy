@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { WhatsAppFormattingToolbar } from "@/components/ui/whatsapp-formatting-toolbar";
@@ -262,8 +264,10 @@ export default function Reminders() {
     },
   });
 
+  const campaignsPg = usePagedList(campaigns, { isLoading: loadingCampaigns });
+
   // Fetch recipients for viewing campaign
-  const { data: viewingRecipients = [], isLoading: loadingRecipients } = useQuery({
+  const { data: viewingRecipientsRaw = [], isLoading: loadingRecipients } = useQuery({
     queryKey: ["campaign-recipients", viewingCampaignId],
     queryFn: async () => {
       if (!viewingCampaignId) return [];
@@ -277,6 +281,9 @@ export default function Reminders() {
     },
     enabled: !!viewingCampaignId,
   });
+
+  const viewingRecipients = viewingRecipientsRaw;
+  const recipientsPg = usePagedList(viewingRecipients, { resetKey: viewingCampaignId, isLoading: loadingRecipients });
 
   // Get viewing campaign details
   const viewingCampaign = campaigns.find(c => c.id === viewingCampaignId);
@@ -1442,7 +1449,7 @@ export default function Reminders() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {campaigns.map((campaign) => {
+                    {campaignsPg.items.map((campaign) => {
                       const TypeIcon = CAMPAIGN_TYPES[campaign.campaign_type]?.icon || Bell;
                       const progress = campaign.total_recipients > 0
                         ? Math.round(((campaign.sent_count + campaign.failed_count) / campaign.total_recipients) * 100)
@@ -1514,6 +1521,9 @@ export default function Reminders() {
                   </TableBody>
                 </Table>
               )}
+              {!loadingCampaigns && campaigns.length > 0 && (
+                <PagerFor state={campaignsPg} itemLabel="campanhas" />
+              )}
             </CardContent>
           </Card>
         </TabsContent>
@@ -1544,7 +1554,7 @@ export default function Reminders() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {viewingRecipients.map((recipient) => (
+                {recipientsPg.items.map((recipient) => (
                   <TableRow key={recipient.id}>
                     <TableCell>
                       <div>
@@ -1608,6 +1618,9 @@ export default function Reminders() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {!loadingRecipients && viewingRecipients.length > 0 && (
+            <PagerFor state={recipientsPg} itemLabel="destinatários" />
           )}
 
           {/* Action buttons */}

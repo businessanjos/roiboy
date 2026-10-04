@@ -848,6 +848,7 @@ function CapturedDealsDialog({
   const sorted = [...deals].sort(
     (a, b) => new Date(b.won_at ?? 0).getTime() - new Date(a.won_at ?? 0).getTime(),
   );
+  const sortedPg = usePagedList(sorted, { resetKey: open, isLoading: !open });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -873,7 +874,7 @@ function CapturedDealsDialog({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {sorted.map((d) => {
+              {sortedPg.items.map((d) => {
                 const prod = productsQuery.data?.get(d.id);
                 return (
                   <TableRow
@@ -917,6 +918,7 @@ function CapturedDealsDialog({
             </TableBody>
           </Table>
         </div>
+        <PagerFor state={sortedPg} itemLabel="negociações" />
 
         <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
           <span className="text-muted-foreground">
@@ -1208,6 +1210,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     : sellerFilter.length > 0
       ? summary.filter((s) => sellerFilter.includes(s.uid))
       : summary;
+  const visibleSummaryPg = usePagedList(visibleSummary, { resetKey: [restrictToUserId, sellerFilter] });
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number; deals: CapturedDeal[] } | null>(null);
   const [capturedDetail, setCapturedDetail] = useState<
@@ -1261,7 +1264,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleSummary.map((s) => (
+            {visibleSummaryPg.items.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums p-0">
@@ -1312,6 +1315,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           </TableBody>
         </Table></div>
       )}
+      {visibleSummary.length > 0 && <PagerFor state={visibleSummaryPg} itemLabel="vendedores" />}
 
       {spinUser && (
         <RouletteSpinDialog
@@ -1537,6 +1541,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
     : sellerFilter.length > 0
       ? summary.filter((s) => sellerFilter.includes(s.uid))
       : summary;
+  const visibleSummaryPg = usePagedList(visibleSummary, { resetKey: [restrictToUserId, sellerFilter, windowOffset] });
 
   const [spinUser, setSpinUser] = useState<{ uid: string; name: string; pending: number } | null>(null);
   const [salesDetail, setSalesDetail] = useState<{ uid: string; name: string } | null>(null);
@@ -1607,7 +1612,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
             </TableRow>
           </TableHeader>
           <TableBody>
-            {visibleSummary.map((s) => (
+            {visibleSummaryPg.items.map((s) => (
               <TableRow key={s.uid}>
                 <TableCell className="text-sm font-medium">{s.name}</TableCell>
                 <TableCell className="text-center text-sm tabular-nums p-0">
@@ -1654,6 +1659,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
           </TableBody>
         </Table></div>
       )}
+      {visibleSummary.length > 0 && <PagerFor state={visibleSummaryPg} itemLabel="vendedores" />}
 
       {spinUser && (
         <RouletteSpinDialog

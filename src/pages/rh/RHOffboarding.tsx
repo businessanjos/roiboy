@@ -17,6 +17,8 @@ import { useHROffboardings, getOffboardingPerson, OFFBOARDING_STAGE_LABELS, OFFB
 import { TERMINATION_TYPE_LABELS } from "@/lib/rescissionCalc";
 import OffboardingDrawer from "@/components/rh/offboarding/OffboardingDrawer";
 import NewOffboardingDialog from "@/components/rh/offboarding/NewOffboardingDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
 
@@ -65,6 +67,8 @@ export default function RHOffboarding() {
       return true;
     });
   }, [offboardings, search, stageFilter, typeFilter, periodFilter, bondFilter]);
+
+  const pg = usePagedList(filtered, { resetKey: [search, stageFilter, typeFilter, periodFilter, bondFilter, view], isLoading: loading });
 
   const stats = useMemo(() => {
     const active = offboardings.filter((o) => !["completed", "cancelled"].includes(o.stage));
@@ -175,9 +179,12 @@ export default function RHOffboarding() {
           <p>Nenhum desligamento {stageFilter !== "all" ? "nesta etapa" : "registrado"}.</p>
         </CardContent></Card>
       ) : view === "list" ? (
+        <>
         <div className="space-y-2">
-          {filtered.map((o) => <OffboardingRow key={o.id} o={o} onClick={() => setSelected(o)} />)}
+          {pg.items.map((o) => <OffboardingRow key={o.id} o={o} onClick={() => setSelected(o)} />)}
         </div>
+        <PagerFor state={pg} itemLabel="desligamentos" />
+        </>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
           {OFFBOARDING_STAGES.map((stg) => {

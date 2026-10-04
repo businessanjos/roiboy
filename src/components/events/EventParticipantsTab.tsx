@@ -66,6 +66,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Database } from "@/integrations/supabase/types";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
 type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
@@ -663,6 +665,11 @@ export default function EventParticipantsTab({
     return name.includes(q) || email.includes(q) || phone.includes(q);
   });
 
+  const participantsPg = usePagedList(filteredParticipants, {
+    resetKey: [statusFilter, searchQuery],
+    isLoading: loading,
+  });
+
   return (
     <div className="space-y-6">
       {/* Stats — clique para filtrar */}
@@ -799,7 +806,7 @@ export default function EventParticipantsTab({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredParticipants.map((p) => {
+                {participantsPg.items.map((p) => {
                   const StatusIcon = rsvpStatusConfig[p.rsvp_status].icon;
                   return (
                     <TableRow key={p.id}>
@@ -916,6 +923,7 @@ export default function EventParticipantsTab({
               </TableBody>
             </Table>
           )}
+          {filteredParticipants.length > 0 && <PagerFor state={participantsPg} itemLabel="participantes" />}
         </CardContent>
       </Card>
 

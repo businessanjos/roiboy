@@ -18,6 +18,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
@@ -436,7 +438,12 @@ export default function MentoriaEC() {
   }, [members]);
 
 
-  const rows = tab === "abertas" ? openList : doneList;
+  const rowsFull = tab === "abertas" ? openList : doneList;
+  const pg = usePagedList(rowsFull, {
+    resetKey: [tab, search, openFilter, doneFilter, mentorshipFilter, programFilter, practiceFilter, attendanceSort],
+    isLoading: membersQuery.isLoading,
+  });
+  const rows = pg.items;
   const colSpan = 8;
 
   const openDialog = (member: EcMember, mode: "record" | "schedule") => {
@@ -728,6 +735,7 @@ export default function MentoriaEC() {
             </TableBody>
           </Table>
         </div>
+        <PagerFor state={pg} itemLabel="membros" />
       </Card>
 
       <Dialog open={!!dialogState} onOpenChange={(open) => !open && setDialogState(null)}>

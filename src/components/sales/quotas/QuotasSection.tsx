@@ -11,6 +11,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -303,6 +305,7 @@ export function QuotasSection() {
   const footerFalta = Math.max(0, 100 - footerAtingimento);
 
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
+  const userRowsPg = usePagedList(userRows, { resetKey: [year, month] });
 
   return (
     <div className="space-y-4">
@@ -344,7 +347,7 @@ export function QuotasSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {userRows.map((u) => (
+                  {userRowsPg.items.map((u) => (
                     <TableRow key={u.id} className="cursor-pointer hover:bg-muted/50" onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}>
                       <TableCell className="font-medium whitespace-nowrap">
                         <div className="flex items-center gap-2">
@@ -406,6 +409,7 @@ export function QuotasSection() {
                 </tfoot>
               </Table>
             </div>
+            {userRows.length > 0 && <PagerFor state={userRowsPg} itemLabel="vendedores" />}
           </CardContent>
         </Card>
       )}

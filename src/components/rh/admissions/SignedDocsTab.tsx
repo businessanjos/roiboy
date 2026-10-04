@@ -20,6 +20,8 @@ import { sanitizeDocumentHtml } from "@/lib/hr/admissionDocVars";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { useHRAdmissions, type HRAdmissionDocument } from "@/hooks/useHRAdmissions";
 import { toast } from "sonner";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Row = HRAdmissionDocument & {
   candidate_name: string;
@@ -75,6 +77,7 @@ export default function SignedDocsTab() {
   });
 
   const signed = rows.filter((r) => !!r.signed_at).length;
+  const pg = usePagedList(filtered, { resetKey: [search, status], isLoading: isLoading });
 
   return (
     <Card>
@@ -126,7 +129,7 @@ export default function SignedDocsTab() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => (
+                {pg.items.map((r) => (
                   <TableRow key={r.id}>
                     <TableCell>
                       <p className="text-sm font-medium">{r.candidate_name}</p>
@@ -158,6 +161,7 @@ export default function SignedDocsTab() {
                 ))}
               </TableBody>
             </Table>
+            <PagerFor state={pg} itemLabel="documentos" />
           </div>
         )}
       </CardContent>

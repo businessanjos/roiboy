@@ -19,6 +19,8 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Crown, Search, Loader2, Settings } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 
@@ -231,6 +233,8 @@ export default function VipClients() {
     if (criteria.top_n > 0) base = base.slice(0, criteria.top_n);
     return base;
   }, [rows, search, criteria]);
+
+  const pg = usePagedList(filtered, { resetKey: [search, criteria], isLoading: loading });
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
@@ -445,14 +449,14 @@ export default function VipClients() {
                 </tr>
               </thead>
               <tbody>
-                {filtered.map((r, idx) => (
+                {pg.items.map((r, idx) => (
                   <tr
                     key={r.client_id}
                     onClick={() => navigate(`/clients/${r.client_id}`)}
                     className="border-b last:border-0 hover:bg-muted/30 cursor-pointer transition"
                   >
                     <td className="px-4 py-3 font-semibold text-muted-foreground">
-                      {idx + 1}
+                      {pg.from + idx + 1}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-3">
@@ -504,6 +508,9 @@ export default function VipClients() {
               </tbody>
             </table>
           </div>
+        )}
+        {!loading && filtered.length > 0 && (
+          <PagerFor state={pg} itemLabel="clientes VIP" />
         )}
       </Card>
     </div>

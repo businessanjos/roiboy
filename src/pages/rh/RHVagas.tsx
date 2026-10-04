@@ -23,6 +23,8 @@ import { JobsBulkEditDialog } from "@/components/rh/jobs/JobsBulkEditDialog";
 import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export default function RHVagas() {
   const navigate = useNavigate();
@@ -53,6 +55,8 @@ export default function RHVagas() {
         setBenchmarks(map);
       });
   }, [jobs, currentUser?.account_id]);
+
+  const pg = usePagedList(jobs, { resetKey: statusFilter, isLoading: isLoading });
 
   const toggleSelect = (id: string) =>
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -133,8 +137,9 @@ export default function RHVagas() {
           <Button onClick={() => navigate("/rh/vacancies/new")} size="lg"><Plus className="h-4 w-4 mr-2" />Nova Vaga</Button>
         </div>
       ) : (
+        <>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {jobs.map(job => {
+          {pg.items.map(job => {
             const isClosed = job.status === "closed";
             return (
             <Card key={job.id} className={`relative hover:shadow-md transition-shadow cursor-pointer ${isClosed ? "opacity-70 border-dashed bg-muted/30" : ""} ${selectMode && selectedIds.includes(job.id) ? "ring-2 ring-primary" : ""}`} onClick={() => selectMode ? toggleSelect(job.id) : navigate(`/rh/vacancies/${job.id}`)}>
@@ -186,6 +191,8 @@ export default function RHVagas() {
           })}
 
         </div>
+        <PagerFor state={pg} itemLabel="vagas" />
+        </>
       )}
 
       <AlertDialog open={deleteDialog.open} onOpenChange={o => setDeleteDialog({ ...deleteDialog, open: o })}>

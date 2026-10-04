@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { History, CheckCircle2, Clock, RotateCcw, Search, DollarSign, Filter, XCircle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -192,6 +194,10 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
   });
 
   const isLoading = spinsQ.isLoading || spiffsQ.isLoading || usersQ.isLoading;
+  const filteredPg = usePagedList(filtered, {
+    resetKey: [statusFilter, userFilter, spiffFilter, search, from, to, restrictToUserId],
+    isLoading,
+  });
 
   return (
     <div className="space-y-4">
@@ -339,7 +345,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => {
+                {filteredPg.items.map((r) => {
                   const paidByName = r.paid_by ? userById.get(r.paid_by)?.name : null;
                   return (
                     <TableRow key={r.id}>
@@ -415,6 +421,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
               </TableBody>
             </Table></div>
           )}
+          {filtered.length > 0 && <PagerFor state={filteredPg} itemLabel="giros" />}
         </CardContent>
       </Card>
 

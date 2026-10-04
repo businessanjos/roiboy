@@ -26,6 +26,8 @@ import {
   Search, Plus, Handshake, Building2, Phone, Mail, UserSearch, Crown,
 } from "lucide-react";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const RH_ALLOWED_EMAILS = ["m.quintana@me.com", "coachevertonsantos@gmail.com", "rh@anjosbusiness.com.br", "diessica@consultoria-luma.com", "jaqueline@consultoria-luma.com", "brualmeida.est@hotmail.com", "arthur.mudri@hotmail.com", "jessicamarcato@anjosbusiness.com", "anjosgroup.dados@anjosbusiness.com"];
 
@@ -78,6 +80,8 @@ export default function HRServiceProviders() {
       return matchSearch && matchStatus;
     });
   }, [providers, search, statusFilter, tab]);
+
+  const pg = usePagedList(filtered, { resetKey: [search, statusFilter, tab], isLoading: loading });
 
   const countDirector = providers.filter(p => (p as any).provider_kind === "director").length;
   const countOnDemand = providers.length - countDirector;
@@ -204,8 +208,9 @@ export default function HRServiceProviders() {
           <p className="text-sm mt-1">Cadastre seu primeiro prestador de serviço</p>
         </div>
       ) : (
+        <>
         <div className="space-y-2">
-          {filtered.map(provider => {
+          {pg.items.map(provider => {
             const statusInfo = STATUS_MAP[provider.status || "active"] || STATUS_MAP.active;
             return (
               <div
@@ -268,6 +273,8 @@ export default function HRServiceProviders() {
             );
           })}
         </div>
+        <PagerFor state={pg} itemLabel="prestadores" />
+        </>
       )}
       </Tabs>
 
