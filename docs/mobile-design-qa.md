@@ -136,3 +136,12 @@ Limitações: iPhone real não testado; abas com overflow conferidas por regra C
 | 6 | /setores com setor salvo | header mostrava voltar e subtítulo | `isSectors`: título "Áreas", sem voltar/subtítulo | 0 botões "Voltar para as áreas" |
 
 Capturas desta rodada ficaram só em pasta temporária privada (não versionadas).
+
+## Rodada 5 — /gestao-tech e /clients/:id (somente leitura)
+
+| Rota | Origem | Correção | main.scrollWidth 320 / 393 / 1440 |
+|---|---|---|---|
+| /gestao-tech | filtro 220px + "Novo projeto" sem quebra; cabeçalho "Custos Lovable" ("Registrar custo") | barra `flex-wrap`, filtro flexível no celular; cabeçalho com quebra; tabela segue com rolagem contida | 337→320 / 405→393 / 1168 (sem mudança) |
+| /clients/:id | "Reprocessar mensagens faltantes" ao lado do título; data dos eventos `whitespace-nowrap` sem quebra; topo com fotos + dados; cabeçalhos "Perfil do Negócio" e "Checkpoints" | título/ação empilhados no celular (botão largura total); linha do evento com `flex-wrap` e data à direita; topo quebra abaixo das fotos quando falta espaço; cabeçalhos com quebra | 385→320 / 400→393 / 1168 |
+
+Medido com Playwright autenticado, sem clicar em ações. Tipos e build: saída 0.
