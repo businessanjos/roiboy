@@ -138,6 +138,8 @@ export default {
       boxShadow: {
         soft: "var(--shadow-soft, 0 1px 2px 0 hsl(0 0% 0% / 0.06))",
         lift: "var(--shadow-lift, 0 8px 24px -12px hsl(0 0% 0% / 0.24))",
+        ios: "0 1px 2px hsl(20 10% 11% / 0.04), 0 4px 14px -6px hsl(20 10% 11% / 0.08)",
+        "ios-lg": "0 2px 4px hsl(20 10% 11% / 0.05), 0 12px 28px -10px hsl(20 10% 11% / 0.14)",
       },
       borderRadius: {
         lg: "var(--radius)",
