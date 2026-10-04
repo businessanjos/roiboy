@@ -16,7 +16,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
-import { Briefcase, Check, ChevronDown } from "lucide-react";
+import { Briefcase, ChevronDown } from "lucide-react";
 import {
   Select,
   SelectContent,
