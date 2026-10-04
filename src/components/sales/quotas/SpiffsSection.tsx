@@ -1113,7 +1113,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     queryFn: async () => {
       const { data, error } = await supabase
         .from("spiff_spins")
-        .select("user_id, prize_amount, spun_at")
+        .select("id, user_id, prize_amount, spun_at")
         .eq("spiff_id", spiff.id)
         .order("spun_at", { ascending: false });
       if (error) throw error;
@@ -1128,7 +1128,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     queryFn: async () => {
       const { data, error } = await supabase
         .from("spiff_spin_deals" as any)
-        .select("deal_id")
+        .select("deal_id, spin_id")
         .eq("spiff_id", spiff.id);
       if (error) throw error;
       return (data ?? []) as any[];
@@ -1136,6 +1136,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
     enabled: !!accountId,
   });
   const usedDealIds = new Set((usedDealsQuery.data ?? []).map((r: any) => r.deal_id as string));
+  const linkedSpinIds = new Set((usedDealsQuery.data ?? []).map((r: any) => r.spin_id as string));
 
   const consumedByUser = new Map<string, { count: number; total: number }>();
   for (const log of spinsLogQuery.data ?? []) {
@@ -1170,7 +1171,9 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
       .reduce((acc, d) => acc + capturedAmount(d), 0);
     const monthEarned = triggerPerValue > 0 ? Math.floor(monthTotal / triggerPerValue) : 0;
     const monthSpins = (spinsLogQuery.data ?? []).filter(
-      (l: any) => l.user_id === uid && l.spun_at && new Date(l.spun_at).getTime() >= monthStart,
+      // Só giros sem vendas vinculadas: os vinculados já saem via usedDealIds,
+      // e giros deste mês por vendas de meses anteriores não podem zerar o mês atual.
+      (l: any) => l.user_id === uid && !linkedSpinIds.has(l.id) && l.spun_at && new Date(l.spun_at).getTime() >= monthStart,
     ).length;
     const pendingSpins = triggerPerValue > 0
       ? Math.max(0, Math.min(Math.floor(availableTotal / triggerPerValue), monthEarned - monthSpins))

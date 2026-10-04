@@ -95,22 +95,19 @@ Deno.serve(async (req) => {
       throw new Error('Áudio vazio ou muito curto para transcrever.');
     }
 
-    // Nome do arquivo precisa refletir o container real (OpenAI infere pelo sufixo)
-    const contentType = (audioResponse.headers.get('content-type') || audioBlob.type || '').toLowerCase();
-    const urlExt = message.media_url.split('?')[0].split('.').pop()?.toLowerCase() || '';
-    const knownExts = ['flac', 'm4a', 'mp3', 'mp4', 'mpeg', 'mpga', 'oga', 'ogg', 'wav', 'webm'];
-    const ext = knownExts.includes(urlExt)
-      ? urlExt
-      : contentType.includes('webm')
-        ? 'webm'
-        : contentType.includes('mp4') || contentType.includes('m4a')
-          ? 'm4a'
-          : contentType.includes('mpeg')
-            ? 'mp3'
-            : contentType.includes('wav')
-              ? 'wav'
-              : 'ogg';
-
+    // Detecta o container real pelos bytes; nunca chuta "ogg" para conteúdo desconhecido.
+    const head = new Uint8Array(await audioBlob.slice(0, 16).arrayBuffer());
+    const ascii = (a: number, b: number) => String.fromCharCode(...head.slice(a, b));
+    let ext: string | null = null;
+    if (ascii(0, 4) === 'OggS') ext = 'ogg';
+    else if (head[0] === 0x1a && head[1] === 0x45 && head[2] === 0xdf && head[3] === 0xa3) ext = 'webm';
+    else if (ascii(4, 8) === 'ftyp') ext = 'm4a';
+    else if (ascii(0, 4) === 'RIFF' && ascii(8, 12) === 'WAVE') ext = 'wav';
+    else if (ascii(0, 4) === 'fLaC') ext = 'flac';
+    else if (ascii(0, 3) === 'ID3' || (head[0] === 0xff && (head[1] & 0xe0) === 0xe0)) ext = 'mp3';
+    if (!ext) {
+      throw new Error('Arquivo de áudio em formato não reconhecido (possivelmente ainda criptografado). Aguardando novo download da mídia.');
+    }
     const formData = new FormData();
     formData.append('file', audioBlob, `audio.${ext}`);
     formData.append('model', 'whisper-1');

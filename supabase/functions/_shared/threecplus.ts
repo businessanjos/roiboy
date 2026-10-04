@@ -53,7 +53,9 @@ export async function fetch3c(url: string, init?: RequestInit): Promise<Response
   }
   if (agentId) headers["X-Agent-Id"] = agentId;
 
-  return fetch(finalUrl, { ...init, headers });
+  // Limita cada chamada à 3C: upstream lento derrubava o worker (520).
+  const signal = init?.signal ?? AbortSignal.timeout(8000);
+  return fetch(finalUrl, { ...init, headers, signal });
 }
 
 export type ThreeCAgentStatus = "offline" | "idle" | "on_call" | "break" | "manual" | "unknown";
