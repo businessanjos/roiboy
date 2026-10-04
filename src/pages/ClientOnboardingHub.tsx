@@ -81,7 +81,7 @@ export default function ClientOnboardingHub() {
         <div className="flex items-center gap-2">
           <div className="grid flex-1 grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="tablist" aria-label="Visão do onboarding">
             {([["pipeline", "Clientes"], ["health", "Saúde por etapa"]] as const).map(([v, l]) => (
-              <button key={v} type="button" role="tab" aria-selected={tab === v} onClick={() => setTab(v)} className={cn("h-9 truncate rounded-lg px-2 text-sm font-medium", tab === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{l}</button>
+              <button key={v} type="button" role="tab" aria-selected={tab === v} onClick={() => setTab(v)} className={cn("h-11 truncate rounded-lg px-2 text-sm font-medium", tab === v ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{l}</button>
             ))}
           </div>
           <DropdownMenu>
@@ -94,7 +94,7 @@ export default function ClientOnboardingHub() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <button type="button" onClick={() => setShowKpis(v => !v)} aria-expanded={showKpis} className="flex min-h-[32px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+        <button type="button" onClick={() => setShowKpis(v => !v)} aria-expanded={showKpis} className="flex min-h-[44px] w-full items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
           <span>Aguardando <b className={cn("font-semibold", summary.newCount > 0 ? "text-warning-strong dark:text-warning" : "text-foreground")}>{summary.newCount}</b></span>
           <span aria-hidden>·</span>
           <span>Em andamento <b className="font-semibold text-foreground">{summary.inProgress}</b></span>
