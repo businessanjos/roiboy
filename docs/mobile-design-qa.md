@@ -174,3 +174,10 @@ Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estav
 - Lista mobile: restaurados os alertas de contrato (`getContractExpiryStatus`: vencido / vence em ≤30d / ≤60d) e formulários pendentes (`pendingFormSends`) numa linha discreta de pendências por cliente, junto ao risco financeiro, com `aria-label` "Pendências: …" e `title` com detalhes. Sem cards altos nem botões extras.
 - Verificações: tsgo OK; `vite build` completo OK (apenas avisos de chunks grandes preexistentes); vitest `src/components/layout` + `src/hooks` 45/45 OK.
 - Limitação: verificação visual não executada nesta rodada — sessão do navegador de testes não estava disponível (tela de login).
+
+## Rodada 7c — Onboarding CS (achado de QA 393px) + validação final
+- Medição real (Playwright, sessão autenticada, somente leitura): `main.scrollWidth == clientWidth` em 320/393/430; botão "Iniciar" termina em x=291 (320px), sem corte; o scrollWidth=435 relatado já tinha sido corrigido na rodada 7 (`min-w-0` na grade). A tabela do orquestrador fica contida no próprio recipiente rolável dentro do `<details>` recolhido.
+- `src/pages/ClientOnboardingHub.tsx`: segmento Clientes/Saúde 36→44px; botão de indicadores 32→44px com quebra por item (`whitespace-nowrap`), sem cortar números em 320px.
+- Primeiro card em y≈221 (393×852). Nenhum onboarding iniciado nem registro alterado.
+- Clientes 393px reconferido com sessão: largura 393, linha de pendências exibida (inadimplência visível; contrato/formulários aparecem quando existem).
+- Final: tsgo OK; `vite build` OK (só avisos de chunks preexistentes); vitest layout+hooks 45/45 OK.
