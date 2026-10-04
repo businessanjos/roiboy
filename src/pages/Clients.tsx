@@ -3243,7 +3243,7 @@ export default function Clients() {
           </div>
         </Card>
       ) : viewMode === "cards" ? (
-        <div className="grid gap-3">
+        <div className="grid grid-cols-1 gap-3 [&>*]:min-w-0">
           {filtered.map((client) => {
             const clientProductsData = (client.client_products || []).filter((cp: any) => cp.is_active !== false);
             
