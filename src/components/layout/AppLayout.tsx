@@ -28,6 +28,7 @@ import { isRouteBlockedByProfile } from "@/lib/access/profileGate";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
+import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -44,6 +45,7 @@ export function AppLayout() {
   const { perms: profilePerms, isAdmin: profileIsAdmin, loading: profileLoading } = useUserPermissions();
   const tabBarVisible = useMobileTabBarVisible();
   const isRoyZapp = location.pathname.startsWith("/roy-zapp");
+  useVisualViewportHeight();
 
   // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
