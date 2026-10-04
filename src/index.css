@@ -395,17 +395,58 @@
 @media (max-width: 1023px) {
   body {
     overscroll-behavior-y: none;
+    /* Tipografia do sistema Apple no celular (SF Pro no iOS) */
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", system-ui, "Segoe UI", Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    text-size-adjust: 100%;
   }
   /* Rolagem com inércia nativa dentro dos containers do app */
   main,
   [data-scroll-area] {
     -webkit-overflow-scrolling: touch;
   }
-  /* Evita zoom automático do iOS ao focar campos */
-  input,
-  select,
-  textarea {
+  /* Evita zoom automático do iOS ao focar campos — vence utilitários como text-sm/text-xs */
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea),
+  :is(input:not([type="checkbox"]):not([type="radio"]):not([type="range"]), select, textarea)[class],
+  [contenteditable="true"][class] {
     font-size: 16px;
+  }
+  /* Diálogos centrais nunca passam da viewport dinâmica e rolam por dentro */
+  [role="dialog"][data-state="open"].fixed.top-\[50\%\] {
+    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    width: calc(100vw - 1.5rem);
+    border-radius: 20px;
+  }
+  /* Tabs horizontais roláveis em vez de quebrar/cortar */
+  [role="tablist"] {
+    max-width: 100%;
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  [role="tablist"]::-webkit-scrollbar {
+    display: none;
+  }
+  /* Tabelas largas: rolagem contida no próprio container */
+  .relative.w-full.overflow-auto:has(> table) {
+    overscroll-behavior-x: contain;
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Feedback de toque discreto (respeita reduced motion) */
+.touch-press {
+  transition: transform 150ms ease, background-color 150ms ease;
+}
+.touch-press:active {
+  transform: scale(0.96);
+}
+@media (prefers-reduced-motion: reduce) {
+  .touch-press,
+  .touch-press:active {
+    transition: none;
+    transform: none;
   }
 }
 

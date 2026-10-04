@@ -3,7 +3,7 @@ import { Outlet, Navigate, useLocation } from "react-router-dom";
 import { Sidebar } from "./Sidebar";
 import { MAIN_SCROLL_ID } from "@/lib/navigation/scrollMain";
 import { MobileAppHeader } from "./MobileAppHeader";
-import { MobileTabBar } from "./MobileTabBar";
+import { MobileTabBar, useMobileTabBarVisible } from "./MobileTabBar";
 import { GlobalHeader } from "./GlobalHeader";
 import { useAuth } from "@/hooks/useAuth";
 import { useSubscriptionStatus } from "@/hooks/useSubscriptionStatus";
@@ -42,6 +42,8 @@ export function AppLayout() {
   const { hasSectorAccess, isLoading: sectorAccessLoading } = useSectorAccess();
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { perms: profilePerms, isAdmin: profileIsAdmin, loading: profileLoading } = useUserPermissions();
+  const tabBarVisible = useMobileTabBarVisible();
+  const isRoyZapp = location.pathname.startsWith("/roy-zapp");
 
   // Diálogo de nova versão (poll do /version.json) é renderizado no final do layout.
 
@@ -97,7 +99,7 @@ export function AppLayout() {
 
   if (isLoading) {
     return (
-      <div className="flex flex-col items-center justify-center h-screen gap-4">
+      <div className="flex flex-col items-center justify-center h-[100dvh] gap-4">
         <LoadingScreen message="Carregando..." />
         {loadingTimeout && (
           <Button variant="outline" onClick={() => window.location.reload()}>
@@ -163,23 +165,26 @@ export function AppLayout() {
   return (
     <PlanLimitsProvider>
       <NotificationsProvider>
-        <div className="flex flex-col h-screen w-full bg-background overflow-hidden">
+        <div className="flex flex-col h-[100dvh] w-full bg-background overflow-hidden">
           <div className="hidden lg:block">
             <GlobalHeader />
           </div>
           <TrialBanner />
           {/* O ROY zAPP tem cabeçalho e navegação próprios no mobile. */}
-          {!location.pathname.startsWith("/roy-zapp") && <MobileAppHeader />}
+          {!isRoyZapp && <MobileAppHeader />}
 
           <div className="flex flex-row flex-1 w-full min-h-0 overflow-hidden gap-4">
             <Sidebar />
+            {/* O main é o container de rolagem; o espaço inferior só existe quando há tab bar. */}
             <main
               id={MAIN_SCROLL_ID}
               className={
                 "flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain lg:pb-0 " +
-                (location.pathname.startsWith("/roy-zapp")
+                (isRoyZapp
                   ? "pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
-                  : "pb-[calc(3.5rem+env(safe-area-inset-bottom))]")
+                  : tabBarVisible
+                    ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]"
+                    : "pb-[env(safe-area-inset-bottom)]")
               }
             >
               <Outlet />

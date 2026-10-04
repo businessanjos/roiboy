@@ -952,7 +952,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                 type="button"
                 variant="ghost"
                 size="icon"
-                className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-accent text-white hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
+                className="flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10 rounded-full bg-zapp-accent text-white hover:bg-zapp-accent/90 sm:bg-transparent sm:text-zapp-accent sm:hover:bg-zapp-hover"
                 onClick={(e) => {
                   e.preventDefault();
                   onSendMessage();
@@ -971,8 +971,9 @@ export const ZappMessageInput = memo(function ZappMessageInput({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="flex-shrink-0 h-10 w-10 rounded-full bg-zapp-hover text-zapp-text sm:bg-transparent sm:text-zapp-text-muted sm:hover:bg-zapp-hover"
+                    className="flex-shrink-0 h-11 w-11 sm:h-10 sm:w-10 rounded-full bg-zapp-hover text-zapp-text sm:bg-transparent sm:text-zapp-text-muted sm:hover:bg-zapp-hover"
                     onClick={onStartRecording}
+                    aria-label="Gravar áudio"
                     disabled={uploadingMedia}
                   >
                     <Mic className="h-5 w-5 sm:h-6 sm:w-6" />

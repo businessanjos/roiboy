@@ -10,7 +10,7 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions } from "@/hooks/usePermissions";
 import { SectorsHealthBanner } from "@/components/sectors/SectorsHealthBanner";
-import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw, Activity, Users } from "lucide-react";
+import { BarChart3, Wallet, Target, Palette, Zap, Bot, Briefcase, CalendarDays, AlertTriangle, RefreshCw, Activity, Users, ChevronRight } from "lucide-react";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { useQueryClient } from "@tanstack/react-query";
 import eternumSimbolo from "@/assets/simbolo-eternum.png";
@@ -317,23 +317,29 @@ export default function Sectors() {
     );
   }
 
+  const cardCls = (disabled?: boolean) =>
+    cn(
+      "group relative flex w-full items-center gap-3.5 rounded-[20px] border border-border/60 bg-card/80 p-4 text-left shadow-ios transition-[transform,box-shadow,background-color] duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background motion-reduce:transition-none",
+      disabled
+        ? "cursor-not-allowed opacity-50"
+        : "hover:bg-card hover:shadow-ios-lg active:scale-[0.985] motion-reduce:active:scale-100",
+    );
+
   return (
-    <div className="min-h-screen bg-background" data-testid="sectors-page">
-      <div className="container mx-auto px-6 py-12 max-w-5xl">
-        {/* Header */}
-        <div className="flex flex-col items-center mb-14">
-          <img 
-            src={eternumSimbolo} 
-            alt="Eternum" 
-            className="h-20 w-auto mb-3" 
-          />
-          <h1 className="text-2xl md:text-3xl font-light text-foreground tracking-tight">
-            {accountName || (userLoading ? "..." : "Sua Empresa")}
-          </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Selecione uma área para continuar
-          </p>
-        </div>
+    <div className="min-h-[100dvh] bg-background" data-testid="sectors-page">
+      <div className="mx-auto w-full max-w-5xl px-4 pb-[calc(2rem+env(safe-area-inset-bottom))] pt-6 sm:px-6 md:py-12">
+        {/* Header compacto no celular, centralizado no desktop */}
+        <header className="mb-6 flex items-center gap-3 md:mb-12 md:flex-col md:text-center">
+          <img src={eternumSimbolo} alt="Eternum" className="h-11 w-auto shrink-0 md:mb-2 md:h-20" />
+          <div className="min-w-0">
+            <p className="text-[13px] font-medium text-muted-foreground">
+              {currentUser?.name ? `Olá, ${currentUser.name.split(" ")[0]}` : "Bem-vindo"}
+            </p>
+            <h1 className="truncate text-[26px] font-semibold leading-tight tracking-tight text-foreground md:text-3xl md:font-light">
+              {accountName || (userLoading ? "..." : "Sua Empresa")}
+            </h1>
+          </div>
+        </header>
 
         <SectorsHealthBanner
           userLoading={userLoading}
@@ -346,98 +352,66 @@ export default function Sectors() {
           isAdmin={isAdmin || isSuperAdmin}
         />
 
-        {/* All 6 Areas */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4" data-testid="sectors-grid">
+        <h2 className="mb-2 px-1 text-[13px] font-semibold uppercase tracking-wide text-muted-foreground">
+          Selecione uma área
+        </h2>
+        <ul className="grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4" data-testid="sectors-grid">
           {coreSectors.map((sector) => {
             const identity = SECTOR_IDENTITY[sector.id];
             const IconComponent = identity?.overrideIcon || sector.icon;
-
             return (
-              <div
-                key={sector.id}
-                onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
-                data-testid="sector-card"
-                data-sector-id={sector.id}
-                className={cn(
-                  "group relative p-5 rounded-xl border border-l-[3px] bg-card overflow-hidden transition-all duration-300",
-                  identity?.accent || "border-l-primary",
-                  sector.comingSoon
-                    ? "cursor-not-allowed opacity-40"
-                    : cn(
-                        "cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5",
-                        identity?.hoverBorder || "hover:border-primary/30"
-                      )
-                )}
-              >
-                {/* Background pattern */}
-                <SectorPattern sectorId={sector.id} />
-
-                <div className="relative z-10 flex items-center gap-4">
-                  {/* Icon */}
-                  <div className={cn(
-                    "w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300",
-                    identity?.hoverIconBg || "group-hover:bg-primary/10"
-                  )}>
-                    <IconComponent className={cn(
-                      "h-6 w-6 text-foreground/70 transition-colors duration-300",
-                      identity?.hoverIconColor || "group-hover:text-primary"
-                    )} strokeWidth={1.5} />
-                  </div>
-
-                  {/* Content */}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <h3 className="text-lg font-semibold text-foreground tracking-tight">
-                        {sector.name}
-                      </h3>
+              <li key={sector.id}>
+                <button
+                  type="button"
+                  onClick={() => handleSectorClick(sector.id, sector.defaultRoute, sector.comingSoon)}
+                  disabled={sector.comingSoon}
+                  aria-disabled={sector.comingSoon}
+                  data-testid="sector-card"
+                  data-sector-id={sector.id}
+                  className={cardCls(sector.comingSoon)}
+                >
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-primary/15 text-foreground/80" aria-hidden>
+                    <IconComponent className="h-[22px] w-[22px]" strokeWidth={1.6} />
+                  </span>
+                  <span className="min-w-0 flex-1">
+                    <span className="flex flex-wrap items-center gap-2">
+                      <span className="text-[17px] font-semibold tracking-tight text-foreground">{sector.name}</span>
                       {sector.comingSoon && (
-                        <span className="text-[10px] text-muted-foreground bg-muted px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
+                        <span className="rounded-full bg-muted px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                           Em breve
                         </span>
                       )}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
+                    </span>
+                    <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground line-clamp-2">
                       {sector.description}
-                    </p>
-                  </div>
-
-                  {/* Arrow */}
-                  
-                </div>
-              </div>
+                    </span>
+                  </span>
+                  <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden />
+                </button>
+              </li>
             );
           })}
-        </div>
+        </ul>
 
-        {/* Liderança Eternum — visível apenas para gestão (heads/diretores/sócios/admins) */}
         {(isManagementUser(currentUser, isSuperAdmin) || hasSectorAccess("reuniao-lideres")) && (
-          <div className="mt-6">
-            <div
-              onClick={() => navigate("/reuniao-lideres")}
-              className="group relative p-5 rounded-xl border border-l-[3px] border-l-amber-500 bg-card overflow-hidden transition-all duration-300 cursor-pointer hover:shadow-xl hover:shadow-black/5 hover:-translate-y-0.5 hover:border-warning/30"
-            >
-              <div className="relative z-10 flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-muted/60 flex items-center justify-center flex-shrink-0 transition-colors duration-300 group-hover:bg-warning/10">
-                  <Users className="h-6 w-6 text-foreground/70 transition-colors duration-300 group-hover:text-warning" strokeWidth={1.5} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-semibold text-foreground tracking-tight">
-                      Reunião de Líderes
-                    </h3>
-                    <span className="text-[10px] text-warning-strong bg-warning/10 px-2 py-0.5 rounded-full uppercase tracking-wider font-medium">
-                      Gestão
-                    </span>
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">
-                    Pauta semanal de números, gargalos e impeditivos por área
-                  </p>
-                </div>
-              </div>
-            </div>
+          <div className="mt-3 md:mt-4">
+            <button type="button" onClick={() => navigate("/reuniao-lideres")} className={cardCls()}>
+              <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[14px] bg-warning/15 text-foreground/80" aria-hidden>
+                <Users className="h-[22px] w-[22px]" strokeWidth={1.6} />
+              </span>
+              <span className="min-w-0 flex-1">
+                <span className="flex flex-wrap items-center gap-2">
+                  <span className="text-[17px] font-semibold tracking-tight text-foreground">Reunião de Líderes</span>
+                  <span className="rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wider text-warning-strong">Gestão</span>
+                </span>
+                <span className="mt-0.5 block text-[13px] leading-snug text-muted-foreground line-clamp-2">
+                  Pauta semanal de números, gargalos e impeditivos por área
+                </span>
+              </span>
+              <ChevronRight className="h-5 w-5 shrink-0 text-muted-foreground/70" aria-hidden />
+            </button>
           </div>
         )}
-
 
         {/* Explicit empty state — surfaces when loading is done, no errors,
             but the user has no sectors assigned. Used by E2E tests as a

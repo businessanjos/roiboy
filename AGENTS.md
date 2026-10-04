@@ -2,3 +2,4 @@
 - Permissões granulares: Perfis de Permissão (`permission_profiles`/`_items`, `user_permission_profiles`, `user_permission_overrides`, RPC `get_user_permissions`, hook `useUserPermissions`). Why: gestor libera por módulo/alcance, no modelo da Clínica Ryka.
 - Visibilidade de negócios via RLS restritiva `can_view_deal` (dono/SDR/renovação/criador, gestor, perfil com alcance "all" ou `user_deal_visibility`). Why: bloqueia todos os caminhos de acesso, não só a tela.
 - Acesso por funil: `user_pipeline_access` (none/own/all por pessoa e funil; sem linha = own, então funil novo já nasce "Só os dele"); `can_view_deal(..., pipeline_id)` aplica: gestor > none > dono > all > regras por status. Why: gestor libera funil a funil sem configurar funis novos.
+- Mobile nav active state uses `pickActiveNavIndex` (pathname + query) and the tab bar's visibility hook drives AppLayout bottom padding. Why: one active tab and no phantom space when the bar is hidden.
