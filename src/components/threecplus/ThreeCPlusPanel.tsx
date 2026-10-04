@@ -88,7 +88,12 @@ function clampLauncherPosition(position: Position, width = 330, height = 52): Po
 
 function readLauncherPosition(): Position {
   if (typeof window === "undefined") return { x: MARGIN, y: 80 };
-  const fallback = clampLauncherPosition({ x: window.innerWidth - 330 - MARGIN, y: 80 });
+  // No celular o botão nasce compacto no canto inferior direito, acima da
+  // barra de abas, para não cobrir o topo nem as ações das telas.
+  const isMobile = window.innerWidth < 1024;
+  const fallback = isMobile
+    ? clampLauncherPosition({ x: window.innerWidth - 120 - MARGIN, y: window.innerHeight - 52 - 96 }, 120)
+    : clampLauncherPosition({ x: window.innerWidth - 330 - MARGIN, y: 80 });
   try {
     const raw = window.localStorage.getItem(LAUNCHER_POSITION_STORAGE_KEY);
     if (!raw) return fallback;
@@ -589,7 +594,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
             aria-label={`Abrir Discador 3C. Status: ${statusInfo.label}`}
           >
             <Phone className={cn("h-4 w-4", activeCall ? "text-destructive" : "text-primary")} />
-            <span>Discador 3C</span>
+            <span className="hidden lg:inline">Discador 3C</span>
             {activeCall ? (
               <span className="flex items-center gap-1.5 text-xs text-destructive">
                 <span className="relative flex h-2 w-2">
