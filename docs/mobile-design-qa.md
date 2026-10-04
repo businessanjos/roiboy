@@ -187,3 +187,15 @@ Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estav
 - Concluir/Reabrir: botão `role="checkbox"` com `aria-checked`, área clicável real 44×44 (medido) e visual 20px; mesmo handler (`customStatuses` → `handleStatusChange(UUID)`, follow-up preservado). Conclusão real não testada.
 - "Mostrar indicadores": 32→44px (medido).
 - 393px: largura 393, primeira tarefa y≈221, 0 linhas com opacidade global. Final: tsgo OK; `vite build` OK; vitest layout+hooks 45/45 OK.
+
+## Rodada 7e — Revisão funcional final de Tarefas (diff 51d454)
+- `src/pages/Tasks.tsx`:
+  - Menu da lista mobile ganhou "Abrir lead" (`/leads?lead=:id`, só no setor Vendas, como na tabela) e "Abrir cliente" (`/clients/:id`).
+  - `handleTaskRowClick`: com negócio carregado abre o detalhe como antes; sem negócio, apenas <1024 abre a edição da tarefa (desktop inalterado). Conclusão/UUID/follow-up intocados.
+  - Filtros: só uma composição montada por vez via `matchMedia("(min-width:1024px)")` — `taskFilterItems` no Drawer (<1024) ou na FilterBar (≥1024); `filterLead` continua compartilhado; ao cruzar o breakpoint o popover fecha.
+- Verificado (Playwright, sessão real, somente navegação):
+  - 393 e 768: 1 gatilho "Negociação" e exatamente 1 campo de busca visível; busca digitada; Esc fecha e o foco volta ao gatilho "Negociação".
+  - 1440: 1 gatilho, 1 campo de busca.
+  - Tarefa ligada a cliente sem negócio: menu mostra "Abrir cliente" → navegou para `/clients/<id>`; toque na linha abriu a edição e Esc cancelou sem salvar.
+- Limitações: "Abrir lead" não exercitado (nenhuma tarefa de lead sem negócio nos primeiros itens); não criei teste unitário dedicado ao popover — coberto pelo teste de navegador acima.
+- Final: tsgo OK; `vite build` OK (só avisos de chunks preexistentes); vitest layout+hooks 45/45 OK. Nada publicado; nenhum registro alterado.

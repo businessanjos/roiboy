@@ -229,6 +229,15 @@ export default function Tasks() {
   // Filtro por negociação (deal ou lead) para comparar tarefas com o pipeline
   const [filterLead, setFilterLead] = usePersistedFilter<string>("tasks", "filterLead", "all");
   const [leadFilterOpen, setLeadFilterOpen] = useState(false);
+  // Apenas uma composição de filtros montada por vez (drawer <1024, FilterBar >=1024),
+  // evitando dois Popovers de Negociação disputando foco com o mesmo estado.
+  const [isLgViewport, setIsLgViewport] = useState(() => typeof window !== "undefined" && window.matchMedia("(min-width: 1024px)").matches);
+  useEffect(() => {
+    const mq = window.matchMedia("(min-width: 1024px)");
+    const on = () => { setIsLgViewport(mq.matches); setLeadFilterOpen(false); };
+    mq.addEventListener("change", on);
+    return () => mq.removeEventListener("change", on);
+  }, []);
   const [followUpDealId, setFollowUpDealId] = useState<string | null>(null);
   const [selectedDealForDetail, setSelectedDealForDetail] = useState<FullDeal | null>(null);
   const [isDealDetailOpen, setIsDealDetailOpen] = useState(false);
@@ -753,13 +762,15 @@ export default function Tasks() {
 
   // Open deal detail sheet when clicking a task row
   const handleTaskRowClick = useCallback((task: Task) => {
-    if (!task.deal_id || !task.deals) return;
-    const fullDeal = allDeals.find(d => d.id === task.deal_id);
+    const fullDeal = task.deal_id && task.deals ? allDeals.find(d => d.id === task.deal_id) : null;
     if (fullDeal) {
       setSelectedDealForDetail(fullDeal);
       setIsDealDetailOpen(true);
+      return;
     }
-  }, [allDeals]);
+    // Lista mobile: sem negócio carregado, abre a edição da tarefa (somente leitura até salvar).
+    if (!window.matchMedia("(min-width: 1024px)").matches) openEditDialog(task);
+  }, [allDeals, openEditDialog]);
 
   // Handle column sort toggle
   const handleColumnSort = useCallback((column: SortOption) => {
@@ -1329,6 +1340,16 @@ export default function Tasks() {
                   {task.deals && task.deal_id && (
                     <DropdownMenuItem className="h-11" onSelect={() => navigate(`/pipeline?deal=${task.deal_id}`)}>
                       <TrendingUp className="mr-2 h-4 w-4" />Ver negócio
+                    </DropdownMenuItem>
+                  )}
+                  {isInVendasSector && task.leads && task.lead_id && (
+                    <DropdownMenuItem className="h-11" onSelect={() => navigate(`/leads?lead=${task.lead_id}`)}>
+                      <User2 className="mr-2 h-4 w-4" />Abrir lead
+                    </DropdownMenuItem>
+                  )}
+                  {task.clients && task.client_id && (
+                    <DropdownMenuItem className="h-11" onSelect={() => navigate(`/clients/${task.client_id}`)}>
+                      <User2 className="mr-2 h-4 w-4" />Abrir cliente
                     </DropdownMenuItem>
                   )}
                   <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => openEditDialog(task), 0)}>
@@ -1913,7 +1934,7 @@ export default function Tasks() {
               </DrawerClose>
             </DrawerHeader>
             <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-4 [&>div]:!w-full [&_button[role=combobox]]:!h-11 [&_button[role=combobox]]:!w-full [&_button[role=combobox]]:bg-card">
-              {taskFilterItems}
+              {!isLgViewport && taskFilterItems}
               <div className="grid grid-cols-2 gap-2">
                 <div className="space-y-1.5">
                   <Label htmlFor="tasks-m-start" className="text-xs text-muted-foreground">De</Label>
@@ -2321,7 +2342,7 @@ export default function Tasks() {
         filtersActive={tasksFiltersActive}
         onClearFilters={clearTaskFilters}
       >
-        {taskFilterItems}
+        {isLgViewport && taskFilterItems}
       </FilterBar>
 
       {/* Content based on view mode */}
