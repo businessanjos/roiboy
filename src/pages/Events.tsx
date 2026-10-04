@@ -88,6 +88,8 @@ import AttendanceReport from "@/components/events/AttendanceReport";
 import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface AttendanceRecord {
   id: string;
