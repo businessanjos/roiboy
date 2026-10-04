@@ -52,7 +52,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
             </CardDescription>
 
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[state.status])}>
               {CHECKPOINT_STATUS_LABELS[state.status]}
             </Badge>

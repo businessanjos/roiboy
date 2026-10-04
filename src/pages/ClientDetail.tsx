@@ -2063,7 +2063,7 @@ export default function ClientDetail() {
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-        <div className="flex items-start gap-3 sm:gap-4">
+        <div className="flex flex-wrap items-start gap-3 sm:flex-nowrap sm:gap-4">
           <ClientAvatarUpload
             clientId={client.id}
             clientName={client.full_name}
@@ -2078,7 +2078,7 @@ export default function ClientDetail() {
             onLogoChange={(url) => setClient({ ...client, logo_url: url })}
             size="lg"
           />
-          <div className="min-w-0 flex-1">
+          <div className="min-w-0 flex-1 basis-[140px]">
             <div className="flex flex-wrap items-center gap-2 sm:gap-3">
               <h1 className="text-xl sm:text-2xl font-bold text-foreground truncate flex items-center gap-2">
                 <span className="truncate">{client.full_name}</span>
@@ -2696,8 +2696,8 @@ export default function ClientDetail() {
               />
               <Card className="shadow-card">
                 <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
+                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                    <div className="min-w-0">
                       <CardTitle className="text-base">Histórico Completo</CardTitle>
                       <CardDescription>
                         Todas as interações e eventos do cliente em um só lugar
@@ -2709,6 +2709,7 @@ export default function ClientDetail() {
                       onClick={handleReprocessMessages}
                       disabled={reprocessingMessages || !client?.phone_e164}
                       title={!client?.phone_e164 ? "Cliente sem telefone cadastrado" : "Reenviar eventos do WhatsApp ao backend"}
+                      className="w-full shrink-0 sm:w-auto"
                     >
                       {reprocessingMessages ? (
                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />

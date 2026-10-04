@@ -545,9 +545,9 @@ function SystemEventItem({
           : config.icon}
       </div>
       <div className="flex-1 min-w-0">
-        <div className="flex items-start justify-between gap-2">
-          <div>
-            <p className="font-medium text-foreground">{event.title}</p>
+        <div className="flex flex-wrap items-start justify-between gap-x-2 gap-y-1">
+          <div className="min-w-0">
+            <p className="font-medium text-foreground break-words">{event.title}</p>
             <div className="flex items-center gap-1.5 mt-0.5">
               <span className={cn("text-xs font-medium", config.textColor)}>
                 {config.label}
@@ -592,7 +592,7 @@ function SystemEventItem({
 
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="ml-auto flex shrink-0 items-center gap-2">
             {/* Delete button for followup, financial, sales items */}
             {(event.type === "followup" || event.type === "financial" || event.type === "sales") && (
               <Button
