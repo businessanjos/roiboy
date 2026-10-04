@@ -38,8 +38,17 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Drawer, DrawerClose, DrawerContent, DrawerFooter, DrawerHeader, DrawerTitle } from "@/components/ui/drawer";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { MobileListGroup, MobileListRow, MobileIconButtonClass } from "@/components/mobile/MobileListGroup";
 import {
   Tooltip,
   TooltipContent,
@@ -74,7 +83,10 @@ import {
   ChevronRight,
   Download,
   CalendarClock,
-
+  MoreHorizontal,
+  SlidersHorizontal,
+  Check,
+  X,
 } from "lucide-react";
 import { toast } from "sonner";
 import { TaskDialog } from "@/components/tasks/TaskDialog";
@@ -225,6 +237,9 @@ export default function Tasks() {
   const [loadedChunks, setLoadedChunks] = useState(1);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
+  const [tasksFiltersOpen, setTasksFiltersOpen] = useState(false);
+  const [showTaskIndicators, setShowTaskIndicators] = useState(false);
+  const tasksFiltersBtnRef = useRef<HTMLButtonElement>(null);
 
   // Busca incremental: só consulta o servidor após o usuário parar de digitar.
   useEffect(() => {
@@ -1179,8 +1194,158 @@ export default function Tasks() {
     return <LoadingScreen message="Carregando tarefas..." fullScreen={false} />;
   }
 
+  // ===== Mobile (<1024px): lista derivada da mesma lógica da TaskTable =====
+  const resolveTaskStatus = (task: Task) => {
+    let taskStatus = customStatuses.find(s => s.id === task.custom_status_id);
+    if (!taskStatus && task.completed_at) taskStatus = customStatuses.find(s => s.is_completed_status);
+    if (!taskStatus && !task.completed_at) {
+      taskStatus = customStatuses.find(s => s.is_default)
+        ?? customStatuses.find(s => s.name.toLowerCase().includes('pendente'));
+    }
+    return taskStatus;
+  };
+  const isoInDays = (days: number, months = 0) => {
+    const d = new Date();
+    d.setDate(d.getDate() + days);
+    if (months) d.setMonth(d.getMonth() + months);
+    return d.toISOString().split('T')[0];
+  };
+
+  const TaskMobileList = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => {
+    if (isLoading && tasks.length === 0) {
+      return (
+        <MobileListGroup className="lg:hidden" aria-busy="true" aria-label="Carregando tarefas">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <MobileListRow key={i} className="gap-3 px-4">
+              <Skeleton className="h-5 w-5 rounded-full" />
+              <div className="flex-1 space-y-2"><Skeleton className="h-3.5 w-2/3" /><Skeleton className="h-3 w-1/2" /></div>
+            </MobileListRow>
+          ))}
+        </MobileListGroup>
+      );
+    }
+    if (tasks.length === 0) {
+      return (
+        <div className="lg:hidden rounded-[20px] bg-card px-6 py-10 text-center shadow-ios">
+          <ClipboardList className="mx-auto mb-3 h-6 w-6 text-muted-foreground" />
+          <p className="font-medium">Nenhuma tarefa encontrada</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {searchTerm || tasksFiltersActive ? "Tente outra busca ou limpe os filtros." : "Toque em + para criar uma tarefa."}
+          </p>
+          {(searchTerm || tasksFiltersActive) && (
+            <Button variant="outline" className="mt-4 h-11" onClick={() => { setSearchTerm(""); clearTaskFilters(); }}>Limpar busca e filtros</Button>
+          )}
+        </div>
+      );
+    }
+    return (
+      <MobileListGroup className={cn("lg:hidden", isLoading && "opacity-60")} aria-label="Tarefas">
+        {tasks.map((task) => {
+          const taskStatus = resolveTaskStatus(task);
+          const isCompleted = taskStatus?.is_completed_status || task.completed_at !== null;
+          const dueDateInfo = getDueDateInfo(task);
+          const priorityConfig = PRIORITY_CONFIG[task.priority];
+          const context = (isInVendasSector && task.deals?.title) || (isInVendasSector && task.leads?.full_name) || task.clients?.full_name || null;
+          const contactInfo = getContactInfoFromTask(task);
+          const title = task.activity_type?.name || task.title;
+          return (
+            <MobileListRow key={task.id} className={cn(isCompleted && "opacity-60")}>
+              <div className="flex h-11 w-12 shrink-0 items-center justify-center self-center">
+                <Checkbox
+                  checked={isCompleted}
+                  aria-label={isCompleted ? `Reabrir ${title}` : `Concluir ${title}`}
+                  onCheckedChange={() => {
+                    const completedStatus = customStatuses.find(s => s.is_completed_status);
+                    const pendingStatus = customStatuses.find(s => !s.is_completed_status);
+                    const newStatusId = isCompleted ? pendingStatus?.id : completedStatus?.id;
+                    if (newStatusId) handleStatusChange(task.id, newStatusId as Task["status"]);
+                  }}
+                  className={cn("h-5 w-5 rounded-full border after:absolute after:-inset-3 relative", isCompleted ? "bg-success border-success text-white" : "border-muted-foreground/40")}
+                />
+              </div>
+              <button
+                type="button"
+                onClick={() => handleTaskRowClick(task)}
+                className="flex min-w-0 flex-1 flex-col items-start self-stretch justify-center py-3 pr-1 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+              >
+                <span className={cn("w-full truncate text-base font-semibold leading-tight", isCompleted && "line-through text-muted-foreground")}>{title}</span>
+                {context && <span className="mt-0.5 w-full truncate text-[13px] text-muted-foreground">{context}</span>}
+                <span className="mt-1 flex w-full min-w-0 items-center gap-1.5 text-[13px] text-muted-foreground">
+                  <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: taskStatus?.color }} aria-hidden />
+                  <span className="shrink-0">{taskStatus?.name || "Sem status"}</span>
+                  {dueDateInfo && <><span aria-hidden>·</span><span className={cn("shrink-0", dueDateInfo.className)}>{dueDateInfo.text}</span></>}
+                  {(task.priority === "urgent" || task.priority === "high") && <><span aria-hidden>·</span><span className="shrink-0">{priorityConfig.label}</span></>}
+                  {task.assigned_user && <span className="ml-auto truncate pl-1">{task.assigned_user.name?.split(" ")[0]}{task.assigned_user.is_active === false ? " (inativo)" : ""}</span>}
+                </span>
+              </button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className={cn(MobileIconButtonClass(), "mr-1 text-muted-foreground")} aria-label={`Ações para ${title}`}>
+                    <MoreHorizontal className="h-4 w-4" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Status: {taskStatus?.name || "—"}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {customStatuses.map((status) => (
+                        <DropdownMenuItem key={status.id} className="h-11" onSelect={() => handleStatusChange(task.id, status.id as Task["status"])}>
+                          <span className="mr-2 h-2 w-2 rounded-full" style={{ backgroundColor: status.color }} />{status.name}
+                          {task.custom_status_id === status.id && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Prioridade: {priorityConfig.label}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      {Object.entries(PRIORITY_CONFIG).map(([priority, config]) => (
+                        <DropdownMenuItem key={priority} className="h-11" onSelect={() => handlePriorityChange(task.id, priority as Task["priority"])}>
+                          {config.label}{task.priority === priority && <Check className="ml-auto h-4 w-4" />}
+                        </DropdownMenuItem>
+                      ))}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="h-11">Prazo: {dueDateInfo ? dueDateInfo.text : "definir"}</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(0))}>Hoje</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(1))}>Amanhã</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(7))}>Em 1 semana</DropdownMenuItem>
+                      <DropdownMenuItem className="h-11" onSelect={() => handleDueDateChange(task.id, isoInDays(0, 1))}>Em 1 mês</DropdownMenuItem>
+                      {task.due_date && <DropdownMenuItem className="h-11 text-destructive" onSelect={() => handleDueDateChange(task.id, null)}>Remover prazo</DropdownMenuItem>}
+                    </DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                  <DropdownMenuSeparator />
+                  {contactInfo && (
+                    <DropdownMenuItem className="h-11" disabled={zappLoading} onSelect={() => openZappConversation({ phone: contactInfo.phone, clientId: contactInfo.clientId, leadId: contactInfo.leadId, name: contactInfo.name || undefined })}>
+                      <MessageCircle className="mr-2 h-4 w-4" />Conversar
+                    </DropdownMenuItem>
+                  )}
+                  {task.deals && task.deal_id && (
+                    <DropdownMenuItem className="h-11" onSelect={() => navigate(`/pipeline?deal=${task.deal_id}`)}>
+                      <TrendingUp className="mr-2 h-4 w-4" />Ver negócio
+                    </DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => openEditDialog(task), 0)}>
+                    <Pencil className="mr-2 h-4 w-4" />Editar
+                  </DropdownMenuItem>
+                  <DropdownMenuItem className="h-11 text-destructive focus:text-destructive" onSelect={() => setTimeout(() => openDeleteDialog(task), 0)}>
+                    <Trash2 className="mr-2 h-4 w-4" />Excluir
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </MobileListRow>
+          );
+        })}
+      </MobileListGroup>
+    );
+  };
+
   const TaskTable = ({ tasks, isLoading }: { tasks: Task[]; isLoading?: boolean }) => (
-    <Card className="shadow-card overflow-hidden">
+    <>
+    <TaskMobileList tasks={tasks} isLoading={isLoading} />
+    <Card className="hidden lg:block shadow-card overflow-hidden">
       <ScrollArea className="w-full">
         <div className="min-w-max">
           <Table>
@@ -1623,12 +1788,359 @@ export default function Tasks() {
         </div>
       </ScrollArea>
     </Card>
+    </>
   );
 
+  const renderTasksMobileHeader = () => {
+    const statusOpts = [
+      { value: "all", label: "Todas", count: baseFilteredTasks.length, color: undefined as string | undefined },
+      ...customStatuses.filter((s) => !s.name.toLowerCase().includes("cancel")).map((s) => ({ value: s.id, label: s.name, count: statusCounts[s.id] || 0, color: s.color })),
+      { value: "__overdue__", label: "Atrasadas", count: overdueCount, color: "hsl(var(--destructive))" },
+    ];
+    const current = statusOpts.find((o) => o.value === (activeTab || "all")) ?? statusOpts[0];
+    return (
+      <div className="lg:hidden space-y-3">
+        <div className="-mx-1 flex items-center gap-1">
+          {viewMode === "list" ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className="inline-flex h-11 min-w-0 items-center gap-1.5 rounded-full px-3 text-[15px] font-semibold hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring touch-press" aria-label={`Status: ${current.label}, ${current.count} tarefas. Trocar status`}>
+                  <span className="truncate">{current.label}</span>
+                  <span className="font-normal tabular-nums text-muted-foreground">· {current.count}</span>
+                  <ChevronDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="start" className="w-64 max-h-[60dvh] overflow-y-auto">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Status da tarefa</DropdownMenuLabel>
+                {statusOpts.map((o) => (
+                  <DropdownMenuItem key={o.value} className="h-11 justify-between" onSelect={() => setActiveTab(o.value === "all" ? null : o.value)}>
+                    <span className="flex min-w-0 items-center gap-2">
+                      <Check className={cn("h-4 w-4 shrink-0", current.value === o.value ? "text-accent" : "opacity-0")} />
+                      {o.color && <span className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: o.color }} />}
+                      <span className="truncate">{o.label}</span>
+                    </span>
+                    <span className="tabular-nums text-muted-foreground">{o.count}</span>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : (
+            <span className="px-3 text-[15px] font-semibold">Kanban</span>
+          )}
+          <div className="ml-auto flex items-center gap-1">
+            <button type="button" className={cn(MobileIconButtonClass(), "bg-primary text-primary-foreground hover:bg-primary/90")} onClick={() => openNewTaskDialog()} aria-label="Nova tarefa">
+              <Plus className="h-5 w-5" />
+            </button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Mais ações">
+                  <MoreHorizontal className="h-5 w-5" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64">
+                <DropdownMenuLabel className="text-xs font-normal text-muted-foreground">Visualização</DropdownMenuLabel>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("list")}>
+                  <Check className={cn("mr-2 h-4 w-4", viewMode === "list" ? "text-accent" : "opacity-0")} />Lista
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={() => setViewMode("kanban")}>
+                  <Check className={cn("mr-2 h-4 w-4", viewMode === "kanban" ? "text-accent" : "opacity-0")} />Kanban
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+                {canExportTasks && (
+                  <DropdownMenuItem className="h-11" onSelect={() => handleExportTasks()}>
+                    <Download className="mr-2 h-4 w-4" />Exportar tarefas
+                  </DropdownMenuItem>
+                )}
+                <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => setRulerLaunchOpen(true), 0)}>
+                  <CalendarClock className="mr-2 h-4 w-4" />Régua de relacionamento
+                </DropdownMenuItem>
+                <DropdownMenuItem className="h-11" onSelect={() => setTimeout(() => setStatusManagerOpen(true), 0)}>
+                  <Settings className="mr-2 h-4 w-4" />Personalizar status
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <div className="relative min-w-0 flex-1">
+            <Search className="pointer-events-none absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <Input type="search" aria-label="Buscar tarefas" placeholder="Buscar tarefas" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="h-11 rounded-xl border-transparent bg-muted/70 pl-10 shadow-none focus-visible:bg-card" />
+          </div>
+          <button ref={tasksFiltersBtnRef} type="button" onClick={() => setTasksFiltersOpen(true)} className={cn(MobileIconButtonClass(tasksFiltersActive), "relative rounded-xl bg-muted/70")} aria-label={tasksFiltersActive ? "Filtros (ativos)" : "Filtros"}>
+            <SlidersHorizontal className="h-5 w-5" />
+            {tasksFiltersActive && <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-accent ring-2 ring-background" aria-hidden />}
+          </button>
+        </div>
+
+        <div className="flex min-h-[32px] items-center gap-2">
+        <button type="button" onClick={() => setShowTaskIndicators((v) => !v)} aria-expanded={showTaskIndicators} aria-label="Mostrar indicadores" className="flex min-h-[32px] min-w-0 flex-1 items-center gap-1.5 text-left text-[13px] text-muted-foreground tabular-nums">
+          <span>Pendentes <b className="font-semibold text-foreground">{pendingCount}</b></span>
+          <span aria-hidden>·</span>
+          <span>Atrasadas <b className={cn("font-semibold", overdueCount > 0 ? "text-destructive" : "text-foreground")}>{overdueCount}</b></span>
+          <span aria-hidden>·</span>
+          <span>Concluídas <b className="font-semibold text-foreground">{doneCount}</b></span>
+          <ChevronDown className={cn("ml-auto h-4 w-4 shrink-0 transition-transform", showTaskIndicators && "rotate-180")} />
+        </button>
+        {tasksFiltersActive && <button type="button" onClick={clearTaskFilters} className="h-8 shrink-0 text-[13px] font-medium text-foreground">Limpar filtros</button>}
+        </div>
+        {showTaskIndicators && (
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { label: "Pendentes", value: pendingCount, cls: "" },
+              { label: "Atrasadas", value: overdueCount, cls: overdueCount > 0 ? "text-destructive" : "" },
+              { label: "Concluídas", value: doneCount, cls: "" },
+            ].map((k) => (
+              <div key={k.label} className="rounded-2xl bg-card px-3 py-2.5 shadow-ios">
+                <p className="text-[11px] text-muted-foreground">{k.label}</p>
+                <p className={cn("text-xl font-semibold tabular-nums", k.cls)}>{k.value}</p>
+              </div>
+            ))}
+            <p className="col-span-3 text-[11px] text-muted-foreground">Concluídas contam pela data de conclusão no período; as demais, pelo prazo.</p>
+          </div>
+        )}
+
+        <Drawer open={tasksFiltersOpen} onOpenChange={(o) => { setTasksFiltersOpen(o); if (!o) setTimeout(() => tasksFiltersBtnRef.current?.focus(), 350); }} shouldScaleBackground={false}>
+          <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined} onCloseAutoFocus={(e) => { e.preventDefault(); tasksFiltersBtnRef.current?.focus(); }}>
+            <DrawerHeader className="flex items-center justify-between px-4 py-2 text-left">
+              <DrawerTitle className="text-[17px] font-semibold">Filtros e ordenação</DrawerTitle>
+              <DrawerClose asChild>
+                <button type="button" className={MobileIconButtonClass()} aria-label="Fechar filtros"><X className="h-5 w-5" /></button>
+              </DrawerClose>
+            </DrawerHeader>
+            <div className="flex-1 space-y-4 overflow-y-auto overscroll-contain px-4 pb-4 [&>div]:!w-full [&_button[role=combobox]]:!h-11 [&_button[role=combobox]]:!w-full [&_button[role=combobox]]:bg-card">
+              {taskFilterItems}
+              <div className="grid grid-cols-2 gap-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="tasks-m-start" className="text-xs text-muted-foreground">De</Label>
+                  <Input id="tasks-m-start" type="date" value={filterDateStart} onChange={(e) => setFilterDateStart(e.target.value)} className="h-11 bg-card" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="tasks-m-end" className="text-xs text-muted-foreground">Até</Label>
+                  <Input id="tasks-m-end" type="date" value={filterDateEnd} onChange={(e) => setFilterDateEnd(e.target.value)} className="h-11 bg-card" />
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Direção da ordenação</Label>
+                <div className="grid grid-cols-2 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Direção da ordenação">
+                  {(["asc", "desc"] as SortDirection[]).map((d) => (
+                    <button key={d} type="button" role="radio" aria-checked={sortDirection === d} onClick={() => setSortDirection(d)} className={cn("h-10 rounded-lg text-sm font-medium", sortDirection === d ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>
+                      {d === "asc" ? "Crescente" : "Decrescente"}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Tarefas por página</Label>
+                <div className="grid grid-cols-3 gap-1 rounded-xl bg-muted p-1" role="radiogroup" aria-label="Tarefas por página">
+                  {[20, 50, 100].map((n) => (
+                    <button key={n} type="button" role="radio" aria-checked={pageSize === n} onClick={() => { setPageSize(n); setCurrentPage(1); }} className={cn("h-10 rounded-lg text-sm font-medium", pageSize === n ? "bg-card text-foreground shadow-sm" : "text-muted-foreground")}>{n}</button>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <DrawerFooter className="flex-row gap-2 border-t border-border/60 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))]">
+              <Button variant="ghost" className="h-11 flex-1" onClick={clearTaskFilters} disabled={!tasksFiltersActive}>Limpar tudo</Button>
+              <DrawerClose asChild><Button className="h-11 flex-[2]">Ver tarefas</Button></DrawerClose>
+            </DrawerFooter>
+          </DrawerContent>
+        </Drawer>
+      </div>
+    );
+  };
+
+  const tasksFiltersActive = filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all";
+  const clearTaskFilters = () => {
+    setFilterUser("all");
+    setFilterActivityType("all");
+    setFilterDateStart("");
+    setFilterDateEnd("");
+    setFilterStage("all");
+    setFilterLead("all");
+  };
+  const taskFilterItems = (<>
+        <FilterItem>
+          <Select value={filterUser} onValueChange={handleUserFilterChange}>
+            <SelectTrigger aria-label="Pessoa vinculada" className="w-full sm:w-[180px] h-10">
+              <div className="flex items-center gap-2">
+                <Filter className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Pessoa vinculada" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              <SelectItem value="mine">
+                <div className="flex items-center gap-2">
+                  <span>🎯</span>
+                  <span>Minhas tarefas</span>
+                </div>
+              </SelectItem>
+              {users.map((user) => (
+                <SelectItem key={user.id} value={user.id}>
+                  <div className="flex items-center gap-2">
+                    <Avatar className="h-5 w-5">
+                      <AvatarImage src={user.avatar_url || undefined} />
+                      <AvatarFallback className="text-[9px]">
+                        {getInitials(user.name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span>{user.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterItem>
+        <FilterItem>
+          <Select value={filterActivityType} onValueChange={setFilterActivityType}>
+            <SelectTrigger aria-label="Tipo de tarefa" className="w-full sm:w-[180px] h-10">
+              <div className="flex items-center gap-2">
+                <ClipboardList className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Tipo de Tarefa" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os tipos</SelectItem>
+              {activityTypes.map((type) => (
+                <SelectItem key={type.id} value={type.id}>
+                  <div className="flex items-center gap-2">
+                    <span 
+                      className="w-2 h-2 rounded-full" 
+                      style={{ backgroundColor: type.color || '#6b7280' }}
+                    />
+                    <span>{type.name}</span>
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </FilterItem>
+        {isInVendasSector && (
+          <FilterItem>
+            <Select value={filterStage} onValueChange={setFilterStage}>
+              <SelectTrigger aria-label="Etapa do funil" className="w-full sm:w-[180px] h-10">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
+                  <SelectValue placeholder="Etapa do Funil" />
+                </div>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as etapas</SelectItem>
+                {dealStages.map((stage) => (
+                  <SelectItem key={stage.id} value={stage.id}>
+                    <div className="flex items-center gap-2">
+                      <span 
+                        className="w-2 h-2 rounded-full" 
+                        style={{ backgroundColor: stage.color }}
+                      />
+                      <span>{stage.name}</span>
+                    </div>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </FilterItem>
+        )}
+        <FilterItem>
+          <Popover open={leadFilterOpen} onOpenChange={setLeadFilterOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-label="Negociação"
+                aria-expanded={leadFilterOpen}
+                className="w-full sm:w-[240px] h-10 justify-between font-normal"
+              >
+                <span className="flex items-center gap-2 min-w-0">
+                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
+                  <span className="truncate">
+                    {selectedLeadOption ? selectedLeadOption.label : "Todas as negociações"}
+                  </span>
+                </span>
+                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[320px] p-0" align="start">
+              <Command>
+                <CommandInput placeholder="Buscar negociação ou lead..." />
+                <CommandList>
+                  <CommandEmpty>Nenhuma negociação nas tarefas carregadas.</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value="Todas as negociações"
+                      onSelect={() => {
+                        setFilterLead("all");
+                        setLeadFilterOpen(false);
+                      }}
+                    >
+                      Todas as negociações
+                    </CommandItem>
+                    {leadOptions.map((opt) => (
+                      <CommandItem
+                        key={opt.key}
+                        value={`${opt.label} ${opt.sublabel ?? ""}`}
+                        onSelect={() => {
+                          setFilterLead(opt.key);
+                          setLeadFilterOpen(false);
+                        }}
+                      >
+                        <div className="flex items-center justify-between gap-2 w-full min-w-0">
+                          <div className="min-w-0">
+                            <p className="truncate text-sm">{opt.label}</p>
+                            {opt.sublabel && (
+                              <p className="truncate text-xs text-muted-foreground">{opt.sublabel}</p>
+                            )}
+                          </div>
+                          <Badge variant="secondary" className="shrink-0 text-[10px]">
+                            {opt.count}
+                          </Badge>
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </FilterItem>
+        {selectedLeadOption && (
+          <FilterItem>
+            <Button
+              variant="secondary"
+              className="h-10 gap-2"
+              onClick={() => {
+                const [kind, id] = filterLead.split(":");
+                navigate(kind === "deal" ? `/pipeline?deal=${id}` : `/leads?lead=${id}`);
+              }}
+            >
+              <ArrowRight className="h-4 w-4" />
+              Ver no pipeline
+            </Button>
+          </FilterItem>
+        )}
+        <FilterItem>
+          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
+            <SelectTrigger aria-label="Ordenar por" className="w-full sm:w-[160px] h-10">
+              <div className="flex items-center gap-2">
+                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                <SelectValue placeholder="Ordenar por" />
+              </div>
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="priority">Prioridade</SelectItem>
+              <SelectItem value="due_date">Data de entrega</SelectItem>
+              <SelectItem value="created_at">Data de criação</SelectItem>
+              {isInVendasSector && <SelectItem value="stage">Etapa do funil</SelectItem>}
+            </SelectContent>
+          </Select>
+        </FilterItem>
+  </>);
+
   return (
-    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
+    <div className="px-4 pt-2 pb-6 sm:px-6 lg:p-8 space-y-3 lg:space-y-6 animate-fade-in">
+      {renderTasksMobileHeader()}
       {/* Header */}
-      <div className="flex flex-col gap-6">
+      <div className="hidden lg:flex flex-col gap-6">
         <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-4">
           <div className="space-y-1">
             <div className="flex items-center gap-3">
@@ -1798,193 +2310,14 @@ export default function Tasks() {
 
       {/* Filters */}
       <FilterBar
+        className="hidden lg:flex"
         searchValue={searchTerm}
         onSearchChange={setSearchTerm}
         searchPlaceholder="Buscar por título, descrição ou cliente..."
-        filtersActive={filterUser !== "all" || filterActivityType !== "all" || filterDateStart !== "" || filterDateEnd !== "" || filterStage !== "all" || filterLead !== "all"}
-        onClearFilters={() => {
-          setFilterUser("all");
-          setFilterActivityType("all");
-          setFilterDateStart("");
-          setFilterDateEnd("");
-          setFilterStage("all");
-          setFilterLead("all");
-        }}
+        filtersActive={tasksFiltersActive}
+        onClearFilters={clearTaskFilters}
       >
-        <FilterItem>
-          <Select value={filterUser} onValueChange={handleUserFilterChange}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10">
-              <div className="flex items-center gap-2">
-                <Filter className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Pessoa vinculada" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos</SelectItem>
-              <SelectItem value="mine">
-                <div className="flex items-center gap-2">
-                  <span>🎯</span>
-                  <span>Minhas tarefas</span>
-                </div>
-              </SelectItem>
-              {users.map((user) => (
-                <SelectItem key={user.id} value={user.id}>
-                  <div className="flex items-center gap-2">
-                    <Avatar className="h-5 w-5">
-                      <AvatarImage src={user.avatar_url || undefined} />
-                      <AvatarFallback className="text-[9px]">
-                        {getInitials(user.name)}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span>{user.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterItem>
-        <FilterItem>
-          <Select value={filterActivityType} onValueChange={setFilterActivityType}>
-            <SelectTrigger className="w-full sm:w-[180px] h-10">
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Tipo de Tarefa" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos os tipos</SelectItem>
-              {activityTypes.map((type) => (
-                <SelectItem key={type.id} value={type.id}>
-                  <div className="flex items-center gap-2">
-                    <span 
-                      className="w-2 h-2 rounded-full" 
-                      style={{ backgroundColor: type.color || '#6b7280' }}
-                    />
-                    <span>{type.name}</span>
-                  </div>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </FilterItem>
-        {isInVendasSector && (
-          <FilterItem>
-            <Select value={filterStage} onValueChange={setFilterStage}>
-              <SelectTrigger className="w-full sm:w-[180px] h-10">
-                <div className="flex items-center gap-2">
-                  <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                  <SelectValue placeholder="Etapa do Funil" />
-                </div>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas as etapas</SelectItem>
-                {dealStages.map((stage) => (
-                  <SelectItem key={stage.id} value={stage.id}>
-                    <div className="flex items-center gap-2">
-                      <span 
-                        className="w-2 h-2 rounded-full" 
-                        style={{ backgroundColor: stage.color }}
-                      />
-                      <span>{stage.name}</span>
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </FilterItem>
-        )}
-        <FilterItem>
-          <Popover open={leadFilterOpen} onOpenChange={setLeadFilterOpen}>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                role="combobox"
-                aria-expanded={leadFilterOpen}
-                className="w-full sm:w-[240px] h-10 justify-between font-normal"
-              >
-                <span className="flex items-center gap-2 min-w-0">
-                  <Briefcase className="h-4 w-4 text-muted-foreground shrink-0" />
-                  <span className="truncate">
-                    {selectedLeadOption ? selectedLeadOption.label : "Todas as negociações"}
-                  </span>
-                </span>
-                <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[320px] p-0" align="start">
-              <Command>
-                <CommandInput placeholder="Buscar negociação ou lead..." />
-                <CommandList>
-                  <CommandEmpty>Nenhuma negociação nas tarefas carregadas.</CommandEmpty>
-                  <CommandGroup>
-                    <CommandItem
-                      value="Todas as negociações"
-                      onSelect={() => {
-                        setFilterLead("all");
-                        setLeadFilterOpen(false);
-                      }}
-                    >
-                      Todas as negociações
-                    </CommandItem>
-                    {leadOptions.map((opt) => (
-                      <CommandItem
-                        key={opt.key}
-                        value={`${opt.label} ${opt.sublabel ?? ""}`}
-                        onSelect={() => {
-                          setFilterLead(opt.key);
-                          setLeadFilterOpen(false);
-                        }}
-                      >
-                        <div className="flex items-center justify-between gap-2 w-full min-w-0">
-                          <div className="min-w-0">
-                            <p className="truncate text-sm">{opt.label}</p>
-                            {opt.sublabel && (
-                              <p className="truncate text-xs text-muted-foreground">{opt.sublabel}</p>
-                            )}
-                          </div>
-                          <Badge variant="secondary" className="shrink-0 text-[10px]">
-                            {opt.count}
-                          </Badge>
-                        </div>
-                      </CommandItem>
-                    ))}
-                  </CommandGroup>
-                </CommandList>
-              </Command>
-            </PopoverContent>
-          </Popover>
-        </FilterItem>
-        {selectedLeadOption && (
-          <FilterItem>
-            <Button
-              variant="secondary"
-              className="h-10 gap-2"
-              onClick={() => {
-                const [kind, id] = filterLead.split(":");
-                navigate(kind === "deal" ? `/pipeline?deal=${id}` : `/leads?lead=${id}`);
-              }}
-            >
-              <ArrowRight className="h-4 w-4" />
-              Ver no pipeline
-            </Button>
-          </FilterItem>
-        )}
-        <FilterItem>
-          <Select value={sortBy} onValueChange={(v) => setSortBy(v as SortOption)}>
-            <SelectTrigger className="w-full sm:w-[160px] h-10">
-              <div className="flex items-center gap-2">
-                <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
-                <SelectValue placeholder="Ordenar por" />
-              </div>
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="priority">Prioridade</SelectItem>
-              <SelectItem value="due_date">Data de entrega</SelectItem>
-              <SelectItem value="created_at">Data de criação</SelectItem>
-              {isInVendasSector && <SelectItem value="stage">Etapa do funil</SelectItem>}
-            </SelectContent>
-          </Select>
-        </FilterItem>
+        {taskFilterItems}
       </FilterBar>
 
       {/* Content based on view mode */}
@@ -2007,8 +2340,8 @@ export default function Tasks() {
           onAddTask={openNewTaskDialog}
         />
       ) : (
-        <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-4">
-          <TabsList className="bg-muted/50 p-1 flex-wrap h-auto gap-1">
+        <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-3 lg:space-y-4">
+          <TabsList className="hidden lg:flex bg-muted/50 p-1 flex-wrap h-auto gap-1">
             <TabsTrigger 
               value="all" 
               className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
@@ -2054,15 +2387,15 @@ export default function Tasks() {
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="all" className="mt-6">
+          <TabsContent value="all" className="mt-0 lg:mt-6">
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
           {customStatuses.map((status) => (
-            <TabsContent key={status.id} value={status.id} className="mt-6">
+            <TabsContent key={status.id} value={status.id} className="mt-0 lg:mt-6">
               <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
             </TabsContent>
           ))}
-          <TabsContent value="__overdue__" className="mt-6">
+          <TabsContent value="__overdue__" className="mt-0 lg:mt-6">
             <TaskTable tasks={paginatedTasks} isLoading={fetchingTasks} />
           </TabsContent>
 
@@ -2102,8 +2435,8 @@ export default function Tasks() {
 
           {/* Pagination Controls */}
           {sortedTasks.length > pageSize && (
-            <div className="flex items-center justify-between px-2 py-3">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <p className="text-sm text-muted-foreground">
                   Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, sortedTasks.length)} de {sortedTasks.length} tarefas
                 </p>

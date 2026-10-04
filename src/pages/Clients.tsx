@@ -378,6 +378,7 @@ export default function Clients() {
   const [syncingProducts, setSyncingProducts] = useState(false);
   const [revenueOpen, setRevenueOpen] = useState(false);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
+  const mobileFiltersBtnRef = useRef<HTMLButtonElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Custom fields state
@@ -1613,7 +1614,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Status do Cliente</Label>
                 <Select value={filterClientStatus} onValueChange={setFilterClientStatus}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Status do Cliente">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1630,7 +1631,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Produto</Label>
                 <Select value={filterProduct} onValueChange={setFilterProduct}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Produto">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1647,7 +1648,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Contrato</Label>
                 <Select value={filterContract} onValueChange={setFilterContract}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Contrato">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1671,7 +1672,7 @@ export default function Clients() {
                 <div className="space-y-1.5 min-w-[160px]">
                   <Label className="text-xs text-muted-foreground">Responsável</Label>
                   <Select value={filterResponsible} onValueChange={setFilterResponsible}>
-                    <SelectTrigger className="h-9 bg-background">
+                    <SelectTrigger className="h-9 bg-background" aria-label="Responsável">
                       <SelectValue placeholder="Todos" />
                     </SelectTrigger>
                     <SelectContent>
@@ -1689,7 +1690,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[160px]">
                 <Label className="text-xs text-muted-foreground">Vínculos</Label>
                 <Select value={filterLinks} onValueChange={setFilterLinks}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Vínculos">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1703,7 +1704,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">Risco financeiro</Label>
                 <Select value={filterRisk} onValueChange={setFilterRisk}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Risco financeiro">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent>
@@ -1718,7 +1719,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">País (DDI)</Label>
                 <Select value={filterCountry} onValueChange={setFilterCountry}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="País (DDI)">
                     <SelectValue placeholder="Todos" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -1739,7 +1740,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">Formação</Label>
                 <Select value={filterEducation} onValueChange={setFilterEducation}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Formação">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -1767,7 +1768,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">Área de Atuação</Label>
                 <Select value={filterArea} onValueChange={setFilterArea}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Área de Atuação">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -1784,7 +1785,7 @@ export default function Clients() {
               <div className="space-y-1.5 min-w-[180px]">
                 <Label className="text-xs text-muted-foreground">Especialidade</Label>
                 <Select value={filterSpecialty} onValueChange={setFilterSpecialty}>
-                  <SelectTrigger className="h-9 bg-background">
+                  <SelectTrigger className="h-9 bg-background" aria-label="Especialidade">
                     <SelectValue placeholder="Todas" />
                   </SelectTrigger>
                   <SelectContent className="max-h-[300px]">
@@ -1949,6 +1950,7 @@ export default function Clients() {
           </div>
           <button
             type="button"
+            ref={mobileFiltersBtnRef}
             onClick={() => setMobileFiltersOpen(true)}
             className={cn(MobileIconButtonClass(filterBadge > 0), "relative rounded-xl bg-muted/70")}
             aria-label={filterBadge > 0 ? `Filtros e ordenação (${filterBadge} ativos)` : "Filtros e ordenação"}
@@ -2095,8 +2097,8 @@ export default function Clients() {
         )}
 
         {/* Painel inferior de filtros */}
-        <Drawer open={mobileFiltersOpen} onOpenChange={setMobileFiltersOpen} shouldScaleBackground={false}>
-          <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined}>
+        <Drawer open={mobileFiltersOpen} onOpenChange={(o) => { setMobileFiltersOpen(o); if (!o) setTimeout(() => mobileFiltersBtnRef.current?.focus(), 350); }} shouldScaleBackground={false}>
+          <DrawerContent className="max-h-[88dvh] lg:hidden" aria-describedby={undefined} onCloseAutoFocus={(e) => { e.preventDefault(); mobileFiltersBtnRef.current?.focus(); }}>
             <DrawerHeader className="flex items-center justify-between px-4 py-2 text-left">
               <DrawerTitle className="text-[17px] font-semibold">Filtros e ordenação</DrawerTitle>
               <DrawerClose asChild>
