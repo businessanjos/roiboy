@@ -3,6 +3,7 @@ import { GripVertical, Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCa
 
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { setThreeCPlusOpen } from "@/hooks/useThreeCPlusOpen";
 
@@ -540,6 +541,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const statusInfo = useMemo(() => STATUS_INFO[status], [status]);
   const StatusIcon = statusInfo.icon;
   const popupOpen = visible && canUseDialer && isOpen;
+  const isMobileView = useIsMobile();
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
@@ -549,7 +551,16 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     return () => setThreeCPlusOpen(false);
   }, [popupOpen]);
 
-  const panelStyle = fullscreen
+  const panelStyle: React.CSSProperties = fullscreen
+    ? { left: 0, top: 0, width: "100vw", height: "100vh" }
+    : isMobileView
+    ? {
+        left: 16,
+        right: 16,
+        top: "calc(env(safe-area-inset-top, 0px) + 64px)",
+        bottom: "calc(env(safe-area-inset-bottom, 0px) + 80px)",
+      }
+    : fullscreen
     ? { left: 0, top: 0, width: "100vw", height: "100vh" }
     : {
         left: Math.round(geometry.x),
@@ -572,7 +583,29 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   return (
     <>
       {/* Botão sempre visível: fechar o popup apenas recolhe para cá. */}
-      {visible && canUseDialer && !isOpen && (
+      {visible && canUseDialer && !isOpen && isMobileView && (
+        <button
+          type="button"
+          onClick={() => {
+            setIsOpen(true);
+            void refreshStatus();
+          }}
+          aria-label={`Abrir Discador 3C. ${activeCall ? (inCall ? "Em chamada" : "Chamando") + " " + formatElapsed(elapsed) : "Status: " + statusInfo.label}`}
+          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
+          className={cn(
+            "pointer-events-auto fixed right-4 z-40 flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-full border bg-card px-3 shadow-lg touch-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+            activeCall ? "border-destructive/50" : "border-border",
+          )}
+        >
+          <Phone className={cn("h-5 w-5", activeCall ? "text-destructive" : "text-primary")} aria-hidden="true" />
+          {activeCall ? (
+            <span className="font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>
+          ) : (
+            <span className={cn("absolute right-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-card", statusInfo.dot)} aria-hidden="true" />
+          )}
+        </button>
+      )}
+      {visible && canUseDialer && !isOpen && !isMobileView && (
         <div
           ref={launcherRef}
           style={{ left: Math.round(launcherPosition.x), top: Math.round(launcherPosition.y) }}
@@ -666,10 +699,10 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
           ))}
 
         <div
-          onPointerDown={startDrag}
+          onPointerDown={isMobileView ? undefined : startDrag}
           className={cn(
             "flex h-12 shrink-0 touch-none select-none items-center justify-between border-b border-border bg-muted/40 px-3 pl-4",
-            fullscreen ? "cursor-default" : "cursor-move",
+            fullscreen || isMobileView ? "cursor-default" : "cursor-move",
           )}
           title={fullscreen ? undefined : "Arraste para mover o discador"}
         >
