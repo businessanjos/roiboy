@@ -1,5 +1,7 @@
 # INVENTÁRIO DE PAGINAÇÃO (auditoria a partir do código real)
 
+> **Inventário PARCIAL.** A tabela da seção 2 lista apenas cerca de 25 áreas representativas; não é uma cobertura documental completa de todas as listagens do sistema.
+
 Levantamento feito via `rg` sobre o código-fonte (não sobre documentação anterior), buscando:
 `usePagedList`, `PagerFor`, `ListPagination`, `useTablePagination`, `TablePagination`,
 `usePaginationState`, `.range(...)` com `count`, `fetchAllRows`, `rpc(...)` com
@@ -21,8 +23,8 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 | :--- | :--- | :--- | :--- | :--- |
 | `src/pages/ClientCheckpoints.tsx` | `/clients/checkpoints` | **LOCAL** (`usePagedList(filtered, ...)`, linha 142) | `useCheckpointsPanel`/`useCheckinsReport` (`src/hooks/useClientCheckins.tsx`) via `fetchAllRows` em lotes | Com desempate: `.order("happened_at").order("id")` / `.order("id", { ascending: true })` nos lotes de `fetchAllRows` |
 | `src/pages/ClientOnboardingHub.tsx` | `/operations/onboarding` | **LOCAL** (`usePagedList(clients, ...)`, linha 351) | `useOnboardingHub` (`src/hooks/useOnboardingHub.tsx`) via `fetchAllRows` | Com desempate: `.order("stage_changed_at").order("id")` (linhas 97-98) |
-| `src/pages/events/EventsPlaybooks.tsx` | `/events/playbooks` (catálogo e itens de um playbook) | **LOCAL** (`usePagedList(playbooks, ...)` e `usePagedList(items, ...)`, linhas 82-83) | `fetchAllRows` direto no componente (linha ~88 e ~100), consultando `event_playbooks`/itens | Com desempate: `.order("created_at").order("id")` (playbooks); `.order("days_offset").order("position")` (itens, sem coluna `id` — ver observação) |
-| `src/hooks/useNotificationsHistory.ts` + `src/pages/Notifications.tsx` | `/notifications` | **SERVIDOR count+range** (`useNotificationsHistoryPage`, linha 142: `.select(..., { count: "exact" }).order("created_at", { ascending: false }).range(from, to)`) | Query direta na tabela `notifications` | **Sem desempate por id** — ordena só por `created_at` |
+| `src/pages/events/EventsPlaybooks.tsx` | `/events/playbooks` (catálogo e itens de um playbook) | **LOCAL** (`usePagedList(playbooks, ...)` e `usePagedList(items, ...)`, linhas 82-83) | `fetchAllRows` direto no componente (linha ~88 e ~100), consultando `event_playbooks`/itens | Com desempate: `.order("created_at").order("id")` (playbooks); `.order("days_offset").order("position").order("id")` (itens, linhas 113-115) |
+| `src/hooks/useNotificationsHistory.ts` + `src/pages/Notifications.tsx` | `/notifications` | **SERVIDOR count+range** (`useNotificationsHistoryPage`, linha 142: `.select(..., { count: "exact" }).order("created_at", { ascending: false }).range(from, to)`) | Query direta na tabela `notifications` | Com desempate: `.order("created_at").order("id")` (linhas 146-147) |
 | `src/hooks/useNotificationsHistory.ts` (`useNotificationTabCounts`) | Badges de contagem por aba em `/notifications` | RPC `get_notification_tab_counts` — **apenas contagem** (`unread_count` por aba), não pagina linhas | RPC | N/A (não retorna linhas) |
 | `src/pages/Tasks.tsx` + `src/lib/tasks/searchTasksRpcParams.ts` | `/tasks` (com termo de busca) | **SERVIDOR RPC offset/limit** — `search_tasks_page` com `p_limit`/`p_offset` e `total_count` por linha (linhas ~354-389 de `Tasks.tsx`) | RPC devolve só IDs da página; linhas completas são hidratadas em lotes de 150 via `.in("id", ...)` | Ordem definida dentro da RPC (não visível no front) |
 | `src/pages/Tasks.tsx` (sem termo de busca) | `/tasks` | **CURSOR / "Carregar mais"** (botão "Carregar mais tarefas", linhas 2399/2483) | Query direta com filtros de setor/usuário, carregada em blocos sob demanda | Depende do `.order` aplicado na query de blocos (não usa RPC) |
@@ -35,8 +37,9 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 | `src/pages/DoubleChairList.tsx` | Lista de pares (Double Chair) | **LOCAL** (`usePagedList(pairs, ...)`, linha 53) | `fetchAllRows` (linhas 30-45) | Conforme `.order` da query (linha ~45) |
 | `src/pages/ClinicaRyka.tsx` | Clientes/Provisões da Clínica Ryka | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (múltiplas consultas, linhas 81-110+) | Conforme `.order` de cada consulta |
 | `src/pages/MentoriaEC.tsx` | Contratos/itens da Mentoria EC | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (linhas 126, 276) | Conforme `.order` de cada consulta |
+| `src/pages/Forms.tsx` | `/forms` (catálogo de formulários) | **LOCAL** (`usePagedList(filteredFormsForPaging, ...)`, linha 616; `PagerFor` linha 1481) | Lista de formulários carregada na própria página | Conforme a query do catálogo |
 | `src/components/renewals/RenewalLosses.tsx` | Motivos de perda de renovação | **LOCAL** (`usePagedList(sortedItems, ...)`, linha 541) | `fetchAllRows` (linha 245) | Conforme `.order` da query de `outcomes` |
-| `src/pages/Renewals.tsx` | Futuros/expirados/sucessores de renovação | Fonte apenas (**sem `usePagedList`/`PagerFor` nesta página** — dados completos usados em KPIs/listas internas) | `fetchAllRows` (3 consultas, linhas 210-263+) | Conforme `.order` de cada consulta |
+| `src/pages/Renewals.tsx` | Futuros/expirados/sucessores de renovação | **LOCAL com paginação manual** (função de lista com `setPage`/`safePage` e botões anterior/próxima, linhas ~640-835; não usa `usePagedList`/`PagerFor`) | `fetchAllRows` (3 consultas, linhas 210-263+) | Conforme `.order` de cada consulta |
 | `src/pages/VipClients.tsx` | Clientes VIP | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (linhas 107-118+) | Conforme `.order` de cada consulta |
 | `src/pages/GestaoTech.tsx` | Projetos de tecnologia | **LOCAL** (`usePagedList(filteredProjects, ...)`, linha 140) | `fetchAllRows` (linha 121) | Conforme `.order` da query |
 | `src/components/client/ClientFormResponses.tsx` | Respostas de formulário (ficha do cliente) | **LOCAL** (`usePagedList(formResponses, ...)`, linha 91) | `fetchAllRows` (linha 136) | Conforme `.order` da query |
@@ -45,11 +48,8 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 | `src/pages/financial/FinancialDunningKanbanPage.tsx` | Kanban de cobrança (Dunning) | **"Carregar mais" LOCAL** (`visibleCounts`/`loadMore`, linhas 356-363) — não refaz query, só revela mais itens do array `cases` já carregado | Query de `cases` fora deste trecho (dataset completo por coluna do Kanban) | Depende do `.order` da query de `cases` |
 | `src/components/marketing/agencies/MaterialRequestsList.tsx` | Solicitações de material por agência | **"Carregar mais" LOCAL** (`visibleCounts`, linha ~30, botão linha 114) — fatia em memória o array já retornado por `useMaterialRequests` | `useMaterialRequests` (react-query, sem paginação de servidor) | Depende do `.order` do hook `useMaterialRequests` |
 
-> Observação sobre `EventsPlaybooks` (itens do playbook): a ordenação usada é `.order("days_offset").order("position")`, sem coluna `id` como critério final — se `days_offset`+`position` empatarem, a ordem entre essas linhas não é garantida. Marcar como **sem desempate id**.
-
 ## 3. Não aplicáveis (com motivo concreto verificado no código)
 
-- **Formulários** (`src/pages/Forms.tsx` e afins): tela de construção/edição de formulário, não lista registros paginável — opera sobre um documento (schema de campos).
 - **Gráficos e dashboards** (ex.: `RHDashboard`, cards de `MarketResearchTab`, `ThreeCPlusMetrics` agregados): exibem agregações já calculadas no banco ou em memória; não há lista de linhas a paginar.
 - **Kanbans com drag-and-drop** (`SalesPipeline` — quadro Kanban, `FinancialDunningKanbanPage` — quadro de colunas): a ordenação visual é definida pelo usuário via arraste; paginar romperia a view de colunas. Onde excede uma contagem fixa por coluna, usam "Carregar mais" LOCAL (ver tabela acima), não paginação de servidor.
 - **Calendário** (telas de agenda/calendário de eventos): navegação por período (dia/semana/mês) substitui paginação linear por página numerada.
@@ -57,7 +57,7 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 ## 4. Limitações conhecidas (verificadas, não presumidas)
 
 - **Teste `briefingRls`**: `src/test/rls/briefingRls.test.ts` depende de um usuário com papel **SDR não-admin**, que não existe no ambiente de teste atual (o arquivo cobre Vendas/SDR/Operações e o caso de controle negativo "sem nenhum desses papéis"; o cenário específico de SDR não-admin não tem fixture correspondente no ambiente).
-- **Playbooks — catálogo vazio**: verificado na UI em 393px, o catálogo de `/events/playbooks` mostra o estado vazio "Nenhum playbook" **sem rodapé de paginação**. Isso é esperado: `PagerFor` (via `ListPagination`) só renderiza o rodapé quando `totalItems > 0`/há registros — com `playbooks.length === 0` o componente não aparece, não é uma falha de paginação.
+- **Playbooks — catálogo vazio**: verificado na UI em 393px, o catálogo de `/events/playbooks` mostra o estado vazio "Nenhum playbook" **sem rodapé de paginação**. O motivo é o catálogo vazio (nenhum registro), não "caber em uma página": `PagerFor` aparece sempre que há registros.
 
 ## Revisão 6f068a4 (correções pontuais)
 - `src/pages/financial/FinancialPluggyStatusPage.tsx` · SyncHistoryDialog: total derivado de `data.total` no cache (reabertura/troca de conta). Teste `PluggySyncHistoryDialog.test.tsx`.
@@ -66,3 +66,8 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 - `src/lib/fetchInChunks.ts` · `fetchAllInChunks`: lote de IDs + `fetchAllRows` por lote. Usado em `MentoriaEC.tsx` (presenças, status) e `Renewals.tsx` (sucessores, produtos fallback, outcomes). Teste com lote de 1201.
 - `src/components/events/EventChecklistTab.tsx`: spinner só na primeira carga; refetch preserva grupos e página. Teste 45 itens/página 2.
 - RPCs `audit_unified_page`/`audit_unified_authors`: `deals.deleted_by` (auth.users) resolvido via `users.auth_user_id` da mesma conta; actor e escopo comercial usam `users.id`.
+
+## 5. Ajustes da revisão 15aea12
+
+- Filtro **Pessoas** da auditoria (`audit_unified_authors`) reutiliza `audit_unified_page` com o mesmo predicado (sem filtro de pessoa) e devolve uma opção por `user_id`, com nome/e-mail do registro mais recente.
+- Sino de notificações: em UPDATE sem linha, erro ou UPDATE realtime externo, a contagem é reconciliada pela contagem do servidor, sem +1/-1 às cegas.
