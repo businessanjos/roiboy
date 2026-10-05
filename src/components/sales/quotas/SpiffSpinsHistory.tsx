@@ -266,7 +266,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
     );
   };
 
-  const renderStatus = (r: any) => (
+  const renderStatus = (r: any) => (<>
 {r.cancelled_at ? (
                           <Badge variant="outline" className="gap-1 border-danger text-danger" title={r.cancelled_reason || "Benefício cancelado"}>
                             <XCircle className="h-3 w-3" /> Cancelado
@@ -282,9 +282,9 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                         ) : (
                           <Badge variant="secondary" className="text-xs">—</Badge>
                         )}
-  );
+  </>);
 
-  const renderAction = (r: any) => (
+  const renderAction = (r: any) => (<>
 {r.cancelled_at ? (
                           <span className="text-[11px] text-danger">{r.cancelled_reason || "Cancelado"}</span>
                         ) : Number(r.prize_amount) <= 0 ? (
@@ -311,7 +311,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                             Desfazer
                           </Button>
                         )}
-  );
+  </>);
 
   return (
     <div className="space-y-4">
