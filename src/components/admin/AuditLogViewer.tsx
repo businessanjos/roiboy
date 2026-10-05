@@ -273,12 +273,14 @@ export async function fetchUnifiedPage(params: {
   search: string;
   offset: number;
   limit: number;
+  /** Teto superior fixo (ex.: início da exportação), para não variar entre lotes. */
+  toIso?: string | null;
 }): Promise<{ rows: UnifiedLog[]; total: number }> {
-  const { accountId, scope, sinceIso, actionFilter, entityFilter, userFilter, search, offset, limit } = params;
+  const { accountId, scope, sinceIso, actionFilter, entityFilter, userFilter, search, offset, limit, toIso } = params;
   const { data, error } = await (supabase.rpc as any)("audit_unified_page", {
     p_account_id: accountId ?? null,
     p_from: sinceIso,
-    p_to: null,
+    p_to: toIso ?? null,
     p_scope: scope,
     p_action: actionFilter,
     p_entity_type: entityFilter,
@@ -291,6 +293,38 @@ export async function fetchUnifiedPage(params: {
   const rows = (data || []) as UnifiedRpcRow[];
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   return { rows: rows.map(mapRpcRowToUnifiedLog), total };
+}
+
+export interface AuthorOption {
+  id: string;
+  name: string;
+}
+
+/** Busca os autores distintos do conjunto filtrado (sem o filtro de pessoa), para o seletor "Pessoas". */
+export async function fetchUnifiedAuthors(params: {
+  accountId?: string;
+  scope: "system" | "commercial";
+  sinceIso: string;
+  actionFilter: string;
+  entityFilter: string;
+  search: string;
+}): Promise<AuthorOption[]> {
+  const { accountId, scope, sinceIso, actionFilter, entityFilter, search } = params;
+  const { data, error } = await (supabase.rpc as any)("audit_unified_authors", {
+    p_account_id: accountId ?? null,
+    p_from: sinceIso,
+    p_to: null,
+    p_scope: scope,
+    p_action: actionFilter,
+    p_entity_type: entityFilter,
+    p_search: search || null,
+  });
+  if (error) throw error;
+  const rows = (data || []) as { user_id: string | null; user_name: string | null; user_email: string | null }[];
+  return rows
+    .filter((r) => r.user_id)
+    .map((r) => ({ id: r.user_id as string, name: r.user_name || r.user_email || "Sem nome" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Enriquece uma página de logs com nomes/contextos (só para os registros exibidos). */
