@@ -68,6 +68,7 @@ export function useNotificationTabCounts(userId: string | null) {
   const query = useQuery({
     queryKey: notificationTabCountsKey(userId),
     queryFn: async (): Promise<NotificationTabCounts> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any -- tipos do RPC ainda não gerados (ver /tmp/mig_notif.sql)
       const { data, error } = await (supabase.rpc as any)("get_notification_tab_counts", {
         p_user_id: userId,
       });
