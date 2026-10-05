@@ -15,6 +15,7 @@ interface DealRulerButtonProps {
   /** compact = ícone pequeno (card do pipeline) */
   variant?: "icon" | "button";
   className?: string;
+  iconClassName?: string;
 }
 
 /** Carrega os modelos apenas quando o diálogo abre (evita fetch por card). */
@@ -53,6 +54,7 @@ export function DealRulerButton({
   sectorId = "vendas",
   variant = "icon",
   className,
+  iconClassName,
 }: DealRulerButtonProps) {
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -74,8 +76,9 @@ export function DealRulerButton({
           className={cn("h-5 w-5 hover:bg-primary/10", className)}
           onClick={handleClick}
           title="Iniciar régua de relacionamento"
+          aria-label="Iniciar régua de relacionamento"
         >
-          <CalendarClock className="h-3 w-3 text-primary" />
+          <CalendarClock className={cn("h-3 w-3 text-primary", iconClassName)} />
         </Button>
       ) : (
         <Button variant="outline" size="sm" className={cn("gap-1.5", className)} onClick={handleClick}>
