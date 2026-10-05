@@ -2516,6 +2516,7 @@ export default function Tasks() {
           )}
         </>
       ) : (
+        <>
         {serverSearch && (tasksError || searchCountsError) && (
           <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
             <span>Não foi possível carregar a busca. Os números e a lista abaixo podem não refletir este termo.</span>
@@ -2685,6 +2686,7 @@ export default function Tasks() {
             </div>
           )}
         </Tabs>
+        </>
       )}
 
       {/* Task Dialog */}
