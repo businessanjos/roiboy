@@ -14,6 +14,8 @@ import { toast } from "sonner";
 import { useMarketingPersona } from "@/hooks/useMarketingPersona";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
 import { buildMarketingConsistencyReport } from "@/lib/marketingConsistency";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export function MarketingReferencesTab() {
   const [boardId, setBoardId] = useState<string | null>(null);
@@ -80,6 +82,7 @@ export function MarketingReferencesTab() {
     !search || r.title?.toLowerCase().includes(search.toLowerCase()) || r.notes?.toLowerCase().includes(search.toLowerCase())
   );
   const consistencyReport = buildMarketingConsistencyReport({ persona, voice, references });
+  const refsPg = usePagedList(filtered, { resetKey: { boardId, search }, isLoading });
 
   if (isLoading) return <Skeleton className="h-[600px]" />;
 
@@ -171,7 +174,7 @@ export function MarketingReferencesTab() {
         </Card>
       ) : (
         <div className="columns-2 md:columns-3 lg:columns-4 xl:columns-5 gap-3 [column-fill:_balance]">
-          {filtered.map(ref => (
+          {refsPg.items.map(ref => (
             <Card
               key={ref.id}
               onClick={() => setPreview(ref)}
@@ -209,6 +212,7 @@ export function MarketingReferencesTab() {
           ))}
         </div>
       )}
+      {filtered.length > 0 && <PagerFor state={refsPg} itemLabel="referências" />}
 
       {/* New board dialog */}
       <Dialog open={boardDialog} onOpenChange={setBoardDialog}>

@@ -126,21 +126,31 @@ export default function MarketingRemindersTab() {
     enabled: !!selectedEventId,
   });
 
-  // Fetch campaign history
+  // Fetch campaign history (todas, em lotes de 1000 via range, pois o array completo
+  // é usado para montar o histórico navegável — paginação local via usePagedList abaixo)
   const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
     queryKey: ["marketing-reminder-campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reminder_campaigns")
-        .select(`
-          *,
-          events!inner (id, title, scheduled_at, modality, category)
-        `)
-        .eq("events.category", "marketing")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data || [];
+      const PAGE = 1000;
+      let allRows: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("reminder_campaigns")
+          .select(`
+            *,
+            events!inner (id, title, scheduled_at, modality, category)
+          `)
+          .eq("events.category", "marketing")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        allRows = allRows.concat(data || []);
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+      return allRows;
     },
   });
 

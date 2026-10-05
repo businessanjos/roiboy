@@ -36,6 +36,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import type { DateRange as DayPickerRange } from "react-day-picker";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { ThreeCPlusSyncSummary } from "./ThreeCPlusSyncSummary";
 import { ThreeCPlusCallsList } from "./ThreeCPlusCallsList";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -302,6 +304,8 @@ export function ThreeCPlusMetrics() {
     };
   }, [filteredLogs, filteredSessions, users]);
 
+  const callsPg = usePagedList(filteredLogs, { resetKey: [dateRange, customRange.from?.getTime(), customRange.to?.getTime(), selectedUser], isLoading: loading });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -557,7 +561,7 @@ export function ThreeCPlusMetrics() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.slice(0, 50).map((log) => {
+                {callsPg.items.map((log) => {
                   const statusInfo = getStatusLabel(log.status);
                   const userName =
                     users.find((u) => u.id === log.user_id)?.name || log.agent_name || "-";
@@ -593,6 +597,9 @@ export function ThreeCPlusMetrics() {
                 })}
               </TableBody>
             </Table>
+          )}
+          {filteredLogs.length > 0 && (
+            <ListPagination state={callsPg} itemLabel="ligações" />
           )}
         </CardContent>
       </Card>

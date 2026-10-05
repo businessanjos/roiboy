@@ -17,6 +17,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -213,6 +215,8 @@ export function ThreeCPlusCallsList() {
 
   const selectedTranscript = selected?.threecplus_call_transcripts?.[0];
 
+  const pg = usePagedList(filtered, { resetKey: [period, seller, outcome, temperature, engine], isLoading: loading });
+
   return (
     <Card>
       <CardHeader>
@@ -320,7 +324,7 @@ export function ThreeCPlusCallsList() {
           <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma ligação no período.</p>
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border">
-            {filtered.map((call) => {
+            {pg.items.map((call) => {
               const t = call.threecplus_call_transcripts?.[0];
               return (
                 <div
@@ -380,6 +384,9 @@ export function ThreeCPlusCallsList() {
               );
             })}
           </div>
+        )}
+        {!loading && filtered.length > 0 && (
+          <ListPagination state={pg} itemLabel="ligações" />
         )}
       </CardContent>
 

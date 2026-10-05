@@ -15,6 +15,8 @@ import { CampaignAlertsDialog } from './CampaignAlertsDialog';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Legend } from 'recharts';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface AdAccount { id: string; name: string; }
 interface Insights {
@@ -388,6 +390,8 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
       return (bv as number) - (av as number);
     });
 
+  const campaignsPg = usePagedList(filtered, { resetKey: { search, statusFilter, sortBy }, isLoading: loading });
+
   const totals = filtered.reduce((acc, c) => {
     if (!c.insights) return acc;
     acc.spend += c.insights.spend;
@@ -534,7 +538,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                       </tr>
                     </thead>
                     <tbody>
-                      {filtered.map(c => (
+                      {campaignsPg.items.map(c => (
                         <tr key={c.id} className="border-b border-border/20 hover:bg-muted/30 transition-colors group cursor-pointer"
                           onClick={() => setDrillCampaign(c)}>
                           <td className="p-2">
@@ -582,6 +586,7 @@ export function CampaignsManager({ adAccountId, datePreset }: Props) {
                       ))}
                     </tbody>
                   </table>
+                  <PagerFor state={campaignsPg} itemLabel="campanhas" />
                 </div>
               )}
             </>

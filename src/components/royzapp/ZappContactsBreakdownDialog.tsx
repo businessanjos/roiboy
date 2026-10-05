@@ -12,6 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import {
   Table,
   TableBody,
@@ -110,6 +112,7 @@ export function ZappContactsBreakdownDialog({
   }, [data, search]);
 
   const isInbound = direction === "inbound";
+  const pg = usePagedList(rows, { resetKey: [direction, sectorId, integrationId, includeGroups, agentUserId, search], isLoading });
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,7 +164,7 @@ export function ZappContactsBreakdownDialog({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {rows.map((r) => (
+                {pg.items.map((r) => (
                   <TableRow key={r.contact_key} className="border-zapp-border">
                     <TableCell className="max-w-[220px]">
                       <p className="truncate font-medium">{r.contact_name}</p>
@@ -198,6 +201,9 @@ export function ZappContactsBreakdownDialog({
               </TableBody>
             </Table>
           </ScrollArea>
+        )}
+        {!isLoading && rows.length > 0 && (
+          <ListPagination state={pg} itemLabel="contatos" />
         )}
       </DialogContent>
     </Dialog>

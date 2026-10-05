@@ -322,6 +322,9 @@ export default function EventSuppliers() {
     isLoading,
   });
 
+  const quotesViewList = quotesViewSupplier ? (quotesBySupplier.get(quotesViewSupplier.id) || []) : [];
+  const quotesViewPg = usePagedList(quotesViewList, { resetKey: quotesViewSupplier?.id });
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -568,7 +571,7 @@ export default function EventSuppliers() {
           </DialogHeader>
           <div className="space-y-3 max-h-[60vh] overflow-auto">
             {quotesViewSupplier &&
-              (quotesBySupplier.get(quotesViewSupplier.id) || []).map((q) => {
+              quotesViewPg.items.map((q) => {
                 const status = QUOTE_STATUS.find((s) => s.value === q.status) || QUOTE_STATUS[0];
                 return (
                   <div key={q.id} className="border rounded-lg p-3 space-y-2">
@@ -618,6 +621,9 @@ export default function EventSuppliers() {
                 );
               })}
           </div>
+          {quotesViewSupplier && quotesViewList.length > 0 && (
+            <PagerFor state={quotesViewPg} itemLabel="orçamentos" />
+          )}
         </DialogContent>
       </Dialog>
     </div>
