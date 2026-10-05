@@ -174,15 +174,15 @@ export default function ClientCheckpoints() {
     : `${(detailed.data || []).length} registro(s) no período/canal selecionado`;
   const activePeriodFilters = (from ? 1 : 0) + (to ? 1 : 0) + (channel && channel !== "todos" ? 1 : 0);
 
-  const periodFields = (
+  const periodFields = (prefix: string) => (
     <>
       <div className="space-y-1.5">
-        <Label htmlFor="cp-from" className="text-xs">De</Label>
-        <Input id="cp-from" type="date" className="h-11 md:h-10" value={from} onChange={(e) => setFrom(e.target.value)} />
+        <Label htmlFor={`${prefix}-from`} className="text-xs">De</Label>
+        <Input id={`${prefix}-from`} type="date" className="h-11 md:h-10" value={from} onChange={(e) => setFrom(e.target.value)} />
       </div>
       <div className="space-y-1.5">
-        <Label htmlFor="cp-to" className="text-xs">Até</Label>
-        <Input id="cp-to" type="date" className="h-11 md:h-10" value={to} onChange={(e) => setTo(e.target.value)} />
+        <Label htmlFor={`${prefix}-to`} className="text-xs">Até</Label>
+        <Input id={`${prefix}-to`} type="date" className="h-11 md:h-10" value={to} onChange={(e) => setTo(e.target.value)} />
       </div>
       <div className="space-y-1.5">
         <Label className="text-xs">Canal</Label>
@@ -294,7 +294,7 @@ export default function ClientCheckpoints() {
 
       <Card className="shadow-card hidden md:block">
         <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-          {periodFields}
+          {periodFields("cp-desktop")}
           <div className="flex items-end text-xs text-muted-foreground">{recordsLabel}</div>
         </CardContent>
       </Card>
@@ -320,7 +320,7 @@ export default function ClientCheckpoints() {
                   <SheetTitle>Filtros</SheetTitle>
                   <SheetDescription>Período e canal usados nos relatórios e no CSV dos registros.</SheetDescription>
                 </SheetHeader>
-                <div className="mt-4 grid gap-3">{periodFields}</div>
+                <div className="mt-4 grid gap-3">{periodFields("cp-mobile")}</div>
                 <p className="mt-3 text-xs text-muted-foreground">{recordsLabel}</p>
                 <SheetClose asChild>
                   <Button className="mt-4 h-11 w-full">Concluir</Button>
@@ -374,7 +374,7 @@ export default function ClientCheckpoints() {
                     <div className="min-w-0">
                       <Link
                         to={`/clients/${r.client_id}${clientDetailSearch}`}
-                        className="block truncate text-[15px] font-medium hover:underline"
+                        className="block py-1 line-clamp-2 break-words text-[15px] font-medium leading-snug hover:underline"
                       >
                         {r.full_name}
                       </Link>
@@ -387,7 +387,7 @@ export default function ClientCheckpoints() {
                   <p className="mt-1.5 text-xs text-muted-foreground">
                     {r.interactionAt ? (
                       <>
-                        Última {format(new Date(r.interactionAt), "dd/MM", { locale: ptBR })}{" "}
+                        Última interação {format(new Date(r.interactionAt), "dd/MM", { locale: ptBR })}{" "}
                         <span className={r.silent ? "text-destructive" : undefined}>
                           ({r.daysSinceInteraction === 0 ? "hoje" : `há ${r.daysSinceInteraction}d`})
                         </span>
@@ -395,6 +395,7 @@ export default function ClientCheckpoints() {
                     ) : (
                       <span className="text-destructive">Sem interação</span>
                     )}
+                    {" · "}Últ. checkpoint {r.last_checkpoint_at ? format(new Date(r.last_checkpoint_at), "dd/MM", { locale: ptBR }) : "—"}
                     {" · "}Próximo {r.state.nextDueAt ? format(new Date(r.state.nextDueAt), "dd/MM", { locale: ptBR }) : "—"}
                   </p>
                   {r.last_summary && (
