@@ -757,10 +757,10 @@ export function SpiffsSection() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(spiff)} className="h-8 w-8" title="Editar">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(spiff)} className="h-11 w-11 sm:h-8 sm:w-8" title="Editar" aria-label={`Editar SPIFF ${spiff.name}`}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-8 w-8" title="Excluir">
+                          <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-11 w-11 sm:h-8 sm:w-8" title="Excluir" aria-label={`Excluir SPIFF ${spiff.name}`}>
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
                         </div>
