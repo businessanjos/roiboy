@@ -218,3 +218,29 @@ Conta do Everton, Playwright, 393×852, 320×700 e 1440×900: /products ("1–15
 - **Notificações**: Verificado sem corte.
 - **Contratos**: /contracts "1–6 de 6" (rodapé antigo substituído pelo padrão; mostra só a faixa quando cabe numa página).
 - **Playbooks**: /events/playbooks com 0 playbooks no banco (estado vazio; rodapé com faixa aparece quando há registros).
+
+## Revisão mobile — setor Vendas (out/2026)
+
+Medição automática no navegador, só leitura, em 393px e 320px. "Pequenos" = botões ou links com menos de 40px de altura.
+
+| Rota | Arquivos principais | Largura da página | Pendências medidas |
+|---|---|---|---|
+| /sales-team | SalesTeam, QuotasIncentivesTab, QuotasSection, SalesTeamTab | ok | 1 pequeno |
+| /sales-dashboard | SalesDashboard (não alterado) | ok | 9 pequenos (abas e filtros de 32–36px) |
+| /pipeline | SalesPipeline, DealCard, DealKanbanColumn, DealRulerButton, DealDetailSheet | ok; ficha cabe na tela (392/392 e 319/319) | 0–1 pequeno |
+| /leads | Leads | ok | 0 |
+| /tasks | Tasks, TaskDialog | ok | 0–3 pequenos |
+| /sales-calendar | SalesCalendar (agenda por dia no celular) | ok | 2 pequenos |
+| /sales-scripts | SalesScripts | ok | 5 pequenos |
+| /products | Products | ok | 0 |
+| /clients | Clients | ok | 0 |
+| /sales/contracts | SalesDigitalContracts | ok | 0 |
+| /sales-team/incentive-presentation | (não alterado) | ok | 13 pequenos |
+| /sales-team/spiffs | SpiffsTracking, SpiffsSection, SpiffSpinsHistory | ok | 14–16 pequenos, nos painéis de campanha |
+| /insights | InsightsFilterBar (filtros em janela inferior), InsightsMainContent, InsightsDashboardTabs | ok | cerca de 13–18 botões sem nome, dentro dos gráficos |
+| /sales/logs | SalesLogs, AuditLogViewer | ok | 0 |
+| /insights/goals | InsightsGoals | ok | 2 botões sem nome |
+
+Discador 3C (ThreeCPlusPanel): no celular, o botão de abrir é redondo, com 48px, fica ancorado acima da barra inferior, sem arrastar, e tem nome para leitores de tela. O painel ocupa a largura da tela menos 16px de cada lado (16–304 em 320px). Em 320px, o painel foi aberto só para medir; nenhum login nem chamada foi feito.
+
+Ainda não conferido: computador em 1440px depois desta rodada; abrir e fechar todos os filtros; troca de páginas; arrastar cartões no quadro.
