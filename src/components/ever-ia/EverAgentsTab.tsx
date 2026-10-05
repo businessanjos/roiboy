@@ -61,6 +61,7 @@ export function EverAgentsTab() {
         .eq("account_id", accountId!),
     ]);
 
+    if (agentsRes.error) { console.error("[EverAgentsTab] erro ao carregar agentes:", agentsRes.error); setLoading(false); return; }
     setAgents(agentsRes.data ?? []);
     if (sectorsRes.data) setSectors(sectorsRes.data as unknown as { id: string; name: string }[]);
     setLoading(false);

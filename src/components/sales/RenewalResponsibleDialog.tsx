@@ -79,7 +79,7 @@ function useRenewalDeals(enabled: boolean) {
     enabled,
     queryFn: async (): Promise<RenewalDeal[]> => {
       // Contagens/estatísticas por responsável precisam do conjunto completo — sem .limit(2000) silencioso.
-      const { data } = await fetchAllRows<any>((from, to) =>
+      const { data, error } = await fetchAllRows<any>((from, to) =>
         (supabase as any)
           .from("deals")
           .select("id, title, status, renewal_responsible_user_id, created_at")
@@ -89,6 +89,7 @@ function useRenewalDeals(enabled: boolean) {
           .order("id", { ascending: false })
           .range(from, to),
       );
+      if (error) throw error;
       return data || [];
     },
   });
