@@ -14,7 +14,7 @@ import { Shield, Search, AlertTriangle, CheckCircle, XCircle, LogIn, LogOut, Ref
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface SecurityLog {
+export interface SecurityLog {
   id: string;
   event_type: string;
   user_id: string | null;
@@ -43,6 +43,32 @@ const eventTypeLabels: Record<string, { label: string; icon: React.ReactNode; co
 
 const EVENT_TYPES_QUERY_KEY = "security-audit-logs-types";
 const SEARCH_QUERY_KEY = "security-audit-search";
+
+/**
+ * Única fonte para linhas + total da aba de segurança: uma única chamada à
+ * RPC search_security_audit com os mesmos filtros devolve a página de linhas
+ * e o total (via total_count em cada linha) — garante que contagem e linhas
+ * nunca fiquem dessincronizadas.
+ */
+export async function fetchSecurityAuditPage(params: {
+  eventTypeFilter: string;
+  search: string;
+  offset: number;
+  limit: number;
+}): Promise<{ rows: SecurityLog[]; total: number }> {
+  const { eventTypeFilter, search, offset, limit } = params;
+  const { data, error } = await (supabase.rpc as any)("search_security_audit", {
+    p_event_type: eventTypeFilter === "all" ? null : eventTypeFilter,
+    p_search: search || null,
+    p_offset: offset,
+    p_limit: limit,
+  });
+  if (error) throw error;
+
+  const rows = (data || []) as SecurityLog[];
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  return { rows, total };
+}
 
 export function SecurityAuditViewer() {
   const { currentUser } = useCurrentUser();
@@ -92,18 +118,12 @@ export function SecurityAuditViewer() {
     queryKey: [SEARCH_QUERY_KEY, currentUser?.account_id, eventTypeFilter, debouncedSearch, pg.from, pg.to],
     queryFn: async (): Promise<{ rows: SecurityLog[]; total: number }> => {
       if (!currentUser?.account_id) return { rows: [], total: 0 };
-
-      const { data, error } = await (supabase.rpc as any)("search_security_audit", {
-        p_event_type: eventTypeFilter === "all" ? null : eventTypeFilter,
-        p_search: debouncedSearch || null,
-        p_offset: pg.from,
-        p_limit: pg.pageSize,
+      return fetchSecurityAuditPage({
+        eventTypeFilter,
+        search: debouncedSearch,
+        offset: pg.from,
+        limit: pg.pageSize,
       });
-      if (error) throw error;
-
-      const rows = (data || []) as SecurityLog[];
-      const resultTotal = rows.length > 0 ? Number(rows[0].total_count) : 0;
-      return { rows, total: resultTotal };
     },
     enabled: !!currentUser?.account_id,
   });

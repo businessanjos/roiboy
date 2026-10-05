@@ -253,7 +253,7 @@ interface AuditLogViewerProps {
 }
 
 /** Busca uma página da RPC unificada e devolve linhas mapeadas + total. */
-async function fetchUnifiedPage(params: {
+export async function fetchUnifiedPage(params: {
   accountId?: string;
   scope: "system" | "commercial";
   sinceIso: string;
