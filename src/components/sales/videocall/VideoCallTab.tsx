@@ -801,6 +801,10 @@ export function VideoCallTab() {
           </div>
         )}
 
+        {!isLoading && filtered.length > 0 && (
+          <ListPagination state={pg} itemLabel="videochamadas" />
+        )}
+
         {/* Detail Dialog */}
         <Dialog open={!!selectedSession} onOpenChange={(open) => !open && setSelectedId(null)}>
           <DialogContent className="sm:max-w-[760px] max-h-[85vh] flex flex-col">
