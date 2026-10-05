@@ -139,7 +139,13 @@ export function useNotificationsHistoryPage(
         query = query.in("source_type", TAB_SOURCE_TYPES[tab as Exclude<NotificationTabId, "all" | "other">]);
       }
 
-      const { data, error, count } = await query.order("created_at", { ascending: false }).range(from, to);
+      // Ordenação estável: created_at desc com id desc como desempate, para que
+      // notificações com o mesmo timestamp (ou timestamps truncados) mantenham
+      // ordem determinística entre páginas e não "pulem"/dupliquem na paginação.
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to);
       if (error) throw error;
       return { rows: (data || []) as NotificationRow[], total: count ?? 0 };
     },
@@ -153,6 +159,26 @@ export function useNotificationsHistoryPage(
  * Atualiza otimisticamente todas as páginas de histórico em cache marcando a
  * notificação `id` como lida (não mexe no total nem refaz fetch).
  */
+/**
+ * Procura uma notificação pelo id em QUALQUER página de histórico já cacheada
+ * pelo react-query. Usado por markAsRead para obter o source_type correto de
+ * notificações antigas que não estão nas 50 mais recentes do resumo do
+ * Contexto, evitando que sejam contabilizadas erroneamente como "Outros".
+ */
+export function findRowInHistoryCache(
+  queryClient: QueryClient,
+  id: string,
+): NotificationRow | null {
+  const caches = queryClient.getQueriesData<HistoryPageResult | undefined>({
+    queryKey: ["notifications-history"],
+  });
+  for (const [, data] of caches) {
+    const row = data?.rows.find((r) => r.id === id);
+    if (row) return row;
+  }
+  return null;
+}
+
 export function optimisticallyMarkReadInHistoryCache(queryClient: QueryClient, id: string) {
   queryClient.setQueriesData<HistoryPageResult | undefined>(
     { queryKey: ["notifications-history"] },

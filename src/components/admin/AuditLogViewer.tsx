@@ -25,7 +25,6 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Search,
   Filter,
@@ -82,6 +81,8 @@ export interface UnifiedLog {
   source: "audit" | "deal";
   /** A quem o registro pertence: "Lead Fulano", "Negócio X", "Cliente Y" */
   context?: string | null;
+  /** Descrição PT-BR já calculada no SQL (audit_unified_page); fallback local em describeLog(). */
+  description?: string | null;
 }
 
 /** Linha crua retornada pela RPC audit_unified_page. */
@@ -99,6 +100,8 @@ interface UnifiedRpcRow {
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
+  context: string | null;
+  description: string | null;
   total_count: number;
 }
 
@@ -118,6 +121,8 @@ export function mapRpcRowToUnifiedLog(row: UnifiedRpcRow): UnifiedLog {
     user_agent: row.user_agent,
     created_at: row.created_at,
     source: row.source,
+    context: row.context,
+    description: row.description,
   };
 }
 
@@ -215,6 +220,10 @@ export function describeLog(log: UnifiedLog): string {
   const nome = log.entity_name ? ` "${log.entity_name}"` : "";
   const onde = log.context ? ` — ${log.context}` : "";
 
+  // A descrição já vem pronta do SQL (audit_unified_page/audit_unified_authors);
+  // o cálculo abaixo só serve de fallback para registros sem o campo preenchido.
+  if (log.description) return log.description;
+
   if (log.entity_type === "deal") {
     const de = (log.details as any)?.de;
     const para = (log.details as any)?.para;
@@ -263,12 +272,14 @@ export async function fetchUnifiedPage(params: {
   search: string;
   offset: number;
   limit: number;
+  /** Teto superior fixo (ex.: início da exportação), para não variar entre lotes. */
+  toIso?: string | null;
 }): Promise<{ rows: UnifiedLog[]; total: number }> {
-  const { accountId, scope, sinceIso, actionFilter, entityFilter, userFilter, search, offset, limit } = params;
+  const { accountId, scope, sinceIso, actionFilter, entityFilter, userFilter, search, offset, limit, toIso } = params;
   const { data, error } = await (supabase.rpc as any)("audit_unified_page", {
     p_account_id: accountId ?? null,
     p_from: sinceIso,
-    p_to: null,
+    p_to: toIso ?? null,
     p_scope: scope,
     p_action: actionFilter,
     p_entity_type: entityFilter,
@@ -281,6 +292,38 @@ export async function fetchUnifiedPage(params: {
   const rows = (data || []) as UnifiedRpcRow[];
   const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
   return { rows: rows.map(mapRpcRowToUnifiedLog), total };
+}
+
+export interface AuthorOption {
+  id: string;
+  name: string;
+}
+
+/** Busca os autores distintos do conjunto filtrado (sem o filtro de pessoa), para o seletor "Pessoas". */
+export async function fetchUnifiedAuthors(params: {
+  accountId?: string;
+  scope: "system" | "commercial";
+  sinceIso: string;
+  actionFilter: string;
+  entityFilter: string;
+  search: string;
+}): Promise<AuthorOption[]> {
+  const { accountId, scope, sinceIso, actionFilter, entityFilter, search } = params;
+  const { data, error } = await (supabase.rpc as any)("audit_unified_authors", {
+    p_account_id: accountId ?? null,
+    p_from: sinceIso,
+    p_to: null,
+    p_scope: scope,
+    p_action: actionFilter,
+    p_entity_type: entityFilter,
+    p_search: search || null,
+  });
+  if (error) throw error;
+  const rows = (data || []) as { user_id: string | null; user_name: string | null; user_email: string | null }[];
+  return rows
+    .filter((r) => r.user_id)
+    .map((r) => ({ id: r.user_id as string, name: r.user_name || r.user_email || "Sem nome" }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 }
 
 /** Enriquece uma página de logs com nomes/contextos (só para os registros exibidos). */
@@ -364,7 +407,7 @@ export async function enrichLogs(results: UnifiedLog[]): Promise<UnifiedLog[]> {
     });
 
     enriched.forEach((r) => {
-      if (r.entity_type === "task" && r.entity_id) {
+      if (r.entity_type === "task" && r.entity_id && !r.context) {
         r.context = taskContext.get(r.entity_id) ?? null;
       }
     });
@@ -476,14 +519,20 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
   const logs = pageResult?.rows ?? [];
 
-  // Pessoas que aparecem na página carregada (lista completa viria de uma fonte à parte se necessário)
-  const people = Array.from(
-    new Map(
-      logs
-        .filter((l) => l.user_id)
-        .map((l) => [l.user_id as string, l.user_name || l.user_email || "Sem nome"]),
-    ).entries(),
-  ).sort((a, b) => a[1].localeCompare(b[1]));
+  // Autores distintos do conjunto filtrado (não só da página carregada), via RPC dedicada.
+  const { data: authorsData } = useQuery({
+    queryKey: ["audit-logs-unified-authors", scope, accountId, actionFilter, entityFilter, periodFilter, debouncedSearch],
+    queryFn: () =>
+      fetchUnifiedAuthors({
+        accountId,
+        scope,
+        sinceIso,
+        actionFilter,
+        entityFilter,
+        search: debouncedSearch,
+      }),
+  });
+  const people: Array<[string, string]> = (authorsData ?? []).map((a) => [a.id, a.name]);
 
   const selectedPersonName =
     userFilter === "all" ? "Todas as pessoas" : people.find(([id]) => id === userFilter)?.[1] ?? "Pessoa";
@@ -502,6 +551,9 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
     setExportProgress({ loaded: 0, total: 0 });
 
     try {
+      // Fixa o teto superior no início da exportação (ou min(p_to, agora)), para que
+      // todos os lotes vejam o mesmo conjunto, mesmo que cheguem novos registros durante a exportação.
+      const exportToIso = new Date().toISOString();
       const rows = await exportAllFiltered(
         (offset, limit) =>
           fetchUnifiedPage({
@@ -514,6 +566,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             search: debouncedSearch,
             offset,
             limit,
+            toIso: exportToIso,
           }),
         (p) => setExportProgress(p),
       );
@@ -558,12 +611,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 min-w-0">
+            <Activity className="h-5 w-5 shrink-0" />
             {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
@@ -704,7 +757,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
           anteriores continuam guardados e podem ser consultados sob demanda.
         </p>
 
-        <ScrollArea className="h-[500px]">
+        <div className="max-h-[500px] w-full overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -788,7 +841,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               )}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </div>
         <PagerFor state={pg} itemLabel="logs" />
 
         <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>

@@ -29423,6 +29423,22 @@ export type Database = {
         Args: { _deal_id: string }
         Returns: boolean
       }
+      audit_unified_authors: {
+        Args: {
+          p_account_id?: string
+          p_action?: string
+          p_entity_type?: string
+          p_from?: string
+          p_scope?: string
+          p_search?: string
+          p_to?: string
+        }
+        Returns: {
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       audit_unified_page: {
         Args: {
           p_account_id?: string
@@ -29438,7 +29454,9 @@ export type Database = {
         }
         Returns: {
           action: string
+          context: string
           created_at: string
+          description: string
           details: Json
           entity_id: string
           entity_name: string
@@ -29985,6 +30003,7 @@ export type Database = {
       }
       search_security_audit: {
         Args: {
+          p_account_id: string
           p_event_type?: string
           p_limit?: number
           p_offset?: number
@@ -30157,7 +30176,7 @@ export type Database = {
         Returns: string
       }
       zapp_attendance_daily: {
-        Args: { p_account_id: string; p_since: string }
+        Args: { p_account_id: string; p_since: string; p_tz?: string }
         Returns: {
           day: string
           messages: number

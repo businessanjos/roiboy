@@ -1151,8 +1151,8 @@ export default function LeadsTab() {
       </div>
 
       {/* Leads List - Scrollable */}
-      <Card className="flex-1 min-h-0 overflow-hidden mt-4">
-        <ScrollArea className="h-full">
+      <Card className="flex-1 min-h-0 flex flex-col overflow-hidden mt-4">
+        <ScrollArea className="flex-1 min-h-0">
           <CardContent className="p-0">
           {leadsPg.items.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
@@ -1279,7 +1279,9 @@ export default function LeadsTab() {
           )}
           </CardContent>
         </ScrollArea>
-        <PagerFor state={leadsPg} itemLabel="leads" />
+        <div className="shrink-0 border-t">
+          <PagerFor state={leadsPg} itemLabel="leads" />
+        </div>
       </Card>
 
       {/* Lead Dialog */}

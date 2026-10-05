@@ -27,6 +27,7 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
     });
 
     const result = await fetchSecurityAuditPage({
+      accountId: "acc-1",
       eventTypeFilter: "login_success",
       search: "joão",
       offset: 10,
@@ -35,6 +36,7 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
 
     expect(rpcMock).toHaveBeenCalledTimes(1);
     expect(rpcMock).toHaveBeenCalledWith("search_security_audit", {
+      p_account_id: "acc-1",
       p_event_type: "login_success",
       p_search: "joão",
       p_offset: 10,
@@ -52,11 +54,12 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
       error: null,
     });
 
-    await fetchSecurityAuditPage({ eventTypeFilter, search, offset: 0, limit: 10 });
+    await fetchSecurityAuditPage({ accountId: "acc-1", eventTypeFilter, search, offset: 0, limit: 10 });
 
     const callArgs = rpcMock.mock.calls[0][1];
     // A mesma string de busca e o mesmo filtro de tipo usados para montar as
     // linhas são os mesmos que determinam o total_count embutido nelas.
+    expect(callArgs.p_account_id).toBe("acc-1");
     expect(callArgs.p_search).toBe(search);
     expect(callArgs.p_event_type).toBe(eventTypeFilter);
   });
@@ -65,6 +68,7 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
     rpcMock.mockResolvedValue({ data: [], error: null });
 
     const result = await fetchSecurityAuditPage({
+      accountId: "acc-1",
       eventTypeFilter: "all",
       search: "",
       offset: 0,
@@ -72,6 +76,7 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
     });
 
     expect(rpcMock).toHaveBeenCalledWith("search_security_audit", {
+      p_account_id: "acc-1",
       p_event_type: null,
       p_search: null,
       p_offset: 0,
@@ -84,7 +89,31 @@ describe("fetchSecurityAuditPage — linhas e total vêm da MESMA chamada a sear
     rpcMock.mockResolvedValue({ data: null, error: new Error("falha de rede") });
 
     await expect(
-      fetchSecurityAuditPage({ eventTypeFilter: "all", search: "", offset: 0, limit: 20 }),
+      fetchSecurityAuditPage({ accountId: "acc-1", eventTypeFilter: "all", search: "", offset: 0, limit: 20 }),
     ).rejects.toThrow("falha de rede");
+  });
+
+  it("não consulta a RPC quando não há accountId (evita busca sem conta)", async () => {
+    const result = await fetchSecurityAuditPage({
+      accountId: null,
+      eventTypeFilter: "all",
+      search: "",
+      offset: 0,
+      limit: 20,
+    });
+
+    expect(rpcMock).not.toHaveBeenCalled();
+    expect(result).toEqual({ rows: [], total: 0 });
+  });
+
+  it("confirma que p_account_id é sempre enviado quando há conta", async () => {
+    rpcMock.mockResolvedValue({ data: [], error: null });
+
+    await fetchSecurityAuditPage({ accountId: "conta-xyz", eventTypeFilter: "all", search: "", offset: 0, limit: 20 });
+
+    expect(rpcMock).toHaveBeenCalledWith(
+      "search_security_audit",
+      expect.objectContaining({ p_account_id: "conta-xyz" }),
+    );
   });
 });

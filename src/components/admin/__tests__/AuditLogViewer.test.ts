@@ -49,6 +49,8 @@ describe("mapRpcRowToUnifiedLog — mapeamento da RPC audit_unified_page", () =>
       ip_address: "1.2.3.4",
       user_agent: "ua",
       created_at: "2026-02-01T10:00:00Z",
+      context: "Lead Y › Negócio X",
+      description: "Moveu o negócio",
       total_count: 42,
     };
     const mapped = mapRpcRowToUnifiedLog(row);
@@ -66,6 +68,8 @@ describe("mapRpcRowToUnifiedLog — mapeamento da RPC audit_unified_page", () =>
       user_agent: "ua",
       created_at: "2026-02-01T10:00:00Z",
       source: "deal",
+      context: "Lead Y › Negócio X",
+      description: "Moveu o negócio",
     });
     // total_count não vaza para o objeto exibido na tela
     expect((mapped as any).total_count).toBeUndefined();
@@ -211,5 +215,28 @@ describe("fetchUnifiedPage — mapeamento de filtros do AuditLogViewer para a RP
         limit: 20,
       }),
     ).rejects.toThrow("falha na RPC");
+  });
+});
+
+describe("auditoria — teto fixo e autores do conjunto completo", () => {
+  beforeEach(() => rpcMock.mockReset());
+
+  it("envia o mesmo p_to em todos os lotes quando toIso é fixado", async () => {
+    const { fetchUnifiedPage } = await import("../AuditLogViewer");
+    rpcMock.mockResolvedValue({ data: [], error: null });
+    const toIso = "2026-10-05T01:00:00.000Z";
+    for (const offset of [0, 1000, 2000]) {
+      await fetchUnifiedPage({ scope: "system", sinceIso: "2026-01-01T00:00:00Z", actionFilter: "all", entityFilter: "all", userFilter: "all", search: "", offset, limit: 1000, toIso });
+    }
+    const tos = rpcMock.mock.calls.map((c) => (c[1] as any).p_to);
+    expect(tos).toEqual([toIso, toIso, toIso]);
+  });
+
+  it("autores vêm da RPC audit_unified_authors, não da página", async () => {
+    const { fetchUnifiedAuthors } = await import("../AuditLogViewer");
+    rpcMock.mockResolvedValue({ data: [{ user_id: "u9", user_name: "Zeca", user_email: null }, { user_id: "u1", user_name: null, user_email: "ana@x.com" }], error: null });
+    const authors = await fetchUnifiedAuthors({ scope: "system", sinceIso: "2026-01-01T00:00:00Z", actionFilter: "all", entityFilter: "all", search: "" });
+    expect(rpcMock.mock.calls[0][0]).toBe("audit_unified_authors");
+    expect(authors).toEqual([{ id: "u1", name: "ana@x.com" }, { id: "u9", name: "Zeca" }]);
   });
 });
