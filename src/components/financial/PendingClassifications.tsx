@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface PendingClassification {
   id: string;
@@ -257,6 +259,8 @@ export function PendingClassifications() {
     );
   }
 
+  const itemsPg = usePagedList(pendingItems, { isLoading });
+
   if (!pendingItems?.length) {
     return (
       <Card>
@@ -311,7 +315,7 @@ export function PendingClassifications() {
         </CardHeader>
         <CardContent>
           <div className="space-y-3">
-            {pendingItems.map((item) => (
+            {itemsPg.items.map((item) => (
               <div
                 key={item.id}
                 className={`border rounded-lg p-4 transition-colors ${
@@ -464,6 +468,7 @@ export function PendingClassifications() {
               </div>
             ))}
           </div>
+          <PagerFor state={itemsPg} itemLabel="transações" />
         </CardContent>
       </Card>
     </div>

@@ -20,6 +20,8 @@ import { OnboardingOrchestrated } from "@/components/client/OnboardingOrchestrat
 import { StageChecklistEditor } from "@/components/client/StageChecklistEditor";
 import { ClientOnboardingDrawer } from "@/components/client/ClientOnboardingDrawer";
 import { useOnboardingHub, computeHealth, daysInStage, OnboardingClient } from "@/hooks/useOnboardingHub";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import {
   useStageChecklistItems,
@@ -344,7 +346,8 @@ function SmartClientList({
   );
 
   const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
-  const clientIds = useMemo(() => clients.slice(0, 50).map(c => c.id), [clients]);
+  const pg = usePagedList(clients, { defaultPageSize: 50 });
+  const clientIds = useMemo(() => pg.items.map(c => c.id), [pg.items]);
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
 
@@ -375,7 +378,7 @@ function SmartClientList({
 
   return (
     <div className="grid grid-cols-1 gap-2 [&>*]:min-w-0">
-      {clients.slice(0, 50).map(c => {
+      {pg.items.map(c => {
         const stage = c.stage_id ? stageById.get(c.stage_id) : null;
         const notStarted = !stage || stage.display_order === 0;
         const health = computeHealth(c.stage_changed_at, stage?.sla_hours ?? null);
@@ -507,11 +510,7 @@ function SmartClientList({
           </Card>
         );
       })}
-      {clients.length > 50 && (
-        <p className="text-xs text-muted-foreground text-center py-2">
-          Mostrando os 50 mais críticos. Use a busca para refinar.
-        </p>
-      )}
+      <PagerFor state={pg} itemLabel="clientes" />
     </div>
   );
 }

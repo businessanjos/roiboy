@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { ADMISSION_DOC_TEMPLATE_SEEDS } from "@/lib/hr/admissionDocTemplates";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface HRDocumentTemplate {
   id: string;
@@ -26,11 +27,15 @@ export function useHRDocumentTemplates() {
     queryKey: ["hr-document-templates", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_document_templates" as any)
-        .select("*")
-        .eq("account_id", currentUser!.account_id)
-        .order("sort_order", { ascending: true });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_document_templates" as any)
+          .select("*")
+          .eq("account_id", currentUser!.account_id)
+          .order("sort_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as HRDocumentTemplate[];
     },

@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface OnboardingStage {
   id: string;
@@ -79,22 +80,27 @@ export function useOnboardingHub() {
 
       const filter = `and(stage_id.is.null,created_at.gte.${thirtyDaysAgo}),stage_id.in.(${onboardingStageIds.join(",")})`;
 
-      const { data, error } = await supabase
-        .from("clients")
-        .select(`
-          id, full_name, company_name, phone_e164, avatar_url, logo_url,
-          stage_id, status, created_at, onboarding_started_at, stage_changed_at,
-          responsible_user_id, ai_next_step, ai_next_step_at,
-          client_products(product_id, products(id, name, color))
-        `)
-        .eq("account_id", accountId!)
-        .eq("status", "active")
-        .or(filter)
-        .order("stage_changed_at", { ascending: true, nullsFirst: true })
-        .limit(500);
+      // Carrega em lotes (sem .limit) para não truncar silenciosamente o universo
+      // usado nos KPIs e na lista — a tela já pagina a exibição.
+      const { data, error } = await fetchAllRows<OnboardingClient>((from, to) =>
+        supabase
+          .from("clients")
+          .select(`
+            id, full_name, company_name, phone_e164, avatar_url, logo_url,
+            stage_id, status, created_at, onboarding_started_at, stage_changed_at,
+            responsible_user_id, ai_next_step, ai_next_step_at,
+            client_products(product_id, products(id, name, color))
+          `)
+          .eq("account_id", accountId!)
+          .eq("status", "active")
+          .or(filter)
+          .order("stage_changed_at", { ascending: true, nullsFirst: true })
+          .order("id", { ascending: true })
+          .range(from, to) as any,
+      );
 
       if (error) throw error;
-      return (data ?? []) as OnboardingClient[];
+      return data;
     },
   });
 
