@@ -758,7 +758,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
           anteriores continuam guardados e podem ser consultados sob demanda.
         </p>
 
-        <ScrollArea className="h-[500px]">
+        <div className="max-h-[500px] w-full overflow-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -842,7 +842,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               )}
             </TableBody>
           </Table>
-        </ScrollArea>
+        </div>
         <PagerFor state={pg} itemLabel="logs" />
 
         <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
