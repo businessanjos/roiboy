@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useId } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -106,6 +106,7 @@ const PRIORITY_LABELS = {
 };
 
 export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId, initialActivityTypeId, suggestedTitle, forceSectorId, onSuccess, onTaskCompleted }: TaskDialogProps) {
+  const fid = `task-dlg-${useId().replace(/:/g, "")}`;
   const queryClient = useQueryClient();
   const { currentUser } = useCurrentUser();
   const { hasVendasAccess } = useSectorAccess();
@@ -632,7 +633,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
         <div className="space-y-4 pt-4 flex-1 overflow-y-auto px-6">
 
           <div className="space-y-2">
-            <Label>Tipo de Atividade *</Label>
+            <Label htmlFor={`${fid}-type`}>Tipo de Atividade *</Label>
             <Select
               value={formData.activity_type_id}
               onValueChange={(value) => {
@@ -646,7 +647,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                 });
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger id={`${fid}-type`} className="h-11 sm:h-10">
                 <SelectValue placeholder="Selecione o tipo de atividade" />
               </SelectTrigger>
               <SelectContent>
@@ -670,7 +671,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           ) && (
             <div className="space-y-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <div className="flex items-center justify-between gap-2">
-                <Label>Ferramenta utilizada *</Label>
+                <Label htmlFor={`${fid}-channel`}>Ferramenta utilizada *</Label>
                 {!isAddingChannel && !editingChannelValue && (
                   <div className="flex items-center gap-1">
                     {contactChannels.find((c) => c.value === formData.contact_channel)
@@ -788,7 +789,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                   value={formData.contact_channel}
                   onValueChange={(value) => setFormData({ ...formData, contact_channel: value })}
                 >
-                  <SelectTrigger>
+                  <SelectTrigger id={`${fid}-channel`} className="h-11 sm:h-10">
                     <SelectValue placeholder="Como a ligação foi feita?" />
                   </SelectTrigger>
                   <SelectContent>
@@ -854,7 +855,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
 
           {/* Unified linking field */}
           <div className="space-y-2">
-            <Label>Vincular a (opcional)</Label>
+            <Label htmlFor={`${fid}-link`}>Vincular a (opcional)</Label>
             <Select
               value={
                 formData.deal_id ? `deal:${formData.deal_id}` :
@@ -876,7 +877,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                 }
               }}
             >
-              <SelectTrigger>
+              <SelectTrigger id={`${fid}-link`} className="h-11 sm:h-10">
                 <SelectValue placeholder="Selecione cliente, lead ou negócio" />
               </SelectTrigger>
               <SelectContent>
