@@ -2527,7 +2527,7 @@ export default function SalesPipeline() {
   return (
     <>
       <div className={cn(
-        "p-3 sm:p-4 space-y-3 sm:space-y-4",
+        "p-4 space-y-3 sm:space-y-4",
         isPipelineFullscreen && "fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
       )}>
 
@@ -2579,7 +2579,9 @@ export default function SalesPipeline() {
                     <Button
                       variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                       size="sm"
-                      className="rounded-none h-8"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em Kanban"
+                      aria-pressed={viewMode === 'kanban'}
                       onClick={() => setViewMode('kanban')}
                     >
                       <LayoutGrid className="h-3.5 w-3.5" />
@@ -2587,7 +2589,9 @@ export default function SalesPipeline() {
                     <Button
                       variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                       size="sm"
-                      className="rounded-none h-8"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em lista"
+                      aria-pressed={viewMode === 'list'}
                       onClick={() => setViewMode('list')}
                     >
                       <List className="h-3.5 w-3.5" />
@@ -2597,7 +2601,7 @@ export default function SalesPipeline() {
                   {/* Config dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
+                      <Button variant="outline" size="sm" className="h-11 w-11 sm:h-9 sm:w-auto px-2" aria-label="Configurações do funil">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -2622,7 +2626,7 @@ export default function SalesPipeline() {
                   </div>
 
 
-                  <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
+                  <Button size="sm" className="h-11 w-11 sm:h-9 sm:w-auto gap-1.5" aria-label="Novo deal" onClick={() => setIsNewDealOpen(true)}>
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Novo Deal</span>
                   </Button>
@@ -2663,7 +2667,8 @@ export default function SalesPipeline() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      aria-label="Filtros"
+                      className="h-11 min-w-11 sm:h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                       onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
                       aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
                     >

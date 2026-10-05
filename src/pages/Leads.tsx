@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
@@ -1212,7 +1212,7 @@ export default function Leads() {
 
   const renderLeadFilterFields = (scope: "desktop" | "mobile") => {
     const m = scope === "mobile";
-    const field = (id: string, label: string, node: React.ReactNode) =>
+    const field = (id: string, label: string, node: ReactNode) =>
       m ? (
         <div className="space-y-1.5">
           <Label htmlFor={id}>{label}</Label>
