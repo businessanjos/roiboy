@@ -35,6 +35,8 @@ import { ProductBonusesTab } from "@/components/products/ProductBonusesTab";
 import { ProductContractTab } from "@/components/products/ProductContractTab";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { MoreVertical } from "lucide-react";
 
 interface SessionPhase {
   duration_hours: string;
@@ -464,9 +466,9 @@ export default function Products() {
   }
 
   return (
-    <div className="p-6 lg:p-8 space-y-6 animate-fade-in">
-      <div className="flex items-center justify-between">
-        <div>
+    <div className="p-4 sm:p-6 lg:p-8 space-y-4 sm:space-y-6 animate-fade-in">
+      <div className="flex items-center justify-between gap-3">
+        <div className="hidden md:block">
           <h1 className="text-2xl font-bold text-foreground">Produtos</h1>
           <p className="text-muted-foreground">
             Gerencie os produtos e planos oferecidos aos seus clientes
@@ -481,12 +483,13 @@ export default function Products() {
               onClick={() => resetForm()}
               disabled={!canCreate("products")}
               title={!canCreate("products") ? "Limite de produtos atingido. Faça upgrade do plano." : undefined}
+              className="h-11 w-full md:h-10 md:w-auto"
             >
               {!canCreate("products") ? <Lock className="h-4 w-4 mr-2" /> : <Plus className="h-4 w-4 mr-2" />}
               {!canCreate("products") ? "Limite atingido" : "Novo Produto"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto">
+          <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto overflow-x-hidden [&>*]:min-w-0">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Editar Produto" : "Novo Produto"}
@@ -496,8 +499,8 @@ export default function Products() {
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs defaultValue="general" className="w-full">
-              <TabsList className={`w-full grid ${isRenewal ? 'grid-cols-4' : 'grid-cols-5'}`}>
+            <Tabs defaultValue="general" className="w-full min-w-0">
+              <TabsList className={`flex w-full justify-start overflow-x-auto scrollbar-hide h-[52px] sm:h-10 sm:grid [&>button]:h-11 sm:[&>button]:h-8 [&>button]:shrink-0 [&>button]:px-3 ${isRenewal ? 'sm:grid-cols-4' : 'sm:grid-cols-5'}`}>
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
                 <TabsTrigger value="bonuses">Bônus</TabsTrigger>
@@ -507,24 +510,28 @@ export default function Products() {
 
               <TabsContent value="general" className="space-y-5 pt-2">
                 {/* Row 1: Nome + Cor */}
-                <div className="grid grid-cols-[1fr_auto] gap-4 items-end">
-                  <div className="space-y-2">
-                    <Label>Nome *</Label>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-[1fr_auto] sm:items-end">
+                  <div className="space-y-2 min-w-0">
+                    <Label htmlFor="product-name">Nome *</Label>
                     <Input
+                      id="product-name"
                       value={name}
                       onChange={(e) => setName(e.target.value)}
                       placeholder="Ex: Mentoria Premium"
                     />
                   </div>
                   <div className="space-y-2">
-                    <Label>Cor</Label>
-                    <div className="flex gap-1.5">
+                    <Label id="product-color-label">Cor</Label>
+                    <div className="flex flex-wrap gap-1 sm:gap-1.5" role="radiogroup" aria-labelledby="product-color-label">
                       {COLOR_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           type="button"
                           onClick={() => setColor(option.value)}
-                          className={`w-7 h-7 rounded-full border-2 transition-all ${
+                          role="radio"
+                          aria-checked={color === option.value}
+                          aria-label={option.label}
+                          className={`w-9 h-9 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${
                             color === option.value 
                               ? "border-foreground scale-110" 
                               : "border-transparent hover:scale-105"
@@ -571,7 +578,7 @@ export default function Products() {
                 )}
 
                 {/* Row 3: Valor, Parcelado, Periodicidade */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 min-[420px]:grid-cols-2 sm:grid-cols-3 gap-4">
                   <div className="space-y-2">
                     <Label>Valor (R$)</Label>
                     <Input
@@ -787,7 +794,7 @@ export default function Products() {
                               </button>
                             )}
                           </div>
-                          <div className="grid grid-cols-4 gap-2">
+                          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                             <div className="space-y-1">
                               <Label className="text-xs">Duração (h)</Label>
                               <Input
@@ -884,7 +891,7 @@ export default function Products() {
                 {/* Grupos WhatsApp */}
                 <div className="rounded-lg border p-4 space-y-3">
                   <Label className="text-sm font-semibold">Grupos WhatsApp</Label>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm mb-0">Grupo individual</Label>
                       <Switch
@@ -937,7 +944,7 @@ export default function Products() {
                 {/* Outros benefícios */}
                 <div className="rounded-lg border p-4 space-y-3">
                   <Label className="text-sm font-semibold">Outros benefícios</Label>
-                  <div className="grid grid-cols-2 gap-x-6 gap-y-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                     <div className="flex items-center justify-between">
                       <Label className="text-sm mb-0">Evento presencial</Label>
                       <Switch
@@ -1118,11 +1125,11 @@ export default function Products() {
               </TabsContent>}
             </Tabs>
 
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>
+            <DialogFooter className="sticky -bottom-6 z-10 -mx-6 -mb-6 mt-2 gap-2 border-t bg-background px-6 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+              <Button variant="outline" className="h-11 sm:h-10" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
-              <Button onClick={handleSave} disabled={saving}>
+              <Button className="h-11 sm:h-10" onClick={handleSave} disabled={saving}>
                 {saving && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
                 {editingId ? "Salvar" : "Criar"}
               </Button>
@@ -1146,9 +1153,21 @@ export default function Products() {
           {pg.items.map((product) => (
             <Card key={product.id} className="shadow-card">
               <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{product.name}</CardTitle>
-                  <div className="flex gap-1">
+                <div className="flex items-start justify-between gap-2">
+                  <CardTitle className="text-lg min-w-0 break-words">{product.name}</CardTitle>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 sm:hidden" aria-label={`Ações do produto ${product.name}`}>
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem className="min-h-11" onClick={() => openEditDialog(product)}><Edit2 className="h-4 w-4 mr-2" />Editar</DropdownMenuItem>
+                      <DropdownMenuItem className="min-h-11" onClick={() => handleDuplicate(product)}><Copy className="h-4 w-4 mr-2" />Duplicar</DropdownMenuItem>
+                      <DropdownMenuItem className="min-h-11 text-destructive focus:text-destructive" onClick={() => handleDelete(product.id)}><Trash2 className="h-4 w-4 mr-2" />Excluir</DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                  <div className="hidden sm:flex gap-1">
                     <Button
                       variant="ghost"
                       size="icon"

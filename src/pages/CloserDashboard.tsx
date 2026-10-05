@@ -225,6 +225,7 @@ function MetricCard({
       onClick={onClick}
       role={onClick ? "button" : undefined}
       tabIndex={onClick ? 0 : undefined}
+      aria-label={onClick ? `${label}: ${value}${hint ? `. ${hint}` : ""}. Abrir auditoria da fonte dos dados` : undefined}
       onKeyDown={
         onClick
           ? (e) => {
@@ -236,17 +237,20 @@ function MetricCard({
           : undefined
       }
     >
-      <CardContent className="pt-5 pb-4">
-        <div className="flex items-center gap-3">
-          <div className={`p-2.5 rounded-lg ${bgClass}`}>
+      <CardContent className="p-3 sm:pt-5 sm:pb-4 sm:px-6">
+        <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:gap-3">
+          <div className={`p-2 sm:p-2.5 rounded-lg ${bgClass}`}>
             <Icon className={`h-5 w-5 ${variant ? colorClass : "text-muted-foreground"}`} />
           </div>
           <div className="min-w-0">
-            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide">{label}</p>
+            <p className="text-xs text-muted-foreground font-medium uppercase tracking-wide line-clamp-2">{label}</p>
             <p className={`text-2xl font-semibold ${colorClass}`}>{value}</p>
-            {hint && <p className="text-xs text-muted-foreground mt-0.5">{hint}</p>}
+            {hint && <p className="hidden sm:block text-xs text-muted-foreground mt-0.5">{hint}</p>}
             {onClick && (
-              <p className="text-[10px] text-primary/70 mt-1">clique para auditar fonte dos dados</p>
+              <>
+                <p className="sm:hidden text-xs text-primary mt-1">Ver fonte ›</p>
+                <p className="hidden sm:block text-[10px] text-primary/70 mt-1">clique para auditar fonte dos dados</p>
+              </>
             )}
           </div>
         </div>
@@ -521,7 +525,7 @@ export default function CloserDashboard() {
             </CardContent>
           </Card>
 
-          <div className="lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+          <div className="lg:col-span-2 grid grid-cols-2 gap-3 sm:gap-4 content-start">
             {loading ? (
               <>
                 <Skeleton className="h-[88px]" />

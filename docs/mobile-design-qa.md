@@ -244,3 +244,9 @@ Medição automática no navegador, só leitura, em 393px e 320px. "Pequenos" = 
 Discador 3C (ThreeCPlusPanel): no celular, o botão de abrir é redondo, com 48px, fica ancorado acima da barra inferior, sem arrastar, e tem nome para leitores de tela. O painel ocupa a largura da tela menos 16px de cada lado (16–304 em 320px). Em 320px, o painel foi aberto só para medir; nenhum login nem chamada foi feito.
 
 Ainda não conferido: computador em 1440px depois desta rodada; abrir e fechar todos os filtros; troca de páginas; arrastar cartões no quadro.
+
+### Fechamento (Produtos, Contratos, Acelerômetro)
+- Formulário Novo Produto, aberto e fechado com Cancelar sem salvar, em 393 e 320px: nada passa da largura (367/367 e 294/294); campo Nome com 319 e 246px; abas com 44px, rolando de lado; os dois campos de preço em uma coluna (até 2 a partir de 420px); Criar e Cancelar com 44px e rodapé fixo no fim do formulário. A aba Entregas também cabe na largura.
+- Produtos e Contratos: menu de ações de 44px no celular, com Editar, Duplicar e Excluir (Contratos também com Copiar link e Abrir), confirmações preservadas. No computador seguem os ícones.
+- Acelerômetro: 4 indicadores em 2 colunas; "Ver fonte ›" continua visível, e a auditoria abre ao tocar no cartão.
+- Não conferido: abas Bônus, Contrato e Qualificação MQL do formulário; abertura dos menus e da auditoria; computador em 1440px.
