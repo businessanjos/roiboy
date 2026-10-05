@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { Card, CardContent } from "@/components/ui/card";
@@ -368,13 +369,17 @@ export function TamSamSomCards({ onOpenDetail, currentMetrics }: Props) {
   const { data, isLoading } = useQuery({
     queryKey: ["mi-tsm-cards", currentUser?.account_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("mi_market_research")
-        .select("id, query, answer, created_at, citations")
-        .order("created_at", { ascending: false })
-        .limit(500);
+      // KPI/dedupe por query precisa do conjunto completo — sem .limit(500) silencioso.
+      const { data, error } = await fetchAllRows<Row>((from, to) =>
+        supabase
+          .from("mi_market_research")
+          .select("id, query, answer, created_at, citations")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
-      return (data ?? []) as Row[];
+      return data;
     },
     enabled: !!currentUser?.account_id,
   });

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -369,12 +370,16 @@ function useDashboardKpis() {
     queryKey: ["cs-pres-nps", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data } = await supabase
-        .from("vnps_snapshots")
-        .select("client_id, vnps_class, computed_at")
-        .eq("account_id", accountId!)
-        .order("computed_at", { ascending: false })
-        .limit(5000);
+      // Última vNPS por cliente precisa do conjunto completo — sem .limit(5000) silencioso.
+      const { data } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("vnps_snapshots")
+          .select("client_id, vnps_class, computed_at")
+          .eq("account_id", accountId!)
+          .order("computed_at", { ascending: false })
+          .order("client_id", { ascending: false })
+          .range(from, to),
+      );
       const latest = new Map<string, string>();
       for (const r of (data ?? []) as any[]) {
         if (!latest.has(r.client_id)) latest.set(r.client_id, r.vnps_class);

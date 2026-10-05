@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface FailedSend {
   id: string;
@@ -40,15 +41,19 @@ export function useFailedZappSends(opts?: { enabled?: boolean }) {
   const fetchAll = useCallback(async () => {
     if (!accountId) return;
     const since = new Date(Date.now() - WINDOW_HOURS * 3600 * 1000).toISOString();
-    const { data, error } = await supabase
-      .from("zapp_messages")
-      .select("id, zapp_conversation_id, message_type, content, delivery_status, created_at, external_message_id, zapp_conversations!inner(sector_id, contact_name, phone_e164, account_id)")
-      .eq("account_id", accountId)
-      .eq("direction", "outbound")
-      .is("external_message_id", null)
-      .gte("created_at", since)
-      .order("created_at", { ascending: false })
-      .limit(200);
+    // Janela de 24h: sem .limit(200) silencioso — carrega tudo em lotes (teto de segurança em fetchAllRows).
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from("zapp_messages")
+        .select("id, zapp_conversation_id, message_type, content, delivery_status, created_at, external_message_id, zapp_conversations!inner(sector_id, contact_name, phone_e164, account_id)")
+        .eq("account_id", accountId)
+        .eq("direction", "outbound")
+        .is("external_message_id", null)
+        .gte("created_at", since)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
     if (error) {
       console.error("[useFailedZappSends] fetch error", error);
       setLoading(false);

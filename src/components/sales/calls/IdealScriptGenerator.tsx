@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -45,11 +46,15 @@ export function IdealScriptGenerator() {
   const { data: allAnalyses = [] } = useQuery({
     queryKey: ['all-call-analyses-for-stats', accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales_call_analyses')
-        .select('id, product_id, call_outcome')
-        .eq('account_id', accountId!)
-        .limit(1000);
+      // Taxa de sucesso por produto precisa do conjunto completo — sem .limit(1000) silencioso.
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from('sales_call_analyses')
+          .select('id, product_id, call_outcome')
+          .eq('account_id', accountId!)
+          .order('id')
+          .range(from, to),
+      );
       if (error) throw error;
       return data || [];
     },

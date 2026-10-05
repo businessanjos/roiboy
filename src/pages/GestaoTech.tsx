@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePermissions } from "@/hooks/usePermissions";
 import { toast } from "sonner";
@@ -116,13 +117,17 @@ export default function GestaoTech() {
   const { data: snapshots = [] } = useQuery({
     queryKey: ["tech-snapshots", accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("tech_project_snapshots")
-        .select("*")
-        .order("snapshot_date", { ascending: false })
-        .limit(2000);
+      // Última snapshot por projeto precisa do conjunto completo — sem .limit(2000) silencioso.
+      const { data, error } = await fetchAllRows<Snapshot>((from, to) =>
+        supabase
+          .from("tech_project_snapshots")
+          .select("*")
+          .order("snapshot_date", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
-      return (data || []) as Snapshot[];
+      return data;
     },
     enabled: !!accountId,
   });
