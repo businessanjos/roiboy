@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, cleanup } from "@testing-library/react";
+import { render, screen, waitFor, cleanup, fireEvent } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
 vi.mock("@/hooks/useCurrentUser", () => ({
@@ -117,10 +117,10 @@ describe("FinancialProvidersPortalPage — paginação de NFs", () => {
 
     await waitFor(() => expect(screen.getByLabelText("Próxima página")).toBeInTheDocument());
 
-    const nextBtn = screen.getByLabelText("Próxima página");
-    nextBtn.click();
+    fireEvent.click(screen.getByLabelText("Próxima página"));
     await waitFor(() => expect(rangeCalls.some((c) => c.from === 20 && c.to === 39)).toBe(true));
-    nextBtn.click();
+    await waitFor(() => expect(screen.getByText(/21.*40 de 60/)).toBeInTheDocument());
+    fireEvent.click(screen.getByLabelText("Próxima página"));
     await waitFor(() => expect(rangeCalls.some((c) => c.from === 40 && c.to === 59)).toBe(true));
     await waitFor(() => expect(screen.getByText(/41.*60 de 60/)).toBeInTheDocument());
 
@@ -144,9 +144,9 @@ describe("FinancialProvidersPortalPage — paginação de NFs", () => {
     );
 
     await waitFor(() => expect(screen.getByLabelText("Próxima página")).toBeInTheDocument());
-    screen.getByLabelText("Próxima página").click();
+    fireEvent.click(screen.getByLabelText("Próxima página"));
     await waitFor(() => expect(screen.getByText(/de 25/)).toBeInTheDocument());
-    await waitFor(() => expect(rangeCalls.some((c) => c.from === 20 && c.to === 44)).toBe(true));
+    await waitFor(() => expect(rangeCalls.some((c) => c.from === 20 && c.to === 39)).toBe(true));
 
     rangeCalls.length = 0;
     invoiceTotal = 15;
@@ -154,7 +154,10 @@ describe("FinancialProvidersPortalPage — paginação de NFs", () => {
 
     await waitFor(() => expect(rangeCalls.some((c) => c.from === 0 && c.to === 19)).toBe(true));
     await waitFor(() => expect(screen.getByText(/de 15/)).toBeInTheDocument());
-    expect(screen.getByLabelText("Próxima página")).toBeDisabled();
+    // Com 15 itens cabendo todos na página (pageSize 20), o rodapé fica
+    // compacto e os botões de navegação somem — comportamento esperado do
+    // ListPagination quando total <= pageSize.
+    expect(screen.queryByLabelText("Próxima página")).not.toBeInTheDocument();
   });
 
   it("ao trocar de conta (account_id), volta para a página 1", async () => {
@@ -167,7 +170,7 @@ describe("FinancialProvidersPortalPage — paginação de NFs", () => {
     );
 
     await waitFor(() => expect(screen.getByLabelText("Próxima página")).toBeInTheDocument());
-    screen.getByLabelText("Próxima página").click();
+    fireEvent.click(screen.getByLabelText("Próxima página"));
     await waitFor(() => expect(rangeCalls.some((c) => c.from === 20 && c.to === 39)).toBe(true));
     await waitFor(() => expect(screen.getByText(/21.*40 de 60/)).toBeInTheDocument());
 
