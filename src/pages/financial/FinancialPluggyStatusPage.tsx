@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePaginationState } from "@/hooks/usePagedList";
 import { ListPagination } from "@/components/ui/list-pagination";

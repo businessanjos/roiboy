@@ -69,6 +69,7 @@ export default function VipClients() {
   const [rows, setRows] = useState<VipRow[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [criteria, setCriteria] = useState<VipCriteria>(DEFAULT_CRITERIA);
   const [criteriaLoaded, setCriteriaLoaded] = useState(false);
