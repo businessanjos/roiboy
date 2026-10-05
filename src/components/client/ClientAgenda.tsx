@@ -581,6 +581,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  const pgParticipations = usePagedList(participations, { resetKey: participations.length });
+  const pgFeedbacks = usePagedList(feedbacks, { resetKey: feedbacks.length });
+
   if (loading || linkedLoading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -702,7 +705,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         
         {participations.length > 0 ? (
           <div className="grid gap-3">
-            {participations.map((p) => (
+            {pgParticipations.items.map((p) => (
               <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center">
@@ -840,7 +843,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             Feedbacks Enviados
           </h3>
           <div className="grid gap-3">
-            {feedbacks.map((f) => (
+            {pgFeedbacks.items.map((f) => (
               <div key={f.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div>
                   <div className="flex items-center">
