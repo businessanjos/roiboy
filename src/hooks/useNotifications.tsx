@@ -1,6 +1,15 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import {
+  notificationTabCountsKey,
+  optimisticallyMarkReadInHistoryCache,
+  optimisticallyMarkAllReadInHistoryCache,
+  decrementTabCounts,
+  invalidateNotificationsQueries,
+  type NotificationTabCounts,
+} from "@/hooks/useNotificationsHistory";
 
 interface Notification {
   id: string;
@@ -131,6 +140,7 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
 };
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
+  const queryClient = useQueryClient();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -238,6 +248,27 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       .on(
         "postgres_changes",
         {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+        },
+        (payload) => {
+          const updated = payload.new as Notification;
+          if (updated.user_id !== currentUserId) return;
+
+          // Mantém o resumo local em sincronia (ex.: marcado como lido em outra aba/dispositivo).
+          setNotifications((prev) =>
+            prev.map((n) => (n.id === updated.id ? { ...n, is_read: updated.is_read } : n))
+          );
+
+          // A página de histórico e as contagens por aba vivem no cache do react-query
+          // e são a fonte de verdade para a tela de Notificações — invalida para refletir.
+          invalidateNotificationsQueries(queryClient, currentUserId);
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
           event: "INSERT",
           schema: "public",
           table: "notifications",
@@ -302,6 +333,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
                 data.content || "Nova notificação",
                 data.link
               );
+
+              invalidateNotificationsQueries(queryClient, currentUserId);
             }
           }
         }
@@ -311,28 +344,55 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [currentUserId]);
+  }, [currentUserId, queryClient]);
 
-  const markAsRead = async (id: string) => {
-    try {
-      const { error } = await supabase
-        .from("notifications")
-        .update({ is_read: true })
-        .eq("id", id);
+  // Marca como lida com update otimista: a linha vira lida e a contagem só é
+  // decrementada se ela estava não lida — um segundo clique (ou clique duplo)
+  // na mesma notificação já lida é no-op, evitando duplo decremento.
+  const markAsRead = useCallback(
+    async (id: string) => {
+      const target = notifications.find((n) => n.id === id);
+      if (target?.is_read) return; // já lida: nada a fazer, nada a decrementar
 
-      if (error) throw error;
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
       setUnreadCount((prev) => Math.max(0, prev - 1));
-    } catch (error) {
-      console.error("Error marking notification as read:", error);
-    }
-  };
+      optimisticallyMarkReadInHistoryCache(queryClient, id);
+      decrementTabCounts(queryClient, currentUserId, target?.source_type ?? null);
+
+      try {
+        const { error } = await supabase
+          .from("notifications")
+          .update({ is_read: true })
+          .eq("id", id);
+
+        if (error) throw error;
+      } catch (error) {
+        console.error("Error marking notification as read:", error);
+        // Rollback do otimista e ressincroniza com o servidor.
+        setNotifications((prev) =>
+          prev.map((n) => (n.id === id ? { ...n, is_read: target?.is_read ?? false } : n))
+        );
+        setUnreadCount((prev) => prev + 1);
+        invalidateNotificationsQueries(queryClient, currentUserId);
+      }
+    },
+    [notifications, queryClient, currentUserId]
+  );
 
   // Atualiza TODAS as notificações não lidas da pessoa no servidor (não só as carregadas no resumo).
-  const markAllAsRead = async () => {
+  const markAllAsRead = useCallback(async () => {
     if (!currentUserId) return;
+
+    setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+    setUnreadCount(0);
+    optimisticallyMarkAllReadInHistoryCache(queryClient);
+    queryClient.setQueriesData<NotificationTabCounts | undefined>(
+      { queryKey: notificationTabCountsKey(currentUserId) },
+      (old) => (old ? { all: 0, sales: 0, checkpoints: 0, forms: 0, mentions: 0, other: 0 } : old)
+    );
+
     try {
       const { error } = await supabase
         .from("notifications")
@@ -341,12 +401,12 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         .eq("is_read", false);
 
       if (error) throw error;
-      setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
-      setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all as read:", error);
+      invalidateNotificationsQueries(queryClient, currentUserId);
+      await fetchUnreadCount(currentUserId);
     }
-  };
+  }, [currentUserId, queryClient]);
 
   return (
     <NotificationsContext.Provider
