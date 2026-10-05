@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay } from "date-fns";
@@ -65,22 +66,17 @@ import {
 } from "@/components/ui/command";
 
 
-/** Carrega todas as páginas via .range() até não haver mais linhas (evita truncar com .limit()). */
+/**
+ * Carrega as páginas da janela (até 180 dias, com os filtros já aplicados no servidor)
+ * via .range(), com teto de segurança (maxRows) para nunca baixar volume irrestrito.
+ */
 async function fetchAllPages<T>(
   build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
   pageSize = 500,
 ): Promise<T[]> {
-  const all: T[] = [];
-  let from = 0;
-  while (true) {
-    const { data, error } = await build(from, from + pageSize - 1);
-    if (error) throw error;
-    const rows = data ?? [];
-    all.push(...rows);
-    if (rows.length < pageSize) break;
-    from += pageSize;
-  }
-  return all;
+  const { data, error } = await fetchAllRows<T>(build, { batchSize: pageSize, maxRows: 20000 });
+  if (error) throw error;
+  return data;
 }
 
 interface UnifiedLog {
