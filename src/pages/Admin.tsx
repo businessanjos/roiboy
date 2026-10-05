@@ -21,6 +21,8 @@ import { StatusBar, StatCard } from "@/components/admin";
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts";
 import { Checkbox } from "@/components/ui/checkbox";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { 
   Building2, 
   Users, 
@@ -682,6 +684,8 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
     a.name.toLowerCase().includes(search.toLowerCase())
   );
 
+  const pgAccounts = usePagedList(filteredAccounts, { resetKey: search, isLoading });
+
   return (
     <Card className="border-0 shadow-sm">
       <CardHeader className="flex flex-row items-center justify-between pb-4">
@@ -981,7 +985,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredAccounts.map(account => {
+                {pgAccounts.items.map(account => {
                                     const status = statusLabels[account.subscription_status || 'trial'] || statusLabels.trial;
                   const isSelected = selectedAccounts.has(account.id);
                   return (
@@ -1268,6 +1272,8 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
     (u.account_name || '').toLowerCase().includes(search.toLowerCase())
   );
 
+  const pgUsers = usePagedList(filteredUsers, { resetKey: search, isLoading });
+
   const roleLabels: Record<string, string> = {
     admin: 'Admin',
     leader: 'Líder',
@@ -1409,7 +1415,7 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredUsers.map(user => {
+                {pgUsers.items.map(user => {
                   const authUserId = getUserAuthId(user);
                   const isSuperAdmin = authUserId ? superAdmins.includes(authUserId) : false;
                   
