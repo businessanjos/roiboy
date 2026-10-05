@@ -236,6 +236,11 @@ describe("useNotifications — markAsRead otimista", () => {
 
     renderHarness(queryClient, oldId);
 
+    // Aguarda o Contexto terminar a inicialização (currentUserId resolvido)
+    // antes de clicar — caso contrário o decremento otimista usaria um
+    // currentUserId ainda nulo e não bateria com a chave de cache do teste.
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("2"));
+
     await act(async () => {
       screen.getByText("mark").click();
     });
