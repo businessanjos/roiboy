@@ -489,7 +489,7 @@ export default function Products() {
               {!canCreate("products") ? "Limite atingido" : "Novo Produto"}
             </Button>
           </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto overflow-x-hidden">
+          <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto overflow-x-hidden [&>*]:min-w-0">
             <DialogHeader>
               <DialogTitle>
                 {editingId ? "Editar Produto" : "Novo Produto"}
@@ -499,7 +499,7 @@ export default function Products() {
               </DialogDescription>
             </DialogHeader>
 
-            <Tabs defaultValue="general" className="w-full">
+            <Tabs defaultValue="general" className="w-full min-w-0">
               <TabsList className={`flex w-full justify-start overflow-x-auto scrollbar-hide h-12 sm:h-10 sm:grid [&>button]:h-10 sm:[&>button]:h-8 [&>button]:shrink-0 [&>button]:px-3 ${isRenewal ? 'sm:grid-cols-4' : 'sm:grid-cols-5'}`}>
                 <TabsTrigger value="general">Geral</TabsTrigger>
                 <TabsTrigger value="deliverables">Entregas</TabsTrigger>
