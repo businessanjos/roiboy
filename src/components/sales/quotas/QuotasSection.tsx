@@ -13,6 +13,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Skeleton } from "@/components/ui/skeleton";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const MONTHS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -313,13 +314,13 @@ export function QuotasSection() {
       {/* Month selector */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="icon" onClick={handlePrevMonth}>
+          <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10" aria-label="Mês anterior" onClick={handlePrevMonth}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
           <span className="font-semibold text-lg min-w-[120px] text-center">
             {MONTHS[month - 1]} {year}
           </span>
-          <Button variant="outline" size="icon" onClick={handleNextMonth}>
+          <Button variant="outline" size="icon" className="h-11 w-11 sm:h-10 sm:w-10" aria-label="Próximo mês" onClick={handleNextMonth}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         </div>
@@ -331,7 +332,46 @@ export function QuotasSection() {
           <CardHeader className="pb-3">
             <CardTitle className="text-base">Metas por Vendedor & Produto</CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-3 sm:px-6">
+            {isMobile ? (
+              <div className="space-y-2">
+                <div className="grid grid-cols-3 gap-2 rounded-xl bg-muted/40 p-3 text-center">
+                  <div><div className="text-[11px] text-muted-foreground">Meta</div><div className="text-sm font-semibold tabular-nums">{fmtBRL(footerMetaTotal)}</div></div>
+                  <div><div className="text-[11px] text-muted-foreground">Realizado</div><div className="text-sm font-semibold tabular-nums text-success">{fmtBRL(footerRealizadoTotal)}</div></div>
+                  <div><div className="text-[11px] text-muted-foreground">Atingido</div><div className="text-sm font-semibold tabular-nums">{footerAtingimento.toFixed(0)}%</div></div>
+                </div>
+                <ul role="list" className="overflow-hidden rounded-[18px] border border-border/60 [&>li+li]:border-t [&>li+li]:border-border/60">
+                  {userRowsPg.items.map((u) => (
+                    <li key={u.id}>
+                      <button
+                        type="button"
+                        className="w-full min-h-[64px] px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring"
+                        onClick={() => { setSelectedUserId(u.id); setDraftQuotas({}); }}
+                        aria-label={`Editar metas de ${u.name}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="font-medium text-sm line-clamp-2 break-words">{u.name}</span>
+                          <Badge variant={u.atingimento >= 100 ? "default" : u.atingimento >= 80 ? "secondary" : "outline"} className="shrink-0 text-[11px]">
+                            {u.atingimento.toFixed(0)}%
+                          </Badge>
+                        </div>
+                        <div className="mt-1 flex items-center justify-between gap-2 text-xs text-muted-foreground tabular-nums">
+                          <span>Meta {u.metaTotalValue > 0 ? fmtBRL(u.metaTotalValue) : "—"}</span>
+                          <span className="text-success font-medium">{u.realizadoTotalValue > 0 ? fmtBRL(u.realizadoTotalValue) : "—"}</span>
+                        </div>
+                        <div className="mt-1.5 flex flex-wrap gap-1">
+                          {u.productCells.map((c, i) => (
+                            <span key={c.id} className="rounded-md bg-muted px-1.5 py-0.5 text-[11px] tabular-nums">
+                              {TRACKED_PRODUCTS[i]?.short ?? ""} {c.realizado}/{c.meta}
+                            </span>
+                          ))}
+                        </div>
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            ) : (
             <div className="overflow-x-auto">
               <Table>
                 <TableHeader>
@@ -410,6 +450,7 @@ export function QuotasSection() {
                 </tfoot>
               </Table>
             </div>
+            )}
             {userRows.length > 0 && <PagerFor state={userRowsPg} itemLabel="vendedores" />}
           </CardContent>
         </Card>
