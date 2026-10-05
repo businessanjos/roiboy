@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import {
   Dialog,
   DialogContent,
@@ -385,6 +387,7 @@ export function VideoCallTab() {
     { label: "Sem transcrição", value: counts.no_transcription },
   ];
 
+  const pg = usePagedList(filtered, { resetKey: [search, period], isLoading });
   const allSelected = filtered.length > 0 && filtered.every((s) => selected.has(s.id));
   const toggleAll = () =>
     setSelected(allSelected ? new Set() : new Set(filtered.map((s) => s.id)));
@@ -612,7 +615,7 @@ export function VideoCallTab() {
 
 
 
-            {filtered.map((session) => {
+            {pg.items.map((session) => {
               const isAnalyzing =
                 analyzing.includes(session.id) || session.analysis_status === "analyzing";
               return (
