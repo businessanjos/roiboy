@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
 
 export interface MarketingTrend {
@@ -37,16 +38,19 @@ export function useMarketingTrends() {
     queryKey: ["marketing-trends", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("marketing_trends")
-        .select("*")
-        .eq("account_id", accountId)
-        .eq("is_archived", false)
-        .order("captured_at", { ascending: false })
-        .order("hype_score", { ascending: false, nullsFirst: false })
-        .limit(200);
+      const { data, error } = await fetchAllRows<MarketingTrend>((from, to) =>
+        supabase
+          .from("marketing_trends")
+          .select("*")
+          .eq("account_id", accountId)
+          .eq("is_archived", false)
+          .order("captured_at", { ascending: false })
+          .order("hype_score", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
-      return data as MarketingTrend[];
+      return data;
     },
     enabled: !!accountId,
     staleTime: 0,

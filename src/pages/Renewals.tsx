@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { RenewalLosses } from "@/components/renewals/RenewalLosses";
@@ -205,7 +206,8 @@ export default function Renewals() {
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
       // 1) Fetch contracts expiring from today through end of 2026 (future renewals)
-      const { data: futureData, error: futureError } = await supabase
+      const { data: futureData, error: futureError } = await fetchAllRows<any>((from, to) =>
+        supabase
         .from("client_contracts")
         .select(`
           id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
@@ -219,7 +221,9 @@ export default function Renewals() {
         .lte("end_date", formatDate(futureLimit))
         .is("parent_contract_id", null)
         .order("end_date", { ascending: true })
-        .limit(2000);
+        .order("id", { ascending: true })
+        .range(from, to),
+      );
 
       // 2) Fetch already expired contracts that have pending/negotiating outcomes
       const { data: expiredPendingOutcomes } = await supabase

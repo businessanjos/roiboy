@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
@@ -78,12 +78,19 @@ export function SecurityAuditViewer() {
     enabled: !!currentUser?.account_id,
   });
 
+  // Busca textual com debounce (ilike server-side em colunas texto: event_type, ip_address)
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(searchQuery.trim()), 350);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
   const pg = usePaginationState(countData || 0, {
-    resetKey: [eventTypeFilter, currentUser?.account_id],
+    resetKey: [eventTypeFilter, currentUser?.account_id, debouncedSearch],
   });
 
   const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ["security-audit-logs", currentUser?.account_id, eventTypeFilter, pg.from, pg.to],
+    queryKey: ["security-audit-logs", currentUser?.account_id, eventTypeFilter, debouncedSearch, pg.from, pg.to],
     queryFn: async () => {
       if (!currentUser?.account_id) return [];
 
@@ -95,6 +102,10 @@ export function SecurityAuditViewer() {
         .order("id", { ascending: false })
         .range(pg.from, pg.to);
       if (eventTypeFilter !== "all") query = query.eq("event_type", eventTypeFilter);
+      if (debouncedSearch) {
+        const term = debouncedSearch.replace(/[%_]/g, "");
+        query = query.or(`event_type.ilike.%${term}%,ip_address.ilike.%${term}%`);
+      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -103,15 +114,9 @@ export function SecurityAuditViewer() {
     enabled: !!currentUser?.account_id,
   });
 
-  // Busca textual aplicada apenas dentro da página carregada do servidor (ver pendências).
-  const filteredLogs = (logs || []).filter((log) => {
-    const matchesSearch = searchQuery === "" || 
-      log.event_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      log.ip_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      JSON.stringify(log.details).toLowerCase().includes(searchQuery.toLowerCase());
-
-    return matchesSearch;
-  });
+  // Busca textual já aplicada no servidor (ilike em event_type/ip_address). Detalhes (JSON) não são pesquisáveis
+  // via ilike nativo — ver pendências.
+  const filteredLogs = logs || [];
 
   const getEventInfo = (eventType: string) => {
     return eventTypeLabels[eventType] || { 
