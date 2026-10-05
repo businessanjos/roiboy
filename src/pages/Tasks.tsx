@@ -1127,7 +1127,8 @@ export default function Tasks() {
     if (!canExportTasks) return;
     let source: Task[] = sortedTasks;
     {
-      // Com busca, a lista local é só a página: exporta TODAS as correspondências
+      // Com ou sem busca, exporta TODAS as correspondências (a lista local é só
+      // a página ou o lote carregado)
       // em lotes com o mesmo predicado/aba/ordem; qualquer lote com erro aborta.
       try {
         const ids = await fetchAllSearchTaskIds(
