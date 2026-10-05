@@ -108,13 +108,14 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
 
   it('renderiza valores lifetime (Visitas, Iniciados) vindos do backend', async () => {
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getByLabelText('Como Submissões é calculado'));
-    const card = screen.getByRole('region', { name: 'Resumo agregado' });
-    const scoped = within(card);
-    expect(scoped.getByText('Visitas')).toBeInTheDocument();
+    await waitFor(() => screen.getByLabelText('Como Visitas é calculado'));
+    const visits = screen.getByLabelText('Como Visitas é calculado').closest('[data-funnel-card="Visitas"]') as HTMLElement;
+    const started = screen.getByLabelText('Como Iniciados é calculado').closest('[data-funnel-card="Iniciados"]') as HTMLElement;
+    expect(visits).toBeTruthy();
+    expect(started).toBeTruthy();
     // 1.000 e 800 (pt-BR)
-    expect(scoped.getByText('1.000')).toBeInTheDocument();
-    expect(scoped.getByText('800')).toBeInTheDocument();
+    expect(within(visits).getByText('1.000')).toBeInTheDocument();
+    expect(within(started).getByText('800')).toBeInTheDocument();
   });
 
   it('expõe a Fonte de cada card alinhada com o backend (DB vs Insights API)', async () => {

@@ -846,6 +846,7 @@ function FunnelCard({ label, value, icon: Icon, sub, highlight, scope, tip, sour
       onClick={clickable ? onClick : undefined}
       role={clickable ? 'button' : undefined}
       tabIndex={clickable ? 0 : undefined}
+      data-funnel-card={label}
     >
       <div className="flex items-center justify-between gap-1.5 text-xs text-muted-foreground mb-1">
         <span className="flex items-center gap-1.5 min-w-0">
