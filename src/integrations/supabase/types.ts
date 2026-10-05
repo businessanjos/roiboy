@@ -29423,6 +29423,36 @@ export type Database = {
         Args: { _deal_id: string }
         Returns: boolean
       }
+      audit_unified_page: {
+        Args: {
+          p_account_id?: string
+          p_action?: string
+          p_entity_type?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_scope?: string
+          p_search?: string
+          p_to?: string
+          p_user?: string
+        }
+        Returns: {
+          action: string
+          created_at: string
+          details: Json
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          id: string
+          ip_address: string
+          source: string
+          total_count: number
+          user_agent: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       audit_zapp_conversation_routing: {
         Args: {
           p_dry_run?: boolean
@@ -30118,6 +30148,25 @@ export type Database = {
       zapp_assignment_sector: {
         Args: { _assignment_id: string }
         Returns: string
+      }
+      zapp_attendance_daily: {
+        Args: { p_account_id: string; p_since: string }
+        Returns: {
+          day: string
+          messages: number
+        }[]
+      }
+      zapp_attendance_metrics: {
+        Args: { p_account_id: string; p_since: string }
+        Returns: {
+          avatar_url: string
+          avg_first_response_min: number
+          conversations: number
+          messages: number
+          name: string
+          open_conversations: number
+          user_id: string
+        }[]
       }
       zapp_can_transfer_any: {
         Args: { _auth_user_id: string }

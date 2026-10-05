@@ -1,7 +1,14 @@
-import { forwardRef, useState, useMemo, useEffect } from "react";
+import { forwardRef, useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
+import {
+  NOTIFICATION_TABS,
+  type NotificationTabId,
+  getTabForNotification,
+  useNotificationTabCounts,
+  useNotificationsHistoryPage,
+} from "@/hooks/useNotificationsHistory";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,7 +24,6 @@ import {
   ShoppingCart,
   FileText,
   MessageSquare,
-  ScrollText,
   Inbox,
   CalendarCheck,
 } from "lucide-react";
@@ -26,62 +32,36 @@ import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { PushNotificationPreferences } from "@/components/notifications/PushNotificationPreferences";
 
-const TABS = [
-  { id: "all", label: "Todas", icon: Inbox },
-  { id: "sales", label: "Vendas", icon: ShoppingCart },
-  { id: "checkpoints", label: "Checkpoints", icon: CalendarCheck },
-  { id: "forms", label: "Formulários", icon: FileText },
-  { id: "mentions", label: "Menções", icon: AtSign },
-  { id: "other", label: "Outros", icon: MessageSquare },
-] as const;
-
-type TabId = (typeof TABS)[number]["id"];
-
-const SOURCE_TYPE_MAP: Record<string, TabId> = {
-  deal: "sales",
-  contract_renewal: "sales",
-  client_contracts: "sales",
-  form_response: "forms",
-  client_followup: "mentions",
-  client_checkpoint: "checkpoints",
-  client_checkpoint_digest: "checkpoints",
+const TAB_ICONS: Record<NotificationTabId, typeof Inbox> = {
+  all: Inbox,
+  sales: ShoppingCart,
+  checkpoints: CalendarCheck,
+  forms: FileText,
+  mentions: AtSign,
+  other: MessageSquare,
 };
 
-// Inverso de SOURCE_TYPE_MAP — usado para filtrar no servidor por aba.
-const TAB_SOURCE_TYPES: Record<Exclude<TabId, "all" | "other">, string[]> = {
-  sales: ["deal", "contract_renewal", "client_contracts"],
-  forms: ["form_response"],
-  mentions: ["client_followup"],
-  checkpoints: ["client_checkpoint", "client_checkpoint_digest"],
-};
-const KNOWN_SOURCE_TYPES = Object.values(TAB_SOURCE_TYPES).flat();
+const TABS = NOTIFICATION_TABS.map((tab) => ({ ...tab, icon: TAB_ICONS[tab.id] }));
 
-
-function getTabForNotification(sourceType: string | null): TabId {
-  if (!sourceType) return "other";
-  return SOURCE_TYPE_MAP[sourceType] || "other";
-}
+type TabId = NotificationTabId;
 
 const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<TabId>("all");
-  const { 
-    notifications, 
-    unreadCount, 
-    loading, 
+  const {
+    unreadCount,
+    loading,
     notificationPermission,
     pushSubscribed,
-    markAsRead, 
+    markAsRead,
     markAllAsRead,
     requestNotificationPermission,
   } = useNotifications();
 
-  // Página de Notificações: histórico completo com paginação no SERVIDOR
-  // (count exato + range), independente do resumo recente do sino/contexto.
+  // Página de Notificações: histórico completo em react-query, com key
+  // incluindo usuário + filtros (aba) + página, independente do resumo
+  // recente do sino/contexto.
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const [pageRows, setPageRows] = useState<any[]>([]);
-  const [pageTotal, setPageTotal] = useState(0);
-  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     let cancelled = false;
@@ -98,61 +78,23 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     return () => { cancelled = true; };
   }, []);
 
-  const pg = usePaginationState(pageTotal, { resetKey: activeTab, defaultPageSize: 20, isLoading: pageLoading });
+  // Contagem inicial "chutada" (1 página) só para não travar a paginação antes
+  // do primeiro fetch — ajustada assim que a query resolve.
+  const [pageTotal, setPageTotal] = useState(0);
+  const pg = usePaginationState(pageTotal, { resetKey: activeTab, defaultPageSize: 20 });
+
+  const historyQuery = useNotificationsHistoryPage(currentUserId, activeTab, pg.currentPage, pg.pageSize);
+  const pageLoading = historyQuery.isLoading;
+  const pageRows = historyQuery.data?.rows ?? [];
 
   useEffect(() => {
-    if (!currentUserId) return;
-    let cancelled = false;
-    setPageLoading(true);
-    (async () => {
-      let query = supabase
-        .from("notifications")
-        .select(
-          `*, triggered_by_user:users!notifications_triggered_by_user_id_fkey(name, avatar_url)`,
-          { count: "exact" }
-        )
-        .eq("user_id", currentUserId);
+    if (historyQuery.data) setPageTotal(historyQuery.data.total);
+  }, [historyQuery.data]);
 
-      if (activeTab === "other") {
-        // "Outros": sem source_type ou de um tipo não mapeado a nenhuma aba conhecida.
-        query = query.or(
-          `source_type.is.null,source_type.not.in.(${KNOWN_SOURCE_TYPES.join(",")})`
-        );
-      } else if (activeTab !== "all") {
-        query = query.in(
-          "source_type",
-          TAB_SOURCE_TYPES[activeTab as Exclude<TabId, "all" | "other">]
-        );
-      }
-
-      const { data, error, count } = await query
-        .order("created_at", { ascending: false })
-        .range(pg.from, pg.to);
-
-      if (cancelled) return;
-      if (error) {
-        console.error("Error fetching notifications page:", error);
-        setPageRows([]);
-        setPageTotal(0);
-      } else {
-        setPageRows(data || []);
-        setPageTotal(count ?? 0);
-      }
-      setPageLoading(false);
-    })();
-    return () => { cancelled = true; };
-  }, [currentUserId, activeTab, pg.from, pg.to]);
-
-  const tabCounts = useMemo(() => {
-    const counts: Record<TabId, number> = { all: 0, sales: 0, checkpoints: 0, forms: 0, mentions: 0, other: 0 };
-    notifications.forEach((n) => {
-      if (!n.is_read) {
-        counts.all++;
-        counts[getTabForNotification(n.source_type)]++;
-      }
-    });
-    return counts;
-  }, [notifications]);
+  // Badges por aba: contagem GLOBAL de não lidas por categoria, calculada no
+  // servidor (RPC) com o mesmo predicado da aba — não depende das notificações
+  // carregadas no cliente.
+  const { counts: tabCounts } = useNotificationTabCounts(currentUserId);
 
   const handleNotificationClick = async (notification: any) => {
     if (!notification.is_read) {
