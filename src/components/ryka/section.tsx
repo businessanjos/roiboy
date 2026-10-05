@@ -7,7 +7,7 @@ export interface RykaPageProps extends HTMLAttributes<HTMLDivElement> {}
 export function RykaPage({ className, ...props }: RykaPageProps) {
   return (
     <div
-      className={cn("mx-auto w-full max-w-[1400px] p-3 md:p-6", className)}
+      className={cn("mx-auto w-full max-w-[1400px] px-4 py-3 md:p-6", className)}
       {...props}
     />
   );

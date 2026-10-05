@@ -31,7 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide-react";
+import { CalendarCheck, Download, FileText, Loader2, MoreHorizontal, Plus, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
@@ -165,9 +167,69 @@ export default function ClientCheckpoints() {
     downloadCsv(`checkpoints_registros_${fileStamp()}.csv`, csv);
   };
 
+  const refreshAll = () => { refetch(); detailed.refetch(); };
+  const detailedEmpty = detailed.isLoading || (detailed.data || []).length === 0;
+  const recordsLabel = detailed.isLoading
+    ? "Carregando registros..."
+    : `${(detailed.data || []).length} registro(s) no período/canal selecionado`;
+  const activePeriodFilters = (from ? 1 : 0) + (to ? 1 : 0) + (channel && channel !== "todos" ? 1 : 0);
+
+  const periodFields = (
+    <>
+      <div className="space-y-1.5">
+        <Label htmlFor="cp-from" className="text-xs">De</Label>
+        <Input id="cp-from" type="date" className="h-11 md:h-10" value={from} onChange={(e) => setFrom(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="cp-to" className="text-xs">Até</Label>
+        <Input id="cp-to" type="date" className="h-11 md:h-10" value={to} onChange={(e) => setTo(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Canal</Label>
+        <Select value={channel} onValueChange={setChannel}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Canal"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os canais</SelectItem>
+            {CHECKIN_CHANNELS.map((c) => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  );
+
   return (
-    <div className="space-y-4">
-      <Breadcrumb>
+    <div className="w-full min-w-0 space-y-4 px-4 py-4 sm:px-5 lg:px-6 lg:py-6">
+      {/* Mobile: linha contextual (o cabeçalho do app já mostra "Checkpoints") */}
+      <div className="flex items-center justify-between gap-3 md:hidden">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Acompanhamento quinzenal</p>
+          <p className="text-xs text-muted-foreground">Um checkpoint a cada 15 dias.</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label="Mais ações">
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem className="min-h-11" disabled={filtered.length === 0} onSelect={exportPanel}>
+              <Download className="h-4 w-4 mr-2" /> CSV do painel
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11" disabled={detailedEmpty} onSelect={exportDetailed}>
+              {detailed.isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              CSV dos registros
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11" disabled={isLoading} onSelect={refreshAll}>
+              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Atualizar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Breadcrumb className="hidden md:block">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
@@ -181,7 +243,7 @@ export default function ClientCheckpoints() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="hidden md:flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <CalendarCheck className="h-5 w-5" />
@@ -196,11 +258,7 @@ export default function ClientCheckpoints() {
             <Download className="h-4 w-4 mr-2" />
             CSV do painel
           </Button>
-          <Button
-            variant="outline"
-            onClick={exportDetailed}
-            disabled={detailed.isLoading || (detailed.data || []).length === 0}
-          >
+          <Button variant="outline" onClick={exportDetailed} disabled={detailedEmpty}>
             {detailed.isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -208,14 +266,25 @@ export default function ClientCheckpoints() {
             )}
             CSV dos registros
           </Button>
-          <Button variant="outline" onClick={() => { refetch(); detailed.refetch(); }} disabled={isLoading}>
+          <Button variant="outline" onClick={refreshAll} disabled={isLoading}>
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Atualizar
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* KPIs: mobile 2 colunas compactas + faixa; desktop 5 cards */}
+      <div className="grid grid-cols-2 gap-2.5 md:hidden">
+        <MiniKpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
+        <MiniKpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
+        <MiniKpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
+        <MiniKpi label="Em dia" value={counts.em_dia} tone="text-success" />
+        <div className="col-span-2 flex items-center justify-between rounded-xl border border-border/60 bg-card px-3 py-2.5 shadow-sm">
+          <span className="text-xs text-muted-foreground">15+ dias sem interação</span>
+          <span className="text-base font-semibold tabular-nums text-destructive">{silentCount}</span>
+        </div>
+      </div>
+      <div className="hidden md:grid gap-3 md:grid-cols-2 lg:grid-cols-5">
         <Kpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
         <Kpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
         <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
@@ -223,45 +292,48 @@ export default function ClientCheckpoints() {
         <Kpi label="15+ dias sem interação" value={silentCount} tone="text-destructive" />
       </div>
 
-      <Card className="shadow-card">
+      <Card className="shadow-card hidden md:block">
         <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Canal</Label>
-            <Select value={channel} onValueChange={setChannel}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os canais</SelectItem>
-                {CHECKIN_CHANNELS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end text-xs text-muted-foreground">
-            {detailed.isLoading
-              ? "Carregando registros..."
-              : `${(detailed.data || []).length} registro(s) no período/canal selecionado`}
-          </div>
+          {periodFields}
+          <div className="flex items-end text-xs text-muted-foreground">{recordsLabel}</div>
         </CardContent>
       </Card>
 
 
-      <Card className="shadow-card">
-        <CardHeader className="pb-3 space-y-3">
-          <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+
+      <Card className="shadow-card min-w-0">
+        <CardHeader className="p-3 pb-3 space-y-3 md:p-6 md:pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="h-11 md:hidden" aria-label="Filtros de período e canal">
+                  <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+                  Filtros
+                  {activePeriodFilters > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{activePeriodFilters}</Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Filtros</SheetTitle>
+                  <SheetDescription>Período e canal usados nos relatórios e no CSV dos registros.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-4 grid gap-3">{periodFields}</div>
+                <p className="mt-3 text-xs text-muted-foreground">{recordsLabel}</p>
+                <SheetClose asChild>
+                  <Button className="mt-4 h-11 w-full">Concluir</Button>
+                </SheetClose>
+              </SheetContent>
+            </Sheet>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative flex-1 min-w-0 md:min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9"
+                className="pl-9 h-11 md:h-10"
+                aria-label="Buscar cliente ou consultor"
                 placeholder="Buscar cliente ou consultor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -279,7 +351,7 @@ export default function ClientCheckpoints() {
             </Tabs>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
           {isLoading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -294,7 +366,52 @@ export default function ClientCheckpoints() {
             </p>
 
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <ul className="divide-y divide-border/60 md:hidden">
+              {pg.items.map((r) => (
+                <li key={r.client_id} className="py-3 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/clients/${r.client_id}${clientDetailSearch}`}
+                        className="block truncate text-[15px] font-medium hover:underline"
+                      >
+                        {r.full_name}
+                      </Link>
+                      <p className="truncate text-xs text-muted-foreground">{r.consultant_name || "Sem consultor"}</p>
+                    </div>
+                    <Badge variant="outline" className={cn("shrink-0 text-[11px]", CHECKPOINT_STATUS_STYLES[r.state.status])}>
+                      {CHECKPOINT_STATUS_LABELS[r.state.status]}
+                    </Badge>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {r.interactionAt ? (
+                      <>
+                        Última {format(new Date(r.interactionAt), "dd/MM", { locale: ptBR })}{" "}
+                        <span className={r.silent ? "text-destructive" : undefined}>
+                          ({r.daysSinceInteraction === 0 ? "hoje" : `há ${r.daysSinceInteraction}d`})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-destructive">Sem interação</span>
+                    )}
+                    {" · "}Próximo {r.state.nextDueAt ? format(new Date(r.state.nextDueAt), "dd/MM", { locale: ptBR }) : "—"}
+                  </p>
+                  {r.last_summary && (
+                    <p className="mt-1 line-clamp-1 text-xs">{r.last_summary}</p>
+                  )}
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <Button variant="ghost" className="h-11" onClick={() => setReport({ id: r.client_id, name: r.full_name })}>
+                      <FileText className="h-4 w-4 mr-1.5" /> Relatório
+                    </Button>
+                    <Button variant="outline" className="h-11" onClick={() => setTarget({ id: r.client_id, name: r.full_name })}>
+                      <Plus className="h-4 w-4 mr-1.5" /> Registrar
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -385,6 +502,7 @@ export default function ClientCheckpoints() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
           {!isLoading && !error && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
@@ -424,5 +542,14 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: strin
         <p className={cn("text-2xl font-semibold mt-1", tone)}>{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function MiniKpi({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3 shadow-sm">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-2xl font-semibold leading-tight tabular-nums", tone)}>{value}</p>
+    </div>
   );
 }
