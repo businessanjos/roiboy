@@ -239,11 +239,25 @@ serve(async (req) => {
     if (action === "budget_history") {
       const { entityId } = body;
       const { supabase } = auth as any;
-      let q = supabase.from("meta_budget_history").select("*").order("created_at", { ascending: false }).limit(200);
-      if (entityId) q = q.eq("entity_id", entityId);
-      const { data, error } = await q;
-      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, history: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Segue cursor via .range até esgotar o histórico, com teto de segurança.
+      const batchSize = 200;
+      const maxRows = 5000;
+      const history: any[] = [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        let q = supabase
+          .from("meta_budget_history")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + batchSize - 1);
+        if (entityId) q = q.eq("entity_id", entityId);
+        const { data, error } = await q;
+        if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const rows = data || [];
+        history.push(...rows);
+        if (rows.length < batchSize) break;
+      }
+      return new Response(JSON.stringify({ success: true, history }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ============ TIMESERIES (BI) ============
