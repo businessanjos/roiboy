@@ -211,6 +211,187 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
+
+// ---- Mapeadores de linhas cru -> eventos da Timeline (reaproveitados no carregamento
+// inicial, no refresh e no "carregar anteriores" paginado por fonte) ----
+function mapMessagesToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((msg: any) => {
+    const isGroup = msg.is_group === true;
+    return {
+      id: msg.id,
+      type: "message" as const,
+      title: isGroup
+        ? `Mensagem no grupo ${msg.group_name || ""}`
+        : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+      description: msg.content_text || "(Áudio transcrito)",
+      timestamp: msg.sent_at,
+      metadata: {
+        source: msg.source,
+        direction: msg.direction,
+        is_group: msg.is_group,
+        group_name: msg.group_name,
+      },
+    };
+  });
+}
+
+function mapRoiToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((roi: any) => ({
+    id: roi.id,
+    type: "roi" as const,
+    title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
+    description: roi.evidence_snippet,
+    timestamp: roi.happened_at,
+    metadata: {
+      impact: roi.impact,
+      category: roi.category,
+      roi_type: roi.roi_type,
+      source: roi.source,
+      image_url: roi.image_url,
+    },
+  }));
+}
+
+function mapRiskToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((risk: any) => ({
+    id: risk.id,
+    type: "risk" as const,
+    title: "Sinal de Risco Detectado",
+    description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
+    timestamp: risk.happened_at,
+    metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
+  }));
+}
+
+function mapRecommendationsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((rec: any) => ({
+    id: rec.id,
+    type: "recommendation" as const,
+    title: rec.title,
+    description: rec.action_text,
+    timestamp: rec.created_at,
+    metadata: { priority: rec.priority, status: rec.status },
+  }));
+}
+
+function mapFollowupsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((followup: any) => {
+    const isNote = followup.type === "note";
+    const isFinancialNote = followup.type === "financial_note";
+    const isSalesNote = followup.type === "sales_note";
+    return {
+      id: followup.id,
+      type: (isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup") as TimelineEvent["type"],
+      title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
+      description: followup.content,
+      timestamp: followup.created_at,
+      metadata: {
+        user_id: followup.user_id,
+        user_name: followup.users?.name || "Usuário",
+        user_avatar: followup.users?.avatar_url,
+        file_url: followup.file_url,
+        file_name: followup.file_name,
+        file_size: followup.file_size,
+        followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
+        updated_at: followup.updated_at,
+      },
+    };
+  });
+}
+
+function mapCheckinsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((ci: any) => {
+    const fromClient = ci.initiated_by === "cliente";
+    const channelLabel = getCheckinChannelLabel(ci.channel);
+    return {
+      id: `checkin-${ci.id}`,
+      type: "checkin" as const,
+      title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
+      description: ci.summary,
+      timestamp: ci.happened_at,
+      metadata: {
+        category: ci.kind,
+        direction: fromClient ? "client_to_team" : "team_to_client",
+        source: ci.source,
+        user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
+        user_avatar: ci.users?.avatar_url,
+      },
+    };
+  });
+}
+
+function mapLifeEventsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((event: any) => ({
+    id: event.id,
+    type: "life_event" as const,
+    title: event.title,
+    description: event.description,
+    timestamp: event.created_at,
+    metadata: {
+      event_type: event.event_type,
+      is_recurring: event.is_recurring,
+      source: event.source,
+    },
+  }));
+}
+
+function mapFormResponsesToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((response: any) => {
+    const responseCount = Object.keys(response.responses || {}).length;
+    return {
+      id: response.id,
+      type: "form_response" as const,
+      title: response.forms?.title || "Formulário",
+      description: `${responseCount} campo(s) preenchido(s)`,
+      timestamp: response.submitted_at,
+      metadata: {
+        form_title: response.forms?.title,
+        form_responses: response.responses,
+      },
+    };
+  });
+}
+
+function mapAttendanceToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((att: any) => ({
+    id: att.id,
+    type: "attendance" as const,
+    title: `Presença confirmada: ${att.events?.title || "Evento"}`,
+    description: att.events?.address || undefined,
+    timestamp: att.join_time,
+    metadata: {
+      event_title: att.events?.title,
+      event_address: att.events?.address,
+    },
+  }));
+}
+
+function mapSubscriptionsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((sub: any) => ({
+    id: sub.id,
+    type: "financial" as const,
+    title: sub.product_name,
+    description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
+    timestamp: sub.created_at,
+    metadata: {
+      payment_status: sub.payment_status,
+      amount: sub.amount,
+      currency: sub.currency,
+    },
+  }));
+}
+
+/** Tamanho de página por fonte paginável da timeline (carregamento incremental no servidor). */
+const TIMELINE_PAGE_SIZES = {
+  messages: 200,
+  lifeEvents: 100,
+  formResponses: 100,
+  attendance: 100,
+  subscriptions: 100,
+  checkins: 200,
+} as const;
+type TimelineSourceKey = keyof typeof TIMELINE_PAGE_SIZES;
+
 const CLIENT_SECTION_TITLES: Record<string, string> = {
   "churn-signals": "Sinais de Churn",
   agenda: "Agenda",
