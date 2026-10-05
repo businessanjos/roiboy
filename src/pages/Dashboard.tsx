@@ -696,6 +696,7 @@ export default function Dashboard() {
           .eq("account_id", currentUser!.account_id!)
           .order("computed_at", { ascending: false })
           .order("client_id", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to),
       );
       if (error) throw error;

@@ -77,6 +77,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
             .from("user_sector_access")
             .select("user_id, sector_id, is_active")
             .eq("account_id", accountId)
+            .order("id")
             .range(from, to)
         ),
         fetchAllRows<any>((from, to) =>
@@ -84,6 +85,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
             .from("user_royzapp_views")
             .select("user_id, views, zapp_sectors")
             .eq("account_id", accountId)
+            .order("id")
             .range(from, to)
         ),
       ]);

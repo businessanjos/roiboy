@@ -45,7 +45,7 @@ export function PermissionProfilesManager({ accountId }: { accountId: string }) 
       const ids = profiles.map((p: Profile) => p.id);
       const { data: items, error: itemsError } = ids.length
         ? await fetchAllRows<Item>((from, to) =>
-            db.from("permission_profile_items").select("profile_id, module, sub_item, access_level, scope").in("profile_id", ids).range(from, to)
+            db.from("permission_profile_items").select("profile_id, module, sub_item, access_level, scope").in("profile_id", ids).order("id").range(from, to)
           )
         : { data: [] as Item[], error: null };
       if (itemsError) throw itemsError;

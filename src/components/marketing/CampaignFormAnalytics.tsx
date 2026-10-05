@@ -73,7 +73,7 @@ export function CampaignFormAnalytics({ form, onBack }: Props) {
       const { data: ev, error: evError } = await fetchAllRows<any>((from, to) => {
         let qe = supabase.from("form_field_events").select("session_id, field_id, event, seconds_on_field").eq("form_id", form.id);
         if (sinceIso) qe = qe.gte("at", sinceIso);
-        return qe.order("session_id", { ascending: true }).range(from, to);
+        return qe.order("session_id", { ascending: true }).order("id", { ascending: true }).range(from, to);
       });
       if (evError) throw evError;
 

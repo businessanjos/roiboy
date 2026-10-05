@@ -378,6 +378,7 @@ function useDashboardKpis() {
           .eq("account_id", accountId!)
           .order("computed_at", { ascending: false })
           .order("client_id", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, to),
       );
       if (error) throw error;

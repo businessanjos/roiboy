@@ -138,6 +138,7 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
             .select("client_id, username, snapshot_at, followers_count, total_likes, total_comments")
             .order("snapshot_at", { ascending: true })
             .order("client_id", { ascending: true })
+            .order("id", { ascending: true })
             .range(from, to),
         ),
         supabase
