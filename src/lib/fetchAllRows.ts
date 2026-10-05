@@ -62,7 +62,7 @@ export async function fetchAllRows<T>(
     // batchSize, pois o backend pode paginar com um teto próprio (ex. 500).
     if (rows.length === 0) break;
 
-    from += batchSize;
+    from += rows.length;
   }
 
   return { data: all, error: null };
