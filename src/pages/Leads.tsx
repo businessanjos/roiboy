@@ -72,7 +72,11 @@ import {
   ChevronLeft,
   Upload,
   GitMerge,
+  SlidersHorizontal,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
@@ -165,6 +169,8 @@ export default function Leads() {
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates, loading: checkingDuplicates } = useLeadDuplicateDetection();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
+  const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterResponsibleUserId, setFilterResponsibleUserId] = useState<string>("all");
   const [filterCreatedFrom, setFilterCreatedFrom] = useState("");
@@ -1203,6 +1209,51 @@ export default function Leads() {
       </div>
     );
   }
+
+  const renderLeadFilterFields = (scope: "desktop" | "mobile") => {
+    const m = scope === "mobile";
+    const field = (id: string, label: string, node: React.ReactNode) =>
+      m ? (
+        <div className="space-y-1.5">
+          <Label htmlFor={id}>{label}</Label>
+          {node}
+        </div>
+      ) : node;
+    return (
+      <>
+        {field(`leads-${scope}-source`, "Origem",
+          <Select value={filterSource} onValueChange={setFilterSource}>
+            <SelectTrigger id={`leads-${scope}-source`} aria-label={m ? undefined : "Origem"} className={m ? "h-11 w-full" : "w-[140px]"}>
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas origens</SelectItem>
+              {LEAD_SOURCES.map((source) => (
+                <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>)}
+        {field(`leads-${scope}-responsible`, "Quem cadastrou",
+          <Select value={filterResponsibleUserId} onValueChange={setFilterResponsibleUserId}>
+            <SelectTrigger id={`leads-${scope}-responsible`} aria-label={m ? undefined : "Quem cadastrou"} className={m ? "h-11 w-full" : "w-[180px]"}>
+              <SelectValue placeholder="Responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Quem cadastrou</SelectItem>
+              {responsibleOptions.map((user) => (
+                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>)}
+        {field(`leads-${scope}-from`, "Criado de",
+          <Input id={`leads-${scope}-from`} aria-label={m ? undefined : "Criado de"} type="date" className={m ? "h-11 w-full" : "w-[160px]"}
+            value={filterCreatedFrom} onChange={(e) => setFilterCreatedFrom(e.target.value)} />)}
+        {field(`leads-${scope}-to`, "Criado até",
+          <Input id={`leads-${scope}-to`} aria-label={m ? undefined : "Criado até"} type="date" className={m ? "h-11 w-full" : "w-[160px]"}
+            value={filterCreatedTo} onChange={(e) => setFilterCreatedTo(e.target.value)} />)}
+      </>
+    );
+  };
 
   return (
     <>
