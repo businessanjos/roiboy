@@ -11,6 +11,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type ImportSource = "cielo" | "cheques";
 
@@ -144,6 +146,7 @@ function ImporterTab({ source }: { source: ImportSource }) {
   const [loading, setLoading] = useState(false);
   const [applying, setApplying] = useState(false);
   const [result, setResult] = useState<PreviewResult | null>(null);
+  const previewPg = usePagedList(result?.rows, { resetKey: result?.batch_id, defaultPageSize: 20 });
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -249,7 +252,7 @@ function ImporterTab({ source }: { source: ImportSource }) {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {result.rows.map((r) => (
+                      {previewPg.items.map((r) => (
                         <TableRow key={r.id}>
                           <TableCell><StatusBadge status={r.status} /></TableCell>
                           <TableCell className="text-xs">{r.parsed_date ?? "—"}</TableCell>
@@ -264,6 +267,7 @@ function ImporterTab({ source }: { source: ImportSource }) {
                     </TableBody>
                   </Table>
                 </ScrollArea>
+                <PagerFor state={previewPg} itemLabel="linhas" />
               </CardContent>
             </Card>
           )}

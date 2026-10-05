@@ -28,6 +28,8 @@ import {
 } from "@/components/ui/table";
 import { toast } from "sonner";
 import { buildPublicContractUrl } from "@/lib/publicLink";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface DigitalContractListItem {
   id: string;
@@ -249,6 +251,11 @@ export default function SalesDigitalContracts() {
         .some((value) => String(value).toLowerCase().includes(term)),
     );
   }, [dealSearch, deals]);
+
+  const contractsPg = usePagedList(filteredContracts, {
+    resetKey: [search],
+    isLoading: loading,
+  });
 
   const getDealClientName = (deal: DealOption) => deal.client?.full_name || deal.lead?.full_name || "Cliente não identificado";
 
@@ -501,7 +508,7 @@ export default function SalesDigitalContracts() {
           <>
             {/* Mobile: lista em cards */}
             <div className="md:hidden divide-y divide-border">
-              {filteredContracts.map((contract) => (
+              {contractsPg.items.map((contract) => (
                 <div key={contract.id} className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -555,7 +562,7 @@ export default function SalesDigitalContracts() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredContracts.map((contract) => (
+                  {contractsPg.items.map((contract) => (
                     <TableRow key={contract.id}>
                       <TableCell className="font-medium">
                         {contract.contract_number ?? "Sem número"}
@@ -605,6 +612,9 @@ export default function SalesDigitalContracts() {
                   ))}
                 </TableBody>
               </Table>
+            </div>
+            <div className="p-3 border-t border-border">
+              <PagerFor state={contractsPg} itemLabel="contratos" />
             </div>
           </>
 

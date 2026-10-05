@@ -15,6 +15,8 @@ import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { EvolutionTrendsSection } from "@/components/instagram/EvolutionTrendsSection";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Snap = {
   client_id: string;
@@ -164,6 +166,8 @@ function RankList({ rows, metric, getValue, getSub }: {
     [rows, getValue],
   );
 
+  const pg = usePagedList(sorted, { resetKey: [metric, rows.length] });
+
   if (sorted.length === 0) {
     return (
       <div className="text-center py-12 text-muted-foreground text-sm">
@@ -173,17 +177,20 @@ function RankList({ rows, metric, getValue, getSub }: {
   }
 
   return (
-    <div className="divide-y divide-border/40">
-      {sorted.map((row, idx) => (
-        <RankRow
-          key={row.client_id + row.username}
-          rank={idx + 1}
-          row={row}
-          metric={metric}
-          value={getValue(row)}
-          sublabel={getSub?.(row)}
-        />
-      ))}
+    <div>
+      <div className="divide-y divide-border/40">
+        {pg.items.map((row, idx) => (
+          <RankRow
+            key={row.client_id + row.username}
+            rank={pg.from + idx + 1}
+            row={row}
+            metric={metric}
+            value={getValue(row)}
+            sublabel={getSub?.(row)}
+          />
+        ))}
+      </div>
+      <PagerFor state={pg} itemLabel="perfis" />
     </div>
   );
 }

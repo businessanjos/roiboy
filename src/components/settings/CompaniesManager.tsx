@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Building2, Pencil, Plus, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface CompanyRow {
   id: string;
@@ -83,6 +85,7 @@ export function CompaniesManager() {
   const [form, setForm] = useState({ ...emptyForm });
 
   const accountId = currentUser?.account_id;
+  const pg = usePagedList(rows, { resetKey: undefined, defaultPageSize: 20, isLoading: loading });
 
   const fetchRows = async () => {
     if (!accountId) return;
@@ -230,7 +233,7 @@ export function CompaniesManager() {
           <p className="text-sm text-muted-foreground py-6">Nenhuma empresa cadastrada.</p>
         ) : (
           <div className="space-y-2">
-            {rows.map((row) => (
+            {pg.items.map((row) => (
               <div
                 key={row.id}
                 className="flex items-center justify-between gap-4 rounded-lg border border-border p-3"
@@ -252,6 +255,7 @@ export function CompaniesManager() {
             ))}
           </div>
         )}
+        {!loading && rows.length > 0 && <PagerFor state={pg} itemLabel="empresas" />}
       </CardContent>
 
       <Dialog open={open} onOpenChange={setOpen}>

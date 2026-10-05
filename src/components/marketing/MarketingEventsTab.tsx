@@ -76,6 +76,8 @@ import {
   eventIconMap, 
   getEventTypeConfig 
 } from "@/config/eventTypes";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Attendance {
   id: string;
@@ -486,6 +488,8 @@ export default function MarketingEventsTab() {
     });
   }, [events, searchTerm, filterEventType, filterModality, filterCategory, modalityTab]);
 
+  const pg = usePagedList(filteredEvents, { resetKey: [searchTerm, filterEventType, filterModality, filterCategory, modalityTab], isLoading: loading });
+
   const presencialCount = events.filter(e => e.modality === "presencial").length;
   const onlineCount = events.filter(e => e.modality === "online").length;
   const marketingCount = events.filter(e => e.category === "marketing").length;
@@ -601,7 +605,7 @@ export default function MarketingEventsTab() {
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredEvents.map((event) => {
+                pg.items.map((event) => {
                   const typeInfo = getTypeInfo(event.event_type);
                   const IconComponent = eventIconMap[typeInfo.icon] || Calendar;
                   const eventDate = event.scheduled_at ? new Date(event.scheduled_at) : null;
@@ -803,6 +807,7 @@ export default function MarketingEventsTab() {
               )}
             </TableBody>
           </Table>
+          <PagerFor state={pg} itemLabel="eventos" />
         </CardContent>
       </Card>
 

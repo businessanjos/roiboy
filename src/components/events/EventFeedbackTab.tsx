@@ -25,6 +25,8 @@ import { format } from "date-fns";
 import { toast } from "sonner";
 import { ptBR } from "date-fns/locale";
 import FeedbackQuestionsEditor from "./FeedbackQuestionsEditor";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Client {
   id: string;
@@ -150,6 +152,7 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const feedbackPg = usePagedList(feedback);
   const nps = calculateNPS();
   const avgOverall = calculateAverageRating('overall_rating');
   const avgContent = calculateAverageRating('content_rating');
@@ -315,7 +318,7 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
 
       {/* Feedback List */}
       <div className="space-y-4">
-        {feedback.map((f) => (
+        {feedbackPg.items.map((f) => (
           <Card key={f.id}>
             <CardContent className="p-4">
               <div className="flex items-start justify-between gap-4">
@@ -405,6 +408,7 @@ export default function EventFeedbackTab({ eventId, accountId }: EventFeedbackTa
           </Card>
         ))}
       </div>
+      <PagerFor state={feedbackPg} itemLabel="feedbacks" />
     </div>
   );
 }

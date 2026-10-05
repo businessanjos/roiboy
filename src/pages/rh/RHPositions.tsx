@@ -22,6 +22,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useHRPositions, type HRPosition } from "@/hooks/useHRPositions";
 import { useHRDepartments } from "@/hooks/useHRDepartments";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const SENIORITY_OPTIONS = ["Estagiário", "Júnior", "Pleno", "Sênior", "Especialista", "Coordenador", "Gerente", "Diretor", "C-Level"];
 const EDUCATION_OPTIONS = ["Ensino Médio", "Técnico", "Superior Incompleto", "Superior Completo", "Pós-graduação", "MBA", "Mestrado", "Doutorado"];
@@ -132,6 +134,8 @@ export default function RHPositions() {
       return a.name.localeCompare(b.name);
     });
   })();
+
+  const pgGroups = usePagedList(grouped, { resetKey: [search, filterDept], isLoading: loading });
 
   const openDialog = (pos?: HRPosition) => {
     if (pos) {
@@ -274,7 +278,7 @@ export default function RHPositions() {
         </div>
       ) : (
         <div className="space-y-8">
-          {grouped.map(group => (
+          {pgGroups.items.map(group => (
             <section key={group.id || "__none__"}>
               {/* Department header */}
               <div className="flex items-center gap-3 mb-3">
@@ -381,6 +385,7 @@ export default function RHPositions() {
               </div>
             </section>
           ))}
+          <PagerFor state={pgGroups} itemLabel="departamentos" />
         </div>
       )}
 

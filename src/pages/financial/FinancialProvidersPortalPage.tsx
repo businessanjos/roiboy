@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Download, Check, X, Search } from "lucide-react";
+import { usePagedList, usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
   pending: { label: "Em análise", cls: "bg-warning/15 text-warning-strong border-warning/40" },
@@ -49,16 +51,21 @@ export default function FinancialProvidersPortalPage() {
     },
   });
 
+  const [invoicesCount, setInvoicesCount] = useState(0);
+  const invoicesPg = usePaginationState(invoicesCount, { defaultPageSize: 20 });
+
   const { data: invoices = [] } = useQuery({
-    queryKey: ["provider-invoices", currentUser?.account_id],
+    queryKey: ["provider-invoices", currentUser?.account_id, invoicesPg.currentPage, invoicesPg.pageSize],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data } = await supabase
+      const { data, count } = await supabase
         .from("hr_provider_invoices")
-        .select("*, provider:hr_service_providers(full_name, company_name, cnpj, bank_pix_key)")
+        .select("*, provider:hr_service_providers(full_name, company_name, cnpj, bank_pix_key)", { count: "exact" })
         .eq("account_id", currentUser!.account_id)
         .order("uploaded_at", { ascending: false })
-        .limit(500);
+        .order("id", { ascending: false })
+        .range(invoicesPg.from, invoicesPg.to);
+      setInvoicesCount(count || 0);
       return data ?? [];
     },
   });
@@ -94,6 +101,8 @@ export default function FinancialProvidersPortalPage() {
       [p.full_name, p.company_name, p.cnpj, p.email].some((v) => (v ?? "").toLowerCase().includes(term))
     );
   }, [providers, q]);
+
+  const providersPg = usePagedList(filteredProviders, { resetKey: q });
 
   return (
     <div className="p-6 space-y-6">
@@ -169,6 +178,7 @@ export default function FinancialProvidersPortalPage() {
                   </TableBody>
                 </Table>
               )}
+              {invoices.length > 0 && <PagerFor state={invoicesPg} itemLabel="notas fiscais" />}
             </CardContent>
           </Card>
         </TabsContent>
@@ -194,7 +204,7 @@ export default function FinancialProvidersPortalPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredProviders.map((p: any) => (
+                  {providersPg.items.map((p: any) => (
                     <TableRow key={p.id}>
                       <TableCell>
                         <div className="font-medium">{p.company_name || p.full_name}</div>
@@ -223,6 +233,7 @@ export default function FinancialProvidersPortalPage() {
                   ))}
                 </TableBody>
               </Table>
+              <PagerFor state={providersPg} itemLabel="prestadores" />
             </CardContent>
           </Card>
         </TabsContent>

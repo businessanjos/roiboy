@@ -29,6 +29,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { AlertTriangle, Check, Upload, X, Users, RefreshCw, Plus, SkipForward, FileKey, UserCheck } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 
 export type DuplicateMatchType = "external_id" | "phone" | "email" | "cpf" | "name";
 export type DuplicateAction = "skip" | "update" | "create" | "link_client";
@@ -205,6 +207,8 @@ export function LeadImportPreview({
 
     return result;
   }, [rows, filterMode, searchTerm]);
+
+  const pg = usePagedList(filteredRows, { resetKey: [filterMode, searchTerm] });
 
   const stats = useMemo(() => {
     const newCount = rows.filter(r => !r.hasError && !r.isDuplicate && !r.isClientMatch).length;
@@ -478,7 +482,7 @@ export function LeadImportPreview({
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredRows.map((row) => {
+                pg.items.map((row) => {
                   const status = getRowStatus(row);
                   const action = getRowAction(row);
                   
@@ -627,6 +631,15 @@ export function LeadImportPreview({
             </TableBody>
           </Table>
         </div>
+        <ListPagination
+          currentPage={pg.currentPage}
+          totalPages={pg.totalPages}
+          totalItems={pg.totalItems}
+          pageSize={pg.pageSize}
+          onPageChange={pg.handlePageChange}
+          onPageSizeChange={pg.handlePageSizeChange}
+          itemLabel="linhas"
+        />
 
         <DialogFooter className="pt-4">
           <div className="flex-1 text-sm text-muted-foreground">

@@ -33,6 +33,8 @@ import { getMlsBadgeClasses, getMlsLevelLabel, MLS_LEVELS } from "@/lib/mls-util
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
 import { ProductBonusesTab } from "@/components/products/ProductBonusesTab";
 import { ProductContractTab } from "@/components/products/ProductContractTab";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface SessionPhase {
   duration_hours: string;
@@ -454,6 +456,8 @@ export default function Products() {
       currency: "BRL",
     }).format(amount);
   };
+
+  const pg = usePagedList(products, { isLoading: loading });
 
   if (loading) {
     return <LoadingScreen message="Carregando produtos..." fullScreen={false} />;
@@ -1139,7 +1143,7 @@ export default function Products() {
         </Card>
       ) : (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {products.map((product) => (
+          {pg.items.map((product) => (
             <Card key={product.id} className="shadow-card">
               <CardHeader className="pb-2">
                 <div className="flex items-start justify-between">
@@ -1227,6 +1231,7 @@ export default function Products() {
           ))}
         </div>
       )}
+      {!loading && products.length > 0 && <PagerFor state={pg} itemLabel="produtos" />}
     </div>
   );
 }

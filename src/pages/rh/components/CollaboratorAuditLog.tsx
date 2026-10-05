@@ -5,6 +5,8 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { History, Loader2, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface AuditEntry {
   id: string;
@@ -96,25 +98,34 @@ function actionBadge(a: string) {
 
 export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorId: string }) {
   const [entries, setEntries] = useState<AuditEntry[]>([]);
+  const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
+
+  // Busca/filtro por usuário e campo é feito no cliente, mas o log pode ser grande;
+  // paginamos no servidor com count exato para não truncar silenciosamente.
+  const pg = usePaginationState(totalCount, { resetKey: search, isLoading: loading, defaultPageSize: 20 });
 
   useEffect(() => {
     let cancel = false;
     (async () => {
       setLoading(true);
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("hr_collaborator_audit_log" as any)
-        .select("*")
+        .select("*", { count: "exact" })
         .eq("collaborator_id", collaboratorId)
         .order("created_at", { ascending: false })
-        .limit(500);
+        .order("id", { ascending: false })
+        .range(pg.from, pg.to);
       if (cancel) return;
-      if (!error) setEntries((data || []) as any);
+      if (!error) {
+        setEntries((data || []) as any);
+        setTotalCount(count || 0);
+      }
       setLoading(false);
     })();
     return () => { cancel = true; };
-  }, [collaboratorId]);
+  }, [collaboratorId, pg.from, pg.to]);
 
   const filtered = entries.filter(e => {
     if (!search.trim()) return true;
@@ -205,6 +216,7 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
             </div>
           </ScrollArea>
         )}
+        {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="alterações" />}
       </CardContent>
     </Card>
   );

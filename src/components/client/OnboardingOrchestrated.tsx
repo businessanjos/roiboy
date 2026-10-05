@@ -14,6 +14,8 @@ import { ArrowRight, CheckSquare, AlertTriangle, ChevronRight, Package, User, Ca
 import { toast } from "sonner";
 import { useStageChecklistItems, useClientChecklistProgress, useToggleChecklistItem, getChecklistStatus, hasPendingInPreviousStages, getNextStage, StageChecklistItem, ChecklistActionType, CHECKLIST_ACTION_LABELS } from "@/hooks/useStageChecklist";
 import { StageChecklistEditor } from "./StageChecklistEditor";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -126,6 +128,8 @@ export function OnboardingOrchestrated({
     [clients]
   );
 
+  const pg = usePagedList(onboardingClients, { resetKey: onboardingClients.length });
+
   // Handle stage change with checklist validation
   const handleStageChange = async (clientId: string, newStageId: string) => {
     const client = clients.find(c => c.id === clientId);
@@ -235,7 +239,7 @@ export function OnboardingOrchestrated({
                 </TableCell>
               </TableRow>
             ) : (
-              onboardingClients.map((client) => {
+              pg.items.map((client) => {
                 const stage = getStage(client.stage_id);
                 const status = client.stage_id 
                   ? getChecklistStatus(client.id, client.stage_id, checklistItems, checklistProgress)
@@ -458,6 +462,7 @@ export function OnboardingOrchestrated({
             )}
           </TableBody>
         </Table>
+        <PagerFor state={pg} itemLabel="clientes" />
       </div>
 
       {/* Checklist Editor */}

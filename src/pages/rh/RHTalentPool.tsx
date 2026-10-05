@@ -16,6 +16,8 @@ import { ptBR } from "date-fns/locale";
 import type { HRJobApplication, CandidateStage } from "@/types/job";
 import { CANDIDATE_STAGE_LABELS } from "@/types/job";
 import CandidateDetailDrawer from "@/components/rh/jobs/CandidateDetailDrawer";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const STAGE_VARIANTS: Record<CandidateStage, "default" | "secondary" | "outline" | "destructive"> = {
   applied: "secondary",
@@ -53,14 +55,25 @@ export default function RHTalentPool() {
     queryKey: ["rh-talent-pool", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_job_applications")
-        .select("*, hr_jobs!inner(title, status, account_id)")
-        .eq("account_id", currentUser!.account_id)
-        .order("applied_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return (data || []).map((r: any) => ({
+      // Banco de talentos pode ultrapassar 1000 candidaturas; busca tudo em lotes
+      // pois KPIs (total, únicos, contratados) precisam do conjunto completo.
+      const pageSize = 1000;
+      let from = 0;
+      let all: any[] = [];
+      while (true) {
+        const { data, error } = await supabase
+          .from("hr_job_applications")
+          .select("*, hr_jobs!inner(title, status, account_id)")
+          .eq("account_id", currentUser!.account_id)
+          .order("applied_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        all = all.concat(data || []);
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all.map((r: any) => ({
         ...r,
         job_title: r.hr_jobs?.title ?? null,
         job_status: r.hr_jobs?.status ?? null,
@@ -90,6 +103,8 @@ export default function RHTalentPool() {
       );
     });
   }, [data, search, stageFilter, jobFilter]);
+
+  const pg = usePagedList(filtered, { resetKey: [search, stageFilter, jobFilter], isLoading: isLoading });
 
   const stats = useMemo(() => {
     const total = (data || []).length;
@@ -166,7 +181,7 @@ export default function RHTalentPool() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filtered.map((r) => (
+              {pg.items.map((r) => (
                 <TableRow key={r.id} className="cursor-pointer" onClick={() => setDrawer({ open: true, candidate: r, jobId: r.job_id })}>
                   <TableCell>
                     <div className="font-medium">{r.candidate_name}</div>
@@ -194,6 +209,7 @@ export default function RHTalentPool() {
             </TableBody>
           </Table>
         )}
+        {!isLoading && filtered.length > 0 && <PagerFor state={pg} itemLabel="candidatos" />}
       </Card>
 
       <CandidateDetailDrawer

@@ -11,6 +11,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Loader2, Search, Stethoscope, ArrowRight, Download, RefreshCw, Check, ChevronDown } from "lucide-react";
 import { toast } from "sonner";
 import { EducationSelect } from "@/components/client/EducationSelect";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 
 type Evidence = { source: string; field?: string; text: string };
@@ -182,6 +184,11 @@ export default function MedicalClients() {
     });
   }, [clients, search, programFilter, areaFilter, educationFilter, sourceFilter, classificationFilter]);
 
+
+  const pg = usePagedList(filtered, {
+    resetKey: [search, programFilter, areaFilter, educationFilter, sourceFilter, classificationFilter],
+    isLoading: loading,
+  });
 
   const exportCsv = () => {
     const rows = [
@@ -395,7 +402,7 @@ export default function MedicalClients() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((c) => (
+                {pg.items.map((c) => (
                   <Fragment key={c.id}>
                   <TableRow>
                     <TableCell className="font-medium">
@@ -543,6 +550,7 @@ export default function MedicalClients() {
               </TableBody>
             </Table>
           )}
+          {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
       </Card>
     </div>

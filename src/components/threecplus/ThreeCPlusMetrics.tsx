@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -36,6 +37,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarPicker } from "@/components/ui/calendar";
 import type { DateRange as DayPickerRange } from "react-day-picker";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { ThreeCPlusSyncSummary } from "./ThreeCPlusSyncSummary";
 import { ThreeCPlusCallsList } from "./ThreeCPlusCallsList";
 import { format, subDays, startOfDay, endOfDay, startOfMonth, endOfMonth, subMonths } from "date-fns";
@@ -171,13 +174,16 @@ export function ThreeCPlusMetrics() {
 
 
       const [logsRes, sessionsRes, usersRes] = await Promise.all([
-        supabase
-          .from("threecplus_call_logs")
-          .select("id, user_id, agent_name, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
-          .gte("started_at", start.toISOString())
-          .lte("started_at", end.toISOString())
-          .order("started_at", { ascending: false })
-          .limit(500),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("threecplus_call_logs")
+            .select("id, user_id, agent_name, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
+            .gte("started_at", start.toISOString())
+            .lte("started_at", end.toISOString())
+            .order("started_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase
           .from("threecplus_agent_sessions")
           .select("id, user_id, session_type, pause_name, started_at, ended_at, duration_seconds")
@@ -301,6 +307,8 @@ export function ThreeCPlusMetrics() {
       agentStats,
     };
   }, [filteredLogs, filteredSessions, users]);
+
+  const callsPg = usePagedList(filteredLogs, { resetKey: [dateRange, customRange.from?.getTime(), customRange.to?.getTime(), selectedUser], isLoading: loading });
 
   if (loading) {
     return (
@@ -557,7 +565,7 @@ export function ThreeCPlusMetrics() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredLogs.slice(0, 50).map((log) => {
+                {callsPg.items.map((log) => {
                   const statusInfo = getStatusLabel(log.status);
                   const userName =
                     users.find((u) => u.id === log.user_id)?.name || log.agent_name || "-";
@@ -593,6 +601,9 @@ export function ThreeCPlusMetrics() {
                 })}
               </TableBody>
             </Table>
+          )}
+          {filteredLogs.length > 0 && (
+            <PagerFor state={callsPg} itemLabel="ligações" />
           )}
         </CardContent>
       </Card>

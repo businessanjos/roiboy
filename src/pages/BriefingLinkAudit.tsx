@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -67,12 +69,21 @@ export default function BriefingLinkAudit() {
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["briefing-link-audit"],
     queryFn: async (): Promise<Row[]> => {
-      const { data: briefings, error } = await supabase
-        .from("deal_operation_briefings")
-        .select("id, created_at, updated_at, is_complete, deal_id, client_id")
-        .order("created_at", { ascending: false })
-        .limit(500);
-      if (error) throw error;
+      // Carrega em lotes via range até esgotar — contadores/KPIs precisam do conjunto completo.
+      const pageSize = 1000;
+      let from = 0;
+      const briefings: { id: string; created_at: string; updated_at: string; is_complete: boolean; deal_id: string | null; client_id: string | null }[] = [];
+      for (;;) {
+        const { data, error } = await supabase
+          .from("deal_operation_briefings")
+          .select("id, created_at, updated_at, is_complete, deal_id, client_id")
+          .order("created_at", { ascending: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        briefings.push(...(data || []));
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
 
       const dealIds = [...new Set((briefings ?? []).map((b) => b.deal_id).filter(Boolean))] as string[];
       const clientIds = [...new Set((briefings ?? []).map((b) => b.client_id).filter(Boolean))] as string[];
@@ -145,6 +156,8 @@ export default function BriefingLinkAudit() {
       );
     });
   }, [rows, filter, search]);
+
+  const pg = usePagedList(filtered, { resetKey: [filter, search], defaultPageSize: 20, isLoading });
 
   const cards: { key: Status | "all"; label: string; value: number; icon: any }[] = [
     { key: "all", label: "Total analisado", value: rows.length, icon: Search },
@@ -240,7 +253,7 @@ export default function BriefingLinkAudit() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => {
+                  {pg.items.map((r) => {
                     const meta = STATUS_META[r.status];
                     return (
                       <TableRow key={r.id}>
@@ -293,6 +306,7 @@ export default function BriefingLinkAudit() {
               </Table>
             </div>
           )}
+          {!isLoading && filtered.length > 0 && <PagerFor state={pg} itemLabel="briefings" />}
         </CardContent>
       </Card>
     </div>

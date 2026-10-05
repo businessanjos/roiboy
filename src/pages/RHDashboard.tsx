@@ -14,6 +14,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const RH_ALLOWED_EMAILS = [
   "m.quintana@me.com", "coachevertonsantos@gmail.com",
@@ -319,6 +321,8 @@ export default function RHDashboard() {
     };
   }, [data]);
 
+  const pgBirthdays = usePagedList(metrics?.birthdays ?? [], { isLoading, resetKey: metrics?.birthdays?.length });
+
   if (canHR === false) {
     return <Navigate to="/" replace />;
   }
@@ -405,7 +409,7 @@ export default function RHDashboard() {
                     <p className="text-sm text-muted-foreground">Nenhum aniversariante neste mês.</p>
                   ) : (
                     <ul className="divide-y divide-hairline">
-                      {metrics.birthdays.map((c: any) => (
+                      {pgBirthdays.items.map((c: any) => (
                         <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                           <span className="truncate">{c.full_name}</span>
                           <span className="text-muted-foreground tabular-nums">
@@ -415,6 +419,7 @@ export default function RHDashboard() {
                       ))}
                     </ul>
                   )}
+                  {metrics.birthdays.length > 0 && <PagerFor state={pgBirthdays} itemLabel="aniversariantes" hidePageSize />}
                 </CardContent>
               </Card>
             </div>

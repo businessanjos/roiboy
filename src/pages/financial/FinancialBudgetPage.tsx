@@ -33,6 +33,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, Target, TrendingUp, TrendingDown, AlertTriangle, CheckCircle2 } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface BudgetVsActual {
   category_id: string | null;
@@ -173,6 +175,11 @@ export default function FinancialBudgetPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
+  const budgetPg = usePagedList(budgetVsActual, {
+    resetKey: [selectedYear, selectedMonth],
+    isLoading,
+  });
+
   const totals = useMemo(() => {
     const expenses = budgetVsActual.filter(b => b.budget_type === "expense");
     const income = budgetVsActual.filter(b => b.budget_type === "income");
@@ -307,13 +314,13 @@ export default function FinancialBudgetPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {budgetVsActual.map((row, idx) => {
+                {budgetPg.items.map((row, idx) => {
                   const isOverBudget = row.budget_type === "expense" 
                     ? row.actual_amount > row.planned_amount
                     : row.actual_amount < row.planned_amount;
                   
                   return (
-                    <TableRow key={idx}>
+                    <TableRow key={budgetPg.from + idx}>
                       <TableCell>{row.category_name || "Todas"}</TableCell>
                       <TableCell>{row.cost_center_name || "Todos"}</TableCell>
                       <TableCell>
@@ -340,6 +347,7 @@ export default function FinancialBudgetPage() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && budgetVsActual.length > 0 && <PagerFor state={budgetPg} itemLabel="itens" />}
         </CardContent>
       </Card>
 

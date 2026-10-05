@@ -26,6 +26,8 @@ import { DeleteYouTubeVideoDialog } from './DeleteYouTubeVideoDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
 import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface YouTubeTabProps {
   initialPostId?: string | null;
@@ -78,6 +80,8 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
     const bVal = (b[sortBy as keyof YouTubeVideo] as number) || 0;
     return bVal - aVal;
   });
+
+  const pg = usePagedList(sortedVideos, { resetKey: [objectiveFilter, typeFilter, dateFrom, dateTo, sortBy], isLoading });
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
@@ -233,7 +237,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
               <TableBody>
                 {sortedVideos.length === 0 ? (
                   <TableRow><TableCell colSpan={8} className="text-center py-12 text-muted-foreground">Nenhum vídeo encontrado</TableCell></TableRow>
-                ) : sortedVideos.map((video) => (
+                ) : pg.items.map((video) => (
                   <TableRow key={video.id} className="group">
                     <TableCell className="text-sm text-muted-foreground">{video.posted_at ? format(new Date(video.posted_at), 'dd/MM/yy') : '-'}</TableCell>
                     <TableCell>{getTypeBadge(video.video_type)}</TableCell>
@@ -265,6 +269,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
               </TableBody>
             </Table>
           </div>
+          <PagerFor state={pg} itemLabel="vídeos" />
         </CardContent>
       </Card>
 

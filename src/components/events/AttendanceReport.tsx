@@ -33,6 +33,8 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface AttendanceReportProps {
   accountId: string | null;
@@ -326,6 +328,8 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
     return "text-danger dark:text-danger";
   };
 
+  const eventsPg = usePagedList(events, { resetKey: selectedProduct, isLoading: loading });
+
   const getRateBadge = (rate: number) => {
     if (rate >= 80) return "bg-success-soft text-success-strong dark:bg-success/30 dark:text-success";
     if (rate >= 50) return "bg-warning-soft text-warning-strong dark:bg-warning/30 dark:text-warning";
@@ -460,7 +464,7 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {events.map((event) => (
+                    {eventsPg.items.map((event) => (
                       <TableRow key={event.id}>
                         <TableCell>
                           <div className="space-y-1">
@@ -493,6 +497,7 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
                     ))}
                   </TableBody>
                 </Table>
+                <PagerFor state={eventsPg} itemLabel="eventos" />
               </div>
             )}
           </CardContent>

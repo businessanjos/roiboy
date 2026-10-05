@@ -3,6 +3,8 @@ import { useState, useMemo } from "react";
 import { useNavigate, Navigate } from "react-router-dom";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useHRPartners, HRPartner } from "@/hooks/useHRPartners";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -61,6 +63,8 @@ export default function HRPartners() {
       return true;
     });
   }, [partners, search]);
+
+  const pg = usePagedList(filtered, { resetKey: search, isLoading: loading });
 
   if (canHR === false) {
     return <Navigate to="/" replace />;
@@ -122,8 +126,9 @@ export default function HRPartners() {
           {search ? "Nenhum sócio encontrado." : "Nenhum sócio cadastrado ainda."}
         </div>
       ) : (
+        <>
         <div className="space-y-3">
-          {filtered.map(partner => {
+          {pg.items.map(partner => {
             const statusInfo = STATUS_MAP[partner.status || "active"] || STATUS_MAP.active;
             return (
               <div
@@ -178,6 +183,8 @@ export default function HRPartners() {
             );
           })}
         </div>
+        <PagerFor state={pg} itemLabel="sócios" />
+        </>
       )}
 
       {/* Create Dialog */}

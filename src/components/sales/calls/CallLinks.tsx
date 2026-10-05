@@ -31,6 +31,8 @@ import { toast } from 'sonner';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
 import { cn } from '@/lib/utils';
+import { usePagedList } from '@/hooks/usePagedList';
+import { ListPagination } from '@/components/ui/list-pagination';
 
 interface CallLink {
   id: string;
@@ -177,6 +179,8 @@ export function CallLinks() {
     );
   });
 
+  const pg = usePagedList(filtered, { resetKey: search, isLoading });
+
   return (
     <Card className="overflow-hidden">
       <CardHeader className="border-b bg-muted/20 flex flex-row items-center justify-between gap-4 space-y-0">
@@ -218,7 +222,7 @@ export function CallLinks() {
           </div>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2">
-            {filtered.map((link) => (
+            {pg.items.map((link) => (
               <div
                 key={link.id}
                 className="group rounded-lg border bg-card p-4 hover:border-primary/40 hover:shadow-sm transition-all space-y-3"
@@ -294,6 +298,17 @@ export function CallLinks() {
               </div>
             ))}
           </div>
+        )}
+        {filtered.length > 0 && (
+          <ListPagination
+            currentPage={pg.currentPage}
+            totalPages={pg.totalPages}
+            totalItems={pg.totalItems}
+            pageSize={pg.pageSize}
+            onPageChange={pg.handlePageChange}
+            onPageSizeChange={pg.handlePageSizeChange}
+            itemLabel="links"
+          />
         )}
       </CardContent>
 

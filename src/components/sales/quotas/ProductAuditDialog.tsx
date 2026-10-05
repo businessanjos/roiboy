@@ -13,6 +13,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Download, ExternalLink, AlertTriangle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const ITEM_DA_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
@@ -222,6 +224,8 @@ export function ProductAuditDialog({ open, onOpenChange }: { open: boolean; onOp
     }
   };
 
+  const rowsPg = usePagedList(rows, { resetKey: [period, seller, search, onlyMismatch], isLoading: dealsQuery.isLoading });
+
   const exportCsv = () => {
     const head = ["Negociação", "Contato", "Vendedor", "Ganha em", "Valor", "Produto marcado", "Produto sugerido"];
     const lines = rows.map((r) =>
@@ -318,7 +322,7 @@ export function ProductAuditDialog({ open, onOpenChange }: { open: boolean; onOp
               {!dealsQuery.isLoading && rows.length === 0 && (
                 <TableRow><TableCell colSpan={7} className="py-6 text-center text-xs text-muted-foreground">Nenhuma divergência encontrada no período.</TableCell></TableRow>
               )}
-              {rows.map((r) => (
+              {rowsPg.items.map((r) => (
                 <TableRow key={r.id}>
                   <TableCell className="py-2">
                     <button
@@ -377,6 +381,7 @@ export function ProductAuditDialog({ open, onOpenChange }: { open: boolean; onOp
           </Table>
         </div>
 
+        {rows.length > 0 && <PagerFor state={rowsPg} itemLabel="vendas" />}
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">{rows.length} venda{rows.length === 1 ? "" : "s"} listada{rows.length === 1 ? "" : "s"}</span>
           <Button variant="outline" size="sm" onClick={() => onOpenChange(false)}>Fechar</Button>

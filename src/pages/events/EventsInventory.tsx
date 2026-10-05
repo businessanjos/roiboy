@@ -26,6 +26,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Boxes, Plus, Search, Pencil, Trash2, MapPin, Package } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const CATEGORIES = [
   { value: "totem", label: "Totem" },
@@ -150,6 +152,11 @@ export default function EventsInventory() {
     maintenance: items.filter((i) => i.status === "maintenance").length,
   }), [items]);
 
+  const itemsPg = usePagedList(filtered, {
+    resetKey: { search, filterCategory, filterStatus },
+    isLoading: loading,
+  });
+
   return (
     <div className="container max-w-7xl mx-auto py-6 space-y-6">
       <div className="flex items-center justify-between flex-wrap gap-4">
@@ -221,8 +228,9 @@ export default function EventsInventory() {
           description="Cadastre seu primeiro item reutilizável."
         />
       ) : (
+        <div className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((item) => {
+          {itemsPg.items.map((item) => {
             const status = STATUSES.find((s) => s.value === item.status);
             const category = CATEGORIES.find((c) => c.value === item.category);
             return (
@@ -262,6 +270,8 @@ export default function EventsInventory() {
               </Card>
             );
           })}
+        </div>
+        <PagerFor state={itemsPg} itemLabel="itens" />
         </div>
       )}
 

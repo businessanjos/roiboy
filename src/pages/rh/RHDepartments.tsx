@@ -20,6 +20,8 @@ import { useHRDepartments, type HRDepartment } from "@/hooks/useHRDepartments";
 import { useHRCollaborators } from "@/hooks/useHRCollaborators";
 import { Switch } from "@/components/ui/switch";
 import { DEPARTMENT_COLOR_OPTIONS, getDepartmentColorHsl } from "@/lib/rh/departmentColors";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const COLOR_OPTIONS = DEPARTMENT_COLOR_OPTIONS;
 const getColorHsl = getDepartmentColorHsl;
@@ -42,6 +44,9 @@ export default function RHDepartments() {
     d.name.toLowerCase().includes(search.toLowerCase()) ||
     d.description?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const rootsAll = filtered.filter(d => !d.parent_department_id);
+  const pgRoots = usePagedList(rootsAll, { resetKey: search, isLoading: loading });
 
   const collaboratorCountByDepartment = useMemo(() => {
     const departmentIdByName = new Map(
@@ -163,7 +168,7 @@ export default function RHDepartments() {
         </div>
       ) : (
         (() => {
-          const roots = filtered.filter(d => !d.parent_department_id);
+          const roots = pgRoots.items;
           const childrenOf = (parentId: string) =>
             filtered.filter(d => d.parent_department_id === parentId);
 
@@ -259,6 +264,7 @@ export default function RHDepartments() {
                   </div>
                 );
               })}
+              <PagerFor state={pgRoots} itemLabel="departamentos" />
             </div>
           );
         })()

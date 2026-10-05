@@ -1,4 +1,6 @@
 import { useMemo } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { format, parse } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowDownRight, ArrowUpRight, Minus, TrendingUp, Trophy } from "lucide-react";
@@ -141,6 +143,9 @@ export function RevenueHistoryDialog({
       return { ...h, deltaAbs, deltaPct, vsInitial };
     });
   }, [history, mentoringStartMonth, initialRevenue]);
+
+  const reversedRows = useMemo(() => [...rows].reverse(), [rows]);
+  const rowsPg = usePagedList(reversedRows, { resetKey: mentoringStartMonth });
 
   const stats = useMemo(() => {
     if (rows.length === 0) return null;
@@ -366,7 +371,7 @@ export function RevenueHistoryDialog({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {[...rows].reverse().map((r) => (
+                      {rowsPg.items.map((r) => (
                         <TableRow key={r.month}>
                           <TableCell className="capitalize font-medium">
                             {monthLabelLong(r.month)}
@@ -427,6 +432,9 @@ export function RevenueHistoryDialog({
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="p-2">
+                    <PagerFor state={rowsPg} itemLabel="meses" />
+                  </div>
                 </div>
               </>
             )}

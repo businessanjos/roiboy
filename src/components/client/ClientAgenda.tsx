@@ -35,6 +35,8 @@ import { cn } from "@/lib/utils";
 import { Link } from "react-router-dom";
 import { EventEditDialog, EventData, EventType } from "@/components/events/EventEditDialog";
 import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Event {
   id: string;
@@ -110,6 +112,204 @@ interface ClientEventFeedback {
 interface ClientAgendaProps {
   clientId: string;
   clientProductIds: string[];
+}
+
+  interface EventTableProps {
+  eventsList: EventWithProducts[];
+  title: string;
+  icon: React.ReactNode;
+  showParticipation?: boolean;
+  getDeliveryStatus: (eventId: string) => ClientDelivery | undefined;
+  getAttendanceStatus: (eventId: string) => ClientAttendance | undefined;
+  getEventTypeInfo: (eventType: EventType) => { label: string; icon: React.ReactNode };
+  toggleDelivery: (eventId: string, currentStatus?: string) => void;
+  handleEditEvent: (event: EventWithProducts) => void;
+}
+
+function EventTable({
+  eventsList,
+  title,
+  icon,
+  showParticipation,
+  getDeliveryStatus,
+  getAttendanceStatus,
+  getEventTypeInfo,
+  toggleDelivery,
+  handleEditEvent,
+}: EventTableProps) {
+  const pg = usePagedList(eventsList, { resetKey: [eventsList.length, showParticipation] });
+
+  if (eventsList.length === 0) return null;
+
+  return (
+      <div>
+        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
+          {icon}
+          {title}
+        </h3>
+        <div className="border rounded-lg overflow-hidden">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                {showParticipation && <TableHead className="w-12"></TableHead>}
+                <TableHead>Evento</TableHead>
+                <TableHead>Tipo</TableHead>
+                <TableHead>Modalidade</TableHead>
+                <TableHead>Data/Hora</TableHead>
+                {showParticipation && <TableHead>Status</TableHead>}
+                <TableHead className="text-right">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {pg.items.map((event) => {
+                const delivery = getDeliveryStatus(event.id);
+                const isDelivered = delivery?.status === "delivered";
+                const attendance = getAttendanceStatus(event.id);
+                const hasCheckedIn = !!attendance;
+                const participated = isDelivered || hasCheckedIn;
+                const isPresencial = event.modality === "presencial";
+                const eventTypeInfo = getEventTypeInfo(event.event_type);
+                const isTodayEvent = event.scheduled_at && isToday(new Date(event.scheduled_at));
+                const hasLink = event.meeting_url || event.material_url;
+
+                // Format date properly - scheduled_at is stored as UTC timestamp
+                const formatEventDate = (dateString: string | null) => {
+                  if (!dateString) return "-";
+                  const date = new Date(dateString);
+                  return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
+                };
+
+                return (
+                  <TableRow 
+                    key={event.id}
+                    className={cn(
+                      isTodayEvent && "bg-primary/5",
+                      showParticipation && participated && "bg-success/5"
+                    )}
+                  >
+                    {showParticipation && (
+                      <TableCell>
+                        <Checkbox
+                          checked={participated}
+                          onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
+                          disabled={hasCheckedIn && !isDelivered}
+                        />
+                      </TableCell>
+                    )}
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        <span className="font-medium">{event.title}</span>
+                        {event.client_id !== null ? (
+                          <Badge className="text-xs bg-success/10 text-success border-success/30" variant="outline">
+                            Individual
+                          </Badge>
+                        ) : (
+                          <Badge className="text-xs bg-info/10 text-info border-info/30" variant="outline">
+                            Compartilhado
+                          </Badge>
+                        )}
+                        {isTodayEvent && (
+                          <Badge variant="default" className="text-xs">Hoje</Badge>
+                        )}
+                      </div>
+                      {event.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-1">
+                          {event.description}
+                        </p>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={event.event_type === "material" ? "secondary" : "default"}>
+                        {eventTypeInfo.icon}
+                        {eventTypeInfo.label}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="space-y-1">
+                        <Badge variant="outline">
+                          {isPresencial ? (
+                            <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
+                          ) : (
+                            <><Monitor className="h-3 w-3 mr-1" /> Online</>
+                          )}
+                        </Badge>
+                        {isPresencial && event.address && (
+                          <p className="text-xs text-muted-foreground line-clamp-1 max-w-[120px]">
+                            {event.address}
+                          </p>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {event.scheduled_at ? (
+                        <div className="flex items-center gap-1 text-sm">
+                          <Clock className="h-3 w-3" />
+                          {formatEventDate(event.scheduled_at)}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground">-</span>
+                      )}
+                    </TableCell>
+                    {showParticipation && (
+                      <TableCell>
+                        {hasCheckedIn ? (
+                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                            <QrCode className="h-3 w-3 mr-1" />
+                            Check-in
+                          </Badge>
+                        ) : isDelivered ? (
+                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
+                            <Check className="h-3 w-3 mr-1" />
+                            Participou
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-muted-foreground">
+                            Não participou
+                          </Badge>
+                        )}
+                      </TableCell>
+                    )}
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {hasLink && (
+                          <Button variant="ghost" size="icon" asChild>
+                            <a
+                              href={event.meeting_url || event.material_url || "#"}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              title="Abrir link"
+                            >
+                              <LinkIcon className="h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                        <Button 
+                          variant="ghost" 
+                          size="icon"
+                          onClick={() => handleEditEvent(event)}
+                          title="Editar evento"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        {event.client_id === null && (
+                          <Button variant="ghost" size="sm" asChild>
+                            <Link to={`/events`} title="Ver na página de Eventos">
+                              <LinkIcon className="h-3 w-3 mr-1" />
+                              Ver
+                            </Link>
+                          </Button>
+                        )}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
+        </div>
+        <PagerFor state={pg} itemLabel="eventos" />
+      </div>
+  );
 }
 
 export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) {
@@ -381,6 +581,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     }
   };
 
+  const pgParticipations = usePagedList(participations, { resetKey: participations.length });
+  const pgFeedbacks = usePagedList(feedbacks, { resetKey: feedbacks.length });
+
   if (loading || linkedLoading) {
     return (
       <div className="text-center py-8 text-muted-foreground">
@@ -465,178 +668,6 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
     );
   };
 
-  const renderEventTable = (eventsList: EventWithProducts[], title: string, icon: React.ReactNode, showParticipation?: boolean) => {
-    if (eventsList.length === 0) return null;
-
-    return (
-      <div>
-        <h3 className="text-sm font-semibold text-muted-foreground mb-3 flex items-center gap-2">
-          {icon}
-          {title}
-        </h3>
-        <div className="border rounded-lg overflow-hidden">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                {showParticipation && <TableHead className="w-12"></TableHead>}
-                <TableHead>Evento</TableHead>
-                <TableHead>Tipo</TableHead>
-                <TableHead>Modalidade</TableHead>
-                <TableHead>Data/Hora</TableHead>
-                {showParticipation && <TableHead>Status</TableHead>}
-                <TableHead className="text-right">Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {eventsList.map((event) => {
-                const delivery = getDeliveryStatus(event.id);
-                const isDelivered = delivery?.status === "delivered";
-                const attendance = getAttendanceStatus(event.id);
-                const hasCheckedIn = !!attendance;
-                const participated = isDelivered || hasCheckedIn;
-                const isPresencial = event.modality === "presencial";
-                const eventTypeInfo = getEventTypeInfo(event.event_type);
-                const isTodayEvent = event.scheduled_at && isToday(new Date(event.scheduled_at));
-                const hasLink = event.meeting_url || event.material_url;
-
-                // Format date properly - scheduled_at is stored as UTC timestamp
-                const formatEventDate = (dateString: string | null) => {
-                  if (!dateString) return "-";
-                  const date = new Date(dateString);
-                  return format(date, "dd/MM/yyyy HH:mm", { locale: ptBR });
-                };
-
-                return (
-                  <TableRow 
-                    key={event.id}
-                    className={cn(
-                      isTodayEvent && "bg-primary/5",
-                      showParticipation && participated && "bg-success/5"
-                    )}
-                  >
-                    {showParticipation && (
-                      <TableCell>
-                        <Checkbox
-                          checked={participated}
-                          onCheckedChange={() => toggleDelivery(event.id, delivery?.status)}
-                          disabled={hasCheckedIn && !isDelivered}
-                        />
-                      </TableCell>
-                    )}
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span className="font-medium">{event.title}</span>
-                        {event.client_id !== null ? (
-                          <Badge className="text-xs bg-success/10 text-success border-success/30" variant="outline">
-                            Individual
-                          </Badge>
-                        ) : (
-                          <Badge className="text-xs bg-info/10 text-info border-info/30" variant="outline">
-                            Compartilhado
-                          </Badge>
-                        )}
-                        {isTodayEvent && (
-                          <Badge variant="default" className="text-xs">Hoje</Badge>
-                        )}
-                      </div>
-                      {event.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-1">
-                          {event.description}
-                        </p>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={event.event_type === "material" ? "secondary" : "default"}>
-                        {eventTypeInfo.icon}
-                        {eventTypeInfo.label}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <Badge variant="outline">
-                          {isPresencial ? (
-                            <><MapPin className="h-3 w-3 mr-1" /> Presencial</>
-                          ) : (
-                            <><Monitor className="h-3 w-3 mr-1" /> Online</>
-                          )}
-                        </Badge>
-                        {isPresencial && event.address && (
-                          <p className="text-xs text-muted-foreground line-clamp-1 max-w-[120px]">
-                            {event.address}
-                          </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {event.scheduled_at ? (
-                        <div className="flex items-center gap-1 text-sm">
-                          <Clock className="h-3 w-3" />
-                          {formatEventDate(event.scheduled_at)}
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </TableCell>
-                    {showParticipation && (
-                      <TableCell>
-                        {hasCheckedIn ? (
-                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
-                            <QrCode className="h-3 w-3 mr-1" />
-                            Check-in
-                          </Badge>
-                        ) : isDelivered ? (
-                          <Badge variant="outline" className="text-success border-success/30 bg-success/10">
-                            <Check className="h-3 w-3 mr-1" />
-                            Participou
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-muted-foreground">
-                            Não participou
-                          </Badge>
-                        )}
-                      </TableCell>
-                    )}
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        {hasLink && (
-                          <Button variant="ghost" size="icon" asChild>
-                            <a
-                              href={event.meeting_url || event.material_url || "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              title="Abrir link"
-                            >
-                              <LinkIcon className="h-4 w-4" />
-                            </a>
-                          </Button>
-                        )}
-                        <Button 
-                          variant="ghost" 
-                          size="icon"
-                          onClick={() => handleEditEvent(event)}
-                          title="Editar evento"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        {event.client_id === null && (
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/events`} title="Ver na página de Eventos">
-                              <LinkIcon className="h-3 w-3 mr-1" />
-                              Ver
-                            </Link>
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
-        </div>
-      </div>
-    );
-  };
 
   const statusColors: Record<string, string> = {
     confirmed: "bg-success/10 text-success border-success/30",
@@ -673,8 +704,9 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         </h3>
         
         {participations.length > 0 ? (
+          <>
           <div className="grid gap-3">
-            {participations.map((p) => (
+            {pgParticipations.items.map((p) => (
               <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center">
@@ -709,6 +741,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
               </div>
             ))}
           </div>
+          <PagerFor state={pgParticipations} itemLabel="convites" />
+          </>
         ) : (
           <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
             <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -725,7 +759,17 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         </h3>
         {individualEvents.length > 0 ? (
           <div className="space-y-6">
-            {renderEventTable(individualEvents, "Eventos deste Cliente", <Users className="h-4 w-4" />, true)}
+            <EventTable
+              eventsList={individualEvents}
+              title="Eventos deste Cliente"
+              icon={<Users className="h-4 w-4" />}
+              showParticipation={true}
+              getDeliveryStatus={getDeliveryStatus}
+              getAttendanceStatus={getAttendanceStatus}
+              getEventTypeInfo={getEventTypeInfo}
+              toggleDelivery={toggleDelivery}
+              handleEditEvent={handleEditEvent}
+            />
           </div>
         ) : (
           <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
@@ -745,9 +789,39 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
           </h3>
           {sharedEvents.length > 0 ? (
             <div className="space-y-6">
-              {renderEventTable(upcomingEvents, "Próximos Eventos", <Calendar className="h-4 w-4" />, true)}
-              {renderEventTable(materialsEvents, "Materiais de Apoio", <FileText className="h-4 w-4" />, true)}
-              {renderEventTable(pastEvents, "Eventos Passados", <Clock className="h-4 w-4" />, true)}
+              <EventTable
+              eventsList={upcomingEvents}
+              title="Próximos Eventos"
+              icon={<Calendar className="h-4 w-4" />}
+              showParticipation={true}
+              getDeliveryStatus={getDeliveryStatus}
+              getAttendanceStatus={getAttendanceStatus}
+              getEventTypeInfo={getEventTypeInfo}
+              toggleDelivery={toggleDelivery}
+              handleEditEvent={handleEditEvent}
+            />
+              <EventTable
+              eventsList={materialsEvents}
+              title="Materiais de Apoio"
+              icon={<FileText className="h-4 w-4" />}
+              showParticipation={true}
+              getDeliveryStatus={getDeliveryStatus}
+              getAttendanceStatus={getAttendanceStatus}
+              getEventTypeInfo={getEventTypeInfo}
+              toggleDelivery={toggleDelivery}
+              handleEditEvent={handleEditEvent}
+            />
+              <EventTable
+              eventsList={pastEvents}
+              title="Eventos Passados"
+              icon={<Clock className="h-4 w-4" />}
+              showParticipation={true}
+              getDeliveryStatus={getDeliveryStatus}
+              getAttendanceStatus={getAttendanceStatus}
+              getEventTypeInfo={getEventTypeInfo}
+              toggleDelivery={toggleDelivery}
+              handleEditEvent={handleEditEvent}
+            />
             </div>
           ) : (
             <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
@@ -772,7 +846,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
             Feedbacks Enviados
           </h3>
           <div className="grid gap-3">
-            {feedbacks.map((f) => (
+            {pgFeedbacks.items.map((f) => (
               <div key={f.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
                 <div>
                   <div className="flex items-center">
@@ -805,6 +879,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
               </div>
             ))}
           </div>
+          <PagerFor state={pgFeedbacks} itemLabel="feedbacks" />
         </div>
       )}
 

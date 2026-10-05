@@ -21,6 +21,8 @@ import { ArrowLeft, RefreshCw, Search, ArrowUpRight, ArrowDownRight, Link2 } fro
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { PluggyConnectDialog } from "@/components/financial/PluggyConnectDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Entry {
   id: string;
@@ -65,15 +67,27 @@ export default function FinancialBankAccountStatementPage() {
     enabled: !!id,
     queryKey: ["bank-account-statement", id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financial_entries")
-        .select("id, description, amount, entry_type, payment_date, due_date, status, source, openfinance_transaction_id")
-        .eq("bank_account_id", id!)
-        .order("payment_date", { ascending: false, nullsFirst: false })
-        .order("due_date", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return (data ?? []) as Entry[];
+      // Carrega em lotes via range() até esgotar — o array completo é usado
+      // para os totais de entradas/saídas, então não pode ser truncado.
+      const BATCH_SIZE = 1000;
+      let all: Entry[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("financial_entries")
+          .select("id, description, amount, entry_type, payment_date, due_date, status, source, openfinance_transaction_id")
+          .eq("bank_account_id", id!)
+          .order("payment_date", { ascending: false, nullsFirst: false })
+          .order("due_date", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + BATCH_SIZE - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as Entry[];
+        all = all.concat(batch);
+        if (batch.length < BATCH_SIZE) break;
+        offset += BATCH_SIZE;
+      }
+      return all;
     },
   });
 
@@ -113,6 +127,8 @@ export default function FinancialBankAccountStatementPage() {
     }
     return { credit, debit, net: credit - debit };
   }, [entries]);
+
+  const pg = usePagedList(filtered, { resetKey: search, isLoading });
 
   const isLinked = !!bankAccount?.openfinance_account_id;
 
@@ -203,7 +219,7 @@ export default function FinancialBankAccountStatementPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((e) => {
+                {pg.items.map((e) => {
                   const date = e.payment_date ?? e.due_date;
                   const isCredit = e.entry_type === "receivable";
                   return (
@@ -231,6 +247,7 @@ export default function FinancialBankAccountStatementPage() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && filtered.length > 0 && <PagerFor state={pg} itemLabel="movimentações" />}
         </CardContent>
       </Card>
     </div>

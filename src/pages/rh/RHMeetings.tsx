@@ -18,6 +18,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SECTOR_OPTIONS, formatDateBR } from "@/lib/rh/pda";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Meeting = {
   id: string;
@@ -59,6 +61,9 @@ export default function RHMeetings() {
   const [aForm, setAForm] = useState(EMPTY_ALIGNMENT);
   const [aFile, setAFile] = useState<File | null>(null);
   const [saving, setSaving] = useState(false);
+
+  const pgMeetings = usePagedList(meetings, { isLoading: loading });
+  const pgAlignments = usePagedList(alignments, { isLoading: loading });
 
   const fetchAll = useCallback(async () => {
     setLoading(true);
@@ -208,7 +213,7 @@ export default function RHMeetings() {
               <div className="border border-dashed rounded-xl py-10 text-center text-sm text-muted-foreground">
                 <CalendarDays className="h-8 w-8 mx-auto mb-2 opacity-40" /> Nenhuma reunião registrada.
               </div>
-            ) : meetings.map(m => (
+            ) : pgMeetings.items.map(m => (
               <Card key={m.id}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -231,6 +236,7 @@ export default function RHMeetings() {
                 </CardContent>
               </Card>
             ))}
+          {!loading && meetings.length > 0 && <PagerFor state={pgMeetings} itemLabel="reuniões" />}
         </TabsContent>
 
         <TabsContent value="alignments" className="mt-4 space-y-3">
@@ -242,7 +248,7 @@ export default function RHMeetings() {
               <div className="border border-dashed rounded-xl py-10 text-center text-sm text-muted-foreground">
                 Nenhum alinhamento registrado.
               </div>
-            ) : alignments.map(a => (
+            ) : pgAlignments.items.map(a => (
               <Card key={a.id}>
                 <CardContent className="p-4 space-y-2">
                   <div className="flex items-center gap-2 flex-wrap">
@@ -263,6 +269,7 @@ export default function RHMeetings() {
                 </CardContent>
               </Card>
             ))}
+          {!loading && alignments.length > 0 && <PagerFor state={pgAlignments} itemLabel="alinhamentos" />}
         </TabsContent>
       </Tabs>
 

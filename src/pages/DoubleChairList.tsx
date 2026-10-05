@@ -6,6 +6,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Pair {
   id: string;
@@ -43,6 +45,8 @@ export default function DoubleChairList() {
     enabled: !!accountId,
   });
 
+  const pg = usePagedList(pairs, { isLoading });
+
   return (
     <div className="container mx-auto p-6 space-y-4 max-w-4xl">
       <div className="flex items-center gap-3">
@@ -74,7 +78,7 @@ export default function DoubleChairList() {
             </div>
           ) : (
             <div className="divide-y">
-              {pairs.map((p) => (
+              {pg.items.map((p) => (
                 <div key={p.id} className="py-3 flex items-center justify-between gap-3">
                   <div className="flex items-center gap-2 flex-wrap">
                     {p.primary_client ? (
@@ -107,6 +111,9 @@ export default function DoubleChairList() {
             </div>
           )}
         </CardContent>
+        {!isLoading && pairs.length > 0 && (
+          <PagerFor state={pg} itemLabel="cadeiras duplas" />
+        )}
       </Card>
     </div>
   );

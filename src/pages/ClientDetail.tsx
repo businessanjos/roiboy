@@ -1,4 +1,6 @@
 import { useEffect, useState, useRef } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -250,6 +252,9 @@ export default function ClientDetail() {
   const [roiEvents, setRoiEvents] = useState<RoiEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [riskEvents, setRiskEvents] = useState<any[]>([]);
+  const roiEventsPg = usePagedList(roiEvents, { resetKey: roiEvents.length });
+  const riskEventsPg = usePagedList(riskEvents, { resetKey: riskEvents.length });
+  const recommendationsPg = usePagedList(recommendations, { resetKey: recommendations.length });
   const [loading, setLoading] = useState(true);
   const [fetchError, setFetchError] = useState<{ type: 'network' | 'not_found' | 'permission'; message: string } | null>(null);
   const [retryCount, setRetryCount] = useState(0);
@@ -2905,7 +2910,7 @@ export default function ClientDetail() {
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {roiEvents.map((roi) => (
+                        {roiEventsPg.items.map((roi) => (
                           <div
                             key={roi.id}
                             className="flex items-start justify-between p-4 rounded-lg border border-border"
@@ -2961,6 +2966,7 @@ export default function ClientDetail() {
                       </div>
                     )}
                   </CardContent>
+                  {roiEvents.length > 0 && <PagerFor state={roiEventsPg} itemLabel="eventos de ROI" />}
                 </Card>
 
                 <Dialog open={!!editingRoiId} onOpenChange={(open) => !open && setEditingRoiId(null)}>
@@ -3059,7 +3065,7 @@ export default function ClientDetail() {
                       </p>
                     ) : (
                       <div className="space-y-3">
-                        {riskEvents.map((risk) => (
+                        {riskEventsPg.items.map((risk) => (
                           <div key={risk.id} className="p-4 rounded-lg border border-border">
                             <div className="flex items-start justify-between gap-4">
                               <div className="flex-1">
@@ -3107,6 +3113,7 @@ export default function ClientDetail() {
                       </div>
                     )}
                   </CardContent>
+                  {riskEvents.length > 0 && <PagerFor state={riskEventsPg} itemLabel="eventos de risco" />}
                 </Card>
 
                 <Dialog open={!!editingRiskId} onOpenChange={(open) => !open && setEditingRiskId(null)}>
@@ -3173,7 +3180,7 @@ export default function ClientDetail() {
                     </p>
                   ) : (
                     <div className="space-y-3">
-                      {recommendations.map((rec) => (
+                      {recommendationsPg.items.map((rec) => (
                         <div key={rec.id} className="p-4 rounded-lg border border-border">
                           <div className="flex items-start justify-between gap-4">
                             <div className="flex-1">
@@ -3219,6 +3226,7 @@ export default function ClientDetail() {
                       ))}
                     </div>
                   )}
+                  {recommendations.length > 0 && <PagerFor state={recommendationsPg} itemLabel="recomendações" />}
                 </CardContent>
               </Card>
             );

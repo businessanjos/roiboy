@@ -88,6 +88,8 @@ import AttendanceReport from "@/components/events/AttendanceReport";
 import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { PlanLimitAlert } from "@/components/plan/PlanLimitAlert";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface AttendanceRecord {
   id: string;
@@ -817,6 +819,15 @@ export default function Events() {
   const onlineCount = events.filter(e => e.modality === "online").length;
 
   const hasActiveFilters = filterEventType !== "all" || filterModality !== "all" || filterStatus !== "all";
+
+  const eventsPg = usePagedList(filteredEvents, {
+    resetKey: [searchTerm, filterEventType, filterModality, modalityTab, filterStatus, sortOrder, viewMode],
+    isLoading: loading,
+  });
+  const attendancePg = usePagedList(attendance, {
+    resetKey: selectedEventForAttendance?.id,
+    isLoading: loadingAttendance,
+  });
 
   const clearFilters = () => {
     setFilterEventType("all");
@@ -1559,7 +1570,7 @@ export default function Events() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredEvents.map((event) => (
+                  {eventsPg.items.map((event) => (
                     <TableRow 
                       key={event.id} 
                       className="cursor-pointer hover:bg-muted/50"
@@ -1780,6 +1791,7 @@ export default function Events() {
                   ))}
                 </TableBody>
               </Table>
+              <PagerFor state={eventsPg} itemLabel="eventos" />
             </div>
           )}
         </CardContent>
@@ -1902,7 +1914,7 @@ export default function Events() {
                 </div>
                 
                 <div className="divide-y max-h-[300px] overflow-y-auto">
-                  {attendance.map((a) => {
+                  {attendancePg.items.map((a) => {
                     const displayName = a.clients?.full_name || a.guest_name || 'Convidado';
                     const displayPhone = a.clients?.phone_e164 || a.guest_phone || '';
                     const initials = displayName.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase();
@@ -1942,6 +1954,7 @@ export default function Events() {
                     );
                   })}
                 </div>
+                <PagerFor state={attendancePg} itemLabel="participantes" />
               </div>
             )}
           </div>

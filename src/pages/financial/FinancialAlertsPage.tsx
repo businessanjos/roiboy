@@ -38,6 +38,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface UpcomingEntry {
   id: string;
@@ -132,6 +134,9 @@ export default function FinancialAlertsPage() {
     if (days <= 3) return "default";
     return "secondary";
   };
+
+  const overduePg = usePagedList(overdueEntries, { resetKey: "overdue" });
+  const upcomingPg = usePagedList(upcomingEntries, { resetKey: filterDays, isLoading: entriesLoading });
 
   const summary = {
     upcoming: upcomingEntries.length,
@@ -250,7 +255,7 @@ export default function FinancialAlertsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {overdueEntries.map((entry) => (
+                        {overduePg.items.map((entry) => (
                           <TableRow key={entry.id} className="bg-destructive/5">
                             <TableCell className="font-medium">{entry.description}</TableCell>
                             <TableCell>{entry.client?.full_name || "-"}</TableCell>
@@ -285,6 +290,7 @@ export default function FinancialAlertsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    <PagerFor state={overduePg} itemLabel="atrasados" />
                   </div>
                 )}
 
@@ -321,7 +327,7 @@ export default function FinancialAlertsPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {upcomingEntries.map((entry) => (
+                        {upcomingPg.items.map((entry) => (
                           <TableRow key={entry.id}>
                             <TableCell className="font-medium">{entry.description}</TableCell>
                             <TableCell>{entry.client?.full_name || "-"}</TableCell>
@@ -356,6 +362,7 @@ export default function FinancialAlertsPage() {
                         ))}
                       </TableBody>
                     </Table>
+                    <PagerFor state={upcomingPg} itemLabel="vencimentos" />
                   </div>
                 )}
               </ScrollArea>

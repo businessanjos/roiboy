@@ -4,6 +4,8 @@ import { parseLocalDate } from "@/lib/dateUtils";
 import { withRetry } from "@/lib/retryFetch";
 import { useLinkedClients, getLinkedClientName } from "@/hooks/useLinkedClients";
 import { usePermissions } from "@/hooks/usePermissions";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -701,6 +703,8 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
   // Get root contracts (contracts that are not renewals of others)
   const rootContracts = contracts.filter(c => !c.parent_contract_id);
 
+  const pgContracts = usePagedList(contracts, { resetKey: contracts.length });
+
   if (loading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -965,7 +969,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {contracts.map((contract) => {
+              {pgContracts.items.map((contract) => {
                 const status = getContractStatus(contract);
                 const StatusIcon = status.icon;
                 const renewals = getRenewals(contract.id);
@@ -1176,6 +1180,7 @@ export function ClientContracts({ clientId }: ClientContractsProps) {
               })}
             </TableBody>
           </Table>
+          <PagerFor state={pgContracts} itemLabel="contratos" />
         </div>
       )}
 

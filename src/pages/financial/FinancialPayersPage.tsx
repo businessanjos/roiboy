@@ -8,6 +8,8 @@ import { Plus, Search, Pencil, Users } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { PayerFormDialog } from "@/components/financial/payers/PayerFormDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Payer {
   id: string;
@@ -70,6 +72,7 @@ export default function FinancialPayersPage() {
       p.legal_name.toLowerCase().includes(search.toLowerCase()) ||
       p.document.includes(search.replace(/\D/g, ""))
   );
+  const pg = usePagedList(filtered, { resetKey: search, isLoading: loading });
 
   return (
     <div className="container max-w-7xl py-6 space-y-4">
@@ -115,7 +118,7 @@ export default function FinancialPayersPage() {
               <TableRow><TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                 Nenhum pagador cadastrado. Clique em "Novo Pagador" para começar.
               </TableCell></TableRow>
-            ) : filtered.map((p) => (
+            ) : pg.items.map((p) => (
               <TableRow key={p.id}>
                 <TableCell>
                   <div className="font-medium">{p.legal_name}</div>
@@ -149,6 +152,7 @@ export default function FinancialPayersPage() {
             ))}
           </TableBody>
         </Table>
+        <PagerFor state={pg} itemLabel="pagadores" />
       </Card>
 
       <PayerFormDialog

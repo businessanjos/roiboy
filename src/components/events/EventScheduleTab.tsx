@@ -35,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Clock, MapPin, User, ListOrdered, Mic, Building2, Home } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface ScheduleItem {
   id: string;
@@ -128,6 +130,8 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
     fetchItems();
     fetchSpeakers();
   }, [eventId]);
+
+  const schedulePg = usePagedList(items, { isLoading: loading });
 
   const resetForm = () => {
     setFormData({
@@ -274,7 +278,7 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {schedulePg.items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell className="whitespace-nowrap">
                     <div className="flex items-center gap-1 text-sm">
@@ -324,6 +328,7 @@ export default function EventScheduleTab({ eventId, accountId }: Props) {
             </TableBody>
           </Table>
         )}
+        {items.length > 0 && <PagerFor state={schedulePg} itemLabel="atividades" />}
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

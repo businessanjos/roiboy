@@ -59,6 +59,8 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const REMINDER_TYPES = [
   { value: "notice", label: "Aviso", description: "Lembrete geral sobre o evento" },
@@ -124,21 +126,31 @@ export default function MarketingRemindersTab() {
     enabled: !!selectedEventId,
   });
 
-  // Fetch campaign history
+  // Fetch campaign history (todas, em lotes de 1000 via range, pois o array completo
+  // é usado para montar o histórico navegável — paginação local via usePagedList abaixo)
   const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
     queryKey: ["marketing-reminder-campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reminder_campaigns")
-        .select(`
-          *,
-          events!inner (id, title, scheduled_at, modality, category)
-        `)
-        .eq("events.category", "marketing")
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data || [];
+      const PAGE = 1000;
+      let allRows: any[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("reminder_campaigns")
+          .select(`
+            *,
+            events!inner (id, title, scheduled_at, modality, category)
+          `)
+          .eq("events.category", "marketing")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + PAGE - 1);
+        if (error) throw error;
+        allRows = allRows.concat(data || []);
+        if (!data || data.length < PAGE) break;
+        from += PAGE;
+      }
+      return allRows;
     },
   });
 
@@ -157,6 +169,8 @@ export default function MarketingRemindersTab() {
     },
     enabled: !!selectedCampaignId,
   });
+
+  const pg = usePagedList(campaigns, { isLoading: loadingCampaigns });
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
@@ -612,7 +626,7 @@ export default function MarketingRemindersTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.map((campaign: any) => (
+                  {pg.items.map((campaign: any) => (
                     <TableRow key={campaign.id}>
                       <TableCell>{campaign.events?.title}</TableCell>
                       <TableCell>
@@ -649,6 +663,7 @@ export default function MarketingRemindersTab() {
                 </TableBody>
               </Table>
             )}
+            {!loadingCampaigns && campaigns.length > 0 && <PagerFor state={pg} itemLabel="campanhas" />}
           </CardContent>
         </Card>
       </TabsContent>

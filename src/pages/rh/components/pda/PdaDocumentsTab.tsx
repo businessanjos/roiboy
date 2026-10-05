@@ -16,6 +16,8 @@ import {
 import { Download, FileText, Plus, Trash2, Upload } from "lucide-react";
 import { PDA_DOC_TYPES } from "@/lib/rh/pdaContent";
 import { formatDateBR } from "@/lib/rh/pda";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Doc = {
   id: string;
@@ -46,6 +48,7 @@ export default function PdaDocumentsTab({
     doc_date: new Date().toISOString().slice(0, 10),
     description: "",
   });
+  const pg = usePagedList(docs, { isLoading: loading });
 
   const fetchDocs = useCallback(async () => {
     setLoading(true);
@@ -126,7 +129,7 @@ export default function PdaDocumentsTab({
         </div>
       ) : (
         <div className="space-y-2">
-          {docs.map(d => (
+          {pg.items.map(d => (
             <Card key={d.id}>
               <CardContent className="p-3 flex items-center gap-3">
                 <FileText className="h-4 w-4 text-muted-foreground shrink-0" />
@@ -149,6 +152,7 @@ export default function PdaDocumentsTab({
               </CardContent>
             </Card>
           ))}
+          <PagerFor state={pg} itemLabel="documentos" />
         </div>
       )}
 

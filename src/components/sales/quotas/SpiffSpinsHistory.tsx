@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogD
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
 import { History, CheckCircle2, Clock, RotateCcw, Search, DollarSign, Filter, XCircle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -67,14 +69,25 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
     queryKey: ["spiff-spins-history", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("spiff_spins")
-        .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
-        .eq("account_id", accountId!)
-        .order("spun_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return (data ?? []) as SpinRow[];
+      // Carrega em lotes via range até esgotar — necessário pois KPIs/totais usam o array completo.
+      const pageSize = 1000;
+      let allRows: SpinRow[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("spiff_spins")
+          .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
+          .eq("account_id", accountId!)
+          .order("spun_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        const rows = (data ?? []) as SpinRow[];
+        allRows = allRows.concat(rows);
+        if (rows.length < pageSize) break;
+        offset += pageSize;
+      }
+      return allRows;
     },
   });
 
@@ -192,6 +205,10 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
   });
 
   const isLoading = spinsQ.isLoading || spiffsQ.isLoading || usersQ.isLoading;
+  const filteredPg = usePagedList(filtered, {
+    resetKey: [statusFilter, userFilter, spiffFilter, search, from, to, restrictToUserId],
+    isLoading,
+  });
 
   return (
     <div className="space-y-4">
@@ -339,7 +356,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((r) => {
+                {filteredPg.items.map((r) => {
                   const paidByName = r.paid_by ? userById.get(r.paid_by)?.name : null;
                   return (
                     <TableRow key={r.id}>
@@ -415,6 +432,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
               </TableBody>
             </Table></div>
           )}
+          {filtered.length > 0 && <PagerFor state={filteredPg} itemLabel="giros" />}
         </CardContent>
       </Card>
 

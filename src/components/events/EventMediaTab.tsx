@@ -29,6 +29,8 @@ import {
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Database } from "@/integrations/supabase/types";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type EventMediaType = Database["public"]["Enums"]["event_media_type"];
 
@@ -232,6 +234,11 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
   const videos = media.filter(m => m.media_type === 'video');
   const documents = media.filter(m => m.media_type === 'document' || m.media_type === 'other');
 
+  // Cada seção de mídia pagina de forma independente (listas separadas na mesma tela)
+  const photosPg = usePagedList(photos, { isLoading: loading });
+  const videosPg = usePagedList(videos, { isLoading: loading });
+  const documentsPg = usePagedList(documents, { isLoading: loading });
+
   return (
     <div className="space-y-6">
       {/* Upload Button */}
@@ -286,7 +293,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                 Fotos ({photos.length})
               </h3>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-                {photos.map(item => (
+                {photosPg.items.map(item => (
                   <Card 
                     key={item.id} 
                     className={`relative group overflow-hidden cursor-pointer ${item.is_cover ? 'ring-2 ring-primary' : ''}`}
@@ -328,6 +335,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                   </Card>
                 ))}
               </div>
+              <PagerFor state={photosPg} itemLabel="fotos" />
             </div>
           )}
 
@@ -339,7 +347,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                 Vídeos ({videos.length})
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {videos.map(item => (
+                {videosPg.items.map(item => (
                   <Card key={item.id} className="overflow-hidden">
                     <video
                       src={item.file_url}
@@ -365,6 +373,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                   </Card>
                 ))}
               </div>
+              <PagerFor state={videosPg} itemLabel="vídeos" />
             </div>
           )}
 
@@ -376,7 +385,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                 Documentos ({documents.length})
               </h3>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {documents.map(item => (
+                {documentsPg.items.map(item => (
                   <Card key={item.id} className="p-4">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -405,6 +414,7 @@ export default function EventMediaTab({ eventId, accountId }: EventMediaTabProps
                   </Card>
                 ))}
               </div>
+              <PagerFor state={documentsPg} itemLabel="documentos" />
             </div>
           )}
         </div>

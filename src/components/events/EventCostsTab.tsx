@@ -35,6 +35,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, DollarSign, TrendingUp, TrendingDown, AlertTriangle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type CostCategory = "venue" | "catering" | "equipment" | "marketing" | "travel" | "accommodation" | "speakers" | "gifts" | "staff" | "technology" | "insurance" | "other";
 type CostStatus = "estimated" | "approved" | "paid" | "cancelled";
@@ -223,6 +225,8 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
   const budgetUsage = budget ? (totalActual / budget) * 100 : 0;
   const isOverBudget = budget && totalActual > budget;
 
+  const costsPg = usePagedList(items, { isLoading: loading });
+
   // Group by category
   const categoryTotals = items
     .filter(i => i.status !== 'cancelled')
@@ -349,7 +353,7 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {items.map((item) => (
+                {costsPg.items.map((item) => (
                   <TableRow key={item.id} className={item.status === 'cancelled' ? 'opacity-50' : ''}>
                     <TableCell>
                       <div>
@@ -394,6 +398,7 @@ export default function EventCostsTab({ eventId, accountId, budget, onUpdate }: 
               </TableBody>
             </Table>
           )}
+          {items.length > 0 && <PagerFor state={costsPg} itemLabel="custos" />}
         </CardContent>
       </Card>
 

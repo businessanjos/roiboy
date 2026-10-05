@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -17,6 +18,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
@@ -134,15 +137,18 @@ export function ThreeCPlusCallsList() {
     setLoading(true);
     const since = new Date(Date.now() - Number(period) * 86400000).toISOString();
     const [{ data }, { data: userRows }] = await Promise.all([
-      supabase
-        .from("threecplus_call_logs")
-        .select(
-          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
-        )
-        .eq("account_id", currentUser.account_id)
-        .gte("started_at", since)
-        .order("started_at", { ascending: false })
-        .limit(400),
+      fetchAllRows((from, to) =>
+        supabase
+          .from("threecplus_call_logs")
+          .select(
+            "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+          )
+          .eq("account_id", currentUser.account_id)
+          .gte("started_at", since)
+          .order("started_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      ),
       supabase.from("users").select("id, name").eq("account_id", currentUser.account_id),
     ]);
     setCalls(dedupeCalls((data as unknown as CallRow[]) || []) as CallRow[]);
@@ -212,6 +218,8 @@ export function ThreeCPlusCallsList() {
   };
 
   const selectedTranscript = selected?.threecplus_call_transcripts?.[0];
+
+  const pg = usePagedList(filtered, { resetKey: [period, seller, outcome, temperature, engine], isLoading: loading });
 
   return (
     <Card>
@@ -320,7 +328,7 @@ export function ThreeCPlusCallsList() {
           <p className="py-6 text-center text-sm text-muted-foreground">Nenhuma ligação no período.</p>
         ) : (
           <div className="divide-y divide-border rounded-lg border border-border">
-            {filtered.map((call) => {
+            {pg.items.map((call) => {
               const t = call.threecplus_call_transcripts?.[0];
               return (
                 <div
@@ -380,6 +388,9 @@ export function ThreeCPlusCallsList() {
               );
             })}
           </div>
+        )}
+        {!loading && filtered.length > 0 && (
+          <PagerFor state={pg} itemLabel="ligações" />
         )}
       </CardContent>
 

@@ -33,6 +33,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Plus, Pencil, Trash2, Gift, Package } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type GiftStatus = "planned" | "purchased" | "in_stock" | "distributed";
 
@@ -187,6 +189,8 @@ export default function EventGiftsTab({ eventId, accountId, onUpdate }: Props) {
     return <Badge variant={config[status].variant}>{config[status].label}</Badge>;
   };
 
+  const giftsPg = usePagedList(items, { isLoading: loading });
+
   const totalValue = items.reduce((sum, item) => sum + (Number(item.total_cost) || 0), 0);
   const totalItems = items.reduce((sum, item) => sum + item.quantity, 0);
   const totalDistributed = items.reduce((sum, item) => sum + item.quantity_distributed, 0);
@@ -240,7 +244,7 @@ export default function EventGiftsTab({ eventId, accountId, onUpdate }: Props) {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {items.map((item) => (
+              {giftsPg.items.map((item) => (
                 <TableRow key={item.id}>
                   <TableCell>
                     <div>
@@ -284,6 +288,7 @@ export default function EventGiftsTab({ eventId, accountId, onUpdate }: Props) {
             </TableBody>
           </Table>
         )}
+        {items.length > 0 && <PagerFor state={giftsPg} itemLabel="brindes" />}
       </CardContent>
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>

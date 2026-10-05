@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { useMarketingProjects, MarketingProject, PROJECT_STATUS_META, MarketingProjectStatus } from "@/hooks/useMarketingProjects";
 import { ProjectFormDialog } from "@/components/marketing/projects/ProjectFormDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 import { format, parseISO, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -40,6 +42,8 @@ export default function MarketingProjects() {
     const matchesStatus = statusFilter === "all" || p.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
+
+  const pg = usePagedList(filtered, { resetKey: [search, statusFilter], isLoading });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -101,7 +105,7 @@ export default function MarketingProjects() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
-          {filtered.map(project => (
+          {pg.items.map(project => (
             <ProjectCard
               key={project.id}
               project={project}
@@ -116,6 +120,8 @@ export default function MarketingProjects() {
           ))}
         </div>
       )}
+
+      {!isLoading && filtered.length > 0 && <PagerFor state={pg} itemLabel="projetos" />}
 
       <ProjectFormDialog
         open={formOpen}

@@ -16,6 +16,8 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import { getPublicOrigin } from "@/lib/publicLink";
 import { SalaryBenchmarkCard } from "@/components/rh/jobs/SalaryBenchmarkCard";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface JobOfferRow {
   id: string;
@@ -160,6 +162,7 @@ export default function RHJobDetail() {
   const { data: job, isLoading } = useHRJobById(id);
   const [copied, setCopied] = useState(false);
   const [offers, setOffers] = useState<JobOfferRow[]>([]);
+  const pgOffers = usePagedList(offers, {});
   const applicationUrl = `${getPublicOrigin()}/vagas/${id}/aplicar`;
 
   useEffect(() => {
@@ -246,7 +249,7 @@ export default function RHJobDetail() {
             <p className="text-sm text-muted-foreground">Nenhuma carta-proposta vinculada a esta vaga ainda.</p>
           ) : (
             <div className="space-y-2">
-              {offers.map((o) => (
+              {pgOffers.items.map((o) => (
                 <div key={o.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-lg border p-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex flex-wrap items-center gap-2">
@@ -282,6 +285,7 @@ export default function RHJobDetail() {
                   </div>
                 </div>
               ))}
+              <PagerFor state={pgOffers} itemLabel="cartas-proposta" />
             </div>
           )}
         </CardContent>

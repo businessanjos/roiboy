@@ -24,6 +24,8 @@ import { CancelDelinquentDialog } from "@/components/financial/CancelDelinquentD
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "@/hooks/use-toast";
 import { parseLocalDate } from "@/lib/dateUtils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type DatePreset = "recent" | "month" | "quarter" | "year" | "custom";
 
@@ -555,6 +557,25 @@ export default function FinancialActiveClientsPage() {
     }
   };
 
+  const pg = usePagedList(filtered, {
+    resetKey: [search, datePreset, customRange, productFilter],
+    isLoading,
+  });
+
+  const allPageSelected =
+    pg.items.length > 0 && pg.items.every((r) => selected.has(r.contract_id));
+  const togglePage = () => {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) {
+        pg.items.forEach((r) => next.delete(r.contract_id));
+      } else {
+        pg.items.forEach((r) => next.add(r.contract_id));
+      }
+      return next;
+    });
+  };
+
   /**
    * Determines the first due date for a contract's receivables using the deal data.
    * Priority: installments_detail[first pending].due_date > installments_detail[0].due_date
@@ -865,7 +886,7 @@ export default function FinancialActiveClientsPage() {
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
                   ? `${selected.size} selecionado(s) · ${selectedRows.length} contrato(s) para gerar fatura.`
-                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda. Marque o cabeçalho para selecionar todos.`}
+                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda. Marque o cabeçalho para selecionar a página atual.`}
                 <span className="ml-1">
                   Cria fatura + parcelas oficiais (aparecem em Financeiro › Parcelas). Idempotente: pula contratos que já têm fatura.
                 </span>
@@ -904,10 +925,11 @@ export default function FinancialActiveClientsPage() {
                   <TableRow>
                     <TableHead className="w-8">
                       <Checkbox
-                        checked={allFilteredSelected}
-                        onCheckedChange={toggleAll}
-                        disabled={filtered.length === 0}
-                        aria-label="Selecionar todos"
+                        checked={allPageSelected}
+                        onCheckedChange={togglePage}
+                        disabled={pg.items.length === 0}
+                        aria-label="Selecionar página"
+                        title="Selecionar página"
                       />
                     </TableHead>
                     <TableHead>Cliente</TableHead>
@@ -926,7 +948,7 @@ export default function FinancialActiveClientsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filtered.map((r) => {
+                  {pg.items.map((r) => {
                     const isEligible =
                       r.installments_count != null &&
                       r.installments_count > r.entries_count &&
@@ -1075,6 +1097,7 @@ export default function FinancialActiveClientsPage() {
                   })}
                 </TableBody>
               </Table>
+              <PagerFor state={pg} itemLabel="contratos" />
             </div>
           )}
         </CardContent>

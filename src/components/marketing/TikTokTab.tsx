@@ -61,6 +61,8 @@ import { DeleteTikTokPostDialog } from './DeleteTikTokPostDialog';
 import { DeleteSocialProfileDialog } from './DeleteSocialProfileDialog';
 import { cn } from '@/lib/utils';
 import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface TikTokTabProps {
   initialPostId?: string | null;
@@ -146,6 +148,8 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
     const bValue = (b[sortBy as keyof TikTokPost] as number) || 0;
     return bValue - aValue;
   });
+
+  const pg = usePagedList(sortedPosts, { resetKey: [objectiveFilter, categoryFilter, dateFrom, dateTo, sortBy], isLoading });
 
   const handleSortToggle = (field: string) => {
     setSortBy(prev => prev === field ? null : field);
@@ -576,7 +580,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  sortedPosts.map((post) => (
+                  pg.items.map((post) => (
                     <TableRow key={post.id} className="group">
                       <TableCell className="text-muted-foreground text-sm">
                         {post.posted_at
@@ -658,6 +662,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
               </TableBody>
             </Table>
           </div>
+          <PagerFor state={pg} itemLabel="vídeos" />
         </CardContent>
       </Card>
 

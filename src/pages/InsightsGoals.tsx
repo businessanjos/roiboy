@@ -18,6 +18,8 @@ import {
 import { useSalesGoals, type SalesGoal } from "@/hooks/useSalesGoals";
 import { SalesGoalDialog } from "@/components/insights/goals/SalesGoalDialog";
 import { SalesGoalProgressCard } from "@/components/insights/goals/SalesGoalProgressCard";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export default function InsightsGoals() {
   const { currentUser } = useCurrentUser();
@@ -44,6 +46,9 @@ export default function InsightsGoals() {
       return data ?? [];
     },
   });
+
+  const goalsKey = useMemo(() => goals.map((g) => g.id).join(","), [goals]);
+  const pg = usePagedList(goals, { resetKey: goalsKey, defaultPageSize: 20, isLoading });
 
   const sellerName = (id: string) => {
     const u = sellers.find((s: any) => s.id === id);
@@ -101,16 +106,19 @@ export default function InsightsGoals() {
             </Button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
-            {goals.map((g) => (
-              <SalesGoalProgressCard
-                key={g.id}
-                goal={g}
-                sellerName={sellerName(g.user_id)}
-                onEdit={() => openEdit(g)}
-                onDelete={() => setDeleteId(g.id)}
-              />
-            ))}
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+              {pg.items.map((g) => (
+                <SalesGoalProgressCard
+                  key={g.id}
+                  goal={g}
+                  sellerName={sellerName(g.user_id)}
+                  onEdit={() => openEdit(g)}
+                  onDelete={() => setDeleteId(g.id)}
+                />
+              ))}
+            </div>
+            <PagerFor state={pg} itemLabel="metas" />
           </div>
         )}
       </div>

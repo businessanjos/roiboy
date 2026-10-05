@@ -47,6 +47,8 @@ import { cn } from "@/lib/utils";
 import { usePermissions } from "@/hooks/usePermissions";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useOperationRole } from "@/hooks/useOperationRole";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const CONTRACT_STATUS_CONFIG: Record<
   string,
@@ -227,6 +229,10 @@ export function ContractTriageQueue({
       });
   }, [contracts, searchTerm, statusFilter, typeFilter, productFilter, sortOrder]);
 
+  const pg = usePagedList(triageContracts, {
+    resetKey: [searchTerm, statusFilter, typeFilter, productFilter, sortOrder, dateRangeStart, dateRangeEnd],
+  });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
@@ -324,7 +330,7 @@ export function ContractTriageQueue({
             </TableRow>
           </TableHeader>
           <TableBody>
-            {triageContracts.map((contract) => {
+            {pg.items.map((contract) => {
               const statusConfig =
                 CONTRACT_STATUS_CONFIG[contract.status] ||
                 CONTRACT_STATUS_CONFIG.active;
@@ -471,6 +477,7 @@ export function ContractTriageQueue({
             })}
           </TableBody>
         </Table>
+        <PagerFor state={pg} itemLabel="contratos" />
       </CardContent>
     </Card>
   );

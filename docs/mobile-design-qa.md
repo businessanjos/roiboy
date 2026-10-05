@@ -199,3 +199,6 @@ Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estav
   - Tarefa ligada a cliente sem negócio: menu mostra "Abrir cliente" → navegou para `/clients/<id>`; toque na linha abriu a edição e Esc cancelou sem salvar.
 - Limitações: "Abrir lead" não exercitado (nenhuma tarefa de lead sem negócio nos primeiros itens); não criei teste unitário dedicado ao popover — coberto pelo teste de navegador acima.
 - Final: tsgo OK; `vite build` OK (só avisos de chunks preexistentes); vitest layout+hooks 45/45 OK. Nada publicado; nenhum registro alterado.
+
+## Rodada 8 — Paginação (verificação no navegador, só leitura)
+Conta do Everton, Playwright, 393×852, 320×700 e 1440×900: /products ("1–15 de 15"), /rh/collaborators ("1–20 de 20"), /notifications ("1–20 de 50", últimas 50), /leads (rodapé com total da base). Largura do main igual à da tela em todas (sem corte). Nenhum registro alterado. Testes de página 2/limites/reset/vazio/encolher em src/hooks/usePagedList.test.ts. Inventário em docs/pagination-audit.md.

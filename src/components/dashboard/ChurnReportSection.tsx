@@ -35,6 +35,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { Link } from "react-router-dom";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import {
   BarChart,
   Bar,
@@ -135,6 +137,8 @@ export function ChurnReportSection() {
 
     return matchesSearch && matchesStatus;
   });
+
+  const pg = usePagedList(filteredContracts, { resetKey: [search, statusFilter, periodFilter], isLoading: loading });
 
   // Calculate metrics
   const metrics = {
@@ -406,7 +410,7 @@ export function ChurnReportSection() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredContracts.map((contract) => {
+                  {pg.items.map((contract) => {
                     const statusConfig = STATUS_CONFIG[contract.status as keyof typeof STATUS_CONFIG];
                     const StatusIcon = statusConfig?.icon || FileText;
 
@@ -468,6 +472,7 @@ export function ChurnReportSection() {
                   })}
                 </TableBody>
               </Table>
+              <PagerFor state={pg} itemLabel="contratos" />
             </CardContent>
           </Card>
         )}

@@ -2,11 +2,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import type { AgencyCampaign } from "@/hooks/useAgencyMetrics";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
 const fmtNum = (v: number) => v.toLocaleString("pt-BR");
 
 export function AgencyCampaignsTable({ campaigns, title = "Campanhas" }: { campaigns: AgencyCampaign[]; title?: string }) {
+  const pg = usePagedList(campaigns);
   return (
     <Card>
       <CardHeader>
@@ -28,7 +31,7 @@ export function AgencyCampaignsTable({ campaigns, title = "Campanhas" }: { campa
               </TableRow>
             </TableHeader>
             <TableBody>
-              {campaigns.map((c) => (
+              {pg.items.map((c) => (
                 <TableRow key={c.id}>
                   <TableCell className="font-medium">{c.name}</TableCell>
                   <TableCell>
@@ -45,6 +48,7 @@ export function AgencyCampaignsTable({ campaigns, title = "Campanhas" }: { campa
             </TableBody>
           </Table>
         )}
+        {campaigns.length > 0 && <PagerFor state={pg} itemLabel="campanhas" />}
       </CardContent>
     </Card>
   );

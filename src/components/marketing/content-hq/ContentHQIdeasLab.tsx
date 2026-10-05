@@ -14,6 +14,8 @@ import {
 } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Idea = {
   title: string;
@@ -108,6 +110,8 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
         (filterIntensity === "all" || idea.intensity === filterIntensity),
       );
   }, [ideas, filterPillar, filterPlatform, filterIntensity]);
+
+  const ideasPg = usePagedList(filtered, { resetKey: { filterPillar, filterPlatform, filterIntensity, ideasLen: ideas.length } });
 
   const togglePlatform = (id: string) =>
     setPickedPlatforms(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
@@ -262,7 +266,7 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
           </div>
 
           <div className="grid sm:grid-cols-2 xl:grid-cols-3 gap-3">
-            {filtered.map(({ idea, idx }) => {
+            {ideasPg.items.map(({ idea, idx }) => {
               const platMeta = PLATFORMS.find(p => p.id === idea.platform);
               const intMeta = INTENSITY_META[idea.intensity];
               const IntIcon = intMeta?.icon || Sparkles;
@@ -306,6 +310,7 @@ export function ContentHQIdeasLab({ talent }: { talent: Talent }) {
               );
             })}
           </div>
+          <PagerFor state={ideasPg} itemLabel="ideias" />
         </>
       )}
 

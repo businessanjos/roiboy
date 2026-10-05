@@ -30,6 +30,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { ptBR } from "date-fns/locale";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
@@ -217,6 +219,7 @@ export default function ClinicaRyka() {
   };
 
   const loading = clientsQuery.isLoading || provisionsQuery.isLoading;
+  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading: loading });
 
   return (
     <div className="container mx-auto py-6 space-y-6">
@@ -305,7 +308,7 @@ export default function ClinicaRyka() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map(({ client, prov, state, rykaStatus }) => {
+                {pg.items.map(({ client, prov, state, rykaStatus }) => {
                   const initials = client.full_name
                     ?.split(" ")
                     .slice(0, 2)
@@ -415,6 +418,7 @@ export default function ClinicaRyka() {
               </TableBody>
             </Table>
           )}
+          {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
       </Card>
     </div>

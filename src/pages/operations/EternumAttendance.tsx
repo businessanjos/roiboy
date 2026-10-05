@@ -13,6 +13,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface ProductLite {
   id: string;
@@ -258,6 +260,11 @@ export default function EternumAttendance() {
   }, [clients, search]);
 
   const presentCount = attendanceSet.size;
+
+  const pg = usePagedList(filteredClients, {
+    resetKey: [selectedEventId, search],
+    isLoading: loadingClients,
+  });
 
   const toggleAttendance = async (clientId: string, present: boolean) => {
     if (!selectedEvent || !accountId) return;
@@ -523,7 +530,7 @@ export default function EternumAttendance() {
                   </p>
                 ) : (
                   <div className="divide-y">
-                    {filteredClients.map((client) => {
+                    {pg.items.map((client) => {
                       const present = attendanceSet.has(client.id);
                       const isSaving = savingId === client.id;
                       const clientProducts = Array.from(client.productIds)
@@ -581,6 +588,9 @@ export default function EternumAttendance() {
               </div>
             </ScrollArea>
           </CardContent>
+          {!loadingClients && filteredClients.length > 0 && (
+            <PagerFor state={pg} itemLabel="clientes" />
+          )}
         </Card>
       </div>
     </div>

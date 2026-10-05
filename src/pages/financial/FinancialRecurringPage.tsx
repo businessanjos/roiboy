@@ -38,6 +38,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { FinancialPageHeader, FinancialEmptyState } from "@/components/financial/_shared";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface RecurringTemplate {
   id: string;
@@ -137,6 +139,8 @@ export default function FinancialRecurringPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
   };
 
+  const templatesPg = usePagedList(templates, { isLoading });
+
   return (
     <div className="p-6 space-y-6">
       <FinancialPageHeader
@@ -183,7 +187,7 @@ export default function FinancialRecurringPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {templates.map((template) => (
+                {templatesPg.items.map((template) => (
                   <TableRow key={template.id}>
                     <TableCell>
                       <div>
@@ -260,6 +264,7 @@ export default function FinancialRecurringPage() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && templates.length > 0 && <PagerFor state={templatesPg} itemLabel="recorrências" />}
         </CardContent>
       </Card>
 
