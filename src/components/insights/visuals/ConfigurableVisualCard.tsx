@@ -2,7 +2,7 @@ import { lazy, Suspense, useMemo, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { VisualErrorBoundary } from "./VisualErrorBoundary";
 import { Skeleton } from "@/components/ui/skeleton";
-import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns, Copy } from "lucide-react";
+import { BarChart3, AlertCircle, Info, Table, GripVertical, Settings, LineChart, PieChart, ArrowLeftRight, Monitor, Columns, Copy, MoreHorizontal } from "lucide-react";
 import { useInsightsDashboardsSafe } from "@/hooks/useInsightsDashboards";
 import { buildNewVisualLayout } from "../grid/layoutPlacement";
 import { RankingPresentationDialog, PresentationOptions } from "./RankingPresentationDialog";
@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSub, DropdownMenuSubContent, DropdownMenuSubTrigger, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { useTvMode } from "../TvModeContext";
 
 const SWITCHABLE_TYPES: { type: ChartType; icon: React.ElementType; label: string }[] = [
@@ -311,7 +312,63 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                 <span className="truncate" title={visual.title || "Visual"}>{visual.title || "Visual"}</span>
               </div>
               {!readOnly && (
-              <div className="flex items-center gap-1 flex-shrink-0">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="md:hidden inline-flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Ações do visual ${visual.title || ""}`.trim()}
+                  >
+                    <MoreHorizontal className="h-5 w-5" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  {chartType === 'ranking' && (
+                    <DropdownMenuItem className="min-h-11" onClick={() => setPresentDialogOpen(true)}><Monitor className="h-4 w-4 mr-2" />Apresentar na TV</DropdownMenuItem>
+                  )}
+                  {SWITCHABLE_SET.has(chartType) && onUpdateVisual && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="min-h-11"><ArrowLeftRight className="h-4 w-4 mr-2" />Alternar tipo</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {SWITCHABLE_TYPES.map(({ type, icon: Icon, label }) => (
+                          <DropdownMenuItem key={type} className="min-h-11" onClick={() => onUpdateVisual(visual.id, { chart_type: type })}>
+                            <Icon className={cn("h-4 w-4 mr-2", type === 'bar_horizontal' && "rotate-90")} />{label}{chartType === type ? " ✓" : ""}
+                          </DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  <DropdownMenuItem className="min-h-11" onClick={() => handleDrilldown()}><Table className="h-4 w-4 mr-2" />Explorar dados</DropdownMenuItem>
+                  {canDuplicate && (
+                    <DropdownMenuItem className="min-h-11" disabled={duplicating} onClick={handleDuplicate}><Copy className="h-4 w-4 mr-2" />Duplicar visual</DropdownMenuItem>
+                  )}
+                  <DropdownMenuItem className="min-h-11" onClick={() => setSettingsOpen(true)}><Settings className="h-4 w-4 mr-2" />Ajustes do visual</DropdownMenuItem>
+                  {isCompactType && onUpdateVisual && (
+                    <DropdownMenuSub>
+                      <DropdownMenuSubTrigger className="min-h-11"><Columns className="h-4 w-4 mr-2" />Largura do card</DropdownMenuSubTrigger>
+                      <DropdownMenuSubContent>
+                        {([
+                          { value: "1/4", label: "1/4 — Compacto" },
+                          { value: "1/3", label: "1/3 — Médio" },
+                          { value: "1/2", label: "1/2 — Largo" },
+                        ] as const).map(({ value, label }) => (
+                          <DropdownMenuItem key={value} className="min-h-11" onClick={() => {
+                            const currentLayout = (visual as any).layout || { x: 0, y: 0, w: 24, h: 6 };
+                            onUpdateVisual(visual.id, { layout: { ...currentLayout, col_span: value } });
+                          }}>{label}{currentColSpan === value ? " ✓" : ""}</DropdownMenuItem>
+                        ))}
+                      </DropdownMenuSubContent>
+                    </DropdownMenuSub>
+                  )}
+                  <DropdownMenuSub>
+                    <DropdownMenuSubTrigger className="min-h-11"><Info className="h-4 w-4 mr-2" />Sobre este visual</DropdownMenuSubTrigger>
+                    <DropdownMenuSubContent className="max-w-[260px] p-3 text-xs">{infoContent}</DropdownMenuSubContent>
+                  </DropdownMenuSub>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              )}
+              {!readOnly && (
+              <div className="hidden md:flex items-center gap-1 flex-shrink-0">
                 {chartType === 'ranking' && (
                   <TooltipProvider>
                     <Tooltip>
@@ -333,7 +390,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                       <Tooltip>
                         <PopoverTrigger asChild>
                           <TooltipTrigger asChild>
-                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1" aria-label="Alternar tipo">
                               <ArrowLeftRight className="h-4 w-4" />
                             </button>
                           </TooltipTrigger>
@@ -383,7 +440,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                            onClick={handleDuplicate}
                            disabled={duplicating}
                            className="text-muted-foreground hover:text-foreground transition-colors p-1 disabled:opacity-50"
-                         >
+                          aria-label="Duplicar visual">
                            <Copy className="h-4 w-4" />
                          </button>
                        </TooltipTrigger>
@@ -410,7 +467,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                       <Tooltip>
                         <PopoverTrigger asChild>
                           <TooltipTrigger asChild>
-                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                            <button className="text-muted-foreground hover:text-foreground transition-colors p-1" aria-label="Largura do card">
                               <Columns className="h-4 w-4" />
                             </button>
                           </TooltipTrigger>
@@ -448,7 +505,7 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger asChild>
-                      <button className="text-muted-foreground hover:text-foreground transition-colors p-1">
+                      <button className="text-muted-foreground hover:text-foreground transition-colors p-1" aria-label="Sobre este visual">
                         <Info className="h-4 w-4" />
                       </button>
                     </TooltipTrigger>
