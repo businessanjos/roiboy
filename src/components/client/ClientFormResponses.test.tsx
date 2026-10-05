@@ -62,7 +62,8 @@ vi.mock("@/integrations/supabase/client", () => {
     const chain: any = {
       select: () => chain,
       eq: () => chain,
-      order: () => Promise.resolve(result),
+      order: () => chain,
+      range: () => Promise.resolve(result),
       maybeSingle: () => Promise.resolve(result),
       then: (onF: any, onR: any) => Promise.resolve(result).then(onF, onR),
     };
