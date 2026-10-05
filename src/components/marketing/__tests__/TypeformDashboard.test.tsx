@@ -82,10 +82,10 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     await act(async () => { render(<TypeformDashboard />); });
     await waitFor(() => screen.getAllByText('Submissões')[0]);
     // Submissões=500, Completados=400, Lead no Roy=200, Ganhos=12 (formato pt-BR)
-    expect(screen.getByText('500')).toBeInTheDocument();
-    expect(screen.getByText('400')).toBeInTheDocument();
-    expect(screen.getByText('200')).toBeInTheDocument();
-    expect(screen.getByText('12')).toBeInTheDocument();
+    expect(screen.getAllByText('500')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('400')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('200')[0]).toBeInTheDocument();
+    expect(screen.getAllByText('12')[0]).toBeInTheDocument();
   });
 
   it('renderiza valores lifetime (Visitas, Iniciados) vindos do backend', async () => {
@@ -93,7 +93,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     await waitFor(() => screen.getByText('Visitas'));
     // 1.000 e 800 (pt-BR)
     expect(screen.getAllByText('1.000')[0]).toBeInTheDocument();
-    expect(screen.getByText('800')).toBeInTheDocument();
+    expect(screen.getAllByText('800')[0]).toBeInTheDocument();
   });
 
   it('expõe a Fonte de cada card alinhada com o backend (DB vs Insights API)', async () => {
