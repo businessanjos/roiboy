@@ -78,3 +78,13 @@ Navegador 393/320/1440 sem corte:
 - **`/notifications`**: Paginado no servidor.
 - **`/contracts`**: "1–6 de 6" (rodapé antigo substituído pelo padrão; mostra só a faixa quando cabe numa página).
 - **`/events/playbooks`**: com 0 playbooks no banco (estado vazio; rodapé com faixa aparece quando há registros).
+
+## Complemento final (revisão estática 1f6f)
+| Área | Fonte / mecanismo | Verificação |
+|---|---|---|
+| Tarefas (busca) | RPC `search_tasks_page` com p_limit/p_offset e total_count — sem carregar lotes de 200k | teste: página 61 → offset 1200 |
+| Negócios excluídos | busca por título, responsável e quem excluiu; mesmo `.or` em linhas e count (`deletedDealsFilter.ts`) | teste unitário |
+| Pluggy status | invalida chaves reais; soma 24h via `fetchAllRows`; "Ver histórico" por conta com count+range | tipos |
+| Consumidores `fetchAllRows` | erro propagado antes de publicar totais/exports (AttendanceReport, EventRoiTab, MarketingLinksUtm, ClientDetail, Clients e outros); desempate `.order('id')` | teste helper: 2500, erro lote 2, 51000 sem teto |
+| Fontes completas | ClientFormResponses, Renewals (pendentes, expirados, sucessores em chunks), RenewalLosses, ClinicaRyka, DoubleChairList, MentoriaEC, useClientCheckins | testes com mocks em lotes |
+| Páginas visuais | AdminPermissionsTab, ações LeaderMeetings, participantes Reminders, artigos por categoria no FAQ, modo lista MarketingTasks (Kanban intacto), itens por categoria no EventChecklist | lint hooks 0 |
