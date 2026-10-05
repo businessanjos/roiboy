@@ -3,7 +3,8 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2, Trash2 } from "lucide-react";
+import { Copy, ExternalLink, FilePlus2, FileSignature, FileText, Files, Loader2, Search, Settings2, Trash2, MoreVertical } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
@@ -837,7 +838,21 @@ function ContractRowActions({
   onDelete: (id: string, contractNumber: string, status: string) => void;
 }) {
   return (
-    <div className="flex items-center gap-1">
+    <>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-11 w-11 sm:hidden" aria-label={`Ações do contrato ${contract.contract_number ?? ""}`.trim()}>
+          <MoreVertical className="h-5 w-5" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end">
+        <DropdownMenuItem className="min-h-11" onClick={() => onCopy(contract.share_token)}><Copy className="h-4 w-4 mr-2" />Copiar link público</DropdownMenuItem>
+        <DropdownMenuItem className="min-h-11" onClick={() => onDuplicate(contract.id)}><Files className="h-4 w-4 mr-2" />Duplicar como rascunho</DropdownMenuItem>
+        <DropdownMenuItem className="min-h-11" onClick={() => onOpen(contract)}><ExternalLink className="h-4 w-4 mr-2" />Abrir contrato</DropdownMenuItem>
+        <DropdownMenuItem className="min-h-11 text-destructive focus:text-destructive" onClick={() => onDelete(contract.id, contract.contract_number ?? "Sem número", contract.status)}><Trash2 className="h-4 w-4 mr-2" />Excluir contrato</DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+    <div className="hidden sm:flex items-center gap-1">
       <Button
         variant="ghost"
         size="icon"
@@ -879,5 +894,6 @@ function ContractRowActions({
         <Trash2 className="h-4 w-4" />
       </Button>
     </div>
+    </>
   );
 }
