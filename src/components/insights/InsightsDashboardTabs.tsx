@@ -89,11 +89,11 @@ export function InsightsDashboardTabs() {
     <>
       <div className="flex items-center gap-1 border-b bg-muted/30 px-2">
         {/* Mobile: seletor em dropdown (evita carrossel de abas em tela estreita) */}
-        <div className="flex sm:hidden flex-1 min-w-0 py-1.5 items-center gap-1.5">
+        <div className="flex sm:hidden flex-1 min-w-0 flex-wrap py-2 items-center gap-2">
           <DropdownMenu>
 
             <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="h-9 flex-1 justify-between gap-2 min-w-0">
+              <Button variant="outline" className="h-11 basis-full justify-between gap-2 min-w-0" aria-label={`Painel: ${activeDashboard?.name || "nenhum selecionado"}. Trocar painel`}>
                 <span className="truncate font-semibold">{activeDashboard?.name || "Selecionar painel"}</span>
                 <ChevronDown className="h-4 w-4 shrink-0 opacity-60" />
               </Button>
@@ -102,8 +102,9 @@ export function InsightsDashboardTabs() {
               {dashboards.map((d) => (
                 <DropdownMenuItem
                   key={d.id}
+                  aria-current={d.id === activeDashboardId ? "page" : undefined}
                   onClick={() => navigateToDashboard(d.id)}
-                  className={cn(d.id === activeDashboardId && "font-semibold text-primary")}
+                  className={cn("min-h-11", d.id === activeDashboardId && "font-semibold text-primary")}
                 >
                   <span className="truncate">{d.name}</span>
                 </DropdownMenuItem>
@@ -111,20 +112,20 @@ export function InsightsDashboardTabs() {
               {activeDashboard && (
                 <>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => { setRenameId(activeDashboard.id); setRenameName(activeDashboard.name); }}>
+                  <DropdownMenuItem className="min-h-11" onClick={() => { setRenameId(activeDashboard.id); setRenameName(activeDashboard.name); }}>
                     <Pencil className="h-4 w-4 mr-2" /> Renomear
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => duplicateDashboard(activeDashboard.id)}>
+                  <DropdownMenuItem className="min-h-11" onClick={() => duplicateDashboard(activeDashboard.id)}>
                     <Copy className="h-4 w-4 mr-2" /> Duplicar
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteId(activeDashboard.id)}>
+                  <DropdownMenuItem className="min-h-11 text-destructive focus:text-destructive" onClick={() => setDeleteId(activeDashboard.id)}>
                     <Trash2 className="h-4 w-4 mr-2" /> Excluir
                   </DropdownMenuItem>
                 </>
               )}
             </DropdownMenuContent>
           </DropdownMenu>
-          <div id="insights-mobile-actions" className="flex items-center gap-1.5 shrink-0" />
+          <div id="insights-mobile-actions" className="flex w-full items-center gap-2 overflow-x-auto scrollbar-hide" />
         </div>
 
 
