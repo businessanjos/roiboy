@@ -15,6 +15,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface DeletedDeal {
   id: string;
@@ -45,23 +47,47 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
   const [restoringId, setRestoringId] = useState<string | null>(null);
   const [purgingId, setPurgingId] = useState<string | null>(null);
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [totalCount, setTotalCount] = useState(0);
 
-  const fetchDeleted = useCallback(async () => {
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 300);
+    return () => clearTimeout(t);
+  }, [search]);
+
+  const pg = usePaginationState(totalCount, { resetKey: debouncedSearch, isLoading: loading });
+
+  const fetchDeleted = useCallback(async (from: number, to: number, term: string) => {
     if (!currentUser?.account_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
+      let query = supabase
         .from('deals')
         .select(`
           id, title, value, status, deleted_at, deleted_by, responsible_user_id,
           contact_name, contact_phone, contact_email,
           responsible_user:users!deals_responsible_user_id_fkey(name)
-        `)
+        `, { count: 'exact' })
         .eq('account_id', currentUser.account_id)
-        .not('deleted_at', 'is', null)
+        .not('deleted_at', 'is', null);
+
+      if (term) {
+        const digits = term.replace(/\D/g, "");
+        const orParts = [
+          `title.ilike.%${term}%`,
+          `contact_name.ilike.%${term}%`,
+          `contact_email.ilike.%${term}%`,
+        ];
+        if (digits.length >= 4) orParts.push(`contact_phone.ilike.%${digits}%`);
+        query = query.or(orParts.join(","));
+      }
+
+      const { data, error, count } = await query
         .order('deleted_at', { ascending: false })
-        .limit(200);
+        .order('id', { ascending: false })
+        .range(from, to);
       if (error) throw error;
+      setTotalCount(count ?? 0);
 
       // Resolve deleted_by names
       const authIds = Array.from(
@@ -102,8 +128,8 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
   }, [currentUser?.account_id, toast]);
 
   useEffect(() => {
-    if (open) fetchDeleted();
-  }, [open, fetchDeleted]);
+    if (open) fetchDeleted(pg.from, pg.to, debouncedSearch);
+  }, [open, fetchDeleted, pg.from, pg.to, debouncedSearch]);
 
   const handleRestore = async (dealId: string) => {
     if (!currentUser?.account_id) return;
@@ -116,6 +142,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .eq('account_id', currentUser.account_id);
       if (error) throw error;
       setDeals(prev => prev.filter(d => d.id !== dealId));
+      setTotalCount(c => Math.max(0, c - 1));
       toast({ title: 'Negociação restaurada' });
       onRestored?.();
     } catch (e: any) {
@@ -137,6 +164,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .eq('account_id', currentUser.account_id);
       if (error) throw error;
       setDeals(prev => prev.filter(d => d.id !== dealId));
+      setTotalCount(c => Math.max(0, c - 1));
       toast({ title: 'Negociação apagada permanentemente' });
     } catch (e: any) {
       toast({ title: 'Erro ao apagar', description: e.message, variant: 'destructive' });
@@ -145,19 +173,7 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
     }
   };
 
-  const term = search.trim().toLowerCase();
-  const digits = term.replace(/\D/g, "");
-  const filteredDeals = !term
-    ? deals
-    : deals.filter(d => {
-        const haystack = [d.title, d.contact_name, d.contact_email, d.responsible_name, d.deleted_by_name]
-          .filter(Boolean)
-          .join(" ")
-          .toLowerCase();
-        if (haystack.includes(term)) return true;
-        if (digits.length >= 4 && (d.contact_phone || "").replace(/\D/g, "").includes(digits)) return true;
-        return false;
-      });
+  const filteredDeals = deals;
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -247,6 +263,9 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
             ))
           )}
         </div>
+        {!loading && totalCount > 0 && (
+          <PagerFor state={pg} itemLabel="negócios excluídos" />
+        )}
       </SheetContent>
     </Sheet>
   );

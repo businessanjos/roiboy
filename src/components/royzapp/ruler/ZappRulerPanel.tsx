@@ -26,6 +26,8 @@ import {
 } from "lucide-react";
 import { useZappRulers, type RulerTemplate, type RulerEnrollment } from "@/hooks/useZappRulers";
 import { ZappRulerTemplateDialog } from "./ZappRulerTemplateDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface ZappRulerPanelProps {
   sectorId?: string | null;
@@ -65,6 +67,10 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
   const [editing, setEditing] = useState<RulerTemplate | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<RulerTemplate | null>(null);
   const [deleteEnrollTarget, setDeleteEnrollTarget] = useState<RulerEnrollment | null>(null);
+
+  const filaPg = usePagedList(pendingManualTouches, { resetKey: "fila", isLoading: loading });
+  const ativasPg = usePagedList(enrollments, { resetKey: "ativas", isLoading: loading });
+  const modelosPg = usePagedList(templates, { resetKey: "modelos", isLoading: loading });
 
   // Mantém o estado de edição sincronizado com a lista atualizada,
   // mesmo quando o diálogo de detalhe está aberto.
@@ -119,7 +125,8 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
               Nenhum toque manual pendente. Tudo em dia.
             </p>
           ) : (
-            pendingManualTouches.map(({ touch, enrollment }) => (
+            <>
+            {filaPg.items.map(({ touch, enrollment }) => (
               <Card key={touch.id}>
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -166,7 +173,9 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                   </div>
                 </CardContent>
               </Card>
-            ))
+            ))}
+            <PagerFor state={filaPg} itemLabel="toques" />
+            </>
           )}
         </TabsContent>
 
@@ -176,7 +185,8 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
               Nenhum contato em régua ainda. Abra uma conversa e use "Régua" no cabeçalho.
             </p>
           ) : (
-            enrollments.map((enrollment) => {
+            <>
+            {ativasPg.items.map((enrollment) => {
               const sent = enrollment.touches.filter((t) => t.status === "sent").length;
               const next = enrollment.touches.find((t) => t.status === "pending");
               return (
@@ -226,7 +236,9 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                   </CardContent>
                 </Card>
               );
-            })
+            })}
+            <PagerFor state={ativasPg} itemLabel="réguas ativas" />
+            </>
           )}
         </TabsContent>
 
@@ -236,7 +248,8 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
               Nenhum modelo criado. Comece com um preset em "Nova régua".
             </p>
           ) : (
-            templates.map((template) => (
+            <>
+            {modelosPg.items.map((template) => (
               <Card key={template.id}>
                 <CardContent className="p-3 space-y-2">
                   <div className="flex items-start justify-between gap-2">
@@ -276,7 +289,9 @@ export function ZappRulerPanel({ sectorId }: ZappRulerPanelProps) {
                   </div>
                 </CardContent>
               </Card>
-            ))
+            ))}
+            <PagerFor state={modelosPg} itemLabel="modelos" />
+            </>
           )}
         </TabsContent>
       </Tabs>
