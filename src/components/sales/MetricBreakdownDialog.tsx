@@ -179,8 +179,8 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl">
-        <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+        <DialogHeader className="pr-10 text-left">
+          <DialogTitle className="break-words leading-snug">{title}</DialogTitle>
           <DialogDescription className="text-xs">
             {sourceHelp}
             <br />
