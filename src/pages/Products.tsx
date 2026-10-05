@@ -1125,7 +1125,7 @@ export default function Products() {
               </TabsContent>}
             </Tabs>
 
-            <DialogFooter className="sticky bottom-0 z-10 -mx-6 -mb-6 mt-2 gap-2 border-t bg-background px-6 py-3 pb-safe">
+            <DialogFooter className="sticky -bottom-6 z-10 -mx-6 -mb-6 mt-2 gap-2 border-t bg-background px-6 pt-3 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
               <Button variant="outline" className="h-11 sm:h-10" onClick={() => setDialogOpen(false)}>
                 Cancelar
               </Button>
