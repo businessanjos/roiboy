@@ -69,14 +69,25 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
     queryKey: ["spiff-spins-history", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("spiff_spins")
-        .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
-        .eq("account_id", accountId!)
-        .order("spun_at", { ascending: false })
-        .limit(1000);
-      if (error) throw error;
-      return (data ?? []) as SpinRow[];
+      // Carrega em lotes via range até esgotar — necessário pois KPIs/totais usam o array completo.
+      const pageSize = 1000;
+      let allRows: SpinRow[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("spiff_spins")
+          .select("id, spiff_id, user_id, prize_amount, prize_label, spun_at, payment_status, paid_at, paid_by, payment_notes, cancelled_at, cancelled_reason")
+          .eq("account_id", accountId!)
+          .order("spun_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(offset, offset + pageSize - 1);
+        if (error) throw error;
+        const rows = (data ?? []) as SpinRow[];
+        allRows = allRows.concat(rows);
+        if (rows.length < pageSize) break;
+        offset += pageSize;
+      }
+      return allRows;
     },
   });
 

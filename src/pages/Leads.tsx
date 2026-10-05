@@ -87,6 +87,8 @@ import { MergeLeadDialog, MergedLeadData } from "@/components/leads/MergeLeadDia
 import { useLeadMerge } from "@/hooks/useLeadMerge";
 import { useLeadDuplicateDetection, LeadDuplicateMatch } from "@/hooks/useLeadDuplicateDetection";
 import { LeadDuplicateAlert } from "@/components/leads/LeadDuplicateAlert";
+import { usePagedList } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -167,9 +169,6 @@ export default function Leads() {
   const [filterResponsibleUserId, setFilterResponsibleUserId] = useState<string>("all");
   const [filterCreatedFrom, setFilterCreatedFrom] = useState("");
   const [filterCreatedTo, setFilterCreatedTo] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize, setPageSize] = useState(20);
-  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
   const [detailLead, setDetailLead] = useState<Lead | null>(null);
@@ -1164,18 +1163,12 @@ export default function Leads() {
     [filteredLeads]
   );
 
-  // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredLeads.length / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
-  const paginatedLeads = useMemo(() => {
-    const start = (safePage - 1) * pageSize;
-    return filteredLeads.slice(start, start + pageSize);
-  }, [filteredLeads, safePage, pageSize]);
-
-  // Reset page on filter changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchQuery, filterSource, filterResponsibleUserId, filterCreatedFrom, filterCreatedTo]);
+  // Pagination (local, sobre lista já filtrada)
+  const pg = usePagedList(filteredLeads, {
+    resetKey: [searchQuery, filterSource, filterResponsibleUserId, filterCreatedFrom, filterCreatedTo],
+    isLoading: loading,
+  });
+  const paginatedLeads = pg.items;
 
   const getInitials = (name: string) => {
     return name

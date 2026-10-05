@@ -45,6 +45,8 @@ import {
   FileText,
   Truck,
 } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 // ===== Categorias de fornecedores =====
 const CATEGORIES: { value: string; label: string; color: string }[] = [
@@ -315,6 +317,11 @@ export default function EventSuppliers() {
     return map;
   }, [suppliers]);
 
+  const suppliersPg = usePagedList(filteredSuppliers, {
+    resetKey: { categoryFilter, search },
+    isLoading,
+  });
+
   return (
     <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
       {/* Header */}
@@ -402,8 +409,9 @@ export default function EventSuppliers() {
           </CardContent>
         </Card>
       ) : (
+        <div className="space-y-3">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredSuppliers.map((s) => {
+          {suppliersPg.items.map((s) => {
             const cat = getCategory(s.category);
             const sQuotes = quotesBySupplier.get(s.id) || [];
             return (
@@ -530,6 +538,8 @@ export default function EventSuppliers() {
               </Card>
             );
           })}
+        </div>
+        <PagerFor state={suppliersPg} itemLabel="fornecedores" />
         </div>
       )}
 
