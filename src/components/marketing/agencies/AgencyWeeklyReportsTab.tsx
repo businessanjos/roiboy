@@ -17,6 +17,8 @@ import {
 } from "@/components/ui/alert-dialog";
 import { useAgencyWeeklyReports, type AgencyWeeklyReport } from "@/hooks/useAgencyWeeklyReports";
 import { AgencyWeeklyReportDialog } from "./AgencyWeeklyReportDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const fmtBRL = (v?: number | null) =>
   v == null ? "—" : v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
@@ -89,6 +91,7 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
     [reports],
   );
 
+  const pg = usePagedList(reports, { isLoading });
   const latest = reports[0];
   const previous = reports[1];
 
@@ -199,7 +202,7 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
           )}
 
           <div className="space-y-3">
-            {reports.map((r) => {
+            {pg.items.map((r) => {
               const isOpen = expanded === r.id;
               return (
                 <Card key={r.id}>
@@ -263,6 +266,7 @@ export function AgencyWeeklyReportsTab({ agencyId, color = "#6366f1" }: { agency
               );
             })}
           </div>
+          <PagerFor state={pg} itemLabel="relatórios" />
         </>
       )}
 

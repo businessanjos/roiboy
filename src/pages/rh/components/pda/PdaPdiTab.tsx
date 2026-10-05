@@ -17,6 +17,8 @@ import {
 import { Pencil, Plus, Target, Trash2 } from "lucide-react";
 import { PdaBadge, YesNoBadge } from "@/components/rh/PdaBadge";
 import { useHRPdaOptions } from "@/hooks/useHRPdaOptions";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export type PdiCycle = {
   id: string;
@@ -67,6 +69,7 @@ export default function PdaPdiTab({
   const [editing, setEditing] = useState<PdiCycle | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const pg = usePagedList(cycles, { isLoading: loading });
 
   const fetchCycles = useCallback(async () => {
     setLoading(true);
@@ -161,12 +164,12 @@ export default function PdaPdiTab({
         </div>
       ) : (
         <div className="space-y-2">
-          {cycles.map((c, idx) => (
+          {pg.items.map((c, idx) => (
             <Card key={c.id}>
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
                   <span className="font-medium text-sm">{c.label}</span>
-                  {idx === 0 && <Badge variant="outline" className="text-[10px]">Mais recente</Badge>}
+                  {pg.from + idx === 0 && <Badge variant="outline" className="text-[10px]">Mais recente</Badge>}
                   <div className="ml-auto flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openDialog(c)}>
                       <Pencil className="h-3.5 w-3.5" />
@@ -186,6 +189,7 @@ export default function PdaPdiTab({
               </CardContent>
             </Card>
           ))}
+          <PagerFor state={pg} itemLabel="ciclos" />
         </div>
       )}
 

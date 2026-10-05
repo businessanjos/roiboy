@@ -173,7 +173,6 @@ export default function RHDashboard() {
   const canHR = useCanAccessHR();
   const accountId = currentUser?.account_id;
   const { data, isLoading } = useRHDashboardData(accountId);
-  const pgBirthdays = usePagedList(metricsBirthdaysPlaceholder, { isLoading });
 
   const metrics = useMemo(() => {
     if (!data) return null;
@@ -322,6 +321,8 @@ export default function RHDashboard() {
     };
   }, [data]);
 
+  const pgBirthdays = usePagedList(metrics?.birthdays ?? [], { isLoading, resetKey: metrics?.birthdays?.length });
+
   if (canHR === false) {
     return <Navigate to="/" replace />;
   }
@@ -408,7 +409,7 @@ export default function RHDashboard() {
                     <p className="text-sm text-muted-foreground">Nenhum aniversariante neste mês.</p>
                   ) : (
                     <ul className="divide-y divide-hairline">
-                      {metrics.birthdays.map((c: any) => (
+                      {pgBirthdays.items.map((c: any) => (
                         <li key={c.id} className="flex items-center justify-between py-2 text-sm">
                           <span className="truncate">{c.full_name}</span>
                           <span className="text-muted-foreground tabular-nums">
@@ -418,6 +419,7 @@ export default function RHDashboard() {
                       ))}
                     </ul>
                   )}
+                  {metrics.birthdays.length > 0 && <PagerFor state={pgBirthdays} itemLabel="aniversariantes" hidePageSize />}
                 </CardContent>
               </Card>
             </div>

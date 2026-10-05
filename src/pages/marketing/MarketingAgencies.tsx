@@ -11,6 +11,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const fmtBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
 
@@ -23,6 +25,7 @@ export default function MarketingAgencies() {
   const [editing, setEditing] = useState<any | null>(null);
   const [membersFor, setMembersFor] = useState<string | null>(null);
   const [reapplying, setReapplying] = useState(false);
+  const pg = usePagedList(agencies, { isLoading });
 
   async function handleReapplyRules() {
     if (!currentUser?.account_id) return;
@@ -86,7 +89,7 @@ export default function MarketingAgencies() {
       )}
 
       <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {agencies.map((a) => (
+        {pg.items.map((a) => (
           <Card key={a.id} className="overflow-hidden hover:shadow-md transition-shadow">
             <div className="h-2" style={{ background: a.color }} />
             <CardHeader className="pb-3">
@@ -141,6 +144,8 @@ export default function MarketingAgencies() {
           </Card>
         ))}
       </div>
+
+      {!isLoading && agencies.length > 0 && <PagerFor state={pg} itemLabel="agências" />}
 
       <AgencyFormDialog open={formOpen} onOpenChange={setFormOpen} agency={editing} />
       {membersFor && (

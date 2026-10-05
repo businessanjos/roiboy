@@ -17,6 +17,8 @@ import {
 import { CalendarClock, Pencil, Plus, Trash2 } from "lucide-react";
 import { FOLLOWUP_KINDS } from "@/lib/rh/pdaContent";
 import { formatDateBR } from "@/lib/rh/pda";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Followup = {
   id: string;
@@ -52,6 +54,7 @@ export default function PdaFollowupsTab({
   const [editing, setEditing] = useState<Followup | null>(null);
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
+  const pg = usePagedList(items, { isLoading: loading });
 
   const fetchItems = useCallback(async () => {
     setLoading(true);
@@ -134,7 +137,7 @@ export default function PdaFollowupsTab({
         </div>
       ) : (
         <div className="space-y-2">
-          {items.map((f) => (
+          {pg.items.map((f) => (
             <Card key={f.id}>
               <CardContent className="p-4 space-y-2">
                 <div className="flex items-center gap-2 flex-wrap">
@@ -168,6 +171,7 @@ export default function PdaFollowupsTab({
               </CardContent>
             </Card>
           ))}
+          <PagerFor state={pg} itemLabel="acompanhamentos" />
         </div>
       )}
 

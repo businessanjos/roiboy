@@ -51,6 +51,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { PendingClassifications } from "@/components/financial/PendingClassifications";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { formatBRLCompact } from "@/lib/financial-format";
 
 interface ParsedTransaction {
@@ -197,6 +199,9 @@ export default function FinancialReconciliationPage() {
   const filteredEntries = pendingEntries.filter((entry) =>
     entry.description.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const entriesPg = usePagedList(filteredEntries, { resetKey: searchQuery, isLoading: entriesLoading });
+  const previewPg = usePagedList(parsedTransactions, { resetKey: uploadedFileName, defaultPageSize: 20 });
 
   const toggleSelection = (id: string) => {
     const newSet = new Set(selectedTransactions);
@@ -577,7 +582,7 @@ export default function FinancialReconciliationPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEntries.map((entry) => (
+                      {entriesPg.items.map((entry) => (
                         <TableRow key={entry.id}>
                           <TableCell>
                             <Checkbox 
@@ -630,6 +635,9 @@ export default function FinancialReconciliationPage() {
                   </Table>
                 )}
               </ScrollArea>
+              {!entriesLoading && filteredEntries.length > 0 && (
+                <PagerFor state={entriesPg} itemLabel="lançamentos" />
+              )}
             </TabsContent>
 
             <TabsContent value="import" className="mt-4 space-y-4">
@@ -761,7 +769,7 @@ export default function FinancialReconciliationPage() {
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {parsedTransactions.map((tx, index) => (
+                        {previewPg.items.map((tx, index) => (
                           <TableRow key={index}>
                             <TableCell>
                               <div className="flex items-center gap-1 text-sm">
@@ -795,6 +803,7 @@ export default function FinancialReconciliationPage() {
                       </TableBody>
                     </Table>
                   </ScrollArea>
+                  <PagerFor state={previewPg} itemLabel="transações" />
                 </>
               )}
             </TabsContent>

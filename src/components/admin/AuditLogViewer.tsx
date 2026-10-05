@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay } from "date-fns";
@@ -520,6 +522,11 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
     );
   });
 
+  const pg = usePagedList(filteredLogs, {
+    resetKey: [search, actionFilter, entityFilter, periodFilter, userFilter],
+    isLoading,
+  });
+
   const exportCsv = () => {
     const rows = filteredLogs ?? [];
     if (rows.length === 0) return;
@@ -708,7 +715,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredLogs?.map((log) => (
+                pg.items.map((log) => (
                   <TableRow
                     key={log.id}
                     className={`cursor-pointer hover:bg-muted/50 border-l-4 ${
@@ -767,6 +774,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             </TableBody>
           </Table>
         </ScrollArea>
+        <PagerFor state={pg} itemLabel="logs" />
 
         <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>
           <DialogContent className="max-w-lg">
