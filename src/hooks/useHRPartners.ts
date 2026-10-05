@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { formatPersonName } from "@/lib/format/personName";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface HRPartner {
   id: string;
@@ -58,11 +59,15 @@ export function useHRPartners() {
     if (!currentUser?.account_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("hr_partners")
-        .select("*")
-        .eq("account_id", currentUser.account_id)
-        .order("full_name");
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_partners")
+          .select("*")
+          .eq("account_id", currentUser.account_id)
+          .order("full_name")
+          .order("id")
+          .range(from, to)
+      );
 
       if (error) throw error;
       setPartners((data || []) as unknown as HRPartner[]);

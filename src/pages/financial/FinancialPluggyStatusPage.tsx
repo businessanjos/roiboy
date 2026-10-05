@@ -177,33 +177,56 @@ export default function FinancialPluggyStatusPage() {
 
   const accountIds = useMemo(() => (accounts ?? []).map((a) => a.id), [accounts]);
 
-  const { data: logs, isLoading: loadingLogs } = useQuery({
-    queryKey: ["pluggy-status-logs", accountIds],
+  // Resumo rotulado: até 10 logs mais recentes POR CONTA (uma query por conta, em
+  // paralelo), evitando que um `.limit()` global esconda contas com muita atividade.
+  // A UI só exibe os 8 mais recentes (rótulo "Últimas atualizações").
+  const { data: logsByAccountData, isLoading: loadingLogs } = useQuery({
+    queryKey: ["pluggy-status-logs-per-account", accountIds],
     enabled: accountIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("openfinance_sync_logs")
-        .select(
-          "id,bank_account_id,sync_type,status,transactions_imported,error_message,started_at,finished_at,provider"
-        )
-        .in("bank_account_id", accountIds)
-        .order("started_at", { ascending: false })
-        .limit(200);
-      if (error) throw error;
-      return (data ?? []) as SyncLogRow[];
+      const results = await Promise.all(
+        accountIds.map(async (id) => {
+          const { data, error } = await supabase
+            .from("openfinance_sync_logs")
+            .select(
+              "id,bank_account_id,sync_type,status,transactions_imported,error_message,started_at,finished_at,provider"
+            )
+            .eq("bank_account_id", id)
+            .order("started_at", { ascending: false })
+            .limit(10);
+          if (error) throw error;
+          return [id, (data ?? []) as SyncLogRow[]] as const;
+        })
+      );
+      return results;
     },
   });
 
   const logsByAccount = useMemo(() => {
-    const map = new Map<string, SyncLogRow[]>();
-    (logs ?? []).forEach((l) => {
-      if (!l.bank_account_id) return;
-      const arr = map.get(l.bank_account_id) ?? [];
-      arr.push(l);
-      map.set(l.bank_account_id, arr);
-    });
-    return map;
-  }, [logs]);
+    return new Map<string, SyncLogRow[]>(logsByAccountData ?? []);
+  }, [logsByAccountData]);
+
+  const logs = useMemo(
+    () => Array.from(logsByAccount.values()).flat(),
+    [logsByAccount]
+  );
+
+  // Totais das últimas 24h: consulta dedicada sem limite (janela de tempo curta,
+  // não sofre o truncamento silencioso do preview por conta acima).
+  const { data: imported24Count = 0 } = useQuery({
+    queryKey: ["pluggy-status-imported-24h", accountIds],
+    enabled: accountIds.length > 0,
+    queryFn: async () => {
+      const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("openfinance_sync_logs")
+        .select("transactions_imported")
+        .in("bank_account_id", accountIds)
+        .gte("started_at", since);
+      if (error) throw error;
+      return (data ?? []).reduce((s, l: any) => s + (l.transactions_imported || 0), 0);
+    },
+  });
 
   const getAccountHealth = (
     a: BankAccountRow,
@@ -220,10 +243,6 @@ export default function FinancialPluggyStatusPage() {
   };
 
   const totals = useMemo(() => {
-    const all = logs ?? [];
-    const last24h = all.filter(
-      (l) => new Date(l.started_at).getTime() > Date.now() - 24 * 60 * 60 * 1000
-    );
     const withProblem = (accounts ?? []).filter((a) => {
       const lgs = logsByAccount.get(a.id) ?? [];
       return getAccountHealth(a, lgs) === "error";
@@ -231,9 +250,9 @@ export default function FinancialPluggyStatusPage() {
     return {
       connections: accounts?.length ?? 0,
       withProblem,
-      imported24: last24h.reduce((s, l) => s + (l.transactions_imported || 0), 0),
+      imported24: imported24Count,
     };
-  }, [logs, accounts, logsByAccount]);
+  }, [accounts, logsByAccount, imported24Count]);
 
   const syncMutation = useMutation({
     mutationFn: async ({
