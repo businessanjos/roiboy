@@ -48,6 +48,8 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
   const [userFilter, setUserFilter] = useState<string>("all");
   const [spiffFilter, setSpiffFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
