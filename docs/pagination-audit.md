@@ -66,3 +66,12 @@ Mantidos com justificativa: seletores com busca (filtros do RoyZapp 500, links d
 - fetchAllRows: sem teto silencioso; avança pelo número de linhas recebidas e para só no lote vazio (cobre teto de backend menor que o lote); erro e maxRows retornam erro explícito; testes 2537 linhas, teto 500, erro no lote 2, limite, empate por id.
 - Onboarding: lista principal agora 20 por página (antes 50, 31 clientes cabiam em uma página só).
 Pendente observado: /clients/checkpoints em 393/320 tem largura 612 (corte lateral), não corrigido nesta rodada. TypeformDashboard.test: 6 falhas por textos duplicados (mock atualizado para a nova consulta em lotes).
+
+### Complemento final da revisão 4a3ba704
+- QuotasSection (hook antes do return) e useVideoCallSessions (import) já corrigidos; tsgo 0 erros; eslint rules-of-hooks 0 violações em todos os arquivos alterados desde f96af873; vite build OK.
+- fetchInChunks (lotes de 200 IDs, concorrência 4, dedupe, erro propagado) em BriefingLinkAudit, FinancialInstallmentsPage e AuditLogViewer (com aviso de erro na tela).
+- Desempate por id em Reminders e LovableCostsSection; demais usos de fetchAllRows conferidos.
+- RHBenefits/RHPositions: páginas por item dentro de cada grupo (cabeçalhos preservados).
+- Social/TikTok/YouTube: troca de conta/canal volta à página 1; posts/vídeos via fetchAllRows com erro propagado. content_platform_posts mantém "últimos 100" (resumo, não lista navegável).
+- EventParticipantsTab via fetchAllRows (invited_at, id). Hooks RH conferidos.
+- vitest src: 202/203; única falha é src/test/rls/briefingRls.test.ts, que depende de existir um usuário SDR não-admin no banco (ambiental, não relacionada).
