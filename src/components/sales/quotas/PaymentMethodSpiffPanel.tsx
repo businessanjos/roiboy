@@ -227,16 +227,18 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
                 <TableCell className="text-sm font-medium">
                   {s.name}
                   {s.unclassified > 0 && (
-                    <Tooltip>
-                      <TooltipTrigger>
-                        <Badge variant="outline" className="ml-1 text-[9px] border-muted-foreground/40 text-muted-foreground cursor-help">
-                          {s.unclassified} sem dados
-                        </Badge>
-                      </TooltipTrigger>
-                      <TooltipContent>
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <button type="button" className="ml-1 inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label={`${s.unclassified} venda(s) sem o campo Parcelas preenchido`}>
+                          <Badge variant="outline" className="text-[10px] sm:text-[9px] border-muted-foreground/40 text-muted-foreground cursor-pointer">
+                            {s.unclassified} sem dados
+                          </Badge>
+                        </button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-auto max-w-xs">
                         <p className="text-xs">{s.unclassified} venda(s) sem o campo "Parcelas" preenchido</p>
-                      </TooltipContent>
-                    </Tooltip>
+                      </PopoverContent>
+                    </Popover>
                   )}
                 </TableCell>
                 <TableCell className="text-center text-sm tabular-nums">{s.totalSales}</TableCell>
