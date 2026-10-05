@@ -30021,6 +30021,34 @@ export type Database = {
           user_id: string
         }[]
       }
+      search_tasks_counts: {
+        Args: {
+          p_account_id: string
+          p_activity_type_id?: string
+          p_completed_status_ids?: string[]
+          p_current_user_id?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_default_status_id?: string
+          p_filter_mode?: string
+          p_filter_user_id?: string
+          p_historical?: boolean
+          p_in_progress_status_id?: string
+          p_negotiation?: string
+          p_pending_is_default?: boolean
+          p_pending_status_id?: string
+          p_search?: string
+          p_sector_activity_type_ids?: string[]
+          p_sector_id?: string
+          p_stage_id?: string
+          p_status_ids?: string[]
+          p_today?: string
+        }
+        Returns: {
+          key: string
+          n: number
+        }[]
+      }
       search_tasks_page: {
         Args: {
           p_account_id: string
@@ -30040,6 +30068,35 @@ export type Database = {
           p_sort_by?: string
           p_sort_direction?: string
           p_stage_id?: string
+        }
+        Returns: {
+          id: string
+          total_count: number
+        }[]
+      }
+      search_tasks_page2: {
+        Args: {
+          p_account_id: string
+          p_activity_type_id?: string
+          p_completed_status_ids?: string[]
+          p_current_user_id?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_default_status_id?: string
+          p_filter_mode?: string
+          p_filter_user_id?: string
+          p_historical?: boolean
+          p_limit?: number
+          p_negotiation?: string
+          p_offset?: number
+          p_search?: string
+          p_sector_activity_type_ids?: string[]
+          p_sector_id?: string
+          p_sort_by?: string
+          p_sort_direction?: string
+          p_stage_id?: string
+          p_tab?: string
+          p_today?: string
         }
         Returns: {
           id: string
@@ -30110,6 +30167,68 @@ export type Database = {
       submit_rsvp_response: {
         Args: { p_status: string; p_token: string }
         Returns: Json
+      }
+      task_matches_tab: {
+        Args: {
+          p_completed_at: string
+          p_completed_status_ids: string[]
+          p_custom_status_id: string
+          p_default_status_id: string
+          p_due_date: string
+          p_tab: string
+          p_today: string
+        }
+        Returns: boolean
+      }
+      tasks_filtered: {
+        Args: {
+          p_account_id: string
+          p_activity_type_id: string
+          p_current_user_id: string
+          p_date_end: string
+          p_date_start: string
+          p_filter_mode: string
+          p_filter_user_id: string
+          p_historical: boolean
+          p_ignore_date: boolean
+          p_negotiation: string
+          p_search: string
+          p_sector_activity_type_ids: string[]
+          p_sector_id: string
+          p_stage_id: string
+        }
+        Returns: {
+          account_id: string
+          activity_type_id: string | null
+          assigned_to: string | null
+          checklist_item_id: string | null
+          client_id: string | null
+          completed_at: string | null
+          contact_channel: string | null
+          created_at: string
+          created_by: string
+          custom_status_id: string | null
+          deal_id: string | null
+          description: string | null
+          due_date: string | null
+          due_time: string | null
+          google_calendar_event_id: string | null
+          id: string
+          lead_id: string | null
+          meeting_platform: string | null
+          meeting_url: string | null
+          priority: Database["public"]["Enums"]["task_priority"]
+          status: Database["public"]["Enums"]["task_status"]
+          title: string
+          updated_at: string
+          zoom_meeting_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "internal_tasks"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       tech_projects_clear_token: {
         Args: { _project_id: string }

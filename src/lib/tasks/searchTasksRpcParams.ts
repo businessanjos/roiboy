@@ -1,98 +1,139 @@
 /**
- * Monta os parâmetros da RPC `search_tasks_page` usada em src/pages/Tasks.tsx
- * quando há um termo de busca ativo. Mantido separado da página para poder
- * ser testado isoladamente (mapeamento puro, sem rede).
- *
- * Reproduz exatamente os filtros já aplicados hoje no servidor (sector +
- * filtro de usuário) e troca a busca por IDs de clients/leads/deals (que
- * hoje chegava a concatenar até 50000 IDs num .or(...in...)) pelo predicado
- * EXISTS feito dentro da função no banco.
+ * Parâmetros das RPCs `search_tasks_page2` (página/ordem/total) e
+ * `search_tasks_counts` (contagens por aba e indicadores) usadas em
+ * src/pages/Tasks.tsx quando há busca ativa. Ambas aplicam no servidor o
+ * MESMO predicado (`tasks_filtered`): busca em 8 campos, setor efetivo,
+ * usuário, tipo de atividade, etapa, negociação e prazo — tudo antes de
+ * contar, ordenar e paginar. Mapeamento puro, sem rede.
  */
 export type FilterUserValue = string; // "all" | "mine" | <user id>
+export type TaskSortBy = "priority" | "due_date" | "created_at" | "responsible" | "stage";
 
-export interface BuildSearchTasksParamsInput {
+export interface TaskStatusLite {
+  id: string;
+  name: string;
+  is_default?: boolean | null;
+  is_completed_status?: boolean | null;
+}
+
+export interface TaskFilterInput {
   accountId: string;
   search: string;
+  sectorId: string | null | undefined;
   sectorActivityTypeIds: string[] | null;
   isHistoricalUserFilter: boolean;
   filterUser: FilterUserValue;
   currentUserId: string | null | undefined;
+  activityType: string; // "all" | id
+  stage: string; // "all" | id
+  negotiation: string; // "all" | "deal:<id>" | "lead:<id>"
+  dateStart: string; // "" | yyyy-MM-dd
+  dateEnd: string;
+  /** Dia LOCAL de quem vê (yyyy-MM-dd) — base de "Atrasadas". */
+  today: string;
+  statuses: TaskStatusLite[];
+}
+
+export interface BuildSearchTasksParamsInput extends TaskFilterInput {
+  tab: string | null; // null | status id | "__overdue__"
+  sortBy: TaskSortBy;
+  sortDirection: "asc" | "desc";
   limit: number;
   offset: number;
-  sortBy?: "created_at" | "due_date" | "priority";
-  sortDirection?: "asc" | "desc";
 }
 
-export interface SearchTasksRpcParams {
-  p_account_id: string;
-  p_search: string;
-  p_sector_activity_type_ids: string[] | null;
-  p_apply_sector_filter: boolean;
-  p_filter_mode: "all" | "mine" | "user";
-  p_filter_user_id: string | null;
-  p_current_user_id: string | null;
-  p_custom_status_id: null;
-  p_stage_id: null;
-  p_deal_id: null;
-  p_lead_id: null;
-  p_date_start: null;
-  p_date_end: null;
-  p_sort_by: "created_at" | "due_date" | "priority";
-  p_sort_direction: "asc" | "desc";
-  p_limit: number;
-  p_offset: number;
-}
-
-export function buildSearchTasksRpcParams(
-  input: BuildSearchTasksParamsInput
-): SearchTasksRpcParams {
-  const {
-    accountId,
-    search,
-    sectorActivityTypeIds,
-    isHistoricalUserFilter,
-    filterUser,
-    currentUserId,
-    limit,
-    offset,
-    sortBy = "created_at",
-    sortDirection = "desc",
-  } = input;
-
-  const applySectorFilter =
-    !isHistoricalUserFilter &&
-    !!sectorActivityTypeIds &&
-    sectorActivityTypeIds.length > 0;
-
-  let filterMode: "all" | "mine" | "user" = "all";
+function baseParams(i: TaskFilterInput) {
+  const applySector =
+    !i.isHistoricalUserFilter && !!i.sectorActivityTypeIds && i.sectorActivityTypeIds.length > 0;
+  let mode: "all" | "mine" | "user" = "all";
   let filterUserId: string | null = null;
-  let currentUserIdForRpc: string | null = null;
-
-  if (filterUser === "mine" && currentUserId) {
-    filterMode = "mine";
-    currentUserIdForRpc = currentUserId;
-  } else if (filterUser !== "all" && filterUser !== "mine" && filterUser) {
-    filterMode = "user";
-    filterUserId = filterUser;
+  let currentUserId: string | null = null;
+  if (i.filterUser === "mine" && i.currentUserId) {
+    mode = "mine";
+    currentUserId = i.currentUserId;
+  } else if (i.filterUser && i.filterUser !== "all" && i.filterUser !== "mine") {
+    mode = "user";
+    filterUserId = i.filterUser;
   }
-
   return {
-    p_account_id: accountId,
-    p_search: search,
-    p_sector_activity_type_ids: applySectorFilter ? sectorActivityTypeIds : null,
-    p_apply_sector_filter: applySectorFilter,
-    p_filter_mode: filterMode,
+    p_account_id: i.accountId,
+    p_search: i.search.trim(),
+    p_sector_id: i.sectorId || null,
+    p_historical: i.isHistoricalUserFilter,
+    p_sector_activity_type_ids: applySector ? i.sectorActivityTypeIds : null,
+    p_filter_mode: mode,
     p_filter_user_id: filterUserId,
-    p_current_user_id: currentUserIdForRpc,
-    p_custom_status_id: null,
-    p_stage_id: null,
-    p_deal_id: null,
-    p_lead_id: null,
-    p_date_start: null,
-    p_date_end: null,
-    p_sort_by: sortBy,
-    p_sort_direction: sortDirection,
-    p_limit: limit,
-    p_offset: offset,
+    p_current_user_id: currentUserId,
+    p_activity_type_id: i.activityType !== "all" ? i.activityType : null,
+    p_stage_id: i.stage !== "all" ? i.stage : null,
+    p_negotiation: i.negotiation !== "all" ? i.negotiation : null,
+    p_date_start: i.dateStart || null,
+    p_date_end: i.dateEnd || null,
+    p_today: i.today,
+    p_default_status_id: i.statuses.find((s) => s.is_default)?.id ?? null,
+    p_completed_status_ids: i.statuses.filter((s) => s.is_completed_status).map((s) => s.id),
   };
+}
+
+export function buildSearchTasksRpcParams(i: BuildSearchTasksParamsInput) {
+  return {
+    ...baseParams(i),
+    p_tab: i.tab || null,
+    p_sort_by: i.sortBy,
+    p_sort_direction: i.sortDirection,
+    p_limit: i.limit,
+    p_offset: i.offset,
+  };
+}
+export type SearchTasksRpcParams = ReturnType<typeof buildSearchTasksRpcParams>;
+
+export function buildSearchTasksCountsParams(i: TaskFilterInput) {
+  const pending = i.statuses.find((s) => s.name.toLowerCase().includes("pendente"));
+  const inProgress = i.statuses.find((s) => s.name.toLowerCase().includes("andamento"));
+  return {
+    ...baseParams(i),
+    p_status_ids: i.statuses.map((s) => s.id),
+    p_pending_status_id: pending?.id ?? null,
+    p_pending_is_default: !!pending?.is_default,
+    p_in_progress_status_id: inProgress?.id ?? null,
+  };
+}
+
+type RpcFn = (
+  fn: string,
+  params: Record<string, unknown>
+) => PromiseLike<{ data: unknown; error: { message: string } | null }>;
+
+/** Uma página: ids na ordem do servidor + total do mesmo predicado. */
+export async function fetchSearchTasksPage(rpc: RpcFn, params: SearchTasksRpcParams) {
+  const { data, error } = await rpc("search_tasks_page2", params);
+  if (error) throw error;
+  const rows = (data || []) as { id: string; total_count: number | string }[];
+  return { ids: rows.map((r) => r.id), total: rows.length ? Number(rows[0].total_count) || 0 : 0 };
+}
+
+/**
+ * Todas as correspondências (exportação), em lotes com o MESMO predicado e
+ * ordem, até esgotar — sem teto. Qualquer erro aborta tudo.
+ */
+export async function fetchAllSearchTaskIds(
+  rpc: RpcFn,
+  params: SearchTasksRpcParams,
+  batchSize = 500
+): Promise<string[]> {
+  const ids: string[] = [];
+  for (let offset = 0; ; offset += batchSize) {
+    const page = await fetchSearchTasksPage(rpc, { ...params, p_limit: batchSize, p_offset: offset });
+    ids.push(...page.ids);
+    if (page.ids.length < batchSize || ids.length >= page.total) break;
+  }
+  return ids;
+}
+
+export async function fetchSearchTasksCounts(rpc: RpcFn, params: ReturnType<typeof buildSearchTasksCountsParams>) {
+  const { data, error } = await rpc("search_tasks_counts", params);
+  if (error) throw error;
+  const map: Record<string, number> = {};
+  for (const r of (data || []) as { key: string; n: number | string }[]) map[r.key] = Number(r.n) || 0;
+  return map;
 }

@@ -103,7 +103,14 @@ import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
-import { buildSearchTasksRpcParams } from "@/lib/tasks/searchTasksRpcParams";
+import {
+  buildSearchTasksRpcParams,
+  buildSearchTasksCountsParams,
+  fetchSearchTasksPage,
+  fetchAllSearchTaskIds,
+  fetchSearchTasksCounts,
+  type TaskFilterInput,
+} from "@/lib/tasks/searchTasksRpcParams";
 import { fetchInBatches } from "@/lib/tasks/fetchInBatches";
 import { ptBR } from "date-fns/locale";
 
@@ -170,6 +177,37 @@ interface Task {
 
 type SortOption = "priority" | "due_date" | "created_at" | "responsible" | "stage";
 type SortDirection = "asc" | "desc";
+
+const TASKS_SELECT = `
+            *,
+            clients:client_id (id, full_name),
+            deals:deal_id (
+              id, 
+              title, 
+              client_id,
+              lead_id,
+              contact_name,
+              contact_phone,
+              stage_id,
+              stage:deal_stages(id, name, color),
+              client:clients(id, full_name, phone_e164),
+              lead:leads(id, full_name, phone)
+            ),
+            leads:lead_id (id, full_name),
+            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url, is_active),
+            activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
+          `;
+
+/** Hidrata linhas completas na ordem dos ids, em lotes de 150, propagando erros. */
+async function hydrateTasks(ids: string[]): Promise<Task[]> {
+  if (ids.length === 0) return [];
+  const rows = await fetchInBatches<Task>(ids, 150, async (batchIds) => {
+    const { data, error } = await supabase.from("internal_tasks").select(TASKS_SELECT).in("id", batchIds);
+    return { data: data as Task[] | null, error };
+  });
+  const byId = new Map(rows.map((t) => [t.id, t]));
+  return ids.map((id) => byId.get(id)).filter(Boolean) as Task[];
+}
 
 const PRIORITY_ORDER: Record<string, number> = {
   urgent: 0,
@@ -246,6 +284,8 @@ export default function Tasks() {
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [loadedChunks, setLoadedChunks] = useState(1);
+  // Kanban com busca: quantas tarefas já reveladas (continuação "Carregar mais").
+  const [kanbanSearchLimit, setKanbanSearchLimit] = useState(200);
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [showSlowLoadMessage, setShowSlowLoadMessage] = useState(false);
   const [tasksFiltersOpen, setTasksFiltersOpen] = useState(false);
@@ -295,6 +335,35 @@ export default function Tasks() {
 
   // Custom task statuses
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
+  const statusesKey = customStatuses.map((s: any) => `${s.id}:${s.is_default ? 1 : 0}${s.is_completed_status ? 1 : 0}`).join(",");
+
+  // Filtros da tela mapeados para o predicado do servidor (busca ativa).
+  const buildFilterInput = (sectorActivityTypeIds: string[] | null, search: string): TaskFilterInput => ({
+    accountId: currentUser?.account_id ?? "",
+    search,
+    sectorId: currentSector?.id ?? null,
+    sectorActivityTypeIds,
+    isHistoricalUserFilter,
+    filterUser,
+    currentUserId: currentUser?.id ?? null,
+    activityType: filterActivityType,
+    stage: filterStage,
+    negotiation: filterLead,
+    dateStart: filterDateStart,
+    dateEnd: filterDateEnd,
+    today: format(new Date(), "yyyy-MM-dd"),
+    statuses: customStatuses as any,
+  });
+  const loadSectorActivityTypeIds = async (): Promise<string[] | null> => {
+    if (!currentSector?.id) return null;
+    const { data, error } = await supabase
+      .from("activity_types")
+      .select("id")
+      .eq("sector_id", currentSector.id)
+      .eq("is_active", true);
+    if (error) throw error;
+    return (data || []).map((t: any) => t.id);
+  };
   
   // Deal stages and deal handlers for DealDetailSheet
   const { deals: allDeals, stages: dealStages, moveDeal, markAsWon, markAsLost, reopenDeal } = useDeals();
@@ -306,7 +375,15 @@ export default function Tasks() {
 
   // Fetch tasks with React Query
   const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks } = useQuery({
-    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch, serverSearch ? currentPage : loadedChunks, serverSearch ? pageSize : null],
+    queryKey: [
+      "internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch,
+      serverSearch ? currentPage : loadedChunks, serverSearch ? pageSize : null,
+      // Com busca, filtros/aba/ordem/modo são aplicados no servidor e entram na chave.
+      serverSearch
+        ? [viewMode, viewMode === "kanban" ? kanbanSearchLimit : activeTab, filterActivityType, filterStage, filterLead,
+           filterDateStart, filterDateEnd, sortBy, sortDirection, statusesKey]
+        : null,
+    ],
     queryFn: async () => {
       // First, get activity type IDs for the current sector to filter server-side
       let sectorActivityTypeIds: string[] | null = null;
@@ -324,25 +401,6 @@ export default function Tasks() {
       // necessária na busca porque ela agora roda via RPC parametrizada).
       const safeSearch = serverSearch ? serverSearch.trim() : "";
 
-      const TASKS_SELECT = `
-            *,
-            clients:client_id (id, full_name),
-            deals:deal_id (
-              id, 
-              title, 
-              client_id,
-              lead_id,
-              contact_name,
-              contact_phone,
-              stage_id,
-              stage:deal_stages(id, name, color),
-              client:clients(id, full_name, phone_e164),
-              lead:leads(id, full_name, phone)
-            ),
-            leads:lead_id (id, full_name),
-            assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url, is_active),
-            activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
-          `;
 
       // Busca em lotes de IDs já filtrada no banco (RPC `search_tasks_page`),
       // trocando a antiga concatenação de até 50000 IDs de clients/leads/deals
@@ -355,40 +413,19 @@ export default function Tasks() {
         // (p_limit = pageSize, p_offset = (page-1) * pageSize) em vez de
         // varrer até 200.000 ids antes de montar a lista. O total exato
         // (para o pager) vem da mesma RPC, na coluna total_count.
+        const isKanban = viewMode === "kanban";
         const rpcParams = buildSearchTasksRpcParams({
-          accountId: currentUser?.account_id ?? "",
-          search: safeSearch,
-          sectorActivityTypeIds,
-          isHistoricalUserFilter,
-          filterUser,
-          currentUserId: currentUser?.id ?? null,
-          limit: pageSize,
-          offset: (currentPage - 1) * pageSize,
+          ...buildFilterInput(sectorActivityTypeIds, safeSearch),
+          // O Kanban mostra todas as colunas: não herda a aba da lista.
+          tab: isKanban ? null : activeTab,
+          sortBy,
+          sortDirection,
+          limit: isKanban ? kanbanSearchLimit : pageSize,
+          offset: isKanban ? 0 : (currentPage - 1) * pageSize,
         });
-        const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
-        if (error) throw error;
-        const rows = (data || []) as { id: string; total_count: number }[];
-        const total = rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
-        const pageIds = rows.map((r) => r.id);
+        const { ids: pageIds, total } = await fetchSearchTasksPage(supabase.rpc as any, rpcParams);
 
-        // Busca as linhas completas (com os joins atuais) apenas para os
-        // ids da página atual, preservando a ordem retornada pela RPC.
-        const byId = new Map<string, Task>();
-        if (pageIds.length > 0) {
-          // Hidratação em lotes de 150 ids (em vez de um único .in(...) com
-          // até centenas/milhares de UUIDs), propagando o erro do primeiro
-          // lote que falhar (ver fetchInBatches).
-          const taskRows = await fetchInBatches<Task>(pageIds, 150, async (batchIds) => {
-            const { data, error } = await supabase
-              .from("internal_tasks")
-              .select(TASKS_SELECT)
-              .in("id", batchIds);
-            return { data: data as Task[] | null, error };
-          });
-          taskRows.forEach((t) => byId.set(t.id, t));
-        }
-        const orderedRows = pageIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
-
+        const orderedRows = await hydrateTasks(pageIds);
         return { rows: orderedRows, hasMore: false, totalFromSearch: total };
       }
 
@@ -447,8 +484,9 @@ export default function Tasks() {
   const hasMoreTasks = !!tasksResult?.hasMore;
 
   // Total real de tarefas no histórico (mesmos filtros de servidor), só contagem.
-  const { data: totalHistoryCount } = useQuery({
+  const { data: totalHistoryCountRaw } = useQuery({
     queryKey: ["internal-tasks-total", filterUser, currentUser?.id, currentSector?.id, serverSearch],
+    enabled: !serverSearch,
     queryFn: async () => {
       let sectorActivityTypeIds: string[] = [];
       if (currentSector?.id) {
@@ -461,28 +499,6 @@ export default function Tasks() {
       }
 
       const safe = serverSearch ? serverSearch.trim() : "";
-
-      // Com busca ativa, a contagem usa a MESMA RPC `search_tasks_page`
-      // (mesmo predicado da listagem), em vez de um count(*) com .limit(1000)
-      // nos IDs de clients/leads/deals — que subestimava o total em buscas
-      // populares. Basta 1 linha (o total_count vem em todas via window
-      // function), então pedimos p_limit = 1.
-      if (safe) {
-        const rpcParams = buildSearchTasksRpcParams({
-          accountId: currentUser?.account_id ?? "",
-          search: safe,
-          sectorActivityTypeIds,
-          isHistoricalUserFilter,
-          filterUser,
-          currentUserId: currentUser?.id ?? null,
-          limit: 1,
-          offset: 0,
-        });
-        const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
-        if (error) throw error;
-        const rows = (data || []) as { id: string; total_count: number }[];
-        return rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
-      }
 
       let q = supabase.from("internal_tasks").select("id", { count: "exact", head: true });
 
@@ -500,6 +516,22 @@ export default function Tasks() {
       return count ?? 0;
     },
     staleTime: 60000,
+  });
+
+  // Com busca, o total vem da própria página (mesmo predicado, aba e filtros).
+  const totalHistoryCount = serverSearch ? tasksResult?.totalFromSearch : totalHistoryCountRaw;
+
+  // Contagens por aba e indicadores com busca: mesmo predicado no servidor,
+  // sobre todas as correspondências (não só a página carregada).
+  const { data: searchCounts } = useQuery({
+    queryKey: ["internal-tasks-search-counts", currentUser?.account_id, currentSector?.id, serverSearch, filterUser,
+      filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, statusesKey],
+    enabled: !!serverSearch && !!currentUser?.account_id && !statusesLoading,
+    queryFn: async () => {
+      const ids = await loadSectorActivityTypeIds();
+      return fetchSearchTasksCounts(supabase.rpc as any, buildSearchTasksCountsParams(buildFilterInput(ids, serverSearch)));
+    },
+    staleTime: 30000,
   });
 
   // IDs usados tanto nas abas quanto nas contagens exatas do histórico.
@@ -878,7 +910,9 @@ export default function Tasks() {
 
 
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
-  const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
+  // Com busca, `tasks` já chega filtrado, ordenado e paginado pelo servidor
+  // (search_tasks_page2): nenhum filtro local é reaplicado depois da página.
+  const baseFilteredTasks = useMemo(() => serverSearch ? tasks : tasks.filter((task) => {
     // Search filter
     const matchesSearch = matchesTaskSearch(task);
     
@@ -942,7 +976,7 @@ export default function Tasks() {
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
-  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [serverSearch, tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
@@ -993,7 +1027,7 @@ export default function Tasks() {
   const selectedLeadOption = leadOptions.find((o) => o.key === filterLead) || null;
 
   // Final filtered tasks - applies tab filter on top of base filters
-  const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
+  const filteredTasks = useMemo(() => serverSearch ? baseFilteredTasks : baseFilteredTasks.filter((task) => {
     const defaultStatus = customStatuses.find(s => s.is_default);
     const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
 
@@ -1018,10 +1052,11 @@ export default function Tasks() {
     if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
 
     return false;
-  }), [baseFilteredTasks, activeTab, customStatuses]);
+  }), [serverSearch, baseFilteredTasks, activeTab, customStatuses]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => {
+    if (serverSearch) return filteredTasks; // ordem global já aplicada no servidor
     const sorted = [...filteredTasks].sort((a, b) => {
       let comparison = 0;
       
@@ -1059,7 +1094,7 @@ export default function Tasks() {
     });
     
     return sorted;
-  }, [filteredTasks, sortBy, sortDirection]);
+  }, [serverSearch, filteredTasks, sortBy, sortDirection]);
 
   // Pagination
   // Com busca ativa (serverSearch), `tasks` já chega paginado pelo servidor
@@ -1085,7 +1120,26 @@ export default function Tasks() {
 
   const handleExportTasks = useCallback(async () => {
     if (!canExportTasks) return;
-    if (sortedTasks.length === 0) {
+    let source: Task[] = sortedTasks;
+    if (serverSearch) {
+      // Com busca, a lista local é só a página: exporta TODAS as correspondências
+      // em lotes com o mesmo predicado/aba/ordem; qualquer lote com erro aborta.
+      try {
+        const ids = await fetchAllSearchTaskIds(
+          supabase.rpc as any,
+          buildSearchTasksRpcParams({
+            ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch),
+            tab: activeTab, sortBy, sortDirection, limit: 500, offset: 0,
+          })
+        );
+        source = await hydrateTasks(ids);
+      } catch (error) {
+        console.error("Erro ao exportar tarefas:", error);
+        toast.error("Erro ao carregar todas as tarefas para exportar. Nada foi exportado.");
+        return;
+      }
+    }
+    if (source.length === 0) {
       toast.error("Nenhuma tarefa para exportar com os filtros atuais");
       return;
     }
@@ -1097,7 +1151,7 @@ export default function Tasks() {
         if (task.completed_at) return "Concluído";
         return STATUS_CONFIG[task.status]?.label || task.status;
       };
-      const rows = sortedTasks.map((task) => ({
+      const rows = source.map((task) => ({
         "Título": task.title,
         "Descrição": task.description || "",
         "Status": statusName(task),
@@ -1124,17 +1178,24 @@ export default function Tasks() {
       console.error("Erro ao exportar tarefas:", error);
       toast.error("Erro ao gerar a planilha");
     }
-  }, [canExportTasks, sortedTasks, customStatuses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canExportTasks, sortedTasks, customStatuses, serverSearch, activeTab, sortBy, sortDirection, filterUser, filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, currentSector?.id, currentUser?.account_id]);
 
 
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection]);
+    setKanbanSearchLimit(200);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection, viewMode]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
+    if (serverSearch) {
+      const counts: Record<string, number> = {};
+      customStatuses.forEach((st) => { counts[st.id] = searchCounts?.[st.id] ?? 0; });
+      return counts;
+    }
     const counts: Record<string, number> = {};
     const defaultStatus = customStatuses.find(s => s.is_default);
     customStatuses.forEach(status => {
@@ -1148,7 +1209,7 @@ export default function Tasks() {
       }).length;
     });
     return counts;
-  }, [baseFilteredTasks, customStatuses]);
+  }, [serverSearch, searchCounts, baseFilteredTasks, customStatuses]);
 
   // For stats cards - uses baseFilteredTasks for dynamic filtering with applied filters
   const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
@@ -1203,6 +1264,15 @@ export default function Tasks() {
       filterLead !== "all" ||
       searchTerm.trim() !== "";
 
+    if (serverSearch) {
+      return {
+        pendingCount: searchCounts?.pending ?? 0,
+        overdueCount: searchCounts?.overdue ?? 0,
+        inProgressCount: searchCounts?.in_progress ?? 0,
+        doneCount: searchCounts?.done ?? 0,
+      };
+    }
+
     if (!hasAnyFilter && accountTaskTotals) {
       return {
         pendingCount: accountTaskTotals.pending,
@@ -1225,6 +1295,8 @@ export default function Tasks() {
     filterLead,
     searchTerm,
     accountTaskTotals,
+    serverSearch,
+    searchCounts,
   ]);
 
 
@@ -2376,7 +2448,7 @@ export default function Tasks() {
       {viewMode === "kanban" ? (
         <>
           <TaskKanban
-            tasks={tasks.filter((task) => {
+            tasks={serverSearch ? tasks : tasks.filter((task) => {
               const matchesSearch = matchesTaskSearch(task);
               
               const matchesUser = filterUser === "all" || 
@@ -2412,8 +2484,20 @@ export default function Tasks() {
             </div>
           )}
           {serverSearch && (
-            <div className="py-2 text-center text-xs text-muted-foreground">
-              Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).
+            <div className="flex flex-col items-center gap-1 py-3">
+              {(totalHistoryCount ?? 0) > tasks.length && (
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={fetchingTasks}
+                  onClick={() => setKanbanSearchLimit((n) => n + 200)}
+                >
+                  {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                Exibindo {tasks.length} de {totalHistoryCount ?? tasks.length} tarefa(s) encontrada(s) na busca.
+              </span>
             </div>
           )}
         </>
