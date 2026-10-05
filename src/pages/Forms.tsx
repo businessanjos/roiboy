@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
@@ -36,6 +36,8 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import {
   Plus,
   MoreHorizontal,
@@ -1245,6 +1247,8 @@ export default function Forms() {
     return <LoadingScreen message="Carregando formulários..." fullScreen={false} />;
   }
 
+  const filteredForms = forms.filter((form) => filterSectorId === "all" || form.sector_id === filterSectorId);
+
   return (
     <div className="p-4 md:p-6 space-y-6">
       {/* Header */}
@@ -1287,7 +1291,7 @@ export default function Forms() {
       </div>
 
       {/* Forms List */}
-      {forms.length === 0 ? (
+      {filteredForms.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12">
             <FileText className="h-12 w-12 text-muted-foreground mb-4" />
@@ -1317,8 +1321,7 @@ export default function Forms() {
 
           {/* Form Rows */}
           <div className="divide-y">
-            {forms
-              .filter((form) => filterSectorId === "all" || form.sector_id === filterSectorId)
+            {formsPg.items
               .map((form, index) => {
               // Get sector info for badge color
               const formSector = sectors.find(s => s.id === form.sector_id);
@@ -1469,6 +1472,7 @@ export default function Forms() {
               );
             })}
           </div>
+          <PagerFor state={formsPg} itemLabel="formulários" />
         </div>
       )}
 

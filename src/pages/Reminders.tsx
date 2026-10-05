@@ -247,20 +247,28 @@ export default function Reminders() {
     enabled: !!selectedEventId,
   });
 
-  // Fetch campaigns
+  // Fetch campaigns (carregamento completo em lotes, sem truncar)
   const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
     queryKey: ["reminder-campaigns"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("reminder_campaigns")
-        .select(`
-          *,
-          events(title)
-        `)
-        .order("created_at", { ascending: false })
-        .limit(50);
-      if (error) throw error;
-      return data as Campaign[];
+      const BATCH = 500;
+      let all: Campaign[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("reminder_campaigns")
+          .select(`
+            *,
+            events(title)
+          `)
+          .order("created_at", { ascending: false })
+          .range(from, from + BATCH - 1);
+        if (error) throw error;
+        all = all.concat((data || []) as Campaign[]);
+        if (!data || data.length < BATCH) break;
+        from += BATCH;
+      }
+      return all;
     },
   });
 
