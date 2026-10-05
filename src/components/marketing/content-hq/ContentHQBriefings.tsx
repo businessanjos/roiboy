@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Sparkles, Loader2, Plus, Save } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "@/hooks/use-toast";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export function ContentHQBriefings({ talent }: { talent: Talent }) {
   const { data: pillars = [] } = usePillars(talent.id);
@@ -21,6 +23,7 @@ export function ContentHQBriefings({ talent }: { talent: Talent }) {
   const [editing, setEditing] = useState<any | null>(null);
 
   const selected = pieces.find(p => p.id === selectedId);
+  const pg = usePagedList(pieces, { resetKey: talent.id, defaultPageSize: 20 });
 
   const handleGeneratePautas = async () => {
     if (!pillarId) { toast({ title: "Escolha um pilar" }); return; }
@@ -76,7 +79,7 @@ export function ContentHQBriefings({ talent }: { talent: Talent }) {
       <Card className="p-4">
         <h3 className="font-semibold mb-3">Pautas — {talent.name}</h3>
         <div className="space-y-2 max-h-[400px] overflow-y-auto">
-          {pieces.map(p => {
+          {pg.items.map(p => {
             const pl = PLATFORMS.find(x => x.id === p.platform);
             return (
               <div key={p.id} className={`p-3 rounded border cursor-pointer ${selectedId === p.id ? "border-primary bg-primary/5" : "hover:bg-muted/50"}`} onClick={() => setSelectedId(p.id)}>
@@ -92,6 +95,7 @@ export function ContentHQBriefings({ talent }: { talent: Talent }) {
           })}
           {pieces.length === 0 && <p className="text-sm text-muted-foreground text-center py-6">Nenhuma pauta ainda. Use o gerador acima.</p>}
         </div>
+        {pieces.length > 0 && <PagerFor state={pg} itemLabel="pautas" />}
       </Card>
 
       {selected && !editing && (

@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { TrendingUp, Sparkles, ExternalLink, Archive, Trash2, Loader2, Flame, Eye, Heart, MessageCircle, Music2, Globe, Target, Wand2, CheckCircle2, AlertCircle, Instagram } from "lucide-react";
 import { useMarketingTrends } from "@/hooks/useMarketingTrends";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
 import { useMarketingBrandVoice } from "@/hooks/useMarketingBrandVoice";
 import { useMarketingPersona } from "@/hooks/useMarketingPersona";
@@ -126,6 +128,7 @@ export function TrendsRadarTab() {
   };
 
   const filtered = trends.filter((t) => sourceFilter === "all" || t.source === sourceFilter);
+  const pg = usePagedList(filtered, { resetKey: [sourceFilter], isLoading });
 
   return (
     <div className="space-y-6">
@@ -317,7 +320,7 @@ export function TrendsRadarTab() {
         </Card>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filtered.map((trend) => (
+          {pg.items.map((trend) => (
             <Card key={trend.id} className="overflow-hidden hover:shadow-md transition-shadow flex flex-col">
               {trend.thumbnail_url && (
                 <div className="aspect-[9/16] max-h-[280px] overflow-hidden bg-muted relative">
