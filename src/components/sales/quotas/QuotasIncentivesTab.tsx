@@ -32,7 +32,7 @@ export function QuotasIncentivesTab() {
   return (
     <Tabs value={tab} onValueChange={setTab} className="space-y-4">
       <div className={isMobile ? "flex items-center gap-2" : "flex items-center justify-between gap-2 flex-wrap"}>
-        <TabsList className={isMobile ? "h-12 flex-1 min-w-0 grid grid-cols-3 rounded-xl [&>button]:h-10" : undefined}>
+        <TabsList className={isMobile ? "h-[52px] flex-1 min-w-0 grid grid-cols-3 rounded-xl [&>button]:h-11" : undefined}>
           <TabsTrigger value="goals" className="gap-1.5">
             <Crosshair className="h-4 w-4" />
             Meta
