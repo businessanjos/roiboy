@@ -64,6 +64,25 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
+
+/** Carrega todas as páginas via .range() até não haver mais linhas (evita truncar com .limit()). */
+async function fetchAllPages<T>(
+  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  pageSize = 500,
+): Promise<T[]> {
+  const all: T[] = [];
+  let from = 0;
+  while (true) {
+    const { data, error } = await build(from, from + pageSize - 1);
+    if (error) throw error;
+    const rows = data ?? [];
+    all.push(...rows);
+    if (rows.length < pageSize) break;
+    from += pageSize;
+  }
+  return all;
+}
+
 interface UnifiedLog {
   id: string;
   user_id: string | null;
@@ -251,25 +270,27 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
       // 1) Log de auditoria existente (tarefas, eventos, pessoas...)
       if (wantsAudit) {
-        let query = supabase
-          .from("audit_logs")
-          .select("*")
-          .gte("created_at", sinceIso)
-          .order("created_at", { ascending: false })
-          .limit(500);
+        const auditRows = await fetchAllPages<any>((from, to) => {
+          let query = supabase
+            .from("audit_logs")
+            .select("*")
+            .gte("created_at", sinceIso)
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to);
 
-        if (accountId) query = query.eq("account_id", accountId);
-        if (actionFilter !== "all") query = query.eq("action", actionFilter);
-        if (isCommercial) {
-          // Foco no comercial: só tarefas/atividades de vendas
-          query = query.eq("entity_type", "task");
-        } else if (entityFilter !== "all") {
-          query = query.eq("entity_type", entityFilter);
-        }
+          if (accountId) query = query.eq("account_id", accountId);
+          if (actionFilter !== "all") query = query.eq("action", actionFilter);
+          if (isCommercial) {
+            // Foco no comercial: só tarefas/atividades de vendas
+            query = query.eq("entity_type", "task");
+          } else if (entityFilter !== "all") {
+            query = query.eq("entity_type", entityFilter);
+          }
+          return query;
+        });
 
-        const { data, error } = await query;
-        if (error) throw error;
-        (data ?? []).forEach((row: any) => {
+        auditRows.forEach((row: any) => {
           // Ignora rotinas automáticas do sistema (não são ações de pessoas)
           if (NOISE_ACTIONS.has(row.action) || NOISE_ENTITIES.has(row.entity_type)) return;
           results.push({
@@ -299,21 +320,22 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             : [];
 
         if (typeFilter.length > 0) {
-          let activityQuery = supabase
-            .from("deal_activities")
-            .select("id, type, title, content, old_value, new_value, created_at, user_id, deal_id, deals(title)")
-            .in("type", typeFilter)
-            .not("user_id", "is", null)
-            .gte("created_at", sinceIso)
-            .order("created_at", { ascending: false })
-            .limit(500);
+          const activities = await fetchAllPages<any>((from, to) => {
+            let activityQuery = supabase
+              .from("deal_activities")
+              .select("id, type, title, content, old_value, new_value, created_at, user_id, deal_id, deals(title)")
+              .in("type", typeFilter)
+              .not("user_id", "is", null)
+              .gte("created_at", sinceIso)
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to);
 
-          if (accountId) activityQuery = activityQuery.eq("account_id", accountId);
+            if (accountId) activityQuery = activityQuery.eq("account_id", accountId);
+            return activityQuery;
+          });
 
-          const { data: activities, error: activityError } = await activityQuery;
-          if (activityError) throw activityError;
-
-          (activities ?? []).forEach((row: any) => {
+          activities.forEach((row: any) => {
             results.push({
               id: `deal-activity-${row.id}`,
               user_id: row.user_id,
@@ -337,21 +359,22 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
         // 3) Negócios excluídos (autor gravado em deleted_by)
         if (actionFilter === "all" || actionFilter === "delete") {
-          let deletedQuery = supabase
-            .from("deals")
-            .select("id, title, deleted_at, deleted_by")
-            .not("deleted_at", "is", null)
-            .not("deleted_by", "is", null)
-            .gte("deleted_at", sinceIso)
-            .order("deleted_at", { ascending: false })
-            .limit(300);
+          const deleted = await fetchAllPages<any>((from, to) => {
+            let deletedQuery = supabase
+              .from("deals")
+              .select("id, title, deleted_at, deleted_by")
+              .not("deleted_at", "is", null)
+              .not("deleted_by", "is", null)
+              .gte("deleted_at", sinceIso)
+              .order("deleted_at", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to);
 
-          if (accountId) deletedQuery = deletedQuery.eq("account_id", accountId);
+            if (accountId) deletedQuery = deletedQuery.eq("account_id", accountId);
+            return deletedQuery;
+          });
 
-          const { data: deleted, error: deletedError } = await deletedQuery;
-          if (deletedError) throw deletedError;
-
-          (deleted ?? []).forEach((row: any) => {
+          deleted.forEach((row: any) => {
             results.push({
               id: `deal-deleted-${row.id}`,
               user_id: row.deleted_by,
@@ -370,20 +393,21 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
         // 4) Negócios criados (autor gravado a partir de agora em created_by)
         if (actionFilter === "all" || actionFilter === "create") {
-          let createdQuery = supabase
-            .from("deals")
-            .select("id, title, created_at, created_by")
-            .not("created_by", "is", null)
-            .gte("created_at", sinceIso)
-            .order("created_at", { ascending: false })
-            .limit(300);
+          const created = await fetchAllPages<any>((from, to) => {
+            let createdQuery = supabase
+              .from("deals")
+              .select("id, title, created_at, created_by")
+              .not("created_by", "is", null)
+              .gte("created_at", sinceIso)
+              .order("created_at", { ascending: false })
+              .order("id", { ascending: false })
+              .range(from, to);
 
-          if (accountId) createdQuery = createdQuery.eq("account_id", accountId);
+            if (accountId) createdQuery = createdQuery.eq("account_id", accountId);
+            return createdQuery;
+          });
 
-          const { data: created, error: createdError } = await createdQuery;
-          if (createdError) throw createdError;
-
-          (created ?? []).forEach((row: any) => {
+          created.forEach((row: any) => {
             results.push({
               id: `deal-created-${row.id}`,
               user_id: row.created_by,

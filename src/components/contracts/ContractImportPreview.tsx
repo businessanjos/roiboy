@@ -10,6 +10,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { AlertTriangle, Check, Upload, Users, FileText, Phone, CreditCard, Building2, Loader2, UserPlus, Filter, CircleCheck, CircleX } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const CONTRACT_STATUS_OPTIONS = [
   { value: "keep", label: "Manter do CSV" },
@@ -111,6 +113,8 @@ export function ContractImportPreview({
     }
     return filtered;
   }, [rows, showOnlyDuplicates, showOnlyErrors, showOnlyNew]);
+
+  const pg = usePagedList(filteredRows, { resetKey: [showOnlyDuplicates, showOnlyErrors, showOnlyNew] });
 
   const toggleRow = (lineNumber: number) => {
     const row = rows.find(r => r.lineNumber === lineNumber);
@@ -345,7 +349,7 @@ export function ContractImportPreview({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredRows.map((row) => {
+                {pg.items.map((row) => {
                   const isSelected = selectedRows.has(row.lineNumber);
                   const hasDuplicates = row.duplicates.length > 0;
                   
@@ -470,6 +474,7 @@ export function ContractImportPreview({
               </TableBody>
             </Table>
           </div>
+          <PagerFor state={pg} itemLabel="registros" />
         </div>
 
         <DialogFooter className="gap-2 flex-shrink-0">

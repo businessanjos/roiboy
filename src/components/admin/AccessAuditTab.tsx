@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { sectors, SectorId } from "@/config/sectors";
@@ -69,6 +71,11 @@ export function AccessAuditTab() {
     () => users.find((u) => u.id === selectedUserId) || null,
     [users, selectedUserId]
   );
+
+  const pgUsers = usePagedList(filteredUsers, {
+    resetKey: [search],
+    isLoading: loadingUsers,
+  });
 
   const { data: sectorAccess = [] } = useQuery({
     queryKey: ["audit-sector-access", selectedUserId],
@@ -251,7 +258,7 @@ export function AccessAuditTab() {
                 {!loadingUsers && filteredUsers.length === 0 && (
                   <p className="p-4 text-sm text-muted-foreground">Nenhum usuário encontrado.</p>
                 )}
-                {filteredUsers.map((u) => (
+                {pgUsers.items.map((u) => (
                   <button
                     key={u.id}
                     onClick={() => setSelectedUserId(u.id)}
@@ -280,6 +287,9 @@ export function AccessAuditTab() {
                 ))}
               </div>
             </ScrollArea>
+            <div className="px-4 pb-3 pt-2 border-t">
+              <PagerFor state={pgUsers} itemLabel="usuários" />
+            </div>
           </CardContent>
         </Card>
 
