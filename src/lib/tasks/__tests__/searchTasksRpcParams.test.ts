@@ -67,4 +67,16 @@ describe("buildSearchTasksRpcParams", () => {
     expect(params.p_sort_by).toBe("created_at");
     expect(params.p_sort_direction).toBe("desc");
   });
+
+  it("página 61 com tamanho de página 20 gera p_offset 1200 e p_limit 20", () => {
+    const pageSize = 20;
+    const page = 61;
+    const params = buildSearchTasksRpcParams({
+      ...base,
+      limit: pageSize,
+      offset: (page - 1) * pageSize,
+    });
+    expect(params.p_limit).toBe(20);
+    expect(params.p_offset).toBe(1200);
+  });
 });

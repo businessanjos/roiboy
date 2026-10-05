@@ -1,10 +1,19 @@
 import { useMemo, useState } from "react";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePaginationState } from "@/hooks/usePagedList";
+import { ListPagination } from "@/components/ui/list-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Accordion,
   AccordionContent,
@@ -159,6 +168,7 @@ export default function FinancialPluggyStatusPage() {
   const navigate = useNavigate();
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [showTechnical, setShowTechnical] = useState(false);
+  const [historyAccountId, setHistoryAccountId] = useState<string | null>(null);
 
   const { data: accounts, isLoading: loadingAccounts } = useQuery({
     queryKey: ["pluggy-status-accounts"],
@@ -218,13 +228,22 @@ export default function FinancialPluggyStatusPage() {
     enabled: accountIds.length > 0,
     queryFn: async () => {
       const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      const { data, error } = await supabase
-        .from("openfinance_sync_logs")
-        .select("transactions_imported")
-        .in("bank_account_id", accountIds)
-        .gte("started_at", since);
+      // Usa fetchAllRows (paginação por .range com ordenação estável) em vez de
+      // uma única query sem limite explícito: evita o truncamento silencioso de
+      // 1000 linhas imposto pelo PostgREST e propaga erro em vez de somar
+      // dados parciais como se fossem o total.
+      const { data, error } = await fetchAllRows<{ transactions_imported: number }>(
+        (from, to) =>
+          supabase
+            .from("openfinance_sync_logs")
+            .select("transactions_imported")
+            .in("bank_account_id", accountIds)
+            .gte("started_at", since)
+            .order("id", { ascending: true })
+            .range(from, to)
+      );
       if (error) throw error;
-      return (data ?? []).reduce((s, l: any) => s + (l.transactions_imported || 0), 0);
+      return data.reduce((s, l) => s + (l.transactions_imported || 0), 0);
     },
   });
 
@@ -272,7 +291,11 @@ export default function FinancialPluggyStatusPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["pluggy-status-accounts"] });
-      queryClient.invalidateQueries({ queryKey: ["pluggy-status-logs"] });
+      // Chaves reais usadas pelas queries desta página (o prefixo basta: o
+      // React Query invalida por correspondência parcial por padrão).
+      queryClient.invalidateQueries({ queryKey: ["pluggy-status-logs-per-account"] });
+      queryClient.invalidateQueries({ queryKey: ["pluggy-status-imported-24h"] });
+      queryClient.invalidateQueries({ queryKey: ["pluggy-status-history"] });
     },
     onError: (err: Error) => {
       toast({
@@ -537,6 +560,12 @@ export default function FinancialPluggyStatusPage() {
                         >
                           Ver extrato
                         </Button>
+                        <Button
+                          variant="ghost"
+                          onClick={() => setHistoryAccountId(a.id)}
+                        >
+                          Ver histórico
+                        </Button>
                       </div>
 
                       {/* History timeline */}
@@ -647,6 +676,127 @@ export default function FinancialPluggyStatusPage() {
           </Accordion>
         )}
       </div>
+      <SyncHistoryDialog
+        accountId={historyAccountId}
+        accountName={(accounts ?? []).find((a) => a.id === historyAccountId)?.name ?? ""}
+        open={historyAccountId !== null}
+        onOpenChange={(open) => !open && setHistoryAccountId(null)}
+      />
     </TooltipProvider>
+  );
+}
+
+const HISTORY_PAGE_SIZE = 20 as const;
+
+/**
+ * Histórico completo (paginado no servidor) de sincronizações de uma conta.
+ * O resumo exibido no accordion mostra só os 8 logs mais recentes; aqui o
+ * usuário navega por todo o histórico via count: 'exact' + range().
+ */
+function SyncHistoryDialog({
+  accountId,
+  accountName,
+  open,
+  onOpenChange,
+}: {
+  accountId: string | null;
+  accountName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}) {
+  // Total real (atualizado a cada resposta) para que a paginação não "pisque"
+  // de volta à página 1 enquanto a contagem ainda não chegou.
+  const [total, setTotal] = useState(0);
+  const pg = usePaginationState(total, {
+    resetKey: accountId,
+    defaultPageSize: HISTORY_PAGE_SIZE,
+  });
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["pluggy-status-history", accountId, pg.currentPage, pg.pageSize],
+    enabled: open && !!accountId,
+    queryFn: async () => {
+      const { data, error, count } = await supabase
+        .from("openfinance_sync_logs")
+        .select(
+          "id,bank_account_id,sync_type,status,transactions_imported,error_message,started_at,finished_at,provider",
+          { count: "exact" }
+        )
+        .eq("bank_account_id", accountId as string)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(pg.from, pg.to);
+      if (error) throw error;
+      const result = { rows: (data ?? []) as SyncLogRow[], total: count ?? 0 };
+      setTotal(result.total);
+      return result;
+    },
+  });
+
+  const rows = data?.rows ?? [];
+  const pgWithTotal = pg;
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Histórico de sincronizações · {accountName}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-3 max-h-[60vh] overflow-y-auto">
+          {isLoading ? (
+            <div className="flex justify-center py-8">
+              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+            </div>
+          ) : rows.length === 0 ? (
+            <div className="text-sm text-muted-foreground text-center py-8">
+              Nenhum registro encontrado.
+            </div>
+          ) : (
+            <ol className="relative border-l border-border ml-2 space-y-3">
+              {rows.map((l) => {
+                const ok = l.status === "success";
+                const err = l.status === "error";
+                return (
+                  <li key={l.id} className="ml-4">
+                    <span
+                      className={`absolute -left-1.5 h-3 w-3 rounded-full border-2 border-background ${
+                        ok ? "bg-success" : err ? "bg-destructive" : "bg-muted-foreground"
+                      }`}
+                    />
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1">
+                      <span className="text-sm font-medium">{friendlySyncType(l.sync_type)}</span>
+                      <span className="text-xs text-muted-foreground">{formatFull(l.started_at)}</span>
+                      {ok && l.transactions_imported > 0 && (
+                        <Badge
+                          variant="outline"
+                          className="bg-success/10 text-success-strong dark:text-success border-success/30"
+                        >
+                          {l.transactions_imported} novas
+                        </Badge>
+                      )}
+                      {err && <Badge variant="destructive">Falhou</Badge>}
+                    </div>
+                    {err && (
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {friendlyError(l.error_message)}
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ol>
+          )}
+        </div>
+        <ListPagination
+          currentPage={pgWithTotal.currentPage}
+          totalPages={pgWithTotal.totalPages}
+          totalItems={pgWithTotal.totalItems}
+          pageSize={pgWithTotal.pageSize}
+          onPageChange={pg.handlePageChange}
+          onPageSizeChange={pg.handlePageSizeChange}
+          itemLabel="registros"
+        />
+      </DialogContent>
+    </Dialog>
   );
 }

@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { buildDeletedDealsOrFilter } from "./deletedDealsFilter";
 
 interface DeletedDeal {
   id: string;
@@ -56,12 +57,6 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
   }, [search]);
 
   const pg = usePaginationState(totalCount, { resetKey: debouncedSearch, isLoading: loading });
-
-  // Escapa termo para uso seguro dentro da gramática do .or()/.ilike() do
-  // PostgREST: vírgula e parênteses quebram a lista de condições, '%' e '_'
-  // são coringas do ILIKE e precisam ser tratados como texto literal.
-  const escapeIlikeTerm = (term: string) =>
-    term.replace(/[\\%_,()]/g, (c) => `\\${c}`);
 
   // Resolve, em lotes, os ids de usuários (responsável ou quem excluiu) cujo
   // nome combina com o termo buscado — sem isso a busca por responsável ou
@@ -107,27 +102,12 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .not('deleted_at', 'is', null);
 
       if (term) {
-        const safeTerm = escapeIlikeTerm(term);
-        const digits = term.replace(/\D/g, "");
-        const orParts = [
-          `title.ilike.%${safeTerm}%`,
-          `contact_name.ilike.%${safeTerm}%`,
-          `contact_email.ilike.%${safeTerm}%`,
-        ];
-        if (digits.length >= 4) orParts.push(`contact_phone.ilike.%${digits}%`);
-
-        // Nome de responsável ou de quem excluiu: resolve ids de users cujo
-        // nome combina e inclui no MESMO .or() usado nas linhas e na
-        // contagem, para que ambos reflitam exatamente os mesmos resultados.
+        // Resolve ids de users cujo nome combina com o termo (responsável ou
+        // quem excluiu) e monta o MESMO filtro usado nas linhas e na
+        // contagem via helper puro (testado isoladamente).
         const { ids: matchingUserIds, authIds: matchingAuthIds } = await findMatchingUserIds(currentUser.account_id, term);
-        if (matchingUserIds.length > 0) {
-          orParts.push(`responsible_user_id.in.(${matchingUserIds.join(",")})`);
-        }
-        if (matchingAuthIds.length > 0) {
-          orParts.push(`deleted_by.in.(${matchingAuthIds.join(",")})`);
-        }
-
-        query = query.or(orParts.join(","));
+        const orFilter = buildDeletedDealsOrFilter({ term, matchingUserIds, matchingAuthIds });
+        if (orFilter) query = query.or(orFilter);
       }
 
       const { data, error, count } = await query
