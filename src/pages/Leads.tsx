@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
