@@ -250,6 +250,8 @@ export default function SalesPipeline() {
   const [openDateEnd, setOpenDateEnd] = usePersistedFilter<string>("salesPipeline", "openDateEnd", "");
   const [openDatePopoverOpen, setOpenDatePopoverOpen] = useState(false);
   const isMobile = useIsMobile();
+  // No celular, Leads tem destino próprio na barra inferior; o funil mostra só o Pipeline.
+  useEffect(() => { if (isMobile && mainTab === "prospeccao") setMainTab("pipeline"); }, [isMobile, mainTab]);
   const [mobileFiltersOpen, setMobileFiltersOpen] = useState(false);
   const [filtersCollapsed, setFiltersCollapsed] = usePersistedFilter<boolean>("salesPipeline", "filtersCollapsed", false);
   const [wonMonthFilter, setWonMonthFilter] = usePersistedFilter<string>("salesPipeline", "wonMonthFilter", "all");
