@@ -86,5 +86,5 @@ Navegador 393/320/1440 sem corte:
 | Negócios excluídos | busca por título, responsável e quem excluiu; mesmo `.or` em linhas e count (`deletedDealsFilter.ts`) | teste unitário |
 | Pluggy status | invalida chaves reais; soma 24h via `fetchAllRows`; "Ver histórico" por conta com count+range | tipos |
 | Consumidores `fetchAllRows` | erro propagado antes de publicar totais/exports (AttendanceReport, EventRoiTab, MarketingLinksUtm, ClientDetail, Clients e outros); desempate `.order('id')` | teste helper: 2500, erro lote 2, 51000 sem teto |
-| Fontes completas | ClientFormResponses, Renewals (pendentes, expirados, sucessores em chunks), RenewalLosses, ClinicaRyka, DoubleChairList, MentoriaEC, useClientCheckins | testes com mocks em lotes |
+| Fontes completas | ClientFormResponses, Renewals (pendentes, expirados, sucessores em chunks), RenewalLosses, ClinicaRyka, DoubleChairList, MentoriaEC, useClientCheckins | tipos; contrato do helper coberto pelos testes |
 | Páginas visuais | AdminPermissionsTab, ações LeaderMeetings, participantes Reminders, artigos por categoria no FAQ, modo lista MarketingTasks (Kanban intacto), itens por categoria no EventChecklist | lint hooks 0 |
