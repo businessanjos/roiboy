@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -386,7 +387,7 @@ export function ThreeCPlusCallsList() {
           </div>
         )}
         {!loading && filtered.length > 0 && (
-          <ListPagination state={pg} itemLabel="ligações" />
+          <PagerFor state={pg} itemLabel="ligações" />
         )}
       </CardContent>
 

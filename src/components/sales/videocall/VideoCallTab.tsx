@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useMemo, useRef, useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -802,7 +803,7 @@ export function VideoCallTab() {
         )}
 
         {!isLoading && filtered.length > 0 && (
-          <ListPagination state={pg} itemLabel="videochamadas" />
+          <PagerFor state={pg} itemLabel="videochamadas" />
         )}
 
         {/* Detail Dialog */}

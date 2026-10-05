@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -203,7 +204,7 @@ export function ZappContactsBreakdownDialog({
           </ScrollArea>
         )}
         {!isLoading && rows.length > 0 && (
-          <ListPagination state={pg} itemLabel="contatos" />
+          <PagerFor state={pg} itemLabel="contatos" />
         )}
       </DialogContent>
     </Dialog>

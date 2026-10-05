@@ -49,6 +49,8 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { formatLocalDate } from "@/lib/dateUtils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface LifeEvent {
   id: string;
@@ -126,23 +128,33 @@ export default function MomentosCxCampaign() {
   const { data: lifeEvents = [], isLoading: loadingEvents } = useQuery({
     queryKey: ["life-events-for-campaign"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_life_events")
-        .select(`
-          id,
-          client_id,
-          event_type,
-          title,
-          description,
-          event_date,
-          is_recurring,
-          source,
-          clients(id, full_name, phone_e164)
-        `)
-        .order("event_date", { ascending: true, nullsFirst: false })
-        .limit(200);
-      if (error) throw error;
-      return data as LifeEvent[];
+      const pageSize = 1000;
+      let allRows: LifeEvent[] = [];
+      let from = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("client_life_events")
+          .select(`
+            id,
+            client_id,
+            event_type,
+            title,
+            description,
+            event_date,
+            is_recurring,
+            source,
+            clients(id, full_name, phone_e164)
+          `)
+          .order("event_date", { ascending: true, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        const rows = (data || []) as LifeEvent[];
+        allRows = allRows.concat(rows);
+        if (rows.length < pageSize) break;
+        from += pageSize;
+      }
+      return allRows;
     },
   });
 
@@ -154,6 +166,8 @@ export default function MomentosCxCampaign() {
     if (filterEventType !== "all" && e.event_type !== filterEventType) return false;
     return true;
   });
+
+  const pg = usePagedList(filteredEvents, { resetKey: filterEventType });
 
   // Get selected events data
   const selectedEventsData = lifeEvents.filter(e => selectedEvents.includes(e.id));
@@ -387,7 +401,7 @@ Um abraço!`);
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredEvents.map((event) => {
+                      {pg.items.map((event) => {
                         const isSelected = selectedEvents.includes(event.id);
                         const hasPhone = !!event.clients?.phone_e164;
                         const EventIcon = getEventIcon(event.event_type);
@@ -441,6 +455,7 @@ Um abraço!`);
                 </div>
               )}
             </CardContent>
+            {!loadingEvents && filteredEvents.length > 0 && <PagerFor state={pg} itemLabel="momentos" />}
           </>
         )}
 

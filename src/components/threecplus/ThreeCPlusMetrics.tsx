@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useState, useEffect, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -599,7 +600,7 @@ export function ThreeCPlusMetrics() {
             </Table>
           )}
           {filteredLogs.length > 0 && (
-            <ListPagination state={callsPg} itemLabel="ligações" />
+            <PagerFor state={callsPg} itemLabel="ligações" />
           )}
         </CardContent>
       </Card>

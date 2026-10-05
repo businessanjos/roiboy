@@ -1,3 +1,4 @@
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useState, useMemo, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient, useInfiniteQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -697,7 +698,7 @@ export default function SalesScripts() {
           {loadingMaterials ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> : materials.length === 0 ? <Card><CardContent className="p-12 text-center"><Package className="w-12 h-12 mx-auto mb-4 text-muted-foreground" /><h3 className="text-lg font-semibold mb-2">Nenhum material</h3><p className="text-muted-foreground mb-4">Adicione informações sobre produto, preço, ICP e diferenciais</p></CardContent></Card> : (
             <>
             <div className="space-y-3">{materialsPg.items.map(material => { const mt = getMaterialType(material.material_type); const Icon = mt?.icon || Package; return (<Card key={material.id} className="group hover:border-primary/30 transition-colors"><CardContent className="p-4"><div className="flex items-start gap-3"><div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center shrink-0"><Icon className="w-5 h-5 text-primary" /></div><div className="flex-1 min-w-0"><div className="flex flex-wrap items-center gap-2 mb-1"><Badge variant="secondary" className="text-xs shrink-0">{mt?.label || material.material_type}</Badge><h4 className="font-medium truncate min-w-0">{material.title}</h4></div><p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-3">{material.content}</p></div><div className="flex gap-1 opacity-100 md:opacity-0 md:group-hover:opacity-100 transition-opacity shrink-0"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(material.content)}><Copy className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingMaterial(material); setMaterialForm({ title: material.title, content: material.content, material_type: material.material_type }); setMaterialDialogOpen(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteMaterialDialog(material)}><Trash2 className="w-4 h-4" /></Button></div></div></CardContent></Card>); })}</div>
-            <ListPagination state={materialsPg} itemLabel="materiais" />
+            <PagerFor state={materialsPg} itemLabel="materiais" />
             </>
           )}
         </TabsContent>
@@ -737,7 +738,7 @@ export default function SalesScripts() {
           ) : (
             <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{playbooksPg.items.map(pb => { const st = getScriptType(pb.script_type); const Icon = st?.icon || FileText; return (<Card key={pb.id} className="group hover:border-primary/30 transition-colors cursor-pointer" onClick={() => setViewingPlaybook(pb)}><CardHeader className="pb-2"><div className="flex items-start justify-between gap-2"><div className="flex items-center gap-2 flex-1 min-w-0"><Icon className="w-5 h-5 text-primary shrink-0" /><CardTitle className="text-base line-clamp-1">{pb.title}</CardTitle></div>{!isSalesRep && <div className="flex gap-1" onClick={e => e.stopPropagation()}><Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => toggleFavoriteMutation.mutate({ id: pb.id, isFavorite: pb.is_favorite })}>{pb.is_favorite ? <Star className="w-4 h-4 text-primary fill-primary" /> : <StarOff className="w-4 h-4 text-muted-foreground" />}</Button><Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={() => setDeletePlaybookDialog(pb)}><Trash2 className="w-4 h-4" /></Button></div>}</div></CardHeader><CardContent><Badge variant="secondary" className="text-xs mb-2">{st?.label || pb.script_type}</Badge><p className="text-sm text-muted-foreground line-clamp-3">{pb.content.replace(/[#*`]/g, '').substring(0, 200)}...</p><p className="text-xs text-muted-foreground mt-2">{new Date(pb.created_at).toLocaleDateString('pt-BR')}</p></CardContent></Card>); })}</div>
-            <ListPagination state={playbooksPg} itemLabel="playbooks" />
+            <PagerFor state={playbooksPg} itemLabel="playbooks" />
             </>
           )}
         </TabsContent>
@@ -1205,7 +1206,7 @@ export default function SalesScripts() {
                           );
                         })}
                       </div>
-                      <ListPagination state={analysesPg} itemLabel="análises" />
+                      <PagerFor state={analysesPg} itemLabel="análises" />
                     </CardContent>
                   </Card>
                 )}
@@ -1258,7 +1259,7 @@ export default function SalesScripts() {
           {loadingScripts ? <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div> : filteredScripts.length === 0 ? <Card><CardContent className="p-12 text-center"><MessageSquareText className="w-12 h-12 mx-auto mb-4 text-muted-foreground" /><h3 className="text-lg font-semibold mb-2">Nenhum script encontrado</h3></CardContent></Card> : (
             <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">{scriptsPg.items.map(script => { const objection = getObjectionConfig(script.objection_type); const funnel = getFunnelConfig(script.funnel_stage); const ObjectionIcon = objection.icon; return (<Card key={script.id} className="group hover:border-primary/30 transition-colors"><CardHeader className="pb-3"><div className="flex items-start justify-between gap-2"><div className="flex-1 min-w-0"><CardTitle className="text-lg truncate">{script.title}</CardTitle><div className="flex flex-wrap gap-2 mt-2">{script.objection_type && <Badge variant="secondary" className={cn("text-xs", objection.bgColor)}><ObjectionIcon className={cn("w-3 h-3 mr-1", objection.color)} />{objection.label}</Badge>}{funnel && <Badge variant="secondary" className={cn("text-xs", funnel.bgColor)}>{funnel.label}</Badge>}</div></div><div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity"><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleCopy(script.content)}><Copy className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingScript(script); setScriptForm({ title: script.title, content: script.content, objection_type: script.objection_type || '', funnel_stage: script.funnel_stage || '', tags: script.tags?.join(', ') || '' }); setScriptDialogOpen(true); }}><Edit2 className="w-4 h-4" /></Button><Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeleteScriptDialog(script)}><Trash2 className="w-4 h-4" /></Button></div></div></CardHeader><CardContent><p className="text-sm text-muted-foreground whitespace-pre-wrap line-clamp-4">{script.content}</p>{script.tags && script.tags.length > 0 && <div className="flex flex-wrap gap-1 mt-3">{script.tags.map((tag, i) => <Badge key={i} variant="outline" className="text-xs">{tag}</Badge>)}</div>}</CardContent></Card>); })}</div>
-            <ListPagination state={scriptsPg} itemLabel="scripts" />
+            <PagerFor state={scriptsPg} itemLabel="scripts" />
             </>
           )}
         </TabsContent>
