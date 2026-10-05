@@ -299,14 +299,39 @@ export default function ClientCheckpoints() {
 
 
 
-      <Card className="shadow-card">
-        <CardHeader className="pb-3 space-y-3">
-          <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+      <Card className="shadow-card min-w-0">
+        <CardHeader className="p-3 pb-3 space-y-3 md:p-6 md:pb-3">
+          <div className="flex items-center justify-between gap-2">
+            <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="h-11 md:hidden" aria-label="Filtros de período e canal">
+                  <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+                  Filtros
+                  {activePeriodFilters > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{activePeriodFilters}</Badge>
+                  )}
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+                <SheetHeader className="text-left">
+                  <SheetTitle>Filtros</SheetTitle>
+                  <SheetDescription>Período e canal usados nos relatórios e no CSV dos registros.</SheetDescription>
+                </SheetHeader>
+                <div className="mt-4 grid gap-3">{periodFields}</div>
+                <p className="mt-3 text-xs text-muted-foreground">{recordsLabel}</p>
+                <SheetClose asChild>
+                  <Button className="mt-4 h-11 w-full">Concluir</Button>
+                </SheetClose>
+              </SheetContent>
+            </Sheet>
+          </div>
           <div className="flex flex-wrap items-center gap-3">
-            <div className="relative flex-1 min-w-[220px]">
+            <div className="relative flex-1 min-w-0 md:min-w-[220px]">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
-                className="pl-9"
+                className="pl-9 h-11 md:h-10"
+                aria-label="Buscar cliente ou consultor"
                 placeholder="Buscar cliente ou consultor..."
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
@@ -324,7 +349,7 @@ export default function ClientCheckpoints() {
             </Tabs>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
           {isLoading ? (
             <div className="flex justify-center py-10">
               <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
@@ -339,7 +364,52 @@ export default function ClientCheckpoints() {
             </p>
 
           ) : (
-            <div className="overflow-x-auto">
+            <>
+            <ul className="divide-y divide-border/60 md:hidden">
+              {pg.items.map((r) => (
+                <li key={r.client_id} className="py-3 min-w-0">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <Link
+                        to={`/clients/${r.client_id}${clientDetailSearch}`}
+                        className="block truncate text-[15px] font-medium hover:underline"
+                      >
+                        {r.full_name}
+                      </Link>
+                      <p className="truncate text-xs text-muted-foreground">{r.consultant_name || "Sem consultor"}</p>
+                    </div>
+                    <Badge variant="outline" className={cn("shrink-0 text-[11px]", CHECKPOINT_STATUS_STYLES[r.state.status])}>
+                      {CHECKPOINT_STATUS_LABELS[r.state.status]}
+                    </Badge>
+                  </div>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {r.interactionAt ? (
+                      <>
+                        Última {format(new Date(r.interactionAt), "dd/MM", { locale: ptBR })}{" "}
+                        <span className={r.silent ? "text-destructive" : undefined}>
+                          ({r.daysSinceInteraction === 0 ? "hoje" : `há ${r.daysSinceInteraction}d`})
+                        </span>
+                      </>
+                    ) : (
+                      <span className="text-destructive">Sem interação</span>
+                    )}
+                    {" · "}Próximo {r.state.nextDueAt ? format(new Date(r.state.nextDueAt), "dd/MM", { locale: ptBR }) : "—"}
+                  </p>
+                  {r.last_summary && (
+                    <p className="mt-1 line-clamp-1 text-xs">{r.last_summary}</p>
+                  )}
+                  <div className="mt-2 grid grid-cols-2 gap-2">
+                    <Button variant="ghost" className="h-11" onClick={() => setReport({ id: r.client_id, name: r.full_name })}>
+                      <FileText className="h-4 w-4 mr-1.5" /> Relatório
+                    </Button>
+                    <Button variant="outline" className="h-11" onClick={() => setTarget({ id: r.client_id, name: r.full_name })}>
+                      <Plus className="h-4 w-4 mr-1.5" /> Registrar
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+            <div className="hidden md:block overflow-x-auto">
               <Table>
                 <TableHeader>
                   <TableRow>
