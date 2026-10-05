@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor, act } from '@testing-library/react';
+import { render, screen, waitFor, act, within, fireEvent } from '@testing-library/react';
 
 // ---- Mocks ----
 const invokeMock = vi.fn();
@@ -17,6 +17,20 @@ vi.mock('sonner', () => ({
 }));
 
 import { TypeformDashboard } from '../TypeformDashboard';
+
+// Radix Select depende de APIs de ponteiro/scroll que o jsdom não implementa.
+if (!(Element.prototype as any).hasPointerCapture) {
+  (Element.prototype as any).hasPointerCapture = () => false;
+}
+if (!(Element.prototype as any).setPointerCapture) {
+  (Element.prototype as any).setPointerCapture = () => {};
+}
+if (!(Element.prototype as any).releasePointerCapture) {
+  (Element.prototype as any).releasePointerCapture = () => {};
+}
+if (!(Element.prototype as any).scrollIntoView) {
+  (Element.prototype as any).scrollIntoView = () => {};
+}
 
 const FORMS = [
   { id: '1', form_id: 'fABC', title: 'Form A', campaign_tag: null, webhook_installed: true, is_active: true },
@@ -80,12 +94,16 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
 
   it('renderiza valores das 4 métricas de período conforme backend', async () => {
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getAllByText('Submissões')[0]);
+    await waitFor(() => screen.getByLabelText('Como Submissões é calculado'));
+    const card = screen.getByLabelText('Como Submissões é calculado').closest('[role="region"][aria-label="Resumo agregado"]') as HTMLElement;
+    expect(card).toBeTruthy();
+    const scoped = within(card);
     // Submissões=500, Completados=400, Lead no Roy=200, Ganhos=12 (formato pt-BR)
-    expect(screen.getAllByText('500')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('400')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('200')[0]).toBeInTheDocument();
-    expect(screen.getAllByText('12')[0]).toBeInTheDocument();
+    expect(scoped.getByText('Submissões')).toBeInTheDocument();
+    expect(scoped.getByText('500')).toBeInTheDocument();
+    expect(scoped.getByText('400')).toBeInTheDocument();
+    expect(scoped.getByText('200')).toBeInTheDocument();
+    expect(scoped.getByText('12')).toBeInTheDocument();
   });
 
   it('renderiza valores lifetime (Visitas, Iniciados) vindos do backend', async () => {
@@ -100,7 +118,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     // Os labels "Fonte: ..." vivem nos tooltips. Renderizamos e abrimos a modal de detalhes
     // para inspecionar o atributo `source` repassado.
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getAllByText('Submissões')[0]);
+    await waitFor(() => screen.getByLabelText('Como Submissões é calculado'));
 
     // Cada FunnelCard expõe um botão "Como ... é calculado" com aria-label.
     const expected: Array<[string, string]> = [
@@ -117,7 +135,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     }
   });
 
-  it('passa o form_id e período corretos quando ambos mudam (escopo respeitado)', async () => {
+  it('passa form_id e período quando ambos mudam', async () => {
     // Override invoke para devolver um payload que reflete o form_id passado, simulando
     // que o backend isolou o escopo. O teste valida que a UI realmente envia esses params.
     invokeMock.mockImplementation(async (_fn: string, opts: any) => {
@@ -138,11 +156,42 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     await waitFor(() => expect(invokeMock).toHaveBeenCalled());
     invokeMock.mockClear();
 
-    // Forçamos novo render de loadFunnel chamando o componente novamente com props alteradas
-    // não é trivial; em vez disso validamos contratualmente que o invoke recebido é
-    // sempre uma combinação de (form_id, days) — sem hardcodes de outros valores.
-    const lastCall = (invokeMock.mock.calls[0] || [])[1] || (invokeMock as any)._calls;
-    expect(lastCall === undefined || ('body' in lastCall)).toBe(true);
+    // Seleciona o formulário "Form A" no combobox de formulário (Radix Select: pointerDown + click).
+    const formTrigger = screen.getAllByRole('combobox')[0];
+    await act(async () => {
+      fireEvent.pointerDown(formTrigger, { button: 0, ctrlKey: false });
+      fireEvent.click(formTrigger);
+    });
+    const formOption = await screen.findByRole('option', { name: 'Form A' });
+    await act(async () => {
+      fireEvent.pointerUp(formOption);
+      fireEvent.click(formOption);
+    });
+
+    // Seleciona o período "Últimos 7d" no combobox de período.
+    const periodTrigger = screen.getAllByRole('combobox')[1];
+    await act(async () => {
+      fireEvent.pointerDown(periodTrigger, { button: 0, ctrlKey: false });
+      fireEvent.click(periodTrigger);
+    });
+    const periodOption = await screen.findByRole('option', { name: 'Últimos 7d' });
+    await act(async () => {
+      fireEvent.pointerUp(periodOption);
+      fireEvent.click(periodOption);
+    });
+
+    await waitFor(() => {
+      expect(invokeMock).toHaveBeenCalledWith(
+        'typeform-manager',
+        expect.objectContaining({
+          body: expect.objectContaining({
+            action: 'get_dashboard',
+            form_id: 'fABC',
+            days: 7,
+          }),
+        }),
+      );
+    });
   });
 
   it('descarta números fora de escopo: respeita consistency.ok=false do backend', async () => {
