@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -59,7 +59,17 @@ export default function FinancialProvidersPortalPage() {
     pageSize: 20,
   });
 
-  const { data: invoicesResult } = useQuery({
+  // Reseta para a página 1 sempre que a conta mudar, para não manter um
+  // range de página antigo (de outra conta) na próxima consulta.
+  const prevAccountIdRef = useRef(currentUser?.account_id);
+  useEffect(() => {
+    if (prevAccountIdRef.current !== currentUser?.account_id) {
+      prevAccountIdRef.current = currentUser?.account_id;
+      setInvoicesPageState((p) => (p.page === 1 ? p : { ...p, page: 1 }));
+    }
+  }, [currentUser?.account_id]);
+
+  const { data: invoicesResult, isLoading: invoicesLoading, isFetching: invoicesFetching } = useQuery({
     queryKey: ["provider-invoices", currentUser?.account_id, invoicesPageState.page, invoicesPageState.pageSize],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<{ rows: any[]; count: number }> => {
@@ -79,14 +89,24 @@ export default function FinancialProvidersPortalPage() {
   const invoices = invoicesResult?.rows ?? [];
   const invoicesCount = invoicesResult?.count ?? 0;
   const invoicesTotalPages = Math.max(1, Math.ceil(invoicesCount / invoicesPageState.pageSize));
-  const invoicesSafePage = Math.min(invoicesPageState.page, invoicesTotalPages);
+
+  // Quando a contagem real chegou (sem fetch em andamento) e a página atual
+  // ficou acima do total de páginas (ex.: itens removidos em outra sessão),
+  // refaz a consulta já na última página válida em vez de só corrigir a
+  // exibição do rodapé.
+  useEffect(() => {
+    if (!invoicesFetching && invoicesResult && invoicesPageState.page > invoicesTotalPages) {
+      setInvoicesPageState((p) => ({ ...p, page: invoicesTotalPages }));
+    }
+  }, [invoicesFetching, invoicesResult, invoicesPageState.page, invoicesTotalPages]);
+
   const invoicesPg: PaginationState = {
-    currentPage: invoicesSafePage,
+    currentPage: invoicesPageState.page,
     pageSize: invoicesPageState.pageSize,
     totalPages: invoicesTotalPages,
     totalItems: invoicesCount,
-    from: (invoicesSafePage - 1) * invoicesPageState.pageSize,
-    to: invoicesSafePage * invoicesPageState.pageSize - 1,
+    from: (invoicesPageState.page - 1) * invoicesPageState.pageSize,
+    to: invoicesPageState.page * invoicesPageState.pageSize - 1,
     handlePageChange: (page) => setInvoicesPageState((p) => ({ ...p, page: Math.max(1, Math.min(page, invoicesTotalPages)) })),
     handlePageSizeChange: (size) => setInvoicesPageState({ page: 1, pageSize: size }),
   };
@@ -199,7 +219,7 @@ export default function FinancialProvidersPortalPage() {
                   </TableBody>
                 </Table>
               )}
-              {invoices.length > 0 && <PagerFor state={invoicesPg} itemLabel="notas fiscais" />}
+              {invoicesCount > 0 && <PagerFor state={invoicesPg} itemLabel="notas fiscais" />}
             </CardContent>
           </Card>
         </TabsContent>
