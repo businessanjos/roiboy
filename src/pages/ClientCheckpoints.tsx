@@ -31,7 +31,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarCheck, Download, FileText, Loader2, Plus, Search } from "lucide-react";
+import { CalendarCheck, Download, FileText, Loader2, MoreHorizontal, Plus, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
@@ -500,6 +502,7 @@ export default function ClientCheckpoints() {
                 </TableBody>
               </Table>
             </div>
+            </>
           )}
           {!isLoading && !error && filtered.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
@@ -539,5 +542,14 @@ function Kpi({ label, value, tone }: { label: string; value: number; tone: strin
         <p className={cn("text-2xl font-semibold mt-1", tone)}>{value}</p>
       </CardContent>
     </Card>
+  );
+}
+
+function MiniKpi({ label, value, tone }: { label: string; value: number; tone: string }) {
+  return (
+    <div className="rounded-xl border border-border/60 bg-card p-3 shadow-sm">
+      <p className="text-[11px] text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-2xl font-semibold leading-tight tabular-nums", tone)}>{value}</p>
+    </div>
   );
 }

@@ -277,7 +277,7 @@ export default function SalesCalendar() {
   const googleConnected = googleQuery.data?.connected;
 
   return (
-    <div className="p-3 md:p-4 space-y-3 md:space-y-4">
+    <div className="px-4 py-3 md:p-4 space-y-3 md:space-y-4">
       <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div className="hidden md:block">
           <h1 className="text-xl font-bold tracking-tight">Calendário</h1>

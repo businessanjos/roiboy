@@ -38,7 +38,7 @@ export default function SalesTeam() {
   }
 
   return (
-    <div className="p-3 md:p-4 space-y-4 pb-24 md:pb-4">
+    <div className="px-4 py-3 md:p-4 space-y-4 pb-24 md:pb-4">
       <div className="hidden md:block">
         <h1 className="text-xl font-bold">Gestão Comercial</h1>
         <p className="text-muted-foreground text-xs">
