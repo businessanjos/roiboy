@@ -430,6 +430,19 @@ export default function ClientDetail() {
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
   const [vnps, setVnps] = useState<VNPSSnapshot | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [timelineHasMore, setTimelineHasMore] = useState(true);
+  const [loadingMoreTimeline, setLoadingMoreTimeline] = useState(false);
+  // Eventos já carregados por fonte paginável da timeline, para recombinar ao "carregar anteriores"
+  const timelineEventsRef = useRef<Record<string, TimelineEvent[]>>({});
+  // Próximo offset e flag de esgotamento por fonte paginável
+  const timelinePageRef = useRef<Record<TimelineSourceKey, { offset: number; done: boolean }>>({
+    messages: { offset: 0, done: false },
+    lifeEvents: { offset: 0, done: false },
+    formResponses: { offset: 0, done: false },
+    attendance: { offset: 0, done: false },
+    subscriptions: { offset: 0, done: false },
+    checkins: { offset: 0, done: false },
+  });
   const [roiEvents, setRoiEvents] = useState<RoiEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [riskEvents, setRiskEvents] = useState<any[]>([]);
