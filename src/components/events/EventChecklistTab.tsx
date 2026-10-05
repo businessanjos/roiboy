@@ -58,6 +58,7 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
   const { toast } = useToast();
   const [items, setItems] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const loadedOnceRef = useRef(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<ChecklistItem | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
@@ -86,7 +87,9 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
   };
 
   const fetchItems = async () => {
-    setLoading(true);
+    // Spinner só na primeira carga: refetch após marcar/editar/excluir mantém
+    // os grupos montados e a página atual de cada um.
+    if (!loadedOnceRef.current) setLoading(true);
     const { data, error } = await fetchAllRows<ChecklistItem>((from, to) =>
       supabase
         .from("event_checklist")
