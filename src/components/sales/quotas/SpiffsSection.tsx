@@ -1278,7 +1278,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                       setCapturedDetail({ name: s.name, deals: s.deals, total: s.total, earnedSpins: s.earnedSpins })
                     }
                     disabled={s.deals.length === 0}
-                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-warning/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Ver negociações de ${s.name}: R$ ${formatBRL(Math.round(s.total))}`}
+                    className="w-full h-full min-h-11 px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-warning/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={s.deals.length > 0 ? "Ver negociações que formaram este valor" : "Sem negociações no período"}
                   >
                     <span className="tabular-nums">R$ {formatBRL(Math.round(s.total))}</span>
@@ -1625,7 +1626,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                     type="button"
                     onClick={() => setSalesDetail({ uid: s.uid, name: s.name })}
                     disabled={s.sales === 0}
-                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-pink-500/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Ver vendas de ${s.name}: ${s.sales}`}
+                    className="w-full h-full min-h-11 px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-pink-500/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={s.sales > 0 ? "Ver quais vendas formaram este número" : "Sem vendas na janela"}
                   >
                     <span className="tabular-nums">{s.sales}</span>
