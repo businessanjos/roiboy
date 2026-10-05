@@ -67,7 +67,8 @@ const filters = (over: Partial<TaskFilterInput> = {}): TaskFilterInput => ({
 });
 const page = (over: Partial<TaskFilterInput> = {}, extra: Partial<Parameters<typeof buildSearchTasksRpcParams>[0]> = {}) =>
   fetchSearchTasksPage(rpc, buildSearchTasksRpcParams({
-    ...filters(over), tab: null, sortBy: "created_at", sortDirection: "desc", limit: 20, offset: 0, ...extra,
+    // Ordem padrão real da tela: prioridade asc (desempate por criação desc, id).
+    ...filters(over), tab: null, sortBy: "priority", sortDirection: "asc", limit: 20, offset: 0, ...extra,
   }));
 
 beforeAll(async () => {
