@@ -1624,7 +1624,7 @@ export function DealDetailSheet({
                           }
                         }}
                       >
-                        <SelectTrigger className="h-7 text-sm flex-1 min-w-0">
+                        <SelectTrigger className="h-11 sm:h-7 text-sm flex-1 min-w-0">
                           <SelectValue placeholder="Selecione" />
                         </SelectTrigger>
                         <SelectContent>
@@ -1668,7 +1668,7 @@ export function DealDetailSheet({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs"
+                              className="h-11 sm:h-7 px-2 text-xs"
                               onClick={() => setMergeDialogOpen(true)}
                             >
                               <GitMerge className="h-3.5 w-3.5 mr-1" />
@@ -1677,7 +1677,7 @@ export function DealDetailSheet({
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-7 px-2 text-xs"
+                              className="h-11 sm:h-7 px-2 text-xs"
                               onClick={() => setTransferDialogOpen(true)}
                             >
                               <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
@@ -1715,7 +1715,7 @@ export function DealDetailSheet({
                         }}
                         disabled={updatingSDR}
                       >
-                        <SelectTrigger className="h-7 text-xs border-dashed">
+                        <SelectTrigger className="h-11 sm:h-7 text-xs border-dashed">
                           <SelectValue placeholder="Quem agendou?" />
                         </SelectTrigger>
                         <SelectContent className="bg-popover">
@@ -1856,20 +1856,20 @@ export function DealDetailSheet({
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
                 <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
-                  <TabsList className="w-full grid grid-cols-4 h-8">
-                    <TabsTrigger value="history" className="text-xs h-7">
+                  <TabsList className="w-full grid grid-cols-4 h-12 sm:h-8">
+                    <TabsTrigger value="history" className="text-xs h-10 sm:h-7">
                       <Clock className="h-3 w-3 mr-1" />
                       Histórico
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-xs h-7">
+                    <TabsTrigger value="activities" className="text-xs h-10 sm:h-7">
                       <ListTodo className="h-3 w-3 mr-1" />
                       Atividades
                     </TabsTrigger>
-                    <TabsTrigger value="briefing" className="text-xs h-7">
+                    <TabsTrigger value="briefing" className="text-xs h-10 sm:h-7">
                       <icons.ClipboardList className="h-3 w-3 mr-1" />
                       Briefing Op.
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-xs h-7">
+                    <TabsTrigger value="contract" className="text-xs h-10 sm:h-7">
                       <icons.FileSignature className="h-3 w-3 mr-1" />
                       Contrato
                     </TabsTrigger>
@@ -1924,7 +1924,7 @@ export function DealDetailSheet({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="h-11 w-11 sm:h-7 sm:w-7 p-0"
                           onClick={() => imageInputRef.current?.click()}
                           disabled={isUploadingImage || isUploadingFile}
                           title="Anexar imagem ou vídeo"
@@ -1939,7 +1939,7 @@ export function DealDetailSheet({
                           type="button"
                           variant="ghost"
                           size="sm"
-                          className="h-7 w-7 p-0"
+                          className="h-11 w-11 sm:h-7 sm:w-7 p-0"
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingImage || isUploadingFile}
                           title="Anexar documento"
