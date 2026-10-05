@@ -1856,20 +1856,20 @@ export function DealDetailSheet({
               {/* Right Column - Tabs for History and Tasks */}
               <div className="space-y-3">
                 <Tabs value={activeDetailTab} onValueChange={setActiveDetailTab} className="w-full">
-                  <TabsList className="w-full grid grid-cols-4 h-12 sm:h-8">
-                    <TabsTrigger value="history" className="text-xs h-10 sm:h-7">
+                  <TabsList className="w-full grid grid-cols-4 h-[52px] sm:h-8">
+                    <TabsTrigger value="history" className="text-xs h-11 sm:h-7">
                       <Clock className="h-3 w-3 mr-1" />
                       Histórico
                     </TabsTrigger>
-                    <TabsTrigger value="activities" className="text-xs h-10 sm:h-7">
+                    <TabsTrigger value="activities" className="text-xs h-11 sm:h-7">
                       <ListTodo className="h-3 w-3 mr-1" />
                       Atividades
                     </TabsTrigger>
-                    <TabsTrigger value="briefing" className="text-xs h-10 sm:h-7">
+                    <TabsTrigger value="briefing" className="text-xs h-11 sm:h-7">
                       <icons.ClipboardList className="h-3 w-3 mr-1" />
                       Briefing Op.
                     </TabsTrigger>
-                    <TabsTrigger value="contract" className="text-xs h-10 sm:h-7">
+                    <TabsTrigger value="contract" className="text-xs h-11 sm:h-7">
                       <icons.FileSignature className="h-3 w-3 mr-1" />
                       Contrato
                     </TabsTrigger>
