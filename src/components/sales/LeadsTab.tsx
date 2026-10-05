@@ -1026,42 +1026,42 @@ export default function LeadsTab() {
       {/* Fixed Section: Stats + Search */}
       <div className="flex-shrink-0 space-y-4">
         {/* Stats */}
-        <div className="grid grid-cols-3 gap-4">
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-info/10 rounded-lg">
+        <div className="grid min-w-0 grid-cols-3 gap-2 sm:gap-4">
+          <Card className="min-w-0">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <div className="hidden shrink-0 p-2 sm:block bg-info/10 rounded-lg">
                   <Users className="h-5 w-5 text-info" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{newLeads.length}</p>
-                  <p className="text-xs text-muted-foreground">Novos</p>
+                <div className="min-w-0">
+                  <p className="text-xl font-bold tabular-nums sm:text-2xl">{newLeads.length}</p>
+                  <p className="text-xs text-muted-foreground break-words">Novos</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-warning/10 rounded-lg">
+          <Card className="min-w-0">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <div className="hidden shrink-0 p-2 sm:block bg-warning/10 rounded-lg">
                   <MessageSquare className="h-5 w-5 text-warning" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{contactedLeads.length}</p>
-                  <p className="text-xs text-muted-foreground">Contatados</p>
+                <div className="min-w-0">
+                  <p className="text-xl font-bold tabular-nums sm:text-2xl">{contactedLeads.length}</p>
+                  <p className="text-xs text-muted-foreground break-words">Contatados</p>
                 </div>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <div className="p-2 bg-success/10 rounded-lg">
+          <Card className="min-w-0">
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex min-w-0 items-center gap-2 sm:gap-3">
+                <div className="hidden shrink-0 p-2 sm:block bg-success/10 rounded-lg">
                   <UserCheck className="h-5 w-5 text-success" />
                 </div>
-                <div>
-                  <p className="text-2xl font-bold">{qualifiedLeads.length}</p>
-                  <p className="text-xs text-muted-foreground">Qualificados</p>
+                <div className="min-w-0">
+                  <p className="text-xl font-bold tabular-nums sm:text-2xl">{qualifiedLeads.length}</p>
+                  <p className="text-xs text-muted-foreground break-words">Qualificados</p>
                 </div>
               </div>
             </CardContent>

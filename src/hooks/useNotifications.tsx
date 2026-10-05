@@ -274,7 +274,10 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
           // outro dispositivo/aba e o sino precisa refletir isso aqui.
           if (updated.is_read && !readAccountedRef.current.has(updated.id)) {
             readAccountedRef.current.add(updated.id);
-            setUnreadCount((prev) => Math.max(0, prev - 1));
+            // Leitura externa: o evento pode chegar atrasado, depois de um refetch
+            // que já a incorporou. Em vez de subtrair às cegas, reconcilia o sino
+            // com a contagem autoritativa do servidor.
+            void fetchUnreadCount(currentUserId);
             decrementTabCounts(queryClient, currentUserId, updated.source_type ?? null);
           }
 
@@ -401,7 +404,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         setNotifications((prev) =>
           prev.map((n) => (n.id === id ? { ...n, is_read: localTarget?.is_read ?? false } : n))
         );
-        setUnreadCount((prev) => prev + 1);
+        // Nunca soma +1 às cegas: reconcilia com a contagem do servidor.
+        void fetchUnreadCount(currentUserId);
         invalidateNotificationsQueries(queryClient, currentUserId);
       };
 
@@ -422,8 +426,9 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
         if (!data) {
           // Não havia transição real a fazer: já estava lida no servidor.
           // Desfaz o decremento otimista (sem duplo decremento), mantendo is_read=true.
-          readAccountedRef.current.delete(id);
-          setUnreadCount((prev) => prev + 1);
+          // O id continua contabilizado (está lida no servidor); o sino é
+          // reconciliado pela contagem autoritativa, sem +1 fantasma.
+          void fetchUnreadCount(currentUserId);
           // reverte apenas a contagem (o estado "lido" já é o correto); revalida
           // do servidor para garantir que a aba certa volte ao valor real.
           invalidateNotificationsQueries(queryClient, currentUserId);
