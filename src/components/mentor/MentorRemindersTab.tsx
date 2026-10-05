@@ -4,6 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Bell, Calendar, CheckCircle, Clock } from 'lucide-react';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface Notification {
   id: string;
@@ -45,6 +47,8 @@ export function MentorRemindersTab({ reminders, isLoading }: MentorRemindersTabP
     );
   }
 
+  const pg = usePagedList(reminders, { resetKey: reminders.length });
+
   const getTypeIcon = (type: string) => {
     switch (type) {
       case 'mentor_event_tomorrow':
@@ -71,7 +75,7 @@ export function MentorRemindersTab({ reminders, isLoading }: MentorRemindersTabP
 
   return (
     <div className="space-y-3">
-      {reminders.map((reminder) => (
+      {pg.items.map((reminder) => (
         <Card 
           key={reminder.id}
           className={`hover:shadow-sm transition-shadow cursor-pointer ${reminder.is_read ? 'opacity-70' : ''}`}
@@ -101,6 +105,7 @@ export function MentorRemindersTab({ reminders, isLoading }: MentorRemindersTabP
           </CardContent>
         </Card>
       ))}
+      <PagerFor state={pg} itemLabel="lembretes" />
     </div>
   );
 }

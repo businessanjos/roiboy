@@ -7,6 +7,8 @@ import { Button } from '@/components/ui/button';
 import { Calendar, Clock, MapPin, Video, ExternalLink } from 'lucide-react';
 import { MentorEvent } from '@/hooks/useMentorEvents';
 import { getEventTypeConfig } from '@/config/eventTypes';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface MentorEventsTabProps {
   events: MentorEvent[];
@@ -50,6 +52,9 @@ export function MentorEventsTab({ events, isLoading }: MentorEventsTabProps) {
   const upcomingEvents = sortedEvents.filter(e => e.scheduled_at && new Date(e.scheduled_at) >= now);
   const pastEvents = sortedEvents.filter(e => e.scheduled_at && new Date(e.scheduled_at) < now);
 
+  const pgUpcoming = usePagedList(upcomingEvents, { resetKey: upcomingEvents.length });
+  const pgPast = usePagedList(pastEvents, { resetKey: pastEvents.length });
+
   return (
     <div className="space-y-6">
       {upcomingEvents.length > 0 && (
@@ -59,10 +64,11 @@ export function MentorEventsTab({ events, isLoading }: MentorEventsTabProps) {
             Próximos Eventos ({upcomingEvents.length})
           </h3>
           <div className="grid gap-4">
-            {upcomingEvents.map((event) => (
+            {pgUpcoming.items.map((event) => (
               <EventCard key={event.id} event={event} onClick={() => navigate(`/events/${event.id}`)} />
             ))}
           </div>
+          <PagerFor state={pgUpcoming} itemLabel="eventos" />
         </div>
       )}
 
@@ -73,10 +79,11 @@ export function MentorEventsTab({ events, isLoading }: MentorEventsTabProps) {
             Eventos Passados ({pastEvents.length})
           </h3>
           <div className="grid gap-4">
-            {pastEvents.map((event) => (
+            {pgPast.items.map((event) => (
               <EventCard key={event.id} event={event} isPast onClick={() => navigate(`/events/${event.id}`)} />
             ))}
           </div>
+          <PagerFor state={pgPast} itemLabel="eventos" />
         </div>
       )}
     </div>
