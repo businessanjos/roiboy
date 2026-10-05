@@ -29750,6 +29750,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_notification_tab_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          tab: string
+          unread_count: number
+        }[]
+      }
       get_ops_consultant_clients_breakdown: {
         Args: {
           p_days?: number
