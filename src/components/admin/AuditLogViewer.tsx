@@ -82,6 +82,8 @@ export interface UnifiedLog {
   source: "audit" | "deal";
   /** A quem o registro pertence: "Lead Fulano", "Negócio X", "Cliente Y" */
   context?: string | null;
+  /** Descrição PT-BR já calculada no SQL (audit_unified_page); fallback local em describeLog(). */
+  description?: string | null;
 }
 
 /** Linha crua retornada pela RPC audit_unified_page. */
@@ -99,6 +101,8 @@ interface UnifiedRpcRow {
   ip_address: string | null;
   user_agent: string | null;
   created_at: string;
+  context: string | null;
+  description: string | null;
   total_count: number;
 }
 
@@ -118,6 +122,8 @@ export function mapRpcRowToUnifiedLog(row: UnifiedRpcRow): UnifiedLog {
     user_agent: row.user_agent,
     created_at: row.created_at,
     source: row.source,
+    context: row.context,
+    description: row.description,
   };
 }
 
@@ -214,6 +220,10 @@ export function describeLog(log: UnifiedLog): string {
   const tipo = (entityLabels[log.entity_type] ?? log.entity_type).toLowerCase();
   const nome = log.entity_name ? ` "${log.entity_name}"` : "";
   const onde = log.context ? ` — ${log.context}` : "";
+
+  // A descrição já vem pronta do SQL (audit_unified_page/audit_unified_authors);
+  // o cálculo abaixo só serve de fallback para registros sem o campo preenchido.
+  if (log.description) return log.description;
 
   if (log.entity_type === "deal") {
     const de = (log.details as any)?.de;
