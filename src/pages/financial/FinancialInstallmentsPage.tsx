@@ -54,6 +54,8 @@ import { FileCheck, FilePlus2, Wallet, CheckCircle, Clock as ClockIcon } from "l
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
 import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type InstallmentRow = {
   id: string;
@@ -274,27 +276,39 @@ export default function FinancialInstallmentsPage() {
     queryKey: ["financial-installments", accountId, currentCompanyId],
     enabled: !!accountId,
     queryFn: async (): Promise<InstallmentRow[]> => {
-      let query = supabase
-        .from("installments")
-        .select(
-          "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
-        )
-        .neq("status", "written_off")
-        .neq("invoices.status", "written_off")
-        .order("due_date", { ascending: true })
-        .limit(3000);
+      // Carrega em lotes via range() até esgotar, pois o array completo é
+      // necessário para KPIs/totais/filtros locais (sem truncar silenciosamente).
+      const BATCH_SIZE = 1000;
+      let allRows: any[] = [];
+      let offset = 0;
+      while (true) {
+        let query = supabase
+          .from("installments")
+          .select(
+            "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+          )
+          .neq("status", "written_off")
+          .neq("invoices.status", "written_off")
+          .order("due_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(offset, offset + BATCH_SIZE - 1);
 
-      if (currentCompanyId) {
-        query = query.eq("invoices.company_id", currentCompanyId);
+        if (currentCompanyId) {
+          query = query.eq("invoices.company_id", currentCompanyId);
+        }
+
+        const { data, error } = await query;
+        if (error) {
+          console.error("[FinancialInstallments]", error);
+          break;
+        }
+        const batch = data ?? [];
+        allRows = allRows.concat(batch);
+        if (batch.length < BATCH_SIZE) break;
+        offset += BATCH_SIZE;
       }
 
-      const { data, error } = await query;
-      if (error) {
-        console.error("[FinancialInstallments]", error);
-        return [];
-      }
-
-      const list = (data ?? []) as any as InstallmentRow[];
+      const list = allRows as any as InstallmentRow[];
 
       // Batch-fetch clients (avoids PostgREST nested embed edge cases).
       const clientIds = Array.from(
@@ -559,6 +573,11 @@ export default function FinancialInstallmentsPage() {
     );
   }, [filtered]);
 
+  const pg = usePagedList(sorted, {
+    resetKey: [search, statusFilter, paymentMethodFilter, productFilter, billingFilter, dateInterval, sort],
+    isLoading,
+  });
+
   const openTimeline = (id: string) => {
     setSelectedId(id);
     setOpen(true);
@@ -752,7 +771,7 @@ export default function FinancialInstallmentsPage() {
                   </TableCell>
                 </TableRow>
               ) : (
-                sorted.map((r) => {
+                pg.items.map((r) => {
                   const meta = STATUS_META[r.status] ?? STATUS_META.pending;
                   const Icon = meta.icon;
                   const client = r.invoices?.clients;
@@ -837,6 +856,7 @@ export default function FinancialInstallmentsPage() {
               )}
             </TableBody>
           </Table>
+          <PagerFor state={pg} itemLabel="parcelas" />
         </CardContent>
       </Card>
 

@@ -1469,67 +1469,16 @@ export default function Leads() {
             )}
 
             {/* Pagination Controls */}
-            {filteredLeads.length > pageSize && (
-              <div className="flex items-center justify-between py-3 pr-2">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm text-muted-foreground">
-                    Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, filteredLeads.length)} de {filteredLeads.length} leads
-                  </p>
-                  <select
-                    value={pageSize}
-                    onChange={(e) => { setPageSize(Number(e.target.value)); setCurrentPage(1); }}
-                    className="h-8 rounded-md border border-input bg-background px-2 text-xs"
-                  >
-                    <option value={20}>20</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                    disabled={safePage <= 1}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronLeft className="h-4 w-4" />
-                  </Button>
-                  {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
-                    let page: number;
-                    if (totalPages <= 7) {
-                      page = i + 1;
-                    } else if (safePage <= 4) {
-                      page = i + 1;
-                    } else if (safePage >= totalPages - 3) {
-                      page = totalPages - 6 + i;
-                    } else {
-                      page = safePage - 3 + i;
-                    }
-                    return (
-                      <Button
-                        key={page}
-                        variant={safePage === page ? "default" : "outline"}
-                        size="sm"
-                        onClick={() => setCurrentPage(page)}
-                        className="h-8 w-8 p-0 text-xs"
-                      >
-                        {page}
-                      </Button>
-                    );
-                  })}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                    disabled={safePage >= totalPages}
-                    className="h-8 w-8 p-0"
-                  >
-                    <ChevronRight className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            )}
+            <ListPagination
+              currentPage={pg.currentPage}
+              totalPages={pg.totalPages}
+              totalItems={pg.totalItems}
+              pageSize={pg.pageSize}
+              onPageChange={pg.handlePageChange}
+              onPageSizeChange={pg.handlePageSizeChange}
+              itemLabel="leads"
+              className="py-3 pr-2"
+            />
           </ScrollArea>
         </div>
       </div>

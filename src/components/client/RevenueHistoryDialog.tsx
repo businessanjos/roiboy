@@ -432,6 +432,9 @@ export function RevenueHistoryDialog({
                       ))}
                     </TableBody>
                   </Table>
+                  <div className="p-2">
+                    <PagerFor state={rowsPg} itemLabel="meses" />
+                  </div>
                 </div>
               </>
             )}

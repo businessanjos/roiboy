@@ -59,6 +59,8 @@ import {
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const REMINDER_TYPES = [
   { value: "notice", label: "Aviso", description: "Lembrete geral sobre o evento" },
@@ -157,6 +159,8 @@ export default function MarketingRemindersTab() {
     },
     enabled: !!selectedCampaignId,
   });
+
+  const pg = usePagedList(campaigns, { isLoading: loadingCampaigns });
 
   const selectedEvent = events.find(e => e.id === selectedEventId);
   const selectedCampaign = campaigns.find(c => c.id === selectedCampaignId);
@@ -612,7 +616,7 @@ export default function MarketingRemindersTab() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {campaigns.map((campaign: any) => (
+                  {pg.items.map((campaign: any) => (
                     <TableRow key={campaign.id}>
                       <TableCell>{campaign.events?.title}</TableCell>
                       <TableCell>
@@ -649,6 +653,7 @@ export default function MarketingRemindersTab() {
                 </TableBody>
               </Table>
             )}
+            {!loadingCampaigns && campaigns.length > 0 && <PagerFor state={pg} itemLabel="campanhas" />}
           </CardContent>
         </Card>
       </TabsContent>

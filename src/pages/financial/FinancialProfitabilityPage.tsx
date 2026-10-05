@@ -25,6 +25,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TrendingUp, TrendingDown, Users, ChevronLeft, ChevronRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface ClientProfitability {
   client_id: string;
@@ -90,6 +92,8 @@ export default function FinancialProfitabilityPage() {
     if (profitability.length === 0) return 0;
     return Math.max(...profitability.map(p => Math.abs(p.profit)));
   }, [profitability]);
+
+  const pg = usePagedList(profitability, { resetKey: [period, dateRange], isLoading });
 
   return (
     <div className="p-6 space-y-6">
@@ -201,7 +205,7 @@ export default function FinancialProfitabilityPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {profitability.map((client) => (
+                {pg.items.map((client) => (
                   <TableRow key={client.client_id}>
                     <TableCell className="font-medium">{client.client_name}</TableCell>
                     <TableCell className="text-right text-success">
@@ -231,6 +235,7 @@ export default function FinancialProfitabilityPage() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && profitability.length > 0 && <PagerFor state={pg} itemLabel="clientes" />}
         </CardContent>
       </Card>
     </div>

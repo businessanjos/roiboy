@@ -37,6 +37,8 @@ import {
   CircleDollarSign,
 } from "lucide-react";
 import { CommissionDealEntry } from "@/hooks/useCommissionPlan";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface CommissionDealViewProps {
   dealEntries: CommissionDealEntry[];
@@ -102,6 +104,10 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
     }
     return Array.from(map.entries()).sort((a, b) => b[1].total - a[1].total);
   }, [dealEntries]);
+
+  const filteredPg = usePagedList(filtered, {
+    resetKey: [filterUser, filterStatus],
+  });
 
   const handleAntecipar = async (entry: CommissionDealEntry) => {
     await onUpdatePayment(entry.id, { payment_status: "fully_paid", notes: "Comissão antecipada" });
@@ -222,7 +228,7 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filtered.map((entry) => {
+                {filteredPg.items.map((entry) => {
                   const pmInfo = PAYMENT_METHOD_LABELS[entry.payment_method || "unknown"] || PAYMENT_METHOD_LABELS.unknown;
                   const statusInfo = COMMISSION_STATUS_MAP[entry.commission_status] || COMMISSION_STATUS_MAP.pending;
 
@@ -330,6 +336,9 @@ export function CommissionDealView({ dealEntries, onUpdatePayment, onMarkAsPaid 
                 })}
               </TableBody>
             </Table></div>
+            <div className="p-3 border-t">
+              <PagerFor state={filteredPg} itemLabel="negócios" />
+            </div>
           </CardContent>
         </Card>
       )}

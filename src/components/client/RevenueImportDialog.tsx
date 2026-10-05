@@ -1,4 +1,6 @@
 import { useMemo, useRef, useState } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import * as XLSX from "xlsx";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -111,6 +113,7 @@ export function RevenueImportDialog({
     onOpenChange?.(o);
   };
   const [rows, setRows] = useState<ParsedRow[]>([]);
+  const rowsPg = usePagedList(rows, {});
   const [parsing, setParsing] = useState(false);
   const [importing, setImporting] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
@@ -366,7 +369,7 @@ export function RevenueImportDialog({
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {rows.map((r) => (
+                    {rowsPg.items.map((r) => (
                       <TableRow key={r.line} className={r.error ? "bg-destructive/5" : undefined}>
                         <TableCell className="text-xs text-muted-foreground">{r.line}</TableCell>
                         <TableCell className="text-sm">{r.clientName ?? (r.rawClient || "—")}</TableCell>
@@ -388,6 +391,7 @@ export function RevenueImportDialog({
                   </TableBody>
                 </Table>
               </ScrollArea>
+              <PagerFor state={rowsPg} itemLabel="linhas" />
             </>
           )}
         </div>

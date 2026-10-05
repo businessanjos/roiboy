@@ -22,6 +22,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { formatBRL } from "@/lib/financial-format";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type SyncIssue = {
   installment_id: string;
@@ -54,13 +56,25 @@ export function FinancialSyncIssuesAlert() {
   const { data, isLoading, refetch, isFetching } = useQuery({
     queryKey: ["financial-sync-issues"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financial_sync_issues_active" as any)
-        .select("*")
-        .order("due_date", { ascending: false })
-        .limit(500);
-      if (error) throw error;
-      return (data ?? []) as unknown as SyncIssue[];
+      // Carrega em lotes via range() até esgotar — o resumo (contagens por
+      // tipo) usa o conjunto completo, então não pode truncar silenciosamente.
+      const BATCH_SIZE = 500;
+      let all: SyncIssue[] = [];
+      let offset = 0;
+      while (true) {
+        const { data, error } = await supabase
+          .from("financial_sync_issues_active" as any)
+          .select("*")
+          .order("due_date", { ascending: false })
+          .order("installment_id", { ascending: false })
+          .range(offset, offset + BATCH_SIZE - 1);
+        if (error) throw error;
+        const batch = (data ?? []) as unknown as SyncIssue[];
+        all = all.concat(batch);
+        if (batch.length < BATCH_SIZE) break;
+        offset += BATCH_SIZE;
+      }
+      return all;
     },
     staleTime: 60_000,
   });
@@ -73,6 +87,8 @@ export function FinancialSyncIssuesAlert() {
     });
     return { total, byType };
   }, [data]);
+
+  const pg = usePagedList(data ?? [], { resetKey: open, isLoading });
 
   if (isLoading || summary.total === 0) return null;
 
@@ -152,7 +168,7 @@ export function FinancialSyncIssuesAlert() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(data ?? []).map((r) => {
+                {pg.items.map((r) => {
                   const meta = ISSUE_LABELS[r.issue_type];
                   return (
                     <TableRow key={r.installment_id}>
@@ -212,6 +228,7 @@ export function FinancialSyncIssuesAlert() {
               </TableBody>
             </Table>
           </div>
+          <PagerFor state={pg} itemLabel="divergências" />
         </DialogContent>
       </Dialog>
     </>

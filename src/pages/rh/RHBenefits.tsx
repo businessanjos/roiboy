@@ -24,6 +24,8 @@ import {
 } from "@/hooks/useHRCompanyBenefits";
 import { CONTRACT_TYPE_LABELS } from "@/constants/jobOptions";
 import type { JobContractType } from "@/types/job";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const CONTRACT_OPTIONS = Object.entries(CONTRACT_TYPE_LABELS) as [JobContractType, string][];
 
@@ -92,6 +94,8 @@ export default function RHBenefits() {
       (BENEFIT_CATEGORY_LABELS[a[0]] || a[0]).localeCompare(BENEFIT_CATEGORY_LABELS[b[0]] || b[0], "pt-BR"),
     );
   }, [filtered]);
+
+  const pgGrouped = usePagedList(grouped, { resetKey: search, isLoading: loading });
 
   const stats = useMemo(() => {
     const active = benefits.filter((b) => b.is_active);
@@ -226,7 +230,7 @@ export default function RHBenefits() {
         </CardContent></Card>
       ) : (
         <div className="space-y-6">
-          {grouped.map(([category, items]) => (
+          {pgGrouped.items.map(([category, items]) => (
             <div key={category} className="space-y-2">
               <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
                 {BENEFIT_CATEGORY_LABELS[category] || category} · {items.length}
@@ -301,6 +305,7 @@ export default function RHBenefits() {
               </div>
             </div>
           ))}
+          <PagerFor state={pgGrouped} itemLabel="categorias" />
         </div>
       )}
 

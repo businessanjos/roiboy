@@ -79,6 +79,8 @@ import { PostComparisonDialog } from './PostComparisonDialog';
 import { WeeklyAnalysisDashboard } from './WeeklyAnalysisDashboard';
 import { cn } from '@/lib/utils';
 import { IntegrationAccessAlert } from '@/components/integrations/IntegrationAccessAlert';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface SocialMediaTabProps {
   initialPostId?: string | null;
@@ -182,6 +184,8 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
     const bValue = (b[sortBy as keyof InstagramPost] as number) || 0;
     return bValue - aValue; // Descending order
   });
+
+  const pg = usePagedList(sortedPosts, { resetKey: [formatFilter, objectiveFilter, dateFrom, dateTo, sortBy], isLoading });
 
   // Toggle sort by column
   const handleSortToggle = (field: string) => {
@@ -791,7 +795,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                         </TableCell>
                       </TableRow>
                     ) : (
-                      sortedPosts.map((post) => {
+                      pg.items.map((post) => {
                         const isSelected = selectedPostsForComparison.includes(post.id);
                         return (
                           <TableRow 
@@ -938,6 +942,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
                   </TableBody>
                 </Table>
               </div>
+              <PagerFor state={pg} itemLabel="posts" />
             </CardContent>
           </TabsContent>
           

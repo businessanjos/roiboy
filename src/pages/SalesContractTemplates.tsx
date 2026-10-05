@@ -30,6 +30,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { TemplateDialog } from "@/components/sales/contracts/TemplateBuilder";
 import type { TemplateVariableDef } from "@/lib/contractTemplates";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface TemplateRow {
   id: string;
@@ -168,6 +170,11 @@ const SalesContractTemplates = () => {
     );
   }, [rows, search]);
 
+  const templatesPg = usePagedList(filtered, {
+    resetKey: [search],
+    isLoading: loading,
+  });
+
   return (
     <div className="container mx-auto py-6 space-y-5 max-w-[1200px]">
       {/* Header */}
@@ -243,7 +250,7 @@ const SalesContractTemplates = () => {
         </div>
       ) : (
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {filtered.map((r) => (
+          {templatesPg.items.map((r) => (
             <div
               key={r.id}
               className="group rounded-xl border border-border bg-card p-4 hover:border-primary/40 hover:shadow-md transition-all flex flex-col"
@@ -312,6 +319,10 @@ const SalesContractTemplates = () => {
             </div>
           ))}
         </div>
+      )}
+
+      {!loading && rows.length > 0 && filtered.length > 0 && (
+        <PagerFor state={templatesPg} itemLabel="templates" />
       )}
 
       <TemplateDialog

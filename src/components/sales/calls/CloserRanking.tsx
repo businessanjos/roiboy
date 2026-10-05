@@ -6,6 +6,8 @@ import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Trophy, Crown, Medal, Award, TrendingUp, Phone, Loader2 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { usePagedList } from '@/hooks/usePagedList';
+import { ListPagination } from '@/components/ui/list-pagination';
 
 interface SellerStats {
   userId: string;
@@ -116,6 +118,7 @@ export function CloserRanking() {
   }
 
   const maxCalls = Math.max(...ranking.map(r => r.totalCalls), 1);
+  const pg = usePagedList(ranking, { isLoading });
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Crown className="w-6 h-6 text-warning" />;
@@ -167,9 +170,9 @@ export function CloserRanking() {
       <Card>
         <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Trophy className="w-4 h-4 text-primary" />Ranking Completo</CardTitle></CardHeader>
         <CardContent className="space-y-2">
-          {ranking.map((seller, i) => (
+          {pg.items.map((seller, i) => (
             <div key={seller.userId} className="flex items-center gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors">
-              <div className="w-8 shrink-0 flex justify-center">{getRankIcon(i)}</div>
+              <div className="w-8 shrink-0 flex justify-center">{getRankIcon(pg.from + i)}</div>
               <div className="flex-1 min-w-0">
                 <p className="font-medium text-sm truncate">{seller.userName}</p>
                 <div className="flex items-center gap-3 text-xs text-muted-foreground mt-0.5">
@@ -188,6 +191,15 @@ export function CloserRanking() {
               </div>
             </div>
           ))}
+          <ListPagination
+            currentPage={pg.currentPage}
+            totalPages={pg.totalPages}
+            totalItems={pg.totalItems}
+            pageSize={pg.pageSize}
+            onPageChange={pg.handlePageChange}
+            onPageSizeChange={pg.handlePageSizeChange}
+            itemLabel="vendedores"
+          />
         </CardContent>
       </Card>
     </div>

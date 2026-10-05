@@ -44,6 +44,8 @@ import {
 import { format, isAfter, isBefore, isEqual } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface CustomField {
   id: string;
@@ -343,6 +345,10 @@ export function FormResponseViewer({
 
   const hasActiveFilters = searchTerm || dateFrom || dateTo || selectedFieldFilter !== "all";
 
+  const responsesPg = usePagedList(filteredResponses, {
+    resetKey: { searchTerm, dateFrom, dateTo, selectedFieldFilter, selectedFieldValue },
+  });
+
   // Handle save to client
   const handleSaveToClient = async () => {
     if (!selectedResponse || !linkingClientId) return;
@@ -489,7 +495,7 @@ export function FormResponseViewer({
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 p-4">
-            {filteredResponses.map((response) => {
+            {responsesPg.items.map((response) => {
               const clientName = response.clients?.full_name || response.client_name || "Não identificado";
               const clientPhone = response.clients?.phone_e164 || response.client_phone;
               const hasClient = !!response.clients || !!response.client_id;
@@ -565,6 +571,12 @@ export function FormResponseViewer({
           </div>
         )}
       </ScrollArea>
+
+      {filteredResponses.length > 0 && (
+        <div className="border-t">
+          <PagerFor state={responsesPg} itemLabel="respostas" />
+        </div>
+      )}
 
       {/* Response Detail Dialog */}
       <Dialog open={!!selectedResponse} onOpenChange={(open) => !open && setSelectedResponse(null)}>

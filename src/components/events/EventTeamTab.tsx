@@ -38,6 +38,8 @@ import {
   GraduationCap
 } from "lucide-react";
 import { Database } from "@/integrations/supabase/types";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type EventTeamRole = Database["public"]["Enums"]["event_team_role"];
 
@@ -185,6 +187,7 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
   };
 
   const availableUsers = users.filter(u => !teamMembers.some(m => m.user_id === u.id));
+  const teamPg = usePagedList(teamMembers, { isLoading: loading });
 
   return (
     <div className="space-y-6">
@@ -212,8 +215,9 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
           }}
         />
       ) : (
+        <div className="space-y-3">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {teamMembers.map((member) => {
+          {teamPg.items.map((member) => {
             const RoleIcon = roleConfig[member.role].icon;
             return (
               <Card key={member.id} className={member.is_primary ? 'ring-2 ring-primary' : ''}>
@@ -279,6 +283,8 @@ export default function EventTeamTab({ eventId, accountId }: EventTeamTabProps) 
               </Card>
             );
           })}
+        </div>
+        <PagerFor state={teamPg} itemLabel="membros" />
         </div>
       )}
 

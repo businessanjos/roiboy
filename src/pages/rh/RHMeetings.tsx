@@ -18,6 +18,8 @@ import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
 import { SECTOR_OPTIONS, formatDateBR } from "@/lib/rh/pda";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Meeting = {
   id: string;
@@ -43,6 +45,8 @@ const EMPTY_ALIGNMENT = { sector: "", title: "", alignment_date: new Date().toIS
 
 export default function RHMeetings() {
   const navigate = useNavigate();
+  const pgMeetings = usePagedList<Meeting>([], { isLoading: true });
+  const pgAlignments = usePagedList<Alignment>([], { isLoading: true });
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
 

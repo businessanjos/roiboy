@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -45,6 +45,8 @@ import {
   Users,
 } from "lucide-react";
 import { FinancialPageHeader } from "@/components/financial/_shared";
+import { usePagedList, usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -142,16 +144,24 @@ export default function FinancialCollectionsRulerPage() {
     },
   });
 
+  const [historyCount, setHistoryCount] = useState(0);
+  const historyPg = usePaginationState(historyCount, {
+    resetKey: tab,
+    isLoading: false,
+    defaultPageSize: 20,
+  });
+
   const historyQ = useQuery({
-    queryKey: ["billing-reminder-sends", accountId],
+    queryKey: ["billing-reminder-sends", accountId, historyPg.currentPage, historyPg.pageSize],
     enabled: !!accountId && tab === "historico",
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error, count } = await supabase
         .from("billing_reminder_sends")
-        .select("*, billing_reminder_rules:rule_id(name)")
+        .select("*, billing_reminder_rules:rule_id(name)", { count: "exact" })
         .eq("account_id", accountId!)
         .order("sent_at", { ascending: false })
-        .limit(200);
+        .order("id", { ascending: false })
+        .range(historyPg.from, historyPg.to);
       if (error) throw error;
       const rows = (data || []) as unknown as SendLog[];
       const clientIds = [...new Set(rows.map((r) => r.client_id).filter(Boolean))] as string[];
@@ -165,9 +175,13 @@ export default function FinancialCollectionsRulerPage() {
           if (r.client_id) r.clients = { full_name: map.get(r.client_id) || "—" };
         });
       }
-      return rows;
+      return { rows, count: count || 0 };
     },
   });
+
+  useEffect(() => {
+    if (historyQ.data) setHistoryCount(historyQ.data.count);
+  }, [historyQ.data]);
 
   const toggleActive = useMutation({
     mutationFn: async (rule: Rule) => {
@@ -355,7 +369,7 @@ export default function FinancialCollectionsRulerPage() {
         </TabsContent>
 
         <TabsContent value="historico">
-          <HistoryTab logs={historyQ.data || []} loading={historyQ.isLoading} />
+          <HistoryTab logs={historyQ.data?.rows || []} loading={historyQ.isLoading} pg={historyPg} />
         </TabsContent>
       </Tabs>
 
@@ -577,6 +591,7 @@ function ClientOverridesTab({
 }) {
   const [addOpen, setAddOpen] = useState(false);
   const [clientSearch, setClientSearch] = useState("");
+  const settingsPg = usePagedList(settings, { defaultPageSize: 20, isLoading: loading });
 
   const clientsQ = useQuery({
     queryKey: ["clients-picker", accountId, clientSearch],
@@ -626,7 +641,7 @@ function ClientOverridesTab({
               </TableRow>
             </TableHeader>
             <TableBody>
-              {settings.map((s) => (
+              {settingsPg.items.map((s) => (
                 <TableRow key={s.id}>
                   <TableCell className="font-medium">{s.clients?.full_name || "—"}</TableCell>
                   <TableCell>
@@ -661,6 +676,7 @@ function ClientOverridesTab({
               ))}
             </TableBody>
           </Table>
+          <PagerFor state={settingsPg} itemLabel="clientes" />
         </Card>
       )}
 
@@ -697,7 +713,15 @@ function ClientOverridesTab({
 // ================================================================
 // History
 // ================================================================
-function HistoryTab({ logs, loading }: { logs: SendLog[]; loading: boolean }) {
+function HistoryTab({
+  logs,
+  loading,
+  pg,
+}: {
+  logs: SendLog[];
+  loading: boolean;
+  pg: ReturnType<typeof usePaginationState>;
+}) {
   if (loading) return <Skeleton className="h-64" />;
   if (logs.length === 0) {
     return (
@@ -758,6 +782,7 @@ function HistoryTab({ logs, loading }: { logs: SendLog[]; loading: boolean }) {
           ))}
         </TableBody>
       </Table>
+      <PagerFor state={pg} itemLabel="envios" />
     </Card>
   );
 }

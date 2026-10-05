@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
@@ -219,6 +221,8 @@ export function ClientBusinessProfile({
   const [history, setHistory] = useState<HistoryRow[]>([]);
   const [rykaStatus, setRykaStatus] = useState<"active" | "pending" | "error" | "none">("none");
   const [loading, setLoading] = useState(true);
+  const reversedHistory = useMemo(() => [...history].reverse(), [history]);
+  const historyPg = usePagedList(reversedHistory, { isLoading: loading });
   const [saving, setSaving] = useState(false);
   const [historyDialogOpen, setHistoryDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | "new" | null>(null);
@@ -903,7 +907,7 @@ export function ClientBusinessProfile({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {[...history].reverse().map((h) => (
+                {historyPg.items.map((h) => (
                   <TableRow key={h.id}>
                     <TableCell className="font-medium">{monthLabel(h.month)}</TableCell>
                     <TableCell>{currency(Number(h.revenue))}</TableCell>
@@ -940,6 +944,7 @@ export function ClientBusinessProfile({
               </TableBody>
             </Table>
           )}
+          {history.length > 0 && <PagerFor state={historyPg} itemLabel="meses" />}
         </CardContent>
       </Card>
 

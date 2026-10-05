@@ -28,6 +28,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, FileText, Pin, PinOff } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface NoteItem {
   id: string;
@@ -195,6 +197,8 @@ export default function EventNotesTab({ eventId, accountId }: Props) {
     }
   };
 
+  const notesPg = usePagedList(items, { isLoading: loading });
+
   const getNoteTypeBadge = (type: string | null) => {
     const config: Record<string, { className: string }> = {
       general: { className: "bg-muted text-foreground dark:bg-muted-foreground dark:text-muted-foreground" },
@@ -239,7 +243,7 @@ export default function EventNotesTab({ eventId, accountId }: Props) {
           />
         ) : (
           <div className="space-y-4">
-            {items.map((item) => (
+            {notesPg.items.map((item) => (
               <div
                 key={item.id}
                 className={`p-4 rounded-lg border ${item.is_pinned ? 'border-primary/50 bg-primary/5' : ''}`}
@@ -287,6 +291,7 @@ export default function EventNotesTab({ eventId, accountId }: Props) {
           </div>
         )}
       </CardContent>
+      {items.length > 0 && <PagerFor state={notesPg} itemLabel="notas" />}
 
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
