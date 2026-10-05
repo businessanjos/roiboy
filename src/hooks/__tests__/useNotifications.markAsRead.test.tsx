@@ -16,6 +16,7 @@ import {
 // histórico/servidor.
 let serverRows: Record<string, { id: string; is_read: boolean; source_type: string | null }>;
 let updateCalls: number;
+let updateError: boolean;
 let realtimeUpdateHandler: ((payload: { new: any }) => void) | null;
 
 const NOTIF = {
@@ -83,6 +84,7 @@ vi.mock("@/integrations/supabase/client", () => ({
               select: () => chain,
               maybeSingle: () => {
                 updateCalls++;
+                if (updateError) return Promise.resolve({ data: null, error: { message: "falha simulada" } });
                 const row = targetId ? serverRows[targetId] : undefined;
                 if (!row) return Promise.resolve({ data: null, error: null });
                 const wasUnread = !row.is_read;
@@ -142,6 +144,7 @@ function renderHarness(queryClient: QueryClient, idToMark = NOTIF.id) {
 describe("useNotifications — markAsRead otimista", () => {
   beforeEach(() => {
     updateCalls = 0;
+    updateError = false;
     realtimeUpdateHandler = null;
     serverRows = {
       [NOTIF.id]: { id: NOTIF.id, is_read: false, source_type: "deal" },
@@ -277,6 +280,7 @@ describe("useNotifications — markAsRead otimista", () => {
 
     // Simula outro dispositivo marcando a notificação como lida: o UPDATE
     // realtime chega sem que este cliente tenha chamado markAsRead.
+    serverRows[NOTIF.id].is_read = true;
     await act(async () => {
       realtimeUpdateHandler!({
         new: { ...NOTIF, is_read: true, source_type: "deal" },
@@ -289,6 +293,68 @@ describe("useNotifications — markAsRead otimista", () => {
       notificationTabCountsKey("user-1")
     );
     expect(counts?.sales).toBe(0);
+  });
+
+  it("(a) UPDATE condicional sem linha (já lida no servidor) reconcilia pelo servidor, sem +1 fantasma", async () => {
+    const oldId = "notif-old-stale";
+    serverRows[NOTIF.id].is_read = true;
+    serverRows[oldId] = { id: oldId, is_read: true, source_type: "deal" }; // servidor já true
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(notificationsHistoryKey("user-1", "all", 4, 20), {
+      rows: [{ ...NOTIF, id: oldId, is_read: false }], // cache desatualizado
+      total: 1,
+    });
+    renderHarness(queryClient, oldId);
+    await waitFor(() => expect(realtimeUpdateHandler).not.toBeNull());
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("0"));
+    await act(async () => {
+      screen.getByText("mark").click();
+    });
+    await waitFor(() => expect(updateCalls).toBe(1));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.getByTestId("count").textContent).toBe("0");
+  });
+
+  it("(a) erro no UPDATE reconcilia o sino pela contagem do servidor, sem somar 1", async () => {
+    const oldId = "notif-old-error";
+    serverRows[NOTIF.id].is_read = true;
+    serverRows[oldId] = { id: oldId, is_read: true, source_type: "deal" };
+    updateError = true;
+    const queryClient = new QueryClient();
+    queryClient.setQueryData(notificationsHistoryKey("user-1", "all", 4, 20), {
+      rows: [{ ...NOTIF, id: oldId, is_read: false }],
+      total: 1,
+    });
+    renderHarness(queryClient, oldId);
+    await waitFor(() => expect(realtimeUpdateHandler).not.toBeNull());
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("0"));
+    await act(async () => {
+      screen.getByText("mark").click();
+    });
+    await waitFor(() => expect(updateCalls).toBe(1));
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.getByTestId("count").textContent).toBe("0");
+  });
+
+  it("(b) UPDATE realtime atrasado de leitura já incorporada pelo refetch não desconta de novo", async () => {
+    // X (NOTIF) já foi lida remotamente e o refetch incorporou; só Y segue não lida.
+    serverRows[NOTIF.id].is_read = true;
+    serverRows["notif-y"] = { id: "notif-y", is_read: false, source_type: "deal" };
+    const queryClient = new QueryClient();
+    renderHarness(queryClient);
+    await waitFor(() => expect(realtimeUpdateHandler).not.toBeNull());
+    await waitFor(() => expect(screen.getByTestId("count").textContent).toBe("1"));
+    await act(async () => {
+      realtimeUpdateHandler!({ new: { ...NOTIF, is_read: true } });
+    });
+    await act(async () => {
+      await new Promise((r) => setTimeout(r, 20));
+    });
+    expect(screen.getByTestId("count").textContent).toBe("1");
   });
 
   it("contagem por aba vem do servidor (RPC), não do cliente", async () => {
