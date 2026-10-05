@@ -444,6 +444,11 @@ export default function VipClients() {
         </div>
       </div>
 
+      {loadError && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível carregar os clientes VIP: {loadError}. Os dados exibidos podem estar desatualizados.
+        </p>
+      )}
       <Card className="overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">
