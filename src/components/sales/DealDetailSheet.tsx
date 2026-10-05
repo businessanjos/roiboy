@@ -1184,7 +1184,7 @@ export function DealDetailSheet({
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-1.5 w-full sm:w-auto sm:mr-8">
+            <div className="grid grid-cols-2 gap-2 w-full sm:flex sm:items-center sm:gap-1.5 sm:w-auto sm:mr-8">
               <DealRulerButton
                 dealId={deal.id}
                 variant="button"
@@ -1192,7 +1192,7 @@ export function DealDetailSheet({
                 contactPhone={contactPhone}
                 clientId={deal.client_id}
                 leadId={deal.lead_id}
-                className="h-8"
+                className="h-11 sm:h-8"
               />
 
               {!isClosed && (
@@ -1200,7 +1200,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 flex-1 sm:flex-none text-success hover:text-success-strong hover:bg-success/10"
+                    className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none text-success hover:text-success-strong hover:bg-success/10"
                     onClick={() => onMarkAsWon(deal.id)}
                     disabled={processingWonDealId === deal.id}
                   >
@@ -1214,7 +1214,7 @@ export function DealDetailSheet({
                   <Button
                     variant="ghost"
                     size="sm"
-                    className="h-8 px-2.5 flex-1 sm:flex-none text-danger hover:text-danger hover:bg-danger/10"
+                    className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none text-danger hover:text-danger hover:bg-danger/10"
                     onClick={() => setLostDialogOpen(true)}
                     disabled={!!processingWonDealId}
                   >
@@ -1227,14 +1227,14 @@ export function DealDetailSheet({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="h-8 px-2.5 flex-1 sm:flex-none"
+                  className="h-11 sm:h-8 px-2.5 flex-1 sm:flex-none"
                   onClick={() => onReopen(deal.id)}
                 >
                   <RotateCcw className="h-4 w-4 mr-1" />
                   Reabrir
                 </Button>
               )}
-              <Button variant="outline" size="sm" className="h-8 flex-1 sm:flex-none" onClick={onEdit}>
+              <Button variant="outline" size="sm" className="h-11 sm:h-8 flex-1 sm:flex-none" onClick={onEdit}>
                 <Edit className="h-3.5 w-3.5 mr-1" />
                 Editar
               </Button>

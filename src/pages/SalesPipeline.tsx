@@ -2539,7 +2539,7 @@ export default function SalesPipeline() {
         >
 
           <div className="flex items-center justify-between gap-2">
-            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
+            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
 
 
               <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
@@ -2955,20 +2955,20 @@ export default function SalesPipeline() {
               className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
             >
 
-              <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-9">
-                <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+              <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-12 sm:h-9 rounded-xl sm:rounded-md">
+                <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <TrendingUp className="h-3.5 w-3.5" />
                   Em Aberto
                   <Badge variant="secondary" className="text-[10px] ml-0.5">{filteredOpenDeals.length}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+                <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <Trophy className="h-3.5 w-3.5" />
                   Ganhas
                   <Badge variant="secondary" className="bg-success/20 text-success-strong text-[10px] ml-0.5">
                     {filteredWonDeals.length}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+                <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <XCircle className="h-3.5 w-3.5" />
                   Perdidas
                   <Badge variant="secondary" className="bg-danger/20 text-danger-strong text-[10px] ml-0.5">
@@ -2987,7 +2987,7 @@ export default function SalesPipeline() {
                     <span className="text-warning-strong dark:text-warning">
                       <b>{hiddenOpenCount}</b> {hiddenOpenCount === 1 ? "negócio em aberto está oculto" : "negócios em aberto estão ocultos"} pelos filtros ativos (de {openDeals.length} no funil).
                     </span>
-                    <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
+                    <Button size="sm" variant="outline" className="h-11 sm:h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
                       Limpar filtros
                     </Button>
                   </div>
