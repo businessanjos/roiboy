@@ -693,7 +693,7 @@ const HISTORY_PAGE_SIZE = 20 as const;
  * O resumo exibido no accordion mostra só os 8 logs mais recentes; aqui o
  * usuário navega por todo o histórico via count: 'exact' + range().
  */
-function SyncHistoryDialog({
+export function SyncHistoryDialog({
   accountId,
   accountName,
   open,
