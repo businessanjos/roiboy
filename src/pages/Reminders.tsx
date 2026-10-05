@@ -262,6 +262,7 @@ export default function Reminders() {
             events(title)
           `)
           .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, from + BATCH - 1);
         if (error) throw error;
         all = all.concat((data || []) as Campaign[]);

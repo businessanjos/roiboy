@@ -87,6 +87,7 @@ export function LovableCostsSection() {
           .eq("entry_type", "expense")
           .ilike("description", "%lovable%")
           .order("payment_date", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: false })
           .range(from, from + pageSize - 1);
         if (error) throw error;
         all.push(...((data || []) as FinancialLovableEntry[]));

@@ -95,8 +95,6 @@ export default function RHBenefits() {
     );
   }, [filtered]);
 
-  const pgGrouped = usePagedList(grouped, { resetKey: search, isLoading: loading });
-
   const stats = useMemo(() => {
     const active = benefits.filter((b) => b.is_active);
     const cost = active.reduce((sum, b) => sum + Number(b.monthly_value || 0), 0);
@@ -230,82 +228,17 @@ export default function RHBenefits() {
         </CardContent></Card>
       ) : (
         <div className="space-y-6">
-          {pgGrouped.items.map(([category, items]) => (
-            <div key={category} className="space-y-2">
-              <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                {BENEFIT_CATEGORY_LABELS[category] || category} · {items.length}
-              </h2>
-              <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-                {items.map((b) => (
-                  <Card key={b.id} className={b.is_active ? "" : "opacity-60"}>
-                    <CardContent className="p-4 space-y-2">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="space-y-1">
-                          <div className="flex items-center gap-1.5">
-                            {b.is_highlight && <Star className="h-3.5 w-3.5 text-warning shrink-0" />}
-                            <p className="font-medium leading-tight">{b.name}</p>
-                          </div>
-                          {b.provider && <p className="text-xs text-muted-foreground">{b.provider}</p>}
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => openDialog(b)}>
-                              <Pencil className="h-4 w-4 mr-2" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuItem
-                              onClick={() => updateBenefit({ id: b.id, is_active: !b.is_active })}
-                            >
-                              {b.is_active ? "Desativar" : "Reativar"}
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(b.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {b.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2">{b.description}</p>
-                      )}
-
-                      <div className="flex flex-wrap gap-1.5 pt-1">
-                        {Number(b.monthly_value || 0) > 0 && (
-                          <Badge variant="secondary" className="text-[11px]">{brl(Number(b.monthly_value))}/mês</Badge>
-                        )}
-                        {Number(b.employee_contribution || 0) > 0 && (
-                          <Badge variant="outline" className="text-[11px]">
-                            Coparticipação {brl(Number(b.employee_contribution))}
-                          </Badge>
-                        )}
-                        {(b.contract_types || []).map((c) => (
-                          <Badge key={c} variant="outline" className="text-[11px]">
-                            {CONTRACT_TYPE_LABELS[c as JobContractType] || c}
-                          </Badge>
-                        ))}
-                      </div>
-
-                      <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground pt-1">
-                        {b.include_in_jobs_by_default && (
-                          <span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" /> padrão nas vagas</span>
-                        )}
-                        {b.use_in_benchmark && (
-                          <span className="inline-flex items-center gap-1"><BarChart3 className="h-3 w-3" /> benchmark</span>
-                        )}
-                        {!b.is_active && <span>inativo</span>}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
+          {grouped.map(([category, items]) => (
+            <BenefitGroup
+              key={category}
+              category={category}
+              items={items}
+              resetKey={search}
+              openDialog={openDialog}
+              updateBenefit={updateBenefit}
+              handleDelete={handleDelete}
+            />
           ))}
-          <PagerFor state={pgGrouped} itemLabel="categorias" />
         </div>
       )}
 
@@ -441,6 +374,96 @@ export default function RHBenefits() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  );
+}
+
+interface BenefitGroupProps {
+  category: string;
+  items: HRCompanyBenefit[];
+  resetKey: unknown;
+  openDialog: (b?: HRCompanyBenefit) => void;
+  updateBenefit: (payload: Partial<HRCompanyBenefit> & { id: string }) => Promise<unknown>;
+  handleDelete: (id: string) => void;
+}
+
+export function BenefitGroup({ category, items, resetKey, openDialog, updateBenefit, handleDelete }: BenefitGroupProps) {
+  const pg = usePagedList(items, { resetKey });
+
+  return (
+    <div className="space-y-2">
+      <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+        {BENEFIT_CATEGORY_LABELS[category] || category} · {items.length}
+      </h2>
+      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+        {pg.items.map((b) => (
+          <Card key={b.id} className={b.is_active ? "" : "opacity-60"}>
+            <CardContent className="p-4 space-y-2">
+              <div className="flex items-start justify-between gap-2">
+                <div className="space-y-1">
+                  <div className="flex items-center gap-1.5">
+                    {b.is_highlight && <Star className="h-3.5 w-3.5 text-warning shrink-0" />}
+                    <p className="font-medium leading-tight">{b.name}</p>
+                  </div>
+                  {b.provider && <p className="text-xs text-muted-foreground">{b.provider}</p>}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0">
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={() => openDialog(b)}>
+                      <Pencil className="h-4 w-4 mr-2" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => updateBenefit({ id: b.id, is_active: !b.is_active })}
+                    >
+                      {b.is_active ? "Desativar" : "Reativar"}
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(b.id)}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {b.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2">{b.description}</p>
+              )}
+
+              <div className="flex flex-wrap gap-1.5 pt-1">
+                {Number(b.monthly_value || 0) > 0 && (
+                  <Badge variant="secondary" className="text-[11px]">{brl(Number(b.monthly_value))}/mês</Badge>
+                )}
+                {Number(b.employee_contribution || 0) > 0 && (
+                  <Badge variant="outline" className="text-[11px]">
+                    Coparticipação {brl(Number(b.employee_contribution))}
+                  </Badge>
+                )}
+                {(b.contract_types || []).map((c) => (
+                  <Badge key={c} variant="outline" className="text-[11px]">
+                    {CONTRACT_TYPE_LABELS[c as JobContractType] || c}
+                  </Badge>
+                ))}
+              </div>
+
+              <div className="flex flex-wrap gap-1.5 text-[11px] text-muted-foreground pt-1">
+                {b.include_in_jobs_by_default && (
+                  <span className="inline-flex items-center gap-1"><Briefcase className="h-3 w-3" /> padrão nas vagas</span>
+                )}
+                {b.use_in_benchmark && (
+                  <span className="inline-flex items-center gap-1"><BarChart3 className="h-3 w-3" /> benchmark</span>
+                )}
+                {!b.is_active && <span>inativo</span>}
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <PagerFor state={pg} itemLabel="benefícios" />
     </div>
   );
 }

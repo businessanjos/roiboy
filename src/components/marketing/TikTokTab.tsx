@@ -149,7 +149,7 @@ export function TikTokTab({ initialPostId, onPostOpened }: TikTokTabProps) {
     return bValue - aValue;
   });
 
-  const pg = usePagedList(sortedPosts, { resetKey: [objectiveFilter, categoryFilter, dateFrom, dateTo, sortBy], isLoading });
+  const pg = usePagedList(sortedPosts, { resetKey: [selectedProfileId, currentProfile?.id, objectiveFilter, categoryFilter, dateFrom, dateTo, sortBy], isLoading });
 
   const handleSortToggle = (field: string) => {
     setSortBy(prev => prev === field ? null : field);

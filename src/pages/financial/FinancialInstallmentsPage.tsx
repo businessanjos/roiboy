@@ -57,6 +57,7 @@ import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 
 type InstallmentRow = {
   id: string;
@@ -328,41 +329,37 @@ export default function FinancialInstallmentsPage() {
         .maybeSingle();
       const itemVendaFieldId = itemVendaFieldRes.data?.id as string | undefined;
 
-      // 1. contracts → deal_id
-      const contractsRes = contractIds.length
-        ? await supabase
-            .from("client_contracts")
-            .select("id, deal_id, product_id")
-            .in("id", contractIds)
-        : ({ data: [], error: null } as any);
-      if (contractsRes.error)
-        console.error("[FinancialInstallments] contracts batch error:", contractsRes.error);
-      const contractsById = new Map<string, any>(
-        (contractsRes.data ?? []).map((c: any) => [c.id, c])
+      // 1. contracts → deal_id (em lotes de 200 ids, erro propagado — nunca
+      // mapa parcial tratado como completo, pois isso quebraria a resolução
+      // do produto do negócio para contratos antigos).
+      const contracts = await fetchInChunks<{ id: string; deal_id: string | null; product_id: string | null }>(
+        contractIds,
+        200,
+        (chunk) => supabase.from("client_contracts").select("id, deal_id, product_id").in("id", chunk),
       );
+      const contractsById = new Map<string, any>(contracts.map((c) => [c.id, c]));
 
       const dealIds: string[] = Array.from(
-        new Set(
-          ((contractsRes.data ?? []) as any[])
-            .map((c) => c.deal_id as string | null)
-            .filter((v): v is string => !!v)
-        )
+        new Set(contracts.map((c) => c.deal_id).filter((v): v is string => !!v)),
       );
 
       // 2. deal_field_values → Item da Venda value (usually a product UUID)
-      const dealFieldRes =
+      const dealFieldRows =
         dealIds.length && itemVendaFieldId
-          ? await supabase
-              .from("deal_field_values")
-              .select("deal_id, value_text")
-              .eq("field_id", itemVendaFieldId)
-              .in("deal_id", dealIds)
-          : ({ data: [], error: null } as any);
-      if (dealFieldRes.error)
-        console.error("[FinancialInstallments] deal_field_values error:", dealFieldRes.error);
+          ? await fetchInChunks<{ deal_id: string; value_text: string | null }>(
+              dealIds,
+              200,
+              (chunk) =>
+                supabase
+                  .from("deal_field_values")
+                  .select("deal_id, value_text")
+                  .eq("field_id", itemVendaFieldId)
+                  .in("deal_id", chunk),
+            )
+          : [];
 
       const dealProductIdByDeal = new Map<string, string>();
-      (dealFieldRes.data ?? []).forEach((row: any) => {
+      dealFieldRows.forEach((row) => {
         const resolved = resolveItemVendaToProductId(row.value_text);
         if (resolved) {
           dealProductIdByDeal.set(row.deal_id, resolved);
@@ -378,20 +375,17 @@ export default function FinancialInstallmentsPage() {
         ])
       );
 
-      const [clientsRes, productsRes] = await Promise.all([
-        clientIds.length
-          ? supabase.from("clients").select("id, full_name, cpf, cnpj, company_name").in("id", clientIds)
-          : Promise.resolve({ data: [], error: null } as any),
-        productIds.length
-          ? supabase.from("products").select("id, name, color").in("id", productIds)
-          : Promise.resolve({ data: [], error: null } as any),
+      const [clients, products] = await Promise.all([
+        fetchInChunks<any>(clientIds, 200, (chunk) =>
+          supabase.from("clients").select("id, full_name, cpf, cnpj, company_name").in("id", chunk),
+        ),
+        fetchInChunks<any>(productIds, 200, (chunk) =>
+          supabase.from("products").select("id, name, color").in("id", chunk),
+        ),
       ]);
 
-      if (clientsRes.error) console.error("[FinancialInstallments] clients batch error:", clientsRes.error);
-      if (productsRes.error) console.error("[FinancialInstallments] products batch error:", productsRes.error);
-
-      const clientsById = new Map<string, any>((clientsRes.data ?? []).map((c: any) => [c.id, c]));
-      const productsById = new Map<string, any>((productsRes.data ?? []).map((p: any) => [p.id, p]));
+      const clientsById = new Map<string, any>(clients.map((c) => [c.id, c]));
+      const productsById = new Map<string, any>(products.map((p) => [p.id, p]));
 
       list.forEach((r) => {
         if (!r.invoices) return;

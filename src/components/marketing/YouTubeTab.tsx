@@ -81,7 +81,7 @@ export function YouTubeTab({ initialPostId, onPostOpened }: YouTubeTabProps) {
     return bVal - aVal;
   });
 
-  const pg = usePagedList(sortedVideos, { resetKey: [objectiveFilter, typeFilter, dateFrom, dateTo, sortBy], isLoading });
+  const pg = usePagedList(sortedVideos, { resetKey: [selectedChannelId, currentChannel?.id, objectiveFilter, typeFilter, dateFrom, dateTo, sortBy], isLoading });
 
   const formatNumber = (num: number): string => {
     if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M';
