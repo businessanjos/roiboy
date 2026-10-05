@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
+import { useState, useMemo, useEffect, useRef, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -416,6 +416,8 @@ function MonthGrid({
   const today = new Date();
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
   const [openDay, setOpenDay] = useState<Date | null>(null);
+  const dayTriggerRef = useRef<HTMLButtonElement | null>(null);
+  const goingToEventRef = useRef(false);
   const openDayEvents = openDay ? eventsByDay.get(format(openDay, "yyyy-MM-dd")) || [] : [];
 
   const handleDayKey = (ev: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
@@ -458,7 +460,7 @@ function MonthGrid({
               <button
                 type="button"
                 data-day-index={idx}
-                onClick={() => setOpenDay(day)}
+                onClick={(ev) => { dayTriggerRef.current = ev.currentTarget; setOpenDay(day); }}
                 onKeyDown={(ev) => handleDayKey(ev, idx)}
                 aria-label={`${format(day, "EEEE, d 'de' MMMM", { locale: ptBR })}: ${dayEvents.length === 0 ? "sem eventos" : `${dayEvents.length} evento${dayEvents.length > 1 ? "s" : ""}`}`}
                 className="md:hidden absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:bg-muted/40"
@@ -500,7 +502,14 @@ function MonthGrid({
         })}
       </div>
       <Dialog open={!!openDay} onOpenChange={(o) => { if (!o) setOpenDay(null); }}>
-        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+        <DialogContent
+          className="max-w-[calc(100vw-2rem)] sm:max-w-md"
+          onCloseAutoFocus={(ev) => {
+            ev.preventDefault();
+            if (goingToEventRef.current) { goingToEventRef.current = false; return; }
+            dayTriggerRef.current?.focus();
+          }}
+        >
           <DialogHeader>
             <DialogTitle className="first-letter:uppercase">
               {openDay ? format(openDay, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""}
@@ -514,7 +523,7 @@ function MonthGrid({
               <li key={e.id}>
                 <button
                   type="button"
-                  onClick={() => { setOpenDay(null); onSelect(e); }}
+                  onClick={() => { goingToEventRef.current = true; setOpenDay(null); onSelect(e); }}
                   className="w-full min-h-11 flex items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", SOURCE_STYLES[e.source].dot)} aria-hidden />
