@@ -438,7 +438,7 @@ export default function CloserDashboard() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/sales-team/incentive-presentation/slideshow")}
-                className="gap-1.5"
+                className="h-11 sm:h-9 gap-1.5"
               >
                 <Presentation className="h-4 w-4" />
                 Apresentar plano
@@ -618,7 +618,7 @@ export default function CloserDashboard() {
             </Card>
           ) : (
             <Tabs defaultValue="all" className="space-y-3">
-              <TabsList>
+              <TabsList className="h-[52px] sm:h-10 max-w-full overflow-x-auto scrollbar-hide justify-start [&>button]:h-11 sm:[&>button]:h-8 [&>button]:shrink-0">
                 <TabsTrigger value="all">Todos ({totalSpiffs})</TabsTrigger>
                 {rouletteSpiffs.length > 0 && (
                   <TabsTrigger value="roulette">Roletas ({rouletteSpiffs.length})</TabsTrigger>
