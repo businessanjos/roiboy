@@ -18,6 +18,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface CostCenter {
   id: string;
@@ -53,13 +56,17 @@ export default function FinancialCostCentersPage() {
     queryKey: ["cost-centers", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("cost_centers")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("display_order");
+      const { data, error } = await fetchAllRows<CostCenter>((from, to) =>
+        supabase
+          .from("cost_centers")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("display_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as unknown as PromiseLike<{ data: CostCenter[] | null; error: unknown }>,
+      );
       if (error) throw error;
-      return data as CostCenter[];
+      return data;
     },
     enabled: !!accountId,
   });
@@ -131,6 +138,8 @@ export default function FinancialCostCentersPage() {
     setIsDialogOpen(true);
   };
 
+  const pg = usePagedList(centers, { isLoading });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -163,7 +172,7 @@ export default function FinancialCostCentersPage() {
             </div>
           ) : (
             <div className="divide-y">
-              {centers.map((center) => (
+              {pg.items.map((center) => (
                 <div
                   key={center.id}
                   className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
@@ -207,6 +216,7 @@ export default function FinancialCostCentersPage() {
               ))}
             </div>
           )}
+          {!isLoading && centers.length > 0 && <PagerFor state={pg} itemLabel="centros de custo" />}
         </CardContent>
       </Card>
 

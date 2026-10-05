@@ -18,6 +18,9 @@ import { toast } from 'sonner';
 import { AlertTriangle, BellRing, CheckCircle2, FileCheck2, Plus, Trash2, XCircle } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { notifyChecklistBlockers } from '@/lib/contentChecklistNotifications';
+import { fetchAllRows } from '@/lib/fetchAllRows';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 import { useChecklistFormatRules } from '@/hooks/useChecklistFormatRules';
 import { ChecklistFormatRulesDialog } from './ChecklistFormatRulesDialog';
@@ -79,19 +82,24 @@ export function ContentChecklistTab() {
     queryKey: ['content-checklists', currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<ChecklistRow[]> => {
-      const { data, error } = await (supabase as any)
-        .from('content_approval_checklists')
-        .select('*')
-        .eq('account_id', currentUser!.account_id)
-        .order('created_at', { ascending: false })
-        .limit(50);
+      const { data, error } = await fetchAllRows<ChecklistRow>((from, to) =>
+        (supabase as any)
+          .from('content_approval_checklists')
+          .select('*')
+          .eq('account_id', currentUser!.account_id)
+          .order('created_at', { ascending: false })
+          .order('id')
+          .range(from, to)
+      );
       if (error) throw error;
-      return (data ?? []) as ChecklistRow[];
+      return data;
     },
   });
 
   const { data: marketingUsers = [] } = useMarketingTeamUsers();
   const accountUsers: AccountUser[] = marketingUsers.map((u) => ({ id: u.id, name: u.name }));
+
+  const historyPg = usePagedList(history, { defaultPageSize: 20 });
 
   const responsibleName =
     accountUsers.find((u) => u.id === draft.responsible_user_id)?.name ?? null;
@@ -481,7 +489,7 @@ export function ContentChecklistTab() {
                 {history.length === 0 && (
                   <p className="text-sm text-muted-foreground">Nenhum checklist registrado ainda.</p>
                 )}
-                {history.map((row) => (
+                {historyPg.items.map((row) => (
                   <div
                     key={row.id}
                     className="flex items-start justify-between gap-2 rounded-md border p-2.5"
@@ -505,6 +513,7 @@ export function ContentChecklistTab() {
                 ))}
               </div>
             </ScrollArea>
+            {history.length > 0 && <PagerFor state={historyPg} itemLabel="checklists" />}
           </CardContent>
         </Card>
       </div>

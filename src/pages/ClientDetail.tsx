@@ -1205,6 +1205,65 @@ export default function ClientDetail() {
     }
   };
 
+  // Busca a próxima faixa de cada fonte paginável da timeline e recombina (ordenada) com o já carregado.
+  const loadMoreTimeline = async () => {
+    if (!id || loadingMoreTimeline) return;
+    setLoadingMoreTimeline(true);
+    try {
+      const keys = Object.keys(TIMELINE_PAGE_SIZES) as TimelineSourceKey[];
+      for (const key of keys) {
+        const page = timelinePageRef.current[key];
+        if (page.done) continue;
+        const size = TIMELINE_PAGE_SIZES[key];
+        const from = page.offset;
+        const to = from + size - 1;
+        let result: { data: any[] | null; error: unknown };
+        switch (key) {
+          case "messages":
+            result = await supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "lifeEvents":
+            result = await supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "formResponses":
+            result = await supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "attendance":
+            result = await supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "subscriptions":
+            result = await supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "checkins":
+            result = await supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+        }
+        if (result.error) {
+          console.error(`Erro ao carregar mais itens da timeline (${key}):`, result.error);
+          continue;
+        }
+        const rows = result.data || [];
+        page.offset += size;
+        if (rows.length < size) page.done = true;
+        if (rows.length === 0) continue;
+        const mapped =
+          key === "messages" ? mapMessagesToEvents(rows) :
+          key === "lifeEvents" ? mapLifeEventsToEvents(rows) :
+          key === "formResponses" ? mapFormResponsesToEvents(rows) :
+          key === "attendance" ? mapAttendanceToEvents(rows) :
+          key === "subscriptions" ? mapSubscriptionsToEvents(rows) :
+          mapCheckinsToEvents(rows);
+        timelineEventsRef.current[key] = [...(timelineEventsRef.current[key] || []), ...mapped];
+      }
+      const combined = Object.values(timelineEventsRef.current).flat();
+      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setTimeline(combined);
+      setTimelineHasMore(keys.some((k) => !timelinePageRef.current[k].done));
+    } finally {
+      setLoadingMoreTimeline(false);
+    }
+  };
+
   // Lightweight timeline-only refresh (no full page loading state)
   const refreshTimeline = async () => {
     if (!id || !accountId) return;
@@ -2633,6 +2692,9 @@ export default function ClientDetail() {
                     clientId={id!} 
                     clientName={client?.full_name}
                     onCommentAdded={refreshTimeline}
+                    hasMoreOnServer={timelineHasMore}
+                    loadingMore={loadingMoreTimeline}
+                    onLoadMoreServer={loadMoreTimeline}
                   />
                 </CardContent>
               </Card>

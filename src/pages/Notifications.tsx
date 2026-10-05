@@ -116,7 +116,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold">Notificações (últimas 50)</h1>
+          <h1 className="text-2xl font-semibold">Notificações</h1>
           {unreadCount > 0 && (
             <Badge variant="default">{unreadCount} não lidas</Badge>
           )}

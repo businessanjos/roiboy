@@ -9,6 +9,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
 import { Star, Trash2, Sparkles, Plus, Copy as CopyIcon, ExternalLink, Flame, TrendingUp, Filter, Loader2, BrainCircuit } from "lucide-react";
 import { useMarketingHooks, type HookCategory } from "@/hooks/useMarketingHooks";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useMarketingIdeas } from "@/hooks/useMarketingIdeas";
 import { useMarketingCopy, type CopyObjective } from "@/hooks/useMarketingCopy";
 import { useContentProfile } from "@/contexts/ContentProfileContext";
@@ -58,6 +60,11 @@ export function HooksTab() {
       return true;
     });
   }, [hooks, filterCategory, filterPlatform, showOnlyFavorites, search]);
+
+  const pg = usePagedList(filtered, {
+    resetKey: [filterCategory, filterPlatform, showOnlyFavorites, search],
+    isLoading,
+  });
 
   const stats = useMemo(() => ({
     total: hooks.length,
@@ -321,7 +328,7 @@ export function HooksTab() {
         </CardContent></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          {filtered.map(hook => {
+          {pg.items.map(hook => {
             const cat = CATEGORIES.find(c => c.value === hook.category);
             const isTop = hook.performance_score >= 80;
             return (
@@ -374,6 +381,10 @@ export function HooksTab() {
             );
           })}
         </div>
+      )}
+
+      {!isLoading && filtered.length > 0 && (
+        <PagerFor state={pg} itemLabel="hooks" />
       )}
 
       <AiSuggestionReviewDialog

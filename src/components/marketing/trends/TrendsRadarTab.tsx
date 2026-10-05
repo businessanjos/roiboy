@@ -412,6 +412,10 @@ export function TrendsRadarTab() {
           ))}
         </div>
       )}
+
+      {!isLoading && filtered.length > 0 && (
+        <PagerFor state={pg} itemLabel="tendências" />
+      )}
     </div>
   );
 }

@@ -132,6 +132,7 @@ const showBrowserNotification = (title: string, body: string, link?: string | nu
 
 export function NotificationsProvider({ children }: { children: ReactNode }) {
   const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [pushSubscribed, setPushSubscribed] = useState(false);
@@ -183,6 +184,16 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
     }
   }, [notificationPermission, currentUserId]);
 
+  // Contagem de não lidas no servidor (count head:true), independente do resumo carregado abaixo.
+  const fetchUnreadCount = async (userId: string) => {
+    const { count, error } = await supabase
+      .from("notifications")
+      .select("id", { count: "exact", head: true })
+      .eq("user_id", userId)
+      .eq("is_read", false);
+    if (!error) setUnreadCount(count ?? 0);
+  };
+
   const fetchNotifications = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
@@ -197,6 +208,8 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       if (!userData) return;
       setCurrentUserId(userData.id);
 
+      // Resumo recente (sino/dropdown) — não é o histórico completo; a página de Notificações
+      // busca o conjunto completo com paginação no servidor.
       const { data, error } = await supabase
         .from("notifications")
         .select(`
@@ -209,6 +222,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
       if (error) throw error;
       setNotifications(data || []);
+      await fetchUnreadCount(userData.id);
     } catch (error) {
       console.error("Error fetching notifications:", error);
     } finally {
@@ -243,6 +257,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
             if (data) {
               setNotifications((prev) => [data, ...prev]);
+              setUnreadCount((prev) => prev + 1);
 
               toast.info(data.title, {
                 description: data.content || undefined,
@@ -309,29 +324,29 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
       setNotifications((prev) =>
         prev.map((n) => (n.id === id ? { ...n, is_read: true } : n))
       );
+      setUnreadCount((prev) => Math.max(0, prev - 1));
     } catch (error) {
       console.error("Error marking notification as read:", error);
     }
   };
 
+  // Atualiza TODAS as notificações não lidas da pessoa no servidor (não só as carregadas no resumo).
   const markAllAsRead = async () => {
+    if (!currentUserId) return;
     try {
-      const unreadIds = notifications.filter((n) => !n.is_read).map((n) => n.id);
-      if (unreadIds.length === 0) return;
-
       const { error } = await supabase
         .from("notifications")
         .update({ is_read: true })
-        .in("id", unreadIds);
+        .eq("user_id", currentUserId)
+        .eq("is_read", false);
 
       if (error) throw error;
       setNotifications((prev) => prev.map((n) => ({ ...n, is_read: true })));
+      setUnreadCount(0);
     } catch (error) {
       console.error("Error marking all as read:", error);
     }
   };
-
-  const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
     <NotificationsContext.Provider
