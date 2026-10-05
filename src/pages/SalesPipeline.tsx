@@ -2527,7 +2527,7 @@ export default function SalesPipeline() {
   return (
     <>
       <div className={cn(
-        "p-3 sm:p-4 space-y-3 sm:space-y-4",
+        "p-4 space-y-3 sm:space-y-4",
         isPipelineFullscreen && "fixed inset-0 z-50 bg-background overflow-hidden flex flex-col"
       )}>
 
@@ -2539,7 +2539,7 @@ export default function SalesPipeline() {
         >
 
           <div className="flex items-center justify-between gap-2">
-            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto">
+            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
 
 
               <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
@@ -2579,7 +2579,9 @@ export default function SalesPipeline() {
                     <Button
                       variant={viewMode === 'kanban' ? 'secondary' : 'ghost'}
                       size="sm"
-                      className="rounded-none h-8"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em Kanban"
+                      aria-pressed={viewMode === 'kanban'}
                       onClick={() => setViewMode('kanban')}
                     >
                       <LayoutGrid className="h-3.5 w-3.5" />
@@ -2587,7 +2589,9 @@ export default function SalesPipeline() {
                     <Button
                       variant={viewMode === 'list' ? 'secondary' : 'ghost'}
                       size="sm"
-                      className="rounded-none h-8"
+                      className="rounded-none h-11 w-11 sm:h-8 sm:w-auto"
+                      aria-label="Ver em lista"
+                      aria-pressed={viewMode === 'list'}
                       onClick={() => setViewMode('list')}
                     >
                       <List className="h-3.5 w-3.5" />
@@ -2597,7 +2601,7 @@ export default function SalesPipeline() {
                   {/* Config dropdown */}
                   <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                      <Button variant="outline" size="sm" className="h-8 sm:h-9 px-2">
+                      <Button variant="outline" size="sm" className="h-11 w-11 sm:h-9 sm:w-auto px-2" aria-label="Configurações do funil">
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
@@ -2622,7 +2626,7 @@ export default function SalesPipeline() {
                   </div>
 
 
-                  <Button size="sm" className="h-8 sm:h-9 gap-1.5" onClick={() => setIsNewDealOpen(true)}>
+                  <Button size="sm" className="h-11 w-11 sm:h-9 sm:w-auto gap-1.5" aria-label="Novo deal" onClick={() => setIsNewDealOpen(true)}>
                     <Plus className="h-4 w-4" />
                     <span className="hidden sm:inline">Novo Deal</span>
                   </Button>
@@ -2663,7 +2667,8 @@ export default function SalesPipeline() {
                     <Button
                       variant="ghost"
                       size="sm"
-                      className="h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      aria-label="Filtros"
+                      className="h-11 min-w-11 sm:h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                       onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
                       aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
                     >
@@ -2950,20 +2955,20 @@ export default function SalesPipeline() {
               className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
             >
 
-              <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-9">
-                <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+              <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-12 sm:h-9 rounded-xl sm:rounded-md">
+                <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <TrendingUp className="h-3.5 w-3.5" />
                   Em Aberto
                   <Badge variant="secondary" className="text-[10px] ml-0.5">{filteredOpenDeals.length}</Badge>
                 </TabsTrigger>
-                <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+                <TabsTrigger value="won" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <Trophy className="h-3.5 w-3.5" />
                   Ganhas
                   <Badge variant="secondary" className="bg-success/20 text-success-strong text-[10px] ml-0.5">
                     {filteredWonDeals.length}
                   </Badge>
                 </TabsTrigger>
-                <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-7">
+                <TabsTrigger value="lost" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <XCircle className="h-3.5 w-3.5" />
                   Perdidas
                   <Badge variant="secondary" className="bg-danger/20 text-danger-strong text-[10px] ml-0.5">
@@ -2982,7 +2987,7 @@ export default function SalesPipeline() {
                     <span className="text-warning-strong dark:text-warning">
                       <b>{hiddenOpenCount}</b> {hiddenOpenCount === 1 ? "negócio em aberto está oculto" : "negócios em aberto estão ocultos"} pelos filtros ativos (de {openDeals.length} no funil).
                     </span>
-                    <Button size="sm" variant="outline" className="h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
+                    <Button size="sm" variant="outline" className="h-11 sm:h-7 text-xs ml-auto" onClick={clearAllPipelineFilters}>
                       Limpar filtros
                     </Button>
                   </div>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
@@ -72,7 +72,11 @@ import {
   ChevronLeft,
   Upload,
   GitMerge,
+  SlidersHorizontal,
 } from "lucide-react";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { cn } from "@/lib/utils";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { LeadTimeline } from "@/components/leads/LeadTimeline";
@@ -165,6 +169,8 @@ export default function Leads() {
   const { duplicates: leadDuplicates, checkDuplicates: checkLeadDuplicates, clearDuplicates: clearLeadDuplicates, loading: checkingDuplicates } = useLeadDuplicateDetection();
 
   const [searchQuery, setSearchQuery] = useState("");
+  const isMobile = useIsMobile();
+  const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterResponsibleUserId, setFilterResponsibleUserId] = useState<string>("all");
   const [filterCreatedFrom, setFilterCreatedFrom] = useState("");
@@ -1204,12 +1210,104 @@ export default function Leads() {
     );
   }
 
+  const renderLeadFilterFields = (scope: "desktop" | "mobile") => {
+    const m = scope === "mobile";
+    const field = (id: string, label: string, node: ReactNode) =>
+      m ? (
+        <div className="space-y-1.5">
+          <Label htmlFor={id}>{label}</Label>
+          {node}
+        </div>
+      ) : node;
+    return (
+      <>
+        {field(`leads-${scope}-source`, "Origem",
+          <Select value={filterSource} onValueChange={setFilterSource}>
+            <SelectTrigger id={`leads-${scope}-source`} aria-label={m ? undefined : "Origem"} className={m ? "h-11 w-full" : "w-[140px]"}>
+              <SelectValue placeholder="Origem" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todas origens</SelectItem>
+              {LEAD_SOURCES.map((source) => (
+                <SelectItem key={source.value} value={source.value}>{source.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>)}
+        {field(`leads-${scope}-responsible`, "Quem cadastrou",
+          <Select value={filterResponsibleUserId} onValueChange={setFilterResponsibleUserId}>
+            <SelectTrigger id={`leads-${scope}-responsible`} aria-label={m ? undefined : "Quem cadastrou"} className={m ? "h-11 w-full" : "w-[180px]"}>
+              <SelectValue placeholder="Responsável" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Quem cadastrou</SelectItem>
+              {responsibleOptions.map((user) => (
+                <SelectItem key={user.id} value={user.id}>{user.name}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>)}
+        {field(`leads-${scope}-from`, "Criado de",
+          <Input id={`leads-${scope}-from`} aria-label={m ? undefined : "Criado de"} type="date" className={m ? "h-11 w-full" : "w-[160px]"}
+            value={filterCreatedFrom} onChange={(e) => setFilterCreatedFrom(e.target.value)} />)}
+        {field(`leads-${scope}-to`, "Criado até",
+          <Input id={`leads-${scope}-to`} aria-label={m ? undefined : "Criado até"} type="date" className={m ? "h-11 w-full" : "w-[160px]"}
+            value={filterCreatedTo} onChange={(e) => setFilterCreatedTo(e.target.value)} />)}
+      </>
+    );
+  };
+
   return (
     <>
       <div className="flex flex-col h-full overflow-hidden">
         {/* Fixed Section */}
-        <div className="flex-shrink-0 p-4 space-y-4">
+        <div className="flex-shrink-0 p-4 space-y-3 sm:space-y-4">
+        <input
+          id="csv-upload-leads"
+          type="file"
+          accept=".csv"
+          className="hidden"
+          onChange={handleFileUpload}
+        />
         {/* Header */}
+        {isMobile ? (
+          <div className="flex items-center gap-2">
+            <div className="relative flex-1 min-w-0">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                aria-label="Buscar leads"
+                placeholder="Buscar lead"
+                className="pl-10 h-11 rounded-xl"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <Button
+              variant="outline"
+              size="icon"
+              className="h-11 w-11 shrink-0 relative rounded-xl"
+              aria-label="Filtros"
+              onClick={() => setLeadFiltersOpen(true)}
+            >
+              <SlidersHorizontal className="h-4 w-4" />
+              {hasActiveFilters && <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-primary" />}
+            </Button>
+            <Button size="icon" className="h-11 w-11 shrink-0 rounded-xl" aria-label="Novo lead" onClick={openNewDialog}>
+              <Plus className="h-5 w-5" />
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0" aria-label="Mais ações">
+                  <MoreHorizontal className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem className="min-h-11" onClick={() => document.getElementById('csv-upload-leads')?.click()}>
+                  <Upload className="h-4 w-4 mr-2" />
+                  Importar CSV
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        ) : (
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold">Leads</h1>
@@ -1218,13 +1316,6 @@ export default function Leads() {
             </p>
           </div>
           <div className="flex items-center gap-2">
-            <input
-              id="csv-upload-leads"
-              type="file"
-              accept=".csv"
-              className="hidden"
-              onChange={handleFileUpload}
-            />
             <Button 
               variant="outline" 
               size="sm"
@@ -1239,36 +1330,36 @@ export default function Leads() {
             </Button>
           </div>
         </div>
+        )}
 
         {/* Stats */}
-        <div className="flex items-center gap-4 overflow-x-auto pb-2">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-muted/50 min-w-fit">
-            <Users className="h-4 w-4 text-muted-foreground" />
-            <span className="text-sm font-medium">{filteredLeads.length}</span>
-            <span className="text-xs text-muted-foreground">Total</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-info/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-info" />
-            <span className="text-sm font-medium">{filteredNewLeads.length}</span>
-            <span className="text-xs text-muted-foreground">Novos</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-warning/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-warning" />
-            <span className="text-sm font-medium">{filteredContactedLeads.length}</span>
-            <span className="text-xs text-muted-foreground">Contatados</span>
-          </div>
-          <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-success/10 min-w-fit">
-            <div className="w-2 h-2 rounded-full bg-success" />
-            <span className="text-sm font-medium">{filteredQualifiedLeads.length}</span>
-            <span className="text-xs text-muted-foreground">Qualificados</span>
-          </div>
+        <div className={cn(isMobile ? "grid grid-cols-4 gap-1.5" : "flex items-center gap-4 overflow-x-auto pb-2")}>
+          {[
+            { n: filteredLeads.length, l: "Total", dot: null, bg: "bg-muted/50" },
+            { n: filteredNewLeads.length, l: "Novos", dot: "bg-info", bg: "bg-info/10" },
+            { n: filteredContactedLeads.length, l: "Contatados", dot: "bg-warning", bg: "bg-warning/10" },
+            { n: filteredQualifiedLeads.length, l: "Qualificados", dot: "bg-success", bg: "bg-success/10" },
+          ].map((s) => isMobile ? (
+            <div key={s.l} className={cn("rounded-xl px-2 py-1.5 min-w-0", s.bg)}>
+              <div className="text-base font-semibold tabular-nums leading-tight">{s.n}</div>
+              <div className="text-[11px] text-muted-foreground truncate">{s.l === "Qualificados" ? "Qualif." : s.l === "Contatados" ? "Contat." : s.l}</div>
+            </div>
+          ) : (
+            <div key={s.l} className={cn("flex items-center gap-2 px-3 py-2 rounded-lg min-w-fit", s.bg)}>
+              {s.dot ? <div className={cn("w-2 h-2 rounded-full", s.dot)} /> : <Users className="h-4 w-4 text-muted-foreground" />}
+              <span className="text-sm font-medium">{s.n}</span>
+              <span className="text-xs text-muted-foreground">{s.l}</span>
+            </div>
+          ))}
         </div>
 
         {/* Search and Filters */}
+        {!isMobile && (
         <div className="flex flex-col sm:flex-row gap-2">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
+              aria-label="Buscar leads"
               placeholder="Buscar por nome, telefone ou email..."
               className="pl-10"
               value={searchQuery}
@@ -1277,61 +1368,41 @@ export default function Leads() {
           </div>
           
           <div className="flex flex-wrap gap-2">
-            <Select value={filterSource} onValueChange={setFilterSource}>
-              <SelectTrigger className="w-[140px]">
-                <SelectValue placeholder="Origem" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todas origens</SelectItem>
-                {LEAD_SOURCES.map((source) => (
-                  <SelectItem key={source.value} value={source.value}>
-                    {source.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Select value={filterResponsibleUserId} onValueChange={setFilterResponsibleUserId}>
-              <SelectTrigger className="w-[180px]">
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Quem cadastrou</SelectItem>
-                {responsibleOptions.map((user) => (
-                  <SelectItem key={user.id} value={user.id}>
-                    {user.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={filterCreatedFrom}
-              onChange={(e) => setFilterCreatedFrom(e.target.value)}
-            />
-
-            <Input
-              type="date"
-              className="w-[160px]"
-              value={filterCreatedTo}
-              onChange={(e) => setFilterCreatedTo(e.target.value)}
-            />
-            
-            
+            {renderLeadFilterFields("desktop")}
             {hasActiveFilters && (
-              <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar filtros">
+              <Button variant="ghost" size="icon" onClick={clearFilters} title="Limpar filtros" aria-label="Limpar filtros">
                 <X className="h-4 w-4" />
               </Button>
             )}
           </div>
         </div>
+        )}
 
-        <p className="text-sm text-muted-foreground px-4 pb-2">
+        <p className="text-sm text-muted-foreground sm:px-4 pb-1 sm:pb-2">
           No filtro atual: <span className="font-medium text-foreground">{filteredNewLeads.length} novas oportunidades</span> de {filteredLeads.length} leads.
         </p>
         </div>
+
+        {isMobile && (
+          <Sheet open={leadFiltersOpen} onOpenChange={setLeadFiltersOpen}>
+            <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe">
+              <SheetHeader>
+                <SheetTitle>Filtros</SheetTitle>
+              </SheetHeader>
+              <div className="mt-4 flex flex-col gap-3">
+                {renderLeadFilterFields("mobile")}
+              </div>
+              <div className="mt-5 flex gap-2">
+                <Button variant="outline" className="h-11 flex-1" onClick={clearFilters} disabled={!hasActiveFilters}>
+                  Limpar
+                </Button>
+                <Button className="h-11 flex-1" onClick={() => setLeadFiltersOpen(false)}>
+                  Ver {filteredLeads.length} leads
+                </Button>
+              </div>
+            </SheetContent>
+          </Sheet>
+        )}
 
         {/* Scrollable Leads List */}
         <div className="flex-1 min-h-0 overflow-hidden px-4 pb-4">
@@ -1360,7 +1431,7 @@ export default function Leads() {
 
                         <div className="flex-1 min-w-0 overflow-hidden">
                           <div className="flex items-center gap-1.5 overflow-hidden">
-                            <span className="font-medium text-sm truncate max-w-[150px]">{lead.full_name}</span>
+                            <span className="font-medium text-sm line-clamp-2 break-words sm:truncate sm:max-w-[150px]">{lead.full_name}</span>
                             {getStatusBadge(lead.status)}
                             {customFields.slice(0, 1).map(field => {
                               const value = fieldValues[lead.id]?.[field.id];
@@ -1408,7 +1479,8 @@ export default function Leads() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              className="h-7 w-7 hover:bg-success/20"
+                              className="h-11 w-11 sm:h-7 sm:w-7 hover:bg-success/20"
+                              aria-label="Abrir conversa no RoyZapp"
                               onClick={(e) => {
                                 e.stopPropagation();
                                 handleOpenZappForLead(lead);
@@ -1422,7 +1494,7 @@ export default function Leads() {
 
                           <DropdownMenu>
                             <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-7 sm:w-7" aria-label="Ações do lead" onClick={(e) => e.stopPropagation()}>
                                 <MoreHorizontal className="h-3.5 w-3.5" />
                               </Button>
                             </DropdownMenuTrigger>

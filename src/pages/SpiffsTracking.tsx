@@ -38,7 +38,7 @@ export default function SpiffsTracking() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-3 sm:p-6 space-y-4 md:space-y-6 max-w-7xl pb-24 md:pb-6">
+      <div className="container mx-auto px-4 py-3 sm:p-6 space-y-4 md:space-y-6 max-w-7xl pb-24 md:pb-6">
         <div className="hidden md:block">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Zap className="h-6 w-6 text-warning" />
@@ -53,21 +53,21 @@ export default function SpiffsTracking() {
         <RouletteApprovalsQueue />
 
           <Tabs value={view} onValueChange={(v) => setView(v as "tracking" | "history")} className="space-y-4">
-            <TabsList>
+            <TabsList className="h-12 sm:h-10 w-full sm:w-auto grid grid-cols-2 sm:inline-flex [&>button]:h-10 sm:[&>button]:h-8">
               <TabsTrigger value="tracking" className="gap-1.5">
                 <Zap className="h-4 w-4" />
                 Acompanhamento
               </TabsTrigger>
               <TabsTrigger value="history" className="gap-1.5">
                 <History className="h-4 w-4" />
-                Histórico de Roletas
+                <span className="sm:hidden">Histórico</span><span className="hidden sm:inline">Histórico de Roletas</span>
               </TabsTrigger>
             </TabsList>
 
             <TabsContent value="tracking" className="space-y-4">
               <div className="flex justify-end">
                 <Tabs value={tab} onValueChange={(v) => setTab(v as "active" | "all")}>
-                  <TabsList>
+                  <TabsList className="h-12 sm:h-10 [&>button]:h-10 sm:[&>button]:h-8">
                     <TabsTrigger value="active" className="gap-1.5">
                       <Sparkles className="h-3.5 w-3.5" />
                       Ativos

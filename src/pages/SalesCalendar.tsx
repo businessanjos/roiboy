@@ -16,6 +16,7 @@ import {
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Link } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 
@@ -328,7 +329,7 @@ export default function SalesCalendar() {
                 variant="outline"
                 size="sm"
                 onClick={reloadGoogleCalendar}
-                className="h-8 gap-1.5"
+                className="h-11 sm:h-8 gap-1.5"
                 disabled={googleQuery.isFetching}
               >
                 <RefreshCw className={cn("h-3.5 w-3.5", googleQuery.isFetching && "animate-spin")} />
@@ -340,11 +341,11 @@ export default function SalesCalendar() {
             variant={filterMine ? "default" : "outline"}
             size="sm"
             onClick={() => setFilterMine((v) => !v)}
-            className="h-8"
+            className="h-11 sm:h-8"
           >
             {filterMine ? "Apenas meus" : "Toda equipe"}
           </Button>
-          <Button variant="outline" size="sm" onClick={refreshAll} className="h-8 gap-1.5">
+          <Button variant="outline" size="sm" onClick={refreshAll} className="h-11 sm:h-8 gap-1.5">
             <RefreshCw className={cn("h-3.5 w-3.5", isLoading && "animate-spin")} />
             Atualizar
           </Button>
@@ -354,13 +355,13 @@ export default function SalesCalendar() {
       <Card className="p-3">
         <div className="flex items-center justify-between gap-3 flex-wrap">
           <div className="flex items-center gap-1">
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(-1)}>
+            <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-8 sm:w-8" aria-label={view === "month" ? "Mês anterior" : "Semana anterior"} onClick={() => navigate(-1)}>
               <ChevronLeft className="h-4 w-4" />
             </Button>
-            <Button variant="ghost" size="sm" className="h-8" onClick={() => setCursor(new Date())}>
+            <Button variant="ghost" size="sm" className="h-11 sm:h-8" onClick={() => setCursor(new Date())}>
               Hoje
             </Button>
-            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => navigate(1)}>
+            <Button variant="ghost" size="icon" className="h-11 w-11 sm:h-8 sm:w-8" aria-label={view === "month" ? "Próximo mês" : "Próxima semana"} onClick={() => navigate(1)}>
               <ChevronRight className="h-4 w-4" />
             </Button>
             <h2 className="text-base font-semibold ml-2 capitalize">
@@ -380,9 +381,9 @@ export default function SalesCalendar() {
               ))}
             </div>
             <Tabs value={view} onValueChange={(v) => setView(v as any)}>
-              <TabsList className="h-8">
-                <TabsTrigger value="month" className="text-xs h-6">Mês</TabsTrigger>
-                <TabsTrigger value="week" className="text-xs h-6">Semana</TabsTrigger>
+              <TabsList className="h-12 sm:h-8">
+                <TabsTrigger value="month" className="text-sm sm:text-xs h-10 sm:h-6 px-4 sm:px-3">Mês</TabsTrigger>
+                <TabsTrigger value="week" className="text-sm sm:text-xs h-10 sm:h-6 px-4 sm:px-3">Semana</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -497,6 +498,8 @@ function WeekGrid({
   onSelect: (e: CalEvent) => void;
 }) {
   const today = new Date();
+  const isMobile = useIsMobile();
+  if (isMobile) return <WeekAgenda days={days} eventsByDay={eventsByDay} onSelect={onSelect} />;
   return (
     <Card className="overflow-hidden">
       <div className="grid grid-cols-7 divide-x">
@@ -532,6 +535,75 @@ function WeekGrid({
         })}
       </div>
     </Card>
+  );
+}
+
+/* ---------- Week Agenda (mobile) ---------- */
+function WeekAgenda({
+  days,
+  eventsByDay,
+  onSelect,
+}: {
+  days: Date[];
+  eventsByDay: Map<string, CalEvent[]>;
+  onSelect: (e: CalEvent) => void;
+}) {
+  const today = new Date();
+  return (
+    <div className="space-y-4">
+      {days.map((day) => {
+        const key = format(day, "yyyy-MM-dd");
+        const dayEvents = eventsByDay.get(key) || [];
+        const isToday = isSameDay(day, today);
+        return (
+          <section key={key} aria-labelledby={`agenda-${key}`}>
+            <h3
+              id={`agenda-${key}`}
+              className={cn(
+                "mb-1.5 px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground capitalize",
+                isToday && "text-primary",
+              )}
+            >
+              {isToday ? "Hoje · " : ""}
+              {format(day, "EEEE, d 'de' MMM", { locale: ptBR })}
+            </h3>
+            {dayEvents.length === 0 ? (
+              <p className="rounded-[18px] bg-card px-4 py-3 text-sm text-muted-foreground shadow-ios">Sem compromissos</p>
+            ) : (
+              <ul role="list" className="overflow-hidden rounded-[18px] bg-card shadow-ios [&>li+li]:border-t [&>li+li]:border-border/60">
+                {dayEvents.map((e) => {
+                  const style = SOURCE_STYLES[e.source];
+                  const Icon = style.icon;
+                  const ctx = e.meta?.clientName || e.meta?.leadName || e.meta?.dealTitle;
+                  return (
+                    <li key={e.id}>
+                      <button
+                        type="button"
+                        onClick={() => onSelect(e)}
+                        className="flex min-h-[56px] w-full items-center gap-3 px-4 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring touch-press"
+                      >
+                        <span className="w-12 shrink-0 text-sm font-medium tabular-nums">
+                          {e.allDay ? "Dia" : format(e.start, "HH:mm")}
+                        </span>
+                        <span className={cn("h-8 w-1 shrink-0 rounded-full", style.dot)} aria-hidden />
+                        <span className="min-w-0 flex-1">
+                          <span className="block text-sm font-medium leading-snug line-clamp-2 break-words">{e.title}</span>
+                          <span className="mt-0.5 flex items-center gap-1 text-xs text-muted-foreground">
+                            <Icon className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{style.label}{ctx ? ` · ${ctx}` : ""}</span>
+                          </span>
+                        </span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" aria-hidden />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+    </div>
   );
 }
 

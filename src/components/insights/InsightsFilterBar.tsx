@@ -22,6 +22,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { InsightsGlobalFieldFilter } from "./InsightsGlobalFieldFilter";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const PRESETS: { value: DatePreset; label: string }[] = [
   { value: "today", label: "Hoje" },
@@ -45,6 +47,8 @@ export function InsightsFilterBar() {
   } = useInsightsFilters();
 
   const [datePickerOpen, setDatePickerOpen] = useState(false);
+  const isMobile = useIsMobile();
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [dateDropdownOpen, setDateDropdownOpen] = useState(false);
   const [dateRange, setDateRangeLocal] = useState<{
     from: Date | undefined;
@@ -115,8 +119,8 @@ export function InsightsFilterBar() {
     (!!filters.pipelineId && filters.pipelineId !== "all") ||
     !!filters.globalFieldFilter;
 
-  return (
-    <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-2xl shadow-sm overflow-x-auto lg:overflow-visible lg:flex-wrap scrollbar-hide">
+  const items = (
+    <>
       {/* Date Filter: Presets via Dropdown, Custom via separate Popover */}
       {!datePickerOpen ? (
         <DropdownMenu open={dateDropdownOpen} onOpenChange={setDateDropdownOpen}>
@@ -317,6 +321,34 @@ export function InsightsFilterBar() {
         </Button>
       )}
 
+    </>
+  );
+
+  if (isMobile) {
+    return (
+      <div className="flex w-full items-center gap-2">
+        <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="h-11 flex-1 min-w-0 justify-start gap-2 rounded-xl">
+              <Filter className="h-4 w-4 shrink-0" />
+              <span className="truncate">{getDateRangeLabel()}</span>
+              {hasActiveFilters && <span className="ml-auto h-2 w-2 shrink-0 rounded-full bg-primary" aria-label="Filtros ativos" />}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe">
+            <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+            <div className="mt-4 flex flex-col items-stretch gap-2 [&_button]:min-h-11 [&_button]:justify-start">{items}</div>
+            <Button className="mt-5 h-11 w-full" onClick={() => setMobileOpen(false)}>Aplicar</Button>
+          </SheetContent>
+        </Sheet>
+        <div id="insights-layout-toggle" className="flex items-center shrink-0" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 p-3 md:p-4 bg-card border rounded-2xl shadow-sm overflow-x-auto lg:overflow-visible lg:flex-wrap scrollbar-hide">
+      {items}
       <div id="insights-layout-toggle" className="ml-auto flex items-center shrink-0 sticky right-0 bg-card pl-2" />
     </div>
   );

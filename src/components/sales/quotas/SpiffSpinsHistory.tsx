@@ -15,6 +15,8 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { History, CheckCircle2, Clock, RotateCcw, Search, DollarSign, Filter, XCircle } from "lucide-react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -46,6 +48,8 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
   const [userFilter, setUserFilter] = useState<string>("all");
   const [spiffFilter, setSpiffFilter] = useState<string>("all");
   const [search, setSearch] = useState("");
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [from, setFrom] = useState<string>("");
   const [to, setTo] = useState<string>("");
 
@@ -210,10 +214,109 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
     isLoading,
   });
 
+  const renderFilterFields = (sc: string) => {
+    const m = sc.endsWith("mobile");
+    return (
+      <>
+            <div className="space-y-1">
+              <Label htmlFor={`${sc}-status`} className="text-xs">Status</Label>
+              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
+                <SelectTrigger id={`${sc}-status`} className={m ? "h-11" : undefined}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  <SelectItem value="pending">A Pagar</SelectItem>
+                  <SelectItem value="paid">Pago</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${sc}-user`} className="text-xs">Vendedor</Label>
+              <Select value={userFilter} onValueChange={setUserFilter}>
+                <SelectTrigger id={`${sc}-user`} className={m ? "h-11" : undefined}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {(usersQ.data ?? []).map((u: any) => (
+                    <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${sc}-spiff`} className="text-xs">Campanha</Label>
+              <Select value={spiffFilter} onValueChange={setSpiffFilter}>
+                <SelectTrigger id={`${sc}-spiff`} className={m ? "h-11" : undefined}><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas</SelectItem>
+                  {(spiffsQ.data ?? []).map((s: any) => (
+                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${sc}-from`} className="text-xs">De</Label>
+              <Input id={`${sc}-from`} className={m ? "h-11" : undefined} type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor={`${sc}-to`} className="text-xs">Até</Label>
+              <Input id={`${sc}-to`} className={m ? "h-11" : undefined} type="date" value={to} onChange={(e) => setTo(e.target.value)} />
+            </div>
+
+      </>
+    );
+  };
+
+  const renderStatus = (r: any) => (<>
+{r.cancelled_at ? (
+                          <Badge variant="outline" className="gap-1 border-danger text-danger" title={r.cancelled_reason || "Benefício cancelado"}>
+                            <XCircle className="h-3 w-3" /> Cancelado
+                          </Badge>
+                        ) : r.payment_status === "paid" ? (
+                          <Badge className="bg-success hover:bg-success text-white gap-1">
+                            <CheckCircle2 className="h-3 w-3" /> Pago
+                          </Badge>
+                        ) : Number(r.prize_amount) > 0 ? (
+                          <Badge variant="outline" className="gap-1 border-warning text-warning-strong dark:text-warning">
+                            <Clock className="h-3 w-3" /> A pagar
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">—</Badge>
+                        )}
+  </>);
+
+  const renderAction = (r: any) => (<>
+{r.cancelled_at ? (
+                          <span className="text-[11px] text-danger">{r.cancelled_reason || "Cancelado"}</span>
+                        ) : Number(r.prize_amount) <= 0 ? (
+                          <span className="text-xs text-muted-foreground">—</span>
+                        ) : r.payment_status === "pending" ? (
+                          <Button
+                            size="sm"
+                            disabled={!canManagePayments}
+                            onClick={() => { setPayDialog(r); setPayNotes(""); }}
+                            className="h-11 md:h-7 gap-1.5 text-xs"
+                          >
+                            <DollarSign className="h-3 w-3" />
+                            Marcar pago
+                          </Button>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={!canManagePayments || updateMut.isPending}
+                            onClick={() => updateMut.mutate({ spin: r, markAsPaid: false })}
+                            className="h-11 md:h-7 gap-1.5 text-xs"
+                          >
+                            <RotateCcw className="h-3 w-3" />
+                            Desfazer
+                          </Button>
+                        )}
+  </>);
+
   return (
     <div className="space-y-4">
       {/* KPIs */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-2 sm:gap-3 lg:grid-cols-4 [&_.text-2xl]:text-lg sm:[&_.text-2xl]:text-2xl [&_.p-4]:p-3 sm:[&_.p-4]:p-4">
         <Card>
           <CardContent className="p-4">
             <div className="text-xs text-muted-foreground uppercase tracking-wide">Giros</div>
@@ -252,6 +355,26 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
       </div>
 
       {/* Filtros */}
+      {isMobile ? (
+        <div className="flex items-center gap-2">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input aria-label="Buscar giros" className="pl-9 h-11 rounded-xl" placeholder="Nome, prêmio…" value={search} onChange={(e) => setSearch(e.target.value)} />
+          </div>
+          <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="h-11 rounded-xl gap-1.5 shrink-0">
+                <Filter className="h-4 w-4" /> Filtros
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe">
+              <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+              <div className="mt-4 space-y-3">{renderFilterFields("spiff-history-mobile")}</div>
+              <Button className="mt-5 h-11 w-full" onClick={() => setFiltersOpen(false)}>Ver {filtered.length} giros</Button>
+            </SheetContent>
+          </Sheet>
+        </div>
+      ) : (
       <Card>
         <CardHeader className="pb-3">
           <CardTitle className="text-sm flex items-center gap-2">
@@ -260,54 +383,13 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
         </CardHeader>
         <CardContent className="space-y-3">
           <div className="grid gap-3 md:grid-cols-3 lg:grid-cols-6">
+            {renderFilterFields("spiff-history-desktop")}
             <div className="space-y-1">
-              <Label className="text-xs">Status</Label>
-              <Select value={statusFilter} onValueChange={(v) => setStatusFilter(v as any)}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  <SelectItem value="pending">A Pagar</SelectItem>
-                  <SelectItem value="paid">Pago</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Vendedor</Label>
-              <Select value={userFilter} onValueChange={setUserFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos</SelectItem>
-                  {(usersQ.data ?? []).map((u: any) => (
-                    <SelectItem key={u.id} value={u.id}>{u.name || u.email}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Campanha</Label>
-              <Select value={spiffFilter} onValueChange={setSpiffFilter}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas</SelectItem>
-                  {(spiffsQ.data ?? []).map((s: any) => (
-                    <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">De</Label>
-              <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Até</Label>
-              <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-            </div>
-            <div className="space-y-1">
-              <Label className="text-xs">Buscar</Label>
+              <Label htmlFor="spiff-history-search" className="text-xs">Buscar</Label>
               <div className="relative">
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-muted-foreground" />
                 <Input
+                  id="spiff-history-search"
                   className="pl-7"
                   placeholder="Nome, prêmio…"
                   value={search}
@@ -318,6 +400,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
           </div>
         </CardContent>
       </Card>
+      )}
 
       {/* Tabela */}
       <Card>
@@ -341,6 +424,27 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
             <div className="p-10 text-center text-sm text-muted-foreground">
               Nenhum giro encontrado com os filtros atuais.
             </div>
+          ) : isMobile ? (
+            <ul role="list" className="[&>li+li]:border-t [&>li+li]:border-border/60">
+              {filteredPg.items.map((r) => (
+                <li key={r.id} className="px-4 py-3 space-y-1.5">
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium line-clamp-2 break-words">{userById.get(r.user_id)?.name || "—"}</div>
+                      <div className="text-xs text-muted-foreground line-clamp-1">{spiffById.get(r.spiff_id) || "—"} · {format(new Date(r.spun_at), "dd/MM/yy HH:mm", { locale: ptBR })}</div>
+                    </div>
+                    <div className="shrink-0">{renderStatus(r)}</div>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="min-w-0 text-sm">
+                      <span className="text-muted-foreground">{r.prize_label || "—"}</span>
+                      <span className="ml-2 font-semibold tabular-nums">{Number(r.prize_amount) > 0 ? formatBRL(Number(r.prize_amount)) : "R$ 0"}</span>
+                    </div>
+                    <div className="shrink-0">{renderAction(r)}</div>
+                  </div>
+                </li>
+              ))}
+            </ul>
           ) : (
             <div className="w-full overflow-x-auto"><Table className="min-w-[560px]">
               <TableHeader>
@@ -374,21 +478,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                           : <span className="text-muted-foreground">R$ 0</span>}
                       </TableCell>
                       <TableCell className="text-center">
-                        {r.cancelled_at ? (
-                          <Badge variant="outline" className="gap-1 border-danger text-danger" title={r.cancelled_reason || "Benefício cancelado"}>
-                            <XCircle className="h-3 w-3" /> Cancelado
-                          </Badge>
-                        ) : r.payment_status === "paid" ? (
-                          <Badge className="bg-success hover:bg-success text-white gap-1">
-                            <CheckCircle2 className="h-3 w-3" /> Pago
-                          </Badge>
-                        ) : Number(r.prize_amount) > 0 ? (
-                          <Badge variant="outline" className="gap-1 border-warning text-warning-strong dark:text-warning">
-                            <Clock className="h-3 w-3" /> A pagar
-                          </Badge>
-                        ) : (
-                          <Badge variant="secondary" className="text-xs">—</Badge>
-                        )}
+                        {renderStatus(r)}
                       </TableCell>
                       <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
                         {r.paid_at ? (
@@ -399,32 +489,7 @@ export function SpiffSpinsHistory({ restrictToUserId }: { restrictToUserId?: str
                         ) : "—"}
                       </TableCell>
                       <TableCell className="text-right">
-                        {r.cancelled_at ? (
-                          <span className="text-[11px] text-danger">{r.cancelled_reason || "Cancelado"}</span>
-                        ) : Number(r.prize_amount) <= 0 ? (
-                          <span className="text-xs text-muted-foreground">—</span>
-                        ) : r.payment_status === "pending" ? (
-                          <Button
-                            size="sm"
-                            disabled={!canManagePayments}
-                            onClick={() => { setPayDialog(r); setPayNotes(""); }}
-                            className="h-7 gap-1.5 text-xs"
-                          >
-                            <DollarSign className="h-3 w-3" />
-                            Marcar pago
-                          </Button>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={!canManagePayments || updateMut.isPending}
-                            onClick={() => updateMut.mutate({ spin: r, markAsPaid: false })}
-                            className="h-7 gap-1.5 text-xs"
-                          >
-                            <RotateCcw className="h-3 w-3" />
-                            Desfazer
-                          </Button>
-                        )}
+                        {renderAction(r)}
                       </TableCell>
                     </TableRow>
                   );

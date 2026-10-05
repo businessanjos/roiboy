@@ -133,7 +133,7 @@ export function InsightsDashboardTabs() {
 
         {/* Scroll left */}
         {canScrollLeft && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => scroll("left")}>
+          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-8 md:w-8 shrink-0" aria-label="Rolar painéis para a esquerda" onClick={() => scroll("left")}>
             <ChevronLeft className="h-4 w-4" />
           </Button>
         )}
@@ -166,7 +166,8 @@ export function InsightsDashboardTabs() {
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity -ml-1"
+                        className="h-11 w-11 md:h-6 md:w-6 md:opacity-0 md:group-hover:opacity-100 focus-visible:opacity-100 transition-opacity -ml-1"
+                        aria-label="Opções do painel"
                       >
                         <MoreHorizontal className="h-3.5 w-3.5" />
                       </Button>
@@ -201,7 +202,7 @@ export function InsightsDashboardTabs() {
 
         {/* Scroll right */}
         {canScrollRight && (
-          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => scroll("right")}>
+          <Button variant="ghost" size="icon" className="h-11 w-11 md:h-8 md:w-8 shrink-0" aria-label="Rolar painéis para a direita" onClick={() => scroll("right")}>
             <ChevronRight className="h-4 w-4" />
           </Button>
         )}
@@ -213,14 +214,15 @@ export function InsightsDashboardTabs() {
         <Button
           variant="ghost"
           size="icon"
-          className="h-8 w-8 shrink-0"
+          className="h-11 w-11 md:h-8 md:w-8 shrink-0"
+          aria-label="Novo painel"
           onClick={() => setCreateOpen(true)}
         >
           <Plus className="h-4 w-4" />
         </Button>
 
         {/* Metas */}
-        <Button asChild variant="ghost" size="sm" className="h-8 shrink-0 gap-1">
+        <Button asChild variant="ghost" size="sm" className="h-11 md:h-8 shrink-0 gap-1">
           <Link to="/insights/goals">
             <Target className="h-4 w-4" />
             Metas

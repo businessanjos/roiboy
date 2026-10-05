@@ -25,6 +25,8 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Search,
   Filter,
@@ -448,6 +450,8 @@ export async function exportAllFiltered(
 
 export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerProps) {
   const isCommercial = scope === "commercial";
+  const isMobile = useIsMobile();
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [search, setSearch] = useState("");
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
@@ -608,61 +612,11 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
     }
   };
 
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 min-w-0">
-            <Activity className="h-5 w-5 shrink-0" />
-            {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
-          </CardTitle>
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={exportCsv}
-              disabled={exporting || total === 0}
-            >
-              <Download className="h-4 w-4 mr-2" />
-              {exporting
-                ? `Exportando${exportProgress ? ` ${exportProgress.loaded}/${exportProgress.total}` : "..."}`
-                : "Exportar"}
-            </Button>
-            <Button variant="outline" size="sm" onClick={() => refetch()}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Atualizar
-            </Button>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {isError && (
-          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            Não foi possível carregar o log completo
-            {logsError instanceof Error ? `: ${logsError.message}` : "."} Os registros abaixo podem estar
-            incompletos — clique em "Atualizar" para tentar novamente.
-          </div>
-        )}
-        {exportError && (
-          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
-            <AlertCircle className="h-4 w-4 shrink-0" />
-            Falha ao exportar: {exportError}
-          </div>
-        )}
-        <div className="flex flex-col sm:flex-row gap-3 mb-4">
-          <div className="relative flex-1">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por pessoa, negócio, tarefa..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
-          </div>
+  const renderFilterControls = (m: boolean) => (
+    <>
           <Popover open={userPickerOpen} onOpenChange={setUserPickerOpen}>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="w-[200px] justify-start font-normal">
+              <Button variant="outline" aria-label="Pessoa" className={m ? "h-11 w-full justify-start font-normal" : "w-[200px] justify-start font-normal"}>
                 <User className="h-4 w-4 mr-2 shrink-0" />
                 <span className="truncate">{selectedPersonName}</span>
               </Button>
@@ -700,7 +654,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             </PopoverContent>
           </Popover>
           <Select value={periodFilter} onValueChange={setPeriodFilter}>
-            <SelectTrigger className="w-[150px]">
+            <SelectTrigger aria-label="Período" className={m ? "h-11 w-full" : "w-[150px]"}>
               <Calendar className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Período" />
             </SelectTrigger>
@@ -713,7 +667,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             </SelectContent>
           </Select>
           <Select value={actionFilter} onValueChange={setActionFilter}>
-            <SelectTrigger className="w-[170px]">
+            <SelectTrigger aria-label="Ação" className={m ? "h-11 w-full" : "w-[170px]"}>
               <Filter className="h-4 w-4 mr-2" />
               <SelectValue placeholder="Ação" />
             </SelectTrigger>
@@ -734,7 +688,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
           </Select>
           {!isCommercial && (
             <Select value={entityFilter} onValueChange={setEntityFilter}>
-              <SelectTrigger className="w-[150px]">
+              <SelectTrigger aria-label="Tipo" className={m ? "h-11 w-full" : "w-[150px]"}>
                 <SelectValue placeholder="Tipo" />
               </SelectTrigger>
               <SelectContent>
@@ -750,6 +704,78 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               </SelectContent>
             </Select>
           )}
+    </>
+  );
+
+  return (
+    <Card>
+      <CardHeader className="pb-3 px-4 sm:px-6">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className={isMobile && isCommercial ? "sr-only" : "flex items-center gap-2 min-w-0"}>
+            <Activity className="h-5 w-5 shrink-0" />
+            {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
+          </CardTitle>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-11 sm:h-9"
+              onClick={exportCsv}
+              disabled={exporting || total === 0}
+            >
+              <Download className="h-4 w-4 mr-2" />
+              {exporting
+                ? `Exportando${exportProgress ? ` ${exportProgress.loaded}/${exportProgress.total}` : "..."}`
+                : "Exportar"}
+            </Button>
+            <Button variant="outline" size="sm" className="h-11 sm:h-9" onClick={() => refetch()}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Atualizar
+            </Button>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-4 sm:px-6">
+        {isError && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Não foi possível carregar o log completo
+            {logsError instanceof Error ? `: ${logsError.message}` : "."} Os registros abaixo podem estar
+            incompletos — clique em "Atualizar" para tentar novamente.
+          </div>
+        )}
+        {exportError && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Falha ao exportar: {exportError}
+          </div>
+        )}
+        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+          <div className="flex gap-2 flex-1 min-w-0">
+          <div className="relative flex-1 min-w-0">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              aria-label="Buscar nos logs"
+              placeholder={isMobile ? "Buscar nos logs" : "Buscar por pessoa, negócio, tarefa..."}
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-9 h-11 sm:h-10"
+            />
+          </div>
+          {isMobile && (
+            <Sheet open={filtersOpen} onOpenChange={setFiltersOpen}>
+              <SheetTrigger asChild>
+                <Button variant="outline" className="h-11 gap-1.5 shrink-0"><Filter className="h-4 w-4" />Filtros</Button>
+              </SheetTrigger>
+              <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe">
+                <SheetHeader><SheetTitle>Filtros</SheetTitle></SheetHeader>
+                <div className="mt-4 flex flex-col gap-3">{renderFilterControls(true)}</div>
+                <Button className="mt-5 h-11 w-full" onClick={() => setFiltersOpen(false)}>Aplicar</Button>
+              </SheetContent>
+            </Sheet>
+          )}
+          </div>
+          {!isMobile && renderFilterControls(false)}
         </div>
 
         <p className="text-xs text-muted-foreground mb-3">
@@ -757,6 +783,38 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
           anteriores continuam guardados e podem ser consultados sob demanda.
         </p>
 
+        {isMobile ? (
+          <ul role="list" className="-mx-2 [&>li+li]:border-t [&>li+li]:border-border/60">
+            {isLoading ? (
+              <li className="py-8 text-center text-sm text-muted-foreground">Carregando logs...</li>
+            ) : logs.length === 0 ? (
+              <li className="py-8 text-center text-sm text-muted-foreground">Nenhum log encontrado</li>
+            ) : logs.map((log) => (
+              <li key={log.id}>
+                <button
+                  type="button"
+                  onClick={() => setSelectedLog(log)}
+                  className={`w-full min-h-[64px] border-l-4 px-3 py-2.5 text-left focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring ${actionRowAccent[log.action] ?? "border-l-transparent"}`}
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-sm font-medium truncate">{log.user_name || "Sistema"}</span>
+                    <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+                      {format(new Date(log.created_at), "dd/MM HH:mm", { locale: ptBR })}
+                    </span>
+                  </div>
+                  <p className="mt-0.5 text-sm line-clamp-2 break-words">{describeLog(log)}</p>
+                  <div className="mt-1 flex items-center gap-1.5">
+                    <Badge variant="outline" className={`gap-1 text-[11px] ${actionColors[log.action] || ""}`}>
+                      {actionIcons[log.action]}
+                      {actionLabels[log.action] || log.action}
+                    </Badge>
+                    <span className="text-xs text-muted-foreground">{entityLabels[log.entity_type] || log.entity_type}</span>
+                  </div>
+                </button>
+              </li>
+            ))}
+          </ul>
+        ) : (
         <div className="max-h-[500px] w-full overflow-auto">
           <Table>
             <TableHeader>
@@ -832,6 +890,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
                         variant="ghost"
                         size="sm"
                         onClick={() => setSelectedLog(log)}
+                        aria-label="Ver detalhes"
                       >
                         <Eye className="h-4 w-4" />
                       </Button>
@@ -842,6 +901,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             </TableBody>
           </Table>
         </div>
+        )}
         <PagerFor state={pg} itemLabel="logs" />
 
         <Dialog open={!!selectedLog} onOpenChange={() => setSelectedLog(null)}>

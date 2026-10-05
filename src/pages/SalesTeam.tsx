@@ -16,12 +16,31 @@ import { TeamInsightsTab } from "@/components/sales/team/TeamInsightsTab";
 import { TeamConversationAnalysisTab } from "@/components/sales/team/TeamConversationAnalysisTab";
 import { QuotasIncentivesTab } from "@/components/sales/quotas/QuotasIncentivesTab";
 import { isManagementUser } from "@/lib/access/managementRoles";
+import { useIsMobile } from "@/hooks/use-mobile";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
+
+const SECTIONS = [
+  { value: "performance", label: "Performance" },
+  { value: "insights", label: "Insights" },
+  { value: "quotas-incentives", label: "Metas & Incentivos" },
+  { value: "career", label: "Carreira" },
+];
+const PERF_SECTIONS = [
+  { value: "overview", label: "Visão Geral" },
+  { value: "live", label: "Ao Vivo" },
+  { value: "telephony", label: "Telefonia" },
+  { value: "conversations", label: "Conversas" },
+  { value: "videocall", label: "Vídeo" },
+];
 
 export default function SalesTeam() {
   const { currentUser } = useCurrentUser();
   const hasFullAccess = isManagementUser(currentUser);
   const { plan, saveSalesLevels } = useCommissionPlan();
   const [activeTab, setActiveTab] = useState("performance");
+  const [perfTab, setPerfTab] = useState("overview");
+  const isMobile = useIsMobile();
 
   if (!hasFullAccess) {
     return (
@@ -48,6 +67,26 @@ export default function SalesTeam() {
 
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        {isMobile ? (
+          <div className="grid grid-cols-2 gap-2">
+            <div className="space-y-1">
+              <Label htmlFor="sales-team-section" className="text-xs text-muted-foreground">Seção</Label>
+              <Select value={activeTab} onValueChange={setActiveTab}>
+                <SelectTrigger id="sales-team-section" className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                <SelectContent>{SECTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+            </div>
+            {activeTab === "performance" && (
+              <div className="space-y-1">
+                <Label htmlFor="sales-team-perf" className="text-xs text-muted-foreground">Visão</Label>
+                <Select value={perfTab} onValueChange={setPerfTab}>
+                  <SelectTrigger id="sales-team-perf" className="h-11 rounded-xl"><SelectValue /></SelectTrigger>
+                  <SelectContent>{PERF_SECTIONS.map((o) => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+            )}
+          </div>
+        ) : (
         <div className="overflow-x-auto -mx-4 px-4">
           <TabsList className="h-10 p-1 bg-muted/60 gap-0.5 inline-flex w-auto min-w-full sm:min-w-0">
             <TabsTrigger value="performance" className="gap-1.5 text-xs sm:text-sm px-2.5 sm:px-4 h-8 data-[state=active]:bg-background data-[state=active]:shadow-sm font-medium whitespace-nowrap">
@@ -71,9 +110,11 @@ export default function SalesTeam() {
             </TabsTrigger>
           </TabsList>
         </div>
+        )}
 
         <TabsContent value="performance">
-          <Tabs defaultValue="overview" className="space-y-4">
+          <Tabs value={perfTab} onValueChange={setPerfTab} className="space-y-4">
+            {!isMobile && (
             <div className="overflow-x-auto -mx-4 px-4">
               <TabsList className="h-9 p-1 bg-muted/40 gap-0.5 inline-flex w-auto min-w-full sm:min-w-0">
                 <TabsTrigger value="overview" className="gap-1.5 text-xs px-2.5 sm:px-3 h-7 data-[state=active]:bg-background data-[state=active]:shadow-sm whitespace-nowrap">
@@ -98,6 +139,7 @@ export default function SalesTeam() {
                 </TabsTrigger>
               </TabsList>
             </div>
+            )}
 
             <TabsContent value="overview">
               <SalesTeamTab />
