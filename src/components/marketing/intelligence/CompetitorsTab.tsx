@@ -20,6 +20,8 @@ import {
 import { MiSectionHeader } from "./MiSectionHeader";
 import { MiEmptyState } from "./MiEmptyState";
 import { CompetitorsSyncPanel } from "./CompetitorsSyncPanel";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { formatTicketRange, tierLabel } from "./tierTicket";
 
 type CompetitorType = "direto" | "indireto" | "transversal";
@@ -205,6 +207,11 @@ export default function CompetitorsTab() {
       return a.name.localeCompare(b.name, "pt-BR");
     });
   }, [competitors, typeFilter, audienceFilter, statusFilter, search]);
+
+  const pg = usePagedList(filtered, {
+    resetKey: [typeFilter, audienceFilter, statusFilter, search],
+    isLoading,
+  });
 
 
   const addMutation = useMutation({
@@ -448,7 +455,7 @@ export default function CompetitorsTab() {
       )}
 
       <div className="space-y-3">
-        {filtered.map((c) => {
+        {pg.items.map((c) => {
           const snap = snapshotsMap[c.id];
           const a = snap?.ai_analysis || null;
           const meta = typeMeta[c.competitor_type] || typeMeta.direto;
@@ -708,6 +715,8 @@ export default function CompetitorsTab() {
           );
         })}
       </div>
+
+      {!isLoading && filtered.length > 0 && <PagerFor state={pg} itemLabel="concorrentes" />}
     </div>
   );
 }

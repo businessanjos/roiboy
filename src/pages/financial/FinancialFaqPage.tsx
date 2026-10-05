@@ -52,6 +52,8 @@ import {
 } from "@/components/ui/select";
 import { FinancialEmptyState } from "@/components/financial/_shared/FinancialEmptyState";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type ReviewStatus = "draft" | "in_review" | "published" | "changes_requested";
 
@@ -291,6 +293,11 @@ export default function FinancialFaqPage() {
       categoryLabelOf(a[0]).localeCompare(categoryLabelOf(b[0])),
     );
   }, [filtered, isRanked]);
+
+  // Pagina a lista de categorias (modo agrupado) ou os artigos (modo busca por relevância),
+  // mantendo cada acordeão de categoria/artigo intacto.
+  const groupedPg = usePagedList(grouped, { resetKey: [isRanked, categoryFilter, reviewFilter, textFilter, selectedTags, manageMode], isLoading, defaultPageSize: 20 });
+  const flatPg = usePagedList(filtered, { resetKey: [isRanked, categoryFilter, reviewFilter, textFilter, selectedTags, manageMode], isLoading, defaultPageSize: 20 });
 
   const hasFilters = selectedTags.length > 0 || !!textFilter || categoryFilter !== "all" || reviewFilter !== "all";
   const clearFilters = () => {
@@ -844,7 +851,7 @@ export default function FinancialFaqPage() {
           </Card>
         ) : grouped ? (
           <div className="space-y-5">
-            {grouped.map(([category, list]) => (
+            {groupedPg.items.map(([category, list]) => (
               <div key={category} className="space-y-2">
                 <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   {categoryLabelOf(category)}
@@ -855,11 +862,15 @@ export default function FinancialFaqPage() {
                 </Card>
               </div>
             ))}
+            <PagerFor state={groupedPg} itemLabel="categorias" />
           </div>
         ) : (
-          <Card className="overflow-hidden">
-            <Accordion type="multiple">{filtered.map(renderArticle)}</Accordion>
-          </Card>
+          <div className="space-y-2">
+            <Card className="overflow-hidden">
+              <Accordion type="multiple">{flatPg.items.map(renderArticle)}</Accordion>
+            </Card>
+            <PagerFor state={flatPg} itemLabel="artigos" />
+          </div>
         )}
       </section>
 

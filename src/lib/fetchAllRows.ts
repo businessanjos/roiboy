@@ -4,7 +4,7 @@
  * (ex.: .order(col).order("id")). `maxRows` é uma proteção contra laços infinitos.
  */
 export async function fetchAllRows<T>(
-  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
+  build: (from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
   { batchSize = 1000, maxRows = 50000 }: { batchSize?: number; maxRows?: number } = {},
 ): Promise<{ data: T[]; error: unknown }> {
   const all: T[] = [];
@@ -12,7 +12,7 @@ export async function fetchAllRows<T>(
     const { data, error } = await build(from, from + batchSize - 1);
     if (error) return { data: all, error };
     const rows = data ?? [];
-    all.push(...rows);
+    all.push(...(rows as T[]));
     if (rows.length < batchSize) break;
   }
   return { data: all, error: null };

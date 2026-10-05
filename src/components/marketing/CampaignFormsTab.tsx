@@ -14,6 +14,9 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { CampaignFormAnalytics } from "./CampaignFormAnalytics";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface CampaignForm {
   id: string;
@@ -52,16 +55,21 @@ export function CampaignFormsTab() {
   const [editing, setEditing] = useState<CampaignForm | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [analyticsFor, setAnalyticsFor] = useState<CampaignForm | null>(null);
+  const pg = usePagedList(forms, { defaultPageSize: 20, isLoading: loading });
 
   async function load() {
     if (!accountId) return;
     setLoading(true);
-    const { data: rows, error } = await supabase
-      .from("forms")
-      .select("id, title, description, slug, is_active, fields, campaign_meta, appearance, created_at")
-      .eq("account_id", accountId)
-      .eq("is_campaign", true)
-      .order("created_at", { ascending: false });
+    const { data: rows, error } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from("forms")
+        .select("id, title, description, slug, is_active, fields, campaign_meta, appearance, created_at")
+        .eq("account_id", accountId)
+        .eq("is_campaign", true)
+        .order("created_at", { ascending: false })
+        .order("id")
+        .range(from, to)
+    );
     if (error) {
       toast.error("Erro ao carregar formulários");
       setLoading(false);
@@ -145,7 +153,7 @@ export function CampaignFormsTab() {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {forms.map((f) => (
+          {pg.items.map((f) => (
             <Card key={f.id} className="bg-card/50">
               <CardContent className="p-4 flex items-center gap-4">
                 <div className="flex-1 min-w-0">
@@ -177,6 +185,7 @@ export function CampaignFormsTab() {
           ))}
         </div>
       )}
+      {!loading && forms.length > 0 && <PagerFor state={pg} itemLabel="formulários" />}
 
       {editing && (
         <CampaignFormEditor
