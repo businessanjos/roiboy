@@ -5,6 +5,7 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
 import { CreditCard } from "lucide-react";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 
@@ -182,17 +183,17 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
         <Badge variant="outline" className="text-[10px] border-purple-500/40 text-purple-700 dark:text-purple-400">
           {periodLabel}
         </Badge>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-sm">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-sm w-auto">
             <p className="text-xs">
               Bônus por venda baseado nas faixas configuradas (forma de pagamento + parcelas).
               Vendas sem o campo "Parcelas" preenchido não pontuam.
             </p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
 
       <div className={`grid gap-2 grid-cols-2 sm:grid-cols-${Math.min(tiers.length, 5)}`}>

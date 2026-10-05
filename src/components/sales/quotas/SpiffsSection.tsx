@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 import { RouletteSpinDialog } from "./RouletteSpinDialog";
@@ -1238,16 +1239,16 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           {period.control}
         </div>
         <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
               Soma o valor captado das vendas ganhas no período (pela data do ganho) e divide por R$ {formatBRL(triggerPerValue)}. Ao girar, o vendedor marca quais vendas está usando — elas ficam vinculadas ao giro e não contam de novo. Clique em "Girar" para sortear o prêmio entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))} e registrar o resultado.
             </p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum negócio ganho no período ainda.</p>
@@ -1580,19 +1581,19 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
             </SelectContent>
           </Select>
         </div>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
               {weekStartDay !== null
                 ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
                 : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
               {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
             </p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       {spiff.custom_prize_description && (
         <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
