@@ -1928,6 +1928,7 @@ export function DealDetailSheet({
                           onClick={() => imageInputRef.current?.click()}
                           disabled={isUploadingImage || isUploadingFile}
                           title="Anexar imagem ou vídeo"
+                          aria-label="Anexar imagem ou vídeo"
                         >
                           {isUploadingImage ? (
                             <Loader2 className="h-4 w-4 animate-spin" />
@@ -1943,6 +1944,7 @@ export function DealDetailSheet({
                           onClick={() => fileInputRef.current?.click()}
                           disabled={isUploadingImage || isUploadingFile}
                           title="Anexar documento"
+                          aria-label="Anexar documento"
                         >
                           {isUploadingFile ? (
                             <Loader2 className="h-4 w-4 animate-spin" />

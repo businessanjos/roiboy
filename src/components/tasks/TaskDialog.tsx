@@ -826,12 +826,12 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           </div>
 
           <div className="space-y-2">
-            <Label>Responsável *</Label>
+            <Label htmlFor={`${fid}-1`}>Responsável *</Label>
             <Select
               value={formData.assigned_to}
               onValueChange={(value) => setFormData({ ...formData, assigned_to: value })}
             >
-              <SelectTrigger>
+              <SelectTrigger id={`${fid}-1`} className="h-11 sm:h-10">
                 <SelectValue placeholder="Selecione o responsável" />
               </SelectTrigger>
               <SelectContent>
@@ -929,14 +929,14 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
 
 
           <div className="space-y-2">
-            <Label>Prioridade</Label>
+            <Label htmlFor={`${fid}-2`}>Prioridade</Label>
             <Select
               value={formData.priority}
               onValueChange={(value: Task["priority"]) => 
                 setFormData({ ...formData, priority: value })
               }
             >
-              <SelectTrigger>
+              <SelectTrigger id={`${fid}-2`} className="h-11 sm:h-10">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
