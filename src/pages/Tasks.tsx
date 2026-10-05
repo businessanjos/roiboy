@@ -2458,6 +2458,15 @@ export default function Tasks() {
         {isLgViewport && taskFilterItems}
       </FilterBar>
 
+      {serverSearch && (tasksError || searchCountsError) && (
+        <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+          <span>Não foi possível carregar a busca. Os números e a lista abaixo podem não refletir este termo.</span>
+          <Button variant="outline" size="sm" className="min-h-11" onClick={() => { refetchTasks(); refetchSearchCounts(); }}>
+            Tentar de novo
+          </Button>
+        </div>
+      )}
+
       {/* Content based on view mode */}
       {viewMode === "kanban" ? (
         <>
@@ -2517,14 +2526,6 @@ export default function Tasks() {
         </>
       ) : (
         <>
-        {serverSearch && (tasksError || searchCountsError) && (
-          <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
-            <span>Não foi possível carregar a busca. Os números e a lista abaixo podem não refletir este termo.</span>
-            <Button variant="outline" size="sm" className="min-h-11" onClick={() => { refetchTasks(); refetchSearchCounts(); }}>
-              Tentar de novo
-            </Button>
-          </div>
-        )}
         <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-3 lg:space-y-4">
           <TabsList className="hidden lg:flex bg-muted/50 p-1 flex-wrap h-auto gap-1">
             <TabsTrigger 
