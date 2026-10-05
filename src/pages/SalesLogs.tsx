@@ -47,7 +47,7 @@ export default function SalesLogs() {
 
   return (
     <div className="p-4 md:p-6 space-y-4">
-      <div>
+      <div className="hidden md:block">
         <h1 className="text-2xl font-bold">Logs</h1>
         <p className="text-sm text-muted-foreground">
           Histórico do que a equipe comercial fez em negócios e tarefas.
