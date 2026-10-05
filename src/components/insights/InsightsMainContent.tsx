@@ -318,13 +318,13 @@ export function InsightsMainContent() {
           dashboardName={activeDashboard.name}
         />
       )}
-      <div className="p-3 md:p-6 space-y-4 md:space-y-6">
+      <div className="p-4 md:p-6 space-y-4 md:space-y-6">
         {/* Header */}
         {(() => {
           const actions = (
             <>
               {canShare && (
-                <Button variant="outline" size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsShareOpen(true)}>
+                <Button variant="outline" size="icon" className="h-11 w-11 md:h-9 md:w-auto md:px-3" aria-label="Compartilhar" onClick={() => setIsShareOpen(true)}>
                   <Share2 className="h-4 w-4" />
                   <span className="hidden md:inline ml-2">Compartilhar</span>
                 </Button>
@@ -333,7 +333,8 @@ export function InsightsMainContent() {
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8 md:h-9 md:w-auto md:px-3"
+                  className="h-11 w-11 md:h-9 md:w-auto md:px-3"
+                  aria-label="Análise comparativa"
                   onClick={() => setIsCompareOpen(true)}
                 >
                   <GitCompareArrows className="h-4 w-4" />
@@ -353,7 +354,7 @@ export function InsightsMainContent() {
                 </Button>
               )}
               {hasVisuals && (
-                <Button size="icon" className="h-8 w-8 md:h-9 md:w-auto md:px-3" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
+                <Button size="icon" className="h-11 w-11 md:h-9 md:w-auto md:px-3" aria-label="Adicionar visual" onClick={() => setIsBuilderOpen(true)} disabled={isLoadingVisuals}>
                   <Plus className="h-4 w-4" />
                   <span className="hidden md:inline ml-2">Adicionar Visual</span>
                 </Button>
