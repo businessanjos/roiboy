@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 import { EverAgentDialog } from "./EverAgentDialog";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface SectorAgent {
   id: string;
@@ -32,6 +35,7 @@ export function EverAgentsTab() {
   const [loading, setLoading] = useState(true);
   const [editingAgent, setEditingAgent] = useState<SectorAgent | null>(null);
   const [showDialog, setShowDialog] = useState(false);
+  const pg = usePagedList(agents, { isLoading: loading });
 
   const accountId = currentUser?.account_id;
 
@@ -43,17 +47,21 @@ export function EverAgentsTab() {
   async function fetchData() {
     setLoading(true);
     const [agentsRes, sectorsRes] = await Promise.all([
-      supabase
-        .from("ai_sector_agents")
-        .select("*")
-        .order("created_at", { ascending: false }),
+      fetchAllRows<SectorAgent>((from, to) =>
+        supabase
+          .from("ai_sector_agents")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to)
+      ),
       supabase
         .from("zapp_departments")
         .select("id, name")
         .eq("account_id", accountId!),
     ]);
 
-    if (agentsRes.data) setAgents(agentsRes.data as unknown as SectorAgent[]);
+    setAgents(agentsRes.data ?? []);
     if (sectorsRes.data) setSectors(sectorsRes.data as unknown as { id: string; name: string }[]);
     setLoading(false);
   }
@@ -136,7 +144,7 @@ export function EverAgentsTab() {
         </Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {agents.map((agent) => (
+          {pg.items.map((agent) => (
             <Card
               key={agent.id}
               className={`transition-all hover:shadow-md ${
@@ -217,6 +225,8 @@ export function EverAgentsTab() {
           ))}
         </div>
       )}
+
+      {agents.length > 0 && <PagerFor state={pg} itemLabel="agentes" />}
 
       {showDialog && (
         <EverAgentDialog

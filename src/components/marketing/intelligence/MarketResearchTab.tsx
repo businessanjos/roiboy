@@ -13,6 +13,9 @@ import { Loader2, Search, ExternalLink, ChevronDown, Sparkles, Trash2, Clock } f
 import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 import { MarketResearchAnswer } from "./MarketResearchAnswer";
 import { benchmarkQueries } from "./marketBenchmarks";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Citation = { index: number; url: string; title: string | null };
 
@@ -65,13 +68,16 @@ export default function MarketResearchTab() {
   const historyQuery = useQuery({
     queryKey: ["mi-market-research", currentUser?.account_id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("mi_market_research")
-        .select("*")
-        .order("created_at", { ascending: false })
-        .limit(30);
+      const { data, error } = await fetchAllRows<ResearchRow>((from, to) =>
+        supabase
+          .from("mi_market_research")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
-      return (data ?? []) as unknown as ResearchRow[];
+      return data;
     },
     enabled: !!currentUser?.account_id,
   });
@@ -136,6 +142,7 @@ export default function MarketResearchTab() {
 
 
   const isRunning = runMutation.isPending;
+  const pg = usePagedList(historyQuery.data, { isLoading: historyQuery.isLoading });
 
   return (
     <div className="space-y-4">
@@ -271,8 +278,8 @@ export default function MarketResearchTab() {
           </Card>
         )}
 
-        {historyQuery.data?.map((r) => (
-          <Collapsible key={r.id} defaultOpen={historyQuery.data[0]?.id === r.id}>
+        {pg.items.map((r) => (
+          <Collapsible key={r.id} defaultOpen={pg.items[0]?.id === r.id}>
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-start justify-between gap-3">
@@ -338,6 +345,11 @@ export default function MarketResearchTab() {
             </Card>
           </Collapsible>
         ))}
+        {pg.totalItems > 0 && (
+          <Card>
+            <PagerFor state={pg} itemLabel="pesquisas" />
+          </Card>
+        )}
       </div>
     </div>
   );

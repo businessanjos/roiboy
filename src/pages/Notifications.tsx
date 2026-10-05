@@ -1,4 +1,5 @@
-import { forwardRef, useState, useMemo } from "react";
+import { forwardRef, useState, useMemo, useEffect } from "react";
+import { supabase } from "@/integrations/supabase/client";
 import { useNavigate } from "react-router-dom";
 import { useNotifications } from "@/hooks/useNotifications";
 import { Button } from "@/components/ui/button";
@@ -21,7 +22,7 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
-import { usePagedList } from "@/hooks/usePagedList";
+import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { PushNotificationPreferences } from "@/components/notifications/PushNotificationPreferences";
 
@@ -46,6 +47,15 @@ const SOURCE_TYPE_MAP: Record<string, TabId> = {
   client_checkpoint_digest: "checkpoints",
 };
 
+// Inverso de SOURCE_TYPE_MAP — usado para filtrar no servidor por aba.
+const TAB_SOURCE_TYPES: Record<Exclude<TabId, "all" | "other">, string[]> = {
+  sales: ["deal", "contract_renewal", "client_contracts"],
+  forms: ["form_response"],
+  mentions: ["client_followup"],
+  checkpoints: ["client_checkpoint", "client_checkpoint_digest"],
+};
+const KNOWN_SOURCE_TYPES = Object.values(TAB_SOURCE_TYPES).flat();
+
 
 function getTabForNotification(sourceType: string | null): TabId {
   if (!sourceType) return "other";
@@ -66,14 +76,72 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     requestNotificationPermission,
   } = useNotifications();
 
-  const filteredNotifications = useMemo(() => {
-    if (activeTab === "all") return notifications;
-    return notifications.filter(
-      (n) => getTabForNotification(n.source_type) === activeTab
-    );
-  }, [notifications, activeTab]);
+  // Página de Notificações: histórico completo com paginação no SERVIDOR
+  // (count exato + range), independente do resumo recente do sino/contexto.
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [pageRows, setPageRows] = useState<any[]>([]);
+  const [pageTotal, setPageTotal] = useState(0);
+  const [pageLoading, setPageLoading] = useState(true);
 
-  const pg = usePagedList(filteredNotifications, { resetKey: activeTab, defaultPageSize: 20 });
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser || cancelled) return;
+      const { data: userData } = await supabase
+        .from("users")
+        .select("id")
+        .eq("auth_user_id", authUser.id)
+        .maybeSingle();
+      if (!cancelled && userData) setCurrentUserId(userData.id);
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
+  const pg = usePaginationState(pageTotal, { resetKey: activeTab, defaultPageSize: 20, isLoading: pageLoading });
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    let cancelled = false;
+    setPageLoading(true);
+    (async () => {
+      let query = supabase
+        .from("notifications")
+        .select(
+          `*, triggered_by_user:users!notifications_triggered_by_user_id_fkey(name, avatar_url)`,
+          { count: "exact" }
+        )
+        .eq("user_id", currentUserId);
+
+      if (activeTab === "other") {
+        // "Outros": sem source_type ou de um tipo não mapeado a nenhuma aba conhecida.
+        query = query.or(
+          `source_type.is.null,source_type.not.in.(${KNOWN_SOURCE_TYPES.join(",")})`
+        );
+      } else if (activeTab !== "all") {
+        query = query.in(
+          "source_type",
+          TAB_SOURCE_TYPES[activeTab as Exclude<TabId, "all" | "other">]
+        );
+      }
+
+      const { data, error, count } = await query
+        .order("created_at", { ascending: false })
+        .range(pg.from, pg.to);
+
+      if (cancelled) return;
+      if (error) {
+        console.error("Error fetching notifications page:", error);
+        setPageRows([]);
+        setPageTotal(0);
+      } else {
+        setPageRows(data || []);
+        setPageTotal(count ?? 0);
+      }
+      setPageLoading(false);
+    })();
+    return () => { cancelled = true; };
+  }, [currentUserId, activeTab, pg.from, pg.to]);
 
   const tabCounts = useMemo(() => {
     const counts: Record<TabId, number> = { all: 0, sales: 0, checkpoints: 0, forms: 0, mentions: 0, other: 0 };
@@ -107,7 +175,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     }
   };
 
-  if (loading) {
+  if (loading || (pageLoading && pageRows.length === 0)) {
     return <LoadingScreen message="Carregando notificações..." fullScreen={false} />;
   }
 
@@ -116,7 +184,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold">Notificações (últimas 50)</h1>
+          <h1 className="text-2xl font-semibold">Notificações</h1>
           {unreadCount > 0 && (
             <Badge variant="default">{unreadCount} não lidas</Badge>
           )}
@@ -192,7 +260,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         </div>
       )}
 
-      {filteredNotifications.length === 0 ? (
+      {pageRows.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-12 text-center">
             <Bell className="h-12 w-12 text-muted-foreground/30 mb-4" />
@@ -208,7 +276,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         </Card>
       ) : (
         <div className="space-y-2">
-          {pg.items.map((notification) => (
+          {pageRows.map((notification) => (
             <button
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
@@ -276,7 +344,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
           ))}
         </div>
       )}
-      {filteredNotifications.length > 0 && (
+      {pageRows.length > 0 && (
         <PagerFor state={pg} itemLabel="notificações" />
       )}
     </div>

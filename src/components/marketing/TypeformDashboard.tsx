@@ -18,6 +18,9 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import { fetchAllRows } from '@/lib/fetchAllRows';
+import { usePagedList } from '@/hooks/usePagedList';
+import { PagerFor } from '@/components/ui/list-pagination';
 
 interface TrackedForm {
   id: string;
@@ -91,11 +94,19 @@ export function TypeformDashboard() {
   const [pickedForms, setPickedForms] = useState<string[]>([]);
   const [search, setSearch] = useState('');
   const [adding, setAdding] = useState(false);
+  const formsPg = usePagedList(forms, { defaultPageSize: 20, isLoading: loading });
 
   const loadForms = useCallback(async () => {
     setLoading(true);
-    const { data } = await supabase.from('typeform_forms').select('*').order('created_at', { ascending: false });
-    setForms((data as any) || []);
+    const { data } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from('typeform_forms')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .order('id')
+        .range(from, to)
+    );
+    setForms(data || []);
     if (data && data.length && !selectedForm) setSelectedForm('__all__');
     setLoading(false);
   }, [selectedForm]);
@@ -588,7 +599,7 @@ export function TypeformDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {forms.map(f => {
+              {formsPg.items.map(f => {
                 const m = perFormMetrics[f.form_id];
                 return (
                   <div key={f.id} className="flex items-center justify-between gap-4 p-3 rounded-md border border-border/30 hover:bg-muted/30">
@@ -627,6 +638,7 @@ export function TypeformDashboard() {
                 );
               })}
             </div>
+            <PagerFor state={formsPg} itemLabel="formulários" />
           </CardContent>
         </Card>
       )}

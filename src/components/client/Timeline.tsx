@@ -114,6 +114,10 @@ interface TimelineProps {
   clientId?: string;
   clientName?: string;
   onCommentAdded?: () => void;
+  /** Há registros mais antigos no servidor ainda não carregados. */
+  hasMoreOnServer?: boolean;
+  loadingMore?: boolean;
+  onLoadMoreServer?: () => void | Promise<void>;
 }
 
 const categoryIcons: Record<string, React.ReactNode> = {
@@ -782,7 +786,7 @@ function SystemEventItem({
 // Timeline is now focused on team comments only
 // Messages, ROI and risks have dedicated tabs
 
-export function Timeline({ events, className, clientId, clientName: propClientName, onCommentAdded }: TimelineProps) {
+export function Timeline({ events, className, clientId, clientName: propClientName, onCommentAdded, hasMoreOnServer = false, loadingMore = false, onLoadMoreServer }: TimelineProps) {
   const [comment, setComment] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -1425,6 +1429,21 @@ export function Timeline({ events, className, clientId, clientName: propClientNa
               >
                 <ChevronDown className="h-4 w-4 transition-transform group-hover:translate-y-0.5" />
                 Mostrar mais {nextBatch} de {hiddenCount} anteriores
+              </button>
+            </div>
+          )}
+
+          {/* Registros mais antigos ainda no servidor */}
+          {hiddenCount === 0 && hasMoreOnServer && onLoadMoreServer && (
+            <div className="flex justify-center py-4">
+              <button
+                type="button"
+                onClick={() => onLoadMoreServer()}
+                disabled={loadingMore}
+                className="inline-flex min-h-11 items-center gap-2 rounded-full border border-border px-5 text-sm font-medium text-foreground hover:bg-muted disabled:opacity-60"
+              >
+                <ChevronDown className="h-4 w-4" />
+                {loadingMore ? "Carregando…" : "Carregar registros anteriores"}
               </button>
             </div>
           )}

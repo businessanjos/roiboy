@@ -5,6 +5,7 @@ import { toast } from "sonner";
 import type { HRJob, HRJobApplication, JobStatus, CandidateStage } from "@/types/job";
 import { recordBenchmarkRun } from "@/lib/benchmarkRunLog";
 import { computeAttractiveness } from "@/components/rh/jobs/SalaryBenchmarkCard";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 // ─── List Jobs ───
 export function useHRJobs(filters?: { status?: JobStatus | "all" }) {
@@ -13,17 +14,20 @@ export function useHRJobs(filters?: { status?: JobStatus | "all" }) {
     queryKey: ["hr-jobs", currentUser?.account_id, filters?.status],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      let query = supabase
-        .from("hr_jobs")
-        .select("*")
-        .eq("account_id", currentUser!.account_id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows((from, to) => {
+        let query = supabase
+          .from("hr_jobs")
+          .select("*")
+          .eq("account_id", currentUser!.account_id)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
 
-      if (filters?.status && filters.status !== "all") {
-        query = query.eq("status", filters.status);
-      }
-
-      const { data, error } = await query;
+        if (filters?.status && filters.status !== "all") {
+          query = query.eq("status", filters.status);
+        }
+        return query;
+      });
       if (error) throw error;
       return (data || []) as unknown as HRJob[];
     },
@@ -209,11 +213,15 @@ export function useHRJobApplications(jobId: string | undefined) {
     enabled: !!jobId,
     queryFn: async () => {
       if (!jobId) return [];
-      const { data, error } = await supabase
-        .from("hr_job_applications")
-        .select("*")
-        .eq("job_id", jobId)
-        .order("applied_at", { ascending: false });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_job_applications")
+          .select("*")
+          .eq("job_id", jobId)
+          .order("applied_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as HRJobApplication[];
     },

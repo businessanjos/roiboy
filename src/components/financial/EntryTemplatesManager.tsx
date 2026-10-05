@@ -42,6 +42,8 @@ import {
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface EntryTemplate {
   id: string;
@@ -271,6 +273,8 @@ export function EntryTemplatesManager({
     (t) => t.type === (activeTab === "income" ? "income" : "expense")
   );
 
+  const pg = usePagedList(filteredTemplates, { resetKey: activeTab, defaultPageSize: 20 });
+
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value);
 
@@ -334,7 +338,7 @@ export function EntryTemplatesManager({
           ) : (
             <ScrollArea className="max-h-[280px]">
               <div className="space-y-2">
-                {filteredTemplates.map((template) => (
+                {pg.items.map((template) => (
                   <div
                     key={template.id}
                     className="flex items-center justify-between p-2 rounded-lg border bg-muted/30 hover:bg-muted/50 transition-colors group"
@@ -402,6 +406,7 @@ export function EntryTemplatesManager({
               </div>
             </ScrollArea>
           )}
+          {filteredTemplates.length > 0 && <PagerFor state={pg} itemLabel="modelos" compactWhenSinglePage />}
         </CardContent>
       </Card>
 

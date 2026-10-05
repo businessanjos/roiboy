@@ -2,6 +2,7 @@ import { useEffect, useState, useRef } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePlanLimits } from "@/hooks/usePlanLimits";
 import { useAuditLog } from "@/hooks/useAuditLog";
@@ -955,13 +956,16 @@ export default function Clients() {
           .select("label,sort_order")
           .eq("active", true)
           .order("sort_order", { ascending: true }),
-        supabase
-          .from("clients")
-          .select("business_niche")
-          .eq("account_id", accId)
-          .not("business_niche", "is", null)
-          .neq("business_niche", "")
-          .limit(2000),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("clients")
+            .select("business_niche, id")
+            .eq("account_id", accId)
+            .not("business_niche", "is", null)
+            .neq("business_niche", "")
+            .order("id")
+            .range(from, to),
+        ),
       ]);
       const catalogLabels = (catalog || []).map((a: any) => (a.label || "").trim()).filter(Boolean);
       const used = (data || [])
@@ -980,13 +984,16 @@ export default function Clients() {
     const accId = accountId || currentUser?.account_id;
     if (!accId) return;
     (async () => {
-      const { data } = await supabase
-        .from("clients")
-        .select("education_specialty")
-        .eq("account_id", accId)
-        .not("education_specialty", "is", null)
-        .neq("education_specialty", "")
-        .limit(2000);
+      const { data } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("clients")
+          .select("education_specialty, id")
+          .eq("account_id", accId)
+          .not("education_specialty", "is", null)
+          .neq("education_specialty", "")
+          .order("id")
+          .range(from, to),
+      );
       const used = Array.from(
         new Set(
           (data || [])

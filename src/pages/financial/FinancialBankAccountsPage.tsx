@@ -62,6 +62,9 @@ import { format, parseISO } from "date-fns";
 import { FinancialPageHeader, FinancialKpiCard, FinancialEmptyState } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
 import { Landmark } from "lucide-react";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface BankAccount {
   id: string;
@@ -244,13 +247,17 @@ export default function FinancialBankAccountsPage() {
     queryKey: ["bank-accounts-all", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("bank_accounts")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("name");
+      const { data, error } = await fetchAllRows<BankAccount>((from, to) =>
+        supabase
+          .from("bank_accounts")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as unknown as PromiseLike<{ data: BankAccount[] | null; error: unknown }>,
+      );
       if (error) throw error;
-      return data as BankAccount[];
+      return data;
     },
     enabled: !!accountId,
   });
@@ -440,6 +447,8 @@ export default function FinancialBankAccountsPage() {
   const institutionOptions = getInstitutionOptions(formData.account_type);
   const institutionCopy = getInstitutionSearchCopy(formData.account_type);
 
+  const pg = usePagedList(bankAccounts, { isLoading });
+
   return (
     <div className="p-6 space-y-6">
       <FinancialPageHeader
@@ -492,7 +501,7 @@ export default function FinancialBankAccountsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {bankAccounts.map((account) => (
+                {pg.items.map((account) => (
                   <TableRow key={account.id}>
                     <TableCell>
                       <div className="flex items-center gap-2">
@@ -592,6 +601,9 @@ export default function FinancialBankAccountsPage() {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {!isLoading && bankAccounts.length > 0 && (
+            <PagerFor state={pg} itemLabel="contas" />
           )}
         </CardContent>
       </Card>

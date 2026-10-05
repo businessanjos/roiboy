@@ -30,6 +30,7 @@ import { toast } from "sonner";
 import { buildPublicContractUrl } from "@/lib/publicLink";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface DigitalContractListItem {
   id: string;
@@ -108,6 +109,11 @@ export default function SalesDigitalContracts() {
   const [search, setSearch] = useState("");
   const [generateOpen, setGenerateOpen] = useState(false);
   const [dealSearch, setDealSearch] = useState("");
+  const [debouncedDealSearch, setDebouncedDealSearch] = useState("");
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedDealSearch(dealSearch), 300);
+    return () => clearTimeout(t);
+  }, [dealSearch]);
   const [deals, setDeals] = useState<DealOption[]>([]);
   const [loadingDeals, setLoadingDeals] = useState(false);
   const [editorDeal, setEditorDeal] = useState<{ id: string | null; clientId: string | null; clientName: string; value: number | null; contractId?: string | null } | null>(null);
@@ -121,16 +127,20 @@ export default function SalesDigitalContracts() {
 
       setLoading(true);
       try {
-        const { data, error } = await supabase
-          .from("digital_contracts")
-          .select(
-            "id, deal_id, client_id, product_id, payment_method, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
-          )
-          .eq("account_id", currentUser.account_id)
-          .order("updated_at", { ascending: false });
+        const { data, error } = await fetchAllRows<DigitalContractListItem>((from, to) =>
+          supabase
+            .from("digital_contracts")
+            .select(
+              "id, deal_id, client_id, product_id, payment_method, contract_number, status, client_name, total_value, installments, installment_value, share_token, signed_at, updated_at, created_at",
+            )
+            .eq("account_id", currentUser.account_id)
+            .order("updated_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to) as any,
+        );
 
         if (error) throw error;
-        const rows = (data ?? []) as DigitalContractListItem[];
+        const rows = data;
         setContracts(rows);
 
         const productIds = Array.from(new Set(rows.map((r) => r.product_id).filter(Boolean))) as string[];
@@ -186,12 +196,19 @@ export default function SalesDigitalContracts() {
           return;
         }
 
-        const { data, error } = await supabase
+        let query = supabase
           .from("deals")
           .select("id, title, status, value, updated_at, client:clients(full_name), lead:leads(full_name), stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
           .eq("account_id", currentUser.account_id)
           .in("stage_id", closerStageIds)
-          .not("status", "in", "(won,lost)")
+          .not("status", "in", "(won,lost)");
+
+        const term = debouncedDealSearch.trim();
+        if (term) {
+          query = query.or(`title.ilike.%${term}%`);
+        }
+
+        const { data, error } = await query
           .order("updated_at", { ascending: false })
           .limit(200);
 
@@ -206,7 +223,7 @@ export default function SalesDigitalContracts() {
     }
 
     loadDealsForContract();
-  }, [currentUser?.account_id, generateOpen]);
+  }, [currentUser?.account_id, generateOpen, debouncedDealSearch]);
 
   const filteredContracts = useMemo(() => {
     const term = search.trim().toLowerCase();

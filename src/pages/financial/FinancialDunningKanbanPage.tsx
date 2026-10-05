@@ -161,20 +161,29 @@ function DraggableCard({ kase, onClick }: { kase: DunningCase; onClick: () => vo
   );
 }
 
+const COLUMN_PAGE_SIZE = 20;
+
 function DroppableColumn({
   stage,
   cases,
   onCardClick,
+  visibleCount,
+  onLoadMore,
 }: {
   stage: (typeof STAGES)[number];
   cases: DunningCase[];
   onCardClick: (kase: DunningCase) => void;
+  visibleCount: number;
+  onLoadMore: () => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id: stage.key });
+  // Totais da coluna sempre sobre o conjunto completo, não apenas os visíveis.
   const total = cases.reduce(
     (sum, c) => sum + Number(c.installment?.amount ?? 0),
     0
   );
+  const visibleCases = cases.slice(0, visibleCount);
+  const hasMore = cases.length > visibleCases.length;
   return (
     <div className="flex flex-col w-72 shrink-0">
       <div className="flex items-center justify-between mb-2 px-1">
@@ -195,9 +204,19 @@ function DroppableColumn({
           isOver ? "bg-primary/10 ring-1 ring-primary" : ""
         }`}
       >
-        {cases.map((kase) => (
+        {visibleCases.map((kase) => (
           <DraggableCard key={kase.id} kase={kase} onClick={() => onCardClick(kase)} />
         ))}
+        {hasMore && (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full text-xs"
+            onClick={onLoadMore}
+          >
+            Carregar mais ({cases.length - visibleCases.length})
+          </Button>
+        )}
       </div>
     </div>
   );
@@ -325,6 +344,15 @@ export default function FinancialDunningKanbanPage() {
     return map;
   }, [cases]);
 
+  // "Carregar mais" por coluna: 20 visíveis inicialmente, +20 por clique. Drag opera sobre o caso inteiro (por id), não pelos visíveis.
+  const [visibleCounts, setVisibleCounts] = useState<Record<Stage, number>>(() => {
+    const init = {} as Record<Stage, number>;
+    STAGES.forEach((s) => { init[s.key] = COLUMN_PAGE_SIZE; });
+    return init;
+  });
+  const loadMore = (stage: Stage) =>
+    setVisibleCounts((prev) => ({ ...prev, [stage]: prev[stage] + COLUMN_PAGE_SIZE }));
+
   const handleDragEnd = (e: DragEndEvent) => {
     if (!e.over) return;
     const id = String(e.active.id);
@@ -419,6 +447,8 @@ export default function FinancialDunningKanbanPage() {
                 stage={stage}
                 cases={byStage[stage.key] || []}
                 onCardClick={setSelected}
+                visibleCount={visibleCounts[stage.key]}
+                onLoadMore={() => loadMore(stage.key)}
               />
             ))}
           </div>

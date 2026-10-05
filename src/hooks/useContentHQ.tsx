@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "@/hooks/use-toast";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export type Talent = {
   id: string;
@@ -100,13 +101,17 @@ export function usePillars(talentId?: string) {
     queryKey: ["content-pillars", talentId],
     enabled: !!talentId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("content_pillars")
-        .select("*")
-        .eq("talent_id", talentId!)
-        .order("name");
+      const { data, error } = await fetchAllRows<Pillar>((from, to) =>
+        supabase
+          .from("content_pillars")
+          .select("*")
+          .eq("talent_id", talentId!)
+          .order("name")
+          .order("id")
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return (data || []) as Pillar[];
+      return data;
     },
   });
 }
@@ -134,13 +139,17 @@ export function useContentPieces(talentId?: string) {
     queryKey: ["content-pieces", talentId],
     enabled: !!talentId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("content_pieces")
-        .select("*")
-        .eq("talent_id", talentId!)
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
+      const { data, error } = await fetchAllRows<ContentPiece>((from, to) =>
+        supabase
+          .from("content_pieces")
+          .select("*")
+          .eq("talent_id", talentId!)
+          .order("scheduled_date", { ascending: true, nullsFirst: false })
+          .order("id")
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return (data || []) as ContentPiece[];
+      return data;
     },
   });
 }

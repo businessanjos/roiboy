@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface RecruitmentPartner {
   id: string;
@@ -15,11 +16,15 @@ export function useRecruitmentPartners() {
     queryKey: ["recruitment-partners", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<RecruitmentPartner[]> => {
-      const { data, error } = await supabase
-        .from("hr_service_providers")
-        .select("id, full_name, company_name, recruitment_commission_pct, is_recruitment_partner, status" as any)
-        .eq("account_id", currentUser!.account_id)
-        .order("full_name");
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_service_providers")
+          .select("id, full_name, company_name, recruitment_commission_pct, is_recruitment_partner, status" as any)
+          .eq("account_id", currentUser!.account_id)
+          .order("full_name")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
       return ((data || []) as any[])
         .filter((p) => p.is_recruitment_partner && p.status !== "terminated")

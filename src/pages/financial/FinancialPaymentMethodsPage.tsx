@@ -40,6 +40,9 @@ import {
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Skeleton } from "@/components/ui/skeleton";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type Category = "a_vista" | "parcelado";
 
@@ -79,15 +82,19 @@ export default function FinancialPaymentMethodsPage() {
     queryKey: ["payment-methods", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("payment_methods")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("category", { ascending: true })
-        .order("display_order", { ascending: true })
-        .order("name", { ascending: true });
+      const { data, error } = await fetchAllRows<PaymentMethod>((from, to) =>
+        supabase
+          .from("payment_methods")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("category", { ascending: true })
+          .order("display_order", { ascending: true })
+          .order("name", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as unknown as PromiseLike<{ data: PaymentMethod[] | null; error: unknown }>,
+      );
       if (error) throw error;
-      return (data ?? []) as PaymentMethod[];
+      return data;
     },
     enabled: !!accountId,
   });
@@ -165,6 +172,8 @@ export default function FinancialPaymentMethodsPage() {
     setIsDialogOpen(true);
   };
 
+  const pg = usePagedList(methods, { isLoading });
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -209,7 +218,7 @@ export default function FinancialPaymentMethodsPage() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {methods.map((m) => (
+                {pg.items.map((m) => (
                   <TableRow key={m.id}>
                     <TableCell className="text-muted-foreground">{m.display_order}</TableCell>
                     <TableCell>
@@ -255,6 +264,7 @@ export default function FinancialPaymentMethodsPage() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && methods.length > 0 && <PagerFor state={pg} itemLabel="formas de pagamento" />}
         </CardContent>
       </Card>
 

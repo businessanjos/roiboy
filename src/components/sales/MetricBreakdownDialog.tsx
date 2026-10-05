@@ -10,6 +10,9 @@ import {
   type MeetingTaskKind,
 } from "@/lib/sales/meetingMetrics";
 import { ExternalLink } from "lucide-react";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export type BreakdownKind = "held" | "noshow" | "scheduled" | "won";
 
@@ -57,6 +60,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
   const [rows, setRows] = useState<Row[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const pg = usePagedList(rows, { resetKey: { kind, userId, accountId, start: startDate.toISOString(), end: endDate.toISOString() }, isLoading: loading });
 
   const start = useMemo(() => startDate.toISOString(), [startDate]);
   const end = useMemo(() => endDate.toISOString(), [endDate]);
@@ -97,19 +101,22 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
           );
         } else {
           const useCompletedAt = kind === "held";
-          let query = supabase
-            .from("internal_tasks")
-            .select(
-              "id, title, created_at, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)",
-            )
-            .eq("account_id", accountId)
-            .eq("assigned_to", userId);
-          if (useCompletedAt) {
-            query = query.not("completed_at", "is", null).gte("completed_at", start).lte("completed_at", end);
-          } else {
-            query = query.gte("created_at", start).lte("created_at", end);
-          }
-          const { data, error } = await query.limit(2000);
+          const buildQuery = (from: number, to: number) => {
+            let query = supabase
+              .from("internal_tasks")
+              .select(
+                "id, title, created_at, completed_at, client_id, deal_id, lead_id, activity_types!internal_tasks_activity_type_id_fkey(name)",
+              )
+              .eq("account_id", accountId)
+              .eq("assigned_to", userId);
+            if (useCompletedAt) {
+              query = query.not("completed_at", "is", null).gte("completed_at", start).lte("completed_at", end);
+            } else {
+              query = query.gte("created_at", start).lte("created_at", end);
+            }
+            return query.order("id", { ascending: true }).range(from, to);
+          };
+          const { data, error } = await fetchAllRows<any>(buildQuery);
           if (error) throw error;
           if (cancel) return;
 
@@ -200,7 +207,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
             </div>
             <ScrollArea className="max-h-[60vh] pr-3">
               <ul className="divide-y divide-border">
-                {rows.map((r) => (
+                {pg.items.map((r) => (
                   <li key={r.id} className="py-2 text-sm">
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
@@ -226,6 +233,7 @@ export function MetricBreakdownDialog({ open, onOpenChange, kind, userId, accoun
                 ))}
               </ul>
             </ScrollArea>
+            <PagerFor state={pg} itemLabel="registros" />
           </>
         )}
       </DialogContent>

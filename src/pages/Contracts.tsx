@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useState, useEffect, useMemo, useRef, useCallback, memo } from "react";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { supabase } from "@/integrations/supabase/client";
@@ -590,14 +591,18 @@ export default function Contracts() {
 
   const fetchContracts = async () => {
     try {
-      const { data, error } = await supabase
-        .from("client_contracts")
-        .select(`
-          *,
-          client:clients(id, full_name, avatar_url, responsible_user_id),
-          product:products(id, name, color)
-        `)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("client_contracts")
+          .select(`
+            *,
+            client:clients(id, full_name, avatar_url, responsible_user_id),
+            product:products(id, name, color)
+          `)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
 
       if (error) throw error;
       setContracts(data || []);

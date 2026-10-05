@@ -202,3 +202,6 @@ Limitações: sem iPhone físico; Kanban de Tarefas no mobile mantido como estav
 
 ## Rodada 8 — Paginação (verificação no navegador, só leitura)
 Conta do Everton, Playwright, 393×852, 320×700 e 1440×900: /products ("1–15 de 15"), /rh/collaborators ("1–20 de 20"), /notifications ("1–20 de 50", últimas 50), /leads (rodapé com total da base). Largura do main igual à da tela em todas (sem corte). Nenhum registro alterado. Testes de página 2/limites/reset/vazio/encolher em src/hooks/usePagedList.test.ts. Inventário em docs/pagination-audit.md.
+
+## Rodada 8b — Paginação rodada 2 (só leitura)
+393/320/1440: /notifications (paginação no servidor, total completo), /financial/bank-accounts ("1–4 de 4"), /operations/onboarding ("1–31 de 31"), /events/playbooks e /contracts (sem texto de faixa: lista cabe numa página/rodapé compacto). Largura sem corte em todas. Nenhum registro alterado; "marcar todas" não executado.

@@ -211,6 +211,187 @@ const getCategoryLabel = (category: string) => {
   return labels[category] || category;
 };
 
+
+// ---- Mapeadores de linhas cru -> eventos da Timeline (reaproveitados no carregamento
+// inicial, no refresh e no "carregar anteriores" paginado por fonte) ----
+function mapMessagesToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((msg: any) => {
+    const isGroup = msg.is_group === true;
+    return {
+      id: msg.id,
+      type: "message" as const,
+      title: isGroup
+        ? `Mensagem no grupo ${msg.group_name || ""}`
+        : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
+      description: msg.content_text || "(Áudio transcrito)",
+      timestamp: msg.sent_at,
+      metadata: {
+        source: msg.source,
+        direction: msg.direction,
+        is_group: msg.is_group,
+        group_name: msg.group_name,
+      },
+    };
+  });
+}
+
+function mapRoiToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((roi: any) => ({
+    id: roi.id,
+    type: "roi" as const,
+    title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
+    description: roi.evidence_snippet,
+    timestamp: roi.happened_at,
+    metadata: {
+      impact: roi.impact,
+      category: roi.category,
+      roi_type: roi.roi_type,
+      source: roi.source,
+      image_url: roi.image_url,
+    },
+  }));
+}
+
+function mapRiskToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((risk: any) => ({
+    id: risk.id,
+    type: "risk" as const,
+    title: "Sinal de Risco Detectado",
+    description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
+    timestamp: risk.happened_at,
+    metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
+  }));
+}
+
+function mapRecommendationsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((rec: any) => ({
+    id: rec.id,
+    type: "recommendation" as const,
+    title: rec.title,
+    description: rec.action_text,
+    timestamp: rec.created_at,
+    metadata: { priority: rec.priority, status: rec.status },
+  }));
+}
+
+function mapFollowupsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((followup: any) => {
+    const isNote = followup.type === "note";
+    const isFinancialNote = followup.type === "financial_note";
+    const isSalesNote = followup.type === "sales_note";
+    return {
+      id: followup.id,
+      type: (isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup") as TimelineEvent["type"],
+      title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
+      description: followup.content,
+      timestamp: followup.created_at,
+      metadata: {
+        user_id: followup.user_id,
+        user_name: followup.users?.name || "Usuário",
+        user_avatar: followup.users?.avatar_url,
+        file_url: followup.file_url,
+        file_name: followup.file_name,
+        file_size: followup.file_size,
+        followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
+        updated_at: followup.updated_at,
+      },
+    };
+  });
+}
+
+function mapCheckinsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((ci: any) => {
+    const fromClient = ci.initiated_by === "cliente";
+    const channelLabel = getCheckinChannelLabel(ci.channel);
+    return {
+      id: `checkin-${ci.id}`,
+      type: "checkin" as const,
+      title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
+      description: ci.summary,
+      timestamp: ci.happened_at,
+      metadata: {
+        category: ci.kind,
+        direction: fromClient ? "client_to_team" : "team_to_client",
+        source: ci.source,
+        user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
+        user_avatar: ci.users?.avatar_url,
+      },
+    };
+  });
+}
+
+function mapLifeEventsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((event: any) => ({
+    id: event.id,
+    type: "life_event" as const,
+    title: event.title,
+    description: event.description,
+    timestamp: event.created_at,
+    metadata: {
+      event_type: event.event_type,
+      is_recurring: event.is_recurring,
+      source: event.source,
+    },
+  }));
+}
+
+function mapFormResponsesToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((response: any) => {
+    const responseCount = Object.keys(response.responses || {}).length;
+    return {
+      id: response.id,
+      type: "form_response" as const,
+      title: response.forms?.title || "Formulário",
+      description: `${responseCount} campo(s) preenchido(s)`,
+      timestamp: response.submitted_at,
+      metadata: {
+        form_title: response.forms?.title,
+        form_responses: response.responses,
+      },
+    };
+  });
+}
+
+function mapAttendanceToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((att: any) => ({
+    id: att.id,
+    type: "attendance" as const,
+    title: `Presença confirmada: ${att.events?.title || "Evento"}`,
+    description: att.events?.address || undefined,
+    timestamp: att.join_time,
+    metadata: {
+      event_title: att.events?.title,
+      event_address: att.events?.address,
+    },
+  }));
+}
+
+function mapSubscriptionsToEvents(rows: any[]): TimelineEvent[] {
+  return rows.map((sub: any) => ({
+    id: sub.id,
+    type: "financial" as const,
+    title: sub.product_name,
+    description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
+    timestamp: sub.created_at,
+    metadata: {
+      payment_status: sub.payment_status,
+      amount: sub.amount,
+      currency: sub.currency,
+    },
+  }));
+}
+
+/** Tamanho de página por fonte paginável da timeline (carregamento incremental no servidor). */
+const TIMELINE_PAGE_SIZES = {
+  messages: 200,
+  lifeEvents: 100,
+  formResponses: 100,
+  attendance: 100,
+  subscriptions: 100,
+  checkins: 200,
+} as const;
+type TimelineSourceKey = keyof typeof TIMELINE_PAGE_SIZES;
+
 const CLIENT_SECTION_TITLES: Record<string, string> = {
   "churn-signals": "Sinais de Churn",
   agenda: "Agenda",
@@ -249,6 +430,19 @@ export default function ClientDetail() {
   const [score, setScore] = useState<ScoreSnapshot | null>(null);
   const [vnps, setVnps] = useState<VNPSSnapshot | null>(null);
   const [timeline, setTimeline] = useState<TimelineEvent[]>([]);
+  const [timelineHasMore, setTimelineHasMore] = useState(true);
+  const [loadingMoreTimeline, setLoadingMoreTimeline] = useState(false);
+  // Eventos já carregados por fonte paginável da timeline, para recombinar ao "carregar anteriores"
+  const timelineEventsRef = useRef<Record<string, TimelineEvent[]>>({});
+  // Próximo offset e flag de esgotamento por fonte paginável
+  const timelinePageRef = useRef<Record<TimelineSourceKey, { offset: number; done: boolean }>>({
+    messages: { offset: 0, done: false },
+    lifeEvents: { offset: 0, done: false },
+    formResponses: { offset: 0, done: false },
+    attendance: { offset: 0, done: false },
+    subscriptions: { offset: 0, done: false },
+    checkins: { offset: 0, done: false },
+  });
   const [roiEvents, setRoiEvents] = useState<RoiEvent[]>([]);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [riskEvents, setRiskEvents] = useState<any[]>([]);
@@ -841,7 +1035,6 @@ export default function ClientDetail() {
         formResponsesResult,
         attendanceResult,
         subscriptionsResult,
-        allRiskResult,
         checkinsResult,
       ] = await Promise.all([
         supabase.from("client_products").select("product_id, is_active, products(id, name, color)").eq("client_id", id),
@@ -851,14 +1044,13 @@ export default function ClientDetail() {
         supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
         supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
         supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
-        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
+        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.messages - 1),
         supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
-        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).limit(100),
-        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
-        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
-        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).limit(200),
+        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.lifeEvents - 1),
+        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.formResponses - 1),
+        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.attendance - 1),
+        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.subscriptions - 1),
+        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.checkins - 1),
       ]);
 
       // Process client products
@@ -896,132 +1088,7 @@ export default function ClientDetail() {
       const recData = recResult.data || [];
       setRecommendations(recData as Recommendation[]);
 
-      // Build timeline
-      const timelineItems: TimelineEvent[] = [];
-
-      // Add messages
-      (messagesResult.data || []).forEach((msg: any) => {
-        const isGroup = msg.is_group === true;
-        timelineItems.push({
-          id: msg.id,
-          type: "message",
-          title: isGroup 
-            ? `Mensagem no grupo ${msg.group_name || ""}` 
-            : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
-          description: msg.content_text || "(Áudio transcrito)",
-          timestamp: msg.sent_at,
-          metadata: { 
-            source: msg.source, 
-            direction: msg.direction,
-            is_group: msg.is_group,
-            group_name: msg.group_name,
-          },
-        });
-      });
-
-      // Add ROI events
-      roiData.forEach((roi: any) => {
-        timelineItems.push({
-          id: roi.id,
-          type: "roi",
-          title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
-          description: roi.evidence_snippet,
-          timestamp: roi.happened_at,
-          metadata: { 
-            impact: roi.impact, 
-            category: roi.category, 
-            roi_type: roi.roi_type,
-            source: roi.source,
-            image_url: roi.image_url,
-          },
-        });
-      });
-
-      // Add risk events
-      (allRiskResult.data || []).forEach((risk: any) => {
-        timelineItems.push({
-          id: risk.id,
-          type: "risk",
-          title: "Sinal de Risco Detectado",
-          description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
-          timestamp: risk.happened_at,
-          metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
-        });
-      });
-
-      // Add recommendations
-      recData.forEach((rec: any) => {
-        timelineItems.push({
-          id: rec.id,
-          type: "recommendation",
-          title: rec.title,
-          description: rec.action_text,
-          timestamp: rec.created_at,
-          metadata: { priority: rec.priority, status: rec.status },
-        });
-      });
-
-      // Add followups
-      (followupsResult.data || []).forEach((followup: any) => {
-        const isNote = followup.type === "note";
-        const isFinancialNote = followup.type === "financial_note";
-        const isSalesNote = followup.type === "sales_note";
-        timelineItems.push({
-          id: followup.id,
-          type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
-          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
-          description: followup.content,
-          timestamp: followup.created_at,
-          metadata: {
-            user_id: followup.user_id,
-            user_name: followup.users?.name || "Usuário",
-            user_avatar: followup.users?.avatar_url,
-            file_url: followup.file_url,
-            file_name: followup.file_name,
-            file_size: followup.file_size,
-            followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
-            updated_at: followup.updated_at,
-          },
-        });
-      });
-
-      // Add check-ins (checkpoints e contatos registrados pelo CS)
-      (checkinsResult.data || []).forEach((ci: any) => {
-        const fromClient = ci.initiated_by === "cliente";
-        const channelLabel = getCheckinChannelLabel(ci.channel);
-        timelineItems.push({
-          id: `checkin-${ci.id}`,
-          type: "checkin",
-          title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
-          description: ci.summary,
-          timestamp: ci.happened_at,
-          metadata: {
-            category: ci.kind,
-            direction: fromClient ? "client_to_team" : "team_to_client",
-            source: ci.source,
-            user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
-            user_avatar: ci.users?.avatar_url,
-          },
-        });
-      });
-
-      // Add life events
-      (lifeEventsResult.data || []).forEach((event: any) => {
-        timelineItems.push({
-          id: event.id,
-          type: "life_event",
-          title: event.title,
-          description: event.description,
-          timestamp: event.created_at,
-          metadata: {
-            event_type: event.event_type,
-            is_recurring: event.is_recurring,
-            source: event.source,
-          },
-        });
-      });
-
-      // Add form responses
+      // Build timeline from per-source event maps (permite recombinar ao "carregar anteriores")
       const formResponseData = (formResponsesResult.data || []).map((response: any) => ({
         id: response.id,
         title: response.forms?.title || "Formulário",
@@ -1030,53 +1097,30 @@ export default function ClientDetail() {
       }));
       setFormResponseSummaries(formResponseData);
 
-      (formResponsesResult.data || []).forEach((response: any) => {
-        const responseCount = Object.keys(response.responses || {}).length;
-        timelineItems.push({
-          id: response.id,
-          type: "form_response",
-          title: response.forms?.title || "Formulário",
-          description: `${responseCount} campo(s) preenchido(s)`,
-          timestamp: response.submitted_at,
-          metadata: {
-            form_title: response.forms?.title,
-            form_responses: response.responses,
-          },
-        });
-      });
+      timelineEventsRef.current = {
+        messages: mapMessagesToEvents(messagesResult.data || []),
+        roi: mapRoiToEvents(roiData),
+        risk: mapRiskToEvents(riskResult.data || []),
+        recommendations: mapRecommendationsToEvents(recData),
+        followups: mapFollowupsToEvents(followupsResult.data || []),
+        checkins: mapCheckinsToEvents(checkinsResult.data || []),
+        lifeEvents: mapLifeEventsToEvents(lifeEventsResult.data || []),
+        formResponses: mapFormResponsesToEvents(formResponsesResult.data || []),
+        attendance: mapAttendanceToEvents(attendanceResult.data || []),
+        subscriptions: mapSubscriptionsToEvents(subscriptionsResult.data || []),
+      };
 
-      // Add attendance records
-      (attendanceResult.data || []).forEach((att: any) => {
-        timelineItems.push({
-          id: att.id,
-          type: "attendance",
-          title: `Presença confirmada: ${att.events?.title || "Evento"}`,
-          description: att.events?.address || undefined,
-          timestamp: att.join_time,
-          metadata: {
-            event_title: att.events?.title,
-            event_address: att.events?.address,
-          },
-        });
-      });
+      timelinePageRef.current = {
+        messages: { offset: TIMELINE_PAGE_SIZES.messages, done: (messagesResult.data || []).length < TIMELINE_PAGE_SIZES.messages },
+        lifeEvents: { offset: TIMELINE_PAGE_SIZES.lifeEvents, done: (lifeEventsResult.data || []).length < TIMELINE_PAGE_SIZES.lifeEvents },
+        formResponses: { offset: TIMELINE_PAGE_SIZES.formResponses, done: (formResponsesResult.data || []).length < TIMELINE_PAGE_SIZES.formResponses },
+        attendance: { offset: TIMELINE_PAGE_SIZES.attendance, done: (attendanceResult.data || []).length < TIMELINE_PAGE_SIZES.attendance },
+        subscriptions: { offset: TIMELINE_PAGE_SIZES.subscriptions, done: (subscriptionsResult.data || []).length < TIMELINE_PAGE_SIZES.subscriptions },
+        checkins: { offset: TIMELINE_PAGE_SIZES.checkins, done: (checkinsResult.data || []).length < TIMELINE_PAGE_SIZES.checkins },
+      };
+      setTimelineHasMore(Object.values(timelinePageRef.current).some((p) => !p.done));
 
-      // Add subscriptions
-      (subscriptionsResult.data || []).forEach((sub: any) => {
-        timelineItems.push({
-          id: sub.id,
-          type: "financial",
-          title: sub.product_name,
-          description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
-          timestamp: sub.created_at,
-          metadata: {
-            payment_status: sub.payment_status,
-            amount: sub.amount,
-            currency: sub.currency,
-          },
-        });
-      });
-
-      // Sort by timestamp
+      const timelineItems = Object.values(timelineEventsRef.current).flat();
       timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
       setTimeline(timelineItems);
 
@@ -1161,6 +1205,65 @@ export default function ClientDetail() {
     }
   };
 
+  // Busca a próxima faixa de cada fonte paginável da timeline e recombina (ordenada) com o já carregado.
+  const loadMoreTimeline = async () => {
+    if (!id || loadingMoreTimeline) return;
+    setLoadingMoreTimeline(true);
+    try {
+      const keys = Object.keys(TIMELINE_PAGE_SIZES) as TimelineSourceKey[];
+      for (const key of keys) {
+        const page = timelinePageRef.current[key];
+        if (page.done) continue;
+        const size = TIMELINE_PAGE_SIZES[key];
+        const from = page.offset;
+        const to = from + size - 1;
+        let result: { data: any[] | null; error: unknown };
+        switch (key) {
+          case "messages":
+            result = await supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "lifeEvents":
+            result = await supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "formResponses":
+            result = await supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "attendance":
+            result = await supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "subscriptions":
+            result = await supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+          case "checkins":
+            result = await supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
+            break;
+        }
+        if (result.error) {
+          console.error(`Erro ao carregar mais itens da timeline (${key}):`, result.error);
+          continue;
+        }
+        const rows = result.data || [];
+        page.offset += size;
+        if (rows.length < size) page.done = true;
+        if (rows.length === 0) continue;
+        const mapped =
+          key === "messages" ? mapMessagesToEvents(rows) :
+          key === "lifeEvents" ? mapLifeEventsToEvents(rows) :
+          key === "formResponses" ? mapFormResponsesToEvents(rows) :
+          key === "attendance" ? mapAttendanceToEvents(rows) :
+          key === "subscriptions" ? mapSubscriptionsToEvents(rows) :
+          mapCheckinsToEvents(rows);
+        timelineEventsRef.current[key] = [...(timelineEventsRef.current[key] || []), ...mapped];
+      }
+      const combined = Object.values(timelineEventsRef.current).flat();
+      combined.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setTimeline(combined);
+      setTimelineHasMore(keys.some((k) => !timelinePageRef.current[k].done));
+    } finally {
+      setLoadingMoreTimeline(false);
+    }
+  };
+
   // Lightweight timeline-only refresh (no full page loading state)
   const refreshTimeline = async () => {
     if (!id || !accountId) return;
@@ -1178,143 +1281,43 @@ export default function ClientDetail() {
         recResult,
         checkinsResult,
       ] = await Promise.all([
-        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).limit(200),
+        supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.messages - 1),
         supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
-        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).limit(100),
-        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).limit(100),
-        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).limit(100),
-        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).limit(100),
+        supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.lifeEvents - 1),
+        supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.formResponses - 1),
+        supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.attendance - 1),
+        supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.subscriptions - 1),
+        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
         supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
         supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
-        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).limit(200),
+        supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.checkins - 1),
       ]);
 
-      const timelineItems: TimelineEvent[] = [];
+      // Process messages/life events/etc fully replace (reset) first page of each source
+      timelineEventsRef.current = {
+        ...timelineEventsRef.current,
+        messages: mapMessagesToEvents(messagesResult.data || []),
+        roi: mapRoiToEvents(roiResult.data || []),
+        risk: mapRiskToEvents(allRiskResult.data || []),
+        recommendations: mapRecommendationsToEvents(recResult.data || []),
+        followups: mapFollowupsToEvents(followupsResult.data || []),
+        checkins: mapCheckinsToEvents(checkinsResult.data || []),
+        lifeEvents: mapLifeEventsToEvents(lifeEventsResult.data || []),
+        formResponses: mapFormResponsesToEvents(formResponsesResult.data || []),
+        attendance: mapAttendanceToEvents(attendanceResult.data || []),
+        subscriptions: mapSubscriptionsToEvents(subscriptionsResult.data || []),
+      };
 
-      // Add messages
-      (messagesResult.data || []).forEach((msg: any) => {
-        const isGroup = msg.is_group === true;
-        timelineItems.push({
-          id: msg.id,
-          type: "message",
-          title: isGroup 
-            ? `Mensagem no grupo ${msg.group_name || ""}` 
-            : msg.direction === "client_to_team" ? "Mensagem do cliente" : "Mensagem para cliente",
-          description: msg.content_text || "(Áudio transcrito)",
-          timestamp: msg.sent_at,
-          metadata: { 
-            source: msg.source, 
-            direction: msg.direction,
-            is_group: msg.is_group,
-            group_name: msg.group_name,
-          },
-        });
-      });
+      timelinePageRef.current = {
+        messages: { offset: TIMELINE_PAGE_SIZES.messages, done: (messagesResult.data || []).length < TIMELINE_PAGE_SIZES.messages },
+        lifeEvents: { offset: TIMELINE_PAGE_SIZES.lifeEvents, done: (lifeEventsResult.data || []).length < TIMELINE_PAGE_SIZES.lifeEvents },
+        formResponses: { offset: TIMELINE_PAGE_SIZES.formResponses, done: (formResponsesResult.data || []).length < TIMELINE_PAGE_SIZES.formResponses },
+        attendance: { offset: TIMELINE_PAGE_SIZES.attendance, done: (attendanceResult.data || []).length < TIMELINE_PAGE_SIZES.attendance },
+        subscriptions: { offset: TIMELINE_PAGE_SIZES.subscriptions, done: (subscriptionsResult.data || []).length < TIMELINE_PAGE_SIZES.subscriptions },
+        checkins: { offset: TIMELINE_PAGE_SIZES.checkins, done: (checkinsResult.data || []).length < TIMELINE_PAGE_SIZES.checkins },
+      };
+      setTimelineHasMore(Object.values(timelinePageRef.current).some((p) => !p.done));
 
-      // Add ROI events
-      (roiResult.data || []).forEach((roi: any) => {
-        timelineItems.push({
-          id: roi.id,
-          type: "roi",
-          title: `ROI ${roi.roi_type === "tangible" ? "Tangível" : "Intangível"}: ${getCategoryLabel(roi.category)}`,
-          description: roi.evidence_snippet,
-          timestamp: roi.happened_at,
-          metadata: { 
-            impact: roi.impact, 
-            category: roi.category, 
-            roi_type: roi.roi_type,
-            source: roi.source,
-            image_url: roi.image_url,
-          },
-        });
-      });
-
-      // Add risk events
-      (allRiskResult.data || []).forEach((risk: any) => {
-        timelineItems.push({
-          id: risk.id,
-          type: "risk",
-          title: "Sinal de Risco Detectado",
-          description: risk.reason + (risk.evidence_snippet ? `: "${risk.evidence_snippet}"` : ""),
-          timestamp: risk.happened_at,
-          metadata: { level: risk.risk_level, source: risk.source, image_url: risk.image_url },
-        });
-      });
-
-      // Add recommendations
-      (recResult.data || []).forEach((rec: any) => {
-        timelineItems.push({
-          id: rec.id,
-          type: "recommendation",
-          title: rec.title,
-          description: rec.action_text,
-          timestamp: rec.created_at,
-          metadata: { priority: rec.priority, status: rec.status },
-        });
-      });
-
-      // Add followups
-      (followupsResult.data || []).forEach((followup: any) => {
-        const isNote = followup.type === "note";
-        const isFinancialNote = followup.type === "financial_note";
-        const isSalesNote = followup.type === "sales_note";
-        timelineItems.push({
-          id: followup.id,
-          type: isSalesNote ? "sales" : isFinancialNote ? "financial" : isNote ? "comment" : "followup",
-          title: followup.title || (isNote ? "Comentário" : isFinancialNote ? "Nota Financeira" : isSalesNote ? "Nota de Vendas" : followup.file_name || "Arquivo anexado"),
-          description: followup.content,
-          timestamp: followup.created_at,
-          metadata: {
-            user_id: followup.user_id,
-            user_name: followup.users?.name || "Usuário",
-            user_avatar: followup.users?.avatar_url,
-            file_url: followup.file_url,
-            file_name: followup.file_name,
-            file_size: followup.file_size,
-            followup_type: followup.type as "note" | "file" | "image" | "financial_note" | "sales_note",
-            updated_at: followup.updated_at,
-          },
-        });
-      });
-
-      // Add check-ins (checkpoints e contatos registrados pelo CS)
-      (checkinsResult.data || []).forEach((ci: any) => {
-        const fromClient = ci.initiated_by === "cliente";
-        const channelLabel = getCheckinChannelLabel(ci.channel);
-        timelineItems.push({
-          id: `checkin-${ci.id}`,
-          type: "checkin",
-          title: `${ci.kind === "checkpoint" ? "Checkpoint quinzenal" : "Contato"} · ${fromClient ? "cliente procurou" : "consultor procurou"} (${channelLabel})`,
-          description: ci.summary,
-          timestamp: ci.happened_at,
-          metadata: {
-            category: ci.kind,
-            direction: fromClient ? "client_to_team" : "team_to_client",
-            source: ci.source,
-            user_name: ci.users?.name || (ci.source === "ai_whatsapp" ? "Resumo por IA" : "Usuário"),
-            user_avatar: ci.users?.avatar_url,
-          },
-        });
-      });
-
-      // Add life events
-      (lifeEventsResult.data || []).forEach((event: any) => {
-        timelineItems.push({
-          id: event.id,
-          type: "life_event",
-          title: event.title,
-          description: event.description,
-          timestamp: event.created_at,
-          metadata: {
-            event_type: event.event_type,
-            is_recurring: event.is_recurring,
-            source: event.source,
-          },
-        });
-      });
-
-      // Add form responses
       const formResponseData = (formResponsesResult.data || []).map((response: any) => ({
         id: response.id,
         title: response.forms?.title || "Formulário",
@@ -1323,55 +1326,13 @@ export default function ClientDetail() {
       }));
       setFormResponseSummaries(formResponseData);
 
-      (formResponsesResult.data || []).forEach((response: any) => {
-        const responseCount = Object.keys(response.responses || {}).length;
-        timelineItems.push({
-          id: response.id,
-          type: "form_response",
-          title: response.forms?.title || "Formulário",
-          description: `${responseCount} campo(s) preenchido(s)`,
-          timestamp: response.submitted_at,
-          metadata: {
-            form_title: response.forms?.title,
-            form_responses: response.responses,
-          },
-        });
-      });
+      const newTimelineItems = Object.values(timelineEventsRef.current).flat();
+      newTimelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
+      setTimeline(newTimelineItems);
 
-      // Add attendance records
-      (attendanceResult.data || []).forEach((att: any) => {
-        timelineItems.push({
-          id: att.id,
-          type: "attendance",
-          title: `Presença confirmada: ${att.events?.title || "Evento"}`,
-          description: att.events?.address || undefined,
-          timestamp: att.join_time,
-          metadata: {
-            event_title: att.events?.title,
-            event_address: att.events?.address,
-          },
-        });
-      });
-
-      // Add subscriptions
-      (subscriptionsResult.data || []).forEach((sub: any) => {
-        timelineItems.push({
-          id: sub.id,
-          type: "financial",
-          title: sub.product_name,
-          description: `Status: ${sub.payment_status === "active" ? "Ativo" : sub.payment_status === "overdue" ? "Em atraso" : sub.payment_status}`,
-          timestamp: sub.created_at,
-          metadata: {
-            payment_status: sub.payment_status,
-            amount: sub.amount,
-            currency: sub.currency,
-          },
-        });
-      });
-
-      // Sort by timestamp - no limit, show all
-      timelineItems.sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime());
-      setTimeline(timelineItems);
+      // Also update ROI and recommendations state
+      setRoiEvents(roiResult.data || []);
+      setRecommendations((recResult.data || []) as Recommendation[]);
 
       // Also update ROI and recommendations state
       setRoiEvents(roiResult.data || []);
@@ -2731,6 +2692,9 @@ export default function ClientDetail() {
                     clientId={id!} 
                     clientName={client?.full_name}
                     onCommentAdded={refreshTimeline}
+                    hasMoreOnServer={timelineHasMore}
+                    loadingMore={loadingMoreTimeline}
+                    onLoadMoreServer={loadMoreTimeline}
                   />
                 </CardContent>
               </Card>

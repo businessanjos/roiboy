@@ -35,6 +35,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface AttendanceReportProps {
   accountId: string | null;
@@ -116,27 +117,30 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
   };
 
   const fetchEventStats = async () => {
-    // Get presencial events with attendance counts
-    let eventsQuery = supabase
-      .from("events")
-      .select(`
-        id,
-        title,
-        scheduled_at,
-        modality,
-        address,
-        checkin_code,
-        event_products (
-          product_id,
-          products (id, name)
-        )
-      `)
-      .eq("modality", "presencial")
-      .not("scheduled_at", "is", null)
-      .order("scheduled_at", { ascending: false })
-      .limit(20);
-
-    const { data: eventsData } = await eventsQuery;
+    // Get presencial events with attendance counts.
+    // Fonte completa (sem teto de 20) via fetchAllRows: o relatório é exportado
+    // e usado para KPIs, então não pode descartar eventos silenciosamente.
+    const { data: eventsData } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from("events")
+        .select(`
+          id,
+          title,
+          scheduled_at,
+          modality,
+          address,
+          checkin_code,
+          event_products (
+            product_id,
+            products (id, name)
+          )
+        `)
+        .eq("modality", "presencial")
+        .not("scheduled_at", "is", null)
+        .order("scheduled_at", { ascending: false, nullsFirst: false })
+        .order("id", { ascending: true })
+        .range(from, to),
+    );
 
     if (!eventsData) {
       setEvents([]);

@@ -3,6 +3,7 @@ import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { createPortal } from "react-dom";
 import { Link, useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useDashboardContractStats } from "@/hooks/useDashboardContractStats";
@@ -687,12 +688,16 @@ export default function Dashboard() {
     enabled: !!currentUser?.account_id,
     staleTime: 1000 * 60 * 5,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("vnps_snapshots")
-        .select("client_id, vnps_class, vnps_score, computed_at")
-        .eq("account_id", currentUser!.account_id!)
-        .order("computed_at", { ascending: false })
-        .limit(5000);
+      // Última vNPS por cliente precisa do conjunto completo — sem .limit(5000) silencioso.
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("vnps_snapshots")
+          .select("client_id, vnps_class, vnps_score, computed_at")
+          .eq("account_id", currentUser!.account_id!)
+          .order("computed_at", { ascending: false })
+          .order("client_id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
       const latestByClient = new Map<string, { vnps_class: string; vnps_score: number }>();
       for (const row of (data ?? []) as any[]) {

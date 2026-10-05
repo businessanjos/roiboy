@@ -14,6 +14,8 @@ import { ptBR } from "date-fns/locale";
 import { pdf, PDFDownloadLink } from "@react-pdf/renderer";
 import SummaryPDF, { type SummaryDoc } from "./SummaryPDF";
 import SummaryEditor from "./SummaryEditor";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Props {
   eventId: string;
@@ -58,6 +60,8 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
     event_date: "",
     transcript: "",
   });
+
+  const rowsPg = usePagedList(rows, { isLoading: loading });
 
   const fetchRows = async () => {
     setLoading(true);
@@ -216,7 +220,7 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
         </Card>
       ) : (
         <div className="grid gap-3">
-          {rows.map((r) => {
+          {rowsPg.items.map((r) => {
             const st = STATUS_LABEL[r.status] || { label: r.status, variant: "outline" };
             const sectionCount = Array.isArray(r.generated_content?.sections) ? r.generated_content.sections.length : 0;
             return (
@@ -253,6 +257,7 @@ export default function EventSummariesTab({ eventId, accountId, eventCoverUrl, e
               </Card>
             );
           })}
+          <PagerFor state={rowsPg} itemLabel="resumos" />
         </div>
       )}
 

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface RulerTemplateStep {
   id?: string;
@@ -132,16 +133,21 @@ export function useZappRulers(sectorId?: string | null) {
         .eq("account_id", accountId)
         .order("created_at", { ascending: false });
 
-      const enrQuery = supabase
-        .from("zapp_ruler_enrollments")
-        .select("*, touches:zapp_ruler_touches(*)")
-        .eq("account_id", accountId)
-        .order("created_at", { ascending: false })
-        .limit(300);
+      const buildEnrQuery = (from: number, to: number) => {
+        let q = supabase
+          .from("zapp_ruler_enrollments")
+          .select("*, touches:zapp_ruler_touches(*)")
+          .eq("account_id", accountId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to);
+        if (sectorId) q = q.eq("sector_id", sectorId);
+        return q;
+      };
 
       const [tplRes, enrRes] = await Promise.all([
         sectorId ? tplQuery.or(`sector_id.eq.${sectorId},sector_id.is.null`) : tplQuery,
-        sectorId ? enrQuery.eq("sector_id", sectorId) : enrQuery,
+        fetchAllRows(buildEnrQuery),
       ]);
 
       if (tplRes.error) throw tplRes.error;

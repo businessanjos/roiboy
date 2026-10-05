@@ -27,6 +27,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { BookOpenCheck, Plus, Pencil, Trash2, ListChecks, AlertTriangle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Playbook {
   id: string;
@@ -76,6 +78,9 @@ export default function EventsPlaybooks() {
   const [editing, setEditing] = useState<Partial<Playbook>>({ name: "", cover_color: "#7c3aed" });
   const [itemDialogOpen, setItemDialogOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<Partial<PlaybookItem>>({ title: "", days_offset: 0 });
+
+  const playbooksPg = usePagedList(playbooks, { isLoading: loading });
+  const itemsPg = usePagedList(items, { resetKey: selected?.id, isLoading: loading });
 
   const loadPlaybooks = async () => {
     if (!accountId) return;
@@ -188,7 +193,8 @@ export default function EventsPlaybooks() {
           ) : playbooks.length === 0 ? (
             <EmptyState icon={BookOpenCheck} title="Nenhum playbook" description="Crie seu primeiro template." />
           ) : (
-            playbooks.map((p) => (
+            <>
+            {playbooksPg.items.map((p) => (
               <Card
                 key={p.id}
                 className={`cursor-pointer transition-all ${selected?.id === p.id ? "ring-2 ring-primary" : "hover:shadow-md"}`}
@@ -216,7 +222,9 @@ export default function EventsPlaybooks() {
                   </div>
                 </CardContent>
               </Card>
-            ))
+            ))}
+            <PagerFor state={playbooksPg} itemLabel="playbooks" />
+            </>
           )}
         </div>
 
@@ -243,7 +251,7 @@ export default function EventsPlaybooks() {
                     Adicione tarefas com prazo relativo ao evento (ex: -30 dias).
                   </div>
                 ) : (
-                  items.map((it) => (
+                  itemsPg.items.map((it) => (
                     <div key={it.id} className="flex items-start gap-3 p-3 border rounded-md hover:bg-muted/30">
                       <div className="flex-shrink-0 text-center min-w-[60px]">
                         <div className={`text-lg font-bold ${it.days_offset < 0 ? "text-primary" : it.days_offset === 0 ? "text-warning" : "text-success"}`}>
@@ -277,6 +285,7 @@ export default function EventsPlaybooks() {
                     </div>
                   ))
                 )}
+                {items.length > 0 && <PagerFor state={itemsPg} itemLabel="itens" />}
               </CardContent>
             </Card>
           ) : (

@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Trash2, Save } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 export function ContentHQPillars({ talent }: { talent: Talent }) {
   const { data: pillars = [] } = usePillars(talent.id);
@@ -14,6 +16,7 @@ export function ContentHQPillars({ talent }: { talent: Talent }) {
   const [editing, setEditing] = useState<Partial<Pillar> | null>(null);
 
   const total = pillars.reduce((a, p) => a + (p.mix_percentage || 0), 0);
+  const pg = usePagedList(pillars, { resetKey: talent.id });
 
   return (
     <div className="space-y-4">
@@ -26,7 +29,7 @@ export function ContentHQPillars({ talent }: { talent: Talent }) {
       </Card>
 
       <div className="grid md:grid-cols-2 gap-3">
-        {pillars.map((p) => (
+        {pg.items.map((p) => (
           <Card key={p.id} className="p-4 space-y-2 cursor-pointer hover:border-primary" onClick={() => setEditing(p)}>
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
@@ -46,6 +49,7 @@ export function ContentHQPillars({ talent }: { talent: Talent }) {
         ))}
         {pillars.length === 0 && <Card className="p-8 text-center text-muted-foreground md:col-span-2">Nenhum pilar ainda. Crie 4–6 pilares.</Card>}
       </div>
+      {pillars.length > 0 && <PagerFor state={pg} itemLabel="pilares" />}
 
       {editing && (
         <Card className="p-4 space-y-3 border-primary">

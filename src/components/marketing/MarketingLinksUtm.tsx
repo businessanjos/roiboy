@@ -16,6 +16,7 @@ import { useCurrentUser } from '@/hooks/useCurrentUser';
 import { toast } from 'sonner';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 interface MarketingLink {
   id: string;
@@ -129,8 +130,12 @@ export function MarketingLinksUtm() {
     try {
       const [linksRes, campRes, evRes, userRes] = await Promise.all([
         supabase.from('marketing_links').select('*').eq('account_id', accountId).eq('archived', false).order('created_at', { ascending: false }),
-        supabase.from('marketing_ad_sets').select('id, name, meta_campaign_id').order('updated_at', { ascending: false }).limit(200),
-        supabase.from('events').select('id, title').neq('status', 'cancelled').order('created_at', { ascending: false }).limit(200),
+        fetchAllRows<any>((from, to) =>
+          supabase.from('marketing_ad_sets').select('id, name, meta_campaign_id').order('updated_at', { ascending: false }).order('id', { ascending: false }).range(from, to),
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase.from('events').select('id, title').neq('status', 'cancelled').order('created_at', { ascending: false }).order('id', { ascending: false }).range(from, to),
+        ),
         supabase.from('users').select('id, name').eq('account_id', accountId).order('name'),
       ]);
       setLinks((linksRes.data as MarketingLink[]) || []);
@@ -662,7 +667,7 @@ function LinkAnalyticsDialog({
           setLoading(false);
           return;
         }
-        const { data: leadsData, count } = await leadsQ.limit(1000);
+        const { data: leadsData } = await fetchAllRows<any>((from, to) => leadsQ.range(from, to));
         const leadIds = (leadsData || []).map((l: any) => l.id);
         const clientIds = (leadsData || []).map((l: any) => l.converted_to_client_id).filter(Boolean);
 
@@ -670,11 +675,14 @@ function LinkAnalyticsDialog({
         let wonCount = 0;
         let revenue = 0;
         if (clientIds.length) {
-          const { data: deals } = await supabase
-            .from('deals')
-            .select('id, status, value')
-            .in('client_id', clientIds)
-            .limit(1000);
+          const { data: deals } = await fetchAllRows<any>((from, to) =>
+            supabase
+              .from('deals')
+              .select('id, status, value')
+              .in('client_id', clientIds)
+              .order('id', { ascending: false })
+              .range(from, to),
+          );
           dealCount = deals?.length || 0;
           (deals || []).forEach((d: any) => {
             if (d.status === 'won' || d.status === 'ganho') {
@@ -683,7 +691,7 @@ function LinkAnalyticsDialog({
             }
           });
         }
-        setStats({ leads: count || leadIds.length, deals: dealCount, won: wonCount, revenue });
+        setStats({ leads: leadIds.length, deals: dealCount, won: wonCount, revenue });
       } catch (e) {
         console.error(e);
         setStats({ leads: 0, deals: 0, won: 0, revenue: 0 });

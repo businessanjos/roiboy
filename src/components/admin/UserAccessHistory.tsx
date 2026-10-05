@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ChevronDown, History } from "lucide-react";
@@ -34,15 +36,31 @@ function describe(r: any): string {
 
 export function UserAccessHistory({ userId, accountId }: { userId: string; accountId: string }) {
   const [open, setOpen] = useState(false);
+
+  const { data: count = 0 } = useQuery({
+    queryKey: ["user-access-history-count", accountId, userId],
+    enabled: open,
+    queryFn: async () => {
+      const { count } = await supabase.from("audit_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", accountId).eq("entity_type", "user").eq("entity_id", userId)
+        .in("action", ["user.access_replicated", "user.permission_changed", "user.pipeline_access_changed", "user.deal_visibility_changed", "user.access_profile_changed"]);
+      return count ?? 0;
+    },
+  });
+
+  const pg = usePaginationState(count, { resetKey: [accountId, userId], defaultPageSize: 20 });
+
   const { data = [], isLoading } = useQuery({
-    queryKey: ["user-access-history", accountId, userId],
+    queryKey: ["user-access-history", accountId, userId, pg.from, pg.to],
     enabled: open,
     queryFn: async () => {
       const { data } = await supabase.from("audit_logs")
         .select("id, action, details, user_name, created_at")
         .eq("account_id", accountId).eq("entity_type", "user").eq("entity_id", userId)
         .in("action", ["user.access_replicated", "user.permission_changed", "user.pipeline_access_changed", "user.deal_visibility_changed", "user.access_profile_changed"])
-        .order("created_at", { ascending: false }).limit(100);
+        .order("created_at", { ascending: false }).order("id", { ascending: false })
+        .range(pg.from, pg.to);
       return data ?? [];
     },
   });
@@ -66,6 +84,7 @@ export function UserAccessHistory({ userId, accountId }: { userId: string; accou
               </p>
             </div>
           ))}
+          {count > pg.pageSize && <PagerFor state={pg} itemLabel="alterações" hidePageSize />}
         </div>
       )}
     </div>

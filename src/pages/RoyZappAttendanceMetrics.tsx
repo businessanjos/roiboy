@@ -28,6 +28,9 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type ConsultantStats = {
   user_id: string;
@@ -77,15 +80,24 @@ export default function RoyZappAttendanceMetrics() {
 
       const accountId = currentUser.account_id;
 
-      // 1) Outbound messages by humans in period
-      const { data: msgs } = await supabase
-        .from("zapp_messages")
-        .select("id, sender_user_id, sender_name, sent_at, zapp_conversation_id")
-        .eq("account_id", accountId)
-        .eq("direction", "outbound")
-        .not("sender_user_id", "is", null)
-        .gte("sent_at", since)
-        .limit(50000);
+      // 1) Outbound messages by humans in period.
+      // Métricas (totais, ranking, série diária) dependem do conjunto completo do período —
+      // usamos fetchAllRows (lotes de 1000 via .range) em vez do antigo .limit(50000) que
+      // truncava silenciosamente. Mantemos o mesmo teto de segurança (50.000 linhas).
+      const { data: msgs } = await fetchAllRows<any>(
+        (from, to) =>
+          supabase
+            .from("zapp_messages")
+            .select("id, sender_user_id, sender_name, sent_at, zapp_conversation_id")
+            .eq("account_id", accountId)
+            .eq("direction", "outbound")
+            .not("sender_user_id", "is", null)
+            .gte("sent_at", since)
+            .order("sent_at")
+            .order("id")
+            .range(from, to),
+        { maxRows: 50000 }
+      );
 
       // 2) Open conversations per agent
       const { data: openAssign } = await supabase
@@ -216,6 +228,8 @@ export default function RoyZappAttendanceMetrics() {
     });
     return arr;
   }, [consultants, sortBy]);
+
+  const pg = usePagedList(sorted, { resetKey: sortBy, isLoading: loading });
 
   const totals = useMemo(
     () => ({
@@ -372,14 +386,14 @@ export default function RoyZappAttendanceMetrics() {
                     </TableCell>
                   </TableRow>
                 ))
-              ) : sorted.length === 0 ? (
+              ) : pg.items.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     Sem atividade no período
                   </TableCell>
                 </TableRow>
               ) : (
-                sorted.map((c) => (
+                pg.items.map((c) => (
                   <TableRow key={c.user_id}>
                     <TableCell>
                       <div className="flex items-center gap-3">
@@ -403,6 +417,7 @@ export default function RoyZappAttendanceMetrics() {
               )}
             </TableBody>
           </Table>
+          {!loading && sorted.length > 0 && <PagerFor state={pg} itemLabel="consultores" />}
         </CardContent>
       </Card>
     </div>

@@ -22,6 +22,7 @@ import {
 import { REBRANDING_SPECS, BRAND_KIT } from "@/data/rebrandingSpecs";
 import { AssetUploadBox } from "@/components/marketing/rebranding/AssetUploadBox";
 import { AiStudio } from "@/components/marketing/rebranding/AiStudio";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 const ICONS: Record<string, any> = {
   Globe, Instagram, Linkedin, AtSign, Music, Youtube, Music2,
@@ -105,11 +106,15 @@ export default function Rebranding() {
     queryKey: ["rebranding-channels", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rebranding_channels" as any)
-        .select("*")
-        .eq("account_id", accountId)
-        .order("sort_order");
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        (supabase as any)
+          .from("rebranding_channels")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("sort_order")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as Channel[];
     },
@@ -119,11 +124,15 @@ export default function Rebranding() {
     queryKey: ["rebranding-tasks", accountId],
     enabled: !!accountId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("rebranding_tasks" as any)
-        .select("*")
-        .eq("account_id", accountId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        (supabase as any)
+          .from("rebranding_tasks")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as Task[];
     },

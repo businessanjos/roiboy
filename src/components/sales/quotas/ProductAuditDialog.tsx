@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { resolveItemVendaToProductId, PRODUCT_IDS } from "@/lib/sales/itemVendaResolver";
@@ -105,13 +106,14 @@ export function ProductAuditDialog({ open, onOpenChange }: { open: boolean; onOp
         .eq("account_id", accountId!)
         .eq("status", "won")
         .order("won_at", { ascending: false })
-        .limit(2000);
+        .order("id", { ascending: false });
       if (period !== "all") {
         const from = new Date();
         from.setDate(from.getDate() - Number(period));
         q = q.gte("won_at", from.toISOString());
       }
-      const { data, error } = await q;
+      // Lista já paginada localmente (rowsPg) no render — sem .limit(2000) silencioso na fonte.
+      const { data, error } = await fetchAllRows<any>((f, t) => q.range(f, t));
       if (error) throw error;
       const deals = data ?? [];
 

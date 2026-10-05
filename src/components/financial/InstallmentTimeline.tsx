@@ -23,6 +23,8 @@ import {
 import { cn } from "@/lib/utils";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type EventRow = {
   id: string;
@@ -288,13 +290,22 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
           );
         }
 
-        return (
+        return <TimelineList events={filteredEvents} />;
+      })()}
+    </div>
+  );
+}
+
+function TimelineList({ events: filteredEvents }: { events: EventRow[] }) {
+  const pg = usePagedList(filteredEvents, { resetKey: filteredEvents.length ? filteredEvents[0].id : null, defaultPageSize: 20 });
+  return (
+    <div className="space-y-2">
       <ol className="relative space-y-4 pl-6">
         <span
           aria-hidden
           className="absolute left-2 top-1 bottom-1 w-px bg-border"
         />
-        {filteredEvents.map((ev) => {
+        {pg.items.map((ev) => {
           const meta = EVENT_META[ev.event_type] ?? {
             icon: Clock,
             label: ev.event_type,
@@ -334,8 +345,7 @@ export function InstallmentTimeline({ installmentId, className }: Props) {
           );
         })}
       </ol>
-        );
-      })()}
+      <PagerFor state={pg} itemLabel="eventos" />
     </div>
   );
 }

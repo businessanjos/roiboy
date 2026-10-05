@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -77,13 +78,17 @@ function useRenewalDeals(enabled: boolean) {
     queryKey: ["renewal-deals-by-responsible"],
     enabled,
     queryFn: async (): Promise<RenewalDeal[]> => {
-      const { data } = await (supabase as any)
-        .from("deals")
-        .select("id, title, status, renewal_responsible_user_id, created_at")
-        .not("renewal_responsible_user_id", "is", null)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(2000);
+      // Contagens/estatísticas por responsável precisam do conjunto completo — sem .limit(2000) silencioso.
+      const { data } = await fetchAllRows<any>((from, to) =>
+        (supabase as any)
+          .from("deals")
+          .select("id, title, status, renewal_responsible_user_id, created_at")
+          .not("renewal_responsible_user_id", "is", null)
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       return data || [];
     },
   });

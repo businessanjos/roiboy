@@ -103,6 +103,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { ptBR } from "date-fns/locale";
 
 interface User {
@@ -324,10 +325,18 @@ export default function Tasks() {
       let relatedLeadIds: string[] = [];
       let relatedDealIds: string[] = [];
       if (safeSearch) {
+        // Busca em lotes (sem teto de 1000) para não perder correspondências
+        // de clientes/leads/negociações em bases grandes.
         const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-          supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
-          supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).limit(1000),
-          supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).limit(1000),
+          fetchAllRows<{ id: string }>((from, to) =>
+            supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).order("id").range(from, to)
+          ),
+          fetchAllRows<{ id: string }>((from, to) =>
+            supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).order("id").range(from, to)
+          ),
+          fetchAllRows<{ id: string }>((from, to) =>
+            supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).order("id").range(from, to)
+          ),
         ]);
         relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
         relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
@@ -400,7 +409,9 @@ export default function Tasks() {
       // Exceção: quando há busca ativa, varremos TODO o histórico que casa com
       // o termo (independente do que já foi carregado na tela).
       const PAGE = 1000;
-      const SEARCH_MAX_PAGES = 20; // até 20k resultados de busca
+      // Teto de segurança contra laço infinito (não é uma garantia de "tudo
+      // carregado" em bases absurdamente grandes — ver `hasMore`/mensagem na UI).
+      const SEARCH_MAX_PAGES = 200; // até 200k resultados de busca
       const MAX_PAGES = searchOrFilter ? SEARCH_MAX_PAGES : Math.max(1, loadedChunks);
       const all: Task[] = [];
       let from = 0;
@@ -408,6 +419,7 @@ export default function Tasks() {
       for (let page = 0; page < MAX_PAGES; page++) {
         const { data, error } = await buildQuery()
           .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
           .range(from, from + PAGE - 1);
         if (error) throw error;
         const chunk = (data || []) as Task[];
@@ -2347,23 +2359,49 @@ export default function Tasks() {
 
       {/* Content based on view mode */}
       {viewMode === "kanban" ? (
-        <TaskKanban
-          tasks={tasks.filter((task) => {
-            const matchesSearch = matchesTaskSearch(task);
-            
-            const matchesUser = filterUser === "all" || 
-              (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
+        <>
+          <TaskKanban
+            tasks={tasks.filter((task) => {
+              const matchesSearch = matchesTaskSearch(task);
+              
+              const matchesUser = filterUser === "all" || 
+                (filterUser === "mine" ? (task.assigned_to === currentUser?.id || task.created_by === currentUser?.id) : (task.assigned_to === filterUser));
 
-            const matchesActivityType = filterActivityType === "all" || 
-              task.activity_type?.id === filterActivityType;
+              const matchesActivityType = filterActivityType === "all" || 
+                task.activity_type?.id === filterActivityType;
 
-            return matchesSearch && matchesUser && matchesActivityType;
-          })}
-          onEditTask={openEditDialog}
-          onDeleteTask={openDeleteDialog}
-          onStatusChange={handleStatusChange}
-          onAddTask={openNewTaskDialog}
-        />
+              return matchesSearch && matchesUser && matchesActivityType;
+            })}
+            onEditTask={openEditDialog}
+            onDeleteTask={openDeleteDialog}
+            onStatusChange={handleStatusChange}
+            onAddTask={openNewTaskDialog}
+          />
+
+          {/* Carregamento incremental do histórico também no Kanban (busca já varre todo o histórico) */}
+          {!serverSearch && (hasMoreTasks || (totalHistoryCount ?? 0) > tasks.length) && (
+            <div className="flex flex-col items-center gap-1 py-3">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled={fetchingTasks}
+                onClick={() => setLoadedChunks((c) => c + 1)}
+              >
+                {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
+              </Button>
+              <span className="text-xs text-muted-foreground">
+                Exibindo {tasks.length}
+                {typeof totalHistoryCount === "number" ? ` de ${totalHistoryCount}` : ""} tarefas do histórico
+                {isHistoricalUserFilter ? " (auditoria histórica)" : ""}
+              </span>
+            </div>
+          )}
+          {serverSearch && (
+            <div className="py-2 text-center text-xs text-muted-foreground">
+              Busca aplicada em todo o histórico — {tasks.length} tarefa(s) encontrada(s).
+            </div>
+          )}
+        </>
       ) : (
         <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-3 lg:space-y-4">
           <TabsList className="hidden lg:flex bg-muted/50 p-1 flex-wrap h-auto gap-1">

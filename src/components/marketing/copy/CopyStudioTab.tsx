@@ -17,6 +17,8 @@ import { useMarketingAiSuggestionReviews } from "@/hooks/useMarketingAiSuggestio
 import { toast } from "sonner";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const COPY_LABELS: Record<CopyType, string> = {
   hook: "Hook",
@@ -45,6 +47,8 @@ export function CopyStudioTab() {
   const [lastGeneration, setLastGeneration] = useState<GenerateCopyResponse | null>(null);
   const [reviewResult, setReviewResult] = useState<MarketingCopyReviewResponse | null>(null);
   const [reviewOpen, setReviewOpen] = useState(false);
+
+  const historyPg = usePagedList(history, { defaultPageSize: 20 });
 
   const feedbackSummary = useMemo(() => {
     const accepted = reviews.filter((item) => item.decision === "accepted").length;
@@ -325,7 +329,7 @@ export function CopyStudioTab() {
           <h4 className="font-medium mb-3 text-sm text-muted-foreground">Histórico</h4>
           <div className="space-y-3">
             {history.length === 0 && <p className="text-sm text-muted-foreground">Nenhuma copy gerada ainda.</p>}
-            {history.map((h) => (
+            {historyPg.items.map((h) => (
               <Card key={h.id} className="p-4 space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
@@ -345,6 +349,7 @@ export function CopyStudioTab() {
               </Card>
             ))}
           </div>
+          {history.length > 0 && <PagerFor state={historyPg} itemLabel="copies" />}
         </div>
       </div>
 

@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { autoSeedSignatureDocs } from "@/lib/hr/autoSeedSignatureDocs";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export type AdmissionStage =
   | "accepted"
@@ -117,11 +118,15 @@ export function useHRAdmissions() {
     queryKey: ["hr-admissions", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_admissions" as any)
-        .select("*")
-        .eq("account_id", currentUser!.account_id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_admissions" as any)
+          .select("*")
+          .eq("account_id", currentUser!.account_id)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as HRAdmission[];
     },

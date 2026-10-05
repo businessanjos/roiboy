@@ -17,6 +17,8 @@ import { cn } from "@/lib/utils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import { resolveClientLocale, formatCurrencyForLocale, type ClientLocale } from "@/lib/clientCurrency";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface ClientFormResponsesProps {
   clientId: string;
@@ -85,6 +87,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
     resolveClientLocale({ country: null, phone: null })
   );
   const { currentUser } = useCurrentUser();
+  const pg = usePagedList(formResponses, { resetKey: clientId, defaultPageSize: 20, isLoading: loading });
 
   useEffect(() => {
     fetchData();
@@ -680,7 +683,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
       })()}
 
       {/* Form Responses */}
-      {formResponses.map((response) => {
+      {pg.items.map((response) => {
         const entries = Object.entries(response.responses).filter(
           ([, v]) => v !== null && v !== undefined && v !== ""
         );
@@ -917,6 +920,7 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
         </Card>
         );
       })}
+      {formResponses.length > 0 && <PagerFor state={pg} itemLabel="fichas" />}
 
 
       {/* Legacy Diagnostic */}

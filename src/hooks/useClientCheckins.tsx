@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import type {
   ClientCheckin,
   CheckinChannel,
@@ -22,14 +23,17 @@ export function useClientCheckins(clientId?: string) {
     queryKey: ["client-checkins", clientId],
     enabled: !!clientId,
     queryFn: async (): Promise<ClientCheckin[]> => {
-      const { data, error } = await supabase
-        .from("client_checkins")
-        .select("*, users(name, avatar_url)")
-        .eq("client_id", clientId!)
-        .order("happened_at", { ascending: false })
-        .limit(200);
+      const { data, error } = await fetchAllRows<ClientCheckin>((from, to) =>
+        supabase
+          .from("client_checkins")
+          .select("*, users(name, avatar_url)")
+          .eq("client_id", clientId!)
+          .order("happened_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      );
       if (error) throw error;
-      return (data || []) as unknown as ClientCheckin[];
+      return data;
     },
   });
 }
@@ -120,12 +124,15 @@ export function useCheckpointsPanel() {
 
       // Buscar check-ins por conta (não por lista de IDs: a URL estoura com
       // milhares de clientes e a requisição falha com 414).
-      const { data: checkins, error: cErr } = await supabase
-        .from("client_checkins")
-        .select("client_id, happened_at, kind, summary")
-        .eq("account_id", currentUser!.account_id)
-        .order("happened_at", { ascending: false })
-        .limit(5000);
+      const { data: checkins, error: cErr } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("client_checkins")
+          .select("client_id, happened_at, kind, summary")
+          .eq("account_id", currentUser!.account_id)
+          .order("happened_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      );
       if (cErr) throw cErr;
 
 

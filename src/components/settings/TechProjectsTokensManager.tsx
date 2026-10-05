@@ -6,6 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { Copy, Eye, EyeOff, RefreshCw, Trash2, KeyRound, Loader2, Shuffle, ShieldCheck, CheckCircle2, XCircle } from "lucide-react";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -36,6 +39,7 @@ export function TechProjectsTokensManager() {
   const [busyId, setBusyId] = useState<string | null>(null);
   const [validating, setValidating] = useState(false);
   const [validation, setValidation] = useState<Record<string, { ok: boolean; status?: number; message?: string; error?: string }>>({});
+  const pg = usePagedList(projects, { isLoading: loading });
 
   const validateTokens = async (projectId?: string) => {
     setValidating(true);
@@ -61,12 +65,16 @@ export function TechProjectsTokensManager() {
 
   const load = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("tech_projects")
-      .select("id, name, slug, color, metrics_endpoint, metrics_token_last4, metrics_token_rotated_at")
-      .order("name");
-    if (error) toast({ title: "Erro ao carregar projetos", description: error.message, variant: "destructive" });
-    setProjects((data as any) || []);
+    const { data, error } = await fetchAllRows<TechProject>((from, to) =>
+      supabase
+        .from("tech_projects")
+        .select("id, name, slug, color, metrics_endpoint, metrics_token_last4, metrics_token_rotated_at")
+        .order("name")
+        .order("id")
+        .range(from, to)
+    );
+    if (error) toast({ title: "Erro ao carregar projetos", description: (error as any)?.message, variant: "destructive" });
+    setProjects(data || []);
     setLoading(false);
   };
 
@@ -188,7 +196,7 @@ export function TechProjectsTokensManager() {
         ) : projects.length === 0 ? (
           <p className="text-sm text-muted-foreground">Nenhum projeto cadastrado em /gestao-tech ainda.</p>
         ) : (
-          projects.map((p) => {
+          pg.items.map((p) => {
             const hasToken = !!p.metrics_token_last4;
             const shown = revealed[p.id];
             const busy = busyId === p.id;
@@ -296,6 +304,7 @@ export function TechProjectsTokensManager() {
             );
           })
         )}
+        {projects.length > 0 && <PagerFor state={pg} itemLabel="projetos" />}
         <p className="text-xs text-muted-foreground pt-2 border-t border-border">
           Ao rotacionar, copie o novo token e atualize o secret <code>ROY_METRICS_TOKEN</code> no
           projeto correspondente. Tokens antigos param de funcionar imediatamente.

@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface HRDepartment {
   id: string;
@@ -26,11 +27,15 @@ export function useHRDepartments() {
     if (!currentUser?.account_id) return;
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from("hr_departments")
-        .select("*")
-        .eq("account_id", currentUser.account_id)
-        .order("name");
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_departments")
+          .select("*")
+          .eq("account_id", currentUser.account_id)
+          .order("name")
+          .order("id")
+          .range(from, to)
+      );
 
       if (error) throw error;
       setDepartments((data || []) as unknown as HRDepartment[]);

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export interface HRPosition {
   id: string;
@@ -35,11 +36,15 @@ export function useHRPositions() {
     queryKey: [KEY, currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_positions")
-        .select("*")
-        .eq("account_id", currentUser!.account_id)
-        .order("title");
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_positions")
+          .select("*")
+          .eq("account_id", currentUser!.account_id)
+          .order("title")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as HRPosition[];
     },

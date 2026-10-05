@@ -9,6 +9,9 @@ import { Switch } from "@/components/ui/switch";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Plus, Trash2, ChevronDown, ChevronRight, GripVertical, Loader2 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Reason {
   id: string;
@@ -42,13 +45,17 @@ export function LossReasonsManager() {
   const { data: reasons = [], isLoading: loadingReasons } = useQuery({
     queryKey: ["loss-reasons-admin", accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("deal_loss_reasons")
-        .select("*")
-        .eq("account_id", accountId!)
-        .order("display_order");
+      const { data, error } = await fetchAllRows<Reason>((from, to) =>
+        supabase
+          .from("deal_loss_reasons")
+          .select("*")
+          .eq("account_id", accountId!)
+          .order("display_order")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
-      return data as Reason[];
+      return data;
     },
     enabled: !!accountId,
   });
@@ -56,16 +63,22 @@ export function LossReasonsManager() {
   const { data: subReasons = [], isLoading: loadingSubs } = useQuery({
     queryKey: ["loss-sub-reasons-admin", accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("deal_loss_sub_reasons")
-        .select("*")
-        .eq("account_id", accountId!)
-        .order("display_order");
+      const { data, error } = await fetchAllRows<SubReason>((from, to) =>
+        supabase
+          .from("deal_loss_sub_reasons")
+          .select("*")
+          .eq("account_id", accountId!)
+          .order("display_order")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
-      return data as SubReason[];
+      return data;
     },
     enabled: !!accountId,
   });
+
+  const pg = usePagedList(reasons, { isLoading: loadingReasons || loadingSubs });
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["loss-reasons-admin"] });
@@ -188,7 +201,7 @@ export function LossReasonsManager() {
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-3">
-        {reasons.map((reason) => {
+        {pg.items.map((reason) => {
           const isExpanded = expandedReasons.has(reason.id);
           const subs = subReasons.filter(s => s.loss_reason_id === reason.id);
 
@@ -305,6 +318,8 @@ export function LossReasonsManager() {
             </Collapsible>
           );
         })}
+
+        {reasons.length > 0 && <PagerFor state={pg} itemLabel="motivos" />}
 
         {/* Add new reason */}
         <div className="flex items-center gap-2 pt-2 border-t">

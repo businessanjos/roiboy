@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { LineChart, Line, ResponsiveContainer, Tooltip } from "recharts";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -129,12 +130,15 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
     let cancelled = false;
     (async () => {
       setLoading(true);
+      // Série completa do gráfico — sem .limit(2000) silencioso.
       const [{ data: hist }, { data: snaps }] = await Promise.all([
-        supabase
-          .from("client_instagram_metrics_history" as any)
-          .select("client_id, username, snapshot_at, followers_count, total_likes, total_comments")
-          .order("snapshot_at", { ascending: true })
-          .limit(2000),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("client_instagram_metrics_history" as any)
+            .select("client_id, username, snapshot_at, followers_count, total_likes, total_comments")
+            .order("snapshot_at", { ascending: true })
+            .range(from, to),
+        ),
         supabase
           .from("client_instagram_snapshots" as any)
           .select("client_id, username, full_name, profile_pic_url, is_verified")

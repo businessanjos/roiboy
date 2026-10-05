@@ -22,6 +22,7 @@ import { useHRAdmissions, type HRAdmissionDocument } from "@/hooks/useHRAdmissio
 import { toast } from "sonner";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 type Row = HRAdmissionDocument & {
   candidate_name: string;
@@ -44,12 +45,16 @@ export default function SignedDocsTab() {
     staleTime: 0,
     refetchOnMount: "always",
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("hr_admission_documents" as any)
-        .select("*")
-        .in("admission_id", admissionIds)
-        .eq("doc_type", "signature")
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows((from, to) =>
+        supabase
+          .from("hr_admission_documents" as any)
+          .select("*")
+          .in("admission_id", admissionIds)
+          .eq("doc_type", "signature")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to)
+      );
       if (error) throw error;
       return (data || []) as unknown as HRAdmissionDocument[];
     },

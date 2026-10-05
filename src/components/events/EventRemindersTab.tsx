@@ -12,6 +12,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
 import { BellRing, RefreshCw, Info } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface EventRemindersTabProps {
   eventId: string;
@@ -80,6 +82,8 @@ export default function EventRemindersTab({ eventId, accountId }: EventReminders
       return data || [];
     },
   });
+
+  const campaignsPg = usePagedList(campaigns, { isLoading: !campaigns });
 
   const enabled = !!event?.auto_reminders_enabled;
   const selected: string[] = Array.isArray(event?.auto_reminder_types)
@@ -196,7 +200,7 @@ export default function EventRemindersTab({ eventId, accountId }: EventReminders
             </p>
           ) : (
             <div className="space-y-2">
-              {campaigns.map((c) => {
+              {campaignsPg.items.map((c) => {
                 const status = STATUS_LABEL[c.status as string] || {
                   label: c.status as string,
                   variant: "outline" as const,
@@ -229,6 +233,7 @@ export default function EventRemindersTab({ eventId, accountId }: EventReminders
                   </div>
                 );
               })}
+              <PagerFor state={campaignsPg} itemLabel="campanhas" />
             </div>
           )}
         </CardContent>

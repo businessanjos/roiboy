@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "sonner";
 
@@ -346,18 +347,19 @@ export function useCommissionPlan(cargo: string = "Closer") {
   const fetchDealEntries = useCallback(async (planId?: string) => {
     if (!accountId) return;
     try {
-      let query = supabase
-        .from("commission_deal_entries")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("created_at", { ascending: false })
-        .limit(200);
-
-      if (planId) {
-        query = query.eq("plan_id", planId);
-      }
-
-      const { data } = await query;
+      // Sem .limit(200) silencioso: a lista é paginada localmente no render (CommissionDealView),
+      // mas o KPI/resumo precisa do conjunto completo.
+      const buildQuery = (from: number, to: number) => {
+        let q = supabase
+          .from("commission_deal_entries")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false });
+        if (planId) q = q.eq("plan_id", planId);
+        return q.range(from, to);
+      };
+      const { data } = await fetchAllRows<any>(buildQuery);
 
       if (data) {
         const userIds = [...new Set(data.map((d: any) => d.user_id))];

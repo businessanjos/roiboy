@@ -27,6 +27,7 @@ import { ManageAdAccountsModal } from '@/components/meta/ManageAdAccountsModal';
 import { CampaignsManager } from '@/components/meta/CampaignsManager';
 import { toast } from 'sonner';
 import { useTrafficAgencies } from '@/hooks/useTrafficAgencies';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 
 interface AdSet {
   id: string;
@@ -92,8 +93,16 @@ export default function MarketingTrafegoPago() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data } = await supabase.from('marketing_ad_sets').select('*').eq('user_id', user.id).order('spend', { ascending: false });
-      setAdSets((data as any[]) || []);
+      const { data } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from('marketing_ad_sets')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('spend', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to),
+      );
+      setAdSets(data || []);
     } finally { setLoading(false); }
   }, [user?.id]);
 
@@ -187,10 +196,14 @@ export default function MarketingTrafegoPago() {
     const STALE_MS = 30 * 60 * 1000;
     (async () => {
       try {
-        const { data: rows } = await supabase
-          .from('marketing_ad_sets')
-          .select('meta_ad_account_id, updated_at')
-          .eq('user_id', user.id);
+        const { data: rows } = await fetchAllRows<any>((from, to) =>
+          supabase
+            .from('marketing_ad_sets')
+            .select('meta_ad_account_id, updated_at, id')
+            .eq('user_id', user.id)
+            .order('id', { ascending: false })
+            .range(from, to),
+        );
         const latestByAccount = new Map<string, number>();
         for (const r of (rows as any[]) || []) {
           if (!r.meta_ad_account_id) continue;

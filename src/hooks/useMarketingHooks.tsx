@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { toast } from "sonner";
 
 export type HookCategory = "curiosidade" | "promessa" | "polemica" | "historia" | "dado" | "provocacao" | "outro";
@@ -35,15 +36,18 @@ export function useMarketingHooks() {
     queryKey: ["marketing-hooks", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("marketing_hooks")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("performance_score", { ascending: false })
-        .order("created_at", { ascending: false })
-        .limit(200);
+      const { data, error } = await fetchAllRows<MarketingHook>((from, to) =>
+        supabase
+          .from("marketing_hooks")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("performance_score", { ascending: false })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
-      return data as MarketingHook[];
+      return data;
     },
     enabled: !!accountId,
   });

@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "./useCurrentUser";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export type CopyType = "hook" | "caption" | "script" | "cta" | "title" | "bio" | "email" | "other";
 export type CopyObjective = "educar" | "converter" | "reter";
@@ -48,14 +49,17 @@ export function useMarketingCopy() {
     queryKey: ["marketing-copy-history", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("marketing_copy_history")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("created_at", { ascending: false })
-        .limit(100);
+      const { data, error } = await fetchAllRows<CopyHistoryItem>((from, to) =>
+        supabase
+          .from("marketing_copy_history")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("created_at", { ascending: false })
+          .order("id")
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return data as CopyHistoryItem[];
+      return data;
     },
     enabled: !!accountId,
   });

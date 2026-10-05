@@ -8,6 +8,21 @@ const corsHeaders = {
 
 const META = "https://graph.facebook.com/v21.0";
 
+/** Segue paging.next do Graph API até acabar, com teto de segurança. */
+async function fetchAllGraph(initialUrl: string, maxPages = 50): Promise<{ data: any[]; error?: any }> {
+  let url: string | undefined = initialUrl;
+  const all: any[] = [];
+  let pages = 0;
+  while (url && pages < maxPages) {
+    const r = await (await fetch(url)).json();
+    if (r.error) return { data: all, error: r.error };
+    all.push(...(r.data || []));
+    url = r.paging?.next;
+    pages++;
+  }
+  return { data: all };
+}
+
 async function getToken(req: Request) {
   const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
   const anon = Deno.env.get("SUPABASE_ANON_KEY")!;
@@ -75,7 +90,7 @@ serve(async (req) => {
       const acc = adAccountId.startsWith("act_") ? adAccountId : `act_${adAccountId}`;
       const fields = `id,name,status,effective_status,objective,daily_budget,lifetime_budget,start_time,stop_time,created_time,buying_type,special_ad_categories,insights.date_preset(${datePreset}){impressions,clicks,spend,reach,actions,action_values,ctr,cpc,cpm,frequency}`;
       const url = `${META}/${acc}/campaigns?fields=${fields}&limit=100&access_token=${token}`;
-      const r = await (await fetch(url)).json();
+      const r = await fetchAllGraph(url);
       if (r.error) return new Response(JSON.stringify({ error: r.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const campaigns = (r.data || []).map((c: any) => ({
         id: c.id,
@@ -100,7 +115,7 @@ serve(async (req) => {
       if (!campaignId) return new Response(JSON.stringify({ error: "campaignId obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const fields = `id,name,status,effective_status,daily_budget,lifetime_budget,optimization_goal,billing_event,targeting,start_time,end_time,insights.date_preset(${datePreset}){impressions,clicks,spend,reach,actions,action_values,ctr,cpc,cpm,frequency}`;
       const url = `${META}/${campaignId}/adsets?fields=${fields}&limit=100&access_token=${token}`;
-      const r = await (await fetch(url)).json();
+      const r = await fetchAllGraph(url);
       if (r.error) return new Response(JSON.stringify({ error: r.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const adsets = (r.data || []).map((a: any) => ({
         id: a.id,
@@ -124,7 +139,7 @@ serve(async (req) => {
       if (!adsetId) return new Response(JSON.stringify({ error: "adsetId obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const fields = `id,name,status,effective_status,creative{id,name,title,body,thumbnail_url,image_url,object_story_spec,asset_feed_spec,effective_object_story_id},preview_shareable_link,insights.date_preset(${datePreset}){impressions,clicks,spend,reach,actions,action_values,ctr,cpc,cpm,frequency}`;
       const url = `${META}/${adsetId}/ads?fields=${fields}&limit=50&access_token=${token}`;
-      const r = await (await fetch(url)).json();
+      const r = await fetchAllGraph(url);
       if (r.error) return new Response(JSON.stringify({ error: r.error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
       const ads = (r.data || []).map((a: any) => ({
         id: a.id,
@@ -224,11 +239,25 @@ serve(async (req) => {
     if (action === "budget_history") {
       const { entityId } = body;
       const { supabase } = auth as any;
-      let q = supabase.from("meta_budget_history").select("*").order("created_at", { ascending: false }).limit(200);
-      if (entityId) q = q.eq("entity_id", entityId);
-      const { data, error } = await q;
-      if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-      return new Response(JSON.stringify({ success: true, history: data || [] }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      // Segue cursor via .range até esgotar o histórico, com teto de segurança.
+      const batchSize = 200;
+      const maxRows = 5000;
+      const history: any[] = [];
+      for (let from = 0; from < maxRows; from += batchSize) {
+        let q = supabase
+          .from("meta_budget_history")
+          .select("*")
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, from + batchSize - 1);
+        if (entityId) q = q.eq("entity_id", entityId);
+        const { data, error } = await q;
+        if (error) return new Response(JSON.stringify({ error: error.message }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+        const rows = data || [];
+        history.push(...rows);
+        if (rows.length < batchSize) break;
+      }
+      return new Response(JSON.stringify({ success: true, history }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     // ============ TIMESERIES (BI) ============
