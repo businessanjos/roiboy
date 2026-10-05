@@ -13,6 +13,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Loader2, Plus, ShieldAlert, ArrowUp, ArrowDown } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface PracticeAreaRow {
   id: string;
@@ -56,6 +58,9 @@ export default function PracticeAreasAdmin() {
       return (data ?? []) as PracticeAreaRow[];
     },
   });
+
+  const sortedRows = (rows ?? []).slice().sort((a, b) => a.sort_order - b.sort_order);
+  const pg = usePagedList(sortedRows, { isLoading });
 
   const invalidate = () => {
     qc.invalidateQueries({ queryKey: ["practice-areas"] });
@@ -207,7 +212,11 @@ export default function PracticeAreasAdmin() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {(rows ?? []).map((row, i, arr) => (
+                {pg.items.map((row, pageIdx) => {
+                  const i = pg.from + pageIdx;
+                  const arr = sortedRows;
+                  return (
+
                   <TableRow key={row.id}>
                     <TableCell>
                       <div className="flex gap-1">
@@ -253,7 +262,8 @@ export default function PracticeAreasAdmin() {
                       </div>
                     </TableCell>
                   </TableRow>
-                ))}
+                  );
+                })}
                 {rows && rows.length === 0 && (
                   <TableRow>
                     <TableCell colSpan={5} className="text-center text-muted-foreground py-6">
@@ -264,6 +274,7 @@ export default function PracticeAreasAdmin() {
               </TableBody>
             </Table>
           )}
+          {!isLoading && <PagerFor state={pg} itemLabel="áreas" />}
         </CardContent>
       </Card>
     </div>

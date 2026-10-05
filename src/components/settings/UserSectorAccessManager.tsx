@@ -13,6 +13,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Loader2, Users, Shield, Save, RefreshCw, MessageSquare, Building } from "lucide-react";
 import { sectors, SectorId } from "@/config/sectors";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface TeamUser {
   id: string;
@@ -56,6 +58,7 @@ export function UserSectorAccessManager() {
   const [activeTab, setActiveTab] = useState("sectors");
 
   const activeSectors = sectors.filter(s => !s.comingSoon);
+  const pgUsers = usePagedList(users, { resetKey: undefined, defaultPageSize: 20, isLoading: loading });
 
   useEffect(() => {
     if (currentUser?.account_id) {
@@ -393,7 +396,7 @@ export function UserSectorAccessManager() {
             <div className="space-y-2">
               <Label>Selecione o usuário</Label>
               <div className="flex flex-wrap gap-2">
-                {users.map((user) => (
+                {pgUsers.items.map((user) => (
                   <Button
                     key={user.id}
                     variant={selectedUserId === user.id ? "default" : "outline"}
@@ -414,6 +417,7 @@ export function UserSectorAccessManager() {
                   </Button>
                 ))}
               </div>
+              {users.length > 0 && <PagerFor state={pgUsers} itemLabel="usuários" />}
             </div>
 
             {selectedUser && (

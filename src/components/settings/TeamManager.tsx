@@ -36,6 +36,8 @@ import {
 import { DeactivateUserDialog, totalOpenItems } from "@/components/settings/DeactivateUserDialog";
 import { Textarea } from "@/components/ui/textarea";
 import { usePermissions, PERMISSIONS } from "@/hooks/usePermissions";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 /**
  * Roles considered "CX scope". A Supervisor CX (team.edit_cx without admin)
@@ -785,6 +787,9 @@ export function TeamManager() {
     );
   });
 
+  const pgUsers = usePagedList(filteredUsers, { resetKey: [searchTerm, statusFilter, cxScopeOnly], defaultPageSize: 20 });
+  const pgRoles = usePagedList(visibleRoles, { resetKey: [cxScopeOnly], defaultPageSize: 20 });
+
   if (loading) {
     return <LoadingScreen message="Carregando equipe..." fullScreen={false} />;
   }
@@ -926,7 +931,7 @@ export function TeamManager() {
             </Card>
           ) : viewMode === "grid" ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-              {filteredUsers.map((user) => (
+              {pgUsers.items.map((user) => (
                 <Card 
                   key={user.id} 
                   className={`group hover:shadow-elevated transition-all duration-200 cursor-pointer shadow-card ${
@@ -1047,7 +1052,7 @@ export function TeamManager() {
             <Card className="shadow-card">
               <CardContent className="p-0">
                 <div className="divide-y divide-border">
-                  {filteredUsers.map((user) => (
+                  {pgUsers.items.map((user) => (
                     <div
                       key={user.id}
                       className={`flex items-center gap-4 p-4 hover:bg-muted/50 transition-colors cursor-pointer group ${
@@ -1158,6 +1163,9 @@ export function TeamManager() {
               </CardContent>
             </Card>
           )}
+          {filteredUsers.length > 0 && (
+            <PagerFor state={pgUsers} itemLabel="membros" />
+          )}
         </TabsContent>
 
         {/* Roles Tab */}
@@ -1206,7 +1214,7 @@ export function TeamManager() {
 
           {rolesViewMode === "grid" ? (
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {roles.map((role) => {
+              {pgRoles.items.map((role) => {
                 const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                 const permissionCount = role.permissions?.length || 0;
                 
@@ -1334,7 +1342,7 @@ export function TeamManager() {
             <Card className="shadow-card">
               <CardContent className="p-0">
                 <div className="divide-y divide-border">
-                  {roles.map((role) => {
+                  {pgRoles.items.map((role) => {
                     const memberCount = users.filter(u => u.team_roles?.some(r => r.id === role.id)).length;
                     const permissionCount = role.permissions?.length || 0;
                     
@@ -1409,6 +1417,9 @@ export function TeamManager() {
                 </div>
               </CardContent>
             </Card>
+          )}
+          {visibleRoles.length > 0 && (
+            <PagerFor state={pgRoles} itemLabel="funções" />
           )}
         </TabsContent>
       </Tabs>

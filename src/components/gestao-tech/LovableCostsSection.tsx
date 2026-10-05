@@ -1,4 +1,6 @@
 import { useState, useMemo } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -74,15 +76,24 @@ export function LovableCostsSection() {
   const { data: financial = [] } = useQuery({
     queryKey: ["lovable-financial-entries", accountId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("financial_entries")
-        .select("id, amount, currency, payment_date, due_date, description, status")
-        .eq("entry_type", "expense")
-        .ilike("description", "%lovable%")
-        .order("payment_date", { ascending: false, nullsFirst: false })
-        .limit(200);
-      if (error) throw error;
-      return (data || []) as FinancialLovableEntry[];
+      // Carrega em lotes via range até esgotar — necessário p/ somar totais corretos (KPIs).
+      const pageSize = 1000;
+      let from = 0;
+      const all: FinancialLovableEntry[] = [];
+      for (;;) {
+        const { data, error } = await supabase
+          .from("financial_entries")
+          .select("id, amount, currency, payment_date, due_date, description, status")
+          .eq("entry_type", "expense")
+          .ilike("description", "%lovable%")
+          .order("payment_date", { ascending: false, nullsFirst: false })
+          .range(from, from + pageSize - 1);
+        if (error) throw error;
+        all.push(...((data || []) as FinancialLovableEntry[]));
+        if (!data || data.length < pageSize) break;
+        from += pageSize;
+      }
+      return all;
     },
     enabled: !!accountId,
   });
@@ -168,6 +179,8 @@ export function LovableCostsSection() {
     return r.sort((a, b) => b.date.localeCompare(a.date));
   }, [manual, financial]);
 
+  const pg = usePagedList(rows, { resetKey: undefined, defaultPageSize: 20, isLoading });
+
   const deleteManual = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase.from("lovable_costs").delete().eq("id", id);
@@ -226,7 +239,7 @@ export function LovableCostsSection() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {rows.map((r) => (
+              {pg.items.map((r) => (
                 <TableRow key={r.key}>
                   <TableCell className="tabular-nums">{fmtDate(r.date)}</TableCell>
                   <TableCell>
@@ -275,6 +288,7 @@ export function LovableCostsSection() {
             </TableBody>
           </Table>
         )}
+        {!isLoading && rows.length > 0 && <PagerFor state={pg} itemLabel="custos" />}
       </CardContent>
 
       <LovableCostDialog

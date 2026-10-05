@@ -23,6 +23,8 @@ import {
   Megaphone, Target, Heart, Wallet, ListChecks, FileText, Loader2, Trash2,
 } from "lucide-react";
 import { AreaKpiSnapshot } from "@/components/leader-meetings/AreaKpiSnapshot";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const AREAS = [
   { id: "marketing", label: "Marketing", icon: Megaphone, color: "text-purple-600 bg-purple-500/10" },
@@ -81,6 +83,8 @@ export default function LeaderMeetings() {
       return data as Meeting[];
     },
   });
+
+  const pgMeetings = usePagedList(meetingsQuery.data, { isLoading: meetingsQuery.isLoading });
 
   const createMutation = useMutation({
     mutationFn: async () => {
@@ -159,7 +163,7 @@ export default function LeaderMeetings() {
         </Card>
       ) : (
         <div className="grid gap-3">
-          {meetingsQuery.data!.map((m) => (
+          {pgMeetings.items.map((m) => (
             <Card
               key={m.id}
               className="cursor-pointer hover:shadow-md hover:border-primary/30 transition-all"
@@ -186,6 +190,9 @@ export default function LeaderMeetings() {
             </Card>
           ))}
         </div>
+      )}
+      {!meetingsQuery.isLoading && (meetingsQuery.data?.length || 0) > 0 && (
+        <PagerFor state={pgMeetings} itemLabel="reuniões" />
       )}
 
       <Dialog open={creating} onOpenChange={setCreating}>

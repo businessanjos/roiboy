@@ -21,6 +21,8 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { LoadingScreen } from "@/components/ui/loading-screen";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { PushNotificationPreferences } from "@/components/notifications/PushNotificationPreferences";
 
 const TABS = [
@@ -71,6 +73,8 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
     );
   }, [notifications, activeTab]);
 
+  const pg = usePagedList(filteredNotifications, { resetKey: activeTab, defaultPageSize: 20 });
+
   const tabCounts = useMemo(() => {
     const counts: Record<TabId, number> = { all: 0, sales: 0, checkpoints: 0, forms: 0, mentions: 0, other: 0 };
     notifications.forEach((n) => {
@@ -112,7 +116,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <Bell className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold">Notificações</h1>
+          <h1 className="text-2xl font-semibold">Notificações (últimas 50)</h1>
           {unreadCount > 0 && (
             <Badge variant="default">{unreadCount} não lidas</Badge>
           )}
@@ -204,7 +208,7 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
         </Card>
       ) : (
         <div className="space-y-2">
-          {filteredNotifications.map((notification) => (
+          {pg.items.map((notification) => (
             <button
               key={notification.id}
               onClick={() => handleNotificationClick(notification)}
@@ -271,6 +275,9 @@ const Notifications = forwardRef<HTMLDivElement>(function Notifications(_, ref) 
             </button>
           ))}
         </div>
+      )}
+      {filteredNotifications.length > 0 && (
+        <PagerFor state={pg} itemLabel="notificações" />
       )}
     </div>
   );

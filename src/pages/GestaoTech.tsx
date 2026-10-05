@@ -29,6 +29,8 @@ import {
   ExternalLink, Pencil, Trash2, Loader2, AlertTriangle,
 } from "lucide-react";
 import { LovableCostsSection } from "@/components/gestao-tech/LovableCostsSection";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const fmtBRL = (cents: number, currency = "BRL") =>
   ((cents || 0) / 100).toLocaleString("pt-BR", {
@@ -129,6 +131,8 @@ export default function GestaoTech() {
     () => (filter === "all" ? projects : projects.filter((p) => p.id === filter)),
     [projects, filter],
   );
+
+  const pg = usePagedList(filteredProjects, { resetKey: filter, defaultPageSize: 20, isLoading });
 
   // Latest snapshot per project (any source) — newest wins
   const latestByProject = useMemo(() => {
@@ -337,7 +341,7 @@ export default function GestaoTech() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {filteredProjects.map((p) => {
+                {pg.items.map((p) => {
                   const snap = latestByProject.get(p.id);
                   const arpu = snap && snap.active_subscriptions > 0
                     ? snap.mrr_cents / snap.active_subscriptions
@@ -414,6 +418,9 @@ export default function GestaoTech() {
               </TableBody>
             </Table>
 
+          )}
+          {!isLoading && filteredProjects.length > 0 && (
+            <PagerFor state={pg} itemLabel="projetos" />
           )}
         </CardContent>
       </Card>

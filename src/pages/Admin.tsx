@@ -1044,6 +1044,7 @@ function AccountsTab({ accounts, allUsers, isLoading }: { accounts: Account[]; a
                 })}
               </TableBody>
             </Table>
+            <PagerFor state={pgAccounts} itemLabel="contas" />
           </div>
         )}
 
@@ -1472,6 +1473,7 @@ function UsersTab({ users, accounts, isLoading }: { users: User[]; accounts: Acc
                 })}
               </TableBody>
             </Table>
+            <PagerFor state={pgUsers} itemLabel="usuários" />
           </div>
         )}
 
