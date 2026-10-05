@@ -29985,6 +29985,7 @@ export type Database = {
       }
       search_security_audit: {
         Args: {
+          p_account_id: string
           p_event_type?: string
           p_limit?: number
           p_offset?: number

@@ -1,90 +1,60 @@
-# INVENTÁRIO ATUAL DE PAGINAÇÃO
+# INVENTÁRIO DE PAGINAÇÃO (auditoria a partir do código real)
 
-Este documento registra o estado real da paginação no sistema, consolidando padrões e inventariando o comportamento de cada tela após a auditoria técnica.
+Levantamento feito via `rg` sobre o código-fonte (não sobre documentação anterior), buscando:
+`usePagedList`, `PagerFor`, `ListPagination`, `useTablePagination`, `TablePagination`,
+`usePaginationState`, `.range(...)` com `count`, `fetchAllRows`, `rpc(...)` com
+`p_offset`/`p_limit`, e os padrões "Carregar mais"/`loadMore`.
 
-## 1. Padrão Técnico
+## 1. Mecanismos existentes no código
 
-### Componentes e Hooks
-- **`usePagedList` / `useTablePagination`**: Hooks principais para gerenciar estado de página, limite e carregamento.
-- **`PagerFor` / `ListPagination`**: Componentes de interface que exibem a faixa de registros (ex: "1–20 de 203") e controles de navegação.
-- **`usePaginationState`**: Utilizado para persistência simples de estado de página.
-- **`fetchAllRows` / `fetchInChunks`**: Helpers para casos onde a carga completa é necessária para processamento local (DREs, exportações específicas).
+| Mecanismo | O que faz | Implementação |
+| :--- | :--- | :--- |
+| **LOCAL sobre fonte completa** | Busca todo o universo de dados (direto ou via `fetchAllRows` em lotes com `.range`) e pagina a exibição em memória com `usePagedList`/`usePaginationState` + `PagerFor`. | `src/hooks/usePagedList.ts` (hook), `src/components/ui/list-pagination.tsx` (`ListPagination`/`PagerFor`), `src/hooks/useTablePagination.ts` e `src/components/ui/table-pagination.tsx` (wrappers de compatibilidade que delegam para os dois primeiros). |
+| **SERVIDOR count+range** | Cada página é buscada do banco com `.select(..., { count: "exact" }).range(from, to)`; o total vem do próprio `count`. | Query direta no componente/hook, sem carregar o universo completo. |
+| **SERVIDOR RPC offset/limit** | RPC recebe `p_offset`/`p_limit` e devolve só a página (geralmente com `total_count` embutido em cada linha). | `supabase.rpc(...)` com esses parâmetros. |
+| **CURSOR / "Carregar mais"** | Botão "Carregar mais" dispara novo `.range(offset, offset+size-1)` no servidor e concatena ao estado já carregado (sem recarregar do zero). | Função local com `offset` controlado em estado/ref. |
+| **"Carregar mais" LOCAL** | Todo o dataset já está em memória (via hook de dados); o botão só aumenta um contador de itens *visíveis* no array já carregado — não faz nova requisição. | `visibleCounts`/contador local. |
 
-### Regras de Ouro
-1.  **Filtros Primeiro**: Qualquer alteração de filtro ou busca reseta a navegação para a Página 1.
-2.  **Ordem Estável**: Toda consulta paginada inclui `id` ou `created_at` na ordenação para evitar registros saltantes.
-3.  **Erro Explícito**: Falhas de rede ou banco durante a troca de página são exibidas ao usuário, não resultando em listas vazias silenciosas.
-4.  **Sem Teto Silencioso**: Removidos limites arbitrários (ex: `.limit(1000)`) que escondiam dados sem avisar o usuário.
+## 2. Inventário por tela (arquivo real → mecanismo)
 
----
+| Componente / arquivo | Lista / aba | Mecanismo | Fonte dos dados | Ordem estável |
+| :--- | :--- | :--- | :--- | :--- |
+| `src/pages/ClientCheckpoints.tsx` | `/clients/checkpoints` | **LOCAL** (`usePagedList(filtered, ...)`, linha 142) | `useCheckpointsPanel`/`useCheckinsReport` (`src/hooks/useClientCheckins.tsx`) via `fetchAllRows` em lotes | Com desempate: `.order("happened_at").order("id")` / `.order("id", { ascending: true })` nos lotes de `fetchAllRows` |
+| `src/pages/ClientOnboardingHub.tsx` | `/operations/onboarding` | **LOCAL** (`usePagedList(clients, ...)`, linha 351) | `useOnboardingHub` (`src/hooks/useOnboardingHub.tsx`) via `fetchAllRows` | Com desempate: `.order("stage_changed_at").order("id")` (linhas 97-98) |
+| `src/pages/events/EventsPlaybooks.tsx` | `/events/playbooks` (catálogo e itens de um playbook) | **LOCAL** (`usePagedList(playbooks, ...)` e `usePagedList(items, ...)`, linhas 82-83) | `fetchAllRows` direto no componente (linha ~88 e ~100), consultando `event_playbooks`/itens | Com desempate: `.order("created_at").order("id")` (playbooks); `.order("days_offset").order("position")` (itens, sem coluna `id` — ver observação) |
+| `src/hooks/useNotificationsHistory.ts` + `src/pages/Notifications.tsx` | `/notifications` | **SERVIDOR count+range** (`useNotificationsHistoryPage`, linha 142: `.select(..., { count: "exact" }).order("created_at", { ascending: false }).range(from, to)`) | Query direta na tabela `notifications` | **Sem desempate por id** — ordena só por `created_at` |
+| `src/hooks/useNotificationsHistory.ts` (`useNotificationTabCounts`) | Badges de contagem por aba em `/notifications` | RPC `get_notification_tab_counts` — **apenas contagem** (`unread_count` por aba), não pagina linhas | RPC | N/A (não retorna linhas) |
+| `src/pages/Tasks.tsx` + `src/lib/tasks/searchTasksRpcParams.ts` | `/tasks` (com termo de busca) | **SERVIDOR RPC offset/limit** — `search_tasks_page` com `p_limit`/`p_offset` e `total_count` por linha (linhas ~354-389 de `Tasks.tsx`) | RPC devolve só IDs da página; linhas completas são hidratadas em lotes de 150 via `.in("id", ...)` | Ordem definida dentro da RPC (não visível no front) |
+| `src/pages/Tasks.tsx` (sem termo de busca) | `/tasks` | **CURSOR / "Carregar mais"** (botão "Carregar mais tarefas", linhas 2399/2483) | Query direta com filtros de setor/usuário, carregada em blocos sob demanda | Depende do `.order` aplicado na query de blocos (não usa RPC) |
+| `src/components/admin/AuditLogViewer.tsx` | `/admin` (aba Auditoria) | **SERVIDOR RPC offset/limit** — `audit_unified_page` com `p_offset`/`p_limit` e `total_count` (linhas 266-280); exibida com `ListPagination` | RPC | Ordem definida dentro da RPC |
+| `src/components/settings/SecurityAuditViewer.tsx` | Configurações → Auditoria de Segurança | **SERVIDOR RPC offset/limit** — `search_security_audit` com `p_offset`/`p_limit` e `total_count` (linhas 63-70) | RPC | Ordem definida dentro da RPC |
+| `src/pages/RoyZappAttendanceMetrics.tsx` | Métricas de atendimento (RoyZapp) | **LOCAL** (`usePagedList(sorted, ...)`, linha 158) | Array já ordenado/calculado em memória a partir de RPCs de métricas | Depende da ordenação local aplicada a `sorted` antes de paginar |
+| `src/pages/Contracts.tsx` | `/contracts` | **LOCAL** via `fetchAllRows` (linhas 596-606) + `ListPagination` (import linha 1, render ~2102) | `fetchAllRows` sobre `contracts` | Com desempate: `.order("created_at").order("id")` |
+| `src/pages/SalesPipeline.tsx` | Lista de negócios (visão em lista, fora do Kanban) | **LOCAL** (`usePagedList(deals, ...)`, linha 3245) | Array de `deals` já carregado no estado do Kanban (não busca página isolada) | Depende da ordenação aplicada a `deals` antes de paginar |
+| `src/pages/BriefingLinkAudit.tsx` | Auditoria de links de briefing | **LOCAL** (`usePagedList`/`PagerFor`) sobre dataset de `fetchAllRows` (linha 89) | `fetchAllRows` | Verificar `.order` da query em `fetchAllRows` (linha ~89) |
+| `src/pages/DoubleChairList.tsx` | Lista de pares (Double Chair) | **LOCAL** (`usePagedList(pairs, ...)`, linha 53) | `fetchAllRows` (linhas 30-45) | Conforme `.order` da query (linha ~45) |
+| `src/pages/ClinicaRyka.tsx` | Clientes/Provisões da Clínica Ryka | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (múltiplas consultas, linhas 81-110+) | Conforme `.order` de cada consulta |
+| `src/pages/MentoriaEC.tsx` | Contratos/itens da Mentoria EC | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (linhas 126, 276) | Conforme `.order` de cada consulta |
+| `src/components/renewals/RenewalLosses.tsx` | Motivos de perda de renovação | **LOCAL** (`usePagedList(sortedItems, ...)`, linha 541) | `fetchAllRows` (linha 245) | Conforme `.order` da query de `outcomes` |
+| `src/pages/Renewals.tsx` | Futuros/expirados/sucessores de renovação | Fonte apenas (**sem `usePagedList`/`PagerFor` nesta página** — dados completos usados em KPIs/listas internas) | `fetchAllRows` (3 consultas, linhas 210-263+) | Conforme `.order` de cada consulta |
+| `src/pages/VipClients.tsx` | Clientes VIP | **LOCAL** (`usePagedList`/`PagerFor`) | `fetchAllRows` (linhas 107-118+) | Conforme `.order` de cada consulta |
+| `src/pages/GestaoTech.tsx` | Projetos de tecnologia | **LOCAL** (`usePagedList(filteredProjects, ...)`, linha 140) | `fetchAllRows` (linha 121) | Conforme `.order` da query |
+| `src/components/client/ClientFormResponses.tsx` | Respostas de formulário (ficha do cliente) | **LOCAL** (`usePagedList(formResponses, ...)`, linha 91) | `fetchAllRows` (linha 136) | Conforme `.order` da query |
+| `src/components/client/ClientFollowup.tsx` | Comentários/follow-ups (ficha do cliente) | **CURSOR / "Carregar mais"** (`fetchFollowups(loadMore)`, `loadMoreFollowups`, linhas 188-362) | `.select(..., { count: "exact" }).order("created_at", ...).range(offset, offset+PAGE_SIZE-1)` direto na tabela `client_followups` (linha ~208) | **Sem desempate por id** — ordena só por `created_at` |
+| `src/pages/ClientDetail.tsx` (Timeline) | Timeline do cliente | **CURSOR / "Carregar mais"** (`loadMoreTimeline`, linhas 1214-1260) | 6 fontes paginadas independentemente (`message_events`, `client_life_events`, `form_responses`, `attendance`, `client_subscriptions`, `client_checkins`), cada uma com `.range(from, to)` e `offset` próprio em `timelinePageRef` | Com desempate: todas as 6 consultas usam `.order(<coluna de data>, ...).order("id", ...)` |
+| `src/pages/financial/FinancialDunningKanbanPage.tsx` | Kanban de cobrança (Dunning) | **"Carregar mais" LOCAL** (`visibleCounts`/`loadMore`, linhas 356-363) — não refaz query, só revela mais itens do array `cases` já carregado | Query de `cases` fora deste trecho (dataset completo por coluna do Kanban) | Depende do `.order` da query de `cases` |
+| `src/components/marketing/agencies/MaterialRequestsList.tsx` | Solicitações de material por agência | **"Carregar mais" LOCAL** (`visibleCounts`, linha ~30, botão linha 114) — fatia em memória o array já retornado por `useMaterialRequests` | `useMaterialRequests` (react-query, sem paginação de servidor) | Depende do `.order` do hook `useMaterialRequests` |
 
-## 2. Inventário por Setor
+> Observação sobre `EventsPlaybooks` (itens do playbook): a ordenação usada é `.order("days_offset").order("position")`, sem coluna `id` como critério final — se `days_offset`+`position` empatarem, a ordem entre essas linhas não é garantida. Marcar como **sem desempate id**.
 
-| Setor | Rota / Aba | Componente | Mecanismo |
-| :--- | :--- | :--- | :--- |
-| **Clientes** | `/clients/checkpoints` | `CheckpointsTable` | Servidor (count + range) |
-| **Clientes** | `/operations/onboarding` | `OnboardingTable` | Servidor (count + range) |
-| **Tarefas** | `/tasks` | `TasksTable` | Servidor (RPC `search_tasks_page`) |
-| **Segurança** | `/admin` (Auditoria) | `AuditLogViewer` | Servidor (RPC `audit_unified_page`) |
-| **Segurança** | Configurações | `SecurityAuditViewer` | Servidor (RPC `search_security_audit`) |
-| **Notificações** | `/notifications` | `NotificationsHistory` | Servidor (RPC `get_notification_tab_counts`) |
-| **Zapp** | Métricas | `RoyZappAttendanceMetrics` | Servidor (RPCs `zapp_attendance_metrics/daily`) |
-| **Contratos** | `/contracts` | `ContractsTable` | Servidor (count + range) |
-| **Eventos** | `/events/playbooks` | `EventsPlaybooks` | Servidor (count + range) |
-| **CRM** | Pipeline / Kanban | `SalesPipeline` | Cursor / "Carregar mais" |
-| **PDA** | Timeline / Feed | `PdaTimeline` | Cursor / Infinite Scroll |
-| **RoyZapp** | Conversas | `ZappChat` | Cursor (Lazy loading histórico) |
-| **Financeiro** | Cobrança (Dunning) | `FinancialCollections` | Cursor / Infinite Scroll |
+## 3. Não aplicáveis (com motivo concreto verificado no código)
 
-### Não Aplicável (Motivo Técnico)
-- **Gráficos e Dashboards**: Agregação total via banco (ex: RHDashboard).
-- **DRE / Fluxo de Caixa**: Estrutura hierárquica que exige carga completa para cálculos de saldo.
-- **Formulários**: Dados de referência para preenchimento.
-- **Calendários**: Visualização por período (mês/semana) substitui a paginação linear.
-- **Organograma / Árvore**: Navegação por profundidade, não por lista.
-- **EverIA**: Interface de chat/agente via stream.
+- **Formulários** (`src/pages/Forms.tsx` e afins): tela de construção/edição de formulário, não lista registros paginável — opera sobre um documento (schema de campos).
+- **Gráficos e dashboards** (ex.: `RHDashboard`, cards de `MarketResearchTab`, `ThreeCPlusMetrics` agregados): exibem agregações já calculadas no banco ou em memória; não há lista de linhas a paginar.
+- **Kanbans com drag-and-drop** (`SalesPipeline` — quadro Kanban, `FinancialDunningKanbanPage` — quadro de colunas): a ordenação visual é definida pelo usuário via arraste; paginar romperia a view de colunas. Onde excede uma contagem fixa por coluna, usam "Carregar mais" LOCAL (ver tabela acima), não paginação de servidor.
+- **Calendário** (telas de agenda/calendário de eventos): navegação por período (dia/semana/mês) substitui paginação linear por página numerada.
 
----
+## 4. Limitações conhecidas (verificadas, não presumidas)
 
-## 3. Exceções Justificadas
-
-Permanecem com limites técnicos específicos por design de performance ou UX:
-- **Seletores de Busca**: Filtros RoyZapp limitados a 500 registros para evitar travamento do browser em multi-selects gigantes.
-- **Links de Call**: Amostra recente de links em `CallLinks`.
-- **Insights**: Valores sugeridos em filtros limitados a 1000 entradas mais frequentes.
-- **Amostra de Setores**: Zapp utiliza amostra para visualização rápida.
-- **Resumos "Últimos N"**:
-    - `content_platform_posts`: Últimos 100 posts (feed social).
-    - Dashboard: Próximos 10 eventos.
-    - Timeline PDA: 50 eventos mais recentes por carga.
-- **Exportação TeamOpenItems**: Gera `p-N.csv` baseado na página atual da visualização por design do solicitante.
-- **Gerador de Script**: Amostra proposital de variáveis para template.
-
----
-
-## 4. Verificação Final
-
-### Qualidade de Código
-- **Build**: Vite build OK.
-- **Tipagem**: `tsgo -p tsconfig.app.json` retornando 0 erros.
-- **Lint**: `eslint rules-of-hooks` 0 violações nos arquivos alterados desde f96af873.
-- **Testes**: Vitest `src` 224/225 passados (1 falha única `src/test/rls/briefingRls.test.ts` depende de usuário SDR não-admin inexistente no banco).
-
-### Visual e Mobile
-Navegador 393/320/1440 sem corte:
-- **`/clients/checkpoints`**: "1–20 de 203" (antes 609px de largura, corrigido).
-- **`/operations/onboarding`**: "1–20 de 31".
-- **`/tasks`**: "1–20 de 682".
-- **`/notifications`**: Paginado no servidor.
-- **`/contracts`**: "1–6 de 6" (rodapé antigo substituído pelo padrão; mostra só a faixa quando cabe numa página).
-- **`/events/playbooks`**: com 0 playbooks no banco (estado vazio; rodapé com faixa aparece quando há registros).
-
-## Complemento final (revisão estática 1f6f)
-| Área | Fonte / mecanismo | Verificação |
-|---|---|---|
-| Tarefas (busca) | RPC `search_tasks_page` com p_limit/p_offset e total_count — sem carregar lotes de 200k | teste: página 61 → offset 1200 |
-| Negócios excluídos | busca por título, responsável e quem excluiu; mesmo `.or` em linhas e count (`deletedDealsFilter.ts`) | teste unitário |
-| Pluggy status | invalida chaves reais; soma 24h via `fetchAllRows`; "Ver histórico" por conta com count+range | tipos |
-| Consumidores `fetchAllRows` | erro propagado antes de publicar totais/exports (AttendanceReport, EventRoiTab, MarketingLinksUtm, ClientDetail, Clients e outros); desempate `.order('id')` | teste helper: 2500, erro lote 2, 51000 sem teto |
-| Fontes completas | ClientFormResponses, Renewals (pendentes, expirados, sucessores em chunks), RenewalLosses, ClinicaRyka, DoubleChairList, MentoriaEC, useClientCheckins | tipos; contrato do helper coberto pelos testes |
-| Páginas visuais | AdminPermissionsTab, ações LeaderMeetings, participantes Reminders, artigos por categoria no FAQ, modo lista MarketingTasks (Kanban intacto), itens por categoria no EventChecklist | lint hooks 0 |
+- **Teste `briefingRls`**: `src/test/rls/briefingRls.test.ts` depende de um usuário com papel **SDR não-admin**, que não existe no ambiente de teste atual (o arquivo cobre Vendas/SDR/Operações e o caso de controle negativo "sem nenhum desses papéis"; o cenário específico de SDR não-admin não tem fixture correspondente no ambiente).
+- **Playbooks — catálogo vazio**: verificado na UI em 393px, o catálogo de `/events/playbooks` mostra o estado vazio "Nenhum playbook" **sem rodapé de paginação**. Isso é esperado: `PagerFor` (via `ListPagination`) só renderiza o rodapé quando `totalItems > 0`/há registros — com `playbooks.length === 0` o componente não aparece, não é uma falha de paginação.
