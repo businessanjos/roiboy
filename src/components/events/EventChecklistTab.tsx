@@ -30,6 +30,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Plus, Pencil, Trash2, CheckSquare, Clock, AlertCircle } from "lucide-react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 type ChecklistStatus = "pending" | "in_progress" | "done" | "cancelled";
 
@@ -282,57 +284,15 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
         ) : (
           <div className="space-y-6">
             {categories.map((category) => (
-              <div key={category} className="space-y-2">
-                <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
-                  {category}
-                </h4>
-                <div className="space-y-2">
-                  {items
-                    .filter(i => (i.category || "Sem categoria") === category)
-                    .map((item) => (
-                      <div
-                        key={item.id}
-                        className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
-                          item.status === "done" ? "bg-muted/50" : "hover:bg-muted/30"
-                        }`}
-                      >
-                        <Checkbox
-                          checked={item.status === "done"}
-                          onCheckedChange={() => toggleStatus(item)}
-                          className="mt-1"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className={`font-medium ${item.status === "done" ? "line-through text-muted-foreground" : ""}`}>
-                              {item.title}
-                            </span>
-                            {getPriorityBadge(item.priority)}
-                          </div>
-                          {item.description && (
-                            <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
-                          )}
-                          {item.due_date && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-                              <Clock className="h-3 w-3" />
-                              {format(new Date(item.due_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                              {new Date(item.due_date) < new Date() && item.status !== "done" && (
-                                <AlertCircle className="h-3 w-3 text-destructive ml-1" />
-                              )}
-                            </div>
-                          )}
-                        </div>
-                        <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => openEditDialog(item)}>
-                            <Pencil className="h-3 w-3" />
-                          </Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleDelete(item.id)}>
-                            <Trash2 className="h-3 w-3 text-destructive" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </div>
+              <ChecklistCategoryGroup
+                key={category}
+                category={category}
+                items={items.filter((i) => (i.category || "Sem categoria") === category)}
+                onToggleStatus={toggleStatus}
+                onEdit={openEditDialog}
+                onDelete={handleDelete}
+                getPriorityBadge={getPriorityBadge}
+              />
             ))}
           </div>
         )}
@@ -414,5 +374,77 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
         </DialogContent>
       </Dialog>
     </Card>
+  );
+}
+
+/** Grupo de itens de uma categoria do checklist, paginado para listas longas. */
+function ChecklistCategoryGroup({
+  category,
+  items,
+  onToggleStatus,
+  onEdit,
+  onDelete,
+  getPriorityBadge,
+}: {
+  category: string;
+  items: ChecklistItem[];
+  onToggleStatus: (item: ChecklistItem) => void;
+  onEdit: (item: ChecklistItem) => void;
+  onDelete: (id: string) => void;
+  getPriorityBadge: (priority: string | null) => JSX.Element;
+}) {
+  const pg = usePagedList(items, { resetKey: category });
+
+  return (
+    <div className="space-y-2">
+      <h4 className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+        {category}
+      </h4>
+      <div className="space-y-2">
+        {pg.items.map((item) => (
+          <div
+            key={item.id}
+            className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
+              item.status === "done" ? "bg-muted/50" : "hover:bg-muted/30"
+            }`}
+          >
+            <Checkbox
+              checked={item.status === "done"}
+              onCheckedChange={() => onToggleStatus(item)}
+              className="mt-1"
+            />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className={`font-medium ${item.status === "done" ? "line-through text-muted-foreground" : ""}`}>
+                  {item.title}
+                </span>
+                {getPriorityBadge(item.priority)}
+              </div>
+              {item.description && (
+                <p className="text-sm text-muted-foreground mt-1">{item.description}</p>
+              )}
+              {item.due_date && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
+                  <Clock className="h-3 w-3" />
+                  {format(new Date(item.due_date), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                  {new Date(item.due_date) < new Date() && item.status !== "done" && (
+                    <AlertCircle className="h-3 w-3 text-destructive ml-1" />
+                  )}
+                </div>
+              )}
+            </div>
+            <div className="flex gap-1">
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onEdit(item)}>
+                <Pencil className="h-3 w-3" />
+              </Button>
+              <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => onDelete(item.id)}>
+                <Trash2 className="h-3 w-3 text-destructive" />
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
+      <PagerFor state={pg} itemLabel="itens" />
+    </div>
   );
 }
