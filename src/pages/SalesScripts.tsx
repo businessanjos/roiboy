@@ -845,7 +845,7 @@ export default function SalesScripts() {
 
                     <Collapsible>
                       <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-8 -mx-1">
+                        <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-11 md:h-8 -mx-1">
                           <span className="text-muted-foreground">Detalhes adicionais (deal, cliente, observações)</span>
                           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
                         </Button>
