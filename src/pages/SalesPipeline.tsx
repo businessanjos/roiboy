@@ -2538,8 +2538,8 @@ export default function SalesPipeline() {
           className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col")}
         >
 
-          <div className="flex items-center justify-between gap-2">
-            <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
+          <div className="flex items-center justify-end sm:justify-between gap-2">
+            <TabsList className="hidden sm:flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
 
 
               <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
@@ -2652,8 +2652,8 @@ export default function SalesPipeline() {
 
               {/* Pipeline selector row + unified filters */}
               <div className="flex flex-col gap-2">
-                <div className={cn("flex flex-col gap-2", (isMobile || filtersCollapsed) && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
-                  <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", (isMobile || filtersCollapsed) && "flex-1 min-w-0 flex-nowrap sm:flex-wrap")}>
+                <div className={cn("flex flex-col gap-2", !isMobile && filtersCollapsed && "flex-row flex-wrap items-center sm:flex-col sm:items-stretch")}>
+                  <div className={cn("flex flex-wrap items-center gap-2 sm:gap-3", (isMobile || filtersCollapsed) && "min-w-0 flex-nowrap sm:flex-wrap", !isMobile && filtersCollapsed && "flex-1")}>
                     <div className="flex items-center gap-2 min-w-0 flex-1">
                       <PipelineSelector
                         pipelines={pipelines}
@@ -2665,10 +2665,10 @@ export default function SalesPipeline() {
                       />
                     </div>
                     <Button
-                      variant="ghost"
+                      variant={isMobile ? "outline" : "ghost"}
                       size="sm"
                       aria-label="Filtros"
-                      className="h-11 min-w-11 sm:h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
+                      className="h-11 w-11 sm:w-auto min-w-11 sm:h-8 shrink-0 gap-1.5 px-2 text-[11px] sm:text-xs font-semibold uppercase tracking-wider text-muted-foreground hover:text-foreground"
                       onClick={() => (isMobile ? setMobileFiltersOpen(true) : setFiltersCollapsed(!filtersCollapsed))}
                       aria-expanded={isMobile ? mobileFiltersOpen : !filtersCollapsed}
                     >
@@ -2681,11 +2681,11 @@ export default function SalesPipeline() {
                   {activeTab === 'open' && (
                     <div className={cn(
                       "flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 px-3 py-1.5 text-xs sm:text-sm sm:justify-start sm:gap-5 sm:border-0 sm:bg-transparent sm:px-0 sm:py-0",
-                      (isMobile || filtersCollapsed) && "w-auto shrink-0 gap-2 px-2 py-1 text-[11px] sm:w-auto sm:px-0 sm:py-0"
+                      !isMobile && filtersCollapsed && "w-auto shrink-0 gap-2 px-2 py-1 text-[11px] sm:w-auto sm:px-0 sm:py-0"
                     )}>
                       <div className="flex items-center gap-1.5 min-w-0">
                         <div className="h-2 w-2 rounded-full bg-primary shrink-0" />
-                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length}<span className={cn((isMobile || filtersCollapsed) && "hidden sm:inline")}> negócios</span></span>
+                        <span className="text-muted-foreground truncate">{filteredOpenDeals.length}<span className={cn(!isMobile && filtersCollapsed && "hidden sm:inline")}> negócios</span></span>
                       </div>
 
                       <div className="flex items-center gap-1.5 min-w-0">
@@ -2955,7 +2955,20 @@ export default function SalesPipeline() {
               className={cn(isPipelineFullscreen && "flex-1 min-h-0 flex flex-col gap-2")}
             >
 
-              <TabsList className="w-full sm:w-auto grid grid-cols-3 sm:flex h-12 sm:h-9 rounded-xl sm:rounded-md">
+              <div className="sm:hidden">
+                <label htmlFor="pipeline-status-mobile" className="sr-only">Situação dos negócios</label>
+                <Select value={activeTab} onValueChange={setActiveTab}>
+                  <SelectTrigger id="pipeline-status-mobile" className="h-11 rounded-xl text-[15px] font-medium">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="open" className="min-h-11">Em aberto · {filteredOpenDeals.length}</SelectItem>
+                    <SelectItem value="won" className="min-h-11">Ganhas · {filteredWonDeals.length}</SelectItem>
+                    <SelectItem value="lost" className="min-h-11">Perdidas · {filteredLostDealsByMonth.length}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <TabsList className="hidden sm:flex w-full sm:w-auto h-12 sm:h-9 rounded-xl sm:rounded-md">
                 <TabsTrigger value="open" className="gap-1 text-xs sm:text-sm sm:gap-1.5 h-10 sm:h-7 rounded-lg sm:rounded-sm">
                   <TrendingUp className="h-3.5 w-3.5" />
                   Em Aberto
