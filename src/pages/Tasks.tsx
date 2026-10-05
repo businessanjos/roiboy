@@ -339,6 +339,10 @@ export default function Tasks() {
   const { statuses: customStatuses, isLoading: statusesLoading } = useTaskStatuses();
   const statusesKey = customStatuses.map((s: any) => `${s.id}:${s.is_default ? 1 : 0}${s.is_completed_status ? 1 : 0}`).join(",");
 
+  // RPC ligada ao cliente: passar `supabase.rpc` solto perde o `this` e a
+  // chamada falha antes de sair para a rede (busca virava lista vazia).
+  const tasksRpc = (fn: string, params: Record<string, unknown>) => (supabase.rpc as any)(fn, params);
+
   // Filtros da tela mapeados para o predicado do servidor (busca ativa).
   const buildFilterInput = (sectorActivityTypeIds: string[] | null, search: string): TaskFilterInput => ({
     accountId: currentUser?.account_id ?? "",
@@ -376,7 +380,7 @@ export default function Tasks() {
   // No need to set default tab - "all" is the default
 
   // Fetch tasks with React Query
-  const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks } = useQuery({
+  const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks, error: tasksError, refetch: refetchTasks } = useQuery({
     queryKey: [
       "internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch,
       serverSearch ? currentPage : loadedChunks, serverSearch ? pageSize : null,
@@ -428,8 +432,8 @@ export default function Tasks() {
         // Kanban: páginas reais com offset até o limite revelado (o teto de
         // linhas do servidor nunca corta nem repete as mesmas 1000).
         const { ids: pageIds, total } = isKanban
-          ? await fetchSearchTasksUpTo(supabase.rpc as any, rpcParams, kanbanSearchLimit)
-          : await fetchSearchTasksPage(supabase.rpc as any, rpcParams);
+          ? await fetchSearchTasksUpTo(tasksRpc, rpcParams, kanbanSearchLimit)
+          : await fetchSearchTasksPage(tasksRpc, rpcParams);
 
         const orderedRows = await hydrateTasks(pageIds);
         return { rows: orderedRows, hasMore: false, totalFromSearch: total };
@@ -529,13 +533,13 @@ export default function Tasks() {
 
   // Contagens por aba e indicadores com busca: mesmo predicado no servidor,
   // sobre todas as correspondências (não só a página carregada).
-  const { data: searchCounts } = useQuery({
+  const { data: searchCounts, error: searchCountsError, refetch: refetchSearchCounts } = useQuery({
     queryKey: ["internal-tasks-search-counts", currentUser?.account_id, currentSector?.id, serverSearch, filterUser,
       filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, statusesKey],
     enabled: !!serverSearch && !!currentUser?.account_id && !statusesLoading,
     queryFn: async () => {
       const ids = await loadSectorActivityTypeIds();
-      return fetchSearchTasksCounts(supabase.rpc as any, buildSearchTasksCountsParams(buildFilterInput(ids, serverSearch)));
+      return fetchSearchTasksCounts(tasksRpc, buildSearchTasksCountsParams(buildFilterInput(ids, serverSearch)));
     },
     staleTime: 30000,
   });
@@ -1134,7 +1138,7 @@ export default function Tasks() {
       try {
         const ids = await exportTaskIds(
           canExportTasks,
-          supabase.rpc as any,
+          tasksRpc,
           buildSearchTasksRpcParams({
             ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch || ""),
             // Mesmo recorte da tela: no Kanban não há aba (todas as colunas).
@@ -2512,6 +2516,14 @@ export default function Tasks() {
           )}
         </>
       ) : (
+        {serverSearch && (tasksError || searchCountsError) && (
+          <div role="alert" className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-destructive/40 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+            <span>Não foi possível carregar a busca. Os números e a lista abaixo podem não refletir este termo.</span>
+            <Button variant="outline" size="sm" className="min-h-11" onClick={() => { refetchTasks(); refetchSearchCounts(); }}>
+              Tentar de novo
+            </Button>
+          </div>
+        )}
         <Tabs value={activeTab || "all"} onValueChange={(v) => setActiveTab(v === "all" ? null : v)} className="space-y-3 lg:space-y-4">
           <TabsList className="hidden lg:flex bg-muted/50 p-1 flex-wrap h-auto gap-1">
             <TabsTrigger 
@@ -2591,7 +2603,7 @@ export default function Tasks() {
           )}
           {serverSearch && (
             <div className="py-2 text-center text-xs text-muted-foreground">
-              Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).
+              {tasksError ? "Busca com erro — resultado não carregado." : <>Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).</>}
             </div>
           )}
 
