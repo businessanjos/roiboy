@@ -910,7 +910,9 @@ export default function Tasks() {
 
 
   // Base filtered tasks - applies all filters EXCEPT tab (for dynamic stats cards)
-  const baseFilteredTasks = useMemo(() => tasks.filter((task) => {
+  // Com busca, `tasks` já chega filtrado, ordenado e paginado pelo servidor
+  // (search_tasks_page2): nenhum filtro local é reaplicado depois da página.
+  const baseFilteredTasks = useMemo(() => serverSearch ? tasks : tasks.filter((task) => {
     // Search filter
     const matchesSearch = matchesTaskSearch(task);
     
@@ -974,7 +976,7 @@ export default function Tasks() {
     const matchesLead = filterLead === "all" || negotiationKey(task) === filterLead;
 
     return matchesSearch && matchesUser && matchesActivityType && matchesSector && matchesDateRange && matchesStage && matchesLead;
-  }), [tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
+  }), [serverSearch, tasks, searchTerm, matchesTaskSearch, filterUser, filterActivityType, currentUser?.id, currentSector?.id, filterDateStart, filterDateEnd, filterStage, filterLead, isHistoricalUserFilter]);
 
   // Same filters as baseFilteredTasks but WITHOUT the due_date range filter.
   // Used for the "Concluídas" stat card which filters by completed_at instead.
@@ -1025,7 +1027,7 @@ export default function Tasks() {
   const selectedLeadOption = leadOptions.find((o) => o.key === filterLead) || null;
 
   // Final filtered tasks - applies tab filter on top of base filters
-  const filteredTasks = useMemo(() => baseFilteredTasks.filter((task) => {
+  const filteredTasks = useMemo(() => serverSearch ? baseFilteredTasks : baseFilteredTasks.filter((task) => {
     const defaultStatus = customStatuses.find(s => s.is_default);
     const targetStatus = activeTab ? customStatuses.find(s => s.id === activeTab) : null;
 
@@ -1050,10 +1052,11 @@ export default function Tasks() {
     if (!task.custom_status_id && task.completed_at && targetStatus?.is_completed_status) return true;
 
     return false;
-  }), [baseFilteredTasks, activeTab, customStatuses]);
+  }), [serverSearch, baseFilteredTasks, activeTab, customStatuses]);
 
   // Sort tasks
   const sortedTasks = useMemo(() => {
+    if (serverSearch) return filteredTasks; // ordem global já aplicada no servidor
     const sorted = [...filteredTasks].sort((a, b) => {
       let comparison = 0;
       
@@ -1091,7 +1094,7 @@ export default function Tasks() {
     });
     
     return sorted;
-  }, [filteredTasks, sortBy, sortDirection]);
+  }, [serverSearch, filteredTasks, sortBy, sortDirection]);
 
   // Pagination
   // Com busca ativa (serverSearch), `tasks` já chega paginado pelo servidor
@@ -1117,7 +1120,26 @@ export default function Tasks() {
 
   const handleExportTasks = useCallback(async () => {
     if (!canExportTasks) return;
-    if (sortedTasks.length === 0) {
+    let source: Task[] = sortedTasks;
+    if (serverSearch) {
+      // Com busca, a lista local é só a página: exporta TODAS as correspondências
+      // em lotes com o mesmo predicado/aba/ordem; qualquer lote com erro aborta.
+      try {
+        const ids = await fetchAllSearchTaskIds(
+          supabase.rpc as any,
+          buildSearchTasksRpcParams({
+            ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch),
+            tab: activeTab, sortBy, sortDirection, limit: 500, offset: 0,
+          })
+        );
+        source = await hydrateTasks(ids);
+      } catch (error) {
+        console.error("Erro ao exportar tarefas:", error);
+        toast.error("Erro ao carregar todas as tarefas para exportar. Nada foi exportado.");
+        return;
+      }
+    }
+    if (source.length === 0) {
       toast.error("Nenhuma tarefa para exportar com os filtros atuais");
       return;
     }
@@ -1129,7 +1151,7 @@ export default function Tasks() {
         if (task.completed_at) return "Concluído";
         return STATUS_CONFIG[task.status]?.label || task.status;
       };
-      const rows = sortedTasks.map((task) => ({
+      const rows = source.map((task) => ({
         "Título": task.title,
         "Descrição": task.description || "",
         "Status": statusName(task),
@@ -1156,17 +1178,24 @@ export default function Tasks() {
       console.error("Erro ao exportar tarefas:", error);
       toast.error("Erro ao gerar a planilha");
     }
-  }, [canExportTasks, sortedTasks, customStatuses]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [canExportTasks, sortedTasks, customStatuses, serverSearch, activeTab, sortBy, sortDirection, filterUser, filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, currentSector?.id, currentUser?.account_id]);
 
 
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection]);
+    setKanbanSearchLimit(200);
+  }, [searchTerm, filterUser, filterActivityType, activeTab, filterDateStart, filterDateEnd, filterStage, filterLead, sortBy, sortDirection, viewMode]);
 
   // Count tasks per status - uses baseFilteredTasks for dynamic filtering
   const statusCounts = useMemo(() => {
+    if (serverSearch) {
+      const counts: Record<string, number> = {};
+      customStatuses.forEach((st) => { counts[st.id] = searchCounts?.[st.id] ?? 0; });
+      return counts;
+    }
     const counts: Record<string, number> = {};
     const defaultStatus = customStatuses.find(s => s.is_default);
     customStatuses.forEach(status => {
@@ -1180,7 +1209,7 @@ export default function Tasks() {
       }).length;
     });
     return counts;
-  }, [baseFilteredTasks, customStatuses]);
+  }, [serverSearch, searchCounts, baseFilteredTasks, customStatuses]);
 
   // For stats cards - uses baseFilteredTasks for dynamic filtering with applied filters
   const { pendingCount, overdueCount, inProgressCount, doneCount } = useMemo(() => {
@@ -1235,6 +1264,15 @@ export default function Tasks() {
       filterLead !== "all" ||
       searchTerm.trim() !== "";
 
+    if (serverSearch) {
+      return {
+        pendingCount: searchCounts?.pending ?? 0,
+        overdueCount: searchCounts?.overdue ?? 0,
+        inProgressCount: searchCounts?.in_progress ?? 0,
+        doneCount: searchCounts?.done ?? 0,
+      };
+    }
+
     if (!hasAnyFilter && accountTaskTotals) {
       return {
         pendingCount: accountTaskTotals.pending,
@@ -1257,6 +1295,8 @@ export default function Tasks() {
     filterLead,
     searchTerm,
     accountTaskTotals,
+    serverSearch,
+    searchCounts,
   ]);
 
 
@@ -2408,7 +2448,7 @@ export default function Tasks() {
       {viewMode === "kanban" ? (
         <>
           <TaskKanban
-            tasks={tasks.filter((task) => {
+            tasks={serverSearch ? tasks : tasks.filter((task) => {
               const matchesSearch = matchesTaskSearch(task);
               
               const matchesUser = filterUser === "all" || 
@@ -2444,8 +2484,20 @@ export default function Tasks() {
             </div>
           )}
           {serverSearch && (
-            <div className="py-2 text-center text-xs text-muted-foreground">
-              Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).
+            <div className="flex flex-col items-center gap-1 py-3">
+              {(totalHistoryCount ?? 0) > tasks.length && (
+                <Button
+                  variant="outline"
+                  className="min-h-11"
+                  disabled={fetchingTasks}
+                  onClick={() => setKanbanSearchLimit((n) => n + 200)}
+                >
+                  {fetchingTasks ? "Carregando..." : "Carregar mais tarefas"}
+                </Button>
+              )}
+              <span className="text-xs text-muted-foreground" aria-live="polite">
+                Exibindo {tasks.length} de {totalHistoryCount ?? tasks.length} tarefa(s) encontrada(s) na busca.
+              </span>
             </div>
           )}
         </>
