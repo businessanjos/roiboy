@@ -113,6 +113,34 @@ export async function fetchSearchTasksPage(rpc: RpcFn, params: SearchTasksRpcPar
 }
 
 /**
+ * Até `maxRows` correspondências (Kanban "Carregar mais"), em páginas reais
+ * com offset — nunca um único p_limit grande, que o teto do servidor (ex.:
+ * 1000 linhas) cortaria. Avança pelo número de linhas recebidas, deduplica e
+ * para ao atingir o total do mesmo predicado ou uma página vazia.
+ */
+export async function fetchSearchTasksUpTo(
+  rpc: RpcFn,
+  params: SearchTasksRpcParams,
+  maxRows: number,
+  batchSize = 500
+): Promise<{ ids: string[]; total: number }> {
+  const ids: string[] = [];
+  const seen = new Set<string>();
+  let total = 0;
+  let offset = 0;
+  while (ids.length < maxRows) {
+    const want = Math.min(batchSize, maxRows - ids.length);
+    const page = await fetchSearchTasksPage(rpc, { ...params, p_limit: want, p_offset: offset });
+    total = page.total;
+    if (page.ids.length === 0) break;
+    offset += page.ids.length;
+    for (const id of page.ids) if (!seen.has(id)) { seen.add(id); ids.push(id); }
+    if (offset >= page.total) break;
+  }
+  return { ids, total };
+}
+
+/**
  * Todas as correspondências (exportação), em lotes com o MESMO predicado e
  * ordem, até esgotar — sem teto. Qualquer erro aborta tudo.
  */
@@ -121,13 +149,7 @@ export async function fetchAllSearchTaskIds(
   params: SearchTasksRpcParams,
   batchSize = 500
 ): Promise<string[]> {
-  const ids: string[] = [];
-  for (let offset = 0; ; offset += batchSize) {
-    const page = await fetchSearchTasksPage(rpc, { ...params, p_limit: batchSize, p_offset: offset });
-    ids.push(...page.ids);
-    if (page.ids.length < batchSize || ids.length >= page.total) break;
-  }
-  return ids;
+  return (await fetchSearchTasksUpTo(rpc, params, Number.POSITIVE_INFINITY, batchSize)).ids;
 }
 
 export async function fetchSearchTasksCounts(rpc: RpcFn, params: ReturnType<typeof buildSearchTasksCountsParams>) {

@@ -108,6 +108,7 @@ import {
   buildSearchTasksCountsParams,
   fetchSearchTasksPage,
   fetchAllSearchTaskIds,
+  fetchSearchTasksUpTo,
   fetchSearchTasksCounts,
   type TaskFilterInput,
 } from "@/lib/tasks/searchTasksRpcParams";
@@ -420,10 +421,14 @@ export default function Tasks() {
           tab: isKanban ? null : activeTab,
           sortBy,
           sortDirection,
-          limit: isKanban ? kanbanSearchLimit : pageSize,
+          limit: pageSize,
           offset: isKanban ? 0 : (currentPage - 1) * pageSize,
         });
-        const { ids: pageIds, total } = await fetchSearchTasksPage(supabase.rpc as any, rpcParams);
+        // Kanban: páginas reais com offset até o limite revelado (o teto de
+        // linhas do servidor nunca corta nem repete as mesmas 1000).
+        const { ids: pageIds, total } = isKanban
+          ? await fetchSearchTasksUpTo(supabase.rpc as any, rpcParams, kanbanSearchLimit)
+          : await fetchSearchTasksPage(supabase.rpc as any, rpcParams);
 
         const orderedRows = await hydrateTasks(pageIds);
         return { rows: orderedRows, hasMore: false, totalFromSearch: total };
@@ -1121,15 +1126,16 @@ export default function Tasks() {
   const handleExportTasks = useCallback(async () => {
     if (!canExportTasks) return;
     let source: Task[] = sortedTasks;
-    if (serverSearch) {
+    {
       // Com busca, a lista local é só a página: exporta TODAS as correspondências
       // em lotes com o mesmo predicado/aba/ordem; qualquer lote com erro aborta.
       try {
         const ids = await fetchAllSearchTaskIds(
           supabase.rpc as any,
           buildSearchTasksRpcParams({
-            ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch),
-            tab: activeTab, sortBy, sortDirection, limit: 500, offset: 0,
+            ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch || ""),
+            // Mesmo recorte da tela: no Kanban não há aba (todas as colunas).
+            tab: viewMode === "kanban" ? null : activeTab, sortBy, sortDirection, limit: 500, offset: 0,
           })
         );
         source = await hydrateTasks(ids);
@@ -1179,7 +1185,7 @@ export default function Tasks() {
       toast.error("Erro ao gerar a planilha");
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [canExportTasks, sortedTasks, customStatuses, serverSearch, activeTab, sortBy, sortDirection, filterUser, filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, currentSector?.id, currentUser?.account_id]);
+  }, [canExportTasks, sortedTasks, customStatuses, serverSearch, activeTab, viewMode, sortBy, sortDirection, filterUser, filterActivityType, filterStage, filterLead, filterDateStart, filterDateEnd, currentSector?.id, currentUser?.account_id]);
 
 
 
