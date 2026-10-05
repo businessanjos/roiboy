@@ -107,7 +107,8 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
         description: "Não foi possível carregar todos os itens. Tente novamente.",
         variant: "destructive",
       });
-      setItems([]);
+      // Mantém os itens anteriores em erro de refetch (sem esvaziar a tela).
+      if (!loadedOnceRef.current) setItems([]);
     } else {
       setItems(data);
     }
