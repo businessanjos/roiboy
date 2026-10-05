@@ -550,6 +550,13 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
   const exportCsv = () => {
     const rows = filteredLogs ?? [];
     if (rows.length === 0) return;
+    if (
+      !window.confirm(
+        `Exportar ${rows.length} registro(s) do conjunto filtrado (período, ações e pessoa selecionados)? O arquivo CSV será baixado agora.`,
+      )
+    ) {
+      return;
+    }
     const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Vinculado a", "Descrição"];
     const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
     const body = rows.map((log) => {
