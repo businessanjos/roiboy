@@ -16,7 +16,7 @@ describe("buildDeletedDealsOrFilter", () => {
     });
     expect(filter).toContain("responsible_user_id.in.(user-1,user-2)");
     // continua incluindo os campos textuais padrão
-    expect(filter).toContain("title.ilike."%maria%"");
+    expect(filter).toContain('title.ilike."%maria%"');
   });
 
   it("busca por nome de quem excluiu gera deleted_by.in(...)", () => {
