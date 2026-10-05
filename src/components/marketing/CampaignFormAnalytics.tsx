@@ -62,25 +62,28 @@ export function CampaignFormAnalytics({ form, onBack }: Props) {
 
       // Sessions
       // Métricas agregadas da campanha: sem .limit() silencioso, carrega tudo em lotes.
-      const { data: sess } = await fetchAllRows<any>((from, to) => {
+      const { data: sess, error: sessError } = await fetchAllRows<any>((from, to) => {
         let q = supabase.from("form_sessions").select("id, landed_at, started_at, completed_at, total_seconds, utm_source, utm_medium, utm_campaign, utm_content, response_id").eq("form_id", form.id);
         if (sinceIso) q = q.gte("landed_at", sinceIso);
         return q.order("landed_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
       });
+      if (sessError) throw sessError;
 
       // Events
-      const { data: ev } = await fetchAllRows<any>((from, to) => {
+      const { data: ev, error: evError } = await fetchAllRows<any>((from, to) => {
         let qe = supabase.from("form_field_events").select("session_id, field_id, event, seconds_on_field").eq("form_id", form.id);
         if (sinceIso) qe = qe.gte("at", sinceIso);
-        return qe.range(from, to);
+        return qe.order("session_id", { ascending: true }).order("id", { ascending: true }).range(from, to);
       });
+      if (evError) throw evError;
 
       // Responses with matched ids
-      const { data: rsp } = await fetchAllRows<any>((from, to) => {
+      const { data: rsp, error: rspError } = await fetchAllRows<any>((from, to) => {
         let qr = supabase.from("form_responses").select("id, matched_lead_id, matched_deal_id").eq("form_id", form.id);
         if (sinceIso) qr = qr.gte("submitted_at", sinceIso);
-        return qr.range(from, to);
+        return qr.order("id", { ascending: true }).range(from, to);
       });
+      if (rspError) throw rspError;
 
       // Field names
       if (form.fields?.length) {

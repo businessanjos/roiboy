@@ -549,6 +549,8 @@ function ActionsList({
     return map;
   }, [usersQuery.data]);
 
+  const pgActions = usePagedList(actions, { resetKey: meetingId });
+
   return (
     <Card>
       <CardHeader className="flex flex-row items-center justify-between">
@@ -563,7 +565,7 @@ function ActionsList({
             Nenhuma ação registrada ainda.
           </p>
         ) : (
-          actions.map((a) => {
+          pgActions.items.map((a) => {
             const areaInfo = AREAS.find((x) => x.id === a.area);
             return (
               <div
@@ -615,6 +617,7 @@ function ActionsList({
           })
         )}
       </CardContent>
+      {actions.length > 0 && <PagerFor state={pgActions} itemLabel="ações" />}
 
       <Dialog open={adding} onOpenChange={setAdding}>
         <DialogContent>

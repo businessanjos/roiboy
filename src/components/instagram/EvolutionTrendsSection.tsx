@@ -131,12 +131,14 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
     (async () => {
       setLoading(true);
       // Série completa do gráfico — sem .limit(2000) silencioso.
-      const [{ data: hist }, { data: snaps }] = await Promise.all([
+      const [{ data: hist, error: histError }, { data: snaps }] = await Promise.all([
         fetchAllRows<any>((from, to) =>
           supabase
             .from("client_instagram_metrics_history" as any)
             .select("client_id, username, snapshot_at, followers_count, total_likes, total_comments")
             .order("snapshot_at", { ascending: true })
+            .order("client_id", { ascending: true })
+            .order("id", { ascending: true })
             .range(from, to),
         ),
         supabase
@@ -145,6 +147,9 @@ export function EvolutionTrendsSection({ allowedClientIds }: { allowedClientIds?
           .order("last_synced_at", { ascending: false }),
       ]);
 
+      if (histError) {
+        console.error("[EvolutionTrendsSection] erro ao carregar histórico:", histError);
+      }
       const profMap: Record<string, ProfileMeta> = {};
       for (const p of (snaps as any[]) || []) {
         const key = `${p.client_id}__${p.username}`;

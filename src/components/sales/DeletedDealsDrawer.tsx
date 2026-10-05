@@ -17,6 +17,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { buildDeletedDealsOrFilter } from "./deletedDealsFilter";
 
 interface DeletedDeal {
   id: string;
@@ -57,6 +58,35 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
 
   const pg = usePaginationState(totalCount, { resetKey: debouncedSearch, isLoading: loading });
 
+  // Resolve, em lotes, os ids de usuários (responsável ou quem excluiu) cujo
+  // nome combina com o termo buscado — sem isso a busca por responsável ou
+  // por quem excluiu não encontrava nada no modo servidor.
+  const findMatchingUserIds = useCallback(async (accountId: string, term: string) => {
+    // `responsible_user_id` referencia users.id, enquanto `deleted_by`
+    // guarda o auth_user_id de quem excluiu — por isso resolvemos os dois.
+    const ids: string[] = [];
+    const authIds: string[] = [];
+    const PAGE = 500;
+    let from = 0;
+    for (;;) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, auth_user_id')
+        .eq('account_id', accountId)
+        .ilike('name', `%${term}%`)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const rows = data || [];
+      for (const r of rows as any[]) {
+        ids.push(r.id);
+        if (r.auth_user_id) authIds.push(r.auth_user_id);
+      }
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+    return { ids, authIds };
+  }, []);
+
   const fetchDeleted = useCallback(async (from: number, to: number, term: string) => {
     if (!currentUser?.account_id) return;
     setLoading(true);
@@ -72,14 +102,12 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .not('deleted_at', 'is', null);
 
       if (term) {
-        const digits = term.replace(/\D/g, "");
-        const orParts = [
-          `title.ilike.%${term}%`,
-          `contact_name.ilike.%${term}%`,
-          `contact_email.ilike.%${term}%`,
-        ];
-        if (digits.length >= 4) orParts.push(`contact_phone.ilike.%${digits}%`);
-        query = query.or(orParts.join(","));
+        // Resolve ids de users cujo nome combina com o termo (responsável ou
+        // quem excluiu) e monta o MESMO filtro usado nas linhas e na
+        // contagem via helper puro (testado isoladamente).
+        const { ids: matchingUserIds, authIds: matchingAuthIds } = await findMatchingUserIds(currentUser.account_id, term);
+        const orFilter = buildDeletedDealsOrFilter({ term, matchingUserIds, matchingAuthIds });
+        if (orFilter) query = query.or(orFilter);
       }
 
       const { data, error, count } = await query

@@ -103,7 +103,7 @@ export default function VipClients() {
       if (!currentUser?.account_id) return;
       setLoading(true);
 
-      const [{ data: contracts }, { data: entries }, { data: prods }] = await Promise.all([
+      const [{ data: contracts, error: contractsError }, { data: entries, error: entriesError }, { data: prods }] = await Promise.all([
         fetchAllRows<any>((from, to) =>
           supabase
             .from("client_contracts")
@@ -133,6 +133,8 @@ export default function VipClients() {
           .order("name"),
       ]);
 
+      if (contractsError) throw contractsError;
+      if (entriesError) throw entriesError;
       const map = new Map<string, VipRow>();
       (contracts || []).forEach((c: any) => {
         const cid = c.client_id;

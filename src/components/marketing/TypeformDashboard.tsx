@@ -98,7 +98,7 @@ export function TypeformDashboard() {
 
   const loadForms = useCallback(async () => {
     setLoading(true);
-    const { data } = await fetchAllRows<any>((from, to) =>
+    const { data, error } = await fetchAllRows<any>((from, to) =>
       supabase
         .from('typeform_forms')
         .select('*')
@@ -106,6 +106,7 @@ export function TypeformDashboard() {
         .order('id')
         .range(from, to)
     );
+    if (error) { console.error('[TypeformDashboard] erro ao carregar formulários:', error); setLoading(false); return; }
     setForms(data || []);
     if (data && data.length && !selectedForm) setSelectedForm('__all__');
     setLoading(false);

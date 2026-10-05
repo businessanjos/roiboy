@@ -93,7 +93,7 @@ export default function MarketingTrafegoPago() {
     if (!user?.id) return;
     setLoading(true);
     try {
-      const { data } = await fetchAllRows<any>((from, to) =>
+      const { data, error } = await fetchAllRows<any>((from, to) =>
         supabase
           .from('marketing_ad_sets')
           .select('*')
@@ -102,6 +102,7 @@ export default function MarketingTrafegoPago() {
           .order('id', { ascending: false })
           .range(from, to),
       );
+      if (error) { console.error('[MarketingTrafegoPago] erro ao carregar conjuntos de anúncios:', error); return; }
       setAdSets(data || []);
     } finally { setLoading(false); }
   }, [user?.id]);

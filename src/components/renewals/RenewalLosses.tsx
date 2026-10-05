@@ -20,6 +20,8 @@ import { useToast } from "@/hooks/use-toast";
 import { parseLocalDate, formatLocalDate } from "@/lib/dateUtils";
 import { cn } from "@/lib/utils";
 import { saveRenewalOutcome } from "@/lib/renewalOutcomes";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import {
@@ -240,11 +242,15 @@ export function RenewalLosses() {
       const formatDate = (d: Date) => d.toISOString().split("T")[0];
 
       // 1) Source of truth for "Resultados": explicit outcomes (renovado / perdido)
-      const { data: outcomes, error: outcomesError } = await supabase
-        .from("renewal_outcomes")
-        .select("*")
-        .eq("account_id", currentUser.account_id)
-        .in("outcome", ["renewed", "lost"]);
+      const { data: outcomes, error: outcomesError } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("renewal_outcomes")
+          .select("*")
+          .eq("account_id", currentUser.account_id)
+          .in("outcome", ["renewed", "lost"])
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       if (outcomesError) {
         console.error("Error fetching renewal outcomes:", outcomesError);
@@ -264,11 +270,10 @@ export function RenewalLosses() {
       const contractIds = Object.keys(outcomesMap);
 
 
-      // 2) Load the contracts for those outcomes (chunked to avoid long URLs)
-      const chunkSize = 200;
-      let allContracts: any[] = [];
-      for (let i = 0; i < contractIds.length; i += chunkSize) {
-        const { data } = await supabase
+      // 2) Load the contracts for those outcomes (chunked to avoid long URLs,
+      // each chunk loaded fully — errors propagate instead of silently truncating).
+      const allContracts: any[] = await fetchInChunks<any>(contractIds, 200, (chunk) =>
+        supabase
           .from("client_contracts")
           .select(`
             id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
@@ -276,10 +281,9 @@ export function RenewalLosses() {
             products(name, color, price, cash_price, installment_price, renewal_discount_percent)
           `)
           .eq("account_id", currentUser.account_id)
-          .in("id", contractIds.slice(i, i + chunkSize))
-          .is("parent_contract_id", null);
-        allContracts = allContracts.concat(data || []);
-      }
+          .in("id", chunk)
+          .is("parent_contract_id", null),
+      );
 
       const mapped: ExpiredContract[] = allContracts.map((c: any) => {
         const endDate = parseLocalDate(c.end_date);

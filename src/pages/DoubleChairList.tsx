@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface Pair {
   id: string;
@@ -26,21 +27,25 @@ export default function DoubleChairList() {
     queryKey: ["double-chair-list", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("client_relationships")
-        .select(`
-          id,
-          primary_client_id,
-          related_client_id,
-          relationship_label,
-          primary_client:clients!client_relationships_primary_client_id_fkey(id, full_name),
-          related_client:clients!client_relationships_related_client_id_fkey(id, full_name)
-        `)
-        .eq("account_id", accountId)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<Pair>((from, to) =>
+        supabase
+          .from("client_relationships")
+          .select(`
+            id,
+            primary_client_id,
+            related_client_id,
+            relationship_label,
+            primary_client:clients!client_relationships_primary_client_id_fkey(id, full_name),
+            related_client:clients!client_relationships_related_client_id_fkey(id, full_name)
+          `)
+          .eq("account_id", accountId)
+          .eq("is_active", true)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any,
+      );
       if (error) throw error;
-      return (data ?? []) as unknown as Pair[];
+      return data ?? [];
     },
     enabled: !!accountId,
   });

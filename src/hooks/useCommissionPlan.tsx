@@ -359,7 +359,8 @@ export function useCommissionPlan(cargo: string = "Closer") {
         if (planId) q = q.eq("plan_id", planId);
         return q.range(from, to);
       };
-      const { data } = await fetchAllRows<any>(buildQuery);
+      const { data, error: entriesError } = await fetchAllRows<any>(buildQuery);
+      if (entriesError) throw entriesError;
 
       if (data) {
         const userIds = [...new Set(data.map((d: any) => d.user_id))];

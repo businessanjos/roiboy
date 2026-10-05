@@ -950,7 +950,7 @@ export default function Clients() {
     const accId = accountId || currentUser?.account_id;
     if (!accId) return;
     (async () => {
-      const [{ data: catalog }, { data }] = await Promise.all([
+      const [{ data: catalog }, { data, error: nicheError }] = await Promise.all([
         supabase
           .from("practice_areas")
           .select("label,sort_order")
@@ -967,6 +967,10 @@ export default function Clients() {
             .range(from, to),
         ),
       ]);
+      if (nicheError) {
+        console.error("[Clients] erro ao carregar opções de área:", nicheError);
+        return;
+      }
       const catalogLabels = (catalog || []).map((a: any) => (a.label || "").trim()).filter(Boolean);
       const used = (data || [])
         .flatMap((r: any) => String(r.business_niche || "").split(","))
@@ -984,7 +988,7 @@ export default function Clients() {
     const accId = accountId || currentUser?.account_id;
     if (!accId) return;
     (async () => {
-      const { data } = await fetchAllRows<any>((from, to) =>
+      const { data, error: specialtyError } = await fetchAllRows<any>((from, to) =>
         supabase
           .from("clients")
           .select("education_specialty, id")
@@ -994,6 +998,10 @@ export default function Clients() {
           .order("id")
           .range(from, to),
       );
+      if (specialtyError) {
+        console.error("[Clients] erro ao carregar opções de especialidade:", specialtyError);
+        return;
+      }
       const used = Array.from(
         new Set(
           (data || [])

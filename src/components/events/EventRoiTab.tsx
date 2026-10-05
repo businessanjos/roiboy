@@ -103,7 +103,7 @@ export default function EventRoiTab({
       // Busca todas as edições do mesmo tipo (sem teto silencioso) e só então
       // filtra pelo nome-base — um .limit() antes do filtro poderia descartar
       // edições mais antigas do mesmo evento.
-      const { data: siblings } = await fetchAllRows<any>((from, to) =>
+      const { data: siblings, error: siblingsError } = await fetchAllRows<any>((from, to) =>
         supabase
           .from("events")
           .select("id, title, scheduled_at, event_type")
@@ -114,6 +114,7 @@ export default function EventRoiTab({
           .range(from, to),
       );
 
+      if (siblingsError) throw siblingsError;
       const matched = (siblings || []).filter((e: any) => titleBase(e.title || "") === base);
       if (matched.length === 0) return [];
       const ids = matched.map((e: any) => e.id);

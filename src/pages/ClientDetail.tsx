@@ -1054,6 +1054,10 @@ export default function ClientDetail() {
         supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.checkins - 1),
       ]);
 
+      for (const r of [roiResult, riskResult, recResult, followupsResult] as any[]) {
+        if (r?.error) throw r.error;
+      }
+
       // Process client products
       const products = (clientProductsResult.data || [])
         .filter((cp: any) => cp.products)
@@ -1293,6 +1297,10 @@ export default function ClientDetail() {
         fetchAllRows<any>((from, to) => supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
         supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.checkins - 1),
       ]);
+
+      for (const r of [followupsResult, allRiskResult, roiResult, recResult] as any[]) {
+        if (r?.error) throw r.error;
+      }
 
       // Process messages/life events/etc fully replace (reset) first page of each source
       timelineEventsRef.current = {

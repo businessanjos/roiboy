@@ -168,6 +168,32 @@ function parseSteps(raw: string): string[] {
     .filter(Boolean);
 }
 
+function FaqCategoryGroup({
+  category,
+  articles,
+  resetKey,
+  renderArticle,
+}: {
+  category: string;
+  articles: FaqArticle[];
+  resetKey: unknown;
+  renderArticle: (a: FaqArticle) => JSX.Element;
+}) {
+  const pg = usePagedList(articles, { resetKey, defaultPageSize: 20 });
+  return (
+    <div className="space-y-2">
+      <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {categoryLabelOf(category)}
+        <span className="ml-2 font-normal opacity-70">{articles.length}</span>
+      </p>
+      <Card className="overflow-hidden">
+        <Accordion type="multiple">{pg.items.map(renderArticle)}</Accordion>
+      </Card>
+      <PagerFor state={pg} itemLabel="artigos" />
+    </div>
+  );
+}
+
 export default function FinancialFaqPage() {
   const { currentUser } = useCurrentUser();
   const accountId = currentUser?.account_id;
@@ -296,8 +322,9 @@ export default function FinancialFaqPage() {
 
   // Pagina a lista de categorias (modo agrupado) ou os artigos (modo busca por relevância),
   // mantendo cada acordeão de categoria/artigo intacto.
-  const groupedPg = usePagedList(grouped, { resetKey: [isRanked, categoryFilter, reviewFilter, textFilter, selectedTags, manageMode], isLoading, defaultPageSize: 20 });
-  const flatPg = usePagedList(filtered, { resetKey: [isRanked, categoryFilter, reviewFilter, textFilter, selectedTags, manageMode], isLoading, defaultPageSize: 20 });
+  const groupResetKey = [isRanked, categoryFilter, reviewFilter, textFilter, selectedTags, manageMode];
+  const groupedPg = usePagedList(grouped, { resetKey: groupResetKey, isLoading, defaultPageSize: 20 });
+  const flatPg = usePagedList(filtered, { resetKey: groupResetKey, isLoading, defaultPageSize: 20 });
 
   const hasFilters = selectedTags.length > 0 || !!textFilter || categoryFilter !== "all" || reviewFilter !== "all";
   const clearFilters = () => {
@@ -852,15 +879,13 @@ export default function FinancialFaqPage() {
         ) : grouped ? (
           <div className="space-y-5">
             {groupedPg.items.map(([category, list]) => (
-              <div key={category} className="space-y-2">
-                <p className="px-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  {categoryLabelOf(category)}
-                  <span className="ml-2 font-normal opacity-70">{list.length}</span>
-                </p>
-                <Card className="overflow-hidden">
-                  <Accordion type="multiple">{list.map(renderArticle)}</Accordion>
-                </Card>
-              </div>
+              <FaqCategoryGroup
+                key={category}
+                category={category}
+                articles={list}
+                resetKey={groupResetKey}
+                renderArticle={renderArticle}
+              />
             ))}
             <PagerFor state={groupedPg} itemLabel="categorias" />
           </div>

@@ -305,7 +305,7 @@ export default function Tasks() {
 
   // Fetch tasks with React Query
   const { data: tasksResult, isLoading: loading, isFetching: fetchingTasks } = useQuery({
-    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch, loadedChunks],
+    queryKey: ["internal-tasks", filterUser, currentUser?.id, currentSector?.id, serverSearch, serverSearch ? currentPage : loadedChunks, serverSearch ? pageSize : null],
     queryFn: async () => {
       // First, get activity type IDs for the current sector to filter server-side
       let sectorActivityTypeIds: string[] | null = null;
@@ -350,48 +350,40 @@ export default function Tasks() {
       // sem busca, o caminho atual (sector/user .or direto na tabela) já é
       // seguro e eficiente.
       if (safeSearch) {
-        const RPC_PAGE = 1000;
-        const SEARCH_MAX_PAGES = 200; // até 200k resultados de busca
-        const allIds: string[] = [];
-        let hasMore = false;
-        let total = 0;
-        for (let page = 0; page < SEARCH_MAX_PAGES; page++) {
-          const rpcParams = buildSearchTasksRpcParams({
-            accountId: currentUser?.account_id ?? "",
-            search: safeSearch,
-            sectorActivityTypeIds,
-            isHistoricalUserFilter,
-            filterUser,
-            currentUserId: currentUser?.id ?? null,
-            limit: RPC_PAGE,
-            offset: page * RPC_PAGE,
-          });
-          const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
-          if (error) throw error;
-          const rows = (data || []) as { id: string; total_count: number }[];
-          if (rows.length > 0) total = Number(rows[0].total_count) || 0;
-          allIds.push(...rows.map((r) => r.id));
-          if (rows.length < RPC_PAGE) break;
-          if (page === SEARCH_MAX_PAGES - 1) hasMore = true;
-        }
+        // Paginação 100% no servidor: pedimos exatamente a página exibida
+        // (p_limit = pageSize, p_offset = (page-1) * pageSize) em vez de
+        // varrer até 200.000 ids antes de montar a lista. O total exato
+        // (para o pager) vem da mesma RPC, na coluna total_count.
+        const rpcParams = buildSearchTasksRpcParams({
+          accountId: currentUser?.account_id ?? "",
+          search: safeSearch,
+          sectorActivityTypeIds,
+          isHistoricalUserFilter,
+          filterUser,
+          currentUserId: currentUser?.id ?? null,
+          limit: pageSize,
+          offset: (currentPage - 1) * pageSize,
+        });
+        const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
+        if (error) throw error;
+        const rows = (data || []) as { id: string; total_count: number }[];
+        const total = rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
+        const pageIds = rows.map((r) => r.id);
 
-        // Busca as linhas completas (com os joins atuais) em lotes via .in,
-        // preservando a ordem retornada pela RPC.
-        const BATCH = 500;
+        // Busca as linhas completas (com os joins atuais) apenas para os
+        // ids da página atual, preservando a ordem retornada pela RPC.
         const byId = new Map<string, Task>();
-        for (let i = 0; i < allIds.length; i += BATCH) {
-          const batchIds = allIds.slice(i, i + BATCH);
-          if (batchIds.length === 0) continue;
-          const { data, error } = await supabase
+        if (pageIds.length > 0) {
+          const { data: taskRows, error: taskRowsError } = await supabase
             .from("internal_tasks")
             .select(TASKS_SELECT)
-            .in("id", batchIds);
-          if (error) throw error;
-          ((data || []) as Task[]).forEach((t) => byId.set(t.id, t));
+            .in("id", pageIds);
+          if (taskRowsError) throw taskRowsError;
+          ((taskRows || []) as Task[]).forEach((t) => byId.set(t.id, t));
         }
-        const orderedRows = allIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
+        const orderedRows = pageIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
 
-        return { rows: orderedRows, hasMore, totalFromSearch: total };
+        return { rows: orderedRows, hasMore: false, totalFromSearch: total };
       }
 
       const buildQuery = () => {
@@ -1064,12 +1056,20 @@ export default function Tasks() {
   }, [filteredTasks, sortBy, sortDirection]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(sortedTasks.length / pageSize));
-  const safePage = Math.min(currentPage, totalPages);
+  // Com busca ativa (serverSearch), `tasks` já chega paginado pelo servidor
+  // (RPC search_tasks_page com p_limit/p_offset), então a página exibida é
+  // o próprio resultado — não repetimos a fatia local (isso causaria página
+  // vazia a partir da 2ª, já que o array local só tem `pageSize` itens) e o
+  // total de páginas vem da contagem exata do servidor (totalHistoryCount).
+  const totalPages = serverSearch
+    ? Math.max(1, Math.ceil((totalHistoryCount ?? sortedTasks.length) / pageSize))
+    : Math.max(1, Math.ceil(sortedTasks.length / pageSize));
+  const safePage = serverSearch ? currentPage : Math.min(currentPage, totalPages);
   const paginatedTasks = useMemo(() => {
+    if (serverSearch) return sortedTasks;
     const start = (safePage - 1) * pageSize;
     return sortedTasks.slice(start, start + pageSize);
-  }, [sortedTasks, safePage, pageSize]);
+  }, [sortedTasks, safePage, pageSize, serverSearch]);
 
   // Export (restrito: Jonathan, Maikol e Everton)
   const canExportTasks = useMemo(
@@ -2407,7 +2407,7 @@ export default function Tasks() {
           )}
           {serverSearch && (
             <div className="py-2 text-center text-xs text-muted-foreground">
-              Busca aplicada em todo o histórico — {tasks.length} tarefa(s) encontrada(s).
+              Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).
             </div>
           )}
         </>
@@ -2491,7 +2491,7 @@ export default function Tasks() {
           )}
           {serverSearch && (
             <div className="py-2 text-center text-xs text-muted-foreground">
-              Busca aplicada em todo o histórico — {tasks.length} tarefa(s) encontrada(s).
+              Busca aplicada em todo o histórico — {(totalHistoryCount ?? tasks.length)} tarefa(s) encontrada(s).
             </div>
           )}
 
@@ -2506,11 +2506,13 @@ export default function Tasks() {
           )}
 
           {/* Pagination Controls */}
-          {sortedTasks.length > pageSize && (
+          {/* Com busca ativa, o total vem do servidor (totalHistoryCount),
+              já que `sortedTasks` só contém a página atual. */}
+          {(serverSearch ? (totalHistoryCount ?? 0) : sortedTasks.length) > pageSize && (
             <div className="flex flex-wrap items-center justify-between gap-2 px-2 py-3">
               <div className="flex min-w-0 flex-wrap items-center gap-2">
                 <p className="text-sm text-muted-foreground">
-                  Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, sortedTasks.length)} de {sortedTasks.length} tarefas
+                  Mostrando {((safePage - 1) * pageSize) + 1}–{Math.min(safePage * pageSize, serverSearch ? (totalHistoryCount ?? sortedTasks.length) : sortedTasks.length)} de {serverSearch ? (totalHistoryCount ?? sortedTasks.length) : sortedTasks.length} tarefas
                 </p>
                 <select
                   value={pageSize}

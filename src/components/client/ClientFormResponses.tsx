@@ -19,6 +19,7 @@ import { toast } from "sonner";
 import { resolveClientLocale, formatCurrencyForLocale, type ClientLocale } from "@/lib/clientCurrency";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface ClientFormResponsesProps {
   clientId: string;
@@ -132,23 +133,27 @@ export function ClientFormResponses({ clientId }: ClientFormResponsesProps) {
         }
       }
 
-      const { data: responsesData, error: responsesError } = await supabase
-        .from("form_responses")
-        .select(`
-          id,
-          form_id,
-          responses,
-          submitted_at,
-          last_edited_at,
-          last_edited_by,
-          forms (
+      const { data: responsesData, error: responsesError } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("form_responses")
+          .select(`
             id,
-            title,
-            fields
-          )
-        `)
-        .eq("client_id", clientId)
-        .order("submitted_at", { ascending: false });
+            form_id,
+            responses,
+            submitted_at,
+            last_edited_at,
+            last_edited_by,
+            forms (
+              id,
+              title,
+              fields
+            )
+          `)
+          .eq("client_id", clientId)
+          .order("submitted_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
 
       if (responsesError) throw responsesError;
       setFormResponses((responsesData || []).map(r => ({

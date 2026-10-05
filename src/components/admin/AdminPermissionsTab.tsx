@@ -19,6 +19,8 @@ import { UserPermissionsEditor } from "@/components/admin/PermissionProfilesMana
 import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
 import { fetchAllRows } from "@/lib/fetchAllRows";
 import { UserManagementPanel } from "./UserManagementPanel";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Account {
   id: string;
@@ -146,6 +148,8 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     if (!selectedUserId) return [];
     return users.filter((u) => u.id === selectedUserId);
   }, [users, selectedUserId]);
+
+  const pgUsers = usePagedList(filteredUsers, { resetKey: [accountId, selectedUserId], isLoading: loadingUsers || loadingAccess });
 
   const getAccess = (userId: string, sectorId: string) =>
     accessList.find((a) => a.user_id === userId && a.sector_id === sectorId);
@@ -426,7 +430,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
             </div>
           ) : (
             <div className="space-y-3">
-              {filteredUsers.map((user) => (
+              {pgUsers.items.map((user) => (
                 <div
                   key={user.id}
                   className="border rounded-lg p-4 bg-card hover:border-primary/30 transition-colors"
@@ -594,6 +598,7 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
                   </div>
                 </div>
               ))}
+              <PagerFor state={pgUsers} itemLabel="usuários" />
             </div>
           )}
 
