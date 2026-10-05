@@ -57,6 +57,18 @@ import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ProjectCopilotPanel } from "./ProjectCopilotPanel";
 import { ProjectStakeholdersTab } from "./ProjectStakeholdersTab";
+import { useEffect } from "react";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
+
+function useDebouncedValue<T>(value: T, delay = 300): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
 
 export function ProjectDetailView({ projectId }: { projectId: string }) {
   const navigate = useNavigate();
@@ -478,6 +490,7 @@ function DocsTab({ projectId }: { projectId: string }) {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [kind, setKind] = useState("link");
+  const pg = usePagedList(items);
 
   return (
     <div className="space-y-3">
@@ -509,7 +522,7 @@ function DocsTab({ projectId }: { projectId: string }) {
         </div>
       )}
       <div className="space-y-2">
-        {items.map(d => (
+        {pg.items.map(d => (
           <div key={d.id} className="flex items-center gap-3 p-3 border rounded-lg group hover:bg-muted/30">
             <FileText className="h-4 w-4 text-muted-foreground" />
             <div className="flex-1 min-w-0">
@@ -526,6 +539,7 @@ function DocsTab({ projectId }: { projectId: string }) {
           </div>
         ))}
         {items.length === 0 && <EmptyState text="Nenhum documento ainda." />}
+        {items.length > 0 && <PagerFor state={pg} itemLabel="documentos" />}
       </div>
     </div>
   );

@@ -22,10 +22,13 @@ interface Props {
   agencyView?: boolean;
 }
 
+const PAGE_SIZE = 20;
+
 export function MaterialRequestsList({ agencyId, showAgencyName = false, agencyView = false }: Props) {
   const { data: requests = [], isLoading } = useMaterialRequests(agencyId);
   const update = useUpdateMaterialRequest();
   const [openId, setOpenId] = useState<string | null>(null);
+  const [visibleCounts, setVisibleCounts] = useState<Record<string, number>>({});
 
   const grouped = useMemo(() => {
     const map: Record<string, typeof requests> = {};
@@ -55,7 +58,7 @@ export function MaterialRequestsList({ agencyId, showAgencyName = false, agencyV
               <Badge variant="outline" className="text-xs">{grouped[col.value]?.length ?? 0}</Badge>
             </div>
             <div className="space-y-2 min-h-[40px]">
-              {(grouped[col.value] ?? []).map((r) => (
+              {(grouped[col.value] ?? []).slice(0, visibleCounts[col.value] ?? PAGE_SIZE).map((r) => (
                 <Card
                   key={r.id}
                   className="p-3 cursor-pointer hover:shadow-md transition-shadow"
@@ -96,6 +99,21 @@ export function MaterialRequestsList({ agencyId, showAgencyName = false, agencyV
                   )}
                 </Card>
               ))}
+              {(grouped[col.value]?.length ?? 0) > (visibleCounts[col.value] ?? PAGE_SIZE) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="w-full text-xs text-muted-foreground"
+                  onClick={() =>
+                    setVisibleCounts((v) => ({
+                      ...v,
+                      [col.value]: (v[col.value] ?? PAGE_SIZE) + PAGE_SIZE,
+                    }))
+                  }
+                >
+                  Carregar mais ({(grouped[col.value]?.length ?? 0) - (visibleCounts[col.value] ?? PAGE_SIZE)} restantes)
+                </Button>
+              )}
             </div>
           </div>
         ))}

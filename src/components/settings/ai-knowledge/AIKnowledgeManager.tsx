@@ -18,6 +18,8 @@ import {
   EMPTY_SETTINGS, KnowledgeSettings, useKnowledgeCorrections,
   useKnowledgeDocuments, useKnowledgeSettings,
 } from "./useAIKnowledge";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 function ListEditor({
   values, onChange, placeholder,
@@ -63,8 +65,10 @@ function ListEditor({
 
 export function AIKnowledgeManager() {
   const { settings, isLoading, save } = useKnowledgeSettings();
-  const { documents, upload, reprocess, remove, download } = useKnowledgeDocuments();
-  const { corrections, upsert, toggle, remove: removeCorrection } = useKnowledgeCorrections();
+  const { documents, isLoading: loadingDocs, upload, reprocess, remove, download } = useKnowledgeDocuments();
+  const { corrections, isLoading: loadingCorrections, upsert, toggle, remove: removeCorrection } = useKnowledgeCorrections();
+  const pgDocs = usePagedList(documents, { isLoading: loadingDocs });
+  const pgCorrections = usePagedList(corrections, { isLoading: loadingCorrections });
 
   const [form, setForm] = useState<KnowledgeSettings>(EMPTY_SETTINGS);
   useEffect(() => { if (settings) setForm(settings); }, [settings]);
@@ -333,7 +337,7 @@ export function AIKnowledgeManager() {
               </label>
 
               <div className="space-y-2">
-                {documents.map((doc) => (
+                {pgDocs.items.map((doc) => (
                   <div key={doc.id} className="flex items-center gap-3 rounded-md border border-border p-3">
                     <FileText className="h-4 w-4 text-muted-foreground" />
                     <div className="min-w-0 flex-1">
@@ -370,6 +374,7 @@ export function AIKnowledgeManager() {
                   <p className="text-sm text-muted-foreground">Nenhum material enviado ainda.</p>
                 )}
               </div>
+              {documents.length > 0 && <PagerFor state={pgDocs} itemLabel="documentos" />}
             </CardContent>
           </Card>
         </TabsContent>
@@ -417,7 +422,7 @@ export function AIKnowledgeManager() {
           </Card>
 
           <div className="space-y-3">
-            {corrections.map((c) => (
+            {pgCorrections.items.map((c) => (
               <Card key={c.id}>
                 <CardContent className="space-y-3 p-4">
                   <div className="flex items-center justify-between gap-3">
@@ -447,6 +452,7 @@ export function AIKnowledgeManager() {
             {corrections.length === 0 && (
               <p className="text-sm text-muted-foreground">Nenhuma correção cadastrada.</p>
             )}
+            {corrections.length > 0 && <PagerFor state={pgCorrections} itemLabel="correções" />}
           </div>
         </TabsContent>
 

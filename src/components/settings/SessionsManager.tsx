@@ -6,6 +6,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { toast } from "sonner";
 import { 
   Monitor, 
@@ -98,6 +101,7 @@ function getCurrentFingerprint(): string {
 }
 
 export function SessionsManager() {
+  // paginação local aplicada abaixo, após carregar `sessions`
   const { currentUser } = useCurrentUser();
   const { logSessionTerminated } = useSecurityAudit();
   const [sessions, setSessions] = useState<UserSession[]>([]);
@@ -157,11 +161,15 @@ export function SessionsManager() {
     setLoading(true);
     try {
       // Query using account_id which matches RLS policies
-      const { data, error } = await supabase
-        .from('user_sessions')
-        .select('*')
-        .eq('account_id', currentUser.account_id)
-        .order('last_active_at', { ascending: false });
+      const { data, error } = await fetchAllRows<UserSession>((from, to) =>
+        supabase
+          .from('user_sessions')
+          .select('*')
+          .eq('account_id', currentUser.account_id)
+          .order('last_active_at', { ascending: false })
+          .order('id')
+          .range(from, to)
+      );
 
       if (error) throw error;
       setSessions(data || []);
@@ -262,6 +270,8 @@ export function SessionsManager() {
     );
   }
 
+  const pg = usePagedList(sessions, { isLoading: loading });
+
   return (
     <Card>
       <CardHeader>
@@ -308,7 +318,7 @@ export function SessionsManager() {
             <p>Nenhuma sessão ativa encontrada</p>
           </div>
         ) : (
-          sessions.map(session => {
+          pg.items.map(session => {
             const isCurrentSession = session.device_fingerprint === currentFingerprint;
             
             return (
@@ -388,6 +398,7 @@ export function SessionsManager() {
             );
           })
         )}
+        {sessions.length > 0 && <PagerFor state={pg} itemLabel="sessões" />}
       </CardContent>
     </Card>
   );

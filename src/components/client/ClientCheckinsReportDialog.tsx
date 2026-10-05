@@ -37,6 +37,8 @@ import {
   fileStamp,
 } from "@/lib/cs/checkinsExport";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Props {
   open: boolean;
@@ -70,6 +72,8 @@ export function ClientCheckinsReportDialog({
     kind,
     enabled: open,
   });
+
+  const pg = usePagedList(data, { resetKey: { from, to, channel, kind, clientId }, defaultPageSize: 20, isLoading });
 
   const stats = useMemo(() => {
     const checkpoints = data.filter((d) => d.kind === "checkpoint");
@@ -162,7 +166,7 @@ export function ClientCheckinsReportDialog({
           </p>
         ) : (
           <div className="space-y-3">
-            {data.map((r) => (
+            {pg.items.map((r) => (
               <div key={r.id} className="rounded-lg border border-border p-3">
                 <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
                   <span className="font-medium text-foreground">
@@ -189,6 +193,7 @@ export function ClientCheckinsReportDialog({
             ))}
           </div>
         )}
+        {data.length > 0 && <PagerFor state={pg} itemLabel="registros" />}
       </DialogContent>
     </Dialog>
   );

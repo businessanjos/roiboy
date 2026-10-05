@@ -31,6 +31,9 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Form {
   id: string;
@@ -100,12 +103,16 @@ export default function FormCampaign() {
   const { data: clients = [], isLoading: loadingClients } = useQuery({
     queryKey: ["clients-for-form-campaign"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("event_active_clients" as any)
-        .select("id, full_name, phone_e164, status, tags")
-        .order("full_name");
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("event_active_clients" as any)
+          .select("id, full_name, phone_e164, status, tags")
+          .order("full_name")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
-      return (data as any[]).map(c => ({
+      return data.map((c: any) => ({
         ...c,
         tags: Array.isArray(c.tags) ? c.tags : [],
       })) as Client[];
@@ -344,6 +351,10 @@ export default function FormCampaign() {
 
   const selectedForm = forms.find(f => f.id === selectedFormId);
   const selectedClientData = clients.filter(c => selectedClients.includes(c.id));
+  const pgClients = usePagedList(filteredClients, {
+    resetKey: [statusFilter, productFilter, searchTerm],
+    isLoading: loadingClients,
+  });
 
   return (
     <div>
@@ -532,7 +543,7 @@ export default function FormCampaign() {
                 </div>
               ) : (
                 <div className="grid gap-2 max-h-80 overflow-y-auto">
-                  {filteredClients.map((client) => {
+                  {pgClients.items.map((client) => {
                     const isSelected = selectedClients.includes(client.id);
                     
                     return (
@@ -560,6 +571,9 @@ export default function FormCampaign() {
                     );
                   })}
                 </div>
+              )}
+              {!loadingClients && filteredClients.length > 0 && (
+                <PagerFor state={pgClients} itemLabel="clientes" />
               )}
             </CardContent>
           </>
