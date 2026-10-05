@@ -502,7 +502,7 @@ function MonthGrid({
       <Dialog open={!!openDay} onOpenChange={(o) => { if (!o) setOpenDay(null); }}>
         <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
           <DialogHeader>
-            <DialogTitle className="capitalize">
+            <DialogTitle className="first-letter:uppercase">
               {openDay ? format(openDay, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""}
             </DialogTitle>
             <DialogDescription>
