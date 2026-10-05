@@ -38,7 +38,13 @@ const migrationSql = () => {
     .filter((n) => readFileSync(join(dir, n), "utf8").includes("FUNCTION public.search_tasks_page2("))
     .sort()
     .pop()!;
-  return readFileSync(join(dir, f), "utf8");
+  // A versão mais recente de tasks_filtered (busca literal) pode vir depois.
+  const tf = readdirSync(dir)
+    .filter((n) => readFileSync(join(dir, n), "utf8").includes("FUNCTION public.tasks_filtered("))
+    .sort()
+    .pop()!;
+  const base = readFileSync(join(dir, f), "utf8");
+  return tf > f ? base + "\n" + readFileSync(join(dir, tf), "utf8") : base;
 };
 
 let db: PGlite;
@@ -84,7 +90,8 @@ beforeAll(async () => {
   await db.exec(migrationSql());
   await db.exec(`INSERT INTO public.activity_types VALUES ('${AT_CALL}', null), ('${AT_MAIL}', null);
     INSERT INTO public.clients VALUES ('${HIDDEN_CLIENT}', 'Cliente Secreto');`);
-  // 45 tarefas "Follow": 44 concluídas (prazo 01/09), a 45ª pendente (04/10, tipo e-mail).
+  // 45 tarefas "Follow": 44 concluídas (prazo 01/09), a 45ª pendente (04/10, tipo e-mail)
+  // e a MAIS ANTIGA — na ordem padrão (criação desc) fica na última página.
   for (let n = 1; n <= 45; n++) {
     const last = n === 45;
     const prio = ["low", "medium", "high", "urgent"][n % 4];
@@ -93,9 +100,12 @@ beforeAll(async () => {
       [tid(n), ACC, `Follow ${n}`, prio, last ? "2026-10-04" : "2026-09-01",
        last ? null : n % 2 ? "2026-09-02T12:00:00Z" : "2026-09-20T12:00:00Z",
        last ? null : n % 3 === 0 ? null : ST_DONE, last ? AT_MAIL : AT_CALL,
-       n === 10 ? HIDDEN_CLIENT : null, new Date(Date.UTC(2026, 0, 1, 0, n)).toISOString()]
+       n === 10 ? HIDDEN_CLIENT : null, new Date(Date.UTC(2026, 0, 1, 0, last ? 0 : n)).toISOString()]
     );
   }
+  // Busca literal: "%", "_" e barra não são curingas.
+  for (const [i, t] of ["Promo _1", "Promo x1", "Promo %2", "Promo 2", "Promo \\3", "Promo 3"].entries())
+    await db.query(`INSERT INTO public.internal_tasks (id, account_id, title, created_at) VALUES ($1,$2,$3, now())`, [tid(500 + i), ACC, t]);
   // Outra conta: nunca aparece.
   await db.query(`INSERT INTO public.internal_tasks (id, account_id, title, created_at) VALUES ($1,$2,'Follow outra conta', now())`, [tid(999), OTHER]);
   // RLS: o cliente vinculado fica invisível para o papel autenticado.
@@ -109,6 +119,11 @@ beforeAll(async () => {
 });
 
 describe("search_tasks_page2 — filtros antes de contar/paginar", () => {
+  it("sem filtro, a tarefa 45 NÃO está na primeira página (ordem padrão real)", async () => {
+    const r = await page();
+    expect(r.total).toBe(45);
+    expect(r.ids).not.toContain(tid(45));
+  });
   it("busca + prazo 04/10: a única correspondência (posição 45) aparece na página 1, total 1", async () => {
     const r = await page({ dateStart: "2026-10-04", dateEnd: "2026-10-04" });
     expect(r).toEqual({ ids: [tid(45)], total: 1 });
@@ -150,6 +165,15 @@ describe("search_tasks_page2 — ordenação global", () => {
   it("prioridade asc começa por urgentes", async () => {
     const r = await page({}, { sortBy: "priority", sortDirection: "asc", limit: 11 });
     expect(r.ids.every((id) => Number(id.slice(-12)) % 4 === 3)).toBe(true);
+  });
+});
+
+describe("busca literal nos campos", () => {
+  it("'_' , '%' e barra casam só o texto literal", async () => {
+    expect(await page({ search: "Promo _" })).toEqual({ ids: [tid(500)], total: 1 });
+    expect(await page({ search: "Promo %" })).toEqual({ ids: [tid(502)], total: 1 });
+    expect(await page({ search: "Promo \\" })).toEqual({ ids: [tid(504)], total: 1 });
+    expect((await page({ search: "promo" })).total).toBe(6);
   });
 });
 

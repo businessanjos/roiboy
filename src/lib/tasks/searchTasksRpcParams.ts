@@ -152,6 +152,20 @@ export async function fetchAllSearchTaskIds(
   return (await fetchSearchTasksUpTo(rpc, params, Number.POSITIVE_INFINITY, batchSize)).ids;
 }
 
+/**
+ * Exportação: gate ANTES de qualquer consulta. Sem permissão → null, nenhuma
+ * chamada. Com permissão → todas as correspondências (com ou sem busca).
+ */
+export async function exportTaskIds(
+  canExport: boolean,
+  rpc: RpcFn,
+  params: SearchTasksRpcParams,
+  batchSize = 500
+): Promise<string[] | null> {
+  if (!canExport) return null;
+  return fetchAllSearchTaskIds(rpc, params, batchSize);
+}
+
 export async function fetchSearchTasksCounts(rpc: RpcFn, params: ReturnType<typeof buildSearchTasksCountsParams>) {
   const { data, error } = await rpc("search_tasks_counts", params);
   if (error) throw error;

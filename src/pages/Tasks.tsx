@@ -109,6 +109,7 @@ import {
   fetchSearchTasksPage,
   fetchAllSearchTaskIds,
   fetchSearchTasksUpTo,
+  exportTaskIds,
   fetchSearchTasksCounts,
   type TaskFilterInput,
 } from "@/lib/tasks/searchTasksRpcParams";
@@ -1131,7 +1132,8 @@ export default function Tasks() {
       // a página ou o lote carregado)
       // em lotes com o mesmo predicado/aba/ordem; qualquer lote com erro aborta.
       try {
-        const ids = await fetchAllSearchTaskIds(
+        const ids = await exportTaskIds(
+          canExportTasks,
           supabase.rpc as any,
           buildSearchTasksRpcParams({
             ...buildFilterInput(await loadSectorActivityTypeIds(), serverSearch || ""),
@@ -1139,6 +1141,7 @@ export default function Tasks() {
             tab: viewMode === "kanban" ? null : activeTab, sortBy, sortDirection, limit: 500, offset: 0,
           })
         );
+        if (!ids) return;
         source = await hydrateTasks(ids);
       } catch (error) {
         console.error("Erro ao exportar tarefas:", error);
