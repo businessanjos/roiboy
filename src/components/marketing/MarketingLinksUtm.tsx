@@ -138,6 +138,10 @@ export function MarketingLinksUtm() {
         ),
         supabase.from('users').select('id, name').eq('account_id', accountId).order('name'),
       ]);
+      if (linksRes.error) throw linksRes.error;
+      if (campRes.error) throw campRes.error;
+      if (evRes.error) throw evRes.error;
+      if (userRes.error) throw userRes.error;
       setLinks((linksRes.data as MarketingLink[]) || []);
       setCampaigns(campRes.data || []);
       setEvents(evRes.data || []);
@@ -667,7 +671,10 @@ function LinkAnalyticsDialog({
           setLoading(false);
           return;
         }
-        const { data: leadsData } = await fetchAllRows<any>((from, to) => leadsQ.range(from, to));
+        const { data: leadsData, error: leadsError } = await fetchAllRows<any>((from, to) =>
+          leadsQ.order('id', { ascending: false }).range(from, to),
+        );
+        if (leadsError) throw leadsError;
         const leadIds = (leadsData || []).map((l: any) => l.id);
         const clientIds = (leadsData || []).map((l: any) => l.converted_to_client_id).filter(Boolean);
 
@@ -675,7 +682,7 @@ function LinkAnalyticsDialog({
         let wonCount = 0;
         let revenue = 0;
         if (clientIds.length) {
-          const { data: deals } = await fetchAllRows<any>((from, to) =>
+          const { data: deals, error: dealsError } = await fetchAllRows<any>((from, to) =>
             supabase
               .from('deals')
               .select('id, status, value')
@@ -683,6 +690,7 @@ function LinkAnalyticsDialog({
               .order('id', { ascending: false })
               .range(from, to),
           );
+          if (dealsError) throw dealsError;
           dealCount = deals?.length || 0;
           (deals || []).forEach((d: any) => {
             if (d.status === 'won' || d.status === 'ganho') {

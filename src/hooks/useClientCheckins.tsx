@@ -91,28 +91,26 @@ export function useCheckpointsPanel() {
     queryKey: ["checkpoints-panel", currentUser?.account_id],
     enabled: !!currentUser?.account_id,
     queryFn: async (): Promise<CheckpointRow[]> => {
-      // Paginação manual: o PostgREST corta em 1000 linhas por requisição.
+      // Carga completa (sem teto de páginas): erro em qualquer lote propaga.
       const byId = new Map<string, any>();
-      const PAGE = 1000;
-      for (let page = 0; page < 20; page++) {
-        const from = page * PAGE;
-        const { data, error } = await supabase
+      const { data: contractRows, error: contractsError } = await fetchAllRows<any>((from, to) =>
+        supabase
           .from("client_contracts")
           .select(
-            "client_id, client:clients!inner(id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name))",
+            "id, client_id, client:clients!inner(id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name))",
           )
           .eq("account_id", currentUser!.account_id)
           .eq("status", "active")
-          .range(from, from + PAGE - 1);
-        if (error) throw error;
-        for (const row of (data || []) as any[]) {
-          const c = row.client;
-          if (!c) continue;
-          const status = String(c.status || "");
-          if (status === "churned") continue;
-          if (!byId.has(c.id)) byId.set(c.id, c);
-        }
-        if (!data || data.length < PAGE) break;
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (contractsError) throw contractsError;
+      for (const row of (contractRows || []) as any[]) {
+        const c = row.client;
+        if (!c) continue;
+        const status = String(c.status || "");
+        if (status === "churned") continue;
+        if (!byId.has(c.id)) byId.set(c.id, c);
       }
 
       const clients = Array.from(byId.values()).sort((a, b) =>
@@ -215,9 +213,7 @@ export function useCheckinsReport(filters: CheckinsReportFilters) {
     ],
     enabled: enabled && !!currentUser?.account_id,
     queryFn: async (): Promise<CheckinReportRow[]> => {
-      const PAGE = 1000;
-      const out: any[] = [];
-      for (let page = 0; page < 20; page++) {
+      const { data: out, error } = await fetchAllRows<any>((rangeFrom, rangeTo) => {
         let q = supabase
           .from("client_checkins")
           .select(
@@ -225,7 +221,8 @@ export function useCheckinsReport(filters: CheckinsReportFilters) {
           )
           .eq("account_id", currentUser!.account_id)
           .order("happened_at", { ascending: false })
-          .range(page * PAGE, page * PAGE + PAGE - 1);
+          .order("id", { ascending: false })
+          .range(rangeFrom, rangeTo);
 
         if (from) q = q.gte("happened_at", `${from}T00:00:00`);
         if (to) q = q.lte("happened_at", `${to}T23:59:59`);
@@ -233,13 +230,11 @@ export function useCheckinsReport(filters: CheckinsReportFilters) {
         if (kind && kind !== "todos") q = q.eq("kind", kind);
         if (clientId) q = q.eq("client_id", clientId);
 
-        const { data, error } = await q;
-        if (error) throw error;
-        out.push(...(data || []));
-        if (!data || data.length < PAGE) break;
-      }
+        return q;
+      });
+      if (error) throw error;
 
-      return out.map((r: any) => ({
+      return (out || []).map((r: any) => ({
         ...r,
         client_name: r.clients?.full_name ?? null,
         consultant_name: r.users?.name ?? r.clients?.responsible?.name ?? null,

@@ -107,13 +107,17 @@ export default function ClinicaRyka() {
     enabled: !!accountId,
     staleTime: 15_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("client_ryka_provisions")
-        .select("client_id, email, status, whatsapp_status, created_at, ryka_response")
-        .eq("account_id", accountId!)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<Provision>((from, to) =>
+        supabase
+          .from("client_ryka_provisions")
+          .select("id, client_id, email, status, whatsapp_status, created_at, ryka_response")
+          .eq("account_id", accountId!)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any,
+      );
       if (error) throw error;
-      return (data ?? []) as Provision[];
+      return data ?? [];
     },
   });
 

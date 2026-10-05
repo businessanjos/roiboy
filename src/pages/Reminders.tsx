@@ -247,6 +247,8 @@ export default function Reminders() {
     enabled: !!selectedEventId,
   });
 
+  const participantsPg = usePagedList(participants, { resetKey: selectedEventId, isLoading: loadingParticipants });
+
   // Fetch campaigns (carregamento completo em lotes, sem truncar)
   const { data: campaigns = [], isLoading: loadingCampaigns } = useQuery({
     queryKey: ["reminder-campaigns"],
@@ -886,8 +888,8 @@ export default function Reminders() {
                       Nenhum participante neste evento
                     </div>
                   ) : (
-                    <div className="grid gap-2 max-h-80 overflow-y-auto">
-                      {participants.map((participant) => {
+                    <div className="grid gap-2">
+                      {participantsPg.items.map((participant) => {
                         const name = getParticipantName(participant);
                         const phone = getParticipantPhone(participant);
                         const email = getParticipantEmail(participant);
@@ -933,6 +935,7 @@ export default function Reminders() {
                       })}
                     </div>
                   )}
+                  {participants.length > 0 && <PagerFor state={participantsPg} itemLabel="participantes" />}
                 </CardContent>
               </>
             )}

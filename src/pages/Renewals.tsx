@@ -1,4 +1,5 @@
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { RenewalLosses } from "@/components/renewals/RenewalLosses";
@@ -226,17 +227,41 @@ export default function Renewals() {
       );
 
       // 2) Fetch already expired contracts that have pending/negotiating outcomes
-      const { data: expiredPendingOutcomes } = await supabase
-        .from("renewal_outcomes")
-        .select("contract_id")
-        .eq("account_id", currentUser.account_id)
-        .in("outcome", ["pending", "negotiating"]);
+      const { data: expiredPendingOutcomes, error: expiredPendingOutcomesError } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("renewal_outcomes")
+          .select("contract_id")
+          .eq("account_id", currentUser.account_id)
+          .in("outcome", ["pending", "negotiating"])
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (expiredPendingOutcomesError) throw expiredPendingOutcomesError;
 
       const pendingContractIds = (expiredPendingOutcomes || []).map((o: any) => o.contract_id);
-      
+
       let expiredPendingData: any[] = [];
       if (pendingContractIds.length > 0) {
-        const { data } = await supabase
+        expiredPendingData = await fetchInChunks<any>(pendingContractIds, 200, (chunk) =>
+          supabase
+            .from("client_contracts")
+            .select(`
+              id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
+              clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
+              products(name, color, price, cash_price, installment_price, renewal_discount_percent)
+            `)
+            .eq("account_id", currentUser.account_id)
+            .in("id", chunk)
+            .not("end_date", "is", null)
+            .lt("end_date", formatDate(today))
+            .is("parent_contract_id", null)
+            .order("end_date", { ascending: true }),
+        );
+      }
+
+      // 3) Also fetch expired contracts without any outcome at all (truly pending)
+      const { data: expiredNoOutcome, error: expiredNoOutcomeError } = await fetchAllRows<any>((from, to) =>
+        supabase
           .from("client_contracts")
           .select(`
             id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
@@ -244,28 +269,15 @@ export default function Renewals() {
             products(name, color, price, cash_price, installment_price, renewal_discount_percent)
           `)
           .eq("account_id", currentUser.account_id)
-          .in("id", pendingContractIds)
           .not("end_date", "is", null)
           .lt("end_date", formatDate(today))
+          .gte("end_date", "2025-03-01")
           .is("parent_contract_id", null)
-          .order("end_date", { ascending: true });
-        expiredPendingData = data || [];
-      }
-
-      // 3) Also fetch expired contracts without any outcome at all (truly pending)
-      const { data: expiredNoOutcome } = await supabase
-        .from("client_contracts")
-        .select(`
-          id, client_id, status, start_date, end_date, value, currency, product_id, payment_option,
-          clients!inner(full_name, phone_e164, emails, logo_url, status, responsible_user_id, users:responsible_user_id(name)),
-          products(name, color, price, cash_price, installment_price, renewal_discount_percent)
-        `)
-        .eq("account_id", currentUser.account_id)
-        .not("end_date", "is", null)
-        .lt("end_date", formatDate(today))
-        .gte("end_date", "2025-03-01")
-        .is("parent_contract_id", null)
-        .order("end_date", { ascending: true });
+          .order("end_date", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (expiredNoOutcomeError) throw expiredNoOutcomeError;
 
       if (futureError) {
         console.error("Error fetching renewal contracts:", futureError);
@@ -290,12 +302,14 @@ export default function Renewals() {
       const clientIds = [...new Set(deduped.map((c: any) => c.client_id))];
       let successorMap: Record<string, { id: string; start_date: string; product_id: string | null }[]> = {};
       if (clientIds.length > 0) {
-        const { data: allClientContracts } = await supabase
-          .from("client_contracts")
-          .select("id, client_id, product_id, start_date, end_date, status")
-          .eq("account_id", currentUser.account_id)
-          .in("client_id", clientIds)
-          .eq("status", "active");
+        const allClientContracts = await fetchInChunks<any>(clientIds, 200, (chunk) =>
+          supabase
+            .from("client_contracts")
+            .select("id, client_id, product_id, start_date, end_date, status")
+            .eq("account_id", currentUser.account_id)
+            .in("client_id", chunk)
+            .eq("status", "active"),
+        );
         (allClientContracts || []).forEach((cc: any) => {
           if (!successorMap[cc.client_id]) successorMap[cc.client_id] = [];
           successorMap[cc.client_id].push({ id: cc.id, start_date: cc.start_date, product_id: cc.product_id });
@@ -325,13 +339,15 @@ export default function Renewals() {
       const needsProductFallback = dedupedFiltered.filter((c: any) => !c.products);
       if (needsProductFallback.length > 0) {
         const fallbackClientIds = [...new Set(needsProductFallback.map((c: any) => c.client_id))];
-        const { data: cp } = await supabase
-          .from("client_products")
-          .select("client_id, product_id, created_at, products(name, color, price, cash_price, installment_price, renewal_discount_percent)")
-          .eq("is_active", true)
-          .eq("account_id", currentUser.account_id)
-          .in("client_id", fallbackClientIds)
-          .order("created_at", { ascending: false });
+        const cp = await fetchInChunks<any>(fallbackClientIds, 200, (chunk) =>
+          supabase
+            .from("client_products")
+            .select("client_id, product_id, created_at, products(name, color, price, cash_price, installment_price, renewal_discount_percent)")
+            .eq("is_active", true)
+            .eq("account_id", currentUser.account_id)
+            .in("client_id", chunk)
+            .order("created_at", { ascending: false }),
+        );
         const productByClient: Record<string, any> = {};
         (cp || []).forEach((row: any) => {
           if (!productByClient[row.client_id] && row.products) {
@@ -348,10 +364,12 @@ export default function Renewals() {
       const allContractIds = dedupedFiltered.map((c: any) => c.id);
       let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
       if (allContractIds.length > 0) {
-        const { data: outcomes } = await supabase
-          .from("renewal_outcomes")
-          .select("id, contract_id, outcome")
-          .in("contract_id", allContractIds);
+        const outcomes = await fetchInChunks<any>(allContractIds, 200, (chunk) =>
+          supabase
+            .from("renewal_outcomes")
+            .select("id, contract_id, outcome")
+            .in("contract_id", chunk),
+        );
         (outcomes || []).forEach((o: any) => {
           allOutcomesMap[o.contract_id] = { id: o.id, outcome: o.outcome };
         });

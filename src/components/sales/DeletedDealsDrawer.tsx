@@ -57,6 +57,41 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
 
   const pg = usePaginationState(totalCount, { resetKey: debouncedSearch, isLoading: loading });
 
+  // Escapa termo para uso seguro dentro da gramática do .or()/.ilike() do
+  // PostgREST: vírgula e parênteses quebram a lista de condições, '%' e '_'
+  // são coringas do ILIKE e precisam ser tratados como texto literal.
+  const escapeIlikeTerm = (term: string) =>
+    term.replace(/[\\%_,()]/g, (c) => `\\${c}`);
+
+  // Resolve, em lotes, os ids de usuários (responsável ou quem excluiu) cujo
+  // nome combina com o termo buscado — sem isso a busca por responsável ou
+  // por quem excluiu não encontrava nada no modo servidor.
+  const findMatchingUserIds = useCallback(async (accountId: string, term: string) => {
+    // `responsible_user_id` referencia users.id, enquanto `deleted_by`
+    // guarda o auth_user_id de quem excluiu — por isso resolvemos os dois.
+    const ids: string[] = [];
+    const authIds: string[] = [];
+    const PAGE = 500;
+    let from = 0;
+    for (;;) {
+      const { data, error } = await supabase
+        .from('users')
+        .select('id, auth_user_id')
+        .eq('account_id', accountId)
+        .ilike('name', `%${term}%`)
+        .range(from, from + PAGE - 1);
+      if (error) throw error;
+      const rows = data || [];
+      for (const r of rows as any[]) {
+        ids.push(r.id);
+        if (r.auth_user_id) authIds.push(r.auth_user_id);
+      }
+      if (rows.length < PAGE) break;
+      from += PAGE;
+    }
+    return { ids, authIds };
+  }, []);
+
   const fetchDeleted = useCallback(async (from: number, to: number, term: string) => {
     if (!currentUser?.account_id) return;
     setLoading(true);
@@ -72,13 +107,26 @@ export function DeletedDealsDrawer({ open, onOpenChange, onRestored }: Props) {
         .not('deleted_at', 'is', null);
 
       if (term) {
+        const safeTerm = escapeIlikeTerm(term);
         const digits = term.replace(/\D/g, "");
         const orParts = [
-          `title.ilike.%${term}%`,
-          `contact_name.ilike.%${term}%`,
-          `contact_email.ilike.%${term}%`,
+          `title.ilike.%${safeTerm}%`,
+          `contact_name.ilike.%${safeTerm}%`,
+          `contact_email.ilike.%${safeTerm}%`,
         ];
         if (digits.length >= 4) orParts.push(`contact_phone.ilike.%${digits}%`);
+
+        // Nome de responsável ou de quem excluiu: resolve ids de users cujo
+        // nome combina e inclui no MESMO .or() usado nas linhas e na
+        // contagem, para que ambos reflitam exatamente os mesmos resultados.
+        const { ids: matchingUserIds, authIds: matchingAuthIds } = await findMatchingUserIds(currentUser.account_id, term);
+        if (matchingUserIds.length > 0) {
+          orParts.push(`responsible_user_id.in.(${matchingUserIds.join(",")})`);
+        }
+        if (matchingAuthIds.length > 0) {
+          orParts.push(`deleted_by.in.(${matchingAuthIds.join(",")})`);
+        }
+
         query = query.or(orParts.join(","));
       }
 

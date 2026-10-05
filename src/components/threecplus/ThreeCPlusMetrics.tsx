@@ -198,6 +198,9 @@ export function ThreeCPlusMetrics() {
           .order("name"),
       ]);
 
+      if (logsRes.error) throw logsRes.error;
+      if (sessionsRes.error) throw sessionsRes.error;
+      if (usersRes.error) throw usersRes.error;
       setCallLogs((logsRes.data as CallLog[]) || []);
       setSessions((sessionsRes.data as AgentSession[]) || []);
       setUsers((usersRes.data as UserInfo[]) || []);

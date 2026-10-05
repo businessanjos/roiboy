@@ -169,6 +169,9 @@ export function MarketingTasksTab() {
 
   const uncategorizedTasks = filteredTasks.filter((t) => !t.section_id);
 
+  // Critérios de busca/filtro/ordenação do modo lista — ao mudar, cada seção volta à página 1.
+  const listFiltersKey = [searchQuery, assigneeFilter, statusFilter, sortFilter];
+
   const handleAddTask = (sectionId?: string, columnId?: string, assigneeId?: string) => {
     setAddingToSection(sectionId || null);
     setDefaultColumnId(columnId);
@@ -357,6 +360,7 @@ export function MarketingTasksTab() {
               onAddTask={() => handleAddTask(section.id)}
               onEditTask={handleEditTask}
               onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              resetKey={listFiltersKey}
             />
           ))}
 
@@ -365,6 +369,7 @@ export function MarketingTasksTab() {
               tasks={uncategorizedTasks}
               onEditTask={handleEditTask}
               onToggleComplete={(id, completed) => toggleComplete.mutate({ id, isCompleted: completed })}
+              resetKey={listFiltersKey}
             />
           )}
 

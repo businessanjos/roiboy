@@ -137,7 +137,7 @@ export function ThreeCPlusCallsList() {
     if (!currentUser?.account_id) return;
     setLoading(true);
     const since = new Date(Date.now() - Number(period) * 86400000).toISOString();
-    const [{ data }, { data: userRows }] = await Promise.all([
+    const [{ data, error }, { data: userRows }] = await Promise.all([
       fetchAllRows((from, to) =>
         supabase
           .from("threecplus_call_logs")
@@ -152,6 +152,7 @@ export function ThreeCPlusCallsList() {
       ),
       supabase.from("users").select("id, name").eq("account_id", currentUser.account_id),
     ]);
+    if (error) { console.error("[ThreeCPlusCallsList] erro ao carregar chamadas:", error); setLoading(false); return; }
     setCalls(dedupeCalls((data as unknown as CallRow[]) || []) as CallRow[]);
     setUsers((userRows as { id: string; name: string }[]) || []);
     setLoading(false);

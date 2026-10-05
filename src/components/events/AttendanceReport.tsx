@@ -120,7 +120,7 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
     // Get presencial events with attendance counts.
     // Fonte completa (sem teto de 20) via fetchAllRows: o relatório é exportado
     // e usado para KPIs, então não pode descartar eventos silenciosamente.
-    const { data: eventsData } = await fetchAllRows<any>((from, to) =>
+    const { data: eventsData, error: eventsError } = await fetchAllRows<any>((from, to) =>
       supabase
         .from("events")
         .select(`
@@ -142,6 +142,11 @@ export default function AttendanceReport({ accountId }: AttendanceReportProps) {
         .range(from, to),
     );
 
+    if (eventsError) {
+      console.error("[AttendanceReport] erro ao carregar eventos:", eventsError);
+      setEvents([]);
+      return;
+    }
     if (!eventsData) {
       setEvents([]);
       return;

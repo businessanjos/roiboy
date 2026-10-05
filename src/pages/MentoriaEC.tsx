@@ -6,6 +6,8 @@ import { ptBR } from "date-fns/locale";
 import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, ArrowDown, ArrowUpDown, History, Trash2 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 import { usePracticeAreas } from "@/hooks/usePracticeAreas";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card } from "@/components/ui/card";
@@ -120,77 +122,38 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-members", accountId],
     enabled: !!accountId,
     queryFn: async (): Promise<EcMember[]> => {
-      const PAGE = 1000;
-
-      const chunk = <T,>(arr: T[], size: number): T[][] => {
-        const out: T[][] = [];
-        for (let i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
-        return out;
-      };
-
-      const fetchAllPages = async (label: string, build: (from: number, to: number) => any) => {
-        const rows: any[] = [];
-        for (let page = 0; page < 20; page++) {
-          const { data, error } = await build(page * PAGE, page * PAGE + PAGE - 1);
-          if (error) {
-            console.error(`[MentoriaEC] falha ao carregar ${label}:`, error);
-            break;
-          }
-          rows.push(...(data || []));
-          if (!data || data.length < PAGE) break;
-        }
-        return rows;
-      };
-
       // Universo = clientes com contrato ATIVO (mesma régua da tela de Clientes)
-      const contracts = await fetchAllPages("contratos", (from, to) =>
+      const { data: contracts, error: contractsError } = await fetchAllRows<any>((from, to) =>
         supabase
           .from("client_contracts")
-          .select("client_id, end_date, status, product_id")
+          .select("client_id, end_date, status, product_id, id")
           .eq("account_id", accountId!)
           .eq("status", "active")
           .order("id")
           .range(from, to),
       );
+      if (contractsError) throw contractsError;
 
       const clientIds = [...new Set(contracts.map((c: any) => c.client_id).filter(Boolean))];
       if (clientIds.length === 0) return [];
 
-      const idChunks = chunk(clientIds as string[], 200);
-
-      const fetchChunked = async <T,>(
-        label: string,
-        run: (ids: string[]) => any,
-      ): Promise<T[]> => {
-        const results = await Promise.all(idChunks.map((ids) => run(ids)));
-        const rows: T[] = [];
-        for (const r of results) {
-          if (r.error) {
-            console.error(`[MentoriaEC] falha ao carregar ${label}:`, r.error);
-            continue;
-          }
-          if (r.data) rows.push(...r.data);
-        }
-        return rows;
-      };
-
       const [clients, productsRes, attendance, statuses] = await Promise.all([
-        fetchChunked<any>("clientes", (ids) =>
-          supabase.from("clients").select("id, full_name, logo_url, business_segment, status").in("id", ids),
+        fetchInChunks<any>(clientIds, 200, (chunk) =>
+          supabase.from("clients").select("id, full_name, logo_url, business_segment, status").in("id", chunk),
         ),
         supabase.from("products").select("id, name, color"),
-        fetchChunked<any>("presenças", (ids) =>
+        fetchInChunks<any>(clientIds, 200, (chunk) =>
           supabase
             .from("ec_mentoring_attendance")
             .select("client_id, session_date")
-            .in("client_id", ids)
+            .in("client_id", chunk)
             .order("session_date", { ascending: false }),
         ),
-        fetchChunked<any>("situação", (ids) =>
-          supabase.from("ec_mentoring_client_status").select("client_id, status").in("client_id", ids),
+        fetchInChunks<any>(clientIds, 200, (chunk) =>
+          supabase.from("ec_mentoring_client_status").select("client_id, status").in("client_id", chunk),
         ),
       ]);
-      if (productsRes.error) console.error("[MentoriaEC] falha ao carregar produtos:", productsRes.error);
+      if (productsRes.error) throw productsRes.error;
       const products = productsRes.data ?? [];
 
       const productMeta = new Map<string, { name: string; color: string | null }>(
@@ -310,11 +273,15 @@ export default function MentoriaEC() {
     queryKey: ["ec-mentoring-history", historyMember?.clientId],
     enabled: !!historyMember?.clientId,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("ec_mentoring_attendance")
-        .select("id, session_date, notes")
-        .eq("client_id", historyMember!.clientId)
-        .order("session_date", { ascending: false });
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("ec_mentoring_attendance")
+          .select("id, session_date, notes")
+          .eq("client_id", historyMember!.clientId)
+          .order("session_date", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
       if (error) throw error;
       return data ?? [];
     },

@@ -371,7 +371,7 @@ function useDashboardKpis() {
     enabled: !!accountId,
     queryFn: async () => {
       // Última vNPS por cliente precisa do conjunto completo — sem .limit(5000) silencioso.
-      const { data } = await fetchAllRows<any>((from, to) =>
+      const { data, error } = await fetchAllRows<any>((from, to) =>
         supabase
           .from("vnps_snapshots")
           .select("client_id, vnps_class, computed_at")
@@ -380,6 +380,7 @@ function useDashboardKpis() {
           .order("client_id", { ascending: false })
           .range(from, to),
       );
+      if (error) throw error;
       const latest = new Map<string, string>();
       for (const r of (data ?? []) as any[]) {
         if (!latest.has(r.client_id)) latest.set(r.client_id, r.vnps_class);

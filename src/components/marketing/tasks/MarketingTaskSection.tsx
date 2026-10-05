@@ -5,6 +5,8 @@ import { Input } from "@/components/ui/input";
 import { MarketingTaskRow } from "./MarketingTaskRow";
 import { useMarketingTaskSections, MarketingTaskSection as SectionType } from "@/hooks/useMarketingTaskSections";
 import { MarketingTask } from "@/hooks/useMarketingTasks";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -28,6 +30,8 @@ interface MarketingTaskSectionProps {
   onAddTask: () => void;
   onEditTask: (taskId: string) => void;
   onToggleComplete: (id: string, completed: boolean) => void;
+  /** Critérios de busca/filtro/ordenação — ao mudar, volta à página 1. */
+  resetKey?: unknown;
 }
 
 export function MarketingTaskSection({
@@ -36,6 +40,7 @@ export function MarketingTaskSection({
   onAddTask,
   onEditTask,
   onToggleComplete,
+  resetKey,
 }: MarketingTaskSectionProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(section.name);
@@ -69,6 +74,7 @@ export function MarketingTaskSection({
   };
 
   const completedCount = tasks.filter((t) => t.is_completed).length;
+  const pgTasks = usePagedList(tasks, { resetKey: [section.id, resetKey] });
 
   return (
     <div className="border-b last:border-b-0">
@@ -142,7 +148,7 @@ export function MarketingTaskSection({
       {/* Tasks */}
       {!section.is_collapsed && (
         <>
-          {tasks.map((task) => (
+          {pgTasks.items.map((task) => (
             <MarketingTaskRow
               key={task.id}
               task={task}
@@ -150,6 +156,8 @@ export function MarketingTaskSection({
               onToggleComplete={(completed) => onToggleComplete(task.id, completed)}
             />
           ))}
+
+          {tasks.length > 0 && <PagerFor state={pgTasks} itemLabel="tarefas" />}
 
           {/* Add Task Row */}
           <div
