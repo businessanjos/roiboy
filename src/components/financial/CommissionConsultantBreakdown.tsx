@@ -26,6 +26,8 @@ import { ChevronDown, ChevronRight, Users, Briefcase, ShieldCheck } from "lucide
 import { useCommissionPlan, type CommissionDealEntry } from "@/hooks/useCommissionPlan";
 import { Skeleton } from "@/components/ui/skeleton";
 import { CommissionApprovalDialog } from "./CommissionApprovalDialog";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const fmtBRL = (v: number) =>
   new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", minimumFractionDigits: 0 }).format(v || 0);
@@ -88,6 +90,7 @@ function groupByUser(entries: CommissionDealEntry[], cargo: "Closer" | "SDR"): C
 function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
   const [open, setOpen] = useState(false);
   const [approvalEntry, setApprovalEntry] = useState<CommissionDealEntry | null>(null);
+  const pg = usePagedList(group.entries, { resetKey: group.userId, defaultPageSize: 20 });
 
   const tierName = useMemo(() => {
     if (!plan?.tiers?.length) return null;
@@ -186,7 +189,7 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {group.entries.map((e) => {
+                {pg.items.map((e) => {
                   const status =
                     STATUS_LABEL[e.commission_status] || STATUS_LABEL.pending;
                   return (
@@ -236,6 +239,7 @@ function ConsultantRow({ group, plan }: { group: ConsultantGroup; plan: any }) {
                 })}
               </TableBody>
             </Table>
+            <PagerFor state={pg} itemLabel="negócios" />
             {plan && (
               <div className="mt-4 rounded-md border bg-muted/30 p-3 text-xs space-y-1">
                 <p className="font-semibold text-foreground">

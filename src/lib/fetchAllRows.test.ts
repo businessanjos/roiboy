@@ -8,7 +8,7 @@ const fixture = Array.from({ length: 2537 }, (_, i) => ({ id: `id-${i}`, tag: i 
 describe("fetchAllRows", () => {
   it("carrega acima do teto de 1000 em lotes, sem duplicar nem truncar", async () => {
     const build = vi.fn(async (from: number, to: number) => ({ data: fixture.slice(from, to + 1), error: null }));
-    const { data, error } = await fetchAllRows(build);
+    const { data, error } = await fetchAllRows<(typeof fixture)[number]>(build);
     expect(error).toBeNull();
     expect(data).toHaveLength(2537);
     expect(new Set(data.map((r) => r.id)).size).toBe(2537);
@@ -19,7 +19,7 @@ describe("fetchAllRows", () => {
     const build = vi.fn(async (from: number, to: number) =>
       from >= 1000 ? { data: null, error: new Error("x") } : { data: fixture.slice(from, to + 1), error: null },
     );
-    const { data, error } = await fetchAllRows(build);
+    const { data, error } = await fetchAllRows<(typeof fixture)[number]>(build);
     expect(error).toBeTruthy();
     expect(data).toHaveLength(1000);
   });

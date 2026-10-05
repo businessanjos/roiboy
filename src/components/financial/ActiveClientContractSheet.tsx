@@ -11,6 +11,8 @@ import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { formatBRLPrecise } from "@/lib/financial-format";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 interface Props {
   contractId: string | null;
@@ -88,6 +90,8 @@ export function ActiveClientContractSheet({
   const expectedInEntries = contractValue - pendingGroupsSum;
   const balanceDiff = Number((entriesSum - expectedInEntries).toFixed(2));
   const hasDivergence = data?.contract && Math.abs(balanceDiff) > 0.01;
+
+  const entriesPg = usePagedList(data?.entries, { resetKey: contractId, isLoading, defaultPageSize: 20 });
 
   return (
     <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
@@ -239,7 +243,7 @@ export function ActiveClientContractSheet({
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {data?.entries.map((e) => {
+                      {entriesPg.items.map((e) => {
                         const st = STATUS_LABEL[e.status] || {
                           label: e.status,
                           className: "bg-muted text-muted-foreground border-border",
@@ -279,6 +283,7 @@ export function ActiveClientContractSheet({
                       })}
                     </TableBody>
                   </Table>
+                  <PagerFor state={entriesPg} itemLabel="lançamentos" />
                 </div>
               )}
             </div>
