@@ -34,7 +34,12 @@ function setupSupabaseFromForms() {
     if (table === 'typeform_forms') {
       return {
         select: () => ({
-          order: () => Promise.resolve({ data: FORMS, error: null }),
+          order: () => ({
+            order: () => ({
+              range: (from: number, to: number) =>
+                Promise.resolve({ data: FORMS.slice(from, to + 1), error: null }),
+            }),
+          }),
         }),
       };
     }
