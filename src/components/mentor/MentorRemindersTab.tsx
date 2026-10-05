@@ -25,6 +25,8 @@ interface MentorRemindersTabProps {
 export function MentorRemindersTab({ reminders, isLoading }: MentorRemindersTabProps) {
   const navigate = useNavigate();
 
+  const pg = usePagedList(reminders, { resetKey: reminders.length });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -46,8 +48,6 @@ export function MentorRemindersTab({ reminders, isLoading }: MentorRemindersTabP
       </Card>
     );
   }
-
-  const pg = usePagedList(reminders, { resetKey: reminders.length });
 
   const getTypeIcon = (type: string) => {
     switch (type) {

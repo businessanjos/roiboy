@@ -39,10 +39,6 @@ export default function RHOffboarding() {
   const [selected, setSelected] = useState<HROffboarding | null>(null);
   const [newOpen, setNewOpen] = useState(false);
 
-  if (canHR === false) {
-    return <Navigate to="/" replace />;
-  }
-
   const filtered = useMemo(() => {
     const now = new Date();
     return offboardings.filter((o) => {
@@ -98,6 +94,10 @@ export default function RHOffboarding() {
       avgDays,
     };
   }, [offboardings]);
+
+  if (canHR === false) {
+    return <Navigate to="/" replace />;
+  }
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">

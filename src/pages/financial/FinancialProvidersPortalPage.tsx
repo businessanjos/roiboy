@@ -13,7 +13,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
 import { Copy, ExternalLink, Download, Check, X, Search } from "lucide-react";
-import { usePagedList, usePaginationState } from "@/hooks/usePagedList";
+import { usePagedList, type PaginationState, type PageSize } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 
 const STATUS_LABEL: Record<string, { label: string; cls: string }> = {
@@ -51,24 +51,45 @@ export default function FinancialProvidersPortalPage() {
     },
   });
 
-  const [invoicesCount, setInvoicesCount] = useState(0);
-  const invoicesPg = usePaginationState(invoicesCount, { defaultPageSize: 20 });
+  // invoicesCount vem do cache da própria query (count retornado pelo Supabase
+  // junto das linhas), nunca de um setState dentro do queryFn — evita mostrar a
+  // contagem da página anterior durante o fetch / perder o total ao remontar.
+  const [invoicesPageState, setInvoicesPageState] = useState<{ page: number; pageSize: PageSize }>({
+    page: 1,
+    pageSize: 20,
+  });
 
-  const { data: invoices = [] } = useQuery({
-    queryKey: ["provider-invoices", currentUser?.account_id, invoicesPg.currentPage, invoicesPg.pageSize],
+  const { data: invoicesResult } = useQuery({
+    queryKey: ["provider-invoices", currentUser?.account_id, invoicesPageState.page, invoicesPageState.pageSize],
     enabled: !!currentUser?.account_id,
-    queryFn: async () => {
-      const { data, count } = await supabase
+    queryFn: async (): Promise<{ rows: any[]; count: number }> => {
+      const from = (invoicesPageState.page - 1) * invoicesPageState.pageSize;
+      const to = from + invoicesPageState.pageSize - 1;
+      const { data, count, error } = await supabase
         .from("hr_provider_invoices")
         .select("*, provider:hr_service_providers(full_name, company_name, cnpj, bank_pix_key)", { count: "exact" })
         .eq("account_id", currentUser!.account_id)
         .order("uploaded_at", { ascending: false })
         .order("id", { ascending: false })
-        .range(invoicesPg.from, invoicesPg.to);
-      setInvoicesCount(count || 0);
-      return data ?? [];
+        .range(from, to);
+      if (error) throw error;
+      return { rows: data ?? [], count: count || 0 };
     },
   });
+  const invoices = invoicesResult?.rows ?? [];
+  const invoicesCount = invoicesResult?.count ?? 0;
+  const invoicesTotalPages = Math.max(1, Math.ceil(invoicesCount / invoicesPageState.pageSize));
+  const invoicesSafePage = Math.min(invoicesPageState.page, invoicesTotalPages);
+  const invoicesPg: PaginationState = {
+    currentPage: invoicesSafePage,
+    pageSize: invoicesPageState.pageSize,
+    totalPages: invoicesTotalPages,
+    totalItems: invoicesCount,
+    from: (invoicesSafePage - 1) * invoicesPageState.pageSize,
+    to: invoicesSafePage * invoicesPageState.pageSize - 1,
+    handlePageChange: (page) => setInvoicesPageState((p) => ({ ...p, page: Math.max(1, Math.min(page, invoicesTotalPages)) })),
+    handlePageSizeChange: (size) => setInvoicesPageState({ page: 1, pageSize: size }),
+  };
 
   const buildLink = (token: string) => `${window.location.origin}/portal/prestador/${token}`;
 

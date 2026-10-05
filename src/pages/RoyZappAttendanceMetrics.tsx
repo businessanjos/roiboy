@@ -84,7 +84,7 @@ export default function RoyZappAttendanceMetrics() {
       // Métricas (totais, ranking, série diária) dependem do conjunto completo do período —
       // usamos fetchAllRows (lotes de 1000 via .range) em vez do antigo .limit(50000) que
       // truncava silenciosamente. Mantemos o mesmo teto de segurança (50.000 linhas).
-      const { data: msgs } = await fetchAllRows<any>(
+      const { data: msgs, error: msgsError } = await fetchAllRows<any>(
         (from, to) =>
           supabase
             .from("zapp_messages")
@@ -98,6 +98,17 @@ export default function RoyZappAttendanceMetrics() {
             .range(from, to),
         { maxRows: 50000 }
       );
+      if (msgsError) {
+        // Erro de lote ou limite de 50.000 atingido: nunca exibir métricas
+        // parciais como se fossem o total do período.
+        console.error("[RoyZappAttendanceMetrics]", msgsError);
+        if (!cancelled) {
+          setConsultants([]);
+          setDaily([]);
+          setLoading(false);
+        }
+        return;
+      }
 
       // 2) Open conversations per agent
       const { data: openAssign } = await supabase

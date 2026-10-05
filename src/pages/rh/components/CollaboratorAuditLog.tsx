@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,31 @@ function fieldLabel(k: string) {
   return FIELD_LABELS[k] ?? k;
 }
 
+/**
+ * Monta a cláusula `.or(...)` do PostgREST para buscar por usuário
+ * (nome/e-mail) ou por rótulo de campo alterado (changed_fields).
+ * Exportado para teste unitário.
+ */
+export function buildAuditSearchFilter(search: string): string | null {
+  const q = search.trim();
+  if (!q) return null;
+  const escaped = q.replace(/[%,]/g, "");
+  if (!escaped) return null;
+  const clauses = [
+    `user_name.ilike.%${escaped}%`,
+    `user_email.ilike.%${escaped}%`,
+  ];
+  const matchingKeys = Object.entries(FIELD_LABELS)
+    .filter(([, label]) => label.toLowerCase().includes(q.toLowerCase()))
+    .map(([key]) => key);
+  if (matchingKeys.length > 0) {
+    matchingKeys.forEach((key) => {
+      clauses.push(`changed_fields->${key}.eq.true`);
+    });
+  }
+  return clauses.join(",");
+}
+
 function formatValue(v: any): string {
   if (v === null || v === undefined || v === "") return "—";
   if (typeof v === "boolean") return v ? "Sim" : "Não";
@@ -100,20 +125,29 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
   const [entries, setEntries] = useState<AuditEntry[]>([]);
   const [totalCount, setTotalCount] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState(false);
   const [search, setSearch] = useState("");
 
-  // Busca/filtro por usuário e campo é feito no cliente, mas o log pode ser grande;
-  // paginamos no servidor com count exato para não truncar silenciosamente.
-  const pg = usePaginationState(totalCount, { resetKey: search, isLoading: loading, defaultPageSize: 20 });
+  // Busca/filtro por usuário e campo agora é feito no servidor (ilike + mapeamento
+  // de rótulos PT-BR para chaves de campo), aplicada antes de range/count.
+  const searchFilter = useMemo(() => buildAuditSearchFilter(search), [search]);
+  const pg = usePaginationState(totalCount, {
+    resetKey: `${collaboratorId}|${search}`,
+    isLoading: loading,
+    defaultPageSize: 20,
+  });
 
   useEffect(() => {
     let cancel = false;
     (async () => {
       setLoading(true);
-      const { data, error, count } = await supabase
+      setLoadError(false);
+      let query = supabase
         .from("hr_collaborator_audit_log" as any)
         .select("*", { count: "exact" })
-        .eq("collaborator_id", collaboratorId)
+        .eq("collaborator_id", collaboratorId);
+      if (searchFilter) query = query.or(searchFilter);
+      const { data, error, count } = await query
         .order("created_at", { ascending: false })
         .order("id", { ascending: false })
         .range(pg.from, pg.to);
@@ -121,22 +155,17 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
       if (!error) {
         setEntries((data || []) as any);
         setTotalCount(count || 0);
+      } else {
+        setLoadError(true);
+        setEntries([]);
+        setTotalCount(0);
       }
       setLoading(false);
     })();
     return () => { cancel = true; };
-  }, [collaboratorId, pg.from, pg.to]);
+  }, [collaboratorId, searchFilter, pg.from, pg.to]);
 
-  const filtered = entries.filter(e => {
-    if (!search.trim()) return true;
-    const q = search.toLowerCase();
-    const fields = Object.keys(e.changed_fields || {}).map(fieldLabel).join(" ");
-    return (
-      (e.user_name || "").toLowerCase().includes(q) ||
-      (e.user_email || "").toLowerCase().includes(q) ||
-      fields.toLowerCase().includes(q)
-    );
-  });
+  const filtered = entries;
 
   return (
     <Card>
@@ -160,9 +189,13 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
           <div className="flex items-center justify-center py-8 text-muted-foreground">
             <Loader2 className="h-4 w-4 mr-2 animate-spin" /> Carregando...
           </div>
+        ) : loadError ? (
+          <div className="text-center py-8 text-sm text-destructive">
+            Não foi possível carregar o histórico. Tente novamente.
+          </div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-8 text-sm text-muted-foreground">
-            Nenhuma alteração registrada ainda.
+            {search.trim() ? "Nenhum registro para a busca." : "Nenhuma alteração registrada ainda."}
           </div>
         ) : (
           <ScrollArea className="h-[520px] pr-3">
@@ -216,7 +249,7 @@ export default function CollaboratorAuditLog({ collaboratorId }: { collaboratorI
             </div>
           </ScrollArea>
         )}
-        {!loading && filtered.length > 0 && <PagerFor state={pg} itemLabel="alterações" />}
+        {!loading && !loadError && filtered.length > 0 && <PagerFor state={pg} itemLabel="alterações" />}
       </CardContent>
     </Card>
   );
