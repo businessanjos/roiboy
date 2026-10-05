@@ -2532,9 +2532,9 @@ export default function Tasks() {
               className="gap-2 data-[state=active]:bg-background data-[state=active]:shadow-sm"
             >
               Todas
-              {baseFilteredTasks.length > 0 && (
+              {(serverSearch ? (searchCounts?.total ?? 0) : baseFilteredTasks.length) > 0 && (
                 <Badge variant="secondary" className="h-5 px-1.5 text-[10px] ml-1">
-                  {baseFilteredTasks.length}
+                  {serverSearch ? searchCounts?.total : baseFilteredTasks.length}
                 </Badge>
               )}
             </TabsTrigger>
