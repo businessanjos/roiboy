@@ -408,7 +408,7 @@ export async function enrichLogs(results: UnifiedLog[]): Promise<UnifiedLog[]> {
     });
 
     enriched.forEach((r) => {
-      if (r.entity_type === "task" && r.entity_id) {
+      if (r.entity_type === "task" && r.entity_id && !r.context) {
         r.context = taskContext.get(r.entity_id) ?? null;
       }
     });
@@ -520,14 +520,20 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
 
   const logs = pageResult?.rows ?? [];
 
-  // Pessoas que aparecem na página carregada (lista completa viria de uma fonte à parte se necessário)
-  const people = Array.from(
-    new Map(
-      logs
-        .filter((l) => l.user_id)
-        .map((l) => [l.user_id as string, l.user_name || l.user_email || "Sem nome"]),
-    ).entries(),
-  ).sort((a, b) => a[1].localeCompare(b[1]));
+  // Autores distintos do conjunto filtrado (não só da página carregada), via RPC dedicada.
+  const { data: authorsData } = useQuery({
+    queryKey: ["audit-logs-unified-authors", scope, accountId, actionFilter, entityFilter, periodFilter, debouncedSearch],
+    queryFn: () =>
+      fetchUnifiedAuthors({
+        accountId,
+        scope,
+        sinceIso,
+        actionFilter,
+        entityFilter,
+        search: debouncedSearch,
+      }),
+  });
+  const people: Array<[string, string]> = (authorsData ?? []).map((a) => [a.id, a.name]);
 
   const selectedPersonName =
     userFilter === "all" ? "Todas as pessoas" : people.find(([id]) => id === userFilter)?.[1] ?? "Pessoa";
@@ -546,6 +552,9 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
     setExportProgress({ loaded: 0, total: 0 });
 
     try {
+      // Fixa o teto superior no início da exportação (ou min(p_to, agora)), para que
+      // todos os lotes vejam o mesmo conjunto, mesmo que cheguem novos registros durante a exportação.
+      const exportToIso = new Date().toISOString();
       const rows = await exportAllFiltered(
         (offset, limit) =>
           fetchUnifiedPage({
@@ -558,6 +567,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             search: debouncedSearch,
             offset,
             limit,
+            toIso: exportToIso,
           }),
         (p) => setExportProgress(p),
       );

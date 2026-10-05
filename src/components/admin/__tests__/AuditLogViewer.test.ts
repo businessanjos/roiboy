@@ -49,6 +49,8 @@ describe("mapRpcRowToUnifiedLog — mapeamento da RPC audit_unified_page", () =>
       ip_address: "1.2.3.4",
       user_agent: "ua",
       created_at: "2026-02-01T10:00:00Z",
+      context: "Lead Y › Negócio X",
+      description: "Moveu o negócio",
       total_count: 42,
     };
     const mapped = mapRpcRowToUnifiedLog(row);
@@ -66,6 +68,8 @@ describe("mapRpcRowToUnifiedLog — mapeamento da RPC audit_unified_page", () =>
       user_agent: "ua",
       created_at: "2026-02-01T10:00:00Z",
       source: "deal",
+      context: "Lead Y › Negócio X",
+      description: "Moveu o negócio",
     });
     // total_count não vaza para o objeto exibido na tela
     expect((mapped as any).total_count).toBeUndefined();
