@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { DigitalContractTab } from "@/components/sales/contracts/DigitalContractTab";
 import { format } from "date-fns";
@@ -31,6 +31,7 @@ import { buildPublicContractUrl } from "@/lib/publicLink";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 
 interface DigitalContractListItem {
   id: string;
@@ -51,6 +52,11 @@ interface DigitalContractListItem {
 }
 
 const shortDealId = (id: string) => id.slice(0, 8).toUpperCase();
+
+/** Escapa caracteres especiais de ilike/or() do PostgREST antes de montar o termo de busca. */
+function escapePostgrestIlike(term: string): string {
+  return term.replace(/[\\%_(),]/g, (c) => `\\${c}`);
+}
 
 
 interface DealOption {
@@ -173,52 +179,109 @@ export default function SalesDigitalContracts() {
   }, [currentUser?.account_id]);
 
 
+  // Contador de requisições em voo: ignora respostas de buscas antigas (fora de ordem)
+  // e nunca limpa `deals` ao iniciar uma nova busca — resultados anteriores permanecem
+  // visíveis até a nova resposta chegar, evitando que a lista "suma" durante o debounce.
+  const dealSearchReqRef = useRef(0);
+
   useEffect(() => {
     async function loadDealsForContract() {
       if (!generateOpen || !currentUser?.account_id) return;
 
+      const reqId = ++dealSearchReqRef.current;
+      const accountId = currentUser.account_id;
       setLoadingDeals(true);
       try {
         // Buscar todas as stages do funil Closer (qualquer etapa pode gerar contrato)
         const { data: stagesData, error: stagesError } = await supabase
           .from("deal_stages")
           .select("id, name, pipeline:pipelines!inner(name)")
-          .eq("account_id", currentUser.account_id);
+          .eq("account_id", accountId);
 
         if (stagesError) throw stagesError;
+        if (reqId !== dealSearchReqRef.current) return;
 
         const closerStageIds = (stagesData ?? [])
           .filter((s: any) => (s.pipeline?.name ?? "").toLowerCase() === "closer")
           .map((s: any) => s.id);
 
         if (closerStageIds.length === 0) {
-          setDeals([]);
+          if (reqId === dealSearchReqRef.current) setDeals([]);
           return;
         }
 
-        let query = supabase
-          .from("deals")
-          .select("id, title, status, value, updated_at, client:clients(full_name), lead:leads(full_name), stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)")
-          .eq("account_id", currentUser.account_id)
-          .in("stage_id", closerStageIds)
-          .not("status", "in", "(won,lost)");
+        const dealSelect =
+          "id, title, status, value, updated_at, client:clients(full_name), lead:leads(full_name), stage:deal_stages(name), responsible:users!deals_responsible_user_id_fkey(name)";
+        const buildBaseQuery = () =>
+          supabase
+            .from("deals")
+            .select(dealSelect)
+            .eq("account_id", accountId)
+            .in("stage_id", closerStageIds)
+            .not("status", "in", "(won,lost)");
 
         const term = debouncedDealSearch.trim();
-        if (term) {
-          query = query.or(`title.ilike.%${term}%`);
+        let rows: any[] = [];
+
+        if (!term) {
+          const { data, error } = await buildBaseQuery()
+            .order("updated_at", { ascending: false })
+            .limit(200);
+          if (error) throw error;
+          rows = data ?? [];
+        } else {
+          const escaped = escapePostgrestIlike(term);
+
+          // Busca por título do negócio OU nome do cliente/lead: primeiro resolve os ids
+          // de clientes/leads cujo full_name combina, depois busca os deals associados.
+          const [
+            { data: titleRows, error: titleError },
+            { data: clientRows, error: clientError },
+            { data: leadRows, error: leadError },
+          ] = await Promise.all([
+            buildBaseQuery().ilike("title", `%${escaped}%`).order("updated_at", { ascending: false }).limit(200),
+            supabase.from("clients").select("id").eq("account_id", accountId).ilike("full_name", `%${escaped}%`).limit(500),
+            supabase.from("leads").select("id").eq("account_id", accountId).ilike("full_name", `%${escaped}%`).limit(500),
+          ]);
+          if (titleError) throw titleError;
+          if (clientError) throw clientError;
+          if (leadError) throw leadError;
+          if (reqId !== dealSearchReqRef.current) return;
+
+          rows = [...(titleRows ?? [])];
+
+          const clientIds = (clientRows ?? []).map((c: any) => c.id as string);
+          const leadIds = (leadRows ?? []).map((l: any) => l.id as string);
+
+          if (clientIds.length) {
+            const byClient = await fetchInChunks<any>(clientIds, 150, (chunk) =>
+              buildBaseQuery().in("client_id", chunk).order("updated_at", { ascending: false }).limit(200) as any,
+            );
+            rows.push(...byClient);
+          }
+          if (leadIds.length) {
+            const byLead = await fetchInChunks<any>(leadIds, 150, (chunk) =>
+              buildBaseQuery().in("lead_id", chunk).order("updated_at", { ascending: false }).limit(200) as any,
+            );
+            rows.push(...byLead);
+          }
+
+          const dedup = new Map<string, any>();
+          for (const row of rows) dedup.set(row.id, row);
+          rows = Array.from(dedup.values())
+            .sort((a, b) => new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime())
+            .slice(0, 200);
         }
 
-        const { data, error } = await query
-          .order("updated_at", { ascending: false })
-          .limit(200);
-
-        if (error) throw error;
-        setDeals((data ?? []) as unknown as DealOption[]);
+        // Ignora resposta obsoleta: uma busca mais nova já está em andamento ou concluída.
+        if (reqId !== dealSearchReqRef.current) return;
+        setDeals(rows as unknown as DealOption[]);
       } catch (error: unknown) {
+        if (reqId !== dealSearchReqRef.current) return;
         console.error("[SalesDigitalContracts] deals load error:", error);
         toast.error(error instanceof Error ? error.message : "Erro ao carregar negócios");
       } finally {
-        setLoadingDeals(false);
+        if (reqId === dealSearchReqRef.current) setLoadingDeals(false);
       }
     }
 
@@ -257,17 +320,11 @@ export default function SalesDigitalContracts() {
     );
   }, [contracts]);
 
-  const filteredDeals = useMemo(() => {
-    const term = dealSearch.trim().toLowerCase();
-    const base = deals.filter((deal) => deal.status !== "won");
-    if (!term) return base;
-
-    return base.filter((deal) =>
-      [deal.title, deal.client?.full_name, deal.lead?.full_name]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(term)),
-    );
-  }, [dealSearch, deals]);
+  // A busca já é feita no servidor (título do negócio OU nome do cliente/lead);
+  // aqui só aplicamos o filtro de status para não re-filtrar por texto com um termo
+  // mais novo que o já usado na busca (o que fazia os resultados "sumirem" durante
+  // o debounce, antes da nova resposta chegar).
+  const filteredDeals = useMemo(() => deals.filter((deal) => deal.status !== "won"), [deals]);
 
   const contractsPg = usePagedList(filteredContracts, {
     resetKey: [search],

@@ -83,6 +83,8 @@ import { toast } from "sonner";
 import { LeadImportPreview, ImportLeadRow } from "@/components/leads/LeadImportPreview";
 import { useZappNavigation } from "@/hooks/useZappNavigation";
 import { ZappLeadPhonePickerDialog } from "@/components/royzapp/dialogs";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const LEAD_SOURCES = [
   { value: "website", label: "Website" },
@@ -1001,6 +1003,11 @@ export default function LeadsTab() {
     return LEAD_SOURCES.find((s) => s.value === source)?.label || source || "—";
   };
 
+  const leadsPg = usePagedList(filteredLeads, {
+    resetKey: [searchQuery, selectedOwnerFilter],
+    isLoading: loading,
+  });
+
   if (loading) {
     return (
       <div className="space-y-4">
@@ -1147,13 +1154,13 @@ export default function LeadsTab() {
       <Card className="flex-1 min-h-0 overflow-hidden mt-4">
         <ScrollArea className="h-full">
           <CardContent className="p-0">
-          {filteredLeads.length === 0 ? (
+          {leadsPg.items.length === 0 ? (
             <div className="p-8 text-center text-muted-foreground">
               Nenhum lead encontrado
             </div>
           ) : (
             <div className="divide-y">
-              {filteredLeads.map((lead) => {
+              {leadsPg.items.map((lead) => {
                 const statusInfo = getStatusInfo(lead.status);
                 const leadDeals = getLeadDeals(lead.id);
                 return (
@@ -1272,6 +1279,7 @@ export default function LeadsTab() {
           )}
           </CardContent>
         </ScrollArea>
+        <PagerFor state={leadsPg} itemLabel="leads" />
       </Card>
 
       {/* Lead Dialog */}
