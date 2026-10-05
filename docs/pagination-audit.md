@@ -34,3 +34,21 @@ Gráficos, rankings top-N declarados, KPIs, formulários/wizards, calendários, 
 ## Verificação
 - `tsgo --noEmit`: OK. `vite build`: OK. `vitest src/hooks src/components/layout`: 52/52 (inclui 7 testes de `usePagedList`: página 2 com IDs distintos, limites, reset por filtro/tamanho, vazio, ajuste ao encolher, sem reset em loading).
 - Navegador: ver docs/mobile-design-qa.md (rodada 8).
+
+## Rodada 2 — auditoria independente (base f96af873)
+
+Base compartilhada: `useTablePagination`/`TablePagination` já eram camadas de compatibilidade sobre `usePagedList`/`ListPagination` (sem setTimeout em useMemo; resetKey por valor; botões 44px com nomes PT-BR; select com aria-label; quebra de linha). Corrigido defeito real encontrado por teste: filtrar estando numa página avançada não voltava à página 1 (efeito de ajuste sobrescrevia o reset) — agora usa atualização funcional.
+Novo `src/lib/fetchAllRows.ts`: carga em lotes de 1000 via `.range()`, ordem com desempate por `id`, teto de segurança (padrão 50.000).
+
+| Área | Correções desta rodada |
+|---|---|
+| Tarefas | Kanban com "Carregar mais tarefas" (mesma continuação da lista). Busca por cliente/lead/negócio mantém até 1000 IDs por relação: os IDs vão na URL do filtro (`in.(...)`) e mais de 1000 UUIDs excederiam o tamanho da URL; termo que casa >1000 nomes é inespecífico — exceção justificada. |
+| Ficha do cliente | Linha do tempo busca registros anteriores no servidor por fonte ("Carregar registros anteriores") até esgotar; respostas de formulário e relatório de checkpoints paginados; check-ins individuais (200) e painel agregado (5000) em lotes. |
+| CS/Vendas | Onboarding (50/500) completo e paginado; Clínica Ryka (3000), VIP, Contratos digitais, Contratos (teto 1000), Renovações (2000) em lotes; "Gerar contrato" com busca no servidor. |
+| Financeiro | Contas bancárias, Centros de custo, Formas de pagamento, FAQ (categorias/busca), Modelos de lançamento, Comissão por consultor, Ficha do contrato, Linha do tempo da parcela, Pendentes de classificação paginados; Pluggy por conta + contagem 24h sem limite; Kanban de cobrança com "Carregar mais" por coluna (totais e arrastar sobre o conjunto completo). Seleção global preservada. DRE/DRF/Balanço/Fluxo não paginados (estruturais). |
+| RH | Todas as fontes `select` sem range trocadas por lotes (colaboradores, prestadores, parceiros, departamentos, cargos, benefícios, vagas, admissões, modelos, docs assinados, desligamentos, candidatos do Kanban). Árvores e grupos preservados. |
+| Marketing | Meta: função segue `paging.next` (campanhas/conjuntos/anúncios) e histórico de orçamento em lotes; conjuntos do Tráfego Pago e atribuição de UTM (leads/negócios) em lotes; Formulários, Typeform, Rebranding (fonte), Checklist (50), Briefings, Pilares, Copy (100), Tendências (200), Hooks (200), Concorrentes, Pesquisa (30), Solicitações (20/coluna + carregar mais), listas do projeto paginadas e seletores com busca no servidor; "+N" do calendário abre lista do dia. Tarefas de marketing com ordem manual/DnD: fonte completa, sem pager (exceção). |
+| Eventos | Playbooks (catálogo e itens), Lembretes e Resumos paginados; relatório de presença com todos os eventos e exportação completa; ROI busca todas as edições antes de filtrar. Checklist e Design por categoria (agrupados, fonte completa). |
+| Admin/Config | Histórico de acesso do usuário (servidor); busca de Segurança no servidor; Notificações: página com paginação no servidor, contagem de não lidas e "marcar todas" no servidor (não executado em QA); Campanha de formulário, Sessões, Tokens, Motivos de perda, Base IA (docs/correções), Perfis, Matriz RoyZapp, Agentes Ever, Métricas RoyZapp (lotes até 50.000, documentado). Logs de auditoria: lotes com teto 20.000 e confirmação antes de exportar. TeamOpenItems mantém export da página (-pN.csv). Conversas Ever: iframe externo, navegação do próprio produto. |
+
+Verificação rodada 2: tsgo OK; vite build OK; vitest hooks+lib+layout 155/155, incluindo `src/lib/fetchAllRows.test.ts` (fixture de 2537 linhas: 3 lotes sem duplicar/truncar, erro parcial, página 2 com IDs distintos, última página, filtro na página avançada volta à 1 com total correto).
