@@ -137,15 +137,18 @@ export function ThreeCPlusCallsList() {
     setLoading(true);
     const since = new Date(Date.now() - Number(period) * 86400000).toISOString();
     const [{ data }, { data: userRows }] = await Promise.all([
-      supabase
-        .from("threecplus_call_logs")
-        .select(
-          "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
-        )
-        .eq("account_id", currentUser.account_id)
-        .gte("started_at", since)
-        .order("started_at", { ascending: false })
-        .limit(400),
+      fetchAllRows((from, to) =>
+        supabase
+          .from("threecplus_call_logs")
+          .select(
+            "id, call_id, phone, contact_name, direction, status, duration_seconds, started_at, qualification_name, user_id, agent_name, lead_id, deal_id, client_id, recording_url, engine, metadata, threecplus_call_transcripts(status, summary, transcript, temperature, last_error, recording_url)",
+          )
+          .eq("account_id", currentUser.account_id)
+          .gte("started_at", since)
+          .order("started_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to),
+      ),
       supabase.from("users").select("id, name").eq("account_id", currentUser.account_id),
     ]);
     setCalls(dedupeCalls((data as unknown as CallRow[]) || []) as CallRow[]);

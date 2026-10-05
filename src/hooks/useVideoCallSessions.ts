@@ -35,11 +35,14 @@ export function useVideoCallSessions() {
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
-    const { data, error } = await supabase
-      .from("video_call_sessions")
-      .select("*, seller:users!video_call_sessions_user_id_fkey(id, name, avatar_url)")
-      .order("created_at", { ascending: false })
-      .limit(300);
+    const { data, error } = await fetchAllRows((from, to) =>
+      supabase
+        .from("video_call_sessions")
+        .select("*, seller:users!video_call_sessions_user_id_fkey(id, name, avatar_url)")
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
 
     if (!error && data) {
       setSessions(data as unknown as VideoCallSession[]);

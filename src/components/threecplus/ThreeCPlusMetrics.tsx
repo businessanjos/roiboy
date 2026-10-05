@@ -174,13 +174,16 @@ export function ThreeCPlusMetrics() {
 
 
       const [logsRes, sessionsRes, usersRes] = await Promise.all([
-        supabase
-          .from("threecplus_call_logs")
-          .select("id, user_id, agent_name, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
-          .gte("started_at", start.toISOString())
-          .lte("started_at", end.toISOString())
-          .order("started_at", { ascending: false })
-          .limit(500),
+        fetchAllRows((from, to) =>
+          supabase
+            .from("threecplus_call_logs")
+            .select("id, user_id, agent_name, call_type, direction, phone, contact_name, campaign_name, status, qualification_name, duration_seconds, acw_seconds, started_at, connected_at, ended_at")
+            .gte("started_at", start.toISOString())
+            .lte("started_at", end.toISOString())
+            .order("started_at", { ascending: false })
+            .order("id", { ascending: false })
+            .range(from, to),
+        ),
         supabase
           .from("threecplus_agent_sessions")
           .select("id, user_id, session_type, pause_name, started_at, ended_at, duration_seconds")
