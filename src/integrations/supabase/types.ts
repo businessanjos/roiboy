@@ -29946,6 +29946,50 @@ export type Database = {
           phone_e164: string
         }[]
       }
+      search_security_audit: {
+        Args: {
+          p_event_type?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: {
+          account_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          ip_address: string
+          total_count: number
+          user_agent: string
+          user_id: string
+        }[]
+      }
+      search_tasks_page: {
+        Args: {
+          p_account_id: string
+          p_apply_sector_filter?: boolean
+          p_current_user_id?: string
+          p_custom_status_id?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_deal_id?: string
+          p_filter_mode?: string
+          p_filter_user_id?: string
+          p_lead_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_sector_activity_type_ids?: string[]
+          p_sort_by?: string
+          p_sort_direction?: string
+          p_stage_id?: string
+        }
+        Returns: {
+          id: string
+          total_count: number
+        }[]
+      }
       seed_admission_signature_docs: {
         Args: { _admission_id: string; _template_ids?: string[] }
         Returns: number

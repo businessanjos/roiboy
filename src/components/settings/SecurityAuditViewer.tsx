@@ -74,7 +74,10 @@ export function SecurityAuditViewer() {
     return () => clearTimeout(t);
   }, [searchQuery]);
 
-  const pg = usePaginationState(0, {
+  // Total é mantido em estado e realimenta o usePaginationState — único estado
+  // de paginação usado tanto para montar a query (from/to) quanto para o pager.
+  const [total, setTotal] = useState(0);
+  const pg = usePaginationState(total, {
     resetKey: [eventTypeFilter, currentUser?.account_id, debouncedSearch],
   });
 
@@ -85,7 +88,6 @@ export function SecurityAuditViewer() {
     isLoading,
     isError,
     error: searchError,
-    refetch,
   } = useQuery({
     queryKey: [SEARCH_QUERY_KEY, currentUser?.account_id, eventTypeFilter, debouncedSearch, pg.from, pg.to],
     queryFn: async (): Promise<{ rows: SecurityLog[]; total: number }> => {
@@ -100,17 +102,15 @@ export function SecurityAuditViewer() {
       if (error) throw error;
 
       const rows = (data || []) as SecurityLog[];
-      const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
-      return { rows, total };
+      const resultTotal = rows.length > 0 ? Number(rows[0].total_count) : 0;
+      return { rows, total: resultTotal };
     },
     enabled: !!currentUser?.account_id,
   });
 
-  // Recalcula totalPages/página efetiva assim que o total chega (mesma fonte da busca).
-  const pgWithTotal = usePaginationState(searchResult?.total ?? 0, {
-    resetKey: [eventTypeFilter, currentUser?.account_id, debouncedSearch],
-    isLoading,
-  });
+  useEffect(() => {
+    if (searchResult) setTotal(searchResult.total);
+  }, [searchResult]);
 
   const filteredLogs = searchResult?.rows ?? [];
 
@@ -230,7 +230,7 @@ export function SecurityAuditViewer() {
             </Table>
           </div>
         )}
-        <PagerFor state={pgWithTotal} itemLabel="logs" hidePageSize />
+        <PagerFor state={pg} itemLabel="logs" hidePageSize />
       </CardContent>
     </Card>
   );

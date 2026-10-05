@@ -71,7 +71,7 @@ export function buildSearchTasksRpcParams(
   if (filterUser === "mine" && currentUserId) {
     filterMode = "mine";
     currentUserIdForRpc = currentUserId;
-  } else if (filterUser !== "all" && filterUser) {
+  } else if (filterUser !== "all" && filterUser !== "mine" && filterUser) {
     filterMode = "user";
     filterUserId = filterUser;
   }
