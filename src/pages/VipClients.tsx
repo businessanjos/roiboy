@@ -21,6 +21,7 @@ import {
 import { Crown, Search, Loader2, Settings } from "lucide-react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { differenceInMonths } from "date-fns";
 import { toast } from "sonner";
 
@@ -103,19 +104,27 @@ export default function VipClients() {
       setLoading(true);
 
       const [{ data: contracts }, { data: entries }, { data: prods }] = await Promise.all([
-        supabase
-          .from("client_contracts")
-          .select(
-            "client_id, value, start_date, status, product_id, products(name, color), clients!inner(id, full_name, logo_url)"
-          )
-          .eq("account_id", currentUser.account_id)
-          .not("status", "in", "(cancelled,dismissed,dropout_7d)"),
-        supabase
-          .from("financial_entries")
-          .select("client_id, amount, status")
-          .eq("account_id", currentUser.account_id)
-          .eq("entry_type", "receivable")
-          .not("client_id", "is", null),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("client_contracts")
+            .select(
+              "id, client_id, value, start_date, status, product_id, products(name, color), clients!inner(id, full_name, logo_url)"
+            )
+            .eq("account_id", currentUser.account_id)
+            .not("status", "in", "(cancelled,dismissed,dropout_7d)")
+            .order("id")
+            .range(from, to) as any,
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("financial_entries")
+            .select("id, client_id, amount, status")
+            .eq("account_id", currentUser.account_id)
+            .eq("entry_type", "receivable")
+            .not("client_id", "is", null)
+            .order("id")
+            .range(from, to) as any,
+        ),
         supabase
           .from("products")
           .select("id, name")
