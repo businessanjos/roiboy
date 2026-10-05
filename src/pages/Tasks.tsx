@@ -2626,6 +2626,7 @@ export default function Tasks() {
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                  aria-label="Página anterior"
                   disabled={safePage <= 1}
                   className="h-8 w-8 p-0"
                 >
@@ -2659,6 +2660,7 @@ export default function Tasks() {
                   variant="outline"
                   size="sm"
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                  aria-label="Próxima página"
                   disabled={safePage >= totalPages}
                   className="h-8 w-8 p-0"
                 >
