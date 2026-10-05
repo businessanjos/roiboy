@@ -375,7 +375,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                       <TooltipTrigger asChild>
                         <button
                           onClick={() => setPresentDialogOpen(true)}
-                          className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                          aria-label="Apresentar na TV"
+ className="text-muted-foreground hover:text-foreground transition-colors p-1"
                         >
                           <Monitor className="h-4 w-4" />
                         </button>
@@ -424,7 +425,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                     <TooltipTrigger asChild>
                       <button 
                         onClick={() => handleDrilldown()}
-                        className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                        aria-label="Explorar dados"
+ className="text-muted-foreground hover:text-foreground transition-colors p-1"
                       >
                         <Table className="h-4 w-4" />
                       </button>
@@ -453,7 +455,8 @@ export function ConfigurableVisualCard({ visual, onUpdateVisual, onRemoveVisual,
                      <TooltipTrigger asChild>
                        <button 
                          onClick={() => setSettingsOpen(true)}
-                         className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                         aria-label="Ajustes do visual"
+ className="text-muted-foreground hover:text-foreground transition-colors p-1"
                        >
                          <Settings className="h-4 w-4" />
                        </button>
