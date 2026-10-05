@@ -69,6 +69,7 @@ export default function VipClients() {
   const [rows, setRows] = useState<VipRow[]>([]);
   const [products, setProducts] = useState<{ id: string; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState("");
   const [criteria, setCriteria] = useState<VipCriteria>(DEFAULT_CRITERIA);
   const [criteriaLoaded, setCriteriaLoaded] = useState(false);
@@ -102,6 +103,8 @@ export default function VipClients() {
     const fetchData = async () => {
       if (!currentUser?.account_id) return;
       setLoading(true);
+      setLoadError(null);
+      try {
 
       const [{ data: contracts, error: contractsError }, { data: entries, error: entriesError }, { data: prods }] = await Promise.all([
         fetchAllRows<any>((from, to) =>
@@ -185,7 +188,12 @@ export default function VipClients() {
 
       setRows(list);
       setProducts(prods || []);
-      setLoading(false);
+      } catch (err: any) {
+        // Mantém os dados anteriores e mostra o erro em vez de carga parcial.
+        setLoadError(err?.message || "Falha ao carregar clientes VIP");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, [currentUser?.account_id]);
@@ -436,6 +444,11 @@ export default function VipClients() {
         </div>
       </div>
 
+      {loadError && (
+        <p role="alert" className="text-sm text-destructive">
+          Não foi possível carregar os clientes VIP: {loadError}. Os dados exibidos podem estar desatualizados.
+        </p>
+      )}
       <Card className="overflow-hidden">
         {loading ? (
           <div className="flex items-center justify-center py-16">

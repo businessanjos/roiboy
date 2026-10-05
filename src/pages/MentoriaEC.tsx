@@ -7,7 +7,7 @@ import { GraduationCap, CheckCircle2, Clock, CalendarClock, Search, ArrowUp, Arr
 
 import { supabase } from "@/integrations/supabase/client";
 import { fetchAllRows } from "@/lib/fetchAllRows";
-import { fetchInChunks } from "@/lib/fetchInChunks";
+import { fetchInChunks, fetchAllInChunks } from "@/lib/fetchInChunks";
 import { usePracticeAreas } from "@/hooks/usePracticeAreas";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Card } from "@/components/ui/card";
@@ -142,15 +142,17 @@ export default function MentoriaEC() {
           supabase.from("clients").select("id, full_name, logo_url, business_segment, status").in("id", chunk),
         ),
         supabase.from("products").select("id, name, color"),
-        fetchInChunks<any>(clientIds, 200, (chunk) =>
+        fetchAllInChunks<any>(clientIds, 200, (chunk, from, to) =>
           supabase
             .from("ec_mentoring_attendance")
-            .select("client_id, session_date")
+            .select("id, client_id, session_date")
             .in("client_id", chunk)
-            .order("session_date", { ascending: false }),
+            .order("session_date", { ascending: false })
+            .order("id", { ascending: true })
+            .range(from, to),
         ),
-        fetchInChunks<any>(clientIds, 200, (chunk) =>
-          supabase.from("ec_mentoring_client_status").select("client_id, status").in("client_id", chunk),
+        fetchAllInChunks<any>(clientIds, 200, (chunk, from, to) =>
+          supabase.from("ec_mentoring_client_status").select("id, client_id, status").in("client_id", chunk).order("id").range(from, to),
         ),
       ]);
       if (productsRes.error) throw productsRes.error;

@@ -1,3 +1,4 @@
+import { fetchAllRows } from "./fetchAllRows";
 /**
  * Executa uma consulta Supabase `.in("col", ids)` em lotes, pois o Postgres/
  * PostgREST tem limites práticos para cláusulas IN muito grandes (URL longa,
@@ -54,4 +55,28 @@ export async function fetchInChunks<T>(
   }
 
   return results.flat();
+}
+
+/**
+ * Variante para relações 1:N: divide os IDs em lotes E pagina o resultado de
+ * cada lote com `fetchAllRows` (o servidor devolve no máximo 1000 linhas por
+ * requisição). `build` recebe o lote e o intervalo `from..to`; deve aplicar
+ * ordem estável (terminando em `id`) e `.range(from, to)`. Erro em qualquer
+ * lote ou página é propagado.
+ */
+export async function fetchAllInChunks<T>(
+  ids: ReadonlyArray<string | null | undefined>,
+  chunkSize: number,
+  build: (chunk: string[], from: number, to: number) => PromiseLike<{ data: unknown[] | null; error: unknown }>,
+  concurrency: number = 4,
+): Promise<T[]> {
+  return fetchInChunks<T>(
+    ids,
+    chunkSize,
+    async (chunk) => {
+      const { data, error } = await fetchAllRows<T>((from, to) => build(chunk, from, to));
+      return { data: data as unknown[], error };
+    },
+    concurrency,
+  );
 }
