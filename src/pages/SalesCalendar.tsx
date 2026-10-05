@@ -510,8 +510,8 @@ function MonthGrid({
             dayTriggerRef.current?.focus();
           }}
         >
-          <DialogHeader>
-            <DialogTitle className="first-letter:uppercase">
+          <DialogHeader className="pr-10 text-left">
+            <DialogTitle className="first-letter:uppercase break-words leading-snug">
               {openDay ? format(openDay, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""}
             </DialogTitle>
             <DialogDescription>
