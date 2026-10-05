@@ -609,6 +609,12 @@ export default function Forms() {
   // Filter state
   const [filterSectorId, setFilterSectorId] = useState<string | "all">("all");
 
+  const filteredFormsForPaging = useMemo(
+    () => forms.filter((form) => filterSectorId === "all" || form.sector_id === filterSectorId),
+    [forms, filterSectorId]
+  );
+  const formsPg = usePagedList(filteredFormsForPaging, { resetKey: filterSectorId, isLoading: loading });
+
   // Preview state (interactive testing)
   const [previewValues, setPreviewValues] = useState<Record<string, any>>({});
   const [previewClientName, setPreviewClientName] = useState("");
@@ -1247,7 +1253,7 @@ export default function Forms() {
     return <LoadingScreen message="Carregando formulários..." fullScreen={false} />;
   }
 
-  const filteredForms = forms.filter((form) => filterSectorId === "all" || form.sector_id === filterSectorId);
+  const filteredForms = filteredFormsForPaging;
 
   return (
     <div className="p-4 md:p-6 space-y-6">
