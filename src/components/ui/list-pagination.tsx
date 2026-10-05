@@ -53,7 +53,7 @@ export function ListPagination({
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="tabular-nums" aria-live="polite">
           {totalItems === 0
             ? `0 ${itemLabel}`
