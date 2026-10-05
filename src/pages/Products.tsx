@@ -522,16 +522,15 @@ export default function Products() {
                   </div>
                   <div className="space-y-2">
                     <Label id="product-color-label">Cor</Label>
-                    <div className="flex flex-wrap gap-1 sm:gap-1.5" role="radiogroup" aria-labelledby="product-color-label">
+                    <div className="flex flex-wrap gap-1 sm:gap-1.5" role="group" aria-labelledby="product-color-label">
                       {COLOR_OPTIONS.map((option) => (
                         <button
                           key={option.value}
                           type="button"
                           onClick={() => setColor(option.value)}
-                          role="radio"
-                          aria-checked={color === option.value}
-                          aria-label={option.label}
-                          className={`w-9 h-9 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${
+                          aria-pressed={color === option.value}
+                          aria-label={`Cor ${option.label}`}
+                          className={`w-11 h-11 sm:w-7 sm:h-7 rounded-full border-2 transition-all ${
                             color === option.value 
                               ? "border-foreground scale-110" 
                               : "border-transparent hover:scale-105"
