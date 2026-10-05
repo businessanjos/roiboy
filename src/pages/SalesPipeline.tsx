@@ -12,6 +12,8 @@ import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { notifyContractCreated } from "@/hooks/useContractNotifications";
 import { useRequiredFieldsValidation } from "@/hooks/useRequiredFieldsValidation";
 import { useLossReasons } from "@/hooks/useLossReasons";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import {
   DEAL_FIELD_IDS,
   NEGOTIATION_REQUIRED_FIELDS,
@@ -3239,7 +3241,9 @@ function DealListView({
   dealMqlMap?: Record<string, { label: string; color?: string }>;
 }) {
   const [expandedReasons, setExpandedReasons] = useState<Set<string>>(new Set());
-  
+  const dealIdsKey = useMemo(() => deals.map(d => d.id).join(','), [deals]);
+  const pg = usePagedList(deals, { resetKey: dealIdsKey, defaultPageSize: 20 });
+
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
@@ -3275,7 +3279,7 @@ function DealListView({
     <Card>
       <CardContent className="p-0">
         <div className="divide-y">
-          {deals.map((deal) => {
+          {pg.items.map((deal) => {
             const stage = stages.find(s => s.id === deal.stage_id);
             const isExpanded = expandedReasons.has(deal.id);
             const hasLongReason = deal.lost_reason && deal.lost_reason.length > 80;
@@ -3502,6 +3506,7 @@ function DealListView({
             );
           })}
         </div>
+        <PagerFor state={pg} itemLabel="negociações" />
       </CardContent>
     </Card>
   );
