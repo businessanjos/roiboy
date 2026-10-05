@@ -185,7 +185,7 @@ export function PaymentMethodSpiffPanel({ spiff, restrictToUserId }: Props) {
         </Badge>
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Como funciona"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
           </PopoverTrigger>
           <PopoverContent className="max-w-sm w-auto">
             <p className="text-xs">

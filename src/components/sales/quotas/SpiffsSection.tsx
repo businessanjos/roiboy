@@ -1241,7 +1241,7 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
         <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Como funciona"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
           </PopoverTrigger>
           <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
@@ -1583,7 +1583,7 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         </div>
         <Popover>
           <PopoverTrigger asChild>
-            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Ajuda: {"como funciona"}"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Como funciona"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
           </PopoverTrigger>
           <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
