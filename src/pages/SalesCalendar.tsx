@@ -699,28 +699,28 @@ function EventDialog({ event, onClose }: { event: CalEvent | null; onClose: () =
 
           <div className="flex flex-wrap gap-2 pt-2">
             {event.meta?.meetingUrl && (
-              <Button variant="default" size="sm" asChild className="h-8">
+              <Button variant="default" size="sm" asChild className="h-11 sm:h-8">
                 <a href={event.meta.meetingUrl} target="_blank" rel="noreferrer">
                   <Video className="h-3.5 w-3.5 mr-1.5" /> Entrar na reunião
                 </a>
               </Button>
             )}
             {event.meta?.htmlLink && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <a href={event.meta.htmlLink} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir no Google
                 </a>
               </Button>
             )}
             {event.meta?.dealId && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <Link to={`/pipeline?deal=${event.meta.dealId}`}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ver negociação
                 </Link>
               </Button>
             )}
             {event.meta?.leadId && !event.meta?.dealId && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <Link to={`/leads?lead=${event.meta.leadId}`}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ver lead
                 </Link>
