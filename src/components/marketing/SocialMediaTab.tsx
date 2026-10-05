@@ -185,7 +185,7 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
     return bValue - aValue; // Descending order
   });
 
-  const pg = usePagedList(sortedPosts, { resetKey: [formatFilter, objectiveFilter, dateFrom, dateTo, sortBy], isLoading });
+  const pg = usePagedList(sortedPosts, { resetKey: [selectedProfileId, currentProfile?.id, formatFilter, objectiveFilter, dateFrom, dateTo, sortBy], isLoading });
 
   // Toggle sort by column
   const handleSortToggle = (field: string) => {

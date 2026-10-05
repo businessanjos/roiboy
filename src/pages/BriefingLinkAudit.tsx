@@ -11,6 +11,8 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "react-router-dom";
 import { Link2, Link2Off, Wand2, AlertTriangle, CheckCircle2, Search, RefreshCw } from "lucide-react";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 
 type Status = "ok" | "auto" | "sem_cliente" | "sem_negocio" | "incompleto";
 
@@ -66,43 +68,53 @@ export default function BriefingLinkAudit() {
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState<Status | "all">("all");
 
-  const { data, isLoading, refetch, isFetching } = useQuery({
+  const { data, isLoading, isError, error: queryError, refetch, isFetching } = useQuery({
     queryKey: ["briefing-link-audit"],
     queryFn: async (): Promise<Row[]> => {
       // Carrega em lotes via range até esgotar — contadores/KPIs precisam do conjunto completo.
-      const pageSize = 1000;
-      let from = 0;
-      const briefings: { id: string; created_at: string; updated_at: string; is_complete: boolean; deal_id: string | null; client_id: string | null }[] = [];
-      for (;;) {
-        const { data, error } = await supabase
+      // fetchAllRows propaga erro de qualquer lote (nunca retorna lista parcial como sucesso).
+      const { data: briefings, error: briefingsError } = await fetchAllRows<{
+        id: string;
+        created_at: string;
+        updated_at: string;
+        is_complete: boolean;
+        deal_id: string | null;
+        client_id: string | null;
+      }>((from, to) =>
+        supabase
           .from("deal_operation_briefings")
           .select("id, created_at, updated_at, is_complete, deal_id, client_id")
           .order("created_at", { ascending: false })
-          .range(from, from + pageSize - 1);
-        if (error) throw error;
-        briefings.push(...(data || []));
-        if (!data || data.length < pageSize) break;
-        from += pageSize;
-      }
+          .order("id", { ascending: false })
+          .range(from, to),
+      );
+      if (briefingsError) throw briefingsError;
 
       const dealIds = [...new Set((briefings ?? []).map((b) => b.deal_id).filter(Boolean))] as string[];
       const clientIds = [...new Set((briefings ?? []).map((b) => b.client_id).filter(Boolean))] as string[];
 
       const dealMap = new Map<string, { title: string; status: string; won_at: string | null; client_id: string | null }>();
       if (dealIds.length) {
-        const { data: deals } = await supabase
-          .from("deals")
-          .select("id, title, status, won_at, client_id")
-          .in("id", dealIds);
-        (deals ?? []).forEach((d) => dealMap.set(d.id, d as any));
-        (deals ?? []).forEach((d) => d.client_id && clientIds.push(d.client_id));
+        // .in() em lotes de 200 ids (com concorrência) — mantém o mapa completo
+        // para preservar a busca por negócio/cliente mesmo com registros antigos.
+        const deals = await fetchInChunks<{ id: string; title: string; status: string; won_at: string | null; client_id: string | null }>(
+          dealIds,
+          200,
+          (chunk) => supabase.from("deals").select("id, title, status, won_at, client_id").in("id", chunk),
+        );
+        deals.forEach((d) => dealMap.set(d.id, d as any));
+        deals.forEach((d) => d.client_id && clientIds.push(d.client_id));
       }
 
       const clientMap = new Map<string, string>();
       const uniqueClients = [...new Set(clientIds)];
       if (uniqueClients.length) {
-        const { data: clients } = await supabase.from("clients").select("id, full_name").in("id", uniqueClients);
-        (clients ?? []).forEach((c) => clientMap.set(c.id, c.full_name));
+        const clients = await fetchInChunks<{ id: string; full_name: string }>(
+          uniqueClients,
+          200,
+          (chunk) => supabase.from("clients").select("id, full_name").in("id", chunk),
+        );
+        clients.forEach((c) => clientMap.set(c.id, c.full_name));
       }
 
       return (briefings ?? []).map((b) => {
@@ -185,6 +197,17 @@ export default function BriefingLinkAudit() {
           Atualizar
         </Button>
       </div>
+
+      {isError && (
+        <Card className="border-destructive/40">
+          <CardContent className="py-4 text-sm text-destructive flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4 shrink-0" />
+            Não foi possível carregar a auditoria completa de briefings
+            {queryError instanceof Error ? `: ${queryError.message}` : "."} Os números abaixo podem estar
+            incompletos — clique em "Atualizar" para tentar novamente.
+          </CardContent>
+        </Card>
+      )}
 
       <div className="grid gap-3 grid-cols-2 md:grid-cols-3 xl:grid-cols-6">
         {cards.map((c) => {

@@ -135,8 +135,6 @@ export default function RHPositions() {
     });
   })();
 
-  const pgGroups = usePagedList(grouped, { resetKey: [search, filterDept], isLoading: loading });
-
   const openDialog = (pos?: HRPosition) => {
     if (pos) {
       setEditingPos(pos);
@@ -278,114 +276,17 @@ export default function RHPositions() {
         </div>
       ) : (
         <div className="space-y-8">
-          {pgGroups.items.map(group => (
-            <section key={group.id || "__none__"}>
-              {/* Department header */}
-              <div className="flex items-center gap-3 mb-3">
-                <div
-                  className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
-                  style={{ backgroundColor: `${group.color}1a`, color: group.color }}
-                >
-                  <Building2 className="h-4 w-4" strokeWidth={2} />
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-base font-semibold text-foreground">{group.name}</h2>
-                  <p className="text-xs text-muted-foreground">
-                    {group.items.length} {group.items.length === 1 ? "cargo" : "cargos"}
-                  </p>
-                </div>
-                <div
-                  className="h-px flex-1 max-w-[40%]"
-                  style={{ background: `linear-gradient(to right, ${group.color}40, transparent)` }}
-                />
-              </div>
-
-              {/* Cards grid */}
-              <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {group.items.map(pos => (
-                  <Card
-                    key={pos.id}
-                    className="group cursor-pointer hover:shadow-md hover:border-primary/30 transition-all relative overflow-hidden"
-                    onClick={() => setDetailPosition(pos)}
-                  >
-                    {/* Top accent bar by department color */}
-                    <div className="h-1" style={{ backgroundColor: group.color }} />
-                    <CardContent className="p-4 space-y-3">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{pos.title}</h3>
-                          {pos.seniority && (
-                            <Badge
-                              variant="outline"
-                              className={`mt-1.5 text-[10px] font-medium ${SENIORITY_COLORS[pos.seniority] || ""}`}
-                            >
-                              {pos.seniority}
-                            </Badge>
-                          )}
-                        </div>
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-7 w-7 -mr-1 -mt-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                              <MoreVertical className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={e => { e.stopPropagation(); openDialog(pos); }}>
-                              <Pencil className="h-4 w-4 mr-2" /> Editar
-                            </DropdownMenuItem>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); handleDelete(pos.id); }}>
-                              <Trash2 className="h-4 w-4 mr-2" /> Excluir
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </div>
-
-                      {pos.description && (
-                        <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                          {pos.description}
-                        </p>
-                      )}
-
-                      <div className="space-y-1.5 pt-1 border-t">
-                        {(pos.salary_min || pos.salary_max) && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <DollarSign className="h-3 w-3 shrink-0" />
-                            <span className="truncate">
-                              {formatSalary(pos.salary_min)}{pos.salary_min && pos.salary_max ? " – " : ""}{formatSalary(pos.salary_max)}
-                            </span>
-                          </div>
-                        )}
-                        {pos.education_level && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <GraduationCap className="h-3 w-3 shrink-0" />
-                            <span className="truncate">{pos.education_level}</span>
-                          </div>
-                        )}
-                        {pos.experience_years != null && pos.experience_years > 0 && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <Briefcase className="h-3 w-3 shrink-0" />
-                            <span>{pos.experience_years} ano(s) de experiência</span>
-                          </div>
-                        )}
-                        {(pos.technical_skills.length > 0 || pos.behavioral_skills.length > 0) && (
-                          <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-                            <Users className="h-3 w-3 shrink-0" />
-                            <span>{pos.technical_skills.length + pos.behavioral_skills.length} competências</span>
-                          </div>
-                        )}
-                      </div>
-
-                      {!pos.is_active && (
-                        <Badge variant="outline" className="text-[10px] text-muted-foreground">Inativo</Badge>
-                      )}
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </section>
+          {grouped.map(group => (
+            <PositionGroup
+              key={group.id || "__none__"}
+              group={group}
+              resetKey={[search, filterDept]}
+              formatSalary={formatSalary}
+              setDetailPosition={setDetailPosition}
+              openDialog={openDialog}
+              handleDelete={handleDelete}
+            />
           ))}
-          <PagerFor state={pgGroups} itemLabel="departamentos" />
         </div>
       )}
 
@@ -754,5 +655,134 @@ export default function RHPositions() {
         </DialogContent>
       </Dialog>
     </div>
+  );
+}
+
+interface PositionGroupData {
+  id: string | null;
+  name: string;
+  color: string;
+  items: HRPosition[];
+}
+
+interface PositionGroupProps {
+  group: PositionGroupData;
+  resetKey: unknown;
+  formatSalary: (v: number | null) => string | null;
+  setDetailPosition: (p: HRPosition) => void;
+  openDialog: (pos?: HRPosition) => void;
+  handleDelete: (id: string) => void;
+}
+
+export function PositionGroup({ group, resetKey, formatSalary, setDetailPosition, openDialog, handleDelete }: PositionGroupProps) {
+  const pg = usePagedList(group.items, { resetKey });
+
+  return (
+    <section>
+      {/* Department header */}
+      <div className="flex items-center gap-3 mb-3">
+        <div
+          className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0"
+          style={{ backgroundColor: `${group.color}1a`, color: group.color }}
+        >
+          <Building2 className="h-4 w-4" strokeWidth={2} />
+        </div>
+        <div className="flex-1">
+          <h2 className="text-base font-semibold text-foreground">{group.name}</h2>
+          <p className="text-xs text-muted-foreground">
+            {group.items.length} {group.items.length === 1 ? "cargo" : "cargos"}
+          </p>
+        </div>
+        <div
+          className="h-px flex-1 max-w-[40%]"
+          style={{ background: `linear-gradient(to right, ${group.color}40, transparent)` }}
+        />
+      </div>
+
+      {/* Cards grid */}
+      <div className="grid gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {pg.items.map(pos => (
+          <Card
+            key={pos.id}
+            className="group cursor-pointer hover:shadow-md hover:border-primary/30 transition-all relative overflow-hidden"
+            onClick={() => setDetailPosition(pos)}
+          >
+            {/* Top accent bar by department color */}
+            <div className="h-1" style={{ backgroundColor: group.color }} />
+            <CardContent className="p-4 space-y-3">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-foreground text-sm leading-tight line-clamp-2">{pos.title}</h3>
+                  {pos.seniority && (
+                    <Badge
+                      variant="outline"
+                      className={`mt-1.5 text-[10px] font-medium ${SENIORITY_COLORS[pos.seniority] || ""}`}
+                    >
+                      {pos.seniority}
+                    </Badge>
+                  )}
+                </div>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon" className="h-7 w-7 -mr-1 -mt-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
+                      <MoreVertical className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={e => { e.stopPropagation(); openDialog(pos); }}>
+                      <Pencil className="h-4 w-4 mr-2" /> Editar
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem className="text-destructive" onClick={e => { e.stopPropagation(); handleDelete(pos.id); }}>
+                      <Trash2 className="h-4 w-4 mr-2" /> Excluir
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+
+              {pos.description && (
+                <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+                  {pos.description}
+                </p>
+              )}
+
+              <div className="space-y-1.5 pt-1 border-t">
+                {(pos.salary_min || pos.salary_max) && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <DollarSign className="h-3 w-3 shrink-0" />
+                    <span className="truncate">
+                      {formatSalary(pos.salary_min)}{pos.salary_min && pos.salary_max ? " – " : ""}{formatSalary(pos.salary_max)}
+                    </span>
+                  </div>
+                )}
+                {pos.education_level && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <GraduationCap className="h-3 w-3 shrink-0" />
+                    <span className="truncate">{pos.education_level}</span>
+                  </div>
+                )}
+                {pos.experience_years != null && pos.experience_years > 0 && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Briefcase className="h-3 w-3 shrink-0" />
+                    <span>{pos.experience_years} ano(s) de experiência</span>
+                  </div>
+                )}
+                {(pos.technical_skills.length > 0 || pos.behavioral_skills.length > 0) && (
+                  <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <Users className="h-3 w-3 shrink-0" />
+                    <span>{pos.technical_skills.length + pos.behavioral_skills.length} competências</span>
+                  </div>
+                )}
+              </div>
+
+              {!pos.is_active && (
+                <Badge variant="outline" className="text-[10px] text-muted-foreground">Inativo</Badge>
+              )}
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+      <PagerFor state={pg} itemLabel="cargos" />
+    </section>
   );
 }

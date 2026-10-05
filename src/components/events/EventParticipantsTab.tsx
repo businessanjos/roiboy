@@ -68,6 +68,7 @@ import { Database } from "@/integrations/supabase/types";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 type EventRsvpStatus = Database["public"]["Enums"]["event_rsvp_status"];
 type ParticipantFilter = EventRsvpStatus | "all" | "coquetel";
@@ -191,17 +192,25 @@ export default function EventParticipantsTab({
 
   const fetchParticipants = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("event_participants")
-      .select(`
-        *,
-        clients (id, full_name, phone_e164, avatar_url, emails)
-      `)
-      .eq("event_id", eventId)
-      .order("invited_at", { ascending: false });
+    // Carrega em lotes via range() até esgotar — eventos grandes (ex. coquetéis
+    // com milhares de convidados) não podem ser truncados pelo limite padrão.
+    const { data, error } = await fetchAllRows<any>((from, to) =>
+      supabase
+        .from("event_participants")
+        .select(`
+          *,
+          clients (id, full_name, phone_e164, avatar_url, emails)
+        `)
+        .eq("event_id", eventId)
+        .order("invited_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to),
+    );
 
     if (error) {
       console.error("Error fetching participants:", error);
+      toast({ title: "Erro", description: "Não foi possível carregar todos os participantes", variant: "destructive" });
+      setParticipants([]);
     } else {
       const sorted = (data || []).slice().sort((a: any, b: any) => {
         const nameA = (a.clients?.full_name || a.guest_name || "").toString();

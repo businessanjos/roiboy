@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from './useCurrentUser';
@@ -108,14 +109,18 @@ export function useSocialMediaData() {
         return MOCK_POSTS.filter(p => p.profile_id === currentProfile.id);
       }
       
-      const { data, error } = await supabase
-        .from('instagram_posts')
-        .select('*')
-        .eq('profile_id', currentProfile.id)
-        .order('posted_at', { ascending: false });
+      const { data, error } = await fetchAllRows<InstagramPost>((from, to) =>
+        supabase
+          .from('instagram_posts')
+          .select('*')
+          .eq('profile_id', currentProfile.id)
+          .order('posted_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to)
+      );
 
       if (error) throw error;
-      return data as InstagramPost[];
+      return data;
     },
     enabled: !!currentProfile,
     staleTime: 120000, // OPTIMIZED: 2 minutes (up from 30 seconds)

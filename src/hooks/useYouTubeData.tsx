@@ -1,4 +1,5 @@
 import { useState, useMemo } from 'react';
+import { fetchAllRows } from '@/lib/fetchAllRows';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useCurrentUser } from '@/hooks/useCurrentUser';
@@ -179,13 +180,17 @@ export function useYouTubeData() {
       if (useMockData) {
         return MOCK_VIDEOS.filter(v => v.channel_id === currentChannel.id);
       }
-      const { data, error } = await supabase
-        .from('youtube_videos')
-        .select('*')
-        .eq('channel_id', currentChannel.id)
-        .order('posted_at', { ascending: false });
+      const { data, error } = await fetchAllRows<YouTubeVideo>((from, to) =>
+        supabase
+          .from('youtube_videos')
+          .select('*')
+          .eq('channel_id', currentChannel.id)
+          .order('posted_at', { ascending: false })
+          .order('id', { ascending: false })
+          .range(from, to)
+      );
       if (error) throw error;
-      return (data || []) as YouTubeVideo[];
+      return data;
     },
     enabled: !!currentChannel?.id,
   });

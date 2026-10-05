@@ -2,6 +2,7 @@ import { useState } from "react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { fetchAllRows } from "@/lib/fetchAllRows";
+import { fetchInChunks } from "@/lib/fetchInChunks";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, subDays, startOfDay } from "date-fns";
@@ -32,6 +33,7 @@ import {
   RefreshCw,
   User,
   Calendar,
+  AlertCircle,
   Activity,
   Eye,
   Plus,
@@ -241,7 +243,7 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
   const [userPickerOpen, setUserPickerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<UnifiedLog | null>(null);
 
-  const { data: logs, isLoading, refetch } = useQuery({
+  const { data: logs, isLoading, isError, error: logsError, refetch } = useQuery({
     queryKey: ["audit-logs-unified", scope, accountId, actionFilter, entityFilter, periodFilter],
     queryFn: async (): Promise<UnifiedLog[]> => {
       const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
@@ -434,12 +436,13 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
         new Set(results.filter((r) => !r.user_name && r.user_id).map((r) => r.user_id as string)),
       );
       if (missingUserIds.length > 0) {
-        const { data: users } = await supabase
-          .from("users")
-          .select("id, name, email")
-          .in("id", missingUserIds);
+        const users = await fetchInChunks<{ id: string; name: string | null; email: string | null }>(
+          missingUserIds,
+          200,
+          (chunk) => supabase.from("users").select("id, name, email").in("id", chunk),
+        );
         const map = new Map<string, { name: string | null; email: string | null }>();
-        (users ?? []).forEach((u: any) => map.set(u.id, { name: u.name, email: u.email }));
+        users.forEach((u) => map.set(u.id, { name: u.name, email: u.email }));
         results.forEach((r) => {
           if (!r.user_name && r.user_id) {
             const found = map.get(r.user_id);
@@ -460,38 +463,41 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
         ),
       );
       if (taskIds.length > 0) {
-        const { data: tasks } = await supabase
-          .from("internal_tasks")
-          .select("id, deal_id, lead_id, client_id")
-          .in("id", taskIds);
+        const tasks = await fetchInChunks<{ id: string; deal_id: string | null; lead_id: string | null; client_id: string | null }>(
+          taskIds,
+          200,
+          (chunk) => supabase.from("internal_tasks").select("id, deal_id, lead_id, client_id").in("id", chunk),
+        );
 
         const dealIds = new Set<string>();
         const leadIds = new Set<string>();
         const clientIds = new Set<string>();
-        (tasks ?? []).forEach((t: any) => {
+        tasks.forEach((t) => {
           if (t.deal_id) dealIds.add(t.deal_id);
           if (t.lead_id) leadIds.add(t.lead_id);
           if (t.client_id) clientIds.add(t.client_id);
         });
 
-        const [dealsRes, leadsRes, clientsRes] = await Promise.all([
-          dealIds.size
-            ? supabase.from("deals").select("id, title").in("id", Array.from(dealIds))
-            : Promise.resolve({ data: [] as any[] }),
-          leadIds.size
-            ? supabase.from("leads").select("id, full_name").in("id", Array.from(leadIds))
-            : Promise.resolve({ data: [] as any[] }),
-          clientIds.size
-            ? supabase.from("clients").select("id, full_name").in("id", Array.from(clientIds))
-            : Promise.resolve({ data: [] as any[] }),
+        // Mapa completo (sem truncar) para preservar a busca por nome mesmo
+        // em tarefas de negócios/leads/clientes antigos.
+        const [deals, leads, clients] = await Promise.all([
+          fetchInChunks<{ id: string; title: string }>(Array.from(dealIds), 200, (chunk) =>
+            supabase.from("deals").select("id, title").in("id", chunk),
+          ),
+          fetchInChunks<{ id: string; full_name: string }>(Array.from(leadIds), 200, (chunk) =>
+            supabase.from("leads").select("id, full_name").in("id", chunk),
+          ),
+          fetchInChunks<{ id: string; full_name: string }>(Array.from(clientIds), 200, (chunk) =>
+            supabase.from("clients").select("id, full_name").in("id", chunk),
+          ),
         ]);
 
         const dealNames = new Map<string, string>();
-        (dealsRes.data ?? []).forEach((d: any) => dealNames.set(d.id, d.title));
+        deals.forEach((d) => dealNames.set(d.id, d.title));
         const leadNames = new Map<string, string>();
-        (leadsRes.data ?? []).forEach((l: any) => leadNames.set(l.id, l.full_name));
+        leads.forEach((l) => leadNames.set(l.id, l.full_name));
         const clientNames = new Map<string, string>();
-        (clientsRes.data ?? []).forEach((c: any) => clientNames.set(c.id, c.full_name));
+        clients.forEach((c) => clientNames.set(c.id, c.full_name));
 
         const taskContext = new Map<string, string>();
         (tasks ?? []).forEach((t: any) => {
@@ -609,6 +615,14 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
         </div>
       </CardHeader>
       <CardContent>
+        {isError && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Não foi possível carregar o log completo
+            {logsError instanceof Error ? `: ${logsError.message}` : "."} Os registros abaixo podem estar
+            incompletos — clique em "Atualizar" para tentar novamente.
+          </div>
+        )}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
