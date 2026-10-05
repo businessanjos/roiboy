@@ -165,9 +165,69 @@ export default function ClientCheckpoints() {
     downloadCsv(`checkpoints_registros_${fileStamp()}.csv`, csv);
   };
 
+  const refreshAll = () => { refetch(); detailed.refetch(); };
+  const detailedEmpty = detailed.isLoading || (detailed.data || []).length === 0;
+  const recordsLabel = detailed.isLoading
+    ? "Carregando registros..."
+    : `${(detailed.data || []).length} registro(s) no período/canal selecionado`;
+  const activePeriodFilters = (from ? 1 : 0) + (to ? 1 : 0) + (channel && channel !== "todos" ? 1 : 0);
+
+  const periodFields = (
+    <>
+      <div className="space-y-1.5">
+        <Label htmlFor="cp-from" className="text-xs">De</Label>
+        <Input id="cp-from" type="date" className="h-11 md:h-10" value={from} onChange={(e) => setFrom(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label htmlFor="cp-to" className="text-xs">Até</Label>
+        <Input id="cp-to" type="date" className="h-11 md:h-10" value={to} onChange={(e) => setTo(e.target.value)} />
+      </div>
+      <div className="space-y-1.5">
+        <Label className="text-xs">Canal</Label>
+        <Select value={channel} onValueChange={setChannel}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Canal"><SelectValue /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os canais</SelectItem>
+            {CHECKIN_CHANNELS.map((c) => (
+              <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+    </>
+  );
+
   return (
-    <div className="space-y-4">
-      <Breadcrumb>
+    <div className="w-full min-w-0 space-y-4 px-4 py-4 sm:px-5 lg:px-6 lg:py-6">
+      {/* Mobile: linha contextual (o cabeçalho do app já mostra "Checkpoints") */}
+      <div className="flex items-center justify-between gap-3 md:hidden">
+        <div className="min-w-0">
+          <p className="text-sm font-semibold">Acompanhamento quinzenal</p>
+          <p className="text-xs text-muted-foreground">Um checkpoint a cada 15 dias.</p>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label="Mais ações">
+              <MoreHorizontal className="h-5 w-5" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem className="min-h-11" disabled={filtered.length === 0} onSelect={exportPanel}>
+              <Download className="h-4 w-4 mr-2" /> CSV do painel
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11" disabled={detailedEmpty} onSelect={exportDetailed}>
+              {detailed.isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
+              CSV dos registros
+            </DropdownMenuItem>
+            <DropdownMenuItem className="min-h-11" disabled={isLoading} onSelect={refreshAll}>
+              {isLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+              Atualizar
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      <Breadcrumb className="hidden md:block">
         <BreadcrumbList>
           <BreadcrumbItem>
             <BreadcrumbLink asChild>
@@ -181,7 +241,7 @@ export default function ClientCheckpoints() {
         </BreadcrumbList>
       </Breadcrumb>
 
-      <div className="flex flex-wrap items-center justify-between gap-3">
+      <div className="hidden md:flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <CalendarCheck className="h-5 w-5" />
@@ -196,11 +256,7 @@ export default function ClientCheckpoints() {
             <Download className="h-4 w-4 mr-2" />
             CSV do painel
           </Button>
-          <Button
-            variant="outline"
-            onClick={exportDetailed}
-            disabled={detailed.isLoading || (detailed.data || []).length === 0}
-          >
+          <Button variant="outline" onClick={exportDetailed} disabled={detailedEmpty}>
             {detailed.isLoading ? (
               <Loader2 className="h-4 w-4 mr-2 animate-spin" />
             ) : (
@@ -208,14 +264,25 @@ export default function ClientCheckpoints() {
             )}
             CSV dos registros
           </Button>
-          <Button variant="outline" onClick={() => { refetch(); detailed.refetch(); }} disabled={isLoading}>
+          <Button variant="outline" onClick={refreshAll} disabled={isLoading}>
             {isLoading && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
             Atualizar
           </Button>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* KPIs: mobile 2 colunas compactas + faixa; desktop 5 cards */}
+      <div className="grid grid-cols-2 gap-2.5 md:hidden">
+        <MiniKpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
+        <MiniKpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
+        <MiniKpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
+        <MiniKpi label="Em dia" value={counts.em_dia} tone="text-success" />
+        <div className="col-span-2 flex items-center justify-between rounded-xl border border-border/60 bg-card px-3 py-2.5 shadow-sm">
+          <span className="text-xs text-muted-foreground">15+ dias sem interação</span>
+          <span className="text-base font-semibold tabular-nums text-destructive">{silentCount}</span>
+        </div>
+      </div>
+      <div className="hidden md:grid gap-3 md:grid-cols-2 lg:grid-cols-5">
         <Kpi label="Vencidos" value={counts.vencido} tone="text-destructive" />
         <Kpi label="Sem registro" value={counts.sem_registro} tone="text-muted-foreground" />
         <Kpi label="Vence em breve" value={counts.atencao} tone="text-warning" />
@@ -223,35 +290,13 @@ export default function ClientCheckpoints() {
         <Kpi label="15+ dias sem interação" value={silentCount} tone="text-destructive" />
       </div>
 
-      <Card className="shadow-card">
+      <Card className="shadow-card hidden md:block">
         <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-          <div className="space-y-1.5">
-            <Label className="text-xs">De</Label>
-            <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Até</Label>
-            <Input type="date" value={to} onChange={(e) => setTo(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label className="text-xs">Canal</Label>
-            <Select value={channel} onValueChange={setChannel}>
-              <SelectTrigger><SelectValue /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value="todos">Todos os canais</SelectItem>
-                {CHECKIN_CHANNELS.map((c) => (
-                  <SelectItem key={c.value} value={c.value}>{c.label}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-end text-xs text-muted-foreground">
-            {detailed.isLoading
-              ? "Carregando registros..."
-              : `${(detailed.data || []).length} registro(s) no período/canal selecionado`}
-          </div>
+          {periodFields}
+          <div className="flex items-end text-xs text-muted-foreground">{recordsLabel}</div>
         </CardContent>
       </Card>
+
 
 
       <Card className="shadow-card">
