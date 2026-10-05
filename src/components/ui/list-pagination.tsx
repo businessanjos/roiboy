@@ -53,7 +53,7 @@ export function ListPagination({
         className,
       )}
     >
-      <div className="flex min-w-0 items-center gap-2">
+      <div className="flex min-w-0 flex-wrap items-center gap-2">
         <span className="tabular-nums" aria-live="polite">
           {totalItems === 0
             ? `0 ${itemLabel}`
@@ -61,7 +61,7 @@ export function ListPagination({
         </span>
         {!hidePageSize && onPageSizeChange && totalItems > PAGE_SIZE_OPTIONS[0] && (
           <Select value={String(pageSize)} onValueChange={(v) => onPageSizeChange(Number(v) as PageSize)}>
-            <SelectTrigger aria-label="Itens por página" className="h-11 w-[84px] text-xs lg:h-8 lg:w-[76px]">
+            <SelectTrigger aria-label="Itens por página" className="h-11 w-[100px] shrink-0 gap-1 whitespace-nowrap px-2.5 text-xs lg:h-8 lg:w-[96px]">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
