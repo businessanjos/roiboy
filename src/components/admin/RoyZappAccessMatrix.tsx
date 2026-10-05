@@ -18,6 +18,9 @@ import {
   Users,
 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { cn } from "@/lib/utils";
 import {
   DEFAULT_ZAPP_VIEWS,
@@ -60,28 +63,38 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
     enabled: !!accountId,
     queryFn: async () => {
       const [usersRes, accessRes, zappRes] = await Promise.all([
-        supabase
-          .from("users")
-          .select("id, name, email, role, is_active")
-          .eq("account_id", accountId)
-          .order("name"),
-        supabase
-          .from("user_sector_access")
-          .select("user_id, sector_id, is_active")
-          .eq("account_id", accountId),
-        (supabase as any)
-          .from("user_royzapp_views")
-          .select("user_id, views, zapp_sectors")
-          .eq("account_id", accountId),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("users")
+            .select("id, name, email, role, is_active")
+            .eq("account_id", accountId)
+            .order("name")
+            .order("id")
+            .range(from, to)
+        ),
+        fetchAllRows<any>((from, to) =>
+          supabase
+            .from("user_sector_access")
+            .select("user_id, sector_id, is_active")
+            .eq("account_id", accountId)
+            .range(from, to)
+        ),
+        fetchAllRows<any>((from, to) =>
+          (supabase as any)
+            .from("user_royzapp_views")
+            .select("user_id, views, zapp_sectors")
+            .eq("account_id", accountId)
+            .range(from, to)
+        ),
       ]);
       if (usersRes.error) throw usersRes.error;
       if (accessRes.error) throw accessRes.error;
       if (zappRes.error) throw zappRes.error;
 
-      const users = (usersRes.data || []).filter((u: any) => u.is_active !== false) as MatrixUser[];
+      const users = usersRes.data.filter((u: any) => u.is_active !== false) as MatrixUser[];
 
       const sectorMap = new Map<string, Set<string>>();
-      (accessRes.data || []).forEach((row: any) => {
+      accessRes.data.forEach((row: any) => {
         if (!row.is_active) return;
         if (!sectorMap.has(row.user_id)) sectorMap.set(row.user_id, new Set());
         sectorMap.get(row.user_id)!.add(row.sector_id);
@@ -89,7 +102,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
 
       const zappMap = new Map<string, ZappWhatsAppSector[] | null>();
       const viewsMap = new Map<string, string[]>();
-      (zappRes.data || []).forEach((row: any) => {
+      zappRes.data.forEach((row: any) => {
         zappMap.set(
           row.user_id,
           row.zapp_sectors === null || row.zapp_sectors === undefined
@@ -137,6 +150,8 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
     () => rows.filter((r) => !r.unrestricted && r.hasZapp && !r.hasPipeline),
     [rows],
   );
+
+  const pg = usePagedList(rows, { resetKey: [search, sector], isLoading });
 
   const withZapp = rows.filter((r) => r.hasZapp).length;
   const withPipeline = rows.filter((r) => r.hasPipeline).length;
@@ -338,7 +353,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
               <span className="w-24 text-center">Pipeline</span>
               <span className="w-24 text-center">WhatsApp</span>
             </div>
-            {rows.map((row) => {
+            {pg.items.map((row) => {
               const isRisky = !row.unrestricted && row.hasZapp && !row.hasPipeline;
               return (
                 <div
@@ -412,6 +427,7 @@ export function RoyZappAccessMatrix({ accountId, onSelectUser }: Props) {
             })}
           </div>
         )}
+        {rows.length > 0 && <PagerFor state={pg} itemLabel="pessoas" />}
 
         <p className="text-[11px] text-muted-foreground">
           Desligar o WhatsApp de um setor não afeta o pipeline: a pessoa continua vendo negócios e

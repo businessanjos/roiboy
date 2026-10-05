@@ -41,7 +41,6 @@ export function LossReasonsManager() {
   const [newSubReasonNames, setNewSubReasonNames] = useState<Record<string, string>>({});
   const [editingReason, setEditingReason] = useState<Record<string, string>>({});
   const [editingSub, setEditingSub] = useState<Record<string, string>>({});
-  const pg = usePagedList(reasons, { isLoading: loadingReasons || loadingSubs });
 
   const { data: reasons = [], isLoading: loadingReasons } = useQuery({
     queryKey: ["loss-reasons-admin", accountId],
@@ -78,6 +77,8 @@ export function LossReasonsManager() {
     },
     enabled: !!accountId,
   });
+
+  const pg = usePagedList(reasons, { isLoading: loadingReasons || loadingSubs });
 
   const invalidateAll = () => {
     queryClient.invalidateQueries({ queryKey: ["loss-reasons-admin"] });

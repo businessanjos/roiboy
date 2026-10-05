@@ -1,21 +1,28 @@
 import { useMemo, useState } from "react";
-import { Talent, useAllContentPieces, PLATFORMS, PIECE_STATUSES } from "@/hooks/useContentHQ";
+import { Talent, useAllContentPieces, PLATFORMS, PIECE_STATUSES, ContentPiece } from "@/hooks/useContentHQ";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, addMonths, isSameDay, startOfWeek, endOfWeek } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-export function ContentHQCalendar({ talents, selectedTalentId, platformFilter }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string }) {
+export function ContentHQCalendar({ talents, selectedTalentId, platformFilter, onSelectPiece }: { talents: Talent[]; selectedTalentId?: string; platformFilter?: string; onSelectPiece?: (piece: ContentPiece, talent: Talent) => void }) {
   const [month, setMonth] = useState(new Date());
   // Fetch all and filter client-side (stable hook count)
   const { data: allRaw = [] } = useAllContentPieces();
   const talentMap = new Map(talents.map(t => [t.id, t.name]));
+  const talentById = new Map(talents.map(t => [t.id, t]));
   const allPieces = allRaw
     .filter(p => !selectedTalentId || p.talent_id === selectedTalentId)
     .filter(p => !platformFilter || p.platform === platformFilter)
     .map(p => ({ ...p, talentName: talentMap.get(p.talent_id) || "?" }));
+
+  const handlePieceClick = (p: any) => {
+    const talent = talentById.get(p.talent_id);
+    if (talent) onSelectPiece?.(p, talent);
+  };
 
   const days = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 0 });
@@ -46,12 +53,48 @@ export function ContentHQCalendar({ talents, selectedTalentId, platformFilter }:
                   const pl = PLATFORMS.find(x => x.id === p.platform);
                   const st = PIECE_STATUSES.find(x => x.id === p.status);
                   return (
-                    <div key={p.id} className={`text-[10px] px-1.5 py-0.5 rounded border ${pl?.color || "bg-muted"}`} title={`${p.talentName}: ${p.title} (${st?.label})`}>
+                    <button
+                      key={p.id}
+                      type="button"
+                      onClick={() => handlePieceClick(p)}
+                      className={`w-full text-left text-[10px] px-1.5 py-0.5 rounded border ${pl?.color || "bg-muted"} ${onSelectPiece ? "hover:ring-1 hover:ring-primary cursor-pointer" : ""}`}
+                      title={`${p.talentName}: ${p.title} (${st?.label})`}
+                    >
                       <span className="font-semibold">{p.talentName[0]}</span> {p.title.slice(0, 18)}
-                    </div>
+                    </button>
                   );
                 })}
-                {pieces.length > 4 && <div className="text-[10px] text-muted-foreground">+{pieces.length - 4}</div>}
+                {pieces.length > 4 && (
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <button type="button" className="text-[10px] text-muted-foreground hover:underline">
+                        +{pieces.length - 4}
+                      </button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-64 p-2 space-y-1" align="start">
+                      <div className="text-xs font-medium text-muted-foreground px-1 pb-1">
+                        {format(d, "dd 'de' MMMM", { locale: ptBR })} · {pieces.length} itens
+                      </div>
+                      <div className="space-y-1 max-h-72 overflow-y-auto">
+                        {pieces.map(p => {
+                          const pl = PLATFORMS.find(x => x.id === p.platform);
+                          const st = PIECE_STATUSES.find(x => x.id === p.status);
+                          return (
+                            <button
+                              key={p.id}
+                              type="button"
+                              onClick={() => handlePieceClick(p)}
+                              className={`w-full text-left text-[11px] px-2 py-1 rounded border ${pl?.color || "bg-muted"} ${onSelectPiece ? "hover:ring-1 hover:ring-primary cursor-pointer" : ""}`}
+                              title={`${p.talentName}: ${p.title} (${st?.label})`}
+                            >
+                              <span className="font-semibold">{p.talentName}</span>: {p.title}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </PopoverContent>
+                  </Popover>
+                )}
               </div>
             </div>
           );

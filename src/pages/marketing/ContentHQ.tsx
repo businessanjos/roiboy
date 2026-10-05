@@ -273,6 +273,7 @@ export default function ContentHQ() {
                       talents={talents}
                       selectedTalentId={talentId === "all" ? undefined : talentId}
                       platformFilter={effPlatform}
+                      onSelectPiece={(piece, talent) => setDrawerPiece({ piece, talent })}
                     />
                   )}
                   {section === "kanban" && (

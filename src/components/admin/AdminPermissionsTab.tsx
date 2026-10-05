@@ -17,6 +17,7 @@ import { RoyZappViewAccessManager } from "@/components/admin/RoyZappViewAccessMa
 import { DealVisibilityManager } from "@/components/admin/DealVisibilityManager";
 import { UserPermissionsEditor } from "@/components/admin/PermissionProfilesManager";
 import { RoyZappAccessMatrix } from "@/components/admin/RoyZappAccessMatrix";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { UserManagementPanel } from "./UserManagementPanel";
 
 interface Account {
@@ -80,13 +81,17 @@ export function AdminPermissionsTab({ accounts }: { accounts: Account[] }) {
     queryKey: ["admin-permissions-users", accountId],
     queryFn: async (): Promise<AccountUser[]> => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("users")
-        .select("id, name, email, avatar_url, role, auth_user_id, is_active")
-        .eq("account_id", accountId)
-        .order("name");
+      const { data, error } = await fetchAllRows<AccountUser>((from, to) =>
+        supabase
+          .from("users")
+          .select("id, name, email, avatar_url, role, auth_user_id, is_active")
+          .eq("account_id", accountId)
+          .order("name")
+          .order("id")
+          .range(from, to)
+      );
       if (error) throw error;
-      return (data || []) as AccountUser[];
+      return data;
     },
     enabled: !!accountId,
   });

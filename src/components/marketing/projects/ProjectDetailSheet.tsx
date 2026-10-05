@@ -549,21 +549,26 @@ function DocsTab({ projectId }: { projectId: string }) {
 function EventsTab({ projectId }: { projectId: string }) {
   const { items, link, unlink } = useProjectEvents(projectId);
   const { currentUser } = useCurrentUser();
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const { data: availableEvents = [] } = useQuery({
-    queryKey: ["available-marketing-events", currentUser?.account_id],
+    queryKey: ["available-marketing-events", currentUser?.account_id, debouncedSearch],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("events")
         .select("id, title, scheduled_at, category, color")
         .eq("account_id", currentUser!.account_id)
         .order("scheduled_at", { ascending: false })
-        .limit(200);
+        .limit(20);
+      if (debouncedSearch.trim()) q = q.ilike("title", `%${debouncedSearch.trim()}%`);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
   });
   const [picker, setPicker] = useState("");
+  const pg = usePagedList(items);
 
   const linkedIds = new Set(items.map((e: any) => e.id));
   const choices = availableEvents.filter(e => !linkedIds.has(e.id));
@@ -571,9 +576,22 @@ function EventsTab({ projectId }: { projectId: string }) {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <Select value={picker} onValueChange={(v) => { setPicker(""); link.mutate(v); }}>
+        <Select
+          value={picker}
+          onValueChange={(v) => { setPicker(""); setSearch(""); link.mutate(v); }}
+          onOpenChange={(open) => { if (!open) setSearch(""); }}
+        >
           <SelectTrigger><SelectValue placeholder="Vincular evento existente..." /></SelectTrigger>
           <SelectContent>
+            <div className="p-1.5">
+              <Input
+                placeholder="Buscar evento..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                onKeyDown={(e) => e.stopPropagation()}
+                className="h-8 text-sm"
+              />
+            </div>
             {choices.map(e => (
               <SelectItem key={e.id} value={e.id}>
                 {e.title} {e.scheduled_at && `— ${format(parseISO(e.scheduled_at), "dd/MM", { locale: ptBR })}`}
@@ -584,7 +602,7 @@ function EventsTab({ projectId }: { projectId: string }) {
         </Select>
       </div>
       <div className="space-y-2">
-        {items.map((e: any) => (
+        {pg.items.map((e: any) => (
           <div key={e.id} className="flex items-center gap-3 p-3 border rounded-lg group hover:bg-muted/30">
             <div className="h-3 w-3 rounded-full" style={{ background: e.color || "#8b5cf6" }} />
             <div className="flex-1 min-w-0">
@@ -599,6 +617,7 @@ function EventsTab({ projectId }: { projectId: string }) {
           </div>
         ))}
         {items.length === 0 && <EmptyState text="Nenhum evento vinculado a este projeto." />}
+        {items.length > 0 && <PagerFor state={pg} itemLabel="eventos" />}
       </div>
     </div>
   );
@@ -608,31 +627,49 @@ function EventsTab({ projectId }: { projectId: string }) {
 function TasksTab({ projectId }: { projectId: string }) {
   const { items, link, unlink } = useProjectTasks(projectId);
   const { currentUser } = useCurrentUser();
+  const [search, setSearch] = useState("");
+  const debouncedSearch = useDebouncedValue(search, 300);
   const { data: availableTasks = [] } = useQuery({
-    queryKey: ["available-marketing-tasks", currentUser?.account_id],
+    queryKey: ["available-marketing-tasks", currentUser?.account_id, debouncedSearch],
     enabled: !!currentUser?.account_id,
     queryFn: async () => {
-      const { data, error } = await supabase
+      let q = supabase
         .from("marketing_tasks")
         .select("id, title, status, priority, due_date, is_completed")
         .eq("account_id", currentUser!.account_id)
         .eq("is_completed", false)
         .order("created_at", { ascending: false })
-        .limit(200);
+        .limit(20);
+      if (debouncedSearch.trim()) q = q.ilike("title", `%${debouncedSearch.trim()}%`);
+      const { data, error } = await q;
       if (error) throw error;
       return data || [];
     },
   });
   const [picker, setPicker] = useState("");
+  const pg = usePagedList(items);
 
   const linkedIds = new Set(items.map((t: any) => t.id));
   const choices = availableTasks.filter(t => !linkedIds.has(t.id));
 
   return (
     <div className="space-y-3">
-      <Select value={picker} onValueChange={(v) => { setPicker(""); link.mutate(v); }}>
+      <Select
+        value={picker}
+        onValueChange={(v) => { setPicker(""); setSearch(""); link.mutate(v); }}
+        onOpenChange={(open) => { if (!open) setSearch(""); }}
+      >
         <SelectTrigger><SelectValue placeholder="Vincular tarefa existente..." /></SelectTrigger>
         <SelectContent>
+          <div className="p-1.5">
+            <Input
+              placeholder="Buscar tarefa..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              className="h-8 text-sm"
+            />
+          </div>
           {choices.map(t => (
             <SelectItem key={t.id} value={t.id}>{t.title}</SelectItem>
           ))}
@@ -640,7 +677,7 @@ function TasksTab({ projectId }: { projectId: string }) {
         </SelectContent>
       </Select>
       <div className="space-y-2">
-        {items.map((t: any) => (
+        {pg.items.map((t: any) => (
           <div key={t.id} className="flex items-center gap-3 p-3 border rounded-lg group hover:bg-muted/30">
             <Checkbox checked={t.is_completed} disabled />
             <div className="flex-1 min-w-0">
@@ -657,6 +694,7 @@ function TasksTab({ projectId }: { projectId: string }) {
           </div>
         ))}
         {items.length === 0 && <EmptyState text="Nenhuma tarefa vinculada." />}
+        {items.length > 0 && <PagerFor state={pg} itemLabel="tarefas" />}
       </div>
     </div>
   );

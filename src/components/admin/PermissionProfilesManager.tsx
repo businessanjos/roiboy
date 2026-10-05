@@ -11,6 +11,9 @@ import { Switch } from "@/components/ui/switch";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Ban, Eye, Loader2, Pencil, Plus, ShieldCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { CopyPermissionsButton } from "./CopyPermissionsDialog";
 import { UserAccessHistory } from "./UserAccessHistory";
 import {
@@ -35,15 +38,20 @@ export function PermissionProfilesManager({ accountId }: { accountId: string }) 
     enabled: !!accountId,
     queryFn: async () => {
       const db = supabase as any;
-      const { data: profiles, error } = await db
-        .from("permission_profiles").select("id, name, description").eq("account_id", accountId).order("name");
+      const { data: profiles, error } = await fetchAllRows<Profile>((from, to) =>
+        db.from("permission_profiles").select("id, name, description").eq("account_id", accountId).order("name").order("id").range(from, to)
+      );
       if (error) throw error;
-      const ids = (profiles ?? []).map((p: Profile) => p.id);
+      const ids = profiles.map((p: Profile) => p.id);
       const { data: items } = ids.length
-        ? await db.from("permission_profile_items").select("profile_id, module, sub_item, access_level, scope").in("profile_id", ids)
-        : { data: [] };
-      const { data: members } = await db.from("user_permission_profiles").select("profile_id").eq("account_id", accountId);
-      return { profiles: (profiles ?? []) as Profile[], items: (items ?? []) as Item[], members: (members ?? []) as { profile_id: string }[] };
+        ? await fetchAllRows<Item>((from, to) =>
+            db.from("permission_profile_items").select("profile_id, module, sub_item, access_level, scope").in("profile_id", ids).range(from, to)
+          )
+        : { data: [] as Item[] };
+      const { data: members } = await fetchAllRows<{ profile_id: string }>((from, to) =>
+        db.from("user_permission_profiles").select("profile_id").eq("account_id", accountId).range(from, to)
+      );
+      return { profiles, items: items ?? [], members: members ?? [] };
     },
   });
 
@@ -54,6 +62,8 @@ export function PermissionProfilesManager({ accountId }: { accountId: string }) 
     toast.success("Perfil excluído");
     qc.invalidateQueries({ queryKey: ["permission-profiles", accountId] });
   };
+
+  const pg = usePagedList(data?.profiles ?? [], { isLoading });
 
   return (
     <Card className="border-0 shadow-sm">
@@ -73,7 +83,7 @@ export function PermissionProfilesManager({ accountId }: { accountId: string }) 
           <p className="text-sm text-muted-foreground">Nenhum perfil criado ainda.</p>
         ) : (
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {data.profiles.map((p) => {
+            {pg.items.map((p) => {
               const its = data.items.filter((i) => i.profile_id === p.id);
               const counts = {
                 manage: its.filter((i) => i.access_level === "manage").length,
@@ -104,6 +114,7 @@ export function PermissionProfilesManager({ accountId }: { accountId: string }) 
             })}
           </div>
         )}
+        {(data?.profiles.length ?? 0) > 0 && <PagerFor state={pg} itemLabel="perfis" />}
       </CardContent>
       {editing && (
         <ProfileEditor
