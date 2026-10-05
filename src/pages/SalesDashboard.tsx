@@ -992,7 +992,7 @@ export default function SalesDashboard() {
           <div className="flex flex-wrap items-center gap-2">
             <Filter className="hidden md:block w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[190px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger aria-label="Período" className="w-full md:w-[190px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1040,7 +1040,7 @@ export default function SalesDashboard() {
             )}
 
             <Select value={repFilter} onValueChange={setRepFilter}>
-              <SelectTrigger className="w-full md:w-[200px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger aria-label="Vendedor" className="w-full md:w-[200px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue placeholder="Todos os vendedores" />
               </SelectTrigger>
               <SelectContent>
