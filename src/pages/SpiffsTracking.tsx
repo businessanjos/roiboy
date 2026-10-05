@@ -38,7 +38,7 @@ export default function SpiffsTracking() {
 
   return (
     <TooltipProvider>
-      <div className="container mx-auto p-3 sm:p-6 space-y-4 md:space-y-6 max-w-7xl pb-24 md:pb-6">
+      <div className="container mx-auto px-4 py-3 sm:p-6 space-y-4 md:space-y-6 max-w-7xl pb-24 md:pb-6">
         <div className="hidden md:block">
           <h1 className="text-2xl font-semibold flex items-center gap-2">
             <Zap className="h-6 w-6 text-warning" />
