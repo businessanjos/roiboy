@@ -4,13 +4,11 @@
  * contagem (`count: 'exact'`), garantindo que ambas usem exatamente o mesmo
  * filtro. Mantido puro e separado do componente para ser testado sem rede.
  *
- * Escapa o termo para uso seguro dentro da gramática do .or()/.ilike() do
- * PostgREST: vírgula e parênteses quebram a lista de condições, '%' e '_'
- * são coringas do ILIKE e precisam ser tratados como texto literal.
+ * Escape do ILIKE (`%`, `_`, `\`) e serialização da gramática do PostgREST
+ * (valor entre aspas duplas) são etapas separadas — ver `@/lib/postgrestFilter`.
  */
-export function escapeIlikeTerm(term: string): string {
-  return term.replace(/[\\%_,()]/g, (c) => `\\${c}`);
-}
+import { ilikeContains } from "@/lib/postgrestFilter";
+export { escapeIlikeWildcards as escapeIlikeTerm } from "@/lib/postgrestFilter";
 
 export interface BuildDeletedDealsOrFilterInput {
   term: string;
@@ -31,12 +29,11 @@ export function buildDeletedDealsOrFilter({
 }: BuildDeletedDealsOrFilterInput): string | null {
   if (!term) return null;
 
-  const safeTerm = escapeIlikeTerm(term);
   const digits = term.replace(/\D/g, "");
   const orParts = [
-    `title.ilike.%${safeTerm}%`,
-    `contact_name.ilike.%${safeTerm}%`,
-    `contact_email.ilike.%${safeTerm}%`,
+    ilikeContains("title", term),
+    ilikeContains("contact_name", term),
+    ilikeContains("contact_email", term),
   ];
   if (digits.length >= 4) orParts.push(`contact_phone.ilike.%${digits}%`);
 
