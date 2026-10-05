@@ -405,7 +405,7 @@ export default function CloserDashboard() {
                   value={effectiveUserId ?? currentUser?.id ?? ""}
                   onValueChange={(v) => setViewedUserId(v === currentUser?.id ? undefined : v)}
                 >
-                  <SelectTrigger className="w-[200px] h-9 gap-1.5">
+                  <SelectTrigger className="w-full sm:w-[200px] h-11 sm:h-9 gap-1.5">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <SelectValue />
                   </SelectTrigger>
@@ -421,7 +421,7 @@ export default function CloserDashboard() {
               )}
               {availableMonths.length > 1 && (
                 <Select value={selectedKey} onValueChange={setSelectedKey}>
-                  <SelectTrigger className="w-[180px] h-9 capitalize">
+                  <SelectTrigger className="w-full sm:w-[180px] h-11 sm:h-9 capitalize">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
