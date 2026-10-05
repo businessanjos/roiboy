@@ -137,7 +137,9 @@ const ITEMS: ItemDef[] = [
   {
     key: "tasks", group: "general", label: "Tarefas pendentes",
     table: "internal_tasks", columns: ["assigned_to"],
-    apply: (q) => q.in("status", OPEN_TASK_STATUSES),
+    // Tarefas concluídas mantêm status "pending" com completed_at preenchido:
+    // exigir completed_at nulo para nunca mover histórico.
+    apply: (q) => q.in("status", OPEN_TASK_STATUSES).is("completed_at", null),
   },
   {
     key: "leader_actions", group: "general", label: "Ações da reunião de líderes",
