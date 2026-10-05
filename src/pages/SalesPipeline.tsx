@@ -2542,14 +2542,14 @@ export default function SalesPipeline() {
             <TabsList className="flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
 
 
-              <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
-                <Users className="h-4 w-4 shrink-0" />
+              <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Users className="h-4 w-4 shrink-0 max-[380px]:hidden" />
                 <span className="whitespace-nowrap sm:hidden">Leads</span>
                 <span className="hidden sm:inline">Prospecção</span>
                 <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'prospeccao' && "hidden sm:inline-flex")}>{mainTab === 'prospeccao' ? leads.length : (leadsCount ?? '...')}</Badge>
               </TabsTrigger>
-              <TabsTrigger value="pipeline" className="flex-1 basis-0 min-w-0 gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
-                <Target className="h-4 w-4 shrink-0" />
+              <TabsTrigger value="pipeline" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
+                <Target className="h-4 w-4 shrink-0 max-[380px]:hidden" />
                 <span className="whitespace-nowrap">Pipeline</span>
                 <Badge variant="secondary" className={cn("text-[10px] sm:text-xs", mainTab !== 'pipeline' && "hidden sm:inline-flex")}>{openDeals.length}</Badge>
               </TabsTrigger>
