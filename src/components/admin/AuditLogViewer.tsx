@@ -612,12 +612,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
   return (
     <Card>
       <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <CardTitle className="flex items-center gap-2">
-            <Activity className="h-5 w-5" />
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <CardTitle className="flex items-center gap-2 min-w-0">
+            <Activity className="h-5 w-5 shrink-0" />
             {isCommercial ? "Logs da equipe comercial" : "Log de Auditoria"}
           </CardTitle>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               variant="outline"
               size="sm"
