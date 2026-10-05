@@ -30176,7 +30176,7 @@ export type Database = {
         Returns: string
       }
       zapp_attendance_daily: {
-        Args: { p_account_id: string; p_since: string }
+        Args: { p_account_id: string; p_since: string; p_tz?: string }
         Returns: {
           day: string
           messages: number
