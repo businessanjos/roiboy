@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 // Sanitiza valores que deveriam ser UUID mas podem vir como strings inválidas
 function sanitizeUuid(value: string | undefined | null): string | null {
@@ -93,16 +94,20 @@ export function useMarketingTasks() {
   const { data: tasks = [], isLoading, error } = useQuery({
     queryKey: ["marketing-tasks"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("marketing_tasks")
-        .select(`
-          *,
-          assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)
-        `)
-        .order("display_order", { ascending: true });
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("marketing_tasks")
+          .select(`
+            *,
+            assignee:users!marketing_tasks_assignee_id_fkey(id, name, avatar_url)
+          `)
+          .order("display_order", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as any
+      );
 
       if (error) throw error;
-      return (data || []).map(task => ({
+      return (data || []).map((task: any) => ({
         ...task,
         media_attachments: task.media_attachments as unknown as MediaAttachment[] | null,
       })) as MarketingTask[];

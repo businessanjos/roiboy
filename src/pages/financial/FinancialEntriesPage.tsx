@@ -544,7 +544,7 @@ export default function FinancialEntriesPage() {
     totalItems,
     handlePageChange,
     handlePageSizeChange,
-  } = useTablePagination(filteredEntries);
+  } = useTablePagination(filteredEntries, 20, [searchQuery, statusFilter, categoryFilter, conciliationFilter, productFilter, periodFilter]);
 
   // Calculate totals
   const totals = filteredEntries.reduce(

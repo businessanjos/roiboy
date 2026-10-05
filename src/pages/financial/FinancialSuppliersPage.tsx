@@ -139,7 +139,7 @@ export default function FinancialSuppliersPage() {
     totalItems: supplierTotalItems,
     handlePageChange: handleSupplierPageChange,
     handlePageSizeChange: handleSupplierPageSizeChange,
-  } = useTablePagination(filteredSuppliers);
+  } = useTablePagination(filteredSuppliers, 20, searchTerm);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

@@ -19,6 +19,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Switch } from "@/components/ui/switch";
 import { emitClientProductsChanged } from "@/lib/client/clientProductsEvents";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 import {
   Breadcrumb,
@@ -1041,11 +1042,11 @@ export default function ClientDetail() {
         supabase.from("client_contracts").select("start_date, end_date").eq("client_id", id).eq("status", "active").order("start_date", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("score_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
         supabase.from("vnps_snapshots").select("*").eq("client_id", id).order("computed_at", { ascending: false }).limit(1).maybeSingle(),
-        supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-        supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+        fetchAllRows<any>((from, to) => supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
+        fetchAllRows<any>((from, to) => supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
+        fetchAllRows<any>((from, to) => supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
         supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.messages - 1),
-        supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
+        fetchAllRows<any>((from, to) => supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
         supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.lifeEvents - 1),
         supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.formResponses - 1),
         supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.attendance - 1),
@@ -1282,14 +1283,14 @@ export default function ClientDetail() {
         checkinsResult,
       ] = await Promise.all([
         supabase.from("message_events").select("*").eq("client_id", id).order("sent_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.messages - 1),
-        supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }),
+        fetchAllRows<any>((from, to) => supabase.from("client_followups").select("*, users(name, avatar_url)").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
         supabase.from("client_life_events").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.lifeEvents - 1),
         supabase.from("form_responses").select("*, forms(title)").eq("client_id", id).order("submitted_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.formResponses - 1),
         supabase.from("attendance").select("*, events(title, address, scheduled_at)").eq("client_id", id).not("event_id", "is", null).order("join_time", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.attendance - 1),
         supabase.from("client_subscriptions").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.subscriptions - 1),
-        supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-        supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }),
-        supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }),
+        fetchAllRows<any>((from, to) => supabase.from("risk_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
+        fetchAllRows<any>((from, to) => supabase.from("roi_events").select("*").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
+        fetchAllRows<any>((from, to) => supabase.from("recommendations").select("*").eq("client_id", id).order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to) as any),
         supabase.from("client_checkins").select("*, users(name, avatar_url)").eq("client_id", id).order("happened_at", { ascending: false }).order("id", { ascending: false }).range(0, TIMELINE_PAGE_SIZES.checkins - 1),
       ]);
 

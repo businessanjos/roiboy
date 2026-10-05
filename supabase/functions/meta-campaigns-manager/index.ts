@@ -8,12 +8,26 @@ const corsHeaders = {
 
 const META = "https://graph.facebook.com/v21.0";
 
-/** Segue paging.next do Graph API até acabar, com teto de segurança. */
-async function fetchAllGraph(initialUrl: string, maxPages = 50): Promise<{ data: any[]; error?: any }> {
+/**
+ * Segue paging.next do Graph API até acabar (sem teto silencioso).
+ * Detecta ciclos (URL repetida) e aplica um teto de segurança ALTO: se for atingido,
+ * retorna erro explícito em vez de sucesso parcial, para nunca esconder dados faltantes.
+ */
+async function fetchAllGraph(initialUrl: string, hardCap = 2000): Promise<{ data: any[]; error?: any }> {
   let url: string | undefined = initialUrl;
   const all: any[] = [];
+  const seenUrls = new Set<string>();
   let pages = 0;
-  while (url && pages < maxPages) {
+  while (url) {
+    if (seenUrls.has(url)) {
+      return { data: all, error: { message: `fetchAllGraph: ciclo de paginação detectado (URL repetida) após ${pages} página(s).` } };
+    }
+    seenUrls.add(url);
+
+    if (pages >= hardCap) {
+      return { data: all, error: { message: `fetchAllGraph: teto de segurança (${hardCap} páginas) atingido sem concluir a paginação.` } };
+    }
+
     const r = await (await fetch(url)).json();
     if (r.error) return { data: all, error: r.error };
     all.push(...(r.data || []));
@@ -239,11 +253,10 @@ serve(async (req) => {
     if (action === "budget_history") {
       const { entityId } = body;
       const { supabase } = auth as any;
-      // Segue cursor via .range até esgotar o histórico, com teto de segurança.
+      // Segue cursor via .range em lotes até esgotar TODO o histórico (sem teto de 5000).
       const batchSize = 200;
-      const maxRows = 5000;
       const history: any[] = [];
-      for (let from = 0; from < maxRows; from += batchSize) {
+      for (let from = 0; ; from += batchSize) {
         let q = supabase
           .from("meta_budget_history")
           .select("*")

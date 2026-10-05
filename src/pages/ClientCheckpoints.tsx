@@ -267,14 +267,14 @@ export default function ClientCheckpoints() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)}>
-              <TabsList>
-                <TabsTrigger value="todos">Todos</TabsTrigger>
-                <TabsTrigger value="vencido">Vencidos</TabsTrigger>
-                <TabsTrigger value="sem_registro">Sem registro</TabsTrigger>
-                <TabsTrigger value="atencao">Em breve</TabsTrigger>
-                <TabsTrigger value="em_dia">Em dia</TabsTrigger>
-                <TabsTrigger value="sem_interacao_15">15+ dias sem interação</TabsTrigger>
+            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)} className="w-full sm:w-auto min-w-0">
+              <TabsList className="w-full sm:w-auto flex-nowrap justify-start overflow-x-auto scrollbar-none">
+                <TabsTrigger value="todos" className="min-h-11 shrink-0">Todos</TabsTrigger>
+                <TabsTrigger value="vencido" className="min-h-11 shrink-0">Vencidos</TabsTrigger>
+                <TabsTrigger value="sem_registro" className="min-h-11 shrink-0">Sem registro</TabsTrigger>
+                <TabsTrigger value="atencao" className="min-h-11 shrink-0">Em breve</TabsTrigger>
+                <TabsTrigger value="em_dia" className="min-h-11 shrink-0">Em dia</TabsTrigger>
+                <TabsTrigger value="sem_interacao_15" className="min-h-11 shrink-0">15+ dias sem interação</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>

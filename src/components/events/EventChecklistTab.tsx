@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { format } from "date-fns";
@@ -84,16 +85,26 @@ export default function EventChecklistTab({ eventId, accountId, onUpdate }: Prop
 
   const fetchItems = async () => {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("event_checklist")
-      .select("*")
-      .eq("event_id", eventId)
-      .order("display_order", { ascending: true });
+    const { data, error } = await fetchAllRows<ChecklistItem>((from, to) =>
+      supabase
+        .from("event_checklist")
+        .select("*")
+        .eq("event_id", eventId)
+        .order("display_order", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to) as any
+    );
 
     if (error) {
       console.error("Error fetching checklist:", error);
+      toast({
+        title: "Erro ao carregar checklist",
+        description: "Não foi possível carregar todos os itens. Tente novamente.",
+        variant: "destructive",
+      });
+      setItems([]);
     } else {
-      setItems(data || []);
+      setItems(data);
     }
     setLoading(false);
   };

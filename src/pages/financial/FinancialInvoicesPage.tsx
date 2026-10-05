@@ -213,7 +213,7 @@ export default function FinancialInvoicesPage() {
     totalItems: invoiceTotalItems,
     handlePageChange: handleInvoicePageChange,
     handlePageSizeChange: handleInvoicePageSizeChange,
-  } = useTablePagination(filteredEntries);
+  } = useTablePagination(filteredEntries, 20, searchQuery);
 
   // Calculate totals
   const totals = filteredEntries.reduce((acc, entry) => {

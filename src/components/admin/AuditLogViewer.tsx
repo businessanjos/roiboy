@@ -1,7 +1,6 @@
-import { useState } from "react";
-import { usePagedList } from "@/hooks/usePagedList";
+import { useEffect, useState } from "react";
+import { usePaginationState } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
-import { fetchAllRows } from "@/lib/fetchAllRows";
 import { fetchInChunks } from "@/lib/fetchInChunks";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -67,21 +66,7 @@ import {
   CommandList,
 } from "@/components/ui/command";
 
-
-/**
- * Carrega as páginas da janela (até 180 dias, com os filtros já aplicados no servidor)
- * via .range(), com teto de segurança (maxRows) para nunca baixar volume irrestrito.
- */
-async function fetchAllPages<T>(
-  build: (from: number, to: number) => PromiseLike<{ data: T[] | null; error: unknown }>,
-  pageSize = 500,
-): Promise<T[]> {
-  const { data, error } = await fetchAllRows<T>(build, { batchSize: pageSize, maxRows: 20000 });
-  if (error) throw error;
-  return data;
-}
-
-interface UnifiedLog {
+export interface UnifiedLog {
   id: string;
   user_id: string | null;
   user_name: string | null;
@@ -97,6 +82,43 @@ interface UnifiedLog {
   source: "audit" | "deal";
   /** A quem o registro pertence: "Lead Fulano", "Negócio X", "Cliente Y" */
   context?: string | null;
+}
+
+/** Linha crua retornada pela RPC audit_unified_page. */
+interface UnifiedRpcRow {
+  id: string;
+  source: "audit" | "deal";
+  user_id: string | null;
+  user_name: string | null;
+  user_email: string | null;
+  action: string;
+  entity_type: string;
+  entity_id: string | null;
+  entity_name: string | null;
+  details: Record<string, unknown> | null;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  total_count: number;
+}
+
+/** Converte uma linha crua da RPC no formato usado pela tela. */
+export function mapRpcRowToUnifiedLog(row: UnifiedRpcRow): UnifiedLog {
+  return {
+    id: row.id,
+    user_id: row.user_id,
+    user_name: row.user_name,
+    user_email: row.user_email,
+    action: row.action,
+    entity_type: row.entity_type,
+    entity_id: row.entity_id,
+    entity_name: row.entity_name,
+    details: row.details,
+    ip_address: row.ip_address,
+    user_agent: row.user_agent,
+    created_at: row.created_at,
+    source: row.source,
+  };
 }
 
 const actionIcons: Record<string, React.ReactNode> = {
@@ -147,7 +169,7 @@ const actionRowAccent: Record<string, string> = {
   image: "border-l-muted-foreground/40",
 };
 
-const actionLabels: Record<string, string> = {
+export const actionLabels: Record<string, string> = {
   create: "Criou",
   update: "Atualizou",
   delete: "Excluiu",
@@ -169,7 +191,7 @@ const actionLabels: Record<string, string> = {
   "user.created": "Criou usuário",
 };
 
-const entityLabels: Record<string, string> = {
+export const entityLabels: Record<string, string> = {
   client: "Cliente",
   user: "Usuário",
   event: "Evento",
@@ -187,7 +209,7 @@ const entityLabels: Record<string, string> = {
 };
 
 /** Frase legível: "Excluiu a tarefa 'Follow Up' — Lead Fulano" */
-function describeLog(log: UnifiedLog): string {
+export function describeLog(log: UnifiedLog): string {
   const acao = actionLabels[log.action] ?? log.action;
   const tipo = (entityLabels[log.entity_type] ?? log.entity_type).toLowerCase();
   const nome = log.entity_name ? ` "${log.entity_name}"` : "";
@@ -211,8 +233,6 @@ function describeLog(log: UnifiedLog): string {
   return `${acao} ${tipo}${nome}${onde}`;
 }
 
-const DEAL_ACTIVITY_TYPES = ["stage_change", "status_change", "note", "image"];
-
 const PERIOD_DAYS: Record<string, number> = {
   "7": 7,
   "30": 30,
@@ -223,9 +243,8 @@ const PERIOD_DAYS: Record<string, number> = {
 /** Teto rígido de exibição na tela (os registros continuam no banco). */
 const MAX_VISIBLE_DAYS = 180;
 
-/** Ruído automático que não representa ação de pessoa. */
-const NOISE_ACTIONS = new Set(["auto_heal_inactive"]);
-const NOISE_ENTITIES = new Set(["hr_collaborators"]);
+/** Tamanho de lote de exportação: segue até esgotar o conjunto filtrado, sem teto silencioso. */
+const EXPORT_BATCH_SIZE = 1000;
 
 interface AuditLogViewerProps {
   accountId?: string; // If provided, shows logs for specific account (super admin view)
@@ -233,299 +252,234 @@ interface AuditLogViewerProps {
   scope?: "system" | "commercial";
 }
 
+/** Busca uma página da RPC unificada e devolve linhas mapeadas + total. */
+export async function fetchUnifiedPage(params: {
+  accountId?: string;
+  scope: "system" | "commercial";
+  sinceIso: string;
+  actionFilter: string;
+  entityFilter: string;
+  userFilter: string;
+  search: string;
+  offset: number;
+  limit: number;
+}): Promise<{ rows: UnifiedLog[]; total: number }> {
+  const { accountId, scope, sinceIso, actionFilter, entityFilter, userFilter, search, offset, limit } = params;
+  const { data, error } = await (supabase.rpc as any)("audit_unified_page", {
+    p_account_id: accountId ?? null,
+    p_from: sinceIso,
+    p_to: null,
+    p_scope: scope,
+    p_action: actionFilter,
+    p_entity_type: entityFilter,
+    p_user: userFilter,
+    p_search: search || null,
+    p_offset: offset,
+    p_limit: limit,
+  });
+  if (error) throw error;
+  const rows = (data || []) as UnifiedRpcRow[];
+  const total = rows.length > 0 ? Number(rows[0].total_count) : 0;
+  return { rows: rows.map(mapRpcRowToUnifiedLog), total };
+}
+
+/** Enriquece uma página de logs com nomes/contextos (só para os registros exibidos). */
+export async function enrichLogs(results: UnifiedLog[]): Promise<UnifiedLog[]> {
+  const enriched = results.map((r) => ({ ...r }));
+
+  // Resolve os nomes das pessoas nas linhas vindas do comercial
+  const missingUserIds = Array.from(
+    new Set(enriched.filter((r) => !r.user_name && r.user_id).map((r) => r.user_id as string)),
+  );
+  if (missingUserIds.length > 0) {
+    const users = await fetchInChunks<{ id: string; name: string | null; email: string | null }>(
+      missingUserIds,
+      200,
+      (chunk) => supabase.from("users").select("id, name, email").in("id", chunk),
+    );
+    const map = new Map<string, { name: string | null; email: string | null }>();
+    users.forEach((u) => map.set(u.id, { name: u.name, email: u.email }));
+    enriched.forEach((r) => {
+      if (!r.user_name && r.user_id) {
+        const found = map.get(r.user_id);
+        if (found) {
+          r.user_name = found.name;
+          r.user_email = found.email;
+        }
+      }
+    });
+  }
+
+  // Descobre a quem cada tarefa pertence (lead, negócio ou cliente)
+  const taskIds = Array.from(
+    new Set(
+      enriched
+        .filter((r) => r.entity_type === "task" && r.entity_id)
+        .map((r) => r.entity_id as string),
+    ),
+  );
+  if (taskIds.length > 0) {
+    const tasks = await fetchInChunks<{ id: string; deal_id: string | null; lead_id: string | null; client_id: string | null }>(
+      taskIds,
+      200,
+      (chunk) => supabase.from("internal_tasks").select("id, deal_id, lead_id, client_id").in("id", chunk),
+    );
+
+    const dealIds = new Set<string>();
+    const leadIds = new Set<string>();
+    const clientIds = new Set<string>();
+    tasks.forEach((t) => {
+      if (t.deal_id) dealIds.add(t.deal_id);
+      if (t.lead_id) leadIds.add(t.lead_id);
+      if (t.client_id) clientIds.add(t.client_id);
+    });
+
+    const [deals, leads, clients] = await Promise.all([
+      fetchInChunks<{ id: string; title: string }>(Array.from(dealIds), 200, (chunk) =>
+        supabase.from("deals").select("id, title").in("id", chunk),
+      ),
+      fetchInChunks<{ id: string; full_name: string }>(Array.from(leadIds), 200, (chunk) =>
+        supabase.from("leads").select("id, full_name").in("id", chunk),
+      ),
+      fetchInChunks<{ id: string; full_name: string }>(Array.from(clientIds), 200, (chunk) =>
+        supabase.from("clients").select("id, full_name").in("id", chunk),
+      ),
+    ]);
+
+    const dealNames = new Map<string, string>();
+    deals.forEach((d) => dealNames.set(d.id, d.title));
+    const leadNames = new Map<string, string>();
+    leads.forEach((l) => leadNames.set(l.id, l.full_name));
+    const clientNames = new Map<string, string>();
+    clients.forEach((c) => clientNames.set(c.id, c.full_name));
+
+    const taskContext = new Map<string, string>();
+    tasks.forEach((t) => {
+      const label =
+        (t.lead_id && leadNames.get(t.lead_id) && `Lead ${leadNames.get(t.lead_id)}`) ||
+        (t.deal_id && dealNames.get(t.deal_id) && `Negócio ${dealNames.get(t.deal_id)}`) ||
+        (t.client_id && clientNames.get(t.client_id) && `Cliente ${clientNames.get(t.client_id)}`) ||
+        null;
+      if (label) taskContext.set(t.id, label);
+    });
+
+    enriched.forEach((r) => {
+      if (r.entity_type === "task" && r.entity_id) {
+        r.context = taskContext.get(r.entity_id) ?? null;
+      }
+    });
+  }
+
+  return enriched;
+}
+
+export interface ExportProgress {
+  loaded: number;
+  total: number;
+}
+
+/**
+ * Exporta TODO o conjunto filtrado em lotes de EXPORT_BATCH_SIZE, até esgotar —
+ * sem teto silencioso. Reporta progresso via onProgress e propaga erro de
+ * qualquer lote (nunca baixa um CSV parcial como se fosse completo).
+ */
+export async function exportAllFiltered(
+  fetchPage: (offset: number, limit: number) => Promise<{ rows: UnifiedLog[]; total: number }>,
+  onProgress?: (p: ExportProgress) => void,
+): Promise<UnifiedLog[]> {
+  const all: UnifiedLog[] = [];
+  let offset = 0;
+  let total = Infinity;
+
+  while (offset < total) {
+    const { rows, total: pageTotal } = await fetchPage(offset, EXPORT_BATCH_SIZE);
+    total = pageTotal;
+    all.push(...rows);
+    offset += rows.length;
+    onProgress?.({ loaded: all.length, total });
+    if (rows.length === 0) break; // segurança: nunca entra em loop infinito
+  }
+
+  return all;
+}
+
 export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerProps) {
   const isCommercial = scope === "commercial";
   const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [periodFilter, setPeriodFilter] = useState<string>("30");
   const [userFilter, setUserFilter] = useState<string>("all");
   const [userPickerOpen, setUserPickerOpen] = useState(false);
   const [selectedLog, setSelectedLog] = useState<UnifiedLog | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [exportProgress, setExportProgress] = useState<ExportProgress | null>(null);
+  const [exportError, setExportError] = useState<string | null>(null);
 
-  const { data: logs, isLoading, isError, error: logsError, refetch } = useQuery({
-    queryKey: ["audit-logs-unified", scope, accountId, actionFilter, entityFilter, periodFilter],
-    queryFn: async (): Promise<UnifiedLog[]> => {
-      const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
-      const sinceIso =
-        periodFilter === "today"
-          ? startOfDay(new Date()).toISOString()
-          : subDays(new Date(), days).toISOString();
-      const wantsDeals = isCommercial || entityFilter === "all" || entityFilter === "deal";
-      const wantsAudit = isCommercial || entityFilter !== "deal";
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedSearch(search.trim()), 350);
+    return () => clearTimeout(t);
+  }, [search]);
 
-      // No escopo comercial, só entram pessoas com cargo da área Comercial
-      let salesUserIds: Set<string> | null = null;
-      if (isCommercial) {
-        const { data: salesRoles } = await supabase
-          .from("user_team_roles")
-          .select("user_id, team_roles!inner(area)")
-          .eq("team_roles.area", "Comercial");
-        salesUserIds = new Set((salesRoles ?? []).map((r: any) => r.user_id));
-      }
+  const sinceIso = (() => {
+    const days = Math.min(PERIOD_DAYS[periodFilter] ?? 30, MAX_VISIBLE_DAYS);
+    return periodFilter === "today"
+      ? startOfDay(new Date()).toISOString()
+      : subDays(new Date(), days).toISOString();
+  })();
 
-      const results: UnifiedLog[] = [];
+  const [total, setTotal] = useState(0);
+  const pg = usePaginationState(total, {
+    resetKey: [scope, accountId, actionFilter, entityFilter, periodFilter, userFilter, debouncedSearch],
+  });
 
-      // 1) Log de auditoria existente (tarefas, eventos, pessoas...)
-      if (wantsAudit) {
-        const auditRows = await fetchAllPages<any>((from, to) => {
-          let query = supabase
-            .from("audit_logs")
-            .select("*")
-            .gte("created_at", sinceIso)
-            .order("created_at", { ascending: false })
-            .order("id", { ascending: false })
-            .range(from, to);
-
-          if (accountId) query = query.eq("account_id", accountId);
-          if (actionFilter !== "all") query = query.eq("action", actionFilter);
-          if (isCommercial) {
-            // Foco no comercial: só tarefas/atividades de vendas
-            query = query.eq("entity_type", "task");
-          } else if (entityFilter !== "all") {
-            query = query.eq("entity_type", entityFilter);
-          }
-          return query;
-        });
-
-        auditRows.forEach((row: any) => {
-          // Ignora rotinas automáticas do sistema (não são ações de pessoas)
-          if (NOISE_ACTIONS.has(row.action) || NOISE_ENTITIES.has(row.entity_type)) return;
-          results.push({
-            id: `audit-${row.id}`,
-            user_id: row.user_id,
-            user_name: row.user_name,
-            user_email: row.user_email,
-            action: row.action,
-            entity_type: row.entity_type,
-            entity_id: row.entity_id,
-            entity_name: row.entity_name,
-            details: row.details,
-            ip_address: row.ip_address,
-            user_agent: row.user_agent,
-            created_at: row.created_at,
-            source: "audit",
-          });
-        });
-      }
-
-      // 2) Ações dentro dos negócios (apenas com autor identificado)
-      if (wantsDeals) {
-        const typeFilter = DEAL_ACTIVITY_TYPES.includes(actionFilter)
-          ? [actionFilter]
-          : actionFilter === "all"
-            ? DEAL_ACTIVITY_TYPES
-            : [];
-
-        if (typeFilter.length > 0) {
-          const activities = await fetchAllPages<any>((from, to) => {
-            let activityQuery = supabase
-              .from("deal_activities")
-              .select("id, type, title, content, old_value, new_value, created_at, user_id, deal_id, deals(title)")
-              .in("type", typeFilter)
-              .not("user_id", "is", null)
-              .gte("created_at", sinceIso)
-              .order("created_at", { ascending: false })
-              .order("id", { ascending: false })
-              .range(from, to);
-
-            if (accountId) activityQuery = activityQuery.eq("account_id", accountId);
-            return activityQuery;
-          });
-
-          activities.forEach((row: any) => {
-            results.push({
-              id: `deal-activity-${row.id}`,
-              user_id: row.user_id,
-              user_name: null,
-              user_email: null,
-              action: row.type,
-              entity_type: "deal",
-              entity_id: row.deal_id,
-              entity_name: row.deals?.title ?? null,
-              details: {
-                titulo: row.title ?? null,
-                conteudo: row.content ?? null,
-                de: row.old_value ?? null,
-                para: row.new_value ?? null,
-              },
-              created_at: row.created_at,
-              source: "deal",
-            });
-          });
-        }
-
-        // 3) Negócios excluídos (autor gravado em deleted_by)
-        if (actionFilter === "all" || actionFilter === "delete") {
-          const deleted = await fetchAllPages<any>((from, to) => {
-            let deletedQuery = supabase
-              .from("deals")
-              .select("id, title, deleted_at, deleted_by")
-              .not("deleted_at", "is", null)
-              .not("deleted_by", "is", null)
-              .gte("deleted_at", sinceIso)
-              .order("deleted_at", { ascending: false })
-              .order("id", { ascending: false })
-              .range(from, to);
-
-            if (accountId) deletedQuery = deletedQuery.eq("account_id", accountId);
-            return deletedQuery;
-          });
-
-          deleted.forEach((row: any) => {
-            results.push({
-              id: `deal-deleted-${row.id}`,
-              user_id: row.deleted_by,
-              user_name: null,
-              user_email: null,
-              action: "delete",
-              entity_type: "deal",
-              entity_id: row.id,
-              entity_name: row.title,
-              details: null,
-              created_at: row.deleted_at,
-              source: "deal",
-            });
-          });
-        }
-
-        // 4) Negócios criados (autor gravado a partir de agora em created_by)
-        if (actionFilter === "all" || actionFilter === "create") {
-          const created = await fetchAllPages<any>((from, to) => {
-            let createdQuery = supabase
-              .from("deals")
-              .select("id, title, created_at, created_by")
-              .not("created_by", "is", null)
-              .gte("created_at", sinceIso)
-              .order("created_at", { ascending: false })
-              .order("id", { ascending: false })
-              .range(from, to);
-
-            if (accountId) createdQuery = createdQuery.eq("account_id", accountId);
-            return createdQuery;
-          });
-
-          created.forEach((row: any) => {
-            results.push({
-              id: `deal-created-${row.id}`,
-              user_id: row.created_by,
-              user_name: null,
-              user_email: null,
-              action: "create",
-              entity_type: "deal",
-              entity_id: row.id,
-              entity_name: row.title,
-              details: null,
-              created_at: row.created_at,
-              source: "deal",
-            });
-          });
-        }
-      }
-
-
-      // Mantém somente a equipe de vendas no escopo comercial
-      const scoped = salesUserIds
-        ? results.filter((r) => r.user_id && salesUserIds!.has(r.user_id))
-        : results;
-      results.length = 0;
-      results.push(...scoped);
-
-      // Resolve os nomes das pessoas nas linhas vindas do comercial
-      const missingUserIds = Array.from(
-        new Set(results.filter((r) => !r.user_name && r.user_id).map((r) => r.user_id as string)),
-      );
-      if (missingUserIds.length > 0) {
-        const users = await fetchInChunks<{ id: string; name: string | null; email: string | null }>(
-          missingUserIds,
-          200,
-          (chunk) => supabase.from("users").select("id, name, email").in("id", chunk),
-        );
-        const map = new Map<string, { name: string | null; email: string | null }>();
-        users.forEach((u) => map.set(u.id, { name: u.name, email: u.email }));
-        results.forEach((r) => {
-          if (!r.user_name && r.user_id) {
-            const found = map.get(r.user_id);
-            if (found) {
-              r.user_name = found.name;
-              r.user_email = found.email;
-            }
-          }
-        });
-      }
-
-      // Descobre a quem cada tarefa pertence (lead, negócio ou cliente)
-      const taskIds = Array.from(
-        new Set(
-          results
-            .filter((r) => r.entity_type === "task" && r.entity_id)
-            .map((r) => r.entity_id as string),
-        ),
-      );
-      if (taskIds.length > 0) {
-        const tasks = await fetchInChunks<{ id: string; deal_id: string | null; lead_id: string | null; client_id: string | null }>(
-          taskIds,
-          200,
-          (chunk) => supabase.from("internal_tasks").select("id, deal_id, lead_id, client_id").in("id", chunk),
-        );
-
-        const dealIds = new Set<string>();
-        const leadIds = new Set<string>();
-        const clientIds = new Set<string>();
-        tasks.forEach((t) => {
-          if (t.deal_id) dealIds.add(t.deal_id);
-          if (t.lead_id) leadIds.add(t.lead_id);
-          if (t.client_id) clientIds.add(t.client_id);
-        });
-
-        // Mapa completo (sem truncar) para preservar a busca por nome mesmo
-        // em tarefas de negócios/leads/clientes antigos.
-        const [deals, leads, clients] = await Promise.all([
-          fetchInChunks<{ id: string; title: string }>(Array.from(dealIds), 200, (chunk) =>
-            supabase.from("deals").select("id, title").in("id", chunk),
-          ),
-          fetchInChunks<{ id: string; full_name: string }>(Array.from(leadIds), 200, (chunk) =>
-            supabase.from("leads").select("id, full_name").in("id", chunk),
-          ),
-          fetchInChunks<{ id: string; full_name: string }>(Array.from(clientIds), 200, (chunk) =>
-            supabase.from("clients").select("id, full_name").in("id", chunk),
-          ),
-        ]);
-
-        const dealNames = new Map<string, string>();
-        deals.forEach((d) => dealNames.set(d.id, d.title));
-        const leadNames = new Map<string, string>();
-        leads.forEach((l) => leadNames.set(l.id, l.full_name));
-        const clientNames = new Map<string, string>();
-        clients.forEach((c) => clientNames.set(c.id, c.full_name));
-
-        const taskContext = new Map<string, string>();
-        (tasks ?? []).forEach((t: any) => {
-          const label =
-            (t.lead_id && leadNames.get(t.lead_id) && `Lead ${leadNames.get(t.lead_id)}`) ||
-            (t.deal_id && dealNames.get(t.deal_id) && `Negócio ${dealNames.get(t.deal_id)}`) ||
-            (t.client_id && clientNames.get(t.client_id) && `Cliente ${clientNames.get(t.client_id)}`) ||
-            null;
-          if (label) taskContext.set(t.id, label);
-        });
-
-        results.forEach((r) => {
-          if (r.entity_type === "task" && r.entity_id) {
-            r.context = taskContext.get(r.entity_id) ?? null;
-          }
-        });
-      }
-
-      return results.sort(
-        (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime(),
-      );
+  const {
+    data: pageResult,
+    isLoading,
+    isError,
+    error: logsError,
+    refetch,
+  } = useQuery({
+    queryKey: [
+      "audit-logs-unified-page",
+      scope,
+      accountId,
+      actionFilter,
+      entityFilter,
+      periodFilter,
+      userFilter,
+      debouncedSearch,
+      pg.from,
+      pg.to,
+    ],
+    queryFn: async (): Promise<{ rows: UnifiedLog[]; total: number }> => {
+      const { rows, total: pageTotal } = await fetchUnifiedPage({
+        accountId,
+        scope,
+        sinceIso,
+        actionFilter,
+        entityFilter,
+        userFilter,
+        search: debouncedSearch,
+        offset: pg.from,
+        limit: pg.pageSize,
+      });
+      const enriched = await enrichLogs(rows);
+      return { rows: enriched, total: pageTotal };
     },
   });
 
-  // Pessoas que realmente aparecem no período carregado
+  useEffect(() => {
+    if (pageResult) setTotal(pageResult.total);
+  }, [pageResult]);
+
+  const logs = pageResult?.rows ?? [];
+
+  // Pessoas que aparecem na página carregada (lista completa viria de uma fonte à parte se necessário)
   const people = Array.from(
     new Map(
-      (logs ?? [])
+      logs
         .filter((l) => l.user_id)
         .map((l) => [l.user_id as string, l.user_name || l.user_email || "Sem nome"]),
     ).entries(),
@@ -534,59 +488,71 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
   const selectedPersonName =
     userFilter === "all" ? "Todas as pessoas" : people.find(([id]) => id === userFilter)?.[1] ?? "Pessoa";
 
-  const filteredLogs = logs?.filter((log) => {
-    if (userFilter !== "all" && log.user_id !== userFilter) return false;
-    if (!search) return true;
-    const searchLower = search.toLowerCase();
-    return (
-      log.user_name?.toLowerCase().includes(searchLower) ||
-      log.user_email?.toLowerCase().includes(searchLower) ||
-      log.entity_name?.toLowerCase().includes(searchLower) ||
-      log.context?.toLowerCase().includes(searchLower) ||
-      describeLog(log).toLowerCase().includes(searchLower) ||
-      log.entity_type.toLowerCase().includes(searchLower)
-    );
-  });
-
-  const pg = usePagedList(filteredLogs, {
-    resetKey: [search, actionFilter, entityFilter, periodFilter, userFilter],
-    isLoading,
-  });
-
-  const exportCsv = () => {
-    const rows = filteredLogs ?? [];
-    if (rows.length === 0) return;
+  const exportCsv = async () => {
     if (
       !window.confirm(
-        `Exportar ${rows.length} registro(s) do conjunto filtrado (período, ações e pessoa selecionados)? O arquivo CSV será baixado agora.`,
+        `Exportar todos os registros do conjunto filtrado (período, ações e pessoa selecionados)? O CSV será baixado ao final, em lotes de ${EXPORT_BATCH_SIZE}.`,
       )
     ) {
       return;
     }
-    const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Vinculado a", "Descrição"];
-    const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
-    const body = rows.map((log) => {
-      return [
-        format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
-        log.user_name ?? "",
-        log.user_email ?? "",
-        actionLabels[log.action] ?? log.action,
-        entityLabels[log.entity_type] ?? log.entity_type,
-        log.entity_name ?? "",
-        log.context ?? "",
-        describeLog(log),
-      ]
-        .map(escape)
-        .join(";");
-    });
-    const csv = [header.map(escape).join(";"), ...body].join("\n");
-    const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement("a");
-    link.href = url;
-    link.download = `log-acoes-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
-    link.click();
-    URL.revokeObjectURL(url);
+
+    setExporting(true);
+    setExportError(null);
+    setExportProgress({ loaded: 0, total: 0 });
+
+    try {
+      const rows = await exportAllFiltered(
+        (offset, limit) =>
+          fetchUnifiedPage({
+            accountId,
+            scope,
+            sinceIso,
+            actionFilter,
+            entityFilter,
+            userFilter,
+            search: debouncedSearch,
+            offset,
+            limit,
+          }),
+        (p) => setExportProgress(p),
+      );
+      const enriched = await enrichLogs(rows);
+
+      if (enriched.length === 0) {
+        setExporting(false);
+        return;
+      }
+
+      const header = ["Data/Hora", "Usuário", "E-mail", "Ação", "Tipo", "Registro", "Vinculado a", "Descrição"];
+      const escape = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+      const body = enriched.map((log) => {
+        return [
+          format(new Date(log.created_at), "dd/MM/yyyy HH:mm:ss", { locale: ptBR }),
+          log.user_name ?? "",
+          log.user_email ?? "",
+          actionLabels[log.action] ?? log.action,
+          entityLabels[log.entity_type] ?? log.entity_type,
+          log.entity_name ?? "",
+          log.context ?? "",
+          describeLog(log),
+        ]
+          .map(escape)
+          .join(";");
+      });
+      const csv = [header.map(escape).join(";"), ...body].join("\n");
+      const blob = new Blob([`\uFEFF${csv}`], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `log-acoes-${format(new Date(), "yyyy-MM-dd-HHmm")}.csv`;
+      link.click();
+      URL.revokeObjectURL(url);
+    } catch (err) {
+      setExportError(err instanceof Error ? err.message : "Falha ao exportar os registros.");
+    } finally {
+      setExporting(false);
+    }
   };
 
   return (
@@ -602,10 +568,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
               variant="outline"
               size="sm"
               onClick={exportCsv}
-              disabled={!filteredLogs || filteredLogs.length === 0}
+              disabled={exporting || total === 0}
             >
               <Download className="h-4 w-4 mr-2" />
-              Exportar
+              {exporting
+                ? `Exportando${exportProgress ? ` ${exportProgress.loaded}/${exportProgress.total}` : "..."}`
+                : "Exportar"}
             </Button>
             <Button variant="outline" size="sm" onClick={() => refetch()}>
               <RefreshCw className="h-4 w-4 mr-2" />
@@ -621,6 +589,12 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
             Não foi possível carregar o log completo
             {logsError instanceof Error ? `: ${logsError.message}` : "."} Os registros abaixo podem estar
             incompletos — clique em "Atualizar" para tentar novamente.
+          </div>
+        )}
+        {exportError && (
+          <div className="mb-4 flex items-center gap-2 rounded-md border border-destructive/40 bg-destructive/5 p-3 text-sm text-destructive">
+            <AlertCircle className="h-4 w-4 shrink-0" />
+            Falha ao exportar: {exportError}
           </div>
         )}
         <div className="flex flex-col sm:flex-row gap-3 mb-4">
@@ -749,14 +723,14 @@ export function AuditLogViewer({ accountId, scope = "system" }: AuditLogViewerPr
                     Carregando logs...
                   </TableCell>
                 </TableRow>
-              ) : filteredLogs?.length === 0 ? (
+              ) : logs.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Nenhum log encontrado
                   </TableCell>
                 </TableRow>
               ) : (
-                pg.items.map((log) => (
+                logs.map((log) => (
                   <TableRow
                     key={log.id}
                     className={`cursor-pointer hover:bg-muted/50 border-l-4 ${

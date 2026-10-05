@@ -205,3 +205,16 @@ Conta do Everton, Playwright, 393×852, 320×700 e 1440×900: /products ("1–15
 
 ## Rodada 8b — Paginação rodada 2 (só leitura)
 393/320/1440: /notifications (paginação no servidor, total completo), /financial/bank-accounts ("1–4 de 4"), /operations/onboarding ("1–31 de 31"), /events/playbooks e /contracts (sem texto de faixa: lista cabe numa página/rodapé compacto). Largura sem corte em todas. Nenhum registro alterado; "marcar todas" não executado.
+
+- **Checkpoints (Clientes)**: Corrigido container de tabela que forçava 609px, causando scroll horizontal excessivo em telas de 393px.
+- **Contratos**: Rodapé legado removido. Implementado `PagerFor` padrão que se ajusta a telas pequenas e esconde botões desnecessários quando os dados cabem em uma página (ex: 6 de 6).
+- **Playbooks**: Validado estado vazio. O componente de paginação não polui a tela se a lista estiver zerada.
+- **Tarefas**: Verificada a faixa "1–20 de 682" em 320px; texto quebra elegantemente ou reduz escala conforme o tema shadcn.
+
+## Rodada 8c (Paginação e Tabelas)
+- **Checkpoints (Clientes)**: Navegador 393/320/1440 sem corte: "1–20 de 203" (antes 609px de largura, corrigido).
+- **Onboarding**: /operations/onboarding "1–20 de 31" verificado sem corte.
+- **Tarefas**: /tasks "1–20 de 682" verificado sem corte; faixa quebra elegantemente.
+- **Notificações**: Verificado sem corte.
+- **Contratos**: /contracts "1–6 de 6" (rodapé antigo substituído pelo padrão; mostra só a faixa quando cabe numa página).
+- **Playbooks**: /events/playbooks com 0 playbooks no banco (estado vazio; rodapé com faixa aparece quando há registros).

@@ -28,7 +28,6 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { fetchAllRows } from "@/lib/fetchAllRows";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 
@@ -80,28 +79,24 @@ export default function RoyZappAttendanceMetrics() {
 
       const accountId = currentUser.account_id;
 
-      // 1) Outbound messages by humans in period.
-      // Métricas (totais, ranking, série diária) dependem do conjunto completo do período —
-      // usamos fetchAllRows (lotes de 1000 via .range) em vez do antigo .limit(50000) que
-      // truncava silenciosamente. Mantemos o mesmo teto de segurança (50.000 linhas).
-      const { data: msgs, error: msgsError } = await fetchAllRows<any>(
-        (from, to) =>
-          supabase
-            .from("zapp_messages")
-            .select("id, sender_user_id, sender_name, sent_at, zapp_conversation_id")
-            .eq("account_id", accountId)
-            .eq("direction", "outbound")
-            .not("sender_user_id", "is", null)
-            .gte("sent_at", since)
-            .order("sent_at")
-            .order("id")
-            .range(from, to),
-        { maxRows: 50000 }
-      );
-      if (msgsError) {
-        // Erro de lote ou limite de 50.000 atingido: nunca exibir métricas
-        // parciais como se fossem o total do período.
-        console.error("[RoyZappAttendanceMetrics]", msgsError);
+      // Agregação feita no servidor via RPC (zapp_attendance_metrics /
+      // zapp_attendance_daily), sem teto artificial no cliente — os números
+      // retornados já são o total do período, nunca uma amostra truncada.
+      const [{ data: rows, error: metricsError }, { data: dailyRows, error: dailyError }] =
+        await Promise.all([
+          (supabase.rpc as any)("zapp_attendance_metrics", {
+            p_account_id: accountId,
+            p_since: since,
+          }),
+          (supabase.rpc as any)("zapp_attendance_daily", {
+            p_account_id: accountId,
+            p_since: since,
+          }),
+        ]);
+
+      if (metricsError || dailyError) {
+        // Nunca exibir métricas parciais/amostradas como se fossem o total do período.
+        console.error("[RoyZappAttendanceMetrics]", metricsError || dailyError);
         if (!cancelled) {
           setConsultants([]);
           setDaily([]);
@@ -110,111 +105,31 @@ export default function RoyZappAttendanceMetrics() {
         return;
       }
 
-      // 2) Open conversations per agent
-      const { data: openAssign } = await supabase
-        .from("zapp_conversation_assignments")
-        .select("agent_id, status, first_message_at, first_response_at, zapp_agents:agent_id(user_id)")
-        .eq("account_id", accountId)
-        .in("status", ["active", "pending"]);
+      const consultantRows: ConsultantStats[] = (rows ?? []).map((r: any) => ({
+        user_id: r.user_id,
+        name: r.name ?? "Usuário",
+        avatar_url: r.avatar_url ?? null,
+        conversations: Number(r.conversations ?? 0),
+        messages: Number(r.messages ?? 0),
+        open_conversations: Number(r.open_conversations ?? 0),
+        avg_first_response_min:
+          r.avg_first_response_min == null ? null : Number(r.avg_first_response_min),
+      }));
 
-      // 3) Avg first response (closed/active assignments in period)
-      const { data: respAssign } = await supabase
-        .from("zapp_conversation_assignments")
-        .select("agent_id, first_message_at, first_response_at, zapp_agents:agent_id(user_id)")
-        .eq("account_id", accountId)
-        .gte("created_at", since)
-        .not("first_response_at", "is", null)
-        .not("first_message_at", "is", null);
-
-      // 4) User profiles
-      const userIds = Array.from(
-        new Set([
-          ...(msgs ?? []).map((m: any) => m.sender_user_id).filter(Boolean),
-          ...(openAssign ?? []).map((a: any) => a.zapp_agents?.user_id).filter(Boolean),
-          ...(respAssign ?? []).map((a: any) => a.zapp_agents?.user_id).filter(Boolean),
-        ])
-      );
-
-      const { data: users } = userIds.length
-        ? await supabase
-            .from("users")
-            .select("id, name, avatar_url")
-            .in("id", userIds)
-        : { data: [] as any[] };
-
-      const userMap = new Map<string, { name: string; avatar_url: string | null }>();
-      (users ?? []).forEach((u: any) =>
-        userMap.set(u.id, { name: u.name ?? "—", avatar_url: u.avatar_url ?? null })
-      );
-
-      // Aggregate per consultant
-      const agg = new Map<string, ConsultantStats>();
-      const ensure = (uid: string): ConsultantStats => {
-        if (!agg.has(uid)) {
-          const u = userMap.get(uid);
-          agg.set(uid, {
-            user_id: uid,
-            name: u?.name ?? "Usuário",
-            avatar_url: u?.avatar_url ?? null,
-            conversations: 0,
-            messages: 0,
-            open_conversations: 0,
-            avg_first_response_min: null,
-          });
-        }
-        return agg.get(uid)!;
-      };
-
-      const convSet = new Map<string, Set<string>>();
-      (msgs ?? []).forEach((m: any) => {
-        const uid = m.sender_user_id as string;
-        const row = ensure(uid);
-        row.messages += 1;
-        if (!convSet.has(uid)) convSet.set(uid, new Set());
-        if (m.zapp_conversation_id) convSet.get(uid)!.add(m.zapp_conversation_id);
-      });
-      convSet.forEach((set, uid) => {
-        ensure(uid).conversations = set.size;
-      });
-
-      (openAssign ?? []).forEach((a: any) => {
-        const uid = a.zapp_agents?.user_id;
-        if (!uid) return;
-        ensure(uid).open_conversations += 1;
-      });
-
-      const respAcc = new Map<string, { sum: number; n: number }>();
-      (respAssign ?? []).forEach((a: any) => {
-        const uid = a.zapp_agents?.user_id;
-        if (!uid) return;
-        const diff =
-          (new Date(a.first_response_at).getTime() -
-            new Date(a.first_message_at).getTime()) /
-          60000;
-        if (!isFinite(diff) || diff < 0) return;
-        const cur = respAcc.get(uid) ?? { sum: 0, n: 0 };
-        cur.sum += diff;
-        cur.n += 1;
-        respAcc.set(uid, cur);
-      });
-      respAcc.forEach((v, uid) => {
-        ensure(uid).avg_first_response_min = v.n ? v.sum / v.n : null;
-      });
-
-      // Daily series (total messages by humans)
+      // Daily series: completa os dias sem mensagens com 0 (RPC só retorna dias com atividade)
       const dayMap = new Map<string, number>();
       const days = Number(period);
       for (let i = days - 1; i >= 0; i--) {
         const d = format(subDays(new Date(), i), "yyyy-MM-dd");
         dayMap.set(d, 0);
       }
-      (msgs ?? []).forEach((m: any) => {
-        const d = format(new Date(m.sent_at), "yyyy-MM-dd");
-        if (dayMap.has(d)) dayMap.set(d, (dayMap.get(d) ?? 0) + 1);
+      (dailyRows ?? []).forEach((r: any) => {
+        const d = String(r.day).slice(0, 10);
+        if (dayMap.has(d)) dayMap.set(d, Number(r.messages ?? 0));
       });
 
       if (cancelled) return;
-      setConsultants(Array.from(agg.values()));
+      setConsultants(consultantRows);
       setDaily(
         Array.from(dayMap.entries()).map(([date, messages]) => ({
           date: format(new Date(date), "dd/MM", { locale: ptBR }),

@@ -29423,6 +29423,36 @@ export type Database = {
         Args: { _deal_id: string }
         Returns: boolean
       }
+      audit_unified_page: {
+        Args: {
+          p_account_id?: string
+          p_action?: string
+          p_entity_type?: string
+          p_from?: string
+          p_limit?: number
+          p_offset?: number
+          p_scope?: string
+          p_search?: string
+          p_to?: string
+          p_user?: string
+        }
+        Returns: {
+          action: string
+          created_at: string
+          details: Json
+          entity_id: string
+          entity_name: string
+          entity_type: string
+          id: string
+          ip_address: string
+          source: string
+          total_count: number
+          user_agent: string
+          user_email: string
+          user_id: string
+          user_name: string
+        }[]
+      }
       audit_zapp_conversation_routing: {
         Args: {
           p_dry_run?: boolean
@@ -29720,6 +29750,13 @@ export type Database = {
           user_id: string
         }[]
       }
+      get_notification_tab_counts: {
+        Args: { p_user_id: string }
+        Returns: {
+          tab: string
+          unread_count: number
+        }[]
+      }
       get_ops_consultant_clients_breakdown: {
         Args: {
           p_days?: number
@@ -29946,6 +29983,50 @@ export type Database = {
           phone_e164: string
         }[]
       }
+      search_security_audit: {
+        Args: {
+          p_event_type?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+        }
+        Returns: {
+          account_id: string
+          created_at: string
+          details: Json
+          event_type: string
+          id: string
+          ip_address: string
+          total_count: number
+          user_agent: string
+          user_id: string
+        }[]
+      }
+      search_tasks_page: {
+        Args: {
+          p_account_id: string
+          p_apply_sector_filter?: boolean
+          p_current_user_id?: string
+          p_custom_status_id?: string
+          p_date_end?: string
+          p_date_start?: string
+          p_deal_id?: string
+          p_filter_mode?: string
+          p_filter_user_id?: string
+          p_lead_id?: string
+          p_limit?: number
+          p_offset?: number
+          p_search?: string
+          p_sector_activity_type_ids?: string[]
+          p_sort_by?: string
+          p_sort_direction?: string
+          p_stage_id?: string
+        }
+        Returns: {
+          id: string
+          total_count: number
+        }[]
+      }
       seed_admission_signature_docs: {
         Args: { _admission_id: string; _template_ids?: string[] }
         Returns: number
@@ -30074,6 +30155,25 @@ export type Database = {
       zapp_assignment_sector: {
         Args: { _assignment_id: string }
         Returns: string
+      }
+      zapp_attendance_daily: {
+        Args: { p_account_id: string; p_since: string }
+        Returns: {
+          day: string
+          messages: number
+        }[]
+      }
+      zapp_attendance_metrics: {
+        Args: { p_account_id: string; p_since: string }
+        Returns: {
+          avatar_url: string
+          avg_first_response_min: number
+          conversations: number
+          messages: number
+          name: string
+          open_conversations: number
+          user_id: string
+        }[]
       }
       zapp_can_transfer_any: {
         Args: { _auth_user_id: string }

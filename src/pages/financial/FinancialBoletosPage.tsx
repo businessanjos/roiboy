@@ -286,7 +286,7 @@ export default function FinancialBoletosPage() {
     totalItems,
     handlePageChange,
     handlePageSizeChange,
-  } = useTablePagination(filteredBoletos);
+  } = useTablePagination(filteredBoletos, 20, [search, statusFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {
