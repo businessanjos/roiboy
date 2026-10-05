@@ -250,3 +250,11 @@ Ainda não conferido: computador em 1440px depois desta rodada; abrir e fechar t
 - Produtos e Contratos: menu de ações de 44px no celular, com Editar, Duplicar e Excluir (Contratos também com Copiar link e Abrir), confirmações preservadas. No computador seguem os ícones.
 - Acelerômetro: 4 indicadores em 2 colunas; "Ver fonte ›" continua visível, e a auditoria abre ao tocar no cartão.
 - Não conferido: abas Bônus, Contrato e Qualificação MQL do formulário; abertura dos menus e da auditoria; computador em 1440px.
+
+### Fechamento Vendas — pendências reais (após 55fb787)
+- SPIFFs: período/datas com rótulo e 44px; Girar, Faixa, vendedor, janela, remover faixa, editar/excluir 44px com nome; detalhamentos (valor/vendas) min 44 com aria contextual; "como funciona?"/"sem dados" por toque (Popover).
+- Abas SPIFFs/Metas/Acelerômetro 44px; Apresentar plano/Compartilhar 44px; Gestão: período/datas 44px.
+- Scripts: abas principais e de Calls 44px; detalhes, navegação Drive, conectar/importar/carregar mais/PDF/copiar/remover 44px.
+- Agenda Mês: célula inteira é botão (≥55px, rótulo com data e nº de eventos, setas do teclado), abre lista do dia com itens 44px; bolinhas decorativas; 7 colunas preservadas em 320 (sem overflow). Ações do detalhe 44px.
+- Tarefas: pager e "Carregar mais tarefas" 44px.
+- Verificado (393px, dados reais): Apresentação, SPIFFs, Scripts, Agenda, Tarefas, Gestão, Dashboard — 0 controles <40px, 0 botões sem nome; larguras extras só em tabelas/abas com rolagem horizontal própria. Agenda testada em 320/393 (toque, teclado, lista). Tipos OK. Nenhuma ação real disparada.

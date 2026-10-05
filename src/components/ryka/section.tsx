@@ -36,7 +36,7 @@ export function RykaPageHeader({
         className,
       )}
     >
-      <div className="max-w-2xl space-y-1.5">
+      <div className="hidden md:block max-w-2xl space-y-1.5">
         {eyebrow ? (
           <p className="text-[10px] font-medium uppercase tracking-[0.05em] text-muted-foreground md:text-[11px]">
             {eyebrow}

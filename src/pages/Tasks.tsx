@@ -2494,6 +2494,7 @@ export default function Tasks() {
               <Button
                 variant="outline"
                 size="sm"
+                className="min-h-11 sm:min-h-9"
                 disabled={fetchingTasks}
                 onClick={() => setLoadedChunks((c) => c + 1)}
               >
@@ -2591,6 +2592,7 @@ export default function Tasks() {
               <Button
                 variant="outline"
                 size="sm"
+                className="min-h-11 sm:min-h-9"
                 disabled={fetchingTasks}
                 onClick={() => setLoadedChunks((c) => c + 1)}
               >
@@ -2645,7 +2647,7 @@ export default function Tasks() {
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                   aria-label="Página anterior"
                   disabled={safePage <= 1}
-                  className="h-8 w-8 p-0"
+                  className="h-11 w-11 sm:h-8 sm:w-8 p-0"
                 >
                   <ChevronLeft className="h-4 w-4" />
                 </Button>
@@ -2679,7 +2681,7 @@ export default function Tasks() {
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                   aria-label="Próxima página"
                   disabled={safePage >= totalPages}
-                  className="h-8 w-8 p-0"
+                  className="h-11 w-11 sm:h-8 sm:w-8 p-0"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Button>

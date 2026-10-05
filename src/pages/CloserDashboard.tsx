@@ -405,7 +405,7 @@ export default function CloserDashboard() {
                   value={effectiveUserId ?? currentUser?.id ?? ""}
                   onValueChange={(v) => setViewedUserId(v === currentUser?.id ? undefined : v)}
                 >
-                  <SelectTrigger className="w-[200px] h-9 gap-1.5">
+                  <SelectTrigger className="w-full sm:w-[200px] h-11 sm:h-9 gap-1.5">
                     <Eye className="h-3.5 w-3.5 text-muted-foreground" />
                     <SelectValue />
                   </SelectTrigger>
@@ -421,7 +421,7 @@ export default function CloserDashboard() {
               )}
               {availableMonths.length > 1 && (
                 <Select value={selectedKey} onValueChange={setSelectedKey}>
-                  <SelectTrigger className="w-[180px] h-9 capitalize">
+                  <SelectTrigger className="w-full sm:w-[180px] h-11 sm:h-9 capitalize">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -438,7 +438,7 @@ export default function CloserDashboard() {
                 variant="outline"
                 size="sm"
                 onClick={() => navigate("/sales-team/incentive-presentation/slideshow")}
-                className="gap-1.5"
+                className="h-11 sm:h-9 gap-1.5"
               >
                 <Presentation className="h-4 w-4" />
                 Apresentar plano
@@ -448,7 +448,7 @@ export default function CloserDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShareOpen(true)}
-                  className="gap-1.5"
+                  className="h-11 sm:h-9 gap-1.5"
                 >
                   <Share2 className="h-4 w-4" />
                   Compartilhar externamente
@@ -618,7 +618,7 @@ export default function CloserDashboard() {
             </Card>
           ) : (
             <Tabs defaultValue="all" className="space-y-3">
-              <TabsList>
+              <TabsList className="h-[52px] sm:h-10 max-w-full overflow-x-auto scrollbar-hide justify-start [&>button]:h-11 sm:[&>button]:h-8 [&>button]:shrink-0">
                 <TabsTrigger value="all">Todos ({totalSpiffs})</TabsTrigger>
                 {rouletteSpiffs.length > 0 && (
                   <TabsTrigger value="roulette">Roletas ({rouletteSpiffs.length})</TabsTrigger>

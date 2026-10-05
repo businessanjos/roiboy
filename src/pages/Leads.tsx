@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo, type ReactNode } from "react";
+import { useState, useEffect, useCallback, useMemo, useRef, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useLeads, Lead } from "@/hooks/useLeads";
 import { useDeals, Deal, DealStage } from "@/hooks/useDeals";
@@ -171,6 +171,7 @@ export default function Leads() {
   const [searchQuery, setSearchQuery] = useState("");
   const isMobile = useIsMobile();
   const [leadFiltersOpen, setLeadFiltersOpen] = useState(false);
+  const leadFiltersTriggerRef = useRef<HTMLButtonElement>(null);
   const [filterSource, setFilterSource] = useState<string>("all");
   const [filterResponsibleUserId, setFilterResponsibleUserId] = useState<string>("all");
   const [filterCreatedFrom, setFilterCreatedFrom] = useState("");
@@ -1285,6 +1286,8 @@ export default function Leads() {
               size="icon"
               className="h-11 w-11 shrink-0 relative rounded-xl"
               aria-label="Filtros"
+              aria-expanded={leadFiltersOpen}
+              ref={leadFiltersTriggerRef}
               onClick={() => setLeadFiltersOpen(true)}
             >
               <SlidersHorizontal className="h-4 w-4" />
@@ -1385,7 +1388,7 @@ export default function Leads() {
 
         {isMobile && (
           <Sheet open={leadFiltersOpen} onOpenChange={setLeadFiltersOpen}>
-            <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe">
+            <SheetContent side="bottom" className="rounded-t-[24px] max-h-[85dvh] overflow-y-auto pb-safe" onCloseAutoFocus={(e) => { e.preventDefault(); leadFiltersTriggerRef.current?.focus(); }}>
               <SheetHeader>
                 <SheetTitle>Filtros</SheetTitle>
               </SheetHeader>

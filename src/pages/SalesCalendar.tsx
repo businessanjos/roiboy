@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -381,9 +381,9 @@ export default function SalesCalendar() {
               ))}
             </div>
             <Tabs value={view} onValueChange={(v) => setView(v as any)}>
-              <TabsList className="h-12 sm:h-8">
-                <TabsTrigger value="month" className="text-sm sm:text-xs h-10 sm:h-6 px-4 sm:px-3">Mês</TabsTrigger>
-                <TabsTrigger value="week" className="text-sm sm:text-xs h-10 sm:h-6 px-4 sm:px-3">Semana</TabsTrigger>
+              <TabsList className="h-[52px] sm:h-8">
+                <TabsTrigger value="month" className="text-sm sm:text-xs h-11 sm:h-6 px-4 sm:px-3">Mês</TabsTrigger>
+                <TabsTrigger value="week" className="text-sm sm:text-xs h-11 sm:h-6 px-4 sm:px-3">Semana</TabsTrigger>
               </TabsList>
             </Tabs>
           </div>
@@ -415,6 +415,18 @@ function MonthGrid({
 }) {
   const today = new Date();
   const weekDays = ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"];
+  const [openDay, setOpenDay] = useState<Date | null>(null);
+  const openDayEvents = openDay ? eventsByDay.get(format(openDay, "yyyy-MM-dd")) || [] : [];
+
+  const handleDayKey = (ev: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
+    const delta = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[ev.key as string];
+    if (delta === undefined) return;
+    ev.preventDefault();
+    const next = idx + delta;
+    if (next < 0 || next >= days.length) return;
+    const el = ev.currentTarget.closest("[data-month-grid]")?.querySelector<HTMLButtonElement>(`[data-day-index="${next}"]`);
+    el?.focus();
+  };
 
   return (
     <Card className="overflow-hidden">
@@ -425,8 +437,8 @@ function MonthGrid({
           </div>
         ))}
       </div>
-      <div className="grid grid-cols-7 auto-rows-fr">
-        {days.map((day) => {
+      <div className="grid grid-cols-7 auto-rows-fr" data-month-grid>
+        {days.map((day, idx) => {
           const key = format(day, "yyyy-MM-dd");
           const dayEvents = eventsByDay.get(key) || [];
           const isCurrentMonth = isSameMonth(day, cursor);
@@ -438,10 +450,19 @@ function MonthGrid({
             <div
               key={key}
               className={cn(
-                "min-h-[62px] md:min-h-[112px] border-r border-b p-1 md:p-1.5 flex flex-col gap-1 last:border-r-0 transition-colors",
+                "relative min-h-[56px] md:min-h-[112px] border-r border-b p-1 md:p-1.5 flex flex-col gap-1 last:border-r-0 transition-colors",
                 !isCurrentMonth && "bg-muted/20",
               )}
             >
+              {/* Mobile: a célula inteira é o alvo de toque; abre a lista do dia */}
+              <button
+                type="button"
+                data-day-index={idx}
+                onClick={() => setOpenDay(day)}
+                onKeyDown={(ev) => handleDayKey(ev, idx)}
+                aria-label={`${format(day, "EEEE, d 'de' MMMM", { locale: ptBR })}: ${dayEvents.length === 0 ? "sem eventos" : `${dayEvents.length} evento${dayEvents.length > 1 ? "s" : ""}`}`}
+                className="md:hidden absolute inset-0 z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-ring active:bg-muted/40"
+              />
               <div className="flex items-center justify-between">
                 <span
                   className={cn(
@@ -457,14 +478,9 @@ function MonthGrid({
                 )}
               </div>
               {/* Mobile: apenas pontos coloridos (toque abre o evento) */}
-              <div className="md:hidden flex flex-wrap gap-1 mt-auto">
+              <div className="md:hidden flex flex-wrap gap-1 mt-auto" aria-hidden>
                 {dayEvents.slice(0, 4).map((e) => (
-                  <button
-                    key={e.id}
-                    onClick={() => onSelect(e)}
-                    aria-label={e.title}
-                    className={cn("h-2 w-2 rounded-full", SOURCE_STYLES[e.source].dot)}
-                  />
+                  <span key={e.id} className={cn("h-2 w-2 rounded-full", SOURCE_STYLES[e.source].dot)} />
                 ))}
                 {dayEvents.length > 4 && (
                   <span className="text-[9px] text-muted-foreground leading-none">+{dayEvents.length - 4}</span>
@@ -483,6 +499,38 @@ function MonthGrid({
           );
         })}
       </div>
+      <Dialog open={!!openDay} onOpenChange={(o) => { if (!o) setOpenDay(null); }}>
+        <DialogContent className="max-w-[calc(100vw-2rem)] sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="first-letter:uppercase">
+              {openDay ? format(openDay, "EEEE, d 'de' MMMM", { locale: ptBR }) : ""}
+            </DialogTitle>
+            <DialogDescription>
+              {openDayEvents.length === 0 ? "Nenhum evento neste dia." : `${openDayEvents.length} evento${openDayEvents.length > 1 ? "s" : ""}`}
+            </DialogDescription>
+          </DialogHeader>
+          <ul className="flex flex-col gap-1 max-h-[60vh] overflow-y-auto">
+            {openDayEvents.map((e) => (
+              <li key={e.id}>
+                <button
+                  type="button"
+                  onClick={() => { setOpenDay(null); onSelect(e); }}
+                  className="w-full min-h-11 flex items-center gap-3 rounded-md px-3 py-2 text-left hover:bg-muted focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  <span className={cn("h-2.5 w-2.5 shrink-0 rounded-full", SOURCE_STYLES[e.source].dot)} aria-hidden />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-sm font-medium truncate">{e.title}</span>
+                    {!e.allDay && e.start && (
+                      <span className="block text-xs text-muted-foreground tabular-nums">{format(e.start, "HH:mm")}</span>
+                    )}
+                  </span>
+                  <ChevronRight className="h-4 w-4 text-muted-foreground shrink-0" aria-hidden />
+                </button>
+              </li>
+            ))}
+          </ul>
+        </DialogContent>
+      </Dialog>
     </Card>
   );
 }
@@ -699,28 +747,28 @@ function EventDialog({ event, onClose }: { event: CalEvent | null; onClose: () =
 
           <div className="flex flex-wrap gap-2 pt-2">
             {event.meta?.meetingUrl && (
-              <Button variant="default" size="sm" asChild className="h-8">
+              <Button variant="default" size="sm" asChild className="h-11 sm:h-8">
                 <a href={event.meta.meetingUrl} target="_blank" rel="noreferrer">
                   <Video className="h-3.5 w-3.5 mr-1.5" /> Entrar na reunião
                 </a>
               </Button>
             )}
             {event.meta?.htmlLink && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <a href={event.meta.htmlLink} target="_blank" rel="noreferrer">
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Abrir no Google
                 </a>
               </Button>
             )}
             {event.meta?.dealId && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <Link to={`/pipeline?deal=${event.meta.dealId}`}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ver negociação
                 </Link>
               </Button>
             )}
             {event.meta?.leadId && !event.meta?.dealId && (
-              <Button variant="outline" size="sm" asChild className="h-8">
+              <Button variant="outline" size="sm" asChild className="h-11 sm:h-8">
                 <Link to={`/leads?lead=${event.meta.leadId}`}>
                   <ExternalLink className="h-3.5 w-3.5 mr-1.5" /> Ver lead
                 </Link>

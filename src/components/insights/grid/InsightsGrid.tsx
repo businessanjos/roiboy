@@ -598,7 +598,9 @@ export function InsightsGrid({ visuals, onLayoutChange, readOnly = false, onUpda
     <button
       type="button"
       onClick={toggleFreeLayout}
-      className={`inline-flex shrink-0 whitespace-nowrap items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
+      aria-label={freeLayout ? "Concluir layout" : "Ajustar layout"}
+      aria-pressed={freeLayout}
+      className={`inline-flex h-11 min-w-11 justify-center md:h-auto md:min-w-0 shrink-0 whitespace-nowrap items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors ${
         freeLayout
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:bg-muted/50"

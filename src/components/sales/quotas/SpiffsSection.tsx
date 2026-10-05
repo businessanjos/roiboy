@@ -16,6 +16,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { PaymentMethodSpiffPanel } from "./PaymentMethodSpiffPanel";
 import { RouletteSpinDialog } from "./RouletteSpinDialog";
@@ -503,7 +504,7 @@ export function SpiffsSection() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-7 gap-1 text-xs"
+                          className="h-11 sm:h-7 gap-1 text-xs"
                           onClick={() => setPaymentTiers([...paymentTiers, { label: "Nova faixa", bonus: 0, min_parcelas: 1, max_parcelas: 1, includes_cash: false }])}
                         >
                           <Plus className="h-3 w-3" />
@@ -533,7 +534,8 @@ export function SpiffsSection() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-11 w-11 sm:h-7 sm:w-7"
+                                aria-label={`Remover faixa ${tier.label}`}
                                 onClick={() => setPaymentTiers(paymentTiers.filter((_, i) => i !== idx))}
                               >
                                 <X className="h-3.5 w-3.5 text-destructive" />
@@ -755,10 +757,10 @@ export function SpiffsSection() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1 justify-end">
-                          <Button variant="ghost" size="icon" onClick={() => openEdit(spiff)} className="h-8 w-8" title="Editar">
+                          <Button variant="ghost" size="icon" onClick={() => openEdit(spiff)} className="h-11 w-11 sm:h-8 sm:w-8" title="Editar" aria-label={`Editar SPIFF ${spiff.name}`}>
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
-                          <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-8 w-8" title="Excluir">
+                          <Button variant="ghost" size="icon" onClick={() => deleteSpiff.mutate(spiff.id)} className="h-11 w-11 sm:h-8 sm:w-8" title="Excluir" aria-label={`Excluir SPIFF ${spiff.name}`}>
                             <Trash2 className="h-3.5 w-3.5 text-destructive" />
                           </Button>
                         </div>
@@ -996,9 +998,9 @@ function useSpiffPeriodFilter(spiff: any) {
   });
 
   const control = (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex w-full sm:w-auto flex-wrap items-center gap-1.5">
       <Select value={preset} onValueChange={setPreset}>
-        <SelectTrigger className="h-7 w-[210px] text-xs">
+        <SelectTrigger className="h-11 sm:h-7 w-full sm:w-[210px] text-xs" aria-label="Período">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent className="max-h-72">
@@ -1021,13 +1023,15 @@ function useSpiffPeriodFilter(spiff: any) {
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="h-7 w-[140px] text-xs"
+            aria-label="Data inicial"
+            className="h-11 sm:h-7 flex-1 sm:flex-none sm:w-[140px] text-xs"
           />
           <Input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="h-7 w-[140px] text-xs"
+            aria-label="Data final"
+            className="h-11 sm:h-7 flex-1 sm:flex-none sm:w-[140px] text-xs"
           />
         </>
       )}
@@ -1238,16 +1242,16 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
           {period.control}
         </div>
         <Badge variant="outline" className="text-[10px] capitalize">{period.label}</Badge>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Como funciona"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
               Soma o valor captado das vendas ganhas no período (pela data do ganho) e divide por R$ {formatBRL(triggerPerValue)}. Ao girar, o vendedor marca quais vendas está usando — elas ficam vinculadas ao giro e não contam de novo. Clique em "Girar" para sortear o prêmio entre R$ {formatBRL(Number(spiff.roulette_min_prize || 0))} e R$ {formatBRL(Number(spiff.roulette_max_prize || 0))} e registrar o resultado.
             </p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       {visibleSummary.length === 0 ? (
         <p className="text-xs text-muted-foreground py-2">Nenhum negócio ganho no período ainda.</p>
@@ -1274,7 +1278,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                       setCapturedDetail({ name: s.name, deals: s.deals, total: s.total, earnedSpins: s.earnedSpins })
                     }
                     disabled={s.deals.length === 0}
-                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-warning/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Ver negociações de ${s.name}: R$ ${formatBRL(Math.round(s.total))}`}
+                    className="w-full h-full min-h-11 px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-warning/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={s.deals.length > 0 ? "Ver negociações que formaram este valor" : "Sem negociações no período"}
                   >
                     <span className="tabular-nums">R$ {formatBRL(Math.round(s.total))}</span>
@@ -1304,7 +1309,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                     variant={s.pendingSpins > 0 ? "default" : "outline"}
                     disabled={s.pendingSpins <= 0}
                     onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.pendingSpins, deals: s.availableDeals })}
-                    className="h-7 gap-1.5 text-xs"
+                    className="h-11 sm:h-7 gap-1.5 text-xs"
+                    aria-label={`Girar roleta de ${s.name}`}
                   >
                     <Dice5 className="h-3.5 w-3.5" />
                     Girar
@@ -1556,19 +1562,19 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
           {triggerSalesCount} vendas / {windowLabel}
         </Badge>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+        <div className="flex w-full sm:w-auto sm:ml-auto flex-wrap items-center gap-1.5">
           {!restrictToUserId && (
             <MultiCheckCombobox
               options={summary.map((s) => ({ value: s.uid, label: s.name }))}
               value={sellerFilter}
               onChange={setSellerFilter}
               placeholder="Todos os vendedores"
-              className="h-7 w-[190px] text-xs"
+              className="h-11 sm:h-7 w-full sm:w-[190px] text-xs"
               emptyText="Nenhum vendedor"
             />
           )}
           <Select value={String(windowOffset)} onValueChange={(v) => setWindowOffset(Number(v))}>
-            <SelectTrigger className="h-7 w-[250px] text-xs">
+            <SelectTrigger className="h-11 sm:h-7 w-full sm:w-[250px] text-xs" aria-label="Janela">
               <SelectValue placeholder="Janela" />
             </SelectTrigger>
             <SelectContent className="max-h-72">
@@ -1580,19 +1586,19 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
             </SelectContent>
           </Select>
         </div>
-        <Tooltip>
-          <TooltipTrigger>
-            <Badge variant="outline" className="text-[10px] cursor-help">como funciona?</Badge>
-          </TooltipTrigger>
-          <TooltipContent className="max-w-xs">
+        <Popover>
+          <PopoverTrigger asChild>
+            <button type="button" className="inline-flex min-h-11 sm:min-h-0 items-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring" aria-label="Como funciona"><Badge variant="outline" className="text-[10px] cursor-pointer">como funciona?</Badge></button>
+          </PopoverTrigger>
+          <PopoverContent className="max-w-xs w-auto">
             <p className="text-xs">
               {weekStartDay !== null
                 ? `Conta os negócios ganhos por cada vendedor na semana atual (${dayNames[weekStartDay]} 00:00 → ${dayNames[(weekStartDay + 6) % 7]} 23:59).`
                 : `Conta os negócios ganhos por cada vendedor nos últimos ${windowDays} dias.`}
               {" "}A cada {triggerSalesCount} vendas, o vendedor ganha 1 giro. O prêmio é livre — escolhido pelo próprio vendedor (ex: "{spiff.custom_prize_description || "vale presente"}").
             </p>
-          </TooltipContent>
-        </Tooltip>
+          </PopoverContent>
+        </Popover>
       </div>
       {spiff.custom_prize_description && (
         <p className="text-xs text-muted-foreground italic">🎁 Prêmio: {spiff.custom_prize_description}</p>
@@ -1620,7 +1626,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                     type="button"
                     onClick={() => setSalesDetail({ uid: s.uid, name: s.name })}
                     disabled={s.sales === 0}
-                    className="w-full h-full px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-pink-500/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                    aria-label={`Ver vendas de ${s.name}: ${s.sales}`}
+                    className="w-full h-full min-h-11 px-2 py-2 inline-flex items-center justify-center gap-1 rounded-md transition-colors hover:bg-pink-500/10 disabled:opacity-60 disabled:cursor-default focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                     title={s.sales > 0 ? "Ver quais vendas formaram este número" : "Sem vendas na janela"}
                   >
                     <span className="tabular-nums">{s.sales}</span>
@@ -1648,7 +1655,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                     variant={s.spins > 0 ? "default" : "outline"}
                     disabled={s.spins <= 0}
                     onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.spins })}
-                    className="h-7 gap-1.5 text-xs"
+                    className="h-11 sm:h-7 gap-1.5 text-xs"
+                    aria-label={`Girar roleta de ${s.name}`}
                   >
                     <Dice5 className="h-3.5 w-3.5" />
                     Girar

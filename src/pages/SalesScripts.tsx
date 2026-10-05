@@ -662,28 +662,28 @@ export default function SalesScripts() {
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
         {isSalesRep ? (
-          <TabsList className="grid w-full grid-cols-1 mb-4 md:mb-6 h-11 md:h-12 p-1 bg-muted/50">
-            <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
+          <TabsList className="grid w-full grid-cols-1 mb-4 md:mb-6 h-[52px] md:h-12 p-1 bg-muted/50">
+            <TabsTrigger value="playbooks" className="gap-2 h-11 md:h-10 data-[state=active]:bg-background data-[state=active]:shadow-sm">
               <Sparkles className="w-4 h-4" />
               <span className="text-sm font-medium">Playbooks</span>
             </TabsTrigger>
           </TabsList>
         ) : (
           <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none mb-4 md:mb-6">
-            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-5 h-11 md:h-12 p-1 bg-muted/50 gap-1">
-              <TabsTrigger value="materials" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
+            <TabsList className="inline-flex w-max md:grid md:w-full md:grid-cols-5 h-[52px] md:h-12 p-1 bg-muted/50 gap-1">
+              <TabsTrigger value="materials" className="gap-2 h-11 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Package className="w-4 h-4" /><span className="text-sm font-medium">Materiais</span>
               </TabsTrigger>
-              <TabsTrigger value="playbooks" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="playbooks" className="gap-2 h-11 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <Sparkles className="w-4 h-4" /><span className="text-sm font-medium">Playbooks</span>
               </TabsTrigger>
-              <TabsTrigger value="analysis" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="analysis" className="gap-2 h-11 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <BarChart3 className="w-4 h-4" /><span className="text-sm font-medium">Calls</span>
               </TabsTrigger>
-              <TabsTrigger value="commission" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="commission" className="gap-2 h-11 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <DollarSign className="w-4 h-4" /><span className="text-sm font-medium">Comissões</span>
               </TabsTrigger>
-              <TabsTrigger value="scripts" className="gap-2 h-9 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
+              <TabsTrigger value="scripts" className="gap-2 h-11 md:h-10 rounded-full md:rounded-xl data-[state=active]:bg-background data-[state=active]:shadow-sm">
                 <BookOpen className="w-4 h-4" /><span className="text-sm font-medium">Scripts</span>
               </TabsTrigger>
             </TabsList>
@@ -756,13 +756,13 @@ export default function SalesScripts() {
 
             <Tabs value={analysisSubTab} onValueChange={setAnalysisSubTab}>
               <TabsList className="h-auto p-1 bg-muted/60 gap-1 flex flex-wrap justify-start w-full">
-                <TabsTrigger value="analyze" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
-                <TabsTrigger value="bulk" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
-                <TabsTrigger value="icp" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
-                <TabsTrigger value="comparative" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
-                <TabsTrigger value="ideal-script" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
-                <TabsTrigger value="ranking" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
-                <TabsTrigger value="links" className="text-xs px-3 h-8 data-[state=active]:bg-background gap-1.5"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
+                <TabsTrigger value="analyze" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Mic className="w-3.5 h-3.5" />Analisar</TabsTrigger>
+                <TabsTrigger value="bulk" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Upload className="w-3.5 h-3.5" />Lote</TabsTrigger>
+                <TabsTrigger value="icp" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Target className="w-3.5 h-3.5" />ICP</TabsTrigger>
+                <TabsTrigger value="comparative" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><TrendingUp className="w-3.5 h-3.5" />Comparativo</TabsTrigger>
+                <TabsTrigger value="ideal-script" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Crown className="w-3.5 h-3.5" />Script Ideal</TabsTrigger>
+                <TabsTrigger value="ranking" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Trophy className="w-3.5 h-3.5" />Ranking</TabsTrigger>
+                <TabsTrigger value="links" className="text-xs px-3 h-11 md:h-8 data-[state=active]:bg-background gap-1.5"><Link2 className="w-3.5 h-3.5" />Links</TabsTrigger>
               </TabsList>
 
               <TabsContent value="analyze" className="space-y-5 mt-4">
@@ -845,7 +845,7 @@ export default function SalesScripts() {
 
                     <Collapsible>
                       <CollapsibleTrigger asChild>
-                        <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-8 -mx-1">
+                        <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-11 md:h-8 -mx-1">
                           <span className="text-muted-foreground">Detalhes adicionais (deal, cliente, observações)</span>
                           <ChevronDown className="w-3.5 h-3.5 text-muted-foreground transition-transform data-[state=open]:rotate-180" />
                         </Button>
@@ -961,7 +961,7 @@ export default function SalesScripts() {
                         </CollapsibleTrigger>
                         <CollapsibleContent className="p-3 pt-0 space-y-3">
                           {!driveConnection?.is_active ? (
-                            <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2" size="sm">
+                            <Button onClick={handleConnectDrive} disabled={isConnectingDrive} className="w-full gap-2 h-11 md:h-9" size="sm">
                               {isConnectingDrive ? <Loader2 className="w-4 h-4 animate-spin" /> : <Cloud className="w-4 h-4" />}
                               Conectar Google Drive
                             </Button>
@@ -982,7 +982,7 @@ export default function SalesScripts() {
                                 }));
                                 return (
                                   <div className="flex items-center gap-1 text-xs text-muted-foreground flex-wrap">
-                                    <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
+                                    <Button type="button" variant="ghost" size="sm" className="h-11 md:h-7 px-3 md:px-2 gap-1" onClick={handleNavigateRoot} disabled={isImportingDriveFile}>
                                       <Home className="w-3.5 h-3.5" />Drives
                                     </Button>
                                     {stackCrumbs.map(crumb => (
@@ -1000,7 +1000,7 @@ export default function SalesScripts() {
                                       </span>
                                     )}
                                     {driveScope !== 'drives-root' && (
-                                      <Button type="button" variant="ghost" size="sm" className="h-7 px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
+                                      <Button type="button" variant="ghost" size="sm" className="h-11 md:h-7 px-3 md:px-2 gap-1 ml-auto" onClick={handleNavigateBack} disabled={isImportingDriveFile}>
                                         <ArrowLeft className="w-3.5 h-3.5" />Voltar
                                       </Button>
                                     )}
@@ -1062,7 +1062,7 @@ export default function SalesScripts() {
                                 )}
                                 {hasMoreDriveFiles && driveScope !== 'drives-root' && (
                                   <div className="border-t p-2">
-                                    <Button type="button" variant="ghost" size="sm" className="w-full gap-2 text-xs" onClick={() => fetchMoreDriveFiles()} disabled={loadingMoreDriveFiles || isImportingDriveFile}>
+                                    <Button type="button" variant="ghost" size="sm" className="w-full gap-2 text-xs h-11 md:h-9" onClick={() => fetchMoreDriveFiles()} disabled={loadingMoreDriveFiles || isImportingDriveFile}>
                                       {loadingMoreDriveFiles ? (<><Loader2 className="w-3.5 h-3.5 animate-spin" />Carregando mais...</>) : (<>Carregar mais</>)}
                                     </Button>
                                   </div>
@@ -1073,7 +1073,7 @@ export default function SalesScripts() {
                                 <span className="text-xs text-muted-foreground">
                                   {selectedDriveFileIds.size > 0 ? `${selectedDriveFileIds.size} selecionado(s)` : 'Selecione um ou mais arquivos'}
                                 </span>
-                                <Button type="button" size="sm" onClick={handleImportSelectedDriveFiles} disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile} className="gap-2">
+                                <Button type="button" size="sm" onClick={handleImportSelectedDriveFiles} disabled={selectedDriveFileIds.size === 0 || isImportingDriveFile} className="gap-2 h-11 md:h-9">
                                   {isImportingDriveFile ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                                   Importar
                                 </Button>
@@ -1104,7 +1104,7 @@ export default function SalesScripts() {
                           {transcriptEntries.length > 1 && (
                             <div className="flex items-center justify-between">
                               <Label className="text-xs font-medium text-muted-foreground">Call {idx + 1}</Label>
-                              <Button variant="ghost" size="sm" className="h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
+                              <Button variant="ghost" size="sm" className="h-11 md:h-7 text-xs text-destructive" onClick={() => setTranscriptEntries(prev => prev.filter(e => e.id !== entry.id))}>
                                 <Trash2 className="w-3 h-3 mr-1" />Remover
                               </Button>
                             </div>
@@ -1153,7 +1153,7 @@ export default function SalesScripts() {
                       </div>
                       <div className="flex items-center gap-1.5 shrink-0">
                         <Button variant="outline" size="sm" onClick={() => handleCopy(transcriptAnalysis)}><Copy className="w-3.5 h-3.5 mr-1.5" />Copiar</Button>
-                        <Button variant="outline" size="sm" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-3.5 h-3.5 mr-1.5" />PDF</Button>
+                        <Button variant="outline" size="sm" className="h-11 md:h-9" onClick={() => exportSalesCallToPDF({ analysis: transcriptAnalysis, createdAt: new Date().toISOString() })}><Download className="w-3.5 h-3.5 mr-1.5" />PDF</Button>
                       </div>
                     </div>
                     <CardContent className="pt-2">
@@ -1303,7 +1303,7 @@ export default function SalesScripts() {
       <Dialog open={!!viewingPlaybook} onOpenChange={open => { if (!open) setViewingPlaybook(null); }}>
         <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader><DialogTitle>{viewingPlaybook?.title}</DialogTitle><DialogDescription>{getScriptType(viewingPlaybook?.script_type || '')?.label} • {viewingPlaybook && new Date(viewingPlaybook.created_at).toLocaleDateString('pt-BR')}</DialogDescription></DialogHeader>
-          <div className="flex items-center gap-2 py-2 border-b border-border shrink-0"><Button variant="outline" size="sm" onClick={() => viewingPlaybook && handleCopy(viewingPlaybook.content)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => { if (viewingPlaybook) { const st = getScriptType(viewingPlaybook.script_type); exportPlaybookToPDF({ title: viewingPlaybook.title, scriptType: st?.label || viewingPlaybook.script_type, content: viewingPlaybook.content, createdAt: viewingPlaybook.created_at }); } }}><Download className="w-4 h-4 mr-2" />PDF</Button></div>
+          <div className="flex items-center gap-2 py-2 border-b border-border shrink-0"><Button variant="outline" size="sm" className="h-11 md:h-9" onClick={() => viewingPlaybook && handleCopy(viewingPlaybook.content)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" className="h-11 md:h-9" onClick={() => { if (viewingPlaybook) { const st = getScriptType(viewingPlaybook.script_type); exportPlaybookToPDF({ title: viewingPlaybook.title, scriptType: st?.label || viewingPlaybook.script_type, content: viewingPlaybook.content, createdAt: viewingPlaybook.created_at }); } }}><Download className="w-4 h-4 mr-2" />PDF</Button></div>
           <div className="flex-1 overflow-y-auto min-h-0"><div className="max-w-none pr-2"><MarkdownRenderer content={viewingPlaybook?.content || ''} /></div></div>
         </DialogContent>
       </Dialog>
@@ -1466,7 +1466,7 @@ export default function SalesScripts() {
           </div>
 
           <div className="max-w-none"><MarkdownRenderer content={viewingAnalysis?.analysis || ''} /></div>
-          <DialogFooter><Button variant="outline" size="sm" onClick={() => viewingAnalysis && handleCopy(viewingAnalysis.analysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" onClick={() => { if (viewingAnalysis) exportSalesCallToPDF({ analysis: viewingAnalysis.analysis, createdAt: viewingAnalysis.created_at }); }}><Download className="w-4 h-4 mr-2" />PDF</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" size="sm" className="h-11 md:h-9" onClick={() => viewingAnalysis && handleCopy(viewingAnalysis.analysis)}><Copy className="w-4 h-4 mr-2" />Copiar</Button><Button variant="outline" size="sm" className="h-11 md:h-9" onClick={() => { if (viewingAnalysis) exportSalesCallToPDF({ analysis: viewingAnalysis.analysis, createdAt: viewingAnalysis.created_at }); }}><Download className="w-4 h-4 mr-2" />PDF</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
