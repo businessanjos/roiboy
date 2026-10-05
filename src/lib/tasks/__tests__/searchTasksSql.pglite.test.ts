@@ -1,3 +1,4 @@
+// @vitest-environment node
 /**
  * Executa as funções SQL REAIS da migração (tasks_filtered, task_matches_tab,
  * search_tasks_page2, search_tasks_counts) num Postgres em memória (PGlite),
