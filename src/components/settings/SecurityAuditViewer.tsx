@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { usePaginationState } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -43,33 +45,72 @@ export function SecurityAuditViewer() {
   const [searchQuery, setSearchQuery] = useState("");
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all");
 
-  const { data: logs, isLoading, refetch } = useQuery({
-    queryKey: ["security-audit-logs", currentUser?.account_id],
+  // Lista de tipos de evento é levantada sobre uma amostra ampla (não paginada) só para popular o filtro.
+  const { data: eventTypesSample } = useQuery({
+    queryKey: ["security-audit-logs-types", currentUser?.account_id],
     queryFn: async () => {
       if (!currentUser?.account_id) return [];
-      
       const { data, error } = await supabase
+        .from("security_audit_logs")
+        .select("event_type")
+        .eq("account_id", currentUser.account_id)
+        .order("created_at", { ascending: false })
+        .limit(500);
+      if (error) throw error;
+      return (data || []).map((d) => d.event_type);
+    },
+    enabled: !!currentUser?.account_id,
+  });
+
+  const { data: countData } = useQuery({
+    queryKey: ["security-audit-logs-count", currentUser?.account_id, eventTypeFilter],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return 0;
+      let query = supabase
+        .from("security_audit_logs")
+        .select("id", { count: "exact", head: true })
+        .eq("account_id", currentUser.account_id);
+      if (eventTypeFilter !== "all") query = query.eq("event_type", eventTypeFilter);
+      const { count, error } = await query;
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!currentUser?.account_id,
+  });
+
+  const pg = usePaginationState(countData || 0, {
+    resetKey: [eventTypeFilter, currentUser?.account_id],
+  });
+
+  const { data: logs, isLoading, refetch } = useQuery({
+    queryKey: ["security-audit-logs", currentUser?.account_id, eventTypeFilter, pg.from, pg.to],
+    queryFn: async () => {
+      if (!currentUser?.account_id) return [];
+
+      let query = supabase
         .from("security_audit_logs")
         .select("*")
         .eq("account_id", currentUser.account_id)
         .order("created_at", { ascending: false })
-        .limit(100);
+        .order("id", { ascending: false })
+        .range(pg.from, pg.to);
+      if (eventTypeFilter !== "all") query = query.eq("event_type", eventTypeFilter);
 
+      const { data, error } = await query;
       if (error) throw error;
       return data as SecurityLog[];
     },
     enabled: !!currentUser?.account_id,
   });
 
+  // Busca textual aplicada apenas dentro da página carregada do servidor (ver pendências).
   const filteredLogs = (logs || []).filter((log) => {
     const matchesSearch = searchQuery === "" || 
       log.event_type.toLowerCase().includes(searchQuery.toLowerCase()) ||
       log.ip_address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       JSON.stringify(log.details).toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesType = eventTypeFilter === "all" || log.event_type === eventTypeFilter;
-    
-    return matchesSearch && matchesType;
+
+    return matchesSearch;
   });
 
   const getEventInfo = (eventType: string) => {
@@ -80,7 +121,7 @@ export function SecurityAuditViewer() {
     };
   };
 
-  const uniqueEventTypes = [...new Set((logs || []).map((l) => l.event_type))];
+  const uniqueEventTypes = [...new Set((eventTypesSample || []).map((l) => l))];
 
   return (
     <Card>
@@ -175,6 +216,7 @@ export function SecurityAuditViewer() {
             </Table>
           </div>
         )}
+        <PagerFor state={pg} itemLabel="logs" hidePageSize />
       </CardContent>
     </Card>
   );
