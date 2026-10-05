@@ -58,3 +58,11 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 
 - **Teste `briefingRls`**: `src/test/rls/briefingRls.test.ts` depende de um usuário com papel **SDR não-admin**, que não existe no ambiente de teste atual (o arquivo cobre Vendas/SDR/Operações e o caso de controle negativo "sem nenhum desses papéis"; o cenário específico de SDR não-admin não tem fixture correspondente no ambiente).
 - **Playbooks — catálogo vazio**: verificado na UI em 393px, o catálogo de `/events/playbooks` mostra o estado vazio "Nenhum playbook" **sem rodapé de paginação**. Isso é esperado: `PagerFor` (via `ListPagination`) só renderiza o rodapé quando `totalItems > 0`/há registros — com `playbooks.length === 0` o componente não aparece, não é uma falha de paginação.
+
+## Revisão 6f068a4 (correções pontuais)
+- `src/pages/financial/FinancialPluggyStatusPage.tsx` · SyncHistoryDialog: total derivado de `data.total` no cache (reabertura/troca de conta). Teste `PluggySyncHistoryDialog.test.tsx`.
+- `src/pages/financial/FinancialFaqPage.tsx`: artigos via `fetchAllRows` com ordem `display_order, question, id`; erro propagado.
+- `src/pages/VipClients.tsx`: try/catch/finally; erro visível, dados anteriores preservados. Teste `VipClients.loadError.test.tsx`.
+- `src/lib/fetchInChunks.ts` · `fetchAllInChunks`: lote de IDs + `fetchAllRows` por lote. Usado em `MentoriaEC.tsx` (presenças, status) e `Renewals.tsx` (sucessores, produtos fallback, outcomes). Teste com lote de 1201.
+- `src/components/events/EventChecklistTab.tsx`: spinner só na primeira carga; refetch preserva grupos e página. Teste 45 itens/página 2.
+- RPCs `audit_unified_page`/`audit_unified_authors`: `deals.deleted_by` (auth.users) resolvido via `users.auth_user_id` da mesma conta; actor e escopo comercial usam `users.id`.
