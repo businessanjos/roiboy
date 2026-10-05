@@ -14,6 +14,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid,
 } from "recharts";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 
 const RH_ALLOWED_EMAILS = [
   "m.quintana@me.com", "coachevertonsantos@gmail.com",
@@ -171,6 +173,7 @@ export default function RHDashboard() {
   const canHR = useCanAccessHR();
   const accountId = currentUser?.account_id;
   const { data, isLoading } = useRHDashboardData(accountId);
+  const pgBirthdays = usePagedList(metricsBirthdaysPlaceholder, { isLoading });
 
   const metrics = useMemo(() => {
     if (!data) return null;

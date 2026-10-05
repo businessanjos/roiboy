@@ -67,6 +67,8 @@ import {
 } from "lucide-react";
 
 import { ContractDetailSheet } from "@/components/contracts/ContractDetailSheet";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
 import { FinancialPageHeader, FinancialKpiCard } from "@/components/financial/_shared";
 import { formatBRLCompact } from "@/lib/financial-format";
 
@@ -298,6 +300,12 @@ export default function FinancialSalesReconciliationPage() {
     () => pendingContracts.reduce((sum, c) => sum + (c.value || 0), 0),
     [pendingContracts]
   );
+
+  const pendingPg = usePagedList(filteredPending, {
+    resetKey: [searchQuery, signatureFilter],
+    isLoading: loading,
+  });
+  const processedPg = usePagedList(processedContracts, { isLoading: loading });
 
   const formatCurrency = (value: number) =>
     new Intl.NumberFormat("pt-BR", {
@@ -722,7 +730,7 @@ export default function FinancialSalesReconciliationPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  filteredPending.map((contract) => (
+                  pendingPg.items.map((contract) => (
                     <TableRow key={contract.id}>
                       <TableCell>
                         <Checkbox
@@ -837,6 +845,7 @@ export default function FinancialSalesReconciliationPage() {
                 )}
               </TableBody>
             </Table>
+            <PagerFor state={pendingPg} itemLabel="contratos" />
           </Card>
         </TabsContent>
 
@@ -871,7 +880,7 @@ export default function FinancialSalesReconciliationPage() {
                     </TableCell>
                   </TableRow>
                 ) : (
-                  processedContracts.map((contract) => (
+                  processedPg.items.map((contract) => (
                     <TableRow key={contract.id}>
                       <TableCell className="font-medium">
                         {contract.client?.full_name || "—"}
@@ -918,6 +927,7 @@ export default function FinancialSalesReconciliationPage() {
                 )}
               </TableBody>
             </Table>
+            <PagerFor state={processedPg} itemLabel="contratos" />
           </Card>
         </TabsContent>
       </Tabs>
