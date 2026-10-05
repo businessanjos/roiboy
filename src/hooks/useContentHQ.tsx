@@ -158,12 +158,16 @@ export function useAllContentPieces() {
   return useQuery({
     queryKey: ["content-pieces", "all"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("content_pieces")
-        .select("*")
-        .order("scheduled_date", { ascending: true, nullsFirst: false });
+      const { data, error } = await fetchAllRows<ContentPiece>((from, to) =>
+        supabase
+          .from("content_pieces")
+          .select("*")
+          .order("scheduled_date", { ascending: true, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return (data || []) as ContentPiece[];
+      return data;
     },
   });
 }

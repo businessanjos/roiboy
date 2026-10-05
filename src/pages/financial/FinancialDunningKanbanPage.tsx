@@ -237,18 +237,22 @@ export default function FinancialDunningKanbanPage() {
     queryKey: ["dunning-cases", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("dunning_cases")
-        .select(
-          `id, stage, installment_id, client_id, assigned_to, sla_due_at,
-           promise_date, promise_amount, last_contact_at, notes, created_at,
-           installment:installments!installment_id(id, amount, due_date, payment_method, number),
-           client:clients!client_id(id, full_name)`
-        )
-        .eq("account_id", accountId)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<DunningCase>((from, to) =>
+        supabase
+          .from("dunning_cases")
+          .select(
+            `id, stage, installment_id, client_id, assigned_to, sla_due_at,
+             promise_date, promise_amount, last_contact_at, notes, created_at,
+             installment:installments!installment_id(id, amount, due_date, payment_method, number),
+             client:clients!client_id(id, full_name)`
+          )
+          .eq("account_id", accountId)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return data as unknown as DunningCase[];
+      return data;
     },
     enabled: !!accountId,
   });
@@ -257,13 +261,17 @@ export default function FinancialDunningKanbanPage() {
     queryKey: ["dunning-events", selected?.id],
     queryFn: async () => {
       if (!selected) return [];
-      const { data, error } = await supabase
-        .from("dunning_case_events")
-        .select("id, event_type, from_stage, to_stage, description, created_at")
-        .eq("case_id", selected.id)
-        .order("created_at", { ascending: false });
+      const { data, error } = await fetchAllRows<DunningEvent>((from, to) =>
+        supabase
+          .from("dunning_case_events")
+          .select("id, event_type, from_stage, to_stage, description, created_at")
+          .eq("case_id", selected.id)
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any
+      );
       if (error) throw error;
-      return data as DunningEvent[];
+      return data;
     },
     enabled: !!selected,
   });

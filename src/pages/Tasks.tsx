@@ -103,7 +103,7 @@ import { useSector } from "@/contexts/SectorContext";
 import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
-import { fetchAllRows } from "@/lib/fetchAllRows";
+import { buildSearchTasksRpcParams } from "@/lib/tasks/searchTasksRpcParams";
 import { ptBR } from "date-fns/locale";
 
 interface User {
@@ -462,6 +462,30 @@ export default function Tasks() {
         sectorActivityTypeIds = (sectorTypes || []).map((t: any) => t.id);
       }
 
+      const safe = serverSearch ? serverSearch.trim() : "";
+
+      // Com busca ativa, a contagem usa a MESMA RPC `search_tasks_page`
+      // (mesmo predicado da listagem), em vez de um count(*) com .limit(1000)
+      // nos IDs de clients/leads/deals — que subestimava o total em buscas
+      // populares. Basta 1 linha (o total_count vem em todas via window
+      // function), então pedimos p_limit = 1.
+      if (safe) {
+        const rpcParams = buildSearchTasksRpcParams({
+          accountId: currentUser?.account_id ?? "",
+          search: safe,
+          sectorActivityTypeIds,
+          isHistoricalUserFilter,
+          filterUser,
+          currentUserId: currentUser?.id ?? null,
+          limit: 1,
+          offset: 0,
+        });
+        const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
+        if (error) throw error;
+        const rows = (data || []) as { id: string; total_count: number }[];
+        return rows.length > 0 ? Number(rows[0].total_count) || 0 : 0;
+      }
+
       let q = supabase.from("internal_tasks").select("id", { count: "exact", head: true });
 
       if (!isHistoricalUserFilter && sectorActivityTypeIds.length > 0) {
@@ -472,31 +496,6 @@ export default function Tasks() {
       } else if (filterUser !== "all" && filterUser) {
         q = q.eq("assigned_to", filterUser);
       }
-      if (serverSearch) {
-        const safe = serverSearch.replace(/[,()*%]/g, " ").trim();
-        if (safe) {
-          const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-            supabase.from("clients").select("id").ilike("full_name", `%${safe}%`).limit(1000),
-            supabase.from("leads").select("id").ilike("full_name", `%${safe}%`).limit(1000),
-            supabase.from("deals").select("id").ilike("title", `%${safe}%`).limit(1000),
-          ]);
-          const cIds = (clientsRes.data || []).map((r: any) => r.id);
-          const lIds = (leadsRes.data || []).map((r: any) => r.id);
-          const dIds = (dealsRes.data || []).map((r: any) => r.id);
-          q = q.or(
-            [
-              `title.ilike.*${safe}*`,
-              `description.ilike.*${safe}*`,
-              cIds.length ? `client_id.in.(${cIds.join(",")})` : null,
-              lIds.length ? `lead_id.in.(${lIds.join(",")})` : null,
-              dIds.length ? `deal_id.in.(${dIds.join(",")})` : null,
-            ]
-              .filter(Boolean)
-              .join(",")
-          );
-        }
-      }
-
 
       const { count, error } = await q;
       if (error) throw error;
