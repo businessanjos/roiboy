@@ -704,6 +704,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
         </h3>
         
         {participations.length > 0 ? (
+          <>
           <div className="grid gap-3">
             {pgParticipations.items.map((p) => (
               <div key={p.id} className="flex items-center justify-between p-3 border rounded-lg bg-muted/30">
@@ -740,6 +741,8 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
               </div>
             ))}
           </div>
+          <PagerFor state={pgParticipations} itemLabel="convites" />
+          </>
         ) : (
           <div className="text-center py-6 text-muted-foreground border rounded-lg bg-muted/10">
             <Calendar className="h-8 w-8 mx-auto mb-2 opacity-30" />
@@ -876,6 +879,7 @@ export function ClientAgenda({ clientId, clientProductIds }: ClientAgendaProps) 
               </div>
             ))}
           </div>
+          <PagerFor state={pgFeedbacks} itemLabel="feedbacks" />
         </div>
       )}
 
