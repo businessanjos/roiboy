@@ -680,7 +680,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                         type="button"
                         variant="ghost"
                         size="sm"
-                        className="h-6 px-2 text-xs"
+                        className="h-11 sm:h-6 px-3 sm:px-2 text-xs"
                         onClick={startEditChannel}
                       >
                         Editar
@@ -690,7 +690,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                       type="button"
                       variant="ghost"
                       size="sm"
-                      className="h-6 px-2 text-xs"
+                      className="h-11 sm:h-6 px-3 sm:px-2 text-xs"
                       onClick={() => setIsAddingChannel(true)}
                     >
                       + Nova ferramenta
@@ -725,6 +725,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     <Button
                       type="button"
                       size="sm"
+                      className="h-11 sm:h-9"
                       onClick={handleCreateChannel}
                       disabled={!newChannelLabel.trim() || isSavingChannel}
                     >
@@ -733,6 +734,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     <Button
                       type="button"
                       size="sm"
+                      className="h-11 sm:h-9"
                       variant="ghost"
                       onClick={() => {
                         setIsAddingChannel(false);
@@ -769,6 +771,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     <Button
                       type="button"
                       size="sm"
+                      className="h-11 sm:h-9"
                       onClick={handleUpdateChannel}
                       disabled={!editChannelLabel.trim() || isSavingChannel}
                     >
@@ -777,6 +780,7 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
                     <Button
                       type="button"
                       size="sm"
+                      className="h-11 sm:h-9"
                       variant="ghost"
                       onClick={() => setEditingChannelValue(null)}
                     >
@@ -1071,9 +1075,10 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
               type="button"
               variant="ghost"
               size="icon"
-              className="text-muted-foreground hover:text-destructive"
+              className="h-11 w-11 sm:h-10 sm:w-10 text-muted-foreground hover:text-destructive"
               onClick={() => setDeleteDialogOpen(true)}
               title="Excluir tarefa"
+              aria-label="Excluir tarefa"
             >
               <Trash2 className="h-4 w-4" />
             </Button>
@@ -1082,10 +1087,10 @@ export function TaskDialog({ open, onOpenChange, task, clientId, dealId, leadId,
           )}
 
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
+            <Button variant="outline" className="h-11 sm:h-10" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button className="h-11 sm:h-10" onClick={handleSubmit} disabled={submitting}>
               {submitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {task ? "Salvar" : "Criar Tarefa"}
             </Button>
