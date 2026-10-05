@@ -2541,7 +2541,7 @@ export default function SalesPipeline() {
         >
 
           <div className="flex items-center justify-end sm:justify-between gap-2">
-            <TabsList className="hidden sm:flex flex-1 min-w-0 sm:flex-none sm:w-auto h-12 sm:h-10 rounded-xl sm:rounded-md [&>button]:h-10 sm:[&>button]:h-8">
+            <TabsList className="hidden md:flex flex-1 min-w-0 md:flex-none md:w-auto h-10 rounded-md [&>button]:h-8">
 
 
               <TabsTrigger value="prospeccao" className="flex-1 basis-0 min-w-0 overflow-hidden gap-1.5 px-1.5 text-xs sm:flex-none sm:basis-auto sm:px-3 sm:text-sm">
