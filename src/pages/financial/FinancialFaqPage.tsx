@@ -1,3 +1,4 @@
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
@@ -218,12 +219,16 @@ export default function FinancialFaqPage() {
     queryKey: ["financial-faq-articles", accountId],
     queryFn: async () => {
       if (!accountId) return [];
-      const { data, error } = await supabase
-        .from("financial_faq_articles")
-        .select("*")
-        .eq("account_id", accountId)
-        .order("display_order", { ascending: true })
-        .order("question", { ascending: true });
+      const { data, error } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("financial_faq_articles")
+          .select("*")
+          .eq("account_id", accountId)
+          .order("display_order", { ascending: true })
+          .order("question", { ascending: true })
+          .order("id", { ascending: true })
+          .range(from, to) as any,
+      );
       if (error) throw error;
       return (data ?? []) as unknown as FaqArticle[];
     },

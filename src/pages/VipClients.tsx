@@ -102,6 +102,8 @@ export default function VipClients() {
     const fetchData = async () => {
       if (!currentUser?.account_id) return;
       setLoading(true);
+      setLoadError(null);
+      try {
 
       const [{ data: contracts, error: contractsError }, { data: entries, error: entriesError }, { data: prods }] = await Promise.all([
         fetchAllRows<any>((from, to) =>
@@ -185,7 +187,12 @@ export default function VipClients() {
 
       setRows(list);
       setProducts(prods || []);
-      setLoading(false);
+      } catch (err: any) {
+        // Mantém os dados anteriores e mostra o erro em vez de carga parcial.
+        setLoadError(err?.message || "Falha ao carregar clientes VIP");
+      } finally {
+        setLoading(false);
+      }
     };
     fetchData();
   }, [currentUser?.account_id]);

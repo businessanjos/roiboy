@@ -727,11 +727,19 @@ function SyncHistoryDialog({
         .order("id", { ascending: false })
         .range(pg.from, pg.to);
       if (error) throw error;
-      const result = { rows: (data ?? []) as SyncLogRow[], total: count ?? 0 };
-      setTotal(result.total);
-      return result;
+      return { rows: (data ?? []) as SyncLogRow[], total: count ?? 0 };
     },
   });
+
+  // O total vem do cache da própria consulta: reabrir o diálogo com cache
+  // fresco (ou voltar de outra conta) restaura o total correto sem refazer
+  // a requisição.
+  useEffect(() => {
+    if (data) setTotal(data.total);
+  }, [data]);
+  useEffect(() => {
+    if (!data) setTotal(0);
+  }, [accountId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const rows = data?.rows ?? [];
   const pgWithTotal = pg;
