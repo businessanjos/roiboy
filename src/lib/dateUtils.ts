@@ -63,3 +63,25 @@ export function formatLocalISOString(date: Date): string {
   const seconds = String(date.getSeconds()).padStart(2, '0');
   return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
 }
+
+/**
+ * Gera a chave de dia (YYYY-MM-DD) de uma data em um fuso horário IANA
+ * específico (não o fuso do sistema). Usado para casar agregações feitas no
+ * servidor por fuso horário (ex.: RPCs com p_tz) com a geração de dias no
+ * cliente, evitando divergência quando o fuso do servidor difere do navegador.
+ */
+export function dayKeyInTz(date: Date, timeZone: string): string {
+  // en-CA formata nativamente como YYYY-MM-DD.
+  return new Intl.DateTimeFormat("en-CA", { timeZone }).format(date);
+}
+
+/**
+ * Parseia uma chave de dia YYYY-MM-DD (já num fuso específico) como meia-noite
+ * LOCAL do navegador, apenas para fins de exibição/formatação — evita o bug de
+ * new Date("YYYY-MM-DD") ser interpretado como UTC e "voltar" um dia em
+ * fusos negativos.
+ */
+export function parseDayKey(dayKey: string): Date {
+  const [year, month, day] = dayKey.split("-").map(Number);
+  return new Date(year, (month || 1) - 1, day || 1);
+}

@@ -14,6 +14,7 @@ import {
 } from "recharts";
 
 import { supabase } from "@/integrations/supabase/client";
+import { dayKeyInTz, parseDayKey } from "@/lib/dateUtils";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -82,6 +83,11 @@ export default function RoyZappAttendanceMetrics() {
       // Agregação feita no servidor via RPC (zapp_attendance_metrics /
       // zapp_attendance_daily), sem teto artificial no cliente — os números
       // retornados já são o total do período, nunca uma amostra truncada.
+      // Fuso do navegador do usuário — enviado ao servidor para que o
+      // agrupamento por dia (zapp_attendance_daily) corresponda exatamente
+      // aos dias exibidos na UI, em vez do fuso do servidor do Postgres.
+      const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "America/Sao_Paulo";
+
       const [{ data: rows, error: metricsError }, { data: dailyRows, error: dailyError }] =
         await Promise.all([
           (supabase.rpc as any)("zapp_attendance_metrics", {
@@ -91,6 +97,7 @@ export default function RoyZappAttendanceMetrics() {
           (supabase.rpc as any)("zapp_attendance_daily", {
             p_account_id: accountId,
             p_since: since,
+            p_tz: tz,
           }),
         ]);
 
@@ -116,11 +123,14 @@ export default function RoyZappAttendanceMetrics() {
           r.avg_first_response_min == null ? null : Number(r.avg_first_response_min),
       }));
 
-      // Daily series: completa os dias sem mensagens com 0 (RPC só retorna dias com atividade)
+      // Daily series: completa os dias sem mensagens com 0 (RPC só retorna dias com atividade).
+      // As chaves de dia são geradas no MESMO fuso enviado ao servidor (tz do
+      // navegador), para que uma mensagem enviada às 22h BRT (01h UTC do dia
+      // seguinte) caia no dia correto tanto no agrupamento do servidor quanto aqui.
       const dayMap = new Map<string, number>();
       const days = Number(period);
       for (let i = days - 1; i >= 0; i--) {
-        const d = format(subDays(new Date(), i), "yyyy-MM-dd");
+        const d = dayKeyInTz(subDays(new Date(), i), tz);
         dayMap.set(d, 0);
       }
       (dailyRows ?? []).forEach((r: any) => {
@@ -132,7 +142,7 @@ export default function RoyZappAttendanceMetrics() {
       setConsultants(consultantRows);
       setDaily(
         Array.from(dayMap.entries()).map(([date, messages]) => ({
-          date: format(new Date(date), "dd/MM", { locale: ptBR }),
+          date: format(parseDayKey(date), "dd/MM", { locale: ptBR }),
           messages,
         }))
       );

@@ -87,14 +87,25 @@ function fieldLabel(k: string) {
  * (nome/e-mail) ou por rótulo de campo alterado (changed_fields).
  * Exportado para teste unitário.
  */
+/**
+ * Delimita um valor com aspas duplas no formato PostgREST, escapando `\\`
+ * e `"` conforme exigido pelo parser de `.or()`. Necessário sempre que o
+ * valor interpolado possa conter caracteres especiais de sintaxe do filtro
+ * (parênteses, pontos, vírgulas, espaços etc.), como em "Depto. (ID)".
+ */
+function pgQuote(value: string): string {
+  const escaped = value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
+  return `"${escaped}"`;
+}
+
 export function buildAuditSearchFilter(search: string): string | null {
   const q = search.trim();
   if (!q) return null;
   const escaped = q.replace(/[%,]/g, "");
   if (!escaped) return null;
   const clauses = [
-    `user_name.ilike.%${escaped}%`,
-    `user_email.ilike.%${escaped}%`,
+    `user_name.ilike.${pgQuote(`%${escaped}%`)}`,
+    `user_email.ilike.${pgQuote(`%${escaped}%`)}`,
   ];
   const matchingKeys = Object.entries(FIELD_LABELS)
     .filter(([, label]) => label.toLowerCase().includes(q.toLowerCase()))

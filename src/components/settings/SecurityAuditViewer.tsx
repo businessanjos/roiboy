@@ -51,13 +51,19 @@ const SEARCH_QUERY_KEY = "security-audit-search";
  * nunca fiquem dessincronizadas.
  */
 export async function fetchSecurityAuditPage(params: {
+  accountId: string | null | undefined;
   eventTypeFilter: string;
   search: string;
   offset: number;
   limit: number;
 }): Promise<{ rows: SecurityLog[]; total: number }> {
-  const { eventTypeFilter, search, offset, limit } = params;
+  const { accountId, eventTypeFilter, search, offset, limit } = params;
+  // Nunca consulta sem conta: evita chamar a RPC com p_account_id nulo
+  // (o que, antes da migração, poderia expor logs de outras contas).
+  if (!accountId) return { rows: [], total: 0 };
+
   const { data, error } = await (supabase.rpc as any)("search_security_audit", {
+    p_account_id: accountId,
     p_event_type: eventTypeFilter === "all" ? null : eventTypeFilter,
     p_search: search || null,
     p_offset: offset,
@@ -119,6 +125,7 @@ export function SecurityAuditViewer() {
     queryFn: async (): Promise<{ rows: SecurityLog[]; total: number }> => {
       if (!currentUser?.account_id) return { rows: [], total: 0 };
       return fetchSecurityAuditPage({
+        accountId: currentUser.account_id,
         eventTypeFilter,
         search: debouncedSearch,
         offset: pg.from,

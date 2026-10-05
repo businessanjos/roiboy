@@ -104,6 +104,7 @@ import { cn } from "@/lib/utils";
 import { FilterBar, FilterItem } from "@/components/ui/filter-bar";
 import { format, differenceInDays } from "date-fns";
 import { buildSearchTasksRpcParams } from "@/lib/tasks/searchTasksRpcParams";
+import { fetchInBatches } from "@/lib/tasks/fetchInBatches";
 import { ptBR } from "date-fns/locale";
 
 interface User {
@@ -374,12 +375,17 @@ export default function Tasks() {
         // ids da página atual, preservando a ordem retornada pela RPC.
         const byId = new Map<string, Task>();
         if (pageIds.length > 0) {
-          const { data: taskRows, error: taskRowsError } = await supabase
-            .from("internal_tasks")
-            .select(TASKS_SELECT)
-            .in("id", pageIds);
-          if (taskRowsError) throw taskRowsError;
-          ((taskRows || []) as Task[]).forEach((t) => byId.set(t.id, t));
+          // Hidratação em lotes de 150 ids (em vez de um único .in(...) com
+          // até centenas/milhares de UUIDs), propagando o erro do primeiro
+          // lote que falhar (ver fetchInBatches).
+          const taskRows = await fetchInBatches<Task>(pageIds, 150, async (batchIds) => {
+            const { data, error } = await supabase
+              .from("internal_tasks")
+              .select(TASKS_SELECT)
+              .in("id", batchIds);
+            return { data: data as Task[] | null, error };
+          });
+          taskRows.forEach((t) => byId.set(t.id, t));
         }
         const orderedRows = pageIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
 

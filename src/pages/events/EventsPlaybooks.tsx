@@ -29,6 +29,7 @@ import {
 import { BookOpenCheck, Plus, Pencil, Trash2, ListChecks, AlertTriangle } from "lucide-react";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface Playbook {
   id: string;
@@ -85,23 +86,40 @@ export default function EventsPlaybooks() {
   const loadPlaybooks = async () => {
     if (!accountId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from("event_playbooks")
-      .select("*")
-      .eq("account_id", accountId)
-      .order("created_at", { ascending: false });
-    setPlaybooks((data as any) ?? []);
+    const { data, error } = await fetchAllRows<Playbook>((from, to) =>
+      supabase
+        .from("event_playbooks")
+        .select("*")
+        .eq("account_id", accountId)
+        .order("created_at", { ascending: false })
+        .order("id", { ascending: false })
+        .range(from, to) as any
+    );
+    if (error) {
+      toast({ title: "Erro ao carregar playbooks", variant: "destructive" });
+      setLoading(false);
+      return;
+    }
+    setPlaybooks(data ?? []);
     setLoading(false);
   };
 
   const loadItems = async (playbookId: string) => {
-    const { data } = await supabase
-      .from("event_playbook_items")
-      .select("*")
-      .eq("playbook_id", playbookId)
-      .order("days_offset", { ascending: true })
-      .order("position", { ascending: true });
-    setItems((data as any) ?? []);
+    const { data, error } = await fetchAllRows<PlaybookItem>((from, to) =>
+      supabase
+        .from("event_playbook_items")
+        .select("*")
+        .eq("playbook_id", playbookId)
+        .order("days_offset", { ascending: true })
+        .order("position", { ascending: true })
+        .order("id", { ascending: true })
+        .range(from, to) as any
+    );
+    if (error) {
+      toast({ title: "Erro ao carregar itens do playbook", variant: "destructive" });
+      return;
+    }
+    setItems(data ?? []);
   };
 
   useEffect(() => { loadPlaybooks(); }, [accountId]);
