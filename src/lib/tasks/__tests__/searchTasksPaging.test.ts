@@ -58,3 +58,30 @@ describe("Exportação", () => {
     await expect(exportTaskIds(true, mkRpc([], 2), params(null))).rejects.toMatchObject({ message: "lote falhou" });
   });
 });
+
+describe("Regressão runtime: RPC precisa do cliente ligado (this)", () => {
+  // Imita o cliente real: rpc() depende de `this` (como o SupabaseClient).
+  class FakeClient {
+    calls: Record<string, unknown>[] = [];
+    rpc(fn: string, p: Record<string, unknown>) {
+      this.calls.push({ fn, ...p });
+      return Promise.resolve({ data: [{ id: "x", total_count: 70 }], error: null });
+    }
+  }
+  // Filtros reais sanitizados do caso: setor Vendas, busca "Primeiro Contato", ordem padrão.
+  const realParams = buildSearchTasksRpcParams({
+    ...f, search: " Primeiro Contato ", sectorId: "vendas", sectorActivityTypeIds: ["at1", "at2"],
+    tab: null, sortBy: "priority", sortDirection: "asc", limit: 20, offset: 0,
+  });
+  it("método solto falha antes da rede (era a causa da lista vazia)", async () => {
+    const c = new FakeClient();
+    const detached = c.rpc as unknown as Parameters<typeof fetchSearchTasksUpTo>[0];
+    await expect(fetchSearchTasksUpTo(detached, realParams, 20)).rejects.toBeTruthy();
+  });
+  it("wrapper ligado envia os filtros reais e devolve o total", async () => {
+    const c = new FakeClient();
+    const r = await fetchSearchTasksUpTo((fn, p) => c.rpc(fn, p), realParams, 20);
+    expect(r.total).toBe(70);
+    expect(c.calls[0]).toMatchObject({ fn: "search_tasks_page2", p_search: "Primeiro Contato", p_sector_id: "vendas", p_sort_by: "priority", p_tab: null });
+  });
+});
