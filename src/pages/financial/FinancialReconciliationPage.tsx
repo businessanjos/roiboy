@@ -565,6 +565,29 @@ export default function FinancialReconciliationPage() {
                 )}
               </div>
 
+              {!allFilteredSelected &&
+                entriesPg.items.length > 0 &&
+                entriesPg.items.every((e) => selectedTransactions.has(e.id)) &&
+                filteredEntries.length > entriesPg.items.length && (
+                  <div className="mb-4">
+                    <Button variant="link" className="h-auto p-0" onClick={selectAllFiltered}>
+                      Selecionar todos os {filteredEntries.length} filtrados
+                    </Button>
+                  </div>
+                )}
+
+              {selectedTransactions.size > 0 && (
+                <div className="mb-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTransactions(new Set())}
+                  >
+                    Limpar seleção
+                  </Button>
+                </div>
+              )}
+
               <ScrollArea className="h-[400px]">
                 {entriesLoading ? (
                   <div className="space-y-2">
