@@ -243,7 +243,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="p-6 lg:p-8 max-w-7xl mx-auto">
+    <div className="p-6 lg:p-8 max-w-7xl mx-auto w-full min-w-0">
       {renderContent()}
     </div>
   );
