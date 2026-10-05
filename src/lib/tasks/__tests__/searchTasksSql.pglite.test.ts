@@ -79,9 +79,9 @@ beforeAll(async () => {
     CREATE TABLE public.users (id uuid PRIMARY KEY, name text);
     CREATE TABLE public.activity_types (id uuid PRIMARY KEY, sector_id text);
     CREATE TABLE public.deal_stages (id uuid PRIMARY KEY, name text);
-    CREATE TABLE public.clients (id uuid PRIMARY KEY, full_name text);
-    CREATE TABLE public.leads (id uuid PRIMARY KEY, full_name text);
-    CREATE TABLE public.deals (id uuid PRIMARY KEY, title text, contact_name text, client_id uuid, lead_id uuid, stage_id uuid);
+    CREATE TABLE public.clients (id uuid PRIMARY KEY, full_name text, account_id uuid DEFAULT '${ACC}');
+    CREATE TABLE public.leads (id uuid PRIMARY KEY, full_name text, account_id uuid DEFAULT '${ACC}');
+    CREATE TABLE public.deals (id uuid PRIMARY KEY, title text, contact_name text, client_id uuid, lead_id uuid, stage_id uuid, account_id uuid DEFAULT '${ACC}');
     CREATE TABLE public.internal_tasks (
       id uuid PRIMARY KEY, account_id uuid, title text, description text, priority public.task_priority,
       due_date date, completed_at timestamptz, custom_status_id uuid, activity_type_id uuid,

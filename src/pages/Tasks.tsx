@@ -1931,7 +1931,7 @@ export default function Tasks() {
 
   const renderTasksMobileHeader = () => {
     const statusOpts = [
-      { value: "all", label: "Todas", count: baseFilteredTasks.length, color: undefined as string | undefined },
+      { value: "all", label: "Todas", count: serverSearch ? (searchCounts?.total ?? 0) : baseFilteredTasks.length, color: undefined as string | undefined },
       ...customStatuses.filter((s) => !s.name.toLowerCase().includes("cancel")).map((s) => ({ value: s.id, label: s.name, count: statusCounts[s.id] || 0, color: s.color })),
       { value: "__overdue__", label: "Atrasadas", count: overdueCount, color: "hsl(var(--destructive))" },
     ];
