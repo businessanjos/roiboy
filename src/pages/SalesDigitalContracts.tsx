@@ -585,9 +585,9 @@ export default function SalesDigitalContracts() {
             <div className="md:hidden divide-y divide-border">
               {contractsPg.items.map((contract) => (
                 <div key={contract.id} className="p-3 space-y-2">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <p className="font-medium text-sm truncate">{contract.client_name}</p>
+                  <div className="flex flex-col items-start gap-1.5">
+                    <div className="min-w-0 w-full">
+                      <p className="font-medium text-sm line-clamp-2 break-words">{contract.client_name}</p>
                       <p className="text-xs text-muted-foreground truncate">
                         {contract.contract_number ?? "Sem número"}
                         {contract.installments
@@ -595,7 +595,7 @@ export default function SalesDigitalContracts() {
                           : ""}
                       </p>
                     </div>
-                    <Badge variant={statusVariants[contract.status] ?? "outline"} className="shrink-0 text-[10px]">
+                    <Badge variant={statusVariants[contract.status] ?? "outline"} className="text-[11px]">
                       {statusLabels[contract.status] ?? contract.status}
                     </Badge>
                   </div>
