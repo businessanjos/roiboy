@@ -318,48 +318,12 @@ export default function Tasks() {
         sectorActivityTypeIds = (sectorTypes || []).map(t => t.id);
       }
 
-      // Busca também por entidades relacionadas (cliente, lead e negociação),
-      // para que tarefas genéricas ("Follow Up") apareçam ao buscar pelo nome.
-      const safeSearch = serverSearch ? serverSearch.replace(/[,()*%]/g, " ").trim() : "";
-      let relatedClientIds: string[] = [];
-      let relatedLeadIds: string[] = [];
-      let relatedDealIds: string[] = [];
-      if (safeSearch) {
-        // Busca em lotes (sem teto de 1000) para não perder correspondências
-        // de clientes/leads/negociações em bases grandes.
-        const [clientsRes, leadsRes, dealsRes] = await Promise.all([
-          fetchAllRows<{ id: string }>((from, to) =>
-            supabase.from("clients").select("id").ilike("full_name", `%${safeSearch}%`).order("id").range(from, to)
-          ),
-          fetchAllRows<{ id: string }>((from, to) =>
-            supabase.from("leads").select("id").ilike("full_name", `%${safeSearch}%`).order("id").range(from, to)
-          ),
-          fetchAllRows<{ id: string }>((from, to) =>
-            supabase.from("deals").select("id").ilike("title", `%${safeSearch}%`).order("id").range(from, to)
-          ),
-        ]);
-        relatedClientIds = (clientsRes.data || []).map((r: any) => r.id);
-        relatedLeadIds = (leadsRes.data || []).map((r: any) => r.id);
-        relatedDealIds = (dealsRes.data || []).map((r: any) => r.id);
-      }
+      // Texto de busca sanitizado (mantido apenas para log/depuração; a
+      // sanitização de caracteres especiais do PostgREST não é mais
+      // necessária na busca porque ela agora roda via RPC parametrizada).
+      const safeSearch = serverSearch ? serverSearch.trim() : "";
 
-      const searchOrFilter = safeSearch
-        ? [
-            `title.ilike.*${safeSearch}*`,
-            `description.ilike.*${safeSearch}*`,
-            relatedClientIds.length ? `client_id.in.(${relatedClientIds.join(",")})` : null,
-            relatedLeadIds.length ? `lead_id.in.(${relatedLeadIds.join(",")})` : null,
-            relatedDealIds.length ? `deal_id.in.(${relatedDealIds.join(",")})` : null,
-          ]
-            .filter(Boolean)
-            .join(",")
-        : "";
-
-      const buildQuery = () => {
-
-        let q = supabase
-          .from("internal_tasks")
-          .select(`
+      const TASKS_SELECT = `
             *,
             clients:client_id (id, full_name),
             deals:deal_id (
@@ -377,7 +341,64 @@ export default function Tasks() {
             leads:lead_id (id, full_name),
             assigned_user:users!internal_tasks_assigned_to_fkey (id, name, avatar_url, is_active),
             activity_type:activity_types!internal_tasks_activity_type_id_fkey (id, name, color, sector_id)
-          `);
+          `;
+
+      // Busca em lotes de IDs já filtrada no banco (RPC `search_tasks_page`),
+      // trocando a antiga concatenação de até 50000 IDs de clients/leads/deals
+      // num .or(...in...) por um predicado EXISTS feito dentro da função
+      // (ver /tmp/mig_tasks.sql). Só usamos a RPC quando há termo de busca:
+      // sem busca, o caminho atual (sector/user .or direto na tabela) já é
+      // seguro e eficiente.
+      if (safeSearch) {
+        const RPC_PAGE = 1000;
+        const SEARCH_MAX_PAGES = 200; // até 200k resultados de busca
+        const allIds: string[] = [];
+        let hasMore = false;
+        let total = 0;
+        for (let page = 0; page < SEARCH_MAX_PAGES; page++) {
+          const rpcParams = buildSearchTasksRpcParams({
+            accountId: currentUser?.account_id ?? "",
+            search: safeSearch,
+            sectorActivityTypeIds,
+            isHistoricalUserFilter,
+            filterUser,
+            currentUserId: currentUser?.id ?? null,
+            limit: RPC_PAGE,
+            offset: page * RPC_PAGE,
+          });
+          const { data, error } = await (supabase.rpc as any)("search_tasks_page", rpcParams);
+          if (error) throw error;
+          const rows = (data || []) as { id: string; total_count: number }[];
+          if (rows.length > 0) total = Number(rows[0].total_count) || 0;
+          allIds.push(...rows.map((r) => r.id));
+          if (rows.length < RPC_PAGE) break;
+          if (page === SEARCH_MAX_PAGES - 1) hasMore = true;
+        }
+
+        // Busca as linhas completas (com os joins atuais) em lotes via .in,
+        // preservando a ordem retornada pela RPC.
+        const BATCH = 500;
+        const byId = new Map<string, Task>();
+        for (let i = 0; i < allIds.length; i += BATCH) {
+          const batchIds = allIds.slice(i, i + BATCH);
+          if (batchIds.length === 0) continue;
+          const { data, error } = await supabase
+            .from("internal_tasks")
+            .select(TASKS_SELECT)
+            .in("id", batchIds);
+          if (error) throw error;
+          ((data || []) as Task[]).forEach((t) => byId.set(t.id, t));
+        }
+        const orderedRows = allIds.map((id) => byId.get(id)).filter(Boolean) as Task[];
+
+        return { rows: orderedRows, hasMore, totalFromSearch: total };
+      }
+
+      const buildQuery = () => {
+
+        let q = supabase
+          .from("internal_tasks")
+          .select(TASKS_SELECT);
 
         // Sector filter (server-side). Inclui NULL para não perder tarefas
         // de leads criados via automação sem tipo de atividade definido.
@@ -394,25 +415,14 @@ export default function Tasks() {
           q = q.eq("assigned_to", filterUser);
         }
 
-        // Busca incremental no servidor: procura em todo o histórico sem
-        // precisar carregar tudo no cliente.
-        if (searchOrFilter) {
-          q = q.or(searchOrFilter);
-        }
-
         return q;
       };
 
       // Primeira abertura é sempre leve (1 bloco). O volume cresce apenas sob
       // demanda pelo botão "Carregar mais", inclusive na auditoria nominal —
       // assim filtros amplos nunca travam a tela no carregamento inicial.
-      // Exceção: quando há busca ativa, varremos TODO o histórico que casa com
-      // o termo (independente do que já foi carregado na tela).
       const PAGE = 1000;
-      // Teto de segurança contra laço infinito (não é uma garantia de "tudo
-      // carregado" em bases absurdamente grandes — ver `hasMore`/mensagem na UI).
-      const SEARCH_MAX_PAGES = 200; // até 200k resultados de busca
-      const MAX_PAGES = searchOrFilter ? SEARCH_MAX_PAGES : Math.max(1, loadedChunks);
+      const MAX_PAGES = Math.max(1, loadedChunks);
       const all: Task[] = [];
       let from = 0;
       let hasMore = false;

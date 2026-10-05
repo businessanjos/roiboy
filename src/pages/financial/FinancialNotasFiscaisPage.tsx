@@ -329,7 +329,7 @@ export default function FinancialNotasFiscaisPage() {
     totalItems,
     handlePageChange,
     handlePageSizeChange,
-  } = useTablePagination(filteredNotas);
+  } = useTablePagination(filteredNotas, 20, [search, statusFilter, typeFilter]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat("pt-BR", {

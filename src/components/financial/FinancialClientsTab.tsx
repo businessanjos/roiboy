@@ -154,7 +154,7 @@ export function FinancialClientsTab() {
     totalItems: clientTotalItems,
     handlePageChange: handleClientPageChange,
     handlePageSizeChange: handleClientPageSizeChange,
-  } = useTablePagination(filteredClients);
+  } = useTablePagination(filteredClients, 20, searchTerm);
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {

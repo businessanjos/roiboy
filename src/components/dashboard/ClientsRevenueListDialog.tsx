@@ -216,7 +216,7 @@ export function ClientsRevenueListDialog({
     totalItems,
     handlePageChange,
     handlePageSizeChange,
-  } = useTablePagination(filtered, 20);
+  } = useTablePagination(filtered, 20, search);
 
   const totals = useMemo(() => {
     return filtered.reduce((acc, r) => acc + r.period_total, 0);

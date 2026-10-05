@@ -173,7 +173,7 @@ export default function FinancialAgingPage() {
     totalItems: agingTotalItems,
     handlePageChange: handleAgingPageChange,
     handlePageSizeChange: handleAgingPageSizeChange,
-  } = useTablePagination(filteredEntries);
+  } = useTablePagination(filteredEntries, 20, searchQuery);
 
   return (
     <div className="p-6 space-y-6">
