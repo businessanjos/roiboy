@@ -11,6 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { TrendingUp, TrendingDown, Users, DollarSign, Target, Info, Copy } from "lucide-react";
 import DuplicateEventDialog from "@/components/events/DuplicateEventDialog";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 interface EventRoiTabProps {
   eventId: string;
@@ -99,13 +100,19 @@ export default function EventRoiTab({
     enabled: !!eventId && !!accountId,
     queryFn: async () => {
       const base = titleBase(eventTitle);
-      const { data: siblings } = await supabase
-        .from("events")
-        .select("id, title, scheduled_at, event_type")
-        .eq("account_id", accountId!)
-        .eq("event_type", eventType as any)
-        .order("scheduled_at", { ascending: false })
-        .limit(40);
+      // Busca todas as edições do mesmo tipo (sem teto silencioso) e só então
+      // filtra pelo nome-base — um .limit() antes do filtro poderia descartar
+      // edições mais antigas do mesmo evento.
+      const { data: siblings } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("events")
+          .select("id, title, scheduled_at, event_type")
+          .eq("account_id", accountId!)
+          .eq("event_type", eventType as any)
+          .order("scheduled_at", { ascending: false, nullsFirst: false })
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
 
       const matched = (siblings || []).filter((e: any) => titleBase(e.title || "") === base);
       if (matched.length === 0) return [];

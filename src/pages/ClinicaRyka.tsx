@@ -32,6 +32,7 @@ import { toast } from "sonner";
 import { formatDistanceToNow } from "date-fns";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 import { ptBR } from "date-fns/locale";
 
 const RYKA_ELIGIBLE_KEYWORDS = ["rykas mentoring", "eternum club"];
@@ -76,18 +77,22 @@ export default function ClinicaRyka() {
     enabled: !!accountId,
     staleTime: 30_000,
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("clients")
-        .select(
-          `id, full_name, company_name, phone_e164, emails, logo_url, avatar_url, status, created_at,
-           client_products(products(id, name, color))`,
-        )
-        .eq("account_id", accountId!)
-        .in("status", ["active", "churn_risk", "paused"])
-        .order("created_at", { ascending: false })
-        .limit(3000);
+      // Carrega em lotes (sem .limit) para não truncar silenciosamente os clientes elegíveis.
+      const { data, error } = await fetchAllRows<ClientRow>((from, to) =>
+        supabase
+          .from("clients")
+          .select(
+            `id, full_name, company_name, phone_e164, emails, logo_url, avatar_url, status, created_at,
+             client_products(products(id, name, color))`,
+          )
+          .eq("account_id", accountId!)
+          .in("status", ["active", "churn_risk", "paused"])
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: false })
+          .range(from, to) as any,
+      );
       if (error) throw error;
-      const rows = (data ?? []) as unknown as ClientRow[];
+      const rows = data;
       return rows.filter((c) =>
         (c.client_products || []).some((cp) => {
           const name = (cp.products?.name || "").toLowerCase();

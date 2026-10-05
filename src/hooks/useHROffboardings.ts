@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { toast } from "sonner";
 import type { TerminationType, NoticeType } from "@/lib/rescissionCalc";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 export type OffboardingStage =
   | "opened"
