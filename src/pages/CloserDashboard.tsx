@@ -448,7 +448,7 @@ export default function CloserDashboard() {
                   variant="outline"
                   size="sm"
                   onClick={() => setShareOpen(true)}
-                  className="gap-1.5"
+                  className="h-11 sm:h-9 gap-1.5"
                 >
                   <Share2 className="h-4 w-4" />
                   Compartilhar externamente
