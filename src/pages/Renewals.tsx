@@ -1,5 +1,5 @@
 import { fetchAllRows } from "@/lib/fetchAllRows";
-import { fetchInChunks } from "@/lib/fetchInChunks";
+import { fetchInChunks, fetchAllInChunks } from "@/lib/fetchInChunks";
 import { useEffect, useState, useCallback } from "react";
 import { RenewalThermometer } from "@/components/renewals/RenewalThermometer";
 import { RenewalLosses } from "@/components/renewals/RenewalLosses";
@@ -302,13 +302,15 @@ export default function Renewals() {
       const clientIds = [...new Set(deduped.map((c: any) => c.client_id))];
       let successorMap: Record<string, { id: string; start_date: string; product_id: string | null }[]> = {};
       if (clientIds.length > 0) {
-        const allClientContracts = await fetchInChunks<any>(clientIds, 200, (chunk) =>
+        const allClientContracts = await fetchAllInChunks<any>(clientIds, 200, (chunk, from, to) =>
           supabase
             .from("client_contracts")
             .select("id, client_id, product_id, start_date, end_date, status")
             .eq("account_id", currentUser.account_id)
             .in("client_id", chunk)
-            .eq("status", "active"),
+            .eq("status", "active")
+            .order("id")
+            .range(from, to),
         );
         (allClientContracts || []).forEach((cc: any) => {
           if (!successorMap[cc.client_id]) successorMap[cc.client_id] = [];
@@ -339,14 +341,16 @@ export default function Renewals() {
       const needsProductFallback = dedupedFiltered.filter((c: any) => !c.products);
       if (needsProductFallback.length > 0) {
         const fallbackClientIds = [...new Set(needsProductFallback.map((c: any) => c.client_id))];
-        const cp = await fetchInChunks<any>(fallbackClientIds, 200, (chunk) =>
+        const cp = await fetchAllInChunks<any>(fallbackClientIds, 200, (chunk, from, to) =>
           supabase
             .from("client_products")
             .select("client_id, product_id, created_at, products(name, color, price, cash_price, installment_price, renewal_discount_percent)")
             .eq("is_active", true)
             .eq("account_id", currentUser.account_id)
             .in("client_id", chunk)
-            .order("created_at", { ascending: false }),
+            .order("created_at", { ascending: false })
+            .order("id", { ascending: true })
+            .range(from, to),
         );
         const productByClient: Record<string, any> = {};
         (cp || []).forEach((row: any) => {
@@ -364,11 +368,13 @@ export default function Renewals() {
       const allContractIds = dedupedFiltered.map((c: any) => c.id);
       let allOutcomesMap: Record<string, { id: string; outcome: string }> = {};
       if (allContractIds.length > 0) {
-        const outcomes = await fetchInChunks<any>(allContractIds, 200, (chunk) =>
+        const outcomes = await fetchAllInChunks<any>(allContractIds, 200, (chunk, from, to) =>
           supabase
             .from("renewal_outcomes")
             .select("id, contract_id, outcome")
-            .in("contract_id", chunk),
+            .in("contract_id", chunk)
+            .order("id")
+            .range(from, to),
         );
         (outcomes || []).forEach((o: any) => {
           allOutcomesMap[o.contract_id] = { id: o.id, outcome: o.outcome };
