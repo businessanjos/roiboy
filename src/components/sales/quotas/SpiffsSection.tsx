@@ -504,7 +504,7 @@ export function SpiffsSection() {
                           type="button"
                           variant="outline"
                           size="sm"
-                          className="h-7 gap-1 text-xs"
+                          className="h-11 sm:h-7 gap-1 text-xs"
                           onClick={() => setPaymentTiers([...paymentTiers, { label: "Nova faixa", bonus: 0, min_parcelas: 1, max_parcelas: 1, includes_cash: false }])}
                         >
                           <Plus className="h-3 w-3" />
@@ -534,7 +534,8 @@ export function SpiffsSection() {
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                className="h-7 w-7"
+                                className="h-11 w-11 sm:h-7 sm:w-7"
+                                aria-label={`Remover faixa ${tier.label}`}
                                 onClick={() => setPaymentTiers(paymentTiers.filter((_, i) => i !== idx))}
                               >
                                 <X className="h-3.5 w-3.5 text-destructive" />
@@ -997,9 +998,9 @@ function useSpiffPeriodFilter(spiff: any) {
   });
 
   const control = (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div className="flex w-full sm:w-auto flex-wrap items-center gap-1.5">
       <Select value={preset} onValueChange={setPreset}>
-        <SelectTrigger className="h-7 w-[210px] text-xs">
+        <SelectTrigger className="h-11 sm:h-7 w-full sm:w-[210px] text-xs" aria-label="Período">
           <SelectValue placeholder="Período" />
         </SelectTrigger>
         <SelectContent className="max-h-72">
@@ -1022,13 +1023,15 @@ function useSpiffPeriodFilter(spiff: any) {
             type="date"
             value={customFrom}
             onChange={(e) => setCustomFrom(e.target.value)}
-            className="h-7 w-[140px] text-xs"
+            aria-label="Data inicial"
+            className="h-11 sm:h-7 flex-1 sm:flex-none sm:w-[140px] text-xs"
           />
           <Input
             type="date"
             value={customTo}
             onChange={(e) => setCustomTo(e.target.value)}
-            className="h-7 w-[140px] text-xs"
+            aria-label="Data final"
+            className="h-11 sm:h-7 flex-1 sm:flex-none sm:w-[140px] text-xs"
           />
         </>
       )}
@@ -1305,7 +1308,8 @@ export function RouletteSpinsPanel({ spiff, restrictToUserId }: { spiff: any; re
                     variant={s.pendingSpins > 0 ? "default" : "outline"}
                     disabled={s.pendingSpins <= 0}
                     onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.pendingSpins, deals: s.availableDeals })}
-                    className="h-7 gap-1.5 text-xs"
+                    className="h-11 sm:h-7 gap-1.5 text-xs"
+                    aria-label={`Girar roleta de ${s.name}`}
                   >
                     <Dice5 className="h-3.5 w-3.5" />
                     Girar
@@ -1557,19 +1561,19 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
         <Badge variant="outline" className="text-[10px] border-pink-500/40 text-pink-700 dark:text-pink-400">
           {triggerSalesCount} vendas / {windowLabel}
         </Badge>
-        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+        <div className="flex w-full sm:w-auto sm:ml-auto flex-wrap items-center gap-1.5">
           {!restrictToUserId && (
             <MultiCheckCombobox
               options={summary.map((s) => ({ value: s.uid, label: s.name }))}
               value={sellerFilter}
               onChange={setSellerFilter}
               placeholder="Todos os vendedores"
-              className="h-7 w-[190px] text-xs"
+              className="h-11 sm:h-7 w-full sm:w-[190px] text-xs"
               emptyText="Nenhum vendedor"
             />
           )}
           <Select value={String(windowOffset)} onValueChange={(v) => setWindowOffset(Number(v))}>
-            <SelectTrigger className="h-7 w-[250px] text-xs">
+            <SelectTrigger className="h-11 sm:h-7 w-full sm:w-[250px] text-xs" aria-label="Janela">
               <SelectValue placeholder="Janela" />
             </SelectTrigger>
             <SelectContent className="max-h-72">
@@ -1649,7 +1653,8 @@ export function CustomSpinsPanel({ spiff, restrictToUserId }: { spiff: any; rest
                     variant={s.spins > 0 ? "default" : "outline"}
                     disabled={s.spins <= 0}
                     onClick={() => setSpinUser({ uid: s.uid, name: s.name, pending: s.spins })}
-                    className="h-7 gap-1.5 text-xs"
+                    className="h-11 sm:h-7 gap-1.5 text-xs"
+                    aria-label={`Girar roleta de ${s.name}`}
                   >
                     <Dice5 className="h-3.5 w-3.5" />
                     Girar
