@@ -71,3 +71,9 @@ Levantamento feito via `rg` sobre o código-fonte (não sobre documentação ant
 
 - Filtro **Pessoas** da auditoria (`audit_unified_authors`) reutiliza `audit_unified_page` com o mesmo predicado (sem filtro de pessoa) e devolve uma opção por `user_id`, com nome/e-mail do registro mais recente.
 - Sino de notificações: em UPDATE sem linha, erro ou UPDATE realtime externo, a contagem é reconciliada pela contagem do servidor, sem +1/-1 às cegas.
+
+## 6. Tarefas com busca (revisão 15aea12, P1)
+
+- `src/pages/Tasks.tsx` com busca ativa usa **SERVIDOR** `search_tasks_page2` (página + total) e `search_tasks_counts` (abas/indicadores), ambos sobre `tasks_filtered` (SECURITY INVOKER): busca em 8 campos, conta, setor efetivo (exceção histórica por responsável), usuário, tipo de atividade, etapa, negociação (`deal:` antes de `lead:`), prazo; aba via `task_matches_tab` (padrão sem status, fallback concluída, Atrasadas pelo dia local). Ordem: prioridade/prazo/responsável/etapa/criação + `created_at`, `id`.
+- Sem filtro local após a página. Exportação: todos os lotes de 500 com o mesmo predicado/aba/ordem, aborta em erro. Kanban com busca: sem aba, "Carregar mais" (+200).
+- Testes: `src/lib/tasks/__tests__/searchTasksSql.pglite.test.ts` executa as funções SQL reais num Postgres em memória com 45 tarefas simuladas.
