@@ -488,7 +488,7 @@ export function TypeformDashboard() {
                     />
                   </div>
                 </div>
-                <div>
+                <div role="region" aria-label="Resumo agregado">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="outline" className="border-success/40 text-success bg-success/5">{isLifetime ? 'Histórico total' : `Período · ${periodLabel}`}</Badge>
                     <span className="text-xs text-muted-foreground">{isLifetime ? 'todas as respostas recebidas' : 'filtrado pelo intervalo selecionado'}</span>
