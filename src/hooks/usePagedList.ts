@@ -53,7 +53,7 @@ export function usePaginationState(
   const safePage = isLoading ? currentPage : Math.min(currentPage, totalPages);
 
   useEffect(() => {
-    if (!isLoading && currentPage > totalPages) setCurrentPage(totalPages);
+    if (!isLoading && currentPage > totalPages) setCurrentPage((p) => Math.min(p, totalPages));
   }, [isLoading, currentPage, totalPages]);
 
   const handlePageChange = useCallback(
