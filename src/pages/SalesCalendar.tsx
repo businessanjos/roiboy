@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, type KeyboardEvent as ReactKeyboardEvent } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
@@ -418,7 +418,7 @@ function MonthGrid({
   const [openDay, setOpenDay] = useState<Date | null>(null);
   const openDayEvents = openDay ? eventsByDay.get(format(openDay, "yyyy-MM-dd")) || [] : [];
 
-  const handleDayKey = (ev: React.KeyboardEvent<HTMLButtonElement>, idx: number) => {
+  const handleDayKey = (ev: ReactKeyboardEvent<HTMLButtonElement>, idx: number) => {
     const delta = { ArrowLeft: -1, ArrowRight: 1, ArrowUp: -7, ArrowDown: 7 }[ev.key as string];
     if (delta === undefined) return;
     ev.preventDefault();
