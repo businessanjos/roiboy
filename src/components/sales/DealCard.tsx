@@ -154,11 +154,11 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
         )} 
       />
 
-      <CardContent className="pl-4 pr-3 py-3 space-y-2 sm:py-2.5 sm:space-y-1.5">
+      <CardContent className="pl-4 pr-3 py-2.5 space-y-1.5">
         {/* Row 1: Avatar + Name/Title + Value */}
-        <div className="flex flex-wrap items-start gap-2 sm:flex-nowrap">
+        <div className="flex items-start gap-2">
           <div className="relative flex-shrink-0">
-            <Avatar className="h-9 w-9 sm:h-7 sm:w-7 border border-border/50">
+            <Avatar className="h-7 w-7 border border-border/50">
               <AvatarImage src={avatarUrl || undefined} />
               <AvatarFallback className="text-[9px] font-semibold bg-primary/10 text-primary">
                 {getInitials(contactName)}
@@ -176,13 +176,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
             )}
           </div>
           <div className="flex-1 min-w-0">
-            <h4 className="font-semibold text-[15px] sm:text-xs leading-snug sm:leading-tight flex items-start sm:items-center gap-1 sm:truncate">
-              <span className="line-clamp-2 break-words sm:line-clamp-none sm:truncate">{deal.title}</span>
+            <h4 className="font-semibold text-xs leading-tight truncate flex items-center gap-1">
+              <span className="truncate">{deal.title}</span>
               <VipBadge clientId={deal.client_id} />
             </h4>
-            <p className="text-[13px] sm:text-[10px] text-muted-foreground truncate">{contactName}</p>
+            <p className="text-[10px] text-muted-foreground truncate">{contactName}</p>
           </div>
-          <span className="basis-full pl-11 text-[15px] sm:basis-auto sm:pl-0 sm:text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">
+          <span className="text-xs font-bold text-primary whitespace-nowrap flex-shrink-0">
             {formatCurrency(deal.value)}
           </span>
         </div>
@@ -190,37 +190,37 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
         {/* Row 2: Renewal badge */}
         {isRenewal && (
           <div className="flex items-center gap-1 text-warning">
-            <RefreshCw className="h-3.5 w-3.5 sm:h-2.5 sm:w-2.5" />
-            <span className="text-xs sm:text-[9px] font-semibold uppercase tracking-wide">Renovação</span>
+            <RefreshCw className="h-2.5 w-2.5" />
+            <span className="text-[9px] font-semibold uppercase tracking-wide">Renovação</span>
           </div>
         )}
 
         {/* 2ª Cadeira badge */}
         {(deal as any).has_second_seat && (
-          <Badge variant="outline" className="text-xs sm:text-[9px] px-1.5 py-0 h-auto min-h-5 sm:h-4 whitespace-normal bg-warning/10 text-warning-strong border-warning/30 self-start">
+          <Badge variant="outline" className="text-[9px] px-1.5 py-0 h-4 bg-warning/10 text-warning-strong border-warning/30 self-start">
             2ª cadeira{(deal as any).second_seat_name ? `: ${(deal as any).second_seat_name}` : ''}
           </Badge>
         )}
 
         {/* Row 3: Meta info line - time + contact hints */}
-        <div className="flex flex-wrap items-center gap-2 border-t border-border/40 pt-2 sm:border-0 sm:pt-0 text-xs sm:text-[10px] text-muted-foreground">
+        <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
           <Badge 
             variant="secondary" 
-            className={cn("text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 font-medium", timeBadge.bg, timeBadge.text)}
+            className={cn("text-[9px] px-1 py-0 h-4 font-medium", timeBadge.bg, timeBadge.text)}
           >
             {timeBadge.label}
           </Badge>
           {contactPhone && (
-            <Phone className="h-3.5 w-3.5 sm:h-2.5 sm:w-2.5 flex-shrink-0" aria-label="Tem telefone" />
+            <Phone className="h-2.5 w-2.5 flex-shrink-0" aria-label="Tem telefone" />
           )}
           {contactEmail && (
-            <Mail className="h-3.5 w-3.5 sm:h-2.5 sm:w-2.5 flex-shrink-0" aria-label="Tem e-mail" />
+            <Mail className="h-2.5 w-2.5 flex-shrink-0" aria-label="Tem e-mail" />
           )}
           {/* Contract expiry inline */}
           {contractExpiry && (
             <Badge 
               variant="secondary" 
-              className={cn("text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 flex items-center gap-0.5 font-medium", contractExpiry.bg, contractExpiry.text)}
+              className={cn("text-[9px] px-1 py-0 h-4 flex items-center gap-0.5 font-medium", contractExpiry.bg, contractExpiry.text)}
             >
               <AlertTriangle className="h-2 w-2" />
               {contractExpiry.label}
@@ -229,14 +229,14 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
         </div>
 
         {/* Row 4: Actions + Tags */}
-        <div className="flex flex-wrap items-center justify-between gap-2 min-w-0 border-t border-border/40 pt-1 sm:flex-nowrap sm:border-0 sm:pt-0 sm:overflow-hidden">
-          <div className="flex items-center gap-1 sm:gap-0.5 -ml-2 sm:ml-0">
+        <div className="flex items-center justify-between gap-2 min-w-0 overflow-hidden">
+          <div className="flex items-center gap-0.5">
             {/* WhatsApp */}
             {contactPhone && (
               <Button
                 variant="ghost"
                 size="icon"
-                className="h-11 w-11 sm:h-5 sm:w-5 hover:bg-success/10"
+                className="h-5 w-5 hover:bg-success/10"
                 aria-label="Abrir conversa no RoyZapp"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -251,7 +251,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
                 disabled={zappLoading}
                 title="Abrir conversa no RoyZapp"
               >
-                <MessageCircle className="h-5 w-5 sm:h-3 sm:w-3 text-success" />
+                <MessageCircle className="h-3 w-3 text-success" />
               </Button>
             )}
             {/* Régua de relacionamento */}
@@ -261,15 +261,13 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               contactPhone={contactPhone}
               clientId={deal.client_id}
               leadId={deal.lead_id}
-              className="h-11 w-11 sm:h-5 sm:w-5"
-              iconClassName="h-5 w-5 sm:h-3 sm:w-3"
             />
             {/* Activities */}
             <Button
               variant="ghost"
               size="icon"
               className={cn(
-                "h-11 w-11 sm:h-5 sm:w-5 relative",
+                "h-5 w-5 relative",
                 activityStatus.pendingCount > 0 ? "hover:bg-primary/10" : "hover:bg-muted"
               )}
               onClick={(e) => {
@@ -280,12 +278,12 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               aria-label={activityStatus.pendingCount > 0 ? `Atividades: ${activityStatus.pendingCount} pendente(s)${activityStatus.hasOverdue ? ", com atraso" : ""}` : "Atividades"}
             >
               <ListTodo className={cn(
-                "h-5 w-5 sm:h-3 sm:w-3",
+                "h-3 w-3",
                 activityStatus.hasOverdue ? "text-destructive" : activityStatus.pendingCount > 0 ? "text-primary" : "text-muted-foreground"
               )} />
               {activityStatus.pendingCount > 0 && (
                 <span className={cn(
-                  "absolute top-1 right-1 sm:-top-1 sm:-right-1 text-[10px] sm:text-[7px] rounded-full h-4 w-4 sm:h-3 sm:w-3 flex items-center justify-center font-bold",
+                  "absolute -top-1 -right-1 text-[7px] rounded-full h-3 w-3 flex items-center justify-center font-bold",
                   activityStatus.hasOverdue ? "bg-destructive text-destructive-foreground" : "bg-primary text-primary-foreground"
                 )}>
                   {activityStatus.pendingCount}
@@ -300,7 +298,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               <Badge
                 variant="outline"
                 className={cn(
-                  "text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4",
+                  "text-[9px] px-1 py-0 h-4",
                   activityStatus.pendingCount > 0
                     ? activityStatus.hasOverdue
                       ? "bg-destructive/10 text-destructive border-destructive/30"
@@ -313,7 +311,7 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               </Badge>
               <Badge
                 variant="outline"
-                className="text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 bg-muted/60 text-muted-foreground border-border"
+                className="text-[9px] px-1 py-0 h-4 bg-muted/60 text-muted-foreground border-border"
                 title="Total de atividades (histórico + em aberto)"
               >
                 {activityStatus.totalActivities} total
@@ -322,16 +320,16 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
           )}
 
           {/* Tags compact */}
-          <div className="flex flex-wrap sm:flex-nowrap items-center gap-1 min-w-0 flex-1 justify-end overflow-hidden">
+          <div className="flex items-center gap-1 min-w-0 flex-1 justify-end overflow-hidden">
             {faturamentoLabel && (
-              <Badge variant="outline" className="text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 bg-success/10 text-success-strong border-success/20 max-w-[140px] sm:max-w-[80px] min-w-0 shrink overflow-hidden">
+              <Badge variant="outline" className="text-[9px] px-1 py-0 h-4 bg-success/10 text-success-strong border-success/20 max-w-[80px] min-w-0 shrink overflow-hidden">
                 <span className="truncate">$ {faturamentoLabel}</span>
               </Badge>
             )}
             {itemVendaLabel && (
               <Badge 
                 variant="outline" 
-                className="text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 max-w-[140px] sm:max-w-[80px] min-w-0 shrink overflow-hidden"
+                className="text-[9px] px-1 py-0 h-4 max-w-[80px] min-w-0 shrink overflow-hidden"
                 style={itemVendaColor ? {
                   backgroundColor: `${itemVendaColor}1A`,
                   color: itemVendaColor,
@@ -350,12 +348,12 @@ export function DealCard({ deal, onClick, isDragging = false, faturamentoLabel, 
               ?.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase()))
               .slice(0, 1)
               .map((tag, index) => (
-                <Badge key={index} variant="outline" className="text-xs sm:text-[9px] px-1.5 sm:px-1 py-0 h-5 sm:h-4 bg-muted/50 truncate max-w-[60px]">
+                <Badge key={index} variant="outline" className="text-[9px] px-1 py-0 h-4 bg-muted/50 truncate max-w-[60px]">
                   {tag}
                 </Badge>
               ))}
             {deal.tags && deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length > 1 && (
-              <span className="text-xs sm:text-[9px] text-muted-foreground">
+              <span className="text-[9px] text-muted-foreground">
                 +{deal.tags.filter(tag => !['renovação', 'vencido'].includes(tag.toLowerCase())).length - 1}
               </span>
             )}
