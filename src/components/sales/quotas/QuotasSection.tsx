@@ -57,6 +57,7 @@ const resolveProductId = (raw: string | null | undefined): string => {
 const ITEM_VENDA_FIELD_ID = "033b91fb-3add-4c96-aec9-567fefbd0fb2";
 
 export function QuotasSection() {
+  const isMobile = useIsMobile();
   const now = new Date();
   const [year, setYear] = useState(now.getFullYear());
   const [month, setMonth] = useState(now.getMonth() + 1);
