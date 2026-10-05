@@ -990,9 +990,9 @@ export default function SalesDashboard() {
         description="Visão executiva de receita, funil, equipe e origem dos ganhos."
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Filter className="w-4 h-4 text-muted-foreground shrink-0" />
+            <Filter className="hidden md:block w-4 h-4 text-muted-foreground shrink-0" aria-hidden="true" />
             <Select value={period} onValueChange={(v) => setPeriod(v as PeriodKey)}>
-              <SelectTrigger className="w-full md:w-[190px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[190px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
@@ -1010,7 +1010,7 @@ export default function SalesDashboard() {
                   <Button
                     variant="outline"
                     className={cn(
-                      "h-9 rounded-xl justify-start text-left font-normal bg-card ring-1 ring-hairline",
+                      "h-11 md:h-9 w-full md:w-auto rounded-xl justify-start text-left font-normal bg-card ring-1 ring-hairline",
                       !customRange?.from && "text-muted-foreground"
                     )}
                   >
@@ -1040,7 +1040,7 @@ export default function SalesDashboard() {
             )}
 
             <Select value={repFilter} onValueChange={setRepFilter}>
-              <SelectTrigger className="w-full md:w-[200px] h-9 rounded-xl bg-card ring-1 ring-hairline">
+              <SelectTrigger className="w-full md:w-[200px] h-11 md:h-9 rounded-xl bg-card ring-1 ring-hairline">
                 <SelectValue placeholder="Todos os vendedores" />
               </SelectTrigger>
               <SelectContent>
@@ -1065,7 +1065,7 @@ export default function SalesDashboard() {
           title="Indicadores principais"
           description={`Período: ${format(start, "dd/MM/yyyy", { locale: ptBR })} → ${format(end, "dd/MM/yyyy", { locale: ptBR })}`}
           actions={
-            <Button variant="ghost" size="sm" onClick={() => setPickerOpen("header")}>
+            <Button variant="ghost" size="sm" className="h-11 md:h-9" onClick={() => setPickerOpen("header")}>
               <Settings2 className="w-4 h-4 mr-1.5" />
               <span className="hidden sm:inline">Personalizar KPIs</span>
               <span className="sm:hidden">KPIs</span>
@@ -1143,7 +1143,7 @@ export default function SalesDashboard() {
 
       <Tabs defaultValue="goals" className="w-full">
         <div className="-mx-3 px-3 md:mx-0 md:px-0 overflow-x-auto scrollbar-none">
-          <TabsList className="inline-flex w-max md:grid md:grid-cols-6 md:w-fit gap-1">
+          <TabsList className="inline-flex w-max h-[52px] md:h-10 md:grid md:grid-cols-6 md:w-fit gap-1 [&>button]:h-11 md:[&>button]:h-auto">
             <TabsTrigger value="goals" className="rounded-full md:rounded-xl">Metas</TabsTrigger>
             <TabsTrigger value="funnel" className="rounded-full md:rounded-xl">Funil</TabsTrigger>
             <TabsTrigger value="performance" className="rounded-full md:rounded-xl">Performance</TabsTrigger>
