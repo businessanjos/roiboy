@@ -80,7 +80,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
 
   it('renderiza valores das 4 métricas de período conforme backend', async () => {
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getByText('Submissões'));
+    await waitFor(() => screen.getAllByText('Submissões')[0]);
     // Submissões=500, Completados=400, Lead no Roy=200, Ganhos=12 (formato pt-BR)
     expect(screen.getByText('500')).toBeInTheDocument();
     expect(screen.getByText('400')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     await act(async () => { render(<TypeformDashboard />); });
     await waitFor(() => screen.getByText('Visitas'));
     // 1.000 e 800 (pt-BR)
-    expect(screen.getByText('1.000')).toBeInTheDocument();
+    expect(screen.getAllByText('1.000')[0]).toBeInTheDocument();
     expect(screen.getByText('800')).toBeInTheDocument();
   });
 
@@ -100,7 +100,7 @@ describe('TypeformDashboard — métricas, escopo e fontes', () => {
     // Os labels "Fonte: ..." vivem nos tooltips. Renderizamos e abrimos a modal de detalhes
     // para inspecionar o atributo `source` repassado.
     await act(async () => { render(<TypeformDashboard />); });
-    await waitFor(() => screen.getByText('Submissões'));
+    await waitFor(() => screen.getAllByText('Submissões')[0]);
 
     // Cada FunnelCard expõe um botão "Como ... é calculado" com aria-label.
     const expected: Array<[string, string]> = [
