@@ -348,7 +348,7 @@ function SmartClientList({
   );
 
   const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
-  const pg = usePagedList(clients, { defaultPageSize: 50, resetKey: search ?? "" });
+  const pg = usePagedList(clients, { defaultPageSize: 20, resetKey: search ?? "" });
   const clientIds = useMemo(() => pg.items.map(c => c.id), [pg.items]);
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);
