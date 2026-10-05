@@ -268,10 +268,6 @@ export function QuotasSection() {
     setDraftQuotas({});
   };
 
-  if (loading || usersQuery.isLoading || productsQuery.isLoading) {
-    return <div className="space-y-3"><Skeleton className="h-10 w-60" /><Skeleton className="h-64" /></div>;
-  }
-
   // Helper: get product price
   const getProductPrice = (productId: string) => {
     const p = products.find((pr) => pr.id === productId);
@@ -292,6 +288,12 @@ export function QuotasSection() {
     return { ...u, productCells, metaTotalValue, realizadoTotalValue, atingimento, falta };
   });
 
+  const userRowsPg = usePagedList(userRows, { resetKey: [year, month] });
+
+  if (loading || usersQuery.isLoading || productsQuery.isLoading) {
+    return <div className="space-y-3"><Skeleton className="h-10 w-60" /><Skeleton className="h-64" /></div>;
+  }
+
   // Footer totals
   const footerProducts = TRACKED_PRODUCTS.map((tp) => ({
     id: tp.id,
@@ -305,7 +307,6 @@ export function QuotasSection() {
   const footerFalta = Math.max(0, 100 - footerAtingimento);
 
   const fmtBRL = (v: number) => `R$ ${v.toLocaleString("pt-BR", { minimumFractionDigits: 2 })}`;
-  const userRowsPg = usePagedList(userRows, { resetKey: [year, month] });
 
   return (
     <div className="space-y-4">

@@ -247,6 +247,8 @@ export function SessionsManager() {
     }
   };
 
+  const pg = usePagedList(sessions, { isLoading: loading });
+
   if (loading) {
     return (
       <Card>
@@ -269,8 +271,6 @@ export function SessionsManager() {
       </Card>
     );
   }
-
-  const pg = usePagedList(sessions, { isLoading: loading });
 
   return (
     <Card>

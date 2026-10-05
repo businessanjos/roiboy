@@ -886,23 +886,34 @@ export default function FinancialActiveClientsPage() {
               <div className="text-xs text-muted-foreground">
                 {selected.size > 0
                   ? `${selected.size} selecionado(s) · ${selectedRows.length} contrato(s) para gerar fatura.`
-                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda. Marque o cabeçalho para selecionar a página atual.`}
+                  : `${eligibleForBatch.length} contrato(s) sem fatura ainda.`}
                 <span className="ml-1">
                   Cria fatura + parcelas oficiais (aparecem em Financeiro › Parcelas). Idempotente: pula contratos que já têm fatura.
                 </span>
               </div>
-              <Button
-                size="sm"
-                onClick={handleGenerateBatch}
-                disabled={generating || selectedRows.length === 0}
-              >
-                {generating ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              <div className="flex items-center gap-2">
+                {!allFilteredSelected ? (
+                  <Button size="sm" variant="outline" onClick={toggleAll}>
+                    Selecionar todos os {filtered.length} resultados filtrados
+                  </Button>
                 ) : (
-                  <Wand2 className="h-4 w-4 mr-2" />
+                  <Button size="sm" variant="outline" onClick={toggleAll}>
+                    Limpar seleção ({selected.size})
+                  </Button>
                 )}
-                Gerar faturas em lote ({selectedRows.length})
-              </Button>
+                <Button
+                  size="sm"
+                  onClick={handleGenerateBatch}
+                  disabled={generating || selectedRows.length === 0}
+                >
+                  {generating ? (
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  ) : (
+                    <Wand2 className="h-4 w-4 mr-2" />
+                  )}
+                  Gerar faturas em lote ({selectedRows.length})
+                </Button>
+              </div>
             </div>
           )}
 

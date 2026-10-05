@@ -56,6 +56,7 @@ import { formatBRLCompact } from "@/lib/financial-format";
 import { resolveItemVendaToProductId } from "@/lib/sales/itemVendaResolver";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { fetchAllRows } from "@/lib/fetchAllRows";
 
 type InstallmentRow = {
   id: string;
@@ -272,40 +273,39 @@ export default function FinancialInstallmentsPage() {
 
 
 
-  const { data: rows = [], isLoading } = useQuery({
+  const { data: rows = [], isLoading, isError, error: rowsQueryError } = useQuery({
     queryKey: ["financial-installments", accountId, currentCompanyId],
     enabled: !!accountId,
     queryFn: async (): Promise<InstallmentRow[]> => {
       // Carrega em lotes via range() até esgotar, pois o array completo é
       // necessário para KPIs/totais/filtros locais (sem truncar silenciosamente).
-      const BATCH_SIZE = 1000;
-      let allRows: any[] = [];
-      let offset = 0;
-      while (true) {
-        let query = supabase
-          .from("installments")
-          .select(
-            "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
-          )
-          .neq("status", "written_off")
-          .neq("invoices.status", "written_off")
-          .order("due_date", { ascending: true })
-          .order("id", { ascending: true })
-          .range(offset, offset + BATCH_SIZE - 1);
+      // Lotes via fetchAllRows: continua até esgotar (lote vazio), nunca assume
+      // fim por "veio menos que o pedido" — e propaga erro de qualquer lote em
+      // vez de devolver uma lista parcial silenciosa.
+      const { data: allRows, error: rowsError } = await fetchAllRows<any>(
+        (from, to) => {
+          let query = supabase
+            .from("installments")
+            .select(
+              "id, invoice_id, number, due_date, amount, payment_method, status, payment_status, paid_at, locked, invoices!inner(id, company_id, account_id, client_id, contract_id, product_id, nf_number, nf_series, nf_status, nf_issued_at, nf_url)"
+            )
+            .neq("status", "written_off")
+            .neq("invoices.status", "written_off")
+            .order("due_date", { ascending: true })
+            .order("id", { ascending: true })
+            .range(from, to);
 
-        if (currentCompanyId) {
-          query = query.eq("invoices.company_id", currentCompanyId);
-        }
-
-        const { data, error } = await query;
-        if (error) {
-          console.error("[FinancialInstallments]", error);
-          break;
-        }
-        const batch = data ?? [];
-        allRows = allRows.concat(batch);
-        if (batch.length < BATCH_SIZE) break;
-        offset += BATCH_SIZE;
+          if (currentCompanyId) {
+            query = query.eq("invoices.company_id", currentCompanyId);
+          }
+          return query;
+        },
+      );
+      if (rowsError) {
+        console.error("[FinancialInstallments]", rowsError);
+        // Nunca exibir uma lista parcial como se fosse o total (KPIs/filtros
+        // dependem do conjunto completo) — propaga o erro para a UI de erro do React Query.
+        throw rowsError;
       }
 
       const list = allRows as any as InstallmentRow[];
@@ -764,6 +764,14 @@ export default function FinancialInstallmentsPage() {
                     </TableCell>
                   </TableRow>
                 ))
+              ) : isError ? (
+                <TableRow>
+                  <TableCell colSpan={10} className="text-center text-destructive py-10">
+                    Não foi possível carregar as parcelas
+                    {rowsQueryError instanceof Error ? `: ${rowsQueryError.message}` : "."} Tente novamente — nenhum
+                    total parcial é exibido para evitar números incorretos.
+                  </TableCell>
+                </TableRow>
               ) : filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={10} className="text-center text-muted-foreground py-10">

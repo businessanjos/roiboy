@@ -18,6 +18,17 @@ interface MentorEventsTabProps {
 export function MentorEventsTab({ events, isLoading }: MentorEventsTabProps) {
   const navigate = useNavigate();
 
+  const sortedEventsForPg = [...events].sort((a, b) => {
+    const dateA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
+    const dateB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
+    return dateA - dateB;
+  });
+  const now0 = new Date();
+  const upcomingEventsForPg = sortedEventsForPg.filter(e => e.scheduled_at && new Date(e.scheduled_at) >= now0);
+  const pastEventsForPg = sortedEventsForPg.filter(e => e.scheduled_at && new Date(e.scheduled_at) < now0);
+  const pgUpcoming = usePagedList(upcomingEventsForPg, { resetKey: upcomingEventsForPg.length });
+  const pgPast = usePagedList(pastEventsForPg, { resetKey: pastEventsForPg.length });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
@@ -40,20 +51,9 @@ export function MentorEventsTab({ events, isLoading }: MentorEventsTabProps) {
     );
   }
 
-  // Sort events by date (upcoming first)
-  const sortedEvents = [...events].sort((a, b) => {
-    const dateA = a.scheduled_at ? new Date(a.scheduled_at).getTime() : 0;
-    const dateB = b.scheduled_at ? new Date(b.scheduled_at).getTime() : 0;
-    return dateA - dateB;
-  });
-
-  // Separate upcoming and past events
-  const now = new Date();
-  const upcomingEvents = sortedEvents.filter(e => e.scheduled_at && new Date(e.scheduled_at) >= now);
-  const pastEvents = sortedEvents.filter(e => e.scheduled_at && new Date(e.scheduled_at) < now);
-
-  const pgUpcoming = usePagedList(upcomingEvents, { resetKey: upcomingEvents.length });
-  const pgPast = usePagedList(pastEvents, { resetKey: pastEvents.length });
+  // Sort events by date (upcoming first) — already computed above for hook ordering
+  const upcomingEvents = upcomingEventsForPg;
+  const pastEvents = pastEventsForPg;
 
   return (
     <div className="space-y-6">

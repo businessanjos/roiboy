@@ -193,6 +193,7 @@ export default function ClientOnboardingHub() {
           {/* Lista enriquecida com botão Iniciar Onboarding / Continuar */}
           <SmartClientList
             clients={filtered}
+            search={search}
             stages={stages}
             stageById={stageById}
             accountId={accountId}
@@ -325,9 +326,10 @@ function KpiCard({
 }
 
 function SmartClientList({
-  clients, stages, stageById, onOpenClient, onStart, accountId, onAdvance,
+  clients, search, stages, stageById, onOpenClient, onStart, accountId, onAdvance,
 }: {
   clients: OnboardingClient[];
+  search?: string;
   stages: { id: string; display_order: number; name: string }[];
   stageById: Map<string, any>;
   onOpenClient: (c: OnboardingClient) => void;
@@ -346,7 +348,7 @@ function SmartClientList({
   );
 
   const stageIds = useMemo(() => sortedStages.map(s => s.id), [sortedStages]);
-  const pg = usePagedList(clients, { defaultPageSize: 50 });
+  const pg = usePagedList(clients, { defaultPageSize: 20, resetKey: search ?? "" });
   const clientIds = useMemo(() => pg.items.map(c => c.id), [pg.items]);
   const { data: checklistItems = [] } = useStageChecklistItems(stageIds);
   const { data: checklistProgress = [] } = useClientChecklistProgress(clientIds);

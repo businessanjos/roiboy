@@ -103,6 +103,8 @@ export function CloserRanking() {
     enabled: !!accountId,
   });
 
+  const pg = usePagedList(ranking, { isLoading });
+
   if (isLoading) return <div className="flex justify-center py-12"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>;
 
   if (ranking.length === 0) {
@@ -118,7 +120,6 @@ export function CloserRanking() {
   }
 
   const maxCalls = Math.max(...ranking.map(r => r.totalCalls), 1);
-  const pg = usePagedList(ranking, { isLoading });
 
   const getRankIcon = (index: number) => {
     if (index === 0) return <Crown className="w-6 h-6 text-warning" />;

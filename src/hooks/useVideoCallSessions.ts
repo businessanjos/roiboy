@@ -33,6 +33,7 @@ export interface VideoCallSession {
 export function useVideoCallSessions() {
   const [sessions, setSessions] = useState<VideoCallSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<unknown>(null);
 
   const fetchSessions = useCallback(async () => {
     setIsLoading(true);
@@ -45,8 +46,14 @@ export function useVideoCallSessions() {
         .range(from, to),
     );
 
-    if (!error && data) {
-      setSessions(data as unknown as VideoCallSession[]);
+    if (error) {
+      // Erro no meio do carregamento (ou limite atingido): nunca mantemos uma
+      // lista antiga/parcial como se fosse o total atual — expomos o erro.
+      console.error("[useVideoCallSessions]", error);
+      setError(error);
+    } else {
+      setError(null);
+      setSessions((data ?? []) as unknown as VideoCallSession[]);
     }
     setIsLoading(false);
   }, []);
@@ -55,5 +62,5 @@ export function useVideoCallSessions() {
     fetchSessions();
   }, [fetchSessions]);
 
-  return { sessions, isLoading, refetch: fetchSessions };
+  return { sessions, isLoading, error, refetch: fetchSessions };
 }

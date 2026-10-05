@@ -251,6 +251,8 @@ export function PendingClassifications() {
     });
   };
 
+  const itemsPg = usePagedList(pendingItems, { isLoading });
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -258,8 +260,6 @@ export function PendingClassifications() {
       </div>
     );
   }
-
-  const itemsPg = usePagedList(pendingItems, { isLoading });
 
   if (!pendingItems?.length) {
     return (

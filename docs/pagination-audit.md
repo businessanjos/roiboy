@@ -56,3 +56,13 @@ Verificação rodada 2: tsgo OK; vite build OK; vitest hooks+lib+layout 155/155,
 ### Varredura final de `.limit()` restantes
 Corrigidos com lotes/servidor: envios com falha (24h), opções de filtro de Clientes, comissão por negócio, analytics de formulário, TAM/SAM/SOM, snapshots de mercado, tendências do Instagram, Gestão Tech (snapshots), NPS do Dashboard e do incentivo CS, auditoria de produto, script ideal (taxa), responsáveis de renovação, régua do RoyZapp (paginada), negócios excluídos (servidor), detalhamento de métrica (paginado).
 Mantidos com justificativa: seletores com busca (filtros do RoyZapp 500, links de call, valores de filtro do Insights 1000, amostra de setores), resumos "próximos/últimos N" (Dashboard, timeline PDA), amostra proposital do gerador de script, busca de IDs em Tarefas (limite de URL), fila e histórico de conversas do RoyZapp (cursor/realtime próprio), ferramentas MCP de análise somente leitura.
+
+### Correções da revisão do commit 4a3ba704
+- CloserRanking + 6 telas: hooks antes dos returns condicionais; eslint rules-of-hooks limpo nos arquivos alterados; teste loading→dados.
+- CollaboratorAuditLog: busca (usuário/e-mail/rótulo PT-BR do campo) aplicada no servidor antes de range/count; reset por colaborador+busca; teste de buildAuditSearchFilter.
+- ProvidersPortal: total vem do resultado em cache ({rows,count}); teste de remontagem com cache.
+- Installments: erro de lote propaga; sem totais de carga incompleta.
+- ActiveClients e Conciliação: "Selecionar esta página" + "Selecionar todos os N filtrados" + "Limpar seleção".
+- fetchAllRows: sem teto silencioso; avança pelo número de linhas recebidas e para só no lote vazio (cobre teto de backend menor que o lote); erro e maxRows retornam erro explícito; testes 2537 linhas, teto 500, erro no lote 2, limite, empate por id.
+- Onboarding: lista principal agora 20 por página (antes 50, 31 clientes cabiam em uma página só).
+Pendente observado: /clients/checkpoints em 393/320 tem largura 612 (corte lateral), não corrigido nesta rodada. TypeformDashboard.test: 6 falhas por textos duplicados (mock atualizado para a nova consulta em lotes).

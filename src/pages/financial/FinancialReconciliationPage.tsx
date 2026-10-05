@@ -213,8 +213,24 @@ export default function FinancialReconciliationPage() {
     setSelectedTransactions(newSet);
   };
 
-  const selectAll = () => {
-    if (selectedTransactions.size === filteredEntries.length) {
+  // "Selecionar esta página" marca/desmarca só os itens visíveis na página atual.
+  const togglePageSelection = () => {
+    const pageIds = entriesPg.items.map((e) => e.id);
+    const allPageSelected = pageIds.length > 0 && pageIds.every((id) => selectedTransactions.has(id));
+    setSelectedTransactions((prev) => {
+      const next = new Set(prev);
+      if (allPageSelected) pageIds.forEach((id) => next.delete(id));
+      else pageIds.forEach((id) => next.add(id));
+      return next;
+    });
+  };
+
+  // "Selecionar todos os N filtrados" é uma ação explícita separada, que cobre o
+  // conjunto filtrado completo (não só a página atual).
+  const allFilteredSelected =
+    filteredEntries.length > 0 && filteredEntries.every((e) => selectedTransactions.has(e.id));
+  const selectAllFiltered = () => {
+    if (allFilteredSelected) {
       setSelectedTransactions(new Set());
     } else {
       setSelectedTransactions(new Set(filteredEntries.map(e => e.id)));
@@ -549,6 +565,29 @@ export default function FinancialReconciliationPage() {
                 )}
               </div>
 
+              {!allFilteredSelected &&
+                entriesPg.items.length > 0 &&
+                entriesPg.items.every((e) => selectedTransactions.has(e.id)) &&
+                filteredEntries.length > entriesPg.items.length && (
+                  <div className="mb-4">
+                    <Button variant="link" className="h-auto p-0" onClick={selectAllFiltered}>
+                      Selecionar todos os {filteredEntries.length} filtrados
+                    </Button>
+                  </div>
+                )}
+
+              {selectedTransactions.size > 0 && (
+                <div className="mb-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSelectedTransactions(new Set())}
+                  >
+                    Limpar seleção
+                  </Button>
+                </div>
+              )}
+
               <ScrollArea className="h-[400px]">
                 {entriesLoading ? (
                   <div className="space-y-2">
@@ -569,9 +608,11 @@ export default function FinancialReconciliationPage() {
                     <TableHeader>
                       <TableRow>
                         <TableHead className="w-12">
-                          <Checkbox 
-                            checked={selectedTransactions.size === filteredEntries.length && filteredEntries.length > 0}
-                            onCheckedChange={selectAll}
+                          <Checkbox
+                            checked={entriesPg.items.length > 0 && entriesPg.items.every((e) => selectedTransactions.has(e.id))}
+                            onCheckedChange={togglePageSelection}
+                            aria-label="Selecionar esta página"
+                            title="Selecionar esta página"
                           />
                         </TableHead>
                         <TableHead>Descrição</TableHead>
