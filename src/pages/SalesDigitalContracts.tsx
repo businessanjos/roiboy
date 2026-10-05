@@ -841,7 +841,7 @@ function ContractRowActions({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-11 w-11 sm:h-8 sm:w-8"
         onClick={() => onCopy(contract.share_token)}
         aria-label="Copiar link público"
         title="Copiar link público"
@@ -851,7 +851,7 @@ function ContractRowActions({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-11 w-11 sm:h-8 sm:w-8"
         onClick={() => onDuplicate(contract.id)}
         aria-label="Duplicar contrato"
         title="Duplicar como novo rascunho"
@@ -861,7 +861,7 @@ function ContractRowActions({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8"
+        className="h-11 w-11 sm:h-8 sm:w-8"
         onClick={() => onOpen(contract)}
         aria-label="Abrir contrato"
         title={contract.deal_id ? "Abrir contrato" : "Abrir contrato (sem negócio vinculado)"}
@@ -871,7 +871,7 @@ function ContractRowActions({
       <Button
         variant="ghost"
         size="icon"
-        className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
+        className="h-11 w-11 sm:h-8 sm:w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
         onClick={() => onDelete(contract.id, contract.contract_number ?? "Sem número", contract.status)}
         aria-label="Excluir contrato"
         title="Excluir contrato"

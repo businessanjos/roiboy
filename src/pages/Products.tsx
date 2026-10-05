@@ -1152,25 +1152,28 @@ export default function Products() {
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-11 w-11 sm:h-8 sm:w-8"
                       onClick={() => openEditDialog(product)}
                       title="Editar"
+                      aria-label="Editar produto"
                     >
                       <Edit2 className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8"
+                      className="h-11 w-11 sm:h-8 sm:w-8"
                       onClick={() => handleDuplicate(product)}
                       title="Duplicar"
+                      aria-label="Duplicar produto"
                     >
                       <Copy className="h-4 w-4" />
                     </Button>
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
+                      className="h-11 w-11 sm:h-8 sm:w-8 text-destructive hover:text-destructive"
+                      aria-label="Excluir produto"
                       onClick={() => handleDelete(product.id)}
                     >
                       <Trash2 className="h-4 w-4" />
