@@ -30254,6 +30254,10 @@ export type Database = {
         Args: { _account_id: string }
         Returns: number
       }
+      transfer_deal: {
+        Args: { _deal_id: string; _new_owner_id: string; _reason?: string }
+        Returns: Json
+      }
       unaccent: { Args: { "": string }; Returns: string }
       unaccent_immutable: { Args: { p_text: string }; Returns: string }
       use_coupon: {
