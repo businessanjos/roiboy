@@ -22,6 +22,7 @@ export const PERMISSION_CATALOG: CatalogModule[] = [
       { sub: "deals_open", label: "Negócios abertos", scoped: true },
       { sub: "deals_won", label: "Negócios ganhos", scoped: true },
       { sub: "deals_lost", label: "Negócios perdidos", scoped: true },
+      { sub: "deal_transfer", label: "Transferir negócios", scoped: true },
       { sub: "leads", label: "Leads", scoped: true },
       { sub: "sales_dashboard", label: "Dashboard de vendas" },
       { sub: "ranking", label: "Ranking" },

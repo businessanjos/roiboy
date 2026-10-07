@@ -14,6 +14,7 @@ import { RenewalResponsibleDialog, useCsTeamUsers, type CsUser } from "@/compone
 import { format, formatDistanceToNow, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useNavigate, useSearchParams } from "react-router-dom";
+import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { supabase } from "@/integrations/supabase/client";
 import { Deal, DealStage } from "@/hooks/useDeals";
 import {
@@ -456,6 +457,7 @@ export function DealDetailSheet({
   const [localReceivedValue, setLocalReceivedValue] = useState<number | null>(null);
   
   const { isAdmin } = usePermissions();
+  const { isAdmin: profileAdmin, denied: profileDenied, perms: profilePerms } = useUserPermissions();
 
   // Ligações da 3C desta negociação (para reaproveitar o mesmo evento do RoyZapp).
   useEffect(() => {
@@ -1077,6 +1079,16 @@ export function DealDetailSheet({
   const contactName = deal.client?.full_name || deal.lead?.full_name || deal.contact_name || 'Sem contato';
   const contactPhone = deal.client?.phone_e164 || deal.lead?.phone || null;
   const isClosed = deal.status !== 'open';
+  // Permissão "Transferir negócios": sem configuração mantém o comportamento atual.
+  const transferPerm = profilePerms.find((p) => p.module === "comercial" && p.sub_item === "deal_transfer");
+  const canTransferDeal =
+    isAdmin || profileAdmin
+      ? true
+      : profileDenied("comercial", "deal_transfer")
+        ? false
+        : transferPerm?.scope === "own"
+          ? !!currentUser?.id && deal.responsible_user_id === currentUser.id
+          : true;
   
   // Users who can always change the responsible, regardless of deal status
   const RESPONSIBLE_OVERRIDE_USER_IDS = [
@@ -1674,6 +1686,7 @@ export function DealDetailSheet({
                               <GitMerge className="h-3.5 w-3.5 mr-1" />
                               Mesclar
                             </Button>
+{canTransferDeal && (
                             <Button
                               variant="ghost"
                               size="sm"
@@ -1683,6 +1696,7 @@ export function DealDetailSheet({
                               <ArrowRightLeft className="h-3.5 w-3.5 mr-1" />
                               Transferir
                             </Button>
+                            )}
                           </div>
                         )}
                       </>
@@ -2222,7 +2236,7 @@ export function DealDetailSheet({
         </ScrollArea>
 
         {/* Transfer Dialog */}
-        {currentUser?.account_id && (
+        {currentUser?.account_id && canTransferDeal && (
           <DealTransferDialog
             open={transferDialogOpen}
             onOpenChange={setTransferDialogOpen}
