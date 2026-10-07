@@ -146,38 +146,13 @@ export function DealTransferDialog({
 
     setTransferring(true);
     try {
-      // Get current user for activity log
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) throw new Error("Usuário não autenticado");
-
-      const { data: userData } = await supabase
-        .from("users")
-        .select("id, name")
-        .eq("auth_user_id", authUser.id)
-        .single();
-
-      // Update deal responsible
-      const { error: updateError } = await supabase
-        .from("deals")
-        .update({ 
-          responsible_user_id: selectedMember.id,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", dealId);
-
-      if (updateError) throw updateError;
-
-      // Log the transfer as an activity
-      await supabase.from("deal_activities").insert({
-        account_id: accountId,
-        deal_id: dealId,
-        type: "stage_change", // Using stage_change type for now
-        title: "Transferência de responsável",
-        content: transferReason || `Negócio transferido de ${currentOwnerName || "Sem responsável"} para ${selectedMember.name}`,
-        old_value: currentOwnerName || null,
-        new_value: selectedMember.name,
-        user_id: userData?.id || null,
+      // Transferência atômica no banco (troca responsável + registra histórico)
+      const { error: rpcError } = await (supabase as any).rpc("transfer_deal", {
+        _deal_id: dealId,
+        _new_owner_id: selectedMember.id,
+        _reason: transferReason || null,
       });
+      if (rpcError) throw rpcError;
 
       toast.success(`Negócio transferido para ${selectedMember.name}`);
       

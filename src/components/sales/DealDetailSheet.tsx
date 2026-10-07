@@ -2236,7 +2236,7 @@ export function DealDetailSheet({
         </ScrollArea>
 
         {/* Transfer Dialog */}
-        {currentUser?.account_id && canTransferDeal && (
+        {canTransferDeal && (
           <DealTransferDialog
             open={transferDialogOpen}
             onOpenChange={setTransferDialogOpen}
@@ -2244,10 +2244,10 @@ export function DealDetailSheet({
             dealTitle={deal.title}
             currentOwnerId={deal.responsible_user_id}
             currentOwnerName={deal.responsible_user?.name || null}
-            accountId={currentUser.account_id}
+            accountId={currentUser?.account_id || (deal as any).account_id}
             onTransferred={() => {
-              fetchActivities();
               onDealUpdated?.();
+              onOpenChange?.(false);
             }}
           />
         )}

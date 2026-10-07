@@ -8,6 +8,13 @@
       "when": 1791382800015,
       "tag": "0000_deal_visibility_update_allow_transfer",
       "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1791390738289,
+      "tag": "0001_transfer_deal_rpc",
+      "breakpoints": true
     }
   ]
 }
