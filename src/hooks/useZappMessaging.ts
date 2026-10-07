@@ -1299,6 +1299,7 @@ export function useZappMessaging({
     
     try {
       let whatsappEdited = false;
+      let editReason = "";
       
       if (message.external_message_id) {
         const isGroupEdit = getContactInfo(selectedConversation).isGroup;
@@ -1314,8 +1315,8 @@ export function useZappMessaging({
             sector_id: selectedSectorId || "",
         });
 
-        
         if (!error && data?.data?.edited) whatsappEdited = true;
+        else editReason = String(data?.data?.reason || (error as any)?.message || "");
       }
       
       const { error: updateError } = await supabase
@@ -1329,7 +1330,18 @@ export function useZappMessaging({
         m.id === messageId ? { ...m, content: newContent.trim(), is_edited: true } : m
       ));
       
-      toast.success(whatsappEdited ? "Mensagem editada" : "Mensagem editada localmente");
+      if (whatsappEdited) {
+        toast.success("Mensagem editada no WhatsApp do cliente");
+      } else {
+        const sentAt = new Date((message as any).created_at || (message as any).timestamp || Date.now()).getTime();
+        const tooOld = Date.now() - sentAt > 15 * 60 * 1000;
+        if (editReason) console.warn("[edit_message] WhatsApp recusou:", editReason);
+        toast.warning("Editada só no ROY — o cliente ainda vê o texto antigo", {
+          description: tooOld
+            ? "O WhatsApp só permite editar mensagens em até 15 minutos após o envio."
+            : "O WhatsApp não aceitou a edição. Se precisar, envie uma nova mensagem com a correção.",
+        });
+      }
     } catch (error: any) {
       console.error("Error editing message:", error);
       toast.error(error.message || "Erro ao editar mensagem");
