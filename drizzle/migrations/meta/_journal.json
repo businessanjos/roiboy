@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "7",
+      "when": 1791382800015,
+      "tag": "0000_deal_visibility_update_allow_transfer",
+      "breakpoints": true
+    }
+  ]
+}
