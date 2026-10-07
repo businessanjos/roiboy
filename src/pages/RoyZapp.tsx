@@ -1728,6 +1728,7 @@ export default function RoyZapp() {
           filterAgentId={filterAgentId}
           setFilterAgentId={setFilterAgentId}
           sectorDepartmentId={currentSectorDepartmentId}
+          sectorAgentIds={sectorAgentIds}
           filteredAssignments={filteredAssignments}
           agents={agents}
           tags={tags}
