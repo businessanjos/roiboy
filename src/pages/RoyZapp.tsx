@@ -1352,6 +1352,13 @@ export default function RoyZapp() {
 
 
   // Filtered conversations based on tab (mine vs queue)
+  // Atendentes que já têm conversas no setor (inclui inativos, para consultar o histórico)
+  const sectorAgentIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const a of assignments) if (a.agent_id) ids.add(a.agent_id);
+    return ids;
+  }, [assignments]);
+
   const filteredAssignments = useMemo(() => {
     return assignments.filter((a) => {
       // Archive filter logic
@@ -1728,6 +1735,7 @@ export default function RoyZapp() {
           filterAgentId={filterAgentId}
           setFilterAgentId={setFilterAgentId}
           sectorDepartmentId={currentSectorDepartmentId}
+          sectorAgentIds={sectorAgentIds}
           filteredAssignments={filteredAssignments}
           agents={agents}
           tags={tags}
