@@ -1070,7 +1070,7 @@ Deno.serve(async (req) => {
     }
 
     // Ações que requerem token
-    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "check_number", "send_reaction"];
+    const tokenRequiredActions = ["send_text", "send_media", "send_to_group", "send_media_to_group", "list_groups", "disconnect", "delete_message", "edit_message", "check_number", "send_reaction"];
     if (tokenRequiredActions.includes(action) && !token) {
       console.error(`[uazapi-manager] Token required but missing for action: ${action} (integration: ${intData?.id || "n/a"}, instance: ${intData?.config?.instance_name || "n/a"})`);
       return new Response(
@@ -1089,7 +1089,7 @@ Deno.serve(async (req) => {
     {
       const writeActions = [
         "send_text", "send_media", "send_to_group", "send_media_to_group", "send_reaction",
-        "delete_message", "create", "connect", "qrcode", "disconnect",
+        "delete_message", "edit_message", "create", "connect", "qrcode", "disconnect",
         "reset_instance", "adopt_instance", "unlink_instance",
         "add_instance_to_sector", "update_instance_pin", "configure_webhook",
         "update_sector_server",
@@ -2101,6 +2101,43 @@ Deno.serve(async (req) => {
       }
       result = await uazapiInstance("/message/delete", "POST", token!, { id: messageId }, sectorServer);
       result = { deleted: true, api_response: result };
+
+    } else if (action === "edit_message") {
+      // Edita mensagem enviada por nós no WhatsApp (UAZAPI POST /message/edit).
+      // O WhatsApp só aceita edição em até ~15 minutos após o envio.
+      const rawId = String(payload.message_id || "");
+      const newContent = String(payload.new_content || "").trim();
+      if (!rawId || !newContent) {
+        return new Response(
+          JSON.stringify({ error: "message_id e new_content são obrigatórios" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      if (newContent.length > 4096) {
+        return new Response(
+          JSON.stringify({ error: "Mensagem muito longa" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+      const editId = rawId.includes(":") ? (rawId.split(":").pop() || rawId) : rawId;
+      let apiResponse: any;
+      try {
+        apiResponse = await uazapiInstance("/message/edit", "POST", token!, { id: editId, text: newContent }, sectorServer);
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        const msg = (err as Error)?.message || "falha ao editar";
+        console.error("[uazapi-manager][edit_message] falhou:", msg.slice(0, 300));
+        result = { edited: false, reason: msg.slice(0, 300) };
+        return new Response(JSON.stringify({ data: result }), { headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const apiError =
+        apiResponse?.error ||
+        (apiResponse?.success === false ? (apiResponse?.message || "falha ao editar") : null) ||
+        (apiResponse?.status === "error" ? (apiResponse?.message || "falha ao editar") : null);
+      result = apiError
+        ? { edited: false, reason: String(typeof apiError === "string" ? apiError : JSON.stringify(apiError)).slice(0, 300) }
+        : { edited: true, api_response: apiResponse };
 
     } else if (action === "send_reaction") {
       // Reagir (ou remover reação, emoji vazio) em uma mensagem do WhatsApp.
