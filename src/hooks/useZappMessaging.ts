@@ -1298,50 +1298,54 @@ export function useZappMessaging({
     if (!message) return;
     
     try {
-      let whatsappEdited = false;
-      let editReason = "";
-      
-      if (message.external_message_id) {
-        const isGroupEdit = getContactInfo(selectedConversation).isGroup;
-        const intId2Raw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
-        const sectorCheckEdit = await assertIntegrationMatchesSector(intId2Raw, { isGroup: isGroupEdit });
-        if (!sectorCheckEdit.ok) return;
-        const intId2 = sectorCheckEdit.integrationId || intId2Raw;
-        const { data, error } = await invokeWhatsAppManager(intId2, {
-            action: "edit_message",
-            message_id: message.external_message_id,
-            new_content: newContent.trim(),
-            phone: getContactInfo(selectedConversation).phone,
-            sector_id: selectedSectorId || "",
+      // ROY e WhatsApp precisam ficar sincronizados: só gravamos a edição
+      // no ROY depois que o WhatsApp confirmar.
+      if (!message.external_message_id) {
+        toast.error("Não foi possível editar", {
+          description: "Esta mensagem não tem vínculo com o WhatsApp. O texto original foi mantido.",
         });
-
-        if (!error && data?.data?.edited) whatsappEdited = true;
-        else editReason = String(data?.data?.reason || (error as any)?.message || "");
+        return;
       }
-      
-      const { error: updateError } = await supabase
-        .from("zapp_messages")
-        .update({ content: newContent.trim(), updated_at: new Date().toISOString(), is_edited: true })
-        .eq("id", messageId);
-      
-      if (updateError) throw updateError;
-      
-      setMessages(prev => prev.map(m =>
-        m.id === messageId ? { ...m, content: newContent.trim(), is_edited: true } : m
-      ));
-      
-      if (whatsappEdited) {
-        toast.success("Mensagem editada no WhatsApp do cliente");
-      } else {
+
+      const isGroupEdit = getContactInfo(selectedConversation).isGroup;
+      const intId2Raw = (selectedConversation.zapp_conversation as any)?.integration_id || selectedIntegrationId;
+      const sectorCheckEdit = await assertIntegrationMatchesSector(intId2Raw, { isGroup: isGroupEdit });
+      if (!sectorCheckEdit.ok) return;
+      const intId2 = sectorCheckEdit.integrationId || intId2Raw;
+      const { data, error } = await invokeWhatsAppManager(intId2, {
+          action: "edit_message",
+          message_id: message.external_message_id,
+          new_content: newContent.trim(),
+          phone: getContactInfo(selectedConversation).phone,
+          sector_id: selectedSectorId || "",
+      });
+
+      const whatsappEdited = !error && !!data?.data?.edited;
+      if (!whatsappEdited) {
+        const editReason = String(data?.data?.reason || (error as any)?.message || "");
+        if (editReason) console.warn("[edit_message] WhatsApp recusou:", editReason);
         const sentAt = new Date((message as any).created_at || (message as any).timestamp || Date.now()).getTime();
         const tooOld = Date.now() - sentAt > 15 * 60 * 1000;
-        if (editReason) console.warn("[edit_message] WhatsApp recusou:", editReason);
-        toast.warning("Editada só no ROY — o cliente ainda vê o texto antigo", {
+        toast.error("Não foi possível editar — o texto original foi mantido", {
           description: tooOld
             ? "O WhatsApp só permite editar mensagens em até 15 minutos após o envio."
             : "O WhatsApp não aceitou a edição. Se precisar, envie uma nova mensagem com a correção.",
         });
+        return;
       }
+
+      const { error: updateError } = await supabase
+        .from("zapp_messages")
+        .update({ content: newContent.trim(), updated_at: new Date().toISOString(), is_edited: true })
+        .eq("id", messageId);
+
+      if (updateError) throw updateError;
+
+      setMessages(prev => prev.map(m =>
+        m.id === messageId ? { ...m, content: newContent.trim(), is_edited: true } : m
+      ));
+
+      toast.success("Mensagem editada no WhatsApp do cliente");
     } catch (error: any) {
       console.error("Error editing message:", error);
       toast.error(error.message || "Erro ao editar mensagem");
