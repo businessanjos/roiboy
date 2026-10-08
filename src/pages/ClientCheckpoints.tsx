@@ -348,6 +348,17 @@ export default function ClientCheckpoints() {
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+            <Select value={sortBy} onValueChange={(v) => setSortBy(v as typeof sortBy)}>
+              <SelectTrigger className="h-11 md:h-10 w-full sm:w-[220px]" aria-label="Ordenar por">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="oldest">Mais antigos primeiro</SelectItem>
+                <SelectItem value="recent">Mais recentes primeiro</SelectItem>
+                <SelectItem value="name_asc">Nome (A → Z)</SelectItem>
+                <SelectItem value="name_desc">Nome (Z → A)</SelectItem>
+              </SelectContent>
+            </Select>
             <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)} className="w-full sm:w-auto min-w-0">
               <TabsList className="w-full sm:w-auto flex-nowrap justify-start overflow-x-auto scrollbar-none">
                 <TabsTrigger value="todos" className="min-h-11 shrink-0">Todos</TabsTrigger>
