@@ -390,7 +390,7 @@ export default function CxSendQueue() {
         <div className="flex flex-wrap items-center justify-between gap-2">
         <TabsList>
           <TabsTrigger value="queue" className="gap-2"><CalendarClock className="h-4 w-4" />Fila</TabsTrigger>
-          <TabsTrigger value="audit" className="gap-2"><History className="h-4 w-4" />Auditoria</TabsTrigger>
+          <TabsTrigger value="audit" className="px-3.5" aria-label="Auditoria" title="Auditoria"><History className="h-4 w-4" /></TabsTrigger>
         </TabsList>
         <div className="flex items-center gap-1">
           <Button variant="ghost" size="icon" className="h-11 w-11" title={maximized ? "Reduzir fila" : "Maximizar fila"} aria-label={maximized ? "Reduzir fila" : "Maximizar fila"} aria-pressed={maximized} onClick={() => { setMaximized((v) => !v); setQueueOpen(true); }}>
