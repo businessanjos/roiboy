@@ -265,3 +265,8 @@ Ainda não conferido: computador em 1440px depois desta rodada; abrir e fechar t
 - Agenda Mês: célula inteira é botão (≥55px, rótulo com data e nº de eventos, setas do teclado), abre lista do dia com itens 44px; bolinhas decorativas; 7 colunas preservadas em 320 (sem overflow). Ações do detalhe 44px.
 - Tarefas: pager e "Carregar mais tarefas" 44px.
 - Verificado (393px, dados reais): Apresentação, SPIFFs, Scripts, Agenda, Tarefas, Gestão, Dashboard — 0 controles <40px, 0 botões sem nome; larguras extras só em tabelas/abas com rolagem horizontal própria. Agenda testada em 320/393 (toque, teclado, lista). Tipos OK. Nenhuma ação real disparada.
+
+### Checkpoints — filtros compactos (após a rodada de Vendas)
+- O painel de "De / Até / Canal" que ficava em um cartão grande no topo da tela foi removido do computador. Período e canal agora abrem de um botão discreto no canto direito do cabeçalho "Clientes", mostrando o resumo ("Todo o período", "12/05/26 – 03/06/26 · WhatsApp"), a contagem de registros e "Limpar" quando há filtro ativo.
+- No celular nada mudou: o botão "Filtros" continua abrindo o mesmo painel lateral, com os mesmos campos.
+- Conferido (dados reais, sem gravar nada): computador 1280px (0 campos de data fora do popover, gatilho presente, popover aberto com 2 datas + canal, "2.208 registros"); celular 393 e 320px sem estourar a largura; painel lateral do celular abre com os 2 campos de data; nenhum erro de página. Tipos e build OK.
