@@ -142,7 +142,7 @@ export function CxPeriodFilter({
             initialFocus
             mode="range"
             defaultMonth={range.from || new Date()}
-            selected={range}
+            selected={range.from ? (range as DateRange) : undefined}
             onSelect={handleCustomSelect}
             numberOfMonths={isMobile ? 1 : 2}
             locale={ptBR}
