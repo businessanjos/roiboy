@@ -1,13 +1,16 @@
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, PauseCircle, PlayCircle } from "lucide-react";
+import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search, Send, Sparkles, UserX } from "lucide-react";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 interface QueueRow {
   id: string;
@@ -20,7 +23,16 @@ interface QueueRow {
   send_status: string | null;
   send_error: string | null;
   force_send: boolean;
-  clients: { full_name: string; status: string | null } | null;
+  clients: { full_name: string; logo_url: string | null } | null;
+}
+
+interface AuditRow {
+  id: string;
+  user_name: string | null;
+  action: string;
+  entity_name: string | null;
+  details: { title?: string; old?: Record<string, unknown>; new?: Record<string, unknown> } | null;
+  created_at: string;
 }
 
 const STATUS_LABEL: Record<string, string> = {
@@ -30,6 +42,8 @@ const STATUS_LABEL: Record<string, string> = {
   cancelled: "Fora da fila",
   failed: "Falhou",
 };
+const IN_QUEUE = ["scheduled", "pending"];
+const DAY = 86400000;
 
 /** Next 08:00 (São Paulo) for the event's day/month, from today on. */
 function nextSendAt(eventDate: string | null): string {
@@ -41,12 +55,35 @@ function nextSendAt(eventDate: string | null): string {
   return at.toISOString();
 }
 
+const fmt = (iso: string | null) =>
+  iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Sem data";
+
+function describeAudit(a: AuditRow): string {
+  if (a.action === "create") return "Criou o momento";
+  if (a.action === "delete") return "Excluiu o momento";
+  const o = a.details?.old || {}, n = a.details?.new || {};
+  const parts: string[] = [];
+  if (o.send_status !== n.send_status) {
+    if (n.send_status === "sent") parts.push("Mensagem enviada");
+    else if (n.send_status === "cancelled") parts.push("Tirou da fila");
+    else if (IN_QUEUE.includes(String(n.send_status))) parts.push("Incluiu na fila");
+    else parts.push(`Situação: ${STATUS_LABEL[String(o.send_status)] || o.send_status} → ${STATUS_LABEL[String(n.send_status)] || n.send_status}`);
+  }
+  if (o.force_send !== n.force_send && n.force_send) parts.push("liberou envio sem contrato ativo");
+  if (o.message !== n.message) parts.push("editou a mensagem");
+  if (o.event_date !== n.event_date) parts.push("mudou a data");
+  else if (o.scheduled_send_at !== n.scheduled_send_at && !parts.length) parts.push("reagendou o envio");
+  return parts.join(", ") || "Alterou o momento";
+}
+
 export default function CxSendQueue() {
   const qc = useQueryClient();
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("queue");
+  const [contract, setContract] = useState("all");
   const [days, setDays] = useState("30");
-  const [busy, setBusy] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
 
   const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ["cx-send-queue"],
@@ -55,7 +92,7 @@ export default function CxSendQueue() {
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase
           .from("client_life_events")
-          .select("id, client_id, event_type, title, message, event_date, scheduled_send_at, send_status, send_error, force_send, clients(full_name, status)")
+          .select("id, client_id, event_type, title, message, event_date, scheduled_send_at, send_status, send_error, force_send, clients(full_name, logo_url)")
           .order("id")
           .range(from, from + 999);
         if (error) throw error;
@@ -80,111 +117,301 @@ export default function CxSendQueue() {
     },
   });
 
+  const { data: audit = [], isLoading: loadingAudit, error: auditError } = useQuery({
+    queryKey: ["cx-send-queue-audit"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("audit_logs")
+        .select("id, user_name, action, entity_name, details, created_at")
+        .eq("entity_type", "cx_moment")
+        .order("created_at", { ascending: false })
+        .limit(200);
+      if (error) throw error;
+      return (data || []) as unknown as AuditRow[];
+    },
+  });
+
+  const isActive = (r: QueueRow) => !!activeIds?.has(r.client_id);
+
+  const stats = useMemo(() => {
+    const now = Date.now();
+    const queued = rows.filter((r) => IN_QUEUE.includes(r.send_status || ""));
+    const due = (r: QueueRow, d: number) => r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() <= now + d * DAY;
+    return {
+      today: queued.filter((r) => due(r, 1)).length,
+      week: queued.filter((r) => due(r, 7)).length,
+      queued: queued.length,
+      inactive: rows.filter((r) => activeIds && !isActive(r) && !IN_QUEUE.includes(r.send_status || "") && r.send_status !== "sent").length,
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, activeIds]);
+
+  const upcoming = useMemo(
+    () =>
+      rows
+        .filter((r) => IN_QUEUE.includes(r.send_status || "") && r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() >= Date.now() - 12 * 3600 * 1000)
+        .sort((a, b) => a.scheduled_send_at!.localeCompare(b.scheduled_send_at!))
+        .slice(0, 6),
+    [rows],
+  );
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const limit = days === "all" ? Infinity : Date.now() + Number(days) * 86400000;
+    const limit = days === "all" ? Infinity : Date.now() + Number(days) * DAY;
     return rows
       .filter((r) => {
         if (q && !(r.clients?.full_name || "").toLowerCase().includes(q)) return false;
         const s = r.send_status || "";
-        if (status === "queue" && !["scheduled", "pending"].includes(s)) return false;
+        if (status === "queue" && !IN_QUEUE.includes(s)) return false;
         if (status !== "queue" && status !== "all" && s !== status) return false;
         if (status === "queue" && r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() > limit) return false;
+        if (contract === "active" && !isActive(r)) return false;
+        if (contract === "inactive" && isActive(r)) return false;
         return true;
       })
       .sort((a, b) => (a.scheduled_send_at || "9").localeCompare(b.scheduled_send_at || "9"))
       .slice(0, 300);
-  }, [rows, search, status, days]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, search, status, days, contract, activeIds]);
 
-  const update = async (r: QueueRow, include: boolean) => {
-    setBusy(r.id);
-    const patch = include
-      ? { send_status: "scheduled", send_error: null, force_send: true, scheduled_send_at: r.scheduled_send_at && new Date(r.scheduled_send_at) > new Date() ? r.scheduled_send_at : nextSendAt(r.event_date) }
-      : { send_status: "cancelled", send_error: "PAUSADO MANUALMENTE: retirado da fila", force_send: false };
-    const { error } = await supabase.from("client_life_events").update(patch).eq("id", r.id);
-    setBusy(null);
-    if (error) return toast.error("Não foi possível atualizar: " + error.message);
-    toast.success(include ? "Incluído na fila de envio" : "Retirado da fila");
+  const apply = async (items: QueueRow[], include: boolean) => {
+    if (!items.length) return;
+    setBusy(true);
+    let failed = 0;
+    for (const r of items) {
+      const patch = include
+        ? {
+            send_status: "scheduled",
+            send_error: null,
+            force_send: !isActive(r),
+            scheduled_send_at: r.scheduled_send_at && new Date(r.scheduled_send_at) > new Date() ? r.scheduled_send_at : nextSendAt(r.event_date),
+          }
+        : { send_status: "cancelled", send_error: "PAUSADO MANUALMENTE: retirado da fila", force_send: false };
+      const { error } = await supabase.from("client_life_events").update(patch).eq("id", r.id);
+      if (error) failed++;
+    }
+    setBusy(false);
+    setSelected(new Set());
+    if (failed) toast.error(`${failed} não puderam ser atualizados`);
+    else toast.success(include ? `${items.length} incluído(s) na fila` : `${items.length} retirado(s) da fila`);
     qc.invalidateQueries({ queryKey: ["cx-send-queue"] });
+    qc.invalidateQueries({ queryKey: ["cx-send-queue-audit"] });
   };
 
+  const selectedRows = filtered.filter((r) => selected.has(r.id));
+  const toggle = (id: string) =>
+    setSelected((s) => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+
+  const kpis = [
+    { label: "Envios hoje", value: stats.today, icon: Send },
+    { label: "Próximos 7 dias", value: stats.week, icon: CalendarClock },
+    { label: "Total na fila", value: stats.queued, icon: Sparkles },
+    { label: "Inativos fora da fila", value: stats.inactive, icon: UserX },
+  ];
+
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Fila de envios automáticos</CardTitle>
-        <CardDescription>
-          Parabéns e momentos CX. Clientes sem contrato ativo saem da fila automaticamente, a não ser que você os inclua aqui.
-        </CardDescription>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="flex flex-col sm:flex-row gap-2">
-          <Input className="h-11" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
-          <Select value={status} onValueChange={setStatus}>
-            <SelectTrigger className="h-11 sm:w-48"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="queue">Na fila</SelectItem>
-              <SelectItem value="cancelled">Fora da fila</SelectItem>
-              <SelectItem value="sent">Enviados</SelectItem>
-              <SelectItem value="failed">Falharam</SelectItem>
-              <SelectItem value="all">Todos</SelectItem>
-            </SelectContent>
-          </Select>
-          {status === "queue" && (
-            <Select value={days} onValueChange={setDays}>
-              <SelectTrigger className="h-11 sm:w-44"><SelectValue /></SelectTrigger>
+    <div className="space-y-6">
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight">Fila de envios automáticos</h2>
+        <p className="text-sm text-muted-foreground">
+          Parabéns e momentos CX. Só clientes com contrato ativo recebem, a não ser que você inclua um inativo manualmente.
+        </p>
+      </div>
+
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {kpis.map((k) => (
+          <Card key={k.label} className="border-border/60">
+            <CardContent className="p-4 flex items-center gap-3">
+              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                <k.icon className="h-5 w-5" />
+              </div>
+              <div className="min-w-0">
+                <p className="text-2xl font-semibold leading-none">{isLoading ? "–" : k.value}</p>
+                <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
+              </div>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      {upcoming.length > 0 && (
+        <div>
+          <p className="text-sm font-medium mb-2">Próximos a receber</p>
+          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
+            {upcoming.map((r) => (
+              <Card key={r.id} className="min-w-[220px] snap-start border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
+                <CardContent className="p-4 space-y-2">
+                  <div className="flex items-center gap-2">
+                    <Avatar row={r} />
+                    <p className="font-medium text-sm truncate">{r.clients?.full_name || "Cliente"}</p>
+                  </div>
+                  <p className="text-xs text-primary font-medium">{fmt(r.scheduled_send_at)}</p>
+                  <p className="text-xs text-muted-foreground line-clamp-2">{r.title}</p>
+                  <ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} />
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <Tabs defaultValue="queue">
+        <TabsList>
+          <TabsTrigger value="queue" className="gap-2"><CalendarClock className="h-4 w-4" />Fila</TabsTrigger>
+          <TabsTrigger value="audit" className="gap-2"><History className="h-4 w-4" />Auditoria</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="queue" className="mt-4 space-y-4">
+          <div className="flex flex-col lg:flex-row gap-2">
+            <div className="relative flex-1">
+              <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+              <Input className="h-11 pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
+            </div>
+            <Select value={contract} onValueChange={setContract}>
+              <SelectTrigger className="h-11 lg:w-52"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="1">Hoje</SelectItem>
-                <SelectItem value="7">Próximos 7 dias</SelectItem>
-                <SelectItem value="30">Próximos 30 dias</SelectItem>
+                <SelectItem value="all">Ativos e inativos</SelectItem>
+                <SelectItem value="active">Só clientes ativos</SelectItem>
+                <SelectItem value="inactive">Só inativos (sem contrato)</SelectItem>
+              </SelectContent>
+            </Select>
+            <Select value={status} onValueChange={setStatus}>
+              <SelectTrigger className="h-11 lg:w-44"><SelectValue /></SelectTrigger>
+              <SelectContent>
+                <SelectItem value="queue">Na fila</SelectItem>
+                <SelectItem value="cancelled">Fora da fila</SelectItem>
+                <SelectItem value="sent">Enviados</SelectItem>
+                <SelectItem value="failed">Falharam</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
             </Select>
-          )}
-        </div>
+            {status === "queue" && (
+              <Select value={days} onValueChange={setDays}>
+                <SelectTrigger className="h-11 lg:w-44"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Hoje</SelectItem>
+                  <SelectItem value="7">Próximos 7 dias</SelectItem>
+                  <SelectItem value="30">Próximos 30 dias</SelectItem>
+                  <SelectItem value="all">Todos</SelectItem>
+                </SelectContent>
+              </Select>
+            )}
+          </div>
 
-        {error ? (
-          <p className="text-sm text-destructive">Erro ao carregar a fila: {(error as Error).message}</p>
-        ) : isLoading ? (
-          <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-        ) : filtered.length === 0 ? (
-          <p className="text-sm text-muted-foreground py-6 text-center">Nada por aqui.</p>
-        ) : (
-          <ul className="divide-y divide-border">
-            {filtered.map((r) => {
-              const inQueue = ["scheduled", "pending"].includes(r.send_status || "");
-              const hasContract = activeIds?.has(r.client_id);
-              return (
-                <li key={r.id} className="py-3 flex flex-col sm:flex-row sm:items-center gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="font-medium">{r.clients?.full_name || "Cliente"}</span>
-                      <Badge variant="outline">{STATUS_LABEL[r.send_status || ""] || r.send_status}</Badge>
-                      {activeIds && !hasContract && <Badge variant="secondary">Sem contrato ativo</Badge>}
-                      {r.force_send && <Badge>Incluído manualmente</Badge>}
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">
-                      {r.title}
-                      {r.scheduled_send_at && ` · ${new Date(r.scheduled_send_at).toLocaleString("pt-BR", { dateStyle: "short", timeStyle: "short" })}`}
-                      {r.send_error && ` · ${r.send_error}`}
-                    </p>
-                    {r.message && <p className="text-xs text-muted-foreground line-clamp-1">{r.message}</p>}
-                  </div>
-                  {r.send_status !== "sent" && (
-                    <Button
-                      variant={inQueue ? "outline" : "default"}
-                      className="h-11"
-                      disabled={busy === r.id}
-                      onClick={() => update(r, !inQueue)}
-                    >
-                      {inQueue ? <><PauseCircle className="h-4 w-4 mr-2" />Tirar da fila</> : <><PlayCircle className="h-4 w-4 mr-2" />Incluir na fila</>}
-                    </Button>
-                  )}
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </CardContent>
-    </Card>
+          {selectedRows.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+              <span className="text-sm font-medium mr-auto">{selectedRows.length} selecionado(s)</span>
+              <Button className="h-11" disabled={busy} onClick={() => apply(selectedRows.filter((r) => !IN_QUEUE.includes(r.send_status || "")), true)}>
+                <PlayCircle className="h-4 w-4 mr-2" />Incluir na fila
+              </Button>
+              <Button variant="outline" className="h-11" disabled={busy} onClick={() => apply(selectedRows.filter((r) => IN_QUEUE.includes(r.send_status || "")), false)}>
+                <PauseCircle className="h-4 w-4 mr-2" />Tirar da fila
+              </Button>
+              <Button variant="ghost" className="h-11" onClick={() => setSelected(new Set())}>Limpar</Button>
+            </div>
+          )}
+
+          {error ? (
+            <p className="text-sm text-destructive">Erro ao carregar a fila: {(error as Error).message}</p>
+          ) : isLoading ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : filtered.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhum envio com esses filtros.</CardContent></Card>
+          ) : (
+            <div className="space-y-2">
+              {filtered.map((r) => {
+                const inQueue = IN_QUEUE.includes(r.send_status || "");
+                return (
+                  <Card key={r.id} className={cn("transition-colors", selected.has(r.id) && "border-primary/50 bg-primary/5")}>
+                    <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                      <div className="flex items-start gap-3 flex-1 min-w-0">
+                        {r.send_status !== "sent" && (
+                          <Checkbox className="mt-3" checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} aria-label={`Selecionar ${r.clients?.full_name || "cliente"}`} />
+                        )}
+                        <Avatar row={r} />
+                        <div className="min-w-0 flex-1">
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="font-medium">{r.clients?.full_name || "Cliente"}</span>
+                            <Badge variant="outline">{STATUS_LABEL[r.send_status || ""] || r.send_status}</Badge>
+                            <ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} />
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {r.title} · <span className="text-foreground/80">{fmt(r.scheduled_send_at)}</span>
+                          </p>
+                          {r.message && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{r.message}</p>}
+                          {r.send_error && !inQueue && <p className="text-xs text-muted-foreground/80 mt-0.5 italic">{r.send_error}</p>}
+                        </div>
+                      </div>
+                      {r.send_status !== "sent" && (
+                        <Button variant={inQueue ? "outline" : "default"} className="h-11 shrink-0" disabled={busy} onClick={() => apply([r], !inQueue)}>
+                          {inQueue ? <><PauseCircle className="h-4 w-4 mr-2" />Tirar da fila</> : <><PlayCircle className="h-4 w-4 mr-2" />Incluir na fila</>}
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        <TabsContent value="audit" className="mt-4">
+          {auditError ? (
+            <p className="text-sm text-destructive">Erro ao carregar a auditoria: {(auditError as Error).message}</p>
+          ) : loadingAudit ? (
+            <div className="flex justify-center py-10"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+          ) : audit.length === 0 ? (
+            <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhuma alteração registrada ainda. A partir de agora, toda inclusão, retirada, edição e exclusão fica registrada aqui.</CardContent></Card>
+          ) : (
+            <Card>
+              <CardContent className="p-0">
+                <ul className="divide-y divide-border">
+                  {audit.map((a) => (
+                    <li key={a.id} className="p-4 flex gap-3">
+                      <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", a.action === "delete" ? "bg-destructive" : a.action === "create" ? "bg-primary" : "bg-muted-foreground")} />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm">
+                          <span className="font-medium">{a.user_name || "Sistema"}</span>{" "}
+                          <span className="text-muted-foreground">· {describeAudit(a)}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          {a.entity_name || "Cliente"}{a.details?.title ? ` · ${a.details.title}` : ""}
+                        </p>
+                      </div>
+                      <span className="text-xs text-muted-foreground shrink-0">{fmt(a.created_at)}</span>
+                    </li>
+                  ))}
+                </ul>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
+    </div>
+  );
+}
+
+function Avatar({ row }: { row: QueueRow }) {
+  const name = row.clients?.full_name || "?";
+  return row.clients?.logo_url ? (
+    <img src={row.clients.logo_url} alt="" className="h-10 w-10 rounded-full object-cover shrink-0" />
+  ) : (
+    <div className="h-10 w-10 rounded-full bg-primary/10 text-primary flex items-center justify-center shrink-0 text-sm font-semibold">
+      {row.event_type === "birthday" ? <Cake className="h-4 w-4" /> : name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+function ContractBadge({ active, forced, known }: { active: boolean; forced: boolean; known: boolean }) {
+  if (!known) return null;
+  if (active) return <Badge className="bg-primary/15 text-primary border-primary/30 hover:bg-primary/15">Ativo</Badge>;
+  return (
+    <Badge variant="secondary" className="gap-1">
+      Inativo{forced ? " · liberado" : ""}
+    </Badge>
   );
 }
