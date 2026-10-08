@@ -3191,6 +3191,7 @@ export type Database = {
           description: string | null
           event_date: string | null
           event_type: string
+          force_send: boolean
           id: string
           image_url: string | null
           integration_id: string | null
@@ -3212,6 +3213,7 @@ export type Database = {
           description?: string | null
           event_date?: string | null
           event_type: string
+          force_send?: boolean
           id?: string
           image_url?: string | null
           integration_id?: string | null
@@ -3233,6 +3235,7 @@ export type Database = {
           description?: string | null
           event_date?: string | null
           event_type?: string
+          force_send?: boolean
           id?: string
           image_url?: string | null
           integration_id?: string | null
