@@ -10,6 +10,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search, Send, Sparkles, UserX, ChevronDown, ChevronUp, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
+import { Link } from "react-router-dom";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -27,6 +30,9 @@ interface QueueRow {
   send_status: string | null;
   send_error: string | null;
   force_send: boolean;
+  description?: string | null;
+  image_url?: string | null;
+  sent_at?: string | null;
   clients: { full_name: string; logo_url: string | null } | null;
 }
 
@@ -91,6 +97,8 @@ export default function CxSendQueue() {
   const [horizon, setHorizon] = useState("30");
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [detail, setDetail] = useState<QueueRow | null>(null);
+  const [activeKpi, setActiveKpi] = useState<string | null>(null);
 
   const { data: rows = [], isLoading, error } = useQuery({
     queryKey: ["cx-send-queue"],
@@ -99,7 +107,7 @@ export default function CxSendQueue() {
       for (let from = 0; ; from += 1000) {
         const { data, error } = await supabase
           .from("client_life_events")
-          .select("id, client_id, event_type, title, message, event_date, scheduled_send_at, send_status, send_error, force_send, clients(full_name, logo_url)")
+          .select("id, client_id, event_type, title, message, event_date, scheduled_send_at, send_status, send_error, force_send, description, image_url, sent_at, clients(full_name, logo_url)")
           .order("id")
           .range(from, from + 999);
         if (error) throw error;
@@ -203,11 +211,16 @@ export default function CxSendQueue() {
     });
 
   const kpis = [
-    { label: "Envios hoje", value: stats.today, icon: Send },
-    { label: "Próximos 7 dias", value: stats.week, icon: CalendarClock },
-    { label: "Total na fila", value: stats.queued, icon: Sparkles },
-    { label: "Inativos fora da fila", value: stats.inactive, icon: UserX },
+    { key: "today", label: "Envios hoje", value: stats.today, icon: Send, f: { status: "queue", days: "1", contract: "all" } },
+    { key: "week", label: "Próximos 7 dias", value: stats.week, icon: CalendarClock, f: { status: "queue", days: "7", contract: "all" } },
+    { key: "queued", label: "Total na fila", value: stats.queued, icon: Sparkles, f: { status: "queue", days: "all", contract: "all" } },
+    { key: "inactive", label: "Inativos fora da fila", value: stats.inactive, icon: UserX, f: { status: "cancelled", days: "all", contract: "inactive" } },
   ];
+  const openKpi = (k: (typeof kpis)[number]) => {
+    setStatus(k.f.status); setDays(k.f.days); setContract(k.f.contract); setSearch("");
+    setActiveKpi(k.key); setQueueOpen(true);
+    setTimeout(() => document.getElementById("cx-queue-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  };
 
   return (
     <div className="space-y-6">
@@ -223,7 +236,9 @@ export default function CxSendQueue() {
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <Card key={k.label} className="border-border/60">
+          <Card key={k.label} role="button" tabIndex={0} aria-pressed={activeKpi === k.key} title="Ver quem são"
+            onClick={() => openKpi(k)} onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openKpi(k); } }}
+            className={cn("border-border/60 cursor-pointer transition-colors hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring", activeKpi === k.key && "border-primary ring-1 ring-primary")}>
             <CardContent className="p-4 flex items-center gap-3">
               <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <k.icon className="h-5 w-5" />
@@ -231,6 +246,7 @@ export default function CxSendQueue() {
               <div className="min-w-0">
                 <p className="text-2xl font-semibold leading-none">{isLoading ? "–" : k.value}</p>
                 <p className="text-xs text-muted-foreground mt-1">{k.label}</p>
+                <p className="text-[11px] text-primary mt-1">Ver quem são →</p>
               </div>
             </CardContent>
           </Card>
@@ -248,7 +264,7 @@ export default function CxSendQueue() {
             {upcoming.map(({ row: r, at, estimated }) => (
               <div key={r.id} className="flex items-start gap-3 min-w-0">
                 <Avatar row={r} />
-                <div className="min-w-0"><p className="font-medium text-sm line-clamp-2">{r.clients?.full_name || "Cliente"}</p>
+                <div className="min-w-0"><button type="button" onClick={() => setDetail(r)} className="font-medium text-sm line-clamp-2 text-left hover:text-primary hover:underline">{r.clients?.full_name || "Cliente"}</button>
                   <p className="text-xs text-primary mt-1">{fmt(at)}{estimated ? " · previsão" : ""}</p>
                   <div className="mt-1"><ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} /></div>
                 </div>
@@ -281,7 +297,7 @@ export default function CxSendQueue() {
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
               <Input aria-label="Buscar cliente na fila" className="h-11 pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
-            <Select value={contract} onValueChange={setContract}>
+            <Select value={contract} onValueChange={(v) => { setContract(v); setActiveKpi(null); }}>
               <SelectTrigger className="h-11 lg:w-52"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">Ativos e inativos</SelectItem>
@@ -289,7 +305,7 @@ export default function CxSendQueue() {
                 <SelectItem value="inactive">Só inativos (sem contrato)</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={status} onValueChange={setStatus}>
+            <Select value={status} onValueChange={(v) => { setStatus(v); setActiveKpi(null); }}>
               <SelectTrigger className="h-11 lg:w-44"><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="queue">Na fila</SelectItem>
@@ -300,7 +316,7 @@ export default function CxSendQueue() {
               </SelectContent>
             </Select>
             {status === "queue" && (
-              <Select value={days} onValueChange={setDays}>
+              <Select value={days} onValueChange={(v) => { setDays(v); setActiveKpi(null); }}>
                 <SelectTrigger className="h-11 lg:w-44"><SelectValue /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="1">Hoje</SelectItem>
@@ -345,7 +361,7 @@ export default function CxSendQueue() {
                         <Avatar row={r} />
                         <div className="min-w-0 flex-1">
                           <div className="flex flex-wrap items-center gap-1.5">
-                            <span className="font-medium">{r.clients?.full_name || "Cliente"}</span>
+                            <button type="button" onClick={() => setDetail(r)} className="font-medium text-left hover:text-primary hover:underline">{r.clients?.full_name || "Cliente"}</button>
                             <Badge variant="outline">{STATUS_LABEL[r.send_status || ""] || r.send_status}</Badge>
                             <ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} />
                           </div>
@@ -404,6 +420,34 @@ export default function CxSendQueue() {
         </TabsContent>
         </div>
       </Tabs>
+      <Dialog open={!!detail} onOpenChange={(o) => !o && setDetail(null)}>
+        <DialogContent className="max-w-lg max-h-[90dvh] overflow-y-auto">
+          {detail && (() => { const d = detail; const inQ = IN_QUEUE.includes(d.send_status || ""); return (<>
+            <DialogHeader className="pr-8">
+              <div className="flex items-center gap-3"><Avatar row={d} />
+                <div className="min-w-0"><DialogTitle className="leading-snug">{d.clients?.full_name || "Cliente"}</DialogTitle>
+                  <DialogDescription className="mt-1 flex flex-wrap gap-1.5"><Badge variant="outline">{STATUS_LABEL[d.send_status || ""] || d.send_status || "Sem situação"}</Badge><ContractBadge active={isActive(d)} forced={d.force_send} known={!!activeIds} /></DialogDescription>
+                </div></div>
+            </DialogHeader>
+            <dl className="grid grid-cols-2 gap-3 text-sm">
+              <div><dt className="text-xs text-muted-foreground">Momento</dt><dd className="font-medium">{d.event_type === "birthday" ? "🎂 " : "🎉 "}{d.title}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Data comemorativa</dt><dd className="font-medium">{d.event_date ? d.event_date.split("-").reverse().join("/") : "Sem data"}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Envio previsto</dt><dd className="font-medium">{fmt(d.scheduled_send_at)}</dd></div>
+              <div><dt className="text-xs text-muted-foreground">Enviado em</dt><dd className="font-medium">{d.sent_at ? fmt(d.sent_at) : "—"}</dd></div>
+            </dl>
+            {d.description && <p className="text-sm text-muted-foreground">{d.description}</p>}
+            <div><p className="text-xs text-muted-foreground mb-1">Mensagem</p>
+              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm whitespace-pre-wrap">{d.message || "Sem texto (usa o parabéns padrão)"}</div></div>
+            {d.image_url && <img src={d.image_url} alt="Cartão do momento" className="rounded-lg border border-border max-h-64 w-full object-contain bg-muted/30" />}
+            {d.send_error && <p className="text-xs rounded-md bg-muted p-2 text-muted-foreground"><span className="font-medium text-foreground">Observação: </span>{d.send_error}</p>}
+            <div className="flex flex-col-reverse sm:flex-row gap-2 pt-1">
+              <Button asChild variant="ghost" className="h-11"><Link to={`/clients/${d.client_id}`}><ExternalLink className="h-4 w-4 mr-2" />Abrir ficha do cliente</Link></Button>
+              {d.send_status !== "sent" && <Button className="h-11 sm:ml-auto" variant={inQ ? "outline" : "default"} disabled={busy} onClick={async () => { await apply([d], !inQ); setDetail(null); }}>
+                {inQ ? <><PauseCircle className="h-4 w-4 mr-2" />Tirar da fila</> : <><PlayCircle className="h-4 w-4 mr-2" />Incluir na fila</>}</Button>}
+            </div>
+          </>); })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
