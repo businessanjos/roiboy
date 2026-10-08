@@ -432,7 +432,7 @@ export default function ClientCheckpoints() {
               role="group"
               aria-label="Filtrar por situação do checkpoint"
             >
-              {STATUS_CHIPS.map((opt) => (
+              {statusChips.map((opt) => (
                 <button
                   key={opt.key}
                   type="button"
