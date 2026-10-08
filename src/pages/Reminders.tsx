@@ -64,8 +64,7 @@ import {
   Square,
   X,
 } from "lucide-react";
-import MomentosCxCampaign from "@/components/reminders/MomentosCxCampaign";
-import CxSendQueue from "@/components/reminders/CxSendQueue";
+import MomentosCxHub from "@/components/reminders/MomentosCxHub";
 import FormCampaign from "@/components/reminders/FormCampaign";
 import {
   AlertDialog,
@@ -1414,9 +1413,8 @@ export default function Reminders() {
           <FormCampaign />
         </TabsContent>
 
-        <TabsContent value="momentos-cx" className="mt-6 space-y-6">
-          <CxSendQueue />
-          <MomentosCxCampaign />
+        <TabsContent value="momentos-cx" className="mt-6">
+          <MomentosCxHub />
         </TabsContent>
 
         <TabsContent value="history" className="mt-6">
