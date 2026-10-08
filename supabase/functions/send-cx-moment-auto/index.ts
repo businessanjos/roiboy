@@ -33,6 +33,96 @@ function randomDelay(minSeconds: number, maxSeconds: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, delay));
 }
 
+// deno-lint-ignore no-explicit-any
+type SB = any;
+
+function extractExternalId(result: Record<string, unknown>): string | null {
+  const v = (result?.id || result?.messageid || result?.messageId) as string | undefined;
+  return v ? String(v) : null;
+}
+
+// Every automatic send MUST be mirrored in RoyZapp, otherwise the team loses context.
+async function findOrCreateConversation(
+  supabase: SB,
+  p: { accountId: string; clientId: string; phoneE164: string; name: string; sectorId: string | null; integrationId: string },
+): Promise<string | null> {
+  let q = supabase
+    .from("zapp_conversations")
+    .select("id")
+    .eq("account_id", p.accountId)
+    .eq("phone_e164", p.phoneE164)
+    .eq("is_group", false);
+  q = p.sectorId ? q.eq("sector_id", p.sectorId) : q.is("sector_id", null);
+  const { data: existing } = await q.order("last_message_at", { ascending: false }).limit(1);
+  if (existing && existing[0]) return existing[0].id;
+
+  const { data: created, error } = await supabase
+    .from("zapp_conversations")
+    .insert({
+      account_id: p.accountId,
+      client_id: p.clientId,
+      phone_e164: p.phoneE164,
+      contact_name: p.name,
+      sector_id: p.sectorId,
+      integration_id: p.integrationId,
+    })
+    .select("id")
+    .single();
+  if (error) {
+    console.error("[cx-auto] create conversation failed:", error.message);
+    return null;
+  }
+  return created.id;
+}
+
+async function mirrorToRoyZapp(
+  supabase: SB,
+  p: {
+    accountId: string;
+    conversationId: string;
+    messageType: "text" | "image";
+    content: string;
+    mediaUrl?: string;
+    externalId: string | null;
+  },
+) {
+  if (p.externalId) {
+    const { data: dup } = await supabase
+      .from("zapp_messages")
+      .select("id")
+      .eq("account_id", p.accountId)
+      .eq("external_message_id", p.externalId)
+      .limit(1);
+    if (dup && dup.length) return;
+  }
+  const now = new Date().toISOString();
+  const { error } = await supabase.from("zapp_messages").insert({
+    account_id: p.accountId,
+    zapp_conversation_id: p.conversationId,
+    direction: "outbound",
+    content: p.content,
+    message_type: p.messageType,
+    media_url: p.mediaUrl ?? null,
+    media_type: p.messageType === "image" ? "image" : null,
+    external_message_id: p.externalId,
+    delivery_status: "sent",
+    sender_name: "Automação CX",
+    sent_at: now,
+  });
+  if (error) {
+    console.error("[cx-auto] mirror message failed:", error.message);
+    return;
+  }
+  await supabase
+    .from("zapp_conversations")
+    .update({
+      last_message_at: now,
+      last_message_preview: p.messageType === "image" ? "📷 Imagem" : p.content.slice(0, 120),
+      updated_at: now,
+    })
+    .eq("id", p.conversationId);
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
