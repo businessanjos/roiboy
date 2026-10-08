@@ -163,6 +163,7 @@ Deno.serve(async (req) => {
         scheduled_send_at,
         send_status,
         send_error,
+        force_send,
         clients!inner (
           full_name,
           phone_e164
@@ -225,9 +226,29 @@ Deno.serve(async (req) => {
     let sentCount = 0;
     let failedCount = 0;
 
+    // Only clients with an active contract receive automatic messages,
+    // unless the team explicitly included the moment in the queue (force_send).
+    const eligibleClientIds = [...new Set(eligible.map((m) => (m as { client_id: string }).client_id))];
+    const { data: activeContracts } = await supabase
+      .from("client_contracts")
+      .select("client_id")
+      .in("client_id", eligibleClientIds)
+      .eq("status", "active");
+    const activeClientIds = new Set((activeContracts || []).map((c: { client_id: string }) => c.client_id));
+
     for (const moment of eligible as unknown as LifeEventWithDetails[]) {
       try {
         const client = moment.clients;
+
+        const forced = (moment as unknown as { force_send?: boolean }).force_send === true;
+        if (!forced && !activeClientIds.has(moment.client_id)) {
+          await supabase
+            .from("client_life_events")
+            .update({ send_status: "cancelled", send_error: "Cancelado: cliente sem contrato ativo" })
+            .eq("id", moment.id);
+          continue;
+        }
+        
         
         if (!client?.phone_e164) {
           console.log(`Client ${moment.client_id} has no phone number, marking as failed`);

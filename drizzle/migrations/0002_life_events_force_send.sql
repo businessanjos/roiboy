@@ -1,0 +1,2 @@
+ALTER TABLE public.client_life_events ADD COLUMN IF NOT EXISTS force_send boolean NOT NULL DEFAULT false;
+COMMENT ON COLUMN public.client_life_events.force_send IS 'Incluído manualmente na fila: envia mesmo sem contrato ativo';
