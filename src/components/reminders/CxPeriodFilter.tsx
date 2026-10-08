@@ -64,7 +64,7 @@ export function CxPeriodFilter({
   const [range, setRange] = useState<DateRange | undefined>(() =>
     value.preset === "custom" && value.start && value.end
       ? { from: new Date(value.start), to: new Date(value.end) }
-      : { from: new Date() },
+      : undefined,
   );
 
   const label = periodTriggerLabel(value);
