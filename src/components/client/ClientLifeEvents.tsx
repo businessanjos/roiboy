@@ -401,8 +401,8 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
       return;
     }
 
-    if (!formMessage.trim()) {
-      toast.error("Mensagem é obrigatória");
+    if (formAutoSend && formMessage.trim().replace(/[\s\-.^_*~]/g, "").length < 3) {
+      toast.error("Escreva a mensagem que será enviada ao cliente");
       return;
     }
 
@@ -922,7 +922,7 @@ export function ClientLifeEvents({ clientId }: ClientLifeEventsProps) {
             </div>
 
             <div className="space-y-2">
-              <Label>Mensagem *</Label>
+              <Label>Mensagem {formAutoSend ? "*" : "(opcional)"}</Label>
               <Textarea
                 placeholder="Mensagem que será enviada ao cliente..."
                 value={formMessage}
