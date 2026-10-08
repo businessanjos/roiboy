@@ -61,26 +61,17 @@ export function CxPeriodFilter({
   const [menuOpen, setMenuOpen] = useState(false);
   const [customOpen, setCustomOpen] = useState(false);
   const isMobile = useIsMobile();
-  const [range, setRange] = useState<{ from?: Date; to?: Date }>(() =>
+  const [range, setRange] = useState<DateRange | undefined>(() =>
     value.preset === "custom" && value.start && value.end
       ? { from: new Date(value.start), to: new Date(value.end) }
-      : { from: new Date(), to: undefined },
+      : { from: new Date() },
   );
 
   const label = periodTriggerLabel(value);
 
-  const selectPreset = (p: CxPeriodPreset) => {
-    setMenuOpen(false);
-    if (p === "custom") {
-      setTimeout(() => setCustomOpen(true), 100);
-      return;
-    }
-    onChange({ preset: p });
-  };
-
-  const handleCustomSelect = (r: { from?: Date; to?: Date } | undefined) => {
+  const handleCustomSelect = (r: DateRange | undefined) => {
     if (!r) return;
-    setRange({ from: r.from, to: r.to });
+    setRange(r);
     if (r.from && r.to) {
       onChange({
         preset: "custom",
@@ -91,58 +82,30 @@ export function CxPeriodFilter({
     }
   };
 
-  return (
-    <>
-      <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
-        <DropdownMenuTrigger asChild>
-          <Button
-            variant="outline"
-            aria-label={ariaLabel}
-            className={cn("h-11 gap-2 justify-between font-normal w-full sm:w-52", className)}
-          >
-            <span className="flex items-center gap-2 min-w-0">
-              <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <span className="truncate">{label}</span>
-            </span>
-            <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="min-w-48">
-          {presets.filter((p) => p !== "custom").map((p) => (
-            <DropdownMenuItem
-              key={p}
-              onClick={() => selectPreset(p)}
-              className={cn(value.preset === p && "bg-accent")}
-            >
-              {CX_PRESET_LABEL[p]}
-            </DropdownMenuItem>
-          ))}
-          <DropdownMenuSeparator />
-          <DropdownMenuItem
-            onSelect={(e) => {
-              e.preventDefault();
-              setMenuOpen(false);
-              setTimeout(() => setCustomOpen(true), 100);
-            }}
-            className={cn(value.preset === "custom" && "bg-accent")}
-          >
-            Personalizado...
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
+  const triggerButton = (
+    <Button
+      variant="outline"
+      aria-label={ariaLabel}
+      className={cn("h-11 gap-2 justify-between font-normal w-full sm:w-52", className)}
+    >
+      <span className="flex items-center gap-2 min-w-0">
+        <CalendarDays className="h-4 w-4 shrink-0 text-muted-foreground" />
+        <span className="truncate">{label}</span>
+      </span>
+      <ChevronDown className="h-4 w-4 opacity-50 shrink-0" />
+    </Button>
+  );
 
-      <Popover open={customOpen} onOpenChange={setCustomOpen}>
-        <PopoverTrigger asChild>
-          <Button variant="outline" className="sr-only" aria-hidden tabIndex={-1}>
-            Calendário
-          </Button>
-        </PopoverTrigger>
+  if (customOpen) {
+    return (
+      <Popover open onOpenChange={(o) => !o && setCustomOpen(false)}>
+        <PopoverTrigger asChild>{triggerButton}</PopoverTrigger>
         <PopoverContent className="w-auto p-0" align="start">
           <Calendar
             initialFocus
             mode="range"
-            defaultMonth={range.from || new Date()}
-            selected={range.from ? (range as DateRange) : undefined}
+            defaultMonth={range?.from || new Date()}
+            selected={range?.from ? range : undefined}
             onSelect={handleCustomSelect}
             numberOfMonths={isMobile ? 1 : 2}
             locale={ptBR}
@@ -150,7 +113,38 @@ export function CxPeriodFilter({
           />
         </PopoverContent>
       </Popover>
-    </>
+    );
+  }
+
+  return (
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
+      <DropdownMenuTrigger asChild>{triggerButton}</DropdownMenuTrigger>
+      <DropdownMenuContent align="start" className="min-w-48">
+        {presets.filter((p) => p !== "custom").map((p) => (
+          <DropdownMenuItem
+            key={p}
+            onClick={() => {
+              setMenuOpen(false);
+              onChange({ preset: p });
+            }}
+            className={cn(value.preset === p && "bg-accent")}
+          >
+            {CX_PRESET_LABEL[p]}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuSeparator />
+        <DropdownMenuItem
+          onSelect={(e) => {
+            e.preventDefault();
+            setMenuOpen(false);
+            setTimeout(() => setCustomOpen(true), 100);
+          }}
+          className={cn(value.preset === "custom" && "bg-accent")}
+        >
+          Personalizado...
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
