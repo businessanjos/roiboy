@@ -12,7 +12,7 @@ import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search,
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink, Pencil, Trash2 } from "lucide-react";
+import { CheckCircle2, ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -232,7 +232,26 @@ export default function CxSendQueue() {
     if (panelPeriod.preset === "today") return 1;
     return Number(panelPeriod.preset) || 30;
   }, [panelPeriod]);
-  const overview = useMemo(() => buildCxOverview(rows, panelDays), [rows, panelDays]);
+  // Last send per client + moment type, so repeated entries don't look like they'll go out again.
+  const keyOf = (r: QueueRow) => `${r.client_id}|${r.event_type}`;
+  const lastSent = useMemo(() => {
+    const m = new Map<string, number>();
+    rows.forEach((r) => {
+      if (r.send_status !== "sent") return;
+      const t = Date.parse(r.sent_at || r.scheduled_send_at || "");
+      if (t && t > (m.get(keyOf(r)) || 0)) m.set(keyOf(r), t);
+    });
+    return m;
+  }, [rows]);
+  const alreadySent = (r: QueueRow) => {
+    if (r.send_status === "sent") return false;
+    const t = lastSent.get(keyOf(r));
+    return !!t && Date.now() - t < 300 * DAY;
+  };
+  const liveRows = useMemo(() => rows.filter((r) => !(IN_QUEUE.includes(r.send_status || "") && alreadySent(r))),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [rows, lastSent]);
+  const overview = useMemo(() => buildCxOverview(liveRows, panelDays), [liveRows, panelDays]);
   const upcoming = overview.upcoming.slice(0, 3);
   const stats = {
     today: overview.today,
@@ -249,7 +268,8 @@ export default function CxSendQueue() {
       .filter((r) => {
         if (q && !(r.clients?.full_name || "").toLowerCase().includes(q)) return false;
         const s = r.send_status || "";
-        if (status === "queue" && !IN_QUEUE.includes(s)) return false;
+        if (status === "dup") return alreadySent(r);
+        if (status === "queue" && (!IN_QUEUE.includes(s) || alreadySent(r))) return false;
         if (status !== "queue" && status !== "all" && s !== status) return false;
         if (status === "queue" && r.scheduled_send_at) {
           const at = Date.parse(r.scheduled_send_at);
@@ -403,6 +423,7 @@ export default function CxSendQueue() {
                 <SelectItem value="queue">Na fila</SelectItem>
                 <SelectItem value="cancelled">Fora da fila</SelectItem>
                 <SelectItem value="sent">Enviados</SelectItem>
+                <SelectItem value="dup">Já receberam (repetidos)</SelectItem>
                 <SelectItem value="failed">Falharam</SelectItem>
                 <SelectItem value="all">Todos</SelectItem>
               </SelectContent>
@@ -455,10 +476,15 @@ export default function CxSendQueue() {
                             <ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} />
                           </div>
                           <p className="text-xs text-muted-foreground mt-1">
-                            {r.title} · <span className="text-foreground/80">{fmt(r.scheduled_send_at)}</span>
+                            {r.title} · <span className="text-foreground/80">{r.send_status === "sent" && r.sent_at ? `Enviado em ${fmt(r.sent_at)}` : fmt(r.scheduled_send_at)}</span>
                           </p>
                           {r.message && <p className="text-xs text-muted-foreground line-clamp-1 mt-0.5">{r.message}</p>}
                           {r.send_error && !inQueue && <p className="text-xs text-muted-foreground/80 mt-0.5 italic">{r.send_error}</p>}
+                          {alreadySent(r) && (
+                            <p className="text-xs mt-1 inline-flex items-center gap-1 rounded-md bg-primary/10 text-primary px-2 py-0.5">
+                              <CheckCircle2 className="h-3.5 w-3.5" />Já recebeu em {fmt(new Date(lastSent.get(keyOf(r))!).toISOString())} · não sai de novo
+                            </p>
+                          )}
                         </div>
                       </div>
                       {r.send_status !== "sent" && (
