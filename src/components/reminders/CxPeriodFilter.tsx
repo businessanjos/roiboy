@@ -108,7 +108,7 @@ export function CxPeriodFilter({
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="start" className="min-w-48">
-          {presets.map((p) => (
+          {presets.filter((p) => p !== "custom").map((p) => (
             <DropdownMenuItem
               key={p}
               onClick={() => selectPreset(p)}
