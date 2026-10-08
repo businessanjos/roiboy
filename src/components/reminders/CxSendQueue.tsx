@@ -12,7 +12,7 @@ import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search,
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ExternalLink } from "lucide-react";
+import { ExternalLink, Pencil, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -85,6 +85,79 @@ function describeAudit(a: AuditRow): string {
   if (o.event_date !== n.event_date) parts.push("mudou a data");
   else if (o.scheduled_send_at !== n.scheduled_send_at && !parts.length) parts.push("reagendou o envio");
   return parts.join(", ") || "Alterou o momento";
+}
+
+type AuditKind = { key: string; label: string; Icon: typeof History; tone: string };
+function auditKind(a: AuditRow): AuditKind {
+  const label = describeAudit(a);
+  if (a.action === "create") return { key: "create", label, Icon: Sparkles, tone: "bg-primary/15 text-primary" };
+  if (a.action === "delete") return { key: "delete", label, Icon: Trash2, tone: "bg-destructive/15 text-destructive" };
+  if (label.startsWith("Mensagem enviada")) return { key: "sent", label, Icon: Send, tone: "bg-primary/15 text-primary" };
+  if (label.startsWith("Tirou da fila")) return { key: "out", label, Icon: PauseCircle, tone: "bg-muted text-muted-foreground" };
+  if (label.startsWith("Incluiu na fila")) return { key: "in", label, Icon: PlayCircle, tone: "bg-primary/15 text-primary" };
+  if (label.includes("mensagem")) return { key: "edit", label, Icon: Pencil, tone: "bg-accent text-accent-foreground" };
+  return { key: "other:" + label, label, Icon: CalendarClock, tone: "bg-accent text-accent-foreground" };
+}
+
+interface AuditGroup { id: string; user: string; kind: AuditKind; items: AuditRow[] }
+/** Groups consecutive entries by the same user and action within 30 minutes. */
+function groupAudit(rows: AuditRow[]): AuditGroup[] {
+  const out: AuditGroup[] = [];
+  for (const a of rows) {
+    const kind = auditKind(a), user = a.user_name || "Sistema";
+    const last = out[out.length - 1];
+    const prev = last?.items[last.items.length - 1];
+    if (last && last.user === user && last.kind.key === kind.key && prev &&
+        new Date(prev.created_at).getTime() - new Date(a.created_at).getTime() <= 30 * 60000) {
+      last.items.push(a);
+    } else out.push({ id: a.id, user, kind, items: [a] });
+  }
+  return out;
+}
+
+function AuditGroupItem({ g }: { g: AuditGroup }) {
+  const [open, setOpen] = useState(false);
+  const { Icon } = g.kind;
+  const many = g.items.length > 1;
+  const first = g.items[0], lastItem = g.items[g.items.length - 1];
+  const who = (a: AuditRow) => a.entity_name || "Cliente";
+  const time = (iso: string) => new Date(iso).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone: CX_TIME_ZONE });
+  return (
+    <li className="px-4 py-3">
+      <div className="flex items-center gap-3">
+        <span title={g.kind.label} aria-label={g.kind.label} className={cn("h-9 w-9 rounded-full flex items-center justify-center shrink-0", g.kind.tone)}>
+          <Icon className="h-4 w-4" />
+        </span>
+        <div className="min-w-0 flex-1">
+          <p className="text-sm truncate">
+            <span className="font-medium">{g.user}</span>
+            {many ? <span className="text-muted-foreground"> · {g.items.length} clientes</span> : <span className="text-muted-foreground"> · {who(first)}</span>}
+          </p>
+          {many && !open && (
+            <p className="text-xs text-muted-foreground truncate">{g.items.slice(0, 3).map(who).join(", ")}{g.items.length > 3 ? ` +${g.items.length - 3}` : ""}</p>
+          )}
+        </div>
+        <span className="text-xs text-muted-foreground shrink-0 text-right">
+          {fmt(first.created_at)}{many && first.created_at !== lastItem.created_at ? <><br />desde {time(lastItem.created_at)}</> : null}
+        </span>
+        {many && (
+          <Button variant="ghost" size="icon" className="h-9 w-9 shrink-0" aria-label={open ? "Recolher" : "Ver todos"} aria-expanded={open} onClick={() => setOpen((o) => !o)}>
+            {open ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+          </Button>
+        )}
+      </div>
+      {many && open && (
+        <ul className="mt-2 ml-12 space-y-1 border-l border-border pl-3">
+          {g.items.map((a) => (
+            <li key={a.id} className="flex justify-between gap-3 text-xs">
+              <span className="truncate">{who(a)}<span className="text-muted-foreground">{a.details?.title ? ` · ${a.details.title}` : ""}</span></span>
+              <span className="text-muted-foreground shrink-0">{time(a.created_at)}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </li>
+  );
 }
 
 export default function CxSendQueue() {
@@ -191,7 +264,8 @@ export default function CxSendQueue() {
   }, [rows, search, status, bounds, contract, activeIds]);
 
   const pagination = usePagedList(filtered, { resetKey: [search, status, period, contract] });
-  const auditPagination = usePagedList(audit);
+  const auditGroups = useMemo(() => groupAudit(audit), [audit]);
+  const auditPagination = usePagedList(auditGroups);
 
   const apply = async (items: QueueRow[], include: boolean) => {
     if (!items.length) return;
@@ -412,23 +486,9 @@ export default function CxSendQueue() {
             <Card>
               <CardContent className="p-0">
                 <ul className={cn("divide-y divide-border overflow-y-auto overscroll-contain", maximized ? "max-h-[70dvh]" : "max-h-[420px]")}>
-                  {auditPagination.items.map((a) => (
-                    <li key={a.id} className="p-4 flex flex-wrap sm:flex-nowrap gap-3">
-                      <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", a.action === "delete" ? "bg-destructive" : a.action === "create" ? "bg-primary" : "bg-muted-foreground")} />
-                      <div className="min-w-0 flex-1">
-                        <p className="text-sm">
-                          <span className="font-medium">{a.user_name || "Sistema"}</span>{" "}
-                          <span className="text-muted-foreground">· {describeAudit(a)}</span>
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {a.entity_name || "Cliente"}{a.details?.title ? ` · ${a.details.title}` : ""}
-                        </p>
-                      </div>
-                      <span className="text-xs text-muted-foreground shrink-0">{fmt(a.created_at)}</span>
-                    </li>
-                  ))}
+                  {auditPagination.items.map((g) => <AuditGroupItem key={g.id} g={g} />)}
                 </ul>
-                <PagerFor state={auditPagination} itemLabel="alterações" />
+                <PagerFor state={auditPagination} itemLabel="grupos" />
               </CardContent>
             </Card>
           )}
