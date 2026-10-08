@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -31,9 +31,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CalendarCheck, Download, FileText, Loader2, MoreHorizontal, Plus, RefreshCw, Search, SlidersHorizontal } from "lucide-react";
+import { CalendarCheck, CalendarDays, ChevronDown, Download, FileText, Loader2, MoreHorizontal, Plus, RefreshCw, Search, SlidersHorizontal, X } from "lucide-react";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
@@ -183,6 +184,35 @@ export default function ClientCheckpoints() {
     : `${(detailed.data || []).length} registro(s) no período/canal selecionado`;
   const activePeriodFilters = (from ? 1 : 0) + (to ? 1 : 0) + (channel && channel !== "todos" ? 1 : 0);
 
+  /** Resumo curto do período/canal para o gatilho discreto do popover. */
+  const periodSummary = useMemo(() => {
+    const d = (iso: string) => format(parseISO(iso), "dd/MM/yy");
+    const base =
+      !from && !to
+        ? "Todo o período"
+        : from && to
+          ? `${d(from)} – ${d(to)}`
+          : from
+            ? `A partir de ${d(from)}`
+            : `Até ${d(to)}`;
+    const ch =
+      channel && channel !== "todos"
+        ? CHECKIN_CHANNELS.find((c) => c.value === channel)?.label || channel
+        : null;
+    return ch ? `${base} · ${ch}` : base;
+  }, [from, to, channel]);
+
+  const recordsShort = detailed.isLoading
+    ? "…"
+    : `${(detailed.data || []).length.toLocaleString("pt-BR")} registros`;
+
+  const clearPeriod = () => {
+    setFrom("");
+    setTo("");
+    setChannel("todos");
+  };
+
+
   const periodFields = (prefix: string) => (
     <>
       <div className="space-y-1.5">
@@ -301,19 +331,48 @@ export default function ClientCheckpoints() {
         <Kpi label="15+ dias sem interação" value={silentCount} tone="text-destructive" />
       </div>
 
-      <Card className="shadow-card hidden md:block">
-        <CardContent className="p-4 grid gap-3 sm:grid-cols-4">
-          {periodFields("cp-desktop")}
-          <div className="flex items-end text-xs text-muted-foreground">{recordsLabel}</div>
-        </CardContent>
-      </Card>
-
-
-
       <Card className="shadow-card min-w-0">
         <CardHeader className="p-3 pb-3 space-y-3 md:p-6 md:pb-3">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base">Clientes ({filtered.length})</CardTitle>
+            <div className="hidden md:flex items-center gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-label="Filtrar por período e canal"
+                    className="h-8 gap-1.5 px-2.5 text-xs font-normal text-muted-foreground hover:text-foreground"
+                  >
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span className="max-w-[220px] truncate">{periodSummary}</span>
+                    {activePeriodFilters > 0 && (
+                      <Badge variant="secondary" className="h-4 px-1 text-[10px] leading-4">
+                        {activePeriodFilters}
+                      </Badge>
+                    )}
+                    <ChevronDown className="h-3 w-3 opacity-60" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent align="end" className="w-auto min-w-[300px] p-3">
+                  <div className="grid gap-2.5 sm:grid-cols-3">{periodFields("cp-pop")}</div>
+                  <div className="mt-3 flex items-center justify-between gap-2 border-t border-border/60 pt-2.5">
+                    <span className="text-xs text-muted-foreground">{recordsShort}</span>
+                    {activePeriodFilters > 0 && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-7 px-2 text-xs"
+                        onClick={clearPeriod}
+                      >
+                        <X className="h-3 w-3 mr-1" />
+                        Limpar
+                      </Button>
+                    )}
+                  </div>
+                </PopoverContent>
+              </Popover>
+            </div>
             <Sheet>
               <SheetTrigger asChild>
                 <Button variant="outline" className="h-11 md:hidden" aria-label="Filtros de período e canal">
