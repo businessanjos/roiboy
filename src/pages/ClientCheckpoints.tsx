@@ -22,7 +22,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -128,6 +127,16 @@ export default function ClientCheckpoints() {
   }, [rows]);
 
   const silentCount = useMemo(() => rows.filter((r) => r.silent).length, [rows]);
+
+  // Chips de situação: substituem as abas roláveis (sem barra de rolagem lateral).
+  const statusChips: { key: FilterKey; label: string; aria?: string; count: number }[] = [
+    { key: "todos", label: "Todos", count: rows.length },
+    { key: "vencido", label: "Vencidos", count: counts.vencido },
+    { key: "sem_registro", label: "Sem registro", count: counts.sem_registro },
+    { key: "atencao", label: "Em breve", count: counts.atencao },
+    { key: "em_dia", label: "Em dia", count: counts.em_dia },
+    { key: "sem_interacao_15", label: "15+ dias", aria: "15+ dias sem interação", count: silentCount },
+  ];
 
   const filtered = rows.filter((r) => {
     if (filter === "sem_interacao_15") {
@@ -418,16 +427,32 @@ export default function ClientCheckpoints() {
                 <SelectItem value="name_desc">Nome (Z → A)</SelectItem>
               </SelectContent>
             </Select>
-            <Tabs value={filter} onValueChange={(v) => setFilter(v as FilterKey)} className="w-full sm:w-auto min-w-0">
-              <TabsList className="w-full sm:w-auto flex-nowrap justify-start overflow-x-auto scrollbar-none">
-                <TabsTrigger value="todos" className="min-h-11 shrink-0">Todos</TabsTrigger>
-                <TabsTrigger value="vencido" className="min-h-11 shrink-0">Vencidos</TabsTrigger>
-                <TabsTrigger value="sem_registro" className="min-h-11 shrink-0">Sem registro</TabsTrigger>
-                <TabsTrigger value="atencao" className="min-h-11 shrink-0">Em breve</TabsTrigger>
-                <TabsTrigger value="em_dia" className="min-h-11 shrink-0">Em dia</TabsTrigger>
-                <TabsTrigger value="sem_interacao_15" className="min-h-11 shrink-0">15+ dias sem interação</TabsTrigger>
-              </TabsList>
-            </Tabs>
+            <div
+              className="flex w-full flex-wrap items-center gap-1.5 sm:w-auto"
+              role="group"
+              aria-label="Filtrar por situação do checkpoint"
+            >
+              {statusChips.map((opt) => (
+                <button
+                  key={opt.key}
+                  type="button"
+                  onClick={() => setFilter(opt.key)}
+                  aria-pressed={filter === opt.key}
+                  aria-label={opt.aria}
+                  className={cn(
+                    "inline-flex min-h-9 items-center gap-1.5 rounded-full border px-3.5 text-xs font-medium transition-colors",
+                    filter === opt.key
+                      ? "border-primary bg-primary text-primary-foreground"
+                      : "border-border/70 bg-card text-muted-foreground hover:border-border hover:text-foreground"
+                  )}
+                >
+                  {opt.label}
+                  <span className={cn("tabular-nums", filter === opt.key ? "opacity-80" : "opacity-60")}>
+                    {opt.count}
+                  </span>
+                </button>
+              ))}
+            </div>
           </div>
         </CardHeader>
         <CardContent className="p-3 pt-0 md:p-6 md:pt-0">
