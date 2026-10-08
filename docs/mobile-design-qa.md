@@ -1,5 +1,12 @@
 # QA mobile — ROY Eternum
 
+## Momentos CX — fila compacta
+- Painel com previsão por dia em horário de Brasília, próximos destinatários e ranking de dias com mais parabéns.
+- Fila e auditoria paginadas, com rolagem interna limitada; controles de minimizar e ampliar sem alterações de dados.
+- Previsão de aniversário pendente sem horário é identificada como previsão; agendamentos vencidos não contam como envios de hoje.
+- Testes unitários de calendário, ranking e previsão: 3 aprovados. Nenhum envio ou alteração de registro real no QA.
+- Playwright autenticado: minimizar/mostrar, ampliar/reduzir e abrir auditoria conferidos; 1280px e 320px sem overflow horizontal (320/320). Compilação automática sem erros.
+
 ## Conclusão atual (rodada 4)
 
 **Verificado de fato**

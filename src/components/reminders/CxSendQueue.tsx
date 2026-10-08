@@ -8,9 +8,13 @@ import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search, Send, Sparkles, UserX } from "lucide-react";
+import { Cake, CalendarClock, History, Loader2, PauseCircle, PlayCircle, Search, Send, Sparkles, UserX, ChevronDown, ChevronUp, Maximize2, Minimize2 } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { usePagedList } from "@/hooks/usePagedList";
+import { PagerFor } from "@/components/ui/list-pagination";
+import { buildCxOverview, CX_TIME_ZONE } from "@/lib/cxQueueOverview";
+import CxQueueDashboard from "./CxQueueDashboard";
 
 interface QueueRow {
   id: string;
@@ -56,7 +60,7 @@ function nextSendAt(eventDate: string | null): string {
 }
 
 const fmt = (iso: string | null) =>
-  iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" }) : "Sem data";
+  iso ? new Date(iso).toLocaleString("pt-BR", { day: "2-digit", month: "short", timeZone: CX_TIME_ZONE, hour: "2-digit", minute: "2-digit" }) : "Sem data";
 
 function describeAudit(a: AuditRow): string {
   if (a.action === "create") return "Criou o momento";
@@ -82,6 +86,9 @@ export default function CxSendQueue() {
   const [status, setStatus] = useState("queue");
   const [contract, setContract] = useState("all");
   const [days, setDays] = useState("30");
+  const [queueOpen, setQueueOpen] = useState(true);
+  const [maximized, setMaximized] = useState(false);
+  const [horizon, setHorizon] = useState("30");
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
 
@@ -133,27 +140,14 @@ export default function CxSendQueue() {
 
   const isActive = (r: QueueRow) => !!activeIds?.has(r.client_id);
 
-  const stats = useMemo(() => {
-    const now = Date.now();
-    const queued = rows.filter((r) => IN_QUEUE.includes(r.send_status || ""));
-    const due = (r: QueueRow, d: number) => r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() <= now + d * DAY;
-    return {
-      today: queued.filter((r) => due(r, 1)).length,
-      week: queued.filter((r) => due(r, 7)).length,
-      queued: queued.length,
-      inactive: rows.filter((r) => activeIds && !isActive(r) && !IN_QUEUE.includes(r.send_status || "") && r.send_status !== "sent").length,
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, activeIds]);
-
-  const upcoming = useMemo(
-    () =>
-      rows
-        .filter((r) => IN_QUEUE.includes(r.send_status || "") && r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() >= Date.now() - 12 * 3600 * 1000)
-        .sort((a, b) => a.scheduled_send_at!.localeCompare(b.scheduled_send_at!))
-        .slice(0, 6),
-    [rows],
-  );
+  const overview = useMemo(() => buildCxOverview(rows, Number(horizon)), [rows, horizon]);
+  const upcoming = overview.upcoming.slice(0, 3);
+  const stats = {
+    today: overview.today,
+    week: overview.week,
+    queued: overview.queued,
+    inactive: rows.filter((r) => activeIds && !isActive(r) && !IN_QUEUE.includes(r.send_status || "") && r.send_status !== "sent").length,
+  };
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -169,10 +163,12 @@ export default function CxSendQueue() {
         if (contract === "inactive" && isActive(r)) return false;
         return true;
       })
-      .sort((a, b) => (a.scheduled_send_at || "9").localeCompare(b.scheduled_send_at || "9"))
-      .slice(0, 300);
+      .sort((a, b) => (a.scheduled_send_at || "9").localeCompare(b.scheduled_send_at || "9"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows, search, status, days, contract, activeIds]);
+
+  const pagination = usePagedList(filtered, { resetKey: [search, status, days, contract] });
+  const auditPagination = usePagedList(audit);
 
   const apply = async (items: QueueRow[], include: boolean) => {
     if (!items.length) return;
@@ -216,17 +212,20 @@ export default function CxSendQueue() {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-xl font-semibold tracking-tight">Fila de envios automáticos</h2>
-        <p className="text-sm text-muted-foreground">
-          Parabéns e momentos CX. Só clientes com contrato ativo recebem, a não ser que você inclua um inativo manualmente.
-        </p>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div><h2 className="text-xl font-semibold">Momentos CX</h2><p className="text-sm text-muted-foreground mt-1">Programação de parabéns e relacionamento</p></div>
+          <Select value={horizon} onValueChange={setHorizon}>
+            <SelectTrigger aria-label="Período do painel" className="h-11 w-44"><SelectValue /></SelectTrigger>
+            <SelectContent><SelectItem value="7">Próximos 7 dias</SelectItem><SelectItem value="30">Próximos 30 dias</SelectItem><SelectItem value="90">Próximos 90 dias</SelectItem></SelectContent>
+          </Select>
+        </div>
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
           <Card key={k.label} className="border-border/60">
             <CardContent className="p-4 flex items-center gap-3">
-              <div className="h-10 w-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center shrink-0">
+              <div className="h-10 w-10 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
                 <k.icon className="h-5 w-5" />
               </div>
               <div className="min-w-0">
@@ -238,38 +237,49 @@ export default function CxSendQueue() {
         ))}
       </div>
 
+      {error ? <p role="alert" className="text-sm text-destructive">Não foi possível carregar a programação.</p> : isLoading ? (
+        <div className="h-[240px] flex items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
+      ) : <CxQueueDashboard overview={overview} />}
+
       {upcoming.length > 0 && (
-        <div>
-          <p className="text-sm font-medium mb-2">Próximos a receber</p>
-          <div className="flex gap-3 overflow-x-auto pb-2 -mx-1 px-1 snap-x">
-            {upcoming.map((r) => (
-              <Card key={r.id} className="min-w-[220px] snap-start border-primary/20 bg-gradient-to-br from-primary/5 to-transparent">
-                <CardContent className="p-4 space-y-2">
-                  <div className="flex items-center gap-2">
-                    <Avatar row={r} />
-                    <p className="font-medium text-sm truncate">{r.clients?.full_name || "Cliente"}</p>
-                  </div>
-                  <p className="text-xs text-primary font-medium">{fmt(r.scheduled_send_at)}</p>
-                  <p className="text-xs text-muted-foreground line-clamp-2">{r.title}</p>
-                  <ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} />
-                </CardContent>
-              </Card>
+        <section className="border-t border-border pt-5" aria-label="Próximos a receber">
+          <h3 className="text-sm font-semibold mb-3">Próximos a receber</h3>
+          <div className="grid gap-4 md:grid-cols-3">
+            {upcoming.map(({ row: r, at, estimated }) => (
+              <div key={r.id} className="flex items-start gap-3 min-w-0">
+                <Avatar row={r} />
+                <div className="min-w-0"><p className="font-medium text-sm line-clamp-2">{r.clients?.full_name || "Cliente"}</p>
+                  <p className="text-xs text-primary mt-1">{fmt(at)}{estimated ? " · previsão" : ""}</p>
+                  <div className="mt-1"><ContractBadge active={isActive(r)} forced={r.force_send} known={!!activeIds} /></div>
+                </div>
+              </div>
             ))}
           </div>
-        </div>
+        </section>
       )}
 
-      <Tabs defaultValue="queue">
+      <Tabs defaultValue="queue" className="border-t border-border pt-5">
+        <div className="flex flex-wrap items-center justify-between gap-2">
         <TabsList>
           <TabsTrigger value="queue" className="gap-2"><CalendarClock className="h-4 w-4" />Fila</TabsTrigger>
           <TabsTrigger value="audit" className="gap-2"><History className="h-4 w-4" />Auditoria</TabsTrigger>
         </TabsList>
-
+        <div className="flex items-center gap-1">
+          <Button variant="ghost" size="icon" className="h-11 w-11" title={maximized ? "Reduzir fila" : "Maximizar fila"} aria-label={maximized ? "Reduzir fila" : "Maximizar fila"} aria-pressed={maximized} onClick={() => { setMaximized((v) => !v); setQueueOpen(true); }}>
+            {maximized ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+          </Button>
+          <Button variant="outline" className="h-11 gap-2" aria-expanded={queueOpen} aria-controls="cx-queue-details" onClick={() => setQueueOpen((v) => !v)}>
+            {queueOpen ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}{queueOpen ? "Minimizar" : "Mostrar fila"}
+          </Button>
+        </div>
+        </div>
+        {!queueOpen && <p className="mt-3 text-sm text-muted-foreground">{filtered.length} envio(s) nos filtros atuais · {selectedRows.length ? `${selectedRows.length} selecionado(s)` : "Fila recolhida"}</p>}
+        <div id="cx-queue-details" hidden={!queueOpen}>
         <TabsContent value="queue" className="mt-4 space-y-4">
           <div className="flex flex-col lg:flex-row gap-2">
             <div className="relative flex-1">
               <Search className="h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-              <Input className="h-11 pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
+              <Input aria-label="Buscar cliente na fila" className="h-11 pl-9" placeholder="Buscar cliente..." value={search} onChange={(e) => setSearch(e.target.value)} />
             </div>
             <Select value={contract} onValueChange={setContract}>
               <SelectTrigger className="h-11 lg:w-52"><SelectValue /></SelectTrigger>
@@ -303,7 +313,7 @@ export default function CxSendQueue() {
           </div>
 
           {selectedRows.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2 rounded-xl border border-primary/30 bg-primary/5 p-3">
+            <div className="flex flex-wrap items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3">
               <span className="text-sm font-medium mr-auto">{selectedRows.length} selecionado(s)</span>
               <Button className="h-11" disabled={busy} onClick={() => apply(selectedRows.filter((r) => !IN_QUEUE.includes(r.send_status || "")), true)}>
                 <PlayCircle className="h-4 w-4 mr-2" />Incluir na fila
@@ -322,12 +332,12 @@ export default function CxSendQueue() {
           ) : filtered.length === 0 ? (
             <Card><CardContent className="py-10 text-center text-sm text-muted-foreground">Nenhum envio com esses filtros.</CardContent></Card>
           ) : (
-            <div className="space-y-2">
-              {filtered.map((r) => {
+            <div className="overflow-hidden rounded-lg border border-border">
+            <div tabIndex={0} role="region" aria-label="Lista de envios" className={cn("overflow-y-auto overscroll-contain divide-y divide-border", maximized ? "max-h-[70dvh]" : "max-h-[420px]")}>
+              {pagination.items.map((r) => {
                 const inQueue = IN_QUEUE.includes(r.send_status || "");
                 return (
-                  <Card key={r.id} className={cn("transition-colors", selected.has(r.id) && "border-primary/50 bg-primary/5")}>
-                    <CardContent className="p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3">
+                  <div key={r.id} className={cn("p-3 sm:p-4 flex flex-col sm:flex-row sm:items-center gap-3", selected.has(r.id) && "bg-primary/5")}>
                       <div className="flex items-start gap-3 flex-1 min-w-0">
                         {r.send_status !== "sent" && (
                           <Checkbox className="mt-3" checked={selected.has(r.id)} onCheckedChange={() => toggle(r.id)} aria-label={`Selecionar ${r.clients?.full_name || "cliente"}`} />
@@ -351,10 +361,11 @@ export default function CxSendQueue() {
                           {inQueue ? <><PauseCircle className="h-4 w-4 mr-2" />Tirar da fila</> : <><PlayCircle className="h-4 w-4 mr-2" />Incluir na fila</>}
                         </Button>
                       )}
-                    </CardContent>
-                  </Card>
+                  </div>
                 );
               })}
+            </div>
+            <PagerFor state={pagination} itemLabel="envios" />
             </div>
           )}
         </TabsContent>
@@ -369,9 +380,9 @@ export default function CxSendQueue() {
           ) : (
             <Card>
               <CardContent className="p-0">
-                <ul className="divide-y divide-border">
-                  {audit.map((a) => (
-                    <li key={a.id} className="p-4 flex gap-3">
+                <ul className={cn("divide-y divide-border overflow-y-auto overscroll-contain", maximized ? "max-h-[70dvh]" : "max-h-[420px]")}>
+                  {auditPagination.items.map((a) => (
+                    <li key={a.id} className="p-4 flex flex-wrap sm:flex-nowrap gap-3">
                       <div className={cn("h-2.5 w-2.5 rounded-full mt-1.5 shrink-0", a.action === "delete" ? "bg-destructive" : a.action === "create" ? "bg-primary" : "bg-muted-foreground")} />
                       <div className="min-w-0 flex-1">
                         <p className="text-sm">
@@ -386,10 +397,12 @@ export default function CxSendQueue() {
                     </li>
                   ))}
                 </ul>
+                <PagerFor state={auditPagination} itemLabel="alterações" />
               </CardContent>
             </Card>
           )}
         </TabsContent>
+        </div>
       </Tabs>
     </div>
   );
