@@ -128,6 +128,16 @@ export default function ClientCheckpoints() {
 
   const silentCount = useMemo(() => rows.filter((r) => r.silent).length, [rows]);
 
+  // Chips de situação: substituem as abas roláveis (sem barra de rolagem lateral).
+  const statusChips: { key: FilterKey; label: string; aria?: string; count: number }[] = [
+    { key: "todos", label: "Todos", count: rows.length },
+    { key: "vencido", label: "Vencidos", count: counts.vencido },
+    { key: "sem_registro", label: "Sem registro", count: counts.sem_registro },
+    { key: "atencao", label: "Em breve", count: counts.atencao },
+    { key: "em_dia", label: "Em dia", count: counts.em_dia },
+    { key: "sem_interacao_15", label: "15+ dias", aria: "15+ dias sem interação", count: silentCount },
+  ];
+
   const filtered = rows.filter((r) => {
     if (filter === "sem_interacao_15") {
       if (!r.silent) return false;
