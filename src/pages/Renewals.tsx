@@ -53,6 +53,7 @@ interface RenewalContract {
 const RENEWALS_FULL_ACCESS_USER_IDS = [
   "d20201f6-a9bd-4934-ae50-07ce7a47574b", // Maikol
   "de43a643-0109-4afb-ac35-be768dbf4090", // Everton
+  "e0017d78-21d4-413a-befc-5197df7ad666", // Andréia Barros
   "1232ec15-5f66-4b5f-9e74-f40d436f9d0f", // Jonathan
   "a1625047-8b72-4b1b-a42c-24bbdc9fd143", // Jéssica Campos
   "c064c5d5-cdb5-47cc-99ce-ad416b6407b1", // Jéssica Marcato
