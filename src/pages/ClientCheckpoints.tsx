@@ -79,6 +79,7 @@ export default function ClientCheckpoints() {
   const [from, setFrom] = usePersistedFilter<string>("checkpoints", "from", "");
   const [to, setTo] = usePersistedFilter<string>("checkpoints", "to", "");
   const [channel, setChannel] = usePersistedFilter<string>("checkpoints", "channel", "todos");
+  const [sortBy, setSortBy] = usePersistedFilter<"oldest" | "recent" | "name_asc" | "name_desc">("checkpoints", "sort", "oldest");
 
 
   const detailed = useCheckinsReport({ from: from || null, to: to || null, channel, enabled: true });
@@ -139,9 +140,17 @@ export default function ClientCheckpoints() {
       r.full_name?.toLowerCase().includes(q) ||
       (r.consultant_name || "").toLowerCase().includes(q)
     );
+  }).sort((a, b) => {
+    if (sortBy === "name_asc") return String(a.full_name || "").localeCompare(String(b.full_name || ""), "pt-BR");
+    if (sortBy === "name_desc") return String(b.full_name || "").localeCompare(String(a.full_name || ""), "pt-BR");
+    // Cronológico pela última interação; sem interação conta como a mais antiga.
+    const ta = a.interactionAt ? new Date(a.interactionAt).getTime() : -Infinity;
+    const tb = b.interactionAt ? new Date(b.interactionAt).getTime() : -Infinity;
+    if (ta === tb) return 0;
+    return sortBy === "recent" ? (tb > ta ? 1 : -1) : (ta > tb ? 1 : -1);
   });
 
-  const pg = usePagedList(filtered, { resetKey: [filter, search], isLoading });
+  const pg = usePagedList(filtered, { resetKey: [filter, search, sortBy], isLoading });
 
   const exportPanel = () => {
     const csv = buildCsv(
