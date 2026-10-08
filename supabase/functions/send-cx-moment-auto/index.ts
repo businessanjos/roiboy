@@ -323,6 +323,27 @@ Deno.serve(async (req) => {
           continue;
         }
 
+        // Duplicate guard: same client + same moment type already sent in the last 300 days.
+        if (moment.event_type === "birthday") {
+          const since = new Date(Date.now() - 300 * 86400000).toISOString();
+          const { data: recent } = await supabase
+            .from("client_life_events")
+            .select("id")
+            .eq("client_id", moment.client_id)
+            .eq("event_type", moment.event_type)
+            .eq("send_status", "sent")
+            .neq("id", moment.id)
+            .gte("sent_at", since)
+            .limit(1);
+          if (recent && recent.length) {
+            await supabase.from("client_life_events").update({
+              send_status: "cancelled",
+              scheduled_send_at: null,
+              send_error: "Cancelado: cliente já recebeu este parabéns neste ciclo",
+            }).eq("id", moment.id);
+            continue;
+          }
+        }
         // Get attached images
         const { data: images } = await supabase
           .from("client_life_event_images")
