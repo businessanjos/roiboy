@@ -18,6 +18,7 @@ import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
 import { buildCxOverview, CX_TIME_ZONE } from "@/lib/cxQueueOverview";
 import CxQueueDashboard from "./CxQueueDashboard";
+import { CxPeriodFilter, CxPeriodValue, cxPeriodBounds } from "./CxPeriodFilter";
 
 interface QueueRow {
   id: string;
@@ -91,10 +92,10 @@ export default function CxSendQueue() {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("queue");
   const [contract, setContract] = useState("all");
-  const [days, setDays] = useState("30");
+  const [period, setPeriod] = useState<CxPeriodValue>({ preset: "30" });
   const [queueOpen, setQueueOpen] = useState(true);
   const [maximized, setMaximized] = useState(false);
-  const [horizon, setHorizon] = useState("30");
+  const [panelPeriod, setPanelPeriod] = useState<CxPeriodValue>({ preset: "30" });
   const [busy, setBusy] = useState(false);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [detail, setDetail] = useState<QueueRow | null>(null);
@@ -148,7 +149,17 @@ export default function CxSendQueue() {
 
   const isActive = (r: QueueRow) => !!activeIds?.has(r.client_id);
 
-  const overview = useMemo(() => buildCxOverview(rows, Number(horizon)), [rows, horizon]);
+  const panelDays = useMemo(() => {
+    if (panelPeriod.preset === "custom") {
+      const from = panelPeriod.start ? new Date(panelPeriod.start).getTime() : Date.now();
+      const span = Math.ceil((new Date(panelPeriod.end || Date.now()).getTime() - Math.min(from, Date.now())) / DAY) || 1;
+      return Math.min(Math.max(span, 1), 366);
+    }
+    if (panelPeriod.preset === "all") return 366;
+    if (panelPeriod.preset === "today") return 1;
+    return Number(panelPeriod.preset) || 30;
+  }, [panelPeriod]);
+  const overview = useMemo(() => buildCxOverview(rows, panelDays), [rows, panelDays]);
   const upcoming = overview.upcoming.slice(0, 3);
   const stats = {
     today: overview.today,
@@ -157,25 +168,29 @@ export default function CxSendQueue() {
     inactive: rows.filter((r) => activeIds && !isActive(r) && !IN_QUEUE.includes(r.send_status || "") && r.send_status !== "sent").length,
   };
 
+  const bounds = useMemo(() => cxPeriodBounds(period), [period]);
+
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const limit = days === "all" ? Infinity : Date.now() + Number(days) * DAY;
     return rows
       .filter((r) => {
         if (q && !(r.clients?.full_name || "").toLowerCase().includes(q)) return false;
         const s = r.send_status || "";
         if (status === "queue" && !IN_QUEUE.includes(s)) return false;
         if (status !== "queue" && status !== "all" && s !== status) return false;
-        if (status === "queue" && r.scheduled_send_at && new Date(r.scheduled_send_at).getTime() > limit) return false;
+        if (status === "queue" && r.scheduled_send_at) {
+          const at = Date.parse(r.scheduled_send_at);
+          if (at > bounds.max || at < bounds.min) return false;
+        }
         if (contract === "active" && !isActive(r)) return false;
         if (contract === "inactive" && isActive(r)) return false;
         return true;
       })
       .sort((a, b) => (a.scheduled_send_at || "9").localeCompare(b.scheduled_send_at || "9"));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rows, search, status, days, contract, activeIds]);
+  }, [rows, search, status, bounds, contract, activeIds]);
 
-  const pagination = usePagedList(filtered, { resetKey: [search, status, days, contract] });
+  const pagination = usePagedList(filtered, { resetKey: [search, status, period, contract] });
   const auditPagination = usePagedList(audit);
 
   const apply = async (items: QueueRow[], include: boolean) => {
@@ -211,13 +226,13 @@ export default function CxSendQueue() {
     });
 
   const kpis = [
-    { key: "today", label: "Envios hoje", value: stats.today, icon: Send, f: { status: "queue", days: "1", contract: "all" } },
-    { key: "week", label: "Próximos 7 dias", value: stats.week, icon: CalendarClock, f: { status: "queue", days: "7", contract: "all" } },
-    { key: "queued", label: "Total na fila", value: stats.queued, icon: Sparkles, f: { status: "queue", days: "all", contract: "all" } },
-    { key: "inactive", label: "Inativos fora da fila", value: stats.inactive, icon: UserX, f: { status: "cancelled", days: "all", contract: "inactive" } },
+    { key: "today", label: "Envios hoje", value: stats.today, icon: Send, f: { status: "queue", period: { preset: "today" } as CxPeriodValue, contract: "all" } },
+    { key: "week", label: "Próximos 7 dias", value: stats.week, icon: CalendarClock, f: { status: "queue", period: { preset: "7" } as CxPeriodValue, contract: "all" } },
+    { key: "queued", label: "Total na fila", value: stats.queued, icon: Sparkles, f: { status: "queue", period: { preset: "all" } as CxPeriodValue, contract: "all" } },
+    { key: "inactive", label: "Inativos fora da fila", value: stats.inactive, icon: UserX, f: { status: "cancelled", period: { preset: "all" } as CxPeriodValue, contract: "inactive" } },
   ];
   const openKpi = (k: (typeof kpis)[number]) => {
-    setStatus(k.f.status); setDays(k.f.days); setContract(k.f.contract); setSearch("");
+    setStatus(k.f.status); setPeriod(k.f.period); setContract(k.f.contract); setSearch("");
     setActiveKpi(k.key); setQueueOpen(true);
     setTimeout(() => document.getElementById("cx-queue-details")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   };
@@ -227,10 +242,13 @@ export default function CxSendQueue() {
       <div>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div><h2 className="text-xl font-semibold">Momentos CX</h2><p className="text-sm text-muted-foreground mt-1">Programação de parabéns e relacionamento</p></div>
-          <Select value={horizon} onValueChange={setHorizon}>
-            <SelectTrigger aria-label="Período do painel" className="h-11 w-44"><SelectValue /></SelectTrigger>
-            <SelectContent><SelectItem value="7">Próximos 7 dias</SelectItem><SelectItem value="30">Próximos 30 dias</SelectItem><SelectItem value="90">Próximos 90 dias</SelectItem></SelectContent>
-          </Select>
+          <CxPeriodFilter
+            ariaLabel="Período do painel"
+            presets={["7", "30", "90", "custom"]}
+            value={panelPeriod}
+            onChange={setPanelPeriod}
+            className="sm:w-56"
+          />
         </div>
       </div>
 
@@ -316,15 +334,12 @@ export default function CxSendQueue() {
               </SelectContent>
             </Select>
             {status === "queue" && (
-              <Select value={days} onValueChange={(v) => { setDays(v); setActiveKpi(null); }}>
-                <SelectTrigger className="h-11 lg:w-44"><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="1">Hoje</SelectItem>
-                  <SelectItem value="7">Próximos 7 dias</SelectItem>
-                  <SelectItem value="30">Próximos 30 dias</SelectItem>
-                  <SelectItem value="all">Todos</SelectItem>
-                </SelectContent>
-              </Select>
+              <CxPeriodFilter
+                ariaLabel="Período da fila"
+                value={period}
+                onChange={(v) => { setPeriod(v); setActiveKpi(null); }}
+                className="w-full sm:w-48"
+              />
             )}
           </div>
 
