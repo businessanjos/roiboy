@@ -3,3 +3,4 @@
 - Visibilidade de negócios via RLS restritiva `can_view_deal` (dono/SDR/renovação/criador, gestor, perfil com alcance "all" ou `user_deal_visibility`). Why: bloqueia todos os caminhos de acesso, não só a tela.
 - Acesso por funil: `user_pipeline_access` (none/own/all por pessoa e funil; sem linha = own, então funil novo já nasce "Só os dele"); `can_view_deal(..., pipeline_id)` aplica: gestor > none > dono > all > regras por status. Why: gestor libera funil a funil sem configurar funis novos.
 - Mobile nav active state uses `pickActiveNavIndex` (pathname + query) and the tab bar's visibility hook drives AppLayout bottom padding. Why: one active tab and no phantom space when the bar is hidden.
+- CX queue forecasts use a pure display-only calendar aggregation in America/Sao_Paulo, while queue and audit lists use shared pagination and bounded scroll regions. Why: readable day-based metrics without rescheduling events or changing delivery rules.
