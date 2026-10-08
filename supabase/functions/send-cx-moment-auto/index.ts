@@ -333,6 +333,7 @@ Deno.serve(async (req) => {
         let messageSent = false;
         let imagesSent = 0;
         let sendError: string | null = null;
+        let zappConvId: string | null = null;
 
         // Send text message first
         if (personalizedMessage.trim() && provider === "uazapi") {
@@ -346,6 +347,23 @@ Deno.serve(async (req) => {
             console.log("UAZAPI text response:", result);
             if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
               messageSent = true;
+              zappConvId = await findOrCreateConversation(supabase, {
+                accountId: moment.account_id,
+                clientId: moment.client_id,
+                phoneE164: client.phone_e164,
+                name: client.full_name,
+                sectorId: whatsappIntegration.sector_id,
+                integrationId: whatsappIntegration.id,
+              });
+              if (zappConvId) {
+                await mirrorToRoyZapp(supabase, {
+                  accountId: moment.account_id,
+                  conversationId: zappConvId,
+                  messageType: "text",
+                  content: personalizedMessage,
+                  externalId: extractExternalId(result),
+                });
+              }
             } else {
               sendError = result.message || result.error || "Erro ao enviar mensagem";
             }
@@ -370,6 +388,16 @@ Deno.serve(async (req) => {
                 body: JSON.stringify({ number: phoneClean, type: "image", file: image.image_url, text: "" }),
               });
               const result = await response.json();
+              if (zappConvId && (result.error === false || result.messageid || result.messageId || result.id)) {
+                await mirrorToRoyZapp(supabase, {
+                  accountId: moment.account_id,
+                  conversationId: zappConvId,
+                  messageType: "image",
+                  content: "",
+                  mediaUrl: image.image_url,
+                  externalId: extractExternalId(result),
+                });
+              }
               console.log("UAZAPI image response:", result);
               if (result.error === false || result.chatid || result.messageid || result.messageId || result.status?.toLowerCase?.() === "pending") {
                 imagesSent++;
