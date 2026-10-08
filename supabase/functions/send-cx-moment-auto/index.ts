@@ -319,7 +319,42 @@ Deno.serve(async (req) => {
             ? `Feliz aniversário, {primeiro_nome}! 🎉\n\nQue este novo ciclo venha cheio de saúde, conquistas e realizações. Estamos muito felizes em ter você com a gente. Conte sempre conosco!`
             : "";
 
-        const rawMessage = (moment.message || "").trim() || fallbackMessage;
+        // Placeholders ("-", ".", "^^") were typed only to bypass the old required field.
+        // Never send them as text: skip if an official duplicate exists, else use fallback.
+        const savedMessage = (moment.message || "").trim();
+        const isPlaceholder = savedMessage.replace(/[\s\-.^_*~]/g, "").length < 3;
+        if (isPlaceholder) {
+          const { data: siblings } = await supabase
+            .from("client_life_events")
+            .select("id, message")
+            .eq("client_id", moment.client_id)
+            .eq("event_type", moment.event_type)
+            .neq("id", moment.id)
+            .neq("send_status", "cancelled");
+          const hasOfficial = (siblings || []).some(
+            (s: { message: string | null }) => (s.message || "").trim().length > 10,
+          );
+          if (hasOfficial) {
+            await supabase
+              .from("client_life_events")
+              .update({
+                send_status: "cancelled",
+                scheduled_send_at: null,
+                send_error: "PAUSADO MANUALMENTE: registro duplicado com mensagem vazia (-)",
+              })
+              .eq("id", moment.id);
+            continue;
+          }
+        }
+        const rawMessage = (isPlaceholder ? "" : savedMessage) || fallbackMessage;
+        if (!rawMessage) {
+          await supabase
+            .from("client_life_events")
+            .update({ send_status: "failed", send_error: "Mensagem está vazia" })
+            .eq("id", moment.id);
+          failedCount++;
+          continue;
+        }
 
         const personalizedMessage = rawMessage
           .replace(/\{nome\}/gi, client.full_name)
