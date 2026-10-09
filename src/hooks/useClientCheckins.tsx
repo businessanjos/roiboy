@@ -97,7 +97,7 @@ export function useCheckpointsPanel() {
         supabase
           .from("client_contracts")
           .select(
-            "id, client_id, client:clients!inner(id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name))",
+            "id, client_id, start_date, end_date, product:products(name), client:clients!inner(id, full_name, status, consultant:users!clients_responsible_user_id_fkey(name))",
           )
           .eq("account_id", currentUser!.account_id)
           .eq("status", "active")
@@ -105,11 +105,36 @@ export function useCheckpointsPanel() {
           .range(from, to),
       );
       if (contractsError) throw contractsError;
+
+      // Contratos cancelados/desistência: um contrato "ativo" com a mesma data
+      // de início é resíduo duplicado do legado e não deve manter o cliente.
+      const { data: cancelledRows, error: cancelledError } = await fetchAllRows<any>((from, to) =>
+        supabase
+          .from("client_contracts")
+          .select("id, client_id, start_date")
+          .eq("account_id", currentUser!.account_id)
+          .in("status", ["cancelled", "dropout_7d"])
+          .order("id", { ascending: true })
+          .range(from, to),
+      );
+      if (cancelledError) throw cancelledError;
+      const cancelledKeys = new Set(
+        (cancelledRows || []).map((r: any) => `${r.client_id}|${r.start_date}`),
+      );
+
+      const today = new Date().toLocaleDateString("en-CA", { timeZone: "America/Sao_Paulo" });
       for (const row of (contractRows || []) as any[]) {
         const c = row.client;
         if (!c) continue;
         const status = String(c.status || "");
         if (status === "churned") continue;
+        // Vigência encerrada por data
+        if (row.end_date && String(row.end_date) < today) continue;
+        // Licença avulsa do software não exige checkpoint de consultoria
+        const productName = String(row.product?.name || "").trim().toLowerCase();
+        if (productName === "clinica ryka") continue;
+        // Duplicata de contrato já cancelado
+        if (cancelledKeys.has(`${row.client_id}|${row.start_date}`)) continue;
         if (!byId.has(c.id)) byId.set(c.id, c);
       }
 
