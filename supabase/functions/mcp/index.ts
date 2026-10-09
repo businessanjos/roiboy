@@ -30,7 +30,7 @@ import { z } from "npm:zod@^3.25.76";
 // src/lib/mcp/helpers.ts
 import { ToolError } from "npm:@lovable.dev/mcp-js@0.28.0";
 
-// node_modules/@supabase/supabase-js/dist/module/index.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/index.js
 var module_exports = {};
 __export(module_exports, {
   FunctionRegion: () => FunctionRegion,
@@ -43,16 +43,16 @@ __export(module_exports, {
   createClient: () => createClient
 });
 
-// node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js
 import { FunctionsClient } from "npm:@supabase/functions-js";
 import { PostgrestClient } from "npm:@supabase/postgrest-js";
 import { RealtimeClient } from "npm:@supabase/realtime-js";
 import { StorageClient as SupabaseStorageClient } from "npm:@supabase/storage-js";
 
-// node_modules/@supabase/supabase-js/dist/module/lib/version.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/lib/version.js
 var version = "2.87.3";
 
-// node_modules/@supabase/supabase-js/dist/module/lib/constants.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/lib/constants.js
 var JS_ENV = "";
 if (typeof Deno !== "undefined") {
   JS_ENV = "deno";
@@ -78,7 +78,7 @@ var DEFAULT_AUTH_OPTIONS = {
 };
 var DEFAULT_REALTIME_OPTIONS = {};
 
-// node_modules/@supabase/supabase-js/dist/module/lib/fetch.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/lib/fetch.js
 var resolveFetch = (customFetch) => {
   if (customFetch) {
     return (...args) => customFetch(...args);
@@ -105,7 +105,7 @@ var fetchWithAuth = (supabaseKey, getAccessToken, customFetch) => {
   };
 };
 
-// node_modules/@supabase/supabase-js/dist/module/lib/helpers.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/lib/helpers.js
 function ensureTrailingSlash(url) {
   return url.endsWith("/") ? url : url + "/";
 }
@@ -143,7 +143,7 @@ function validateSupabaseUrl(supabaseUrl) {
   }
 }
 
-// node_modules/@supabase/supabase-js/dist/module/lib/SupabaseAuthClient.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/lib/SupabaseAuthClient.js
 import { AuthClient } from "npm:@supabase/auth-js";
 var SupabaseAuthClient = class extends AuthClient {
   constructor(options) {
@@ -151,7 +151,7 @@ var SupabaseAuthClient = class extends AuthClient {
   }
 };
 
-// node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/SupabaseClient.js
 var SupabaseClient = class {
   /**
    * Create a new client for use in the browser.
@@ -364,7 +364,7 @@ var SupabaseClient = class {
   }
 };
 
-// node_modules/@supabase/supabase-js/dist/module/index.js
+// ../persist/node_modules/@supabase/supabase-js/dist/module/index.js
 __reExport(module_exports, auth_js_star);
 __reExport(module_exports, realtime_js_star);
 import * as auth_js_star from "npm:@supabase/auth-js";
