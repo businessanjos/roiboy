@@ -64,6 +64,6 @@ describe("resolveAllowedZappSectors", () => {
         unrestricted: true,
         generalSectorIds: [],
       }),
-    ).toEqual(["operacoes", "financeiro", "vendas", "marketing"]);
+    ).toEqual(["operacoes", "financeiro", "vendas", "marketing", "rh"]);
   });
 });

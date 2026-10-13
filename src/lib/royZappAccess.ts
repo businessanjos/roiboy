@@ -71,7 +71,7 @@ export function sanitizeViewList(values: unknown): ZappView[] {
  * (`user_sector_access`). Um usuário pode ter acesso ao pipeline Comercial
  * (setor "vendas") e continuar bloqueado no WhatsApp do Comercial.
  */
-export const ZAPP_WHATSAPP_SECTORS = ["operacoes", "financeiro", "vendas", "marketing"] as const;
+export const ZAPP_WHATSAPP_SECTORS = ["operacoes", "financeiro", "vendas", "marketing", "rh"] as const;
 export type ZappWhatsAppSector = (typeof ZAPP_WHATSAPP_SECTORS)[number];
 
 export const ZAPP_SECTOR_LABELS: Record<ZappWhatsAppSector, string> = {
@@ -79,6 +79,7 @@ export const ZAPP_SECTOR_LABELS: Record<ZappWhatsAppSector, string> = {
   financeiro: "Finanças",
   vendas: "Vendas",
   marketing: "Marketing",
+  rh: "RH",
 };
 
 /** Normaliza a lista salva em `user_royzapp_views.zapp_sectors`. */

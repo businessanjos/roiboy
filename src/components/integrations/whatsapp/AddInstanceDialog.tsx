@@ -30,6 +30,7 @@ const SECTOR_NAMES: Record<string, string> = {
   financeiro: "Finanças",
   vendas: "Vendas",
   sdr: "SDR",
+  rh: "RH",
 };
 
 interface UazapiInstance {

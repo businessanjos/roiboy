@@ -17,6 +17,7 @@ export const ROY_ZAPP_SECTORS: RoyZappSector[] = [
   { id: "vendas", label: "Comercial", description: "Pipeline comercial e leads" },
   { id: "operacoes", label: "Customer Success", description: "Atendimento CX/CS" },
   { id: "financeiro", label: "Financeiro", description: "Cobranças e pagamentos" },
+  { id: "rh", label: "RH", description: "Gestão de pessoas e recrutamento" },
 ];
 
 const LABEL_BY_ID: Record<string, string> = Object.fromEntries(
