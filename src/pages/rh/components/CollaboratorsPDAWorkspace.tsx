@@ -210,6 +210,11 @@ export default function CollaboratorsPDAWorkspace({
                   <SheetDescription>Refina a lista, o quadro e o painel dos colaboradores.</SheetDescription>
                 </SheetHeader>
                 <div className="mt-4 grid gap-3">{pdaFilterFields}</div>
+                {hasActivePdaFilters(filters) && (
+                  <Button variant="ghost" className="mt-3 h-11 w-full" onClick={clearPdaFilters}>
+                    <X className="h-4 w-4 mr-1" /> Limpar filtros
+                  </Button>
+                )}
                 <SheetClose asChild>
                   <Button className="mt-4 h-11 w-full">Concluir</Button>
                 </SheetClose>
