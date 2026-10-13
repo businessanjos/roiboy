@@ -510,7 +510,7 @@ export default function ClientCheckpoints() {
                   )}
                   <div className="mt-2 grid grid-cols-2 gap-2">
                     <Button variant="ghost" className="h-11" onClick={() => setReport({ id: r.client_id, name: r.full_name })}>
-                      <FileText className="h-4 w-4 mr-1.5" /> Relatório
+                      <FileText className="h-4 w-4 mr-1.5" /> Histórico
                     </Button>
                     <Button variant="outline" className="h-11" onClick={() => setTarget({ id: r.client_id, name: r.full_name })}>
                       <Plus className="h-4 w-4 mr-1.5" /> Registrar
@@ -596,9 +596,11 @@ export default function ClientCheckpoints() {
                             size="sm"
                             variant="ghost"
                             onClick={() => setReport({ id: r.client_id, name: r.full_name })}
+                            title={`Histórico de ${r.full_name}`}
+                            aria-label={`Histórico de ${r.full_name}`}
+                            className="h-9 w-9 p-0"
                           >
-                            <FileText className="h-3.5 w-3.5 mr-1" />
-                            Relatório
+                            <FileText className="h-4 w-4" />
                           </Button>
                           <Button
                             size="sm"

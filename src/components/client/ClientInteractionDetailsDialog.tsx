@@ -1,10 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { ExternalLink, Loader2, MessageCircle, Users, ClipboardCheck } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Badge } from "@/components/ui/badge";
+import { ClientHistoryTimeline } from "./ClientHistoryTimeline";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -18,9 +16,6 @@ type Item = {
   text: string | null;
   link?: string;
 };
-
-const fmt = (iso: string) => format(new Date(iso), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR });
-const daysAgo = (iso: string) => Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
 
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
 const CHANNEL: Record<string, string> = { whatsapp: "WhatsApp", call: "Ligação", ligacao: "Ligação", meeting: "Reunião", reuniao: "Reunião", email: "E-mail", presencial: "Presencial" };
@@ -123,7 +118,6 @@ export function ClientInteractionDetailsDialog({
     },
   });
 
-  const latest = data?.[0];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -144,47 +138,19 @@ export function ClientInteractionDetailsDialog({
         ) : !data?.length ? (
           <p className="py-6 text-sm text-muted-foreground">Nenhuma interação encontrada para este cliente.</p>
         ) : (
-          <div className="space-y-4">
-            {latest && (
-              <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Última interação</p>
-                <p className="mt-1 font-medium">
-                  {fmt(latest.at)} · há {daysAgo(latest.at)} dia(s)
-                </p>
-                <p className="text-muted-foreground">{latest.title} · {latest.action}</p>
-              </div>
-            )}
-            <ul className="space-y-2">
-              {data.map((it) => {
-                const Icon = it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle;
-                return (
-                  <li key={it.id} className="rounded-lg border border-border p-3">
-                    <div className="flex flex-wrap items-center gap-2 text-xs">
-                      <Icon className="h-3.5 w-3.5 text-muted-foreground" />
-                      <span className="font-medium text-foreground">{fmt(it.at)}</span>
-                      <Badge variant="outline" className="text-[10px]">
-                        {it.source === "checkin" ? "Check-in" : it.source === "group" ? "Grupo WhatsApp" : "WhatsApp individual"}
-                      </Badge>
-                      <span className="text-muted-foreground">há {daysAgo(it.at)} dia(s)</span>
-                    </div>
-                    <p className="mt-1 text-sm font-medium">{it.title}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {it.action}
-                      {it.who ? ` · por ${it.who}` : ""}
-                    </p>
-                    {it.text && <p className="mt-1.5 whitespace-pre-wrap break-words text-sm">{it.text}</p>}
-                    {it.link && (
-                      <Button asChild variant="ghost" size="sm" className="mt-1 h-7 px-2 text-xs">
-                        <Link to={it.link}>
-                          <ExternalLink className="h-3 w-3 mr-1" /> Ver no RoyZapp
-                        </Link>
-                      </Button>
-                    )}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
+          <ClientHistoryTimeline entries={data.map((it) => ({
+            id: it.id,
+            at: it.at,
+            title: it.title,
+            detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
+            text: it.text,
+            icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
+            action: it.link ? (
+              <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
+                <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
+              </Button>
+            ) : undefined,
+          }))} />
         )}
       </DialogContent>
     </Dialog>
