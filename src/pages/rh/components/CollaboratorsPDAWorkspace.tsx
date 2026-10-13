@@ -100,7 +100,7 @@ export default function CollaboratorsPDAWorkspace({
     };
     return activePdaFilters
       .slice(0, 2)
-      .map(([, v]) => valueLabel(String(v !== undefined ? (activePdaFilters.find(([k]) => true)?.[1] ?? ""), v) : v))
+      .map(([key, value]) => valueLabel(key as string, value))
       .join(" · ");
   }, [activePdaFilters, optionsFor]);
 
