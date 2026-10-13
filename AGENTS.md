@@ -5,3 +5,4 @@
 - Mobile nav active state uses `pickActiveNavIndex` (pathname + query) and the tab bar's visibility hook drives AppLayout bottom padding. Why: one active tab and no phantom space when the bar is hidden.
 - CX queue forecasts use a pure display-only calendar aggregation in America/Sao_Paulo, while queue and audit lists use shared pagination and bounded scroll regions. Why: readable day-based metrics without rescheduling events or changing delivery rules.
 - Client history dialogs share ClientHistoryTimeline for date-grouped presentation in America/Sao_Paulo. Why: consistent readable chronology without duplicating events or changing data access.
+- New sector WhatsApp numbers are created via uazapi-manager `create_sector_instance` (admin-only, then QR via ConnectQRCodeDialog). Why: sectors without pre-made UAZAPI instances could never generate a QR Code.
