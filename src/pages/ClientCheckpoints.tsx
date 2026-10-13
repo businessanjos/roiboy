@@ -36,6 +36,7 @@ import { Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTi
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { useCheckinsReport, useCheckpointsPanel } from "@/hooks/useClientCheckins";
+import { ClientInteractionDetailsDialog } from "@/components/client/ClientInteractionDetailsDialog";
 import { usePersistedFilter } from "@/hooks/usePersistedFilter";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
@@ -69,6 +70,7 @@ function daysSince(iso: string | null | undefined) {
 
 export default function ClientCheckpoints() {
   const { data = [], isLoading, error, refetch } = useCheckpointsPanel();
+  const [details, setDetails] = useState<{ id: string; name: string } | null>(null);
   const [search, setSearch] = usePersistedFilter<string>("checkpoints", "search", "");
   const [filter, setFilter] = usePersistedFilter<FilterKey>("checkpoints", "status", "todos");
   const [target, setTarget] = useState<{ id: string; name: string } | null>(null);
@@ -495,6 +497,7 @@ export default function ClientCheckpoints() {
                         <span className={r.silent ? "text-destructive" : undefined}>
                           ({r.daysSinceInteraction === 0 ? "hoje" : `há ${r.daysSinceInteraction}d`})
                         </span>
+                        {" "}<button type="button" className="ml-1 text-primary underline-offset-2 hover:underline" onClick={() => setDetails({ id: r.client_id, name: r.full_name })}>ver detalhes</button>
                       </>
                     ) : (
                       <span className="text-destructive">Sem interação</span>
@@ -540,7 +543,12 @@ export default function ClientCheckpoints() {
                       <TableCell className="text-muted-foreground">{r.consultant_name || "—"}</TableCell>
                       <TableCell>
                         {r.interactionAt ? (
-                          <div className="text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setDetails({ id: r.client_id, name: r.full_name })}
+                            title="Ver detalhes da interação"
+                            className="text-sm text-left underline-offset-2 hover:underline"
+                          >
                             {format(new Date(r.interactionAt), "dd/MM/yyyy", { locale: ptBR })}
                             <span
                               className={cn(
@@ -552,7 +560,7 @@ export default function ClientCheckpoints() {
                                 ? "hoje"
                                 : `há ${r.daysSinceInteraction} dia(s)`}
                             </span>
-                          </div>
+                          </button>
                         ) : (
                           <span className="text-destructive text-sm">Sem interação</span>
                         )}
@@ -620,6 +628,15 @@ export default function ClientCheckpoints() {
           clientId={target.id}
           clientName={target.name}
           onSaved={() => { refetch(); detailed.refetch(); }}
+        />
+      )}
+
+      {details && (
+        <ClientInteractionDetailsDialog
+          open={!!details}
+          onOpenChange={(o) => !o && setDetails(null)}
+          clientId={details.id}
+          clientName={details.name}
         />
       )}
 
