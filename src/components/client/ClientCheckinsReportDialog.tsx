@@ -97,7 +97,7 @@ export function ClientCheckinsReportDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto min-w-0">
         <DialogHeader>
-          <DialogTitle>Histórico de checkpoints — {clientName}</DialogTitle>
+          <DialogTitle className="pr-6 break-words">Histórico de checkpoints — {clientName}</DialogTitle>
           <DialogDescription>
             Checkpoints e contatos registrados · Horário de Brasília
           </DialogDescription>
