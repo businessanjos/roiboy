@@ -43,6 +43,13 @@
       "when": 1791922255214,
       "tag": "0005_zapp_group_clients",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1791922328540,
+      "tag": "0006_live_activity_small_groups_only",
+      "breakpoints": true
     }
   ]
 }
