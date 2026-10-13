@@ -497,7 +497,7 @@ export default function ClientCheckpoints() {
                         <span className={r.silent ? "text-destructive" : undefined}>
                           ({r.daysSinceInteraction === 0 ? "hoje" : `há ${r.daysSinceInteraction}d`})
                         </span>
-                      </>
+                      </> <button type="button" className="ml-1 text-primary underline-offset-2 hover:underline" onClick={() => setDetails({ id: r.client_id, name: r.full_name })}>ver detalhes</button>
                     ) : (
                       <span className="text-destructive">Sem interação</span>
                     )}
