@@ -36,6 +36,8 @@ import {
 import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import { ConnectQRCodeDialog } from "@/components/integrations/whatsapp/ConnectQRCodeDialog";
+import { extractEdgeFunctionError } from "@/lib/edgeFunctionError";
 
 type ConnectionType = "uazapi" | "meta";
 
@@ -77,6 +79,9 @@ export function ZappConnectionWizard({
   const [loadingInstances, setLoadingInstances] = useState(false);
   const [availableInstances, setAvailableInstances] = useState<UazapiInstance[]>([]);
   const [selectedInstance, setSelectedInstance] = useState("");
+  // "new" = cria um número novo e gera o QR Code; "existing" = vincula instância livre.
+  const [uazapiMode, setUazapiMode] = useState<"new" | "existing">("new");
+  const [qrTarget, setQrTarget] = useState<{ integrationId: string; instanceName: string } | null>(null);
   const [displayName, setDisplayName] = useState("");
   const [usePin, setUsePin] = useState(false);
   const [pin, setPin] = useState("");
@@ -94,6 +99,7 @@ export function ZappConnectionWizard({
     setStep(1);
     setType(null);
     setSelectedInstance("");
+    setUazapiMode("new");
     setDisplayName("");
     setUsePin(false);
     setPin("");
@@ -140,16 +146,35 @@ export function ZappConnectionWizard({
   const canAdvance = useMemo(() => {
     if (step === 1) return !!type;
     if (step === 2) {
-      if (type === "uazapi") return !!selectedInstance && (!usePin || pin.length === 4);
+      if (type === "uazapi")
+        return (uazapiMode === "new" || !!selectedInstance) && (!usePin || pin.length === 4);
       if (type === "meta") return phoneNumberId.trim().length > 0;
     }
     return true;
-  }, [step, type, selectedInstance, usePin, pin, phoneNumberId]);
+  }, [step, type, uazapiMode, selectedInstance, usePin, pin, phoneNumberId]);
 
   const handleSubmit = async () => {
     setSubmitting(true);
     try {
-      if (type === "uazapi") {
+      if (type === "uazapi" && uazapiMode === "new") {
+        const { data, error } = await supabase.functions.invoke("uazapi-manager", {
+          body: {
+            action: "create_sector_instance",
+            sector_id: sectorId,
+            display_name: displayName || null,
+            pin: usePin ? pin : null,
+          },
+        });
+        if (error) throw new Error(await extractEdgeFunctionError(error, "Erro ao criar o número"));
+        const created = data?.data || data;
+        if (!created?.integration_id) throw new Error("A conexão não foi criada. Tente novamente.");
+        toast.success("Número criado! Escaneie o QR Code.");
+        onSuccess();
+        reset();
+        onOpenChange(false);
+        setQrTarget({ integrationId: created.integration_id, instanceName: created.instance_name });
+        return;
+      } else if (type === "uazapi") {
         const { error } = await supabase.functions.invoke("uazapi-manager", {
           body: {
             action: "add_instance_to_sector",
@@ -297,6 +322,31 @@ export function ZappConnectionWizard({
           {/* Step 2: Data */}
           {step === 2 && type === "uazapi" && (
             <div className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2" role="radiogroup" aria-label="Como conectar">
+                {([
+                  { id: "new", title: "Número novo", desc: "Gera o QR Code para ler no celular" },
+                  { id: "existing", title: "Instância já criada", desc: "Vincula uma linha livre do servidor" },
+                ] as const).map((opt) => (
+                  <button
+                    key={opt.id}
+                    type="button"
+                    role="radio"
+                    aria-checked={uazapiMode === opt.id}
+                    onClick={() => setUazapiMode(opt.id)}
+                    className={cn(
+                      "p-3 min-h-[44px] rounded-lg border-2 text-left transition-all",
+                      uazapiMode === opt.id
+                        ? "border-zapp-accent bg-zapp-accent/10"
+                        : "border-zapp-border bg-zapp-panel hover:border-zapp-accent/50"
+                    )}
+                  >
+                    <p className="text-sm font-medium text-zapp-text">{opt.title}</p>
+                    <p className="text-xs text-zapp-text-muted">{opt.desc}</p>
+                  </button>
+                ))}
+              </div>
+
+              {uazapiMode === "existing" && (
               <div className="space-y-2">
                 <Label className="text-zapp-text">Instância UAZAPI</Label>
                 {loadingInstances ? (
@@ -306,7 +356,7 @@ export function ZappConnectionWizard({
                 ) : availableInstances.length === 0 ? (
                   <Alert className="bg-zapp-panel border-zapp-border">
                     <AlertDescription className="text-xs text-zapp-text-muted">
-                      Nenhuma instância livre. Crie primeiro no painel UAZAPI.
+                      Nenhuma instância livre. Escolha "Número novo" para gerar o QR Code.
                     </AlertDescription>
                   </Alert>
                 ) : (
