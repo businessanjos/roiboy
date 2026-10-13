@@ -36,6 +36,13 @@
       "when": 1791546511444,
       "tag": "0004_unique_external_message_id_for_upsert",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1791922255214,
+      "tag": "0005_zapp_group_clients",
+      "breakpoints": true
     }
   ]
 }
