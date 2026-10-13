@@ -387,6 +387,7 @@ export function ZappConnectionWizard({
                   </Select>
                 )}
               </div>
+              )}
 
               <div className="space-y-2">
                 <Label htmlFor="dn" className="text-zapp-text">Nome de exibição (opcional)</Label>
