@@ -1,6 +1,4 @@
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   Dialog,
   DialogContent,
@@ -19,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Download, Loader2, ArrowDownLeft, ArrowUpRight, Sparkles } from "lucide-react";
+import { Download, Loader2, ClipboardCheck, MessageCircle, SlidersHorizontal } from "lucide-react";
 import { useCheckinsReport } from "@/hooks/useClientCheckins";
 import {
   CHECKIN_CHANNELS,
@@ -39,6 +37,8 @@ import {
 import { cn } from "@/lib/utils";
 import { usePagedList } from "@/hooks/usePagedList";
 import { PagerFor } from "@/components/ui/list-pagination";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ClientHistoryTimeline } from "./ClientHistoryTimeline";
 
 interface Props {
   open: boolean;
@@ -95,15 +95,29 @@ export function ClientCheckinsReportDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto min-w-0">
         <DialogHeader>
-          <DialogTitle>Relatório de checkpoints — {clientName}</DialogTitle>
+          <DialogTitle className="pr-6 break-words">Histórico de checkpoints — {clientName}</DialogTitle>
           <DialogDescription>
-            Todos os checkpoints e resumos da timeline registrados para este cliente.
+            Checkpoints e contatos registrados · Horário de Brasília
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-3 sm:grid-cols-4">
+        <div className="flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
+          <div className="flex flex-wrap items-center gap-3 text-xs text-muted-foreground">
+            <span><strong className="text-foreground">{stats.total}</strong> registros</span>
+            <span><strong className="text-foreground">{stats.checkpoints}</strong> checkpoints</span>
+            <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[stats.state.status])}>
+              {CHECKPOINT_STATUS_LABELS[stats.state.status]}
+            </Badge>
+          </div>
+          <div className="flex items-center gap-2">
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button size="sm" variant="outline"><SlidersHorizontal className="mr-2 h-3.5 w-3.5" />Filtros{(from || to || channel !== "todos" || kind !== "todos") ? " · ativos" : ""}</Button>
+              </PopoverTrigger>
+              <PopoverContent align="end" className="w-80 max-w-[calc(100vw-2rem)]">
+        <div className="grid gap-3 grid-cols-2">
           <div className="space-y-1.5">
             <Label className="text-xs">De</Label>
             <Input type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
@@ -137,19 +151,13 @@ export function ClientCheckinsReportDialog({
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border bg-muted/30 p-3">
-          <div className="flex flex-wrap items-center gap-4 text-sm">
-            <span><strong>{stats.total}</strong> registros</span>
-            <span><strong>{stats.checkpoints}</strong> checkpoints</span>
-            <span><strong>{stats.byClient}</strong> iniciados pelo cliente</span>
-            <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[stats.state.status])}>
-              {CHECKPOINT_STATUS_LABELS[stats.state.status]}
-            </Badge>
+                <Button variant="ghost" size="sm" className="mt-3" onClick={() => { setFrom(""); setTo(""); setChannel("todos"); setKind("todos"); }}>Limpar filtros</Button>
+              </PopoverContent>
+            </Popover>
+            <Button size="sm" variant="ghost" onClick={handleExport} disabled={data.length === 0} title="Exportar CSV" aria-label="Exportar CSV">
+              <Download className="h-4 w-4" />
+            </Button>
           </div>
-          <Button size="sm" variant="outline" onClick={handleExport} disabled={data.length === 0}>
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
-          </Button>
         </div>
 
         {isLoading ? (
@@ -165,33 +173,14 @@ export function ClientCheckinsReportDialog({
             Nenhum registro nesse período/canal.
           </p>
         ) : (
-          <div className="space-y-3">
-            {pg.items.map((r) => (
-              <div key={r.id} className="rounded-lg border border-border p-3">
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  <span className="font-medium text-foreground">
-                    {format(new Date(r.happened_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                  </span>
-                  <Badge variant="outline" className="text-[10px]">{getKindLabel(r.kind)}</Badge>
-                  <Badge variant="secondary" className="text-[10px]">{getChannelLabel(r.channel)}</Badge>
-                  <span className="inline-flex items-center gap-1">
-                    {r.initiated_by === "cliente" ? (
-                      <><ArrowDownLeft className="h-3 w-3" /> Cliente procurou</>
-                    ) : (
-                      <><ArrowUpRight className="h-3 w-3" /> Consultor procurou</>
-                    )}
-                  </span>
-                  {r.source === "ai_whatsapp" && (
-                    <span className="inline-flex items-center gap-1">
-                      <Sparkles className="h-3 w-3" /> Resumo automático
-                    </span>
-                  )}
-                  {r.consultant_name && <span>· {r.consultant_name}</span>}
-                </div>
-                <p className="text-sm mt-2">{r.summary}</p>
-              </div>
-            ))}
-          </div>
+          <ClientHistoryTimeline entries={pg.items.map((r) => ({
+            id: r.id,
+            at: r.happened_at,
+            title: getKindLabel(r.kind),
+            detail: [getChannelLabel(r.channel), r.initiated_by === "cliente" ? "Cliente iniciou o contato" : "Consultor iniciou o contato", r.consultant_name, r.source === "ai_whatsapp" ? "Resumo automático · RoyZapp CS" : "Registro manual"].filter(Boolean).join(" · "),
+            text: r.summary,
+            icon: r.kind === "checkpoint" ? ClipboardCheck : MessageCircle,
+          }))} />
         )}
         {data.length > 0 && <PagerFor state={pg} itemLabel="registros" />}
       </DialogContent>
