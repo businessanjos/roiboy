@@ -103,7 +103,12 @@ export default function RoyZapp() {
     loading: zappAccessLoading,
   } = useRoyZappViewAccess();
 
-  const canChooseSector = canPickSector(currentUser?.email);
+  // Administradores sempre podem trocar de setor (ex.: setor sem WhatsApp conectado).
+  const canChooseSector =
+    canPickSector(currentUser?.email) ||
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.is_also_admin === true;
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -1708,6 +1713,33 @@ export default function RoyZapp() {
           showConversationList && selectedConversation ? "hidden lg:flex" : "flex"
         )}
       >
+        {isInboxView && !integrationResolving && !selectedIntegrationId && (
+          <div className="m-3 rounded-lg border border-warning/40 bg-warning/10 p-3 space-y-2">
+            <div className="flex items-start gap-2">
+              <Building2 className="h-4 w-4 mt-0.5 text-warning shrink-0" />
+              <p className="text-sm text-zapp-text">
+                O WhatsApp de <strong>{currentSector?.name || "este setor"}</strong> não está conectado. Você ainda pode ver as conversas que já existem, ou abrir outro setor.
+              </p>
+            </div>
+            {canChooseSector && (
+              <Button
+                size="sm"
+                variant="outline"
+                className="w-full border-zapp-border text-zapp-text hover:bg-zapp-hover"
+                onClick={() => {
+                  setSelectedSectorId(null);
+                  setSelectedIntegrationId(undefined);
+                  replaceSearchParams((next) => {
+                    next.delete("sector");
+                    next.delete("integrationId");
+                  });
+                }}
+              >
+                Escolher outro setor
+              </Button>
+            )}
+          </div>
+        )}
         <ZappConversationPanel
           currentUser={currentUser}
           isAdmin={isAdmin || hasGlobalVisibility}
