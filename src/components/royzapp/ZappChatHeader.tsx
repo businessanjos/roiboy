@@ -1,4 +1,5 @@
-import { memo } from "react";
+import { memo, useState } from "react";
+import { ZappGroupClientsDialog } from "./dialogs/ZappGroupClientsDialog";
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -114,9 +115,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
 }: ZappChatHeaderProps) {
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
+  const [groupClientsOpen, setGroupClientsOpen] = useState(false);
 
   return (
     <div className="flex flex-col">
+      {isGroup && conversationId && accountId && (
+        <ZappGroupClientsDialog open={groupClientsOpen} onOpenChange={setGroupClientsOpen} conversationId={conversationId} accountId={accountId} />
+      )}
       {/* Suggestion Banner - only show if no client linked */}
       {!clientId && conversationId && accountId && onClientLinked && onOpenLinkClient && (
         <ZappClientSuggestionBanner
@@ -437,6 +442,12 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   )}
                   <DropdownMenuSeparator className="bg-zapp-border" />
                 </div>
+                {isGroup && conversationId && accountId && (
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => setGroupClientsOpen(true)}>
+                    <Users2 className="h-4 w-4 mr-2 text-zapp-accent" />
+                    Clientes deste grupo
+                  </DropdownMenuItem>
+                )}
                 <DropdownMenuItem 
                   className="text-zapp-text hover:bg-zapp-hover"
                   onClick={onOpenMediaGallery}

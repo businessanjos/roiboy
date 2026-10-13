@@ -28374,6 +28374,65 @@ export type Database = {
           },
         ]
       }
+      zapp_group_clients: {
+        Row: {
+          account_id: string
+          client_id: string
+          conversation_id: string
+          created_at: string
+          created_by: string | null
+          id: string
+          source: string
+        }
+        Insert: {
+          account_id: string
+          client_id: string
+          conversation_id: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source?: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string
+          conversation_id?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          source?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_group_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "client_latest_metrics"
+            referencedColumns: ["client_id"]
+          },
+          {
+            foreignKeyName: "zapp_group_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_group_clients_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "event_active_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "zapp_group_clients_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_internal_contacts: {
         Row: {
           account_id: string
@@ -30343,6 +30402,7 @@ export type Database = {
         Args: { _user_id: string }
         Returns: boolean
       }
+      zapp_norm_phone: { Args: { p: string }; Returns: string }
       zapp_phone_core: { Args: { _phone: string }; Returns: string }
       zapp_productivity_contacts: {
         Args: {
