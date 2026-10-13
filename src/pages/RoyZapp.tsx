@@ -471,9 +471,16 @@ export default function RoyZapp() {
   // piscar/oscilação entre abas.
   const lastHandledViewParamRef = useRef<string | null>(null);
   useEffect(() => {
-    if (viewFromUrl === lastHandledViewParamRef.current) return;
+    const previousHandledView = lastHandledViewParamRef.current;
+    if (viewFromUrl === previousHandledView) return;
     lastHandledViewParamRef.current = viewFromUrl;
-    if (!viewFromUrl) return;
+    if (!viewFromUrl) {
+      // O link "Conversas" do menu é /roy-zapp sem ?view. Antes esse clique era
+      // ignorado e a tela ficava presa na view anterior (ex.: painel de WhatsApp).
+      // Só reage a uma navegação real (já havia view tratada), não à abertura inicial.
+      if (previousHandledView !== null) setActiveView("inbox");
+      return;
+    }
     if (ZAPP_VIEWS.has(viewFromUrl as ZappView)) {
       setActiveView((prev) => (prev === viewFromUrl ? prev : (viewFromUrl as ZappView)));
     } else {
