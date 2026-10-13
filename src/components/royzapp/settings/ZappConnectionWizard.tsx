@@ -220,6 +220,7 @@ export function ZappConnectionWizard({
   };
 
   return (
+    <>
     <Dialog open={open} onOpenChange={(o) => !o && handleClose()}>
       <DialogContent className="sm:max-w-2xl bg-zapp-bg border-zapp-border text-zapp-text">
         <DialogHeader>
@@ -494,7 +495,9 @@ export function ZappConnectionWizard({
                     {type === "uazapi" && (
                       <div className="flex justify-between">
                         <span className="text-zapp-text-muted">Instância</span>
-                        <span className="text-zapp-text font-medium">{selectedInstance}</span>
+                        <span className="text-zapp-text font-medium">
+                          {uazapiMode === "new" ? "Número novo (QR Code a seguir)" : selectedInstance}
+                        </span>
                       </div>
                     )}
                     {type === "meta" && (
@@ -595,5 +598,19 @@ export function ZappConnectionWizard({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+    {qrTarget && (
+      <ConnectQRCodeDialog
+        open={!!qrTarget}
+        onOpenChange={(o) => !o && setQrTarget(null)}
+        integrationId={qrTarget.integrationId}
+        instanceName={qrTarget.instanceName}
+        sectorId={sectorId}
+        onConnected={() => {
+          setQrTarget(null);
+          onSuccess();
+        }}
+      />
+    )}
+    </>
   );
 }
