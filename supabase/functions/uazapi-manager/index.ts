@@ -1020,6 +1020,7 @@ Deno.serve(async (req) => {
       reset_instance: "whatsapp-admin",
       adopt_instance: "whatsapp-admin",
       add_instance_to_sector: "whatsapp-admin",
+      create_sector_instance: "whatsapp-admin",
       unlink_instance: "whatsapp-admin",
       update_instance_pin: "whatsapp-admin",
       configure_webhook: "whatsapp-admin",
@@ -1091,7 +1092,7 @@ Deno.serve(async (req) => {
         "send_text", "send_media", "send_to_group", "send_media_to_group", "send_reaction",
         "delete_message", "edit_message", "create", "connect", "qrcode", "disconnect",
         "reset_instance", "adopt_instance", "unlink_instance",
-        "add_instance_to_sector", "update_instance_pin", "configure_webhook",
+        "add_instance_to_sector", "create_sector_instance", "update_instance_pin", "configure_webhook",
         "update_sector_server",
       ];
       const isAccountAdmin = userData.role === "admin" || userData.role === "super_admin" || userData.is_also_admin === true;
