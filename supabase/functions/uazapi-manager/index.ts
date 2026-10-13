@@ -1977,6 +1977,64 @@ Deno.serve(async (req) => {
         }),
       };
     
+    } else if (action === "create_sector_instance") {
+      // Cria um número NOVO para o setor (instância UAZAPI vazia) e devolve o
+      // integration_id para a tela gerar o QR Code em seguida. Antes só era
+      // possível vincular instâncias já existentes no painel UAZAPI, então
+      // setores sem nenhuma (ex.: RH, Finanças) não conseguiam gerar QR Code.
+      if (!sector_id) {
+        return new Response(JSON.stringify({ error: "Setor obrigatório para criar a conexão." }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const slug = String(sector_id).toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 12) || "setor";
+      const newName = `roy-${accountId.slice(0, 8)}-${slug}-${Date.now().toString(36).slice(-5)}`;
+      const createServer = await resolveServerForSector(supabase, accountId, sector_id);
+      let initRes: any;
+      try {
+        initRes = await uazapiAdmin("/instance/init", "POST", { name: newName }, createServer);
+      } catch (e) {
+        console.error("[uazapi-manager] create_sector_instance init failed:", e);
+        return new Response(JSON.stringify({ error: `Não foi possível criar o número no servidor do WhatsApp: ${(e as Error).message}` }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      const newToken = initRes?.token || initRes?.instance?.token;
+      if (!newToken) {
+        return new Response(JSON.stringify({ error: "O servidor do WhatsApp não devolveu o token da nova conexão. Tente novamente." }), { status: 502, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+
+      let webhookInfo: { webhook_configured?: boolean; webhook_url?: string; webhook_events?: unknown } = {};
+      try {
+        const wh = await registerWebhookForInstance(newToken, newName, createServer);
+        webhookInfo = { webhook_configured: wh.success, webhook_url: wh.webhookUrl, webhook_events: wh.events };
+      } catch (e) {
+        console.warn("[uazapi-manager] create_sector_instance webhook (não-fatal):", (e as Error).message);
+      }
+
+      let newPinHash: string | null = null;
+      if (payload.pin && /^\d{4}$/.test(String(payload.pin))) {
+        const h = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(payload.pin) + accountId));
+        newPinHash = Array.from(new Uint8Array(h)).map((b) => b.toString(16).padStart(2, "0")).join("");
+      }
+
+      const displayName = (getString(payload.display_name) || "").trim().slice(0, 80) || null;
+      const { data: created, error: insertErr } = await supabase
+        .from("integrations")
+        .insert({
+          account_id: accountId,
+          type: "whatsapp",
+          sector_id,
+          status: "disconnected",
+          display_name: displayName,
+          pin_hash: newPinHash,
+          config: { provider: "uazapi", instance_name: newName, instance_token: newToken, ...webhookInfo },
+        })
+        .select("id")
+        .single();
+      if (insertErr || !created) {
+        console.error("[uazapi-manager] create_sector_instance insert failed:", insertErr);
+        return new Response(JSON.stringify({ error: "Número criado no WhatsApp, mas não foi possível salvar a conexão no ROY." }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      console.log(`[uazapi-manager] create_sector_instance: ${newName} → sector ${sector_id} (integration ${created.id}) by user ${userData.id}`);
+      result = { integration_id: created.id, instance_name: newName };
+
     } else if (action === "add_instance_to_sector") {
       const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
