@@ -26,7 +26,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 
 // Setores que têm WhatsApp configurável
-const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing"];
+const WHATSAPP_SECTOR_IDS: SectorId[] = ["operacoes", "financeiro", "vendas", "marketing", "rh"];
 
 function formatRelative(iso: string): string {
   const then = new Date(iso).getTime();
