@@ -103,7 +103,12 @@ export default function RoyZapp() {
     loading: zappAccessLoading,
   } = useRoyZappViewAccess();
 
-  const canChooseSector = canPickSector(currentUser?.email);
+  // Administradores sempre podem trocar de setor (ex.: setor sem WhatsApp conectado).
+  const canChooseSector =
+    canPickSector(currentUser?.email) ||
+    currentUser?.role === "admin" ||
+    currentUser?.role === "super_admin" ||
+    currentUser?.is_also_admin === true;
   const navigate = useNavigate();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
