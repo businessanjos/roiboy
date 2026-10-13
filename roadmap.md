@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Arthur: remover aviso de teste da conta interna no menu e banner, sem alterar cobrança ou permissões.
 - [x] Checkpoints: relatório e detalhes em linha do tempo compartilhada, filtros discretos e ações compactas; build OK.
 - [ ] Checkpoints: validação visual com dados reais aguarda usuário entrar no preview; sessão própria indisponível.
 - [x] Momentos CX: fila recolhível/maximizável e paginada; painel de aniversários por dia e próximos destinatários; controles conferidos com Playwright, sem envios reais.

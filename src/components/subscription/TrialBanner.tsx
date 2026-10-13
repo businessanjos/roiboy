@@ -4,6 +4,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { AlertTriangle, Clock, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { hideInternalTrialNotice } from "@/lib/subscriptionPresentation";
 
 export function TrialBanner() {
   const { isLoading, subscriptionStatus, daysRemaining, isTrialExpired } = useSubscriptionStatus();
@@ -14,7 +15,7 @@ export function TrialBanner() {
   if (subscriptionStatus === "active" || subscriptionStatus === "paid") return null;
 
   // Hide for @anjosbusiness.com.br users
-  if (user?.email?.endsWith("@anjosbusiness.com.br") || user?.email?.endsWith("@anjosbusiness.com") || user?.email === "m.quintana@me.com" || user?.email === "coachevertonsantos@gmail.com") return null;
+  if (hideInternalTrialNotice(user?.email)) return null;
 
   // Show nothing if trial is expired (they'll be redirected)
   if (isTrialExpired) return null;

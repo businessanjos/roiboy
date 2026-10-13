@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Crown, Clock, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { hideInternalTrialNotice } from "@/lib/subscriptionPresentation";
 
 interface PlanInfo {
   planName: string | null;
@@ -12,18 +14,16 @@ interface PlanInfo {
 }
 
 export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
+  const { currentUser, loading } = useCurrentUser();
+  const accountId = currentUser?.account_id;
   const [planInfo, setPlanInfo] = useState<PlanInfo | null>(null);
 
   useEffect(() => {
+    let cancelled = false;
+    setPlanInfo(null);
+    if (!accountId) return;
     async function fetchPlanInfo() {
       try {
-        const { data: user } = await supabase
-          .from("users")
-          .select("account_id")
-          .maybeSingle();
-
-        if (!user?.account_id) return;
-
         const { data: account } = await supabase
           .from("accounts")
           .select(`
@@ -32,10 +32,10 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
             plan_id,
             subscription_plans (name)
           `)
-          .eq("id", user.account_id)
+          .eq("id", accountId)
           .maybeSingle();
 
-        if (!account) return;
+        if (!account || cancelled) return;
 
         const trialEndsAt = account.trial_ends_at ? new Date(account.trial_ends_at) : null;
         const now = new Date();
@@ -60,9 +60,11 @@ export function SidebarPlanInfo({ collapsed }: { collapsed: boolean }) {
     }
 
     fetchPlanInfo();
-  }, []);
+    return () => { cancelled = true; };
+  }, [accountId]);
 
-  if (!planInfo) return null;
+  if (loading || !planInfo) return null;
+  if (planInfo.subscriptionStatus === "trial" && hideInternalTrialNotice(currentUser?.email)) return null;
 
   const isTrialing = planInfo.subscriptionStatus === "trial";
   const isActive = ["active", "paid"].includes(planInfo.subscriptionStatus || "");

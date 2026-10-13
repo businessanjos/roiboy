@@ -6,3 +6,4 @@
 - CX queue forecasts use a pure display-only calendar aggregation in America/Sao_Paulo, while queue and audit lists use shared pagination and bounded scroll regions. Why: readable day-based metrics without rescheduling events or changing delivery rules.
 - Client history dialogs share ClientHistoryTimeline for date-grouped presentation in America/Sao_Paulo. Why: consistent readable chronology without duplicating events or changing data access.
 - New sector WhatsApp numbers are created via uazapi-manager `create_sector_instance` (admin-only, then QR via ConnectQRCodeDialog). Why: sectors without pre-made UAZAPI instances could never generate a QR Code.
+- Trial notices share a presentation-only identity predicate; SidebarPlanInfo reads the account from useCurrentUser. Why: consistent internal notices without altering billing or subscription access.
