@@ -1,6 +1,8 @@
 import type { LucideIcon } from "lucide-react";
 import { Clock3 } from "lucide-react";
 import type { ReactNode } from "react";
+import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 export interface ClientHistoryEntry {
   id: string;
@@ -42,7 +44,14 @@ export function ClientHistoryTimeline({ entries }: { entries: ClientHistoryEntry
                     <Icon className="h-4 w-4" />
                   </span>
                   <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
-                    <p className="text-sm font-semibold">{entry.title}</p>
+                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
+                      <p className="text-sm font-semibold">{entry.title}</p>
+                      {entry.badge && (
+                        <Badge variant="outline" className={cn("h-4 shrink-0 text-[10px] bg-warning/10 text-warning border-warning/30")}>
+                          {entry.badge}
+                        </Badge>
+                      )}
+                    </div>
                     <time dateTime={entry.at} className="inline-flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
                       <Clock3 className="h-3 w-3" />{timeLabel(entry.at)}
                     </time>
