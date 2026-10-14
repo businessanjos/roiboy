@@ -224,17 +224,17 @@ export function ClientInteractionDetailsDialog({
           </div>
         ) : error ? (
           <p className="py-6 text-sm text-destructive">Não foi possível carregar as interações. Tente de novo.</p>
-        ) : !data?.length ? (
+        ) : !items?.length ? (
           <p className="py-6 text-sm text-muted-foreground">Nenhuma interação encontrada para este cliente.</p>
         ) : (
-          <ClientHistoryTimeline entries={data.map((it) => ({
+          <ClientHistoryTimeline entries={items.map((it) => ({
             id: it.id,
             at: it.at,
             title: it.title,
             detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
             text: it.text,
             icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
-            badge: it.pendingReply ? `Sem resposta ${silenceLabel(it.silentDays)}` : undefined,
+            badge: it.pendingReply ? `Cliente sem responder ${silenceLabel(it.silentDays)}` : undefined,
             action: it.link ? (
               <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
                 <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
