@@ -177,46 +177,30 @@ export function ClientInteractionDetailsDialog({
         </DialogHeader>
 
         {!isLoading && !error && newestPending && (
-          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
-            <div className="flex items-center gap-2">
-              <MessageCircleQuestion className="h-4 w-4 shrink-0 text-warning" />
+          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 px-3 py-2.5">
+            <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-semibold text-warning">
                 Cliente sem responder {silenceLabel(newestPending.silentDays)}
               </p>
+              <p className="text-xs text-muted-foreground">
+                Equipe: {dateTimeLabel(newestPending.at)}{newestPending.who ? ` (${newestPending.who})` : ""}
+                <span className="mx-1.5">·</span>
+                Cliente: {data?.lastInboundAt ? dateTimeLabel(data.lastInboundAt) : "nunca respondeu"}
+              </p>
             </div>
-            <dl className="mt-2 grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
-              <div>
-                <dt className="text-muted-foreground">Última resposta do cliente</dt>
-                <dd className="font-medium">
-                  {data?.lastInboundAt ? dateTimeLabel(data.lastInboundAt) : "Nunca respondeu"}
-                </dd>
-              </div>
-              <div>
-                <dt className="text-muted-foreground">Última mensagem enviada (equipe)</dt>
-                <dd className="font-medium">
-                  {dateTimeLabel(newestPending.at)}
-                  {newestPending.who ? ` · ${newestPending.who}` : ""}
-                </dd>
-              </div>
-            </dl>
-            <p className="mt-2 text-xs text-muted-foreground">
-              {newestPending.title} — a equipe escreveu por último e o cliente não respondeu depois disso.
-            </p>
           </div>
         )}
 
         {!isLoading && !error && awaitingTeam && newestMsg && (
-          <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/10 p-3">
+          <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/10 px-3 py-2.5">
             <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-info" />
-            <div className="min-w-0">
+            <div className="min-w-0 space-y-0.5">
               <p className="text-sm font-semibold text-info">Aguardando resposta da consultora</p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                A última mensagem foi do cliente em {dateTimeLabel(newestMsg.at)} — {newestMsg.title}.
-              </p>
+              <p className="text-xs text-muted-foreground">Cliente escreveu em {dateTimeLabel(newestMsg.at)}</p>
             </div>
           </div>
         )}
-
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
@@ -230,15 +214,18 @@ export function ClientInteractionDetailsDialog({
           <ClientHistoryTimeline entries={items.map((it) => ({
             id: it.id,
             at: it.at,
-            title: it.title,
-            detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
-            text: it.text,
+            title: it.source === "checkin"
+              ? "Registro na ficha"
+              : it.inbound ? (it.who || "Cliente") : (it.who || "Equipe"),
+            detail: it.source === "checkin"
+              ? [it.action, it.who].filter(Boolean).join(" · ")
+              : `${it.inbound ? "Cliente" : "Equipe"} · ${it.title.replace(/^Grupo: /, "Grupo ")}`,
+            text: it.text?.replace(/^\*[^*\n]+\*:?\s*\n?/, "") ?? null,
             icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
-            badge: it.pendingReply ? `Cliente sem responder ${silenceLabel(it.silentDays)}` : undefined,
             action: it.link ? (
-              <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
-                <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
-              </Button>
+              <Link to={it.link} className="inline-flex items-center gap-1 text-xs text-primary hover:underline">
+                <ExternalLink className="h-3 w-3" />Abrir conversa
+              </Link>
             ) : undefined,
           }))} />
         )}
