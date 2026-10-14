@@ -24,6 +24,15 @@ type Item = {
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
 const CHANNEL: Record<string, string> = { whatsapp: "WhatsApp", call: "Ligação", ligacao: "Ligação", meeting: "Reunião", reuniao: "Reunião", email: "E-mail", presencial: "Presencial" };
 
+const zone = "America/Sao_Paulo";
+const dateTimeLabel = (at: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: zone, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(at));
+const silenceLabel = (days?: number) => {
+  if (days === undefined) return "";
+  if (days <= 0) return "hoje";
+  return days === 1 ? "há 1 dia" : `há ${days} dias`;
+};
+
 export function ClientInteractionDetailsDialog({
   clientId,
   clientName,
@@ -161,7 +170,7 @@ export function ClientInteractionDetailsDialog({
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground">
                 Última mensagem foi da equipe{newestPending.who ? ` (${newestPending.who})` : ""} em{" "}
-                {dateTimeLabel(newestPending.at)} — {newestPending.title.toLowerCase()}. Nenhuma resposta depois disso.
+                {dateTimeLabel(newestPending.at)} — {newestPending.title}. Nenhuma resposta depois disso.
               </p>
             </div>
           </div>
@@ -184,6 +193,7 @@ export function ClientInteractionDetailsDialog({
             detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
             text: it.text,
             icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
+            badge: it.pendingReply ? `Sem resposta ${silenceLabel(it.silentDays)}` : undefined,
             action: it.link ? (
               <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
                 <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
