@@ -19,6 +19,8 @@ type Item = {
   pendingReply?: boolean;
   /** Dias desde essa mensagem da equipe */
   silentDays?: number;
+  /** Mensagem recebida do cliente (não enviada pela equipe) */
+  inbound?: boolean;
 };
 
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
@@ -47,7 +49,7 @@ export function ClientInteractionDetailsDialog({
   const { data, isLoading, error } = useQuery({
     queryKey: ["client-interaction-details", clientId],
     enabled: open,
-    queryFn: async (): Promise<Item[]> => {
+    queryFn: async (): Promise<{ items: Item[]; lastInboundAt: string | null }> => {
       const [ck, direct, links] = await Promise.all([
         supabase
           .from("client_checkins")
@@ -91,6 +93,7 @@ export function ClientInteractionDetailsDialog({
       // Conversas em que a última mensagem é da equipe: o cliente não respondeu
       // depois dela. Guardamos quantos dias se passaram desde essa mensagem.
       const pendingMessages = new Map<string, number>();
+      let lastInboundAt: string | null = null;
       msgs.forEach((m) => {
         const rows = m.data || [];
         if (rows.length && rows[0].direction === "outbound") {
@@ -98,6 +101,10 @@ export function ClientInteractionDetailsDialog({
             `msg-${rows[0].id}`,
             Math.floor((Date.now() - new Date(rows[0].sent_at).getTime()) / 86_400_000),
           );
+        }
+        const inbound = rows.find((r: any) => r.direction !== "outbound");
+        if (inbound && (!lastInboundAt || new Date(inbound.sent_at) > new Date(lastInboundAt))) {
+          lastInboundAt = inbound.sent_at;
         }
       });
 
@@ -138,18 +145,26 @@ export function ClientInteractionDetailsDialog({
             text: r.content,
             pendingReply: pendingMessages.has(`msg-${r.id}`) || undefined,
             silentDays: pendingMessages.get(`msg-${r.id}`),
+            inbound: !out,
             link: `/roy-zapp?sector=${c?.sector_id || ""}&conversation=${r.zapp_conversation_id}`,
           });
         }),
       );
 
-      return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 15);
+      return {
+        items: items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 15),
+        lastInboundAt,
+      };
     },
   });
+  const items = data?.items;
 
   // A interação mais recente da linha do tempo é uma mensagem da equipe sem
   // resposta: cliente está há X dias sem responder.
-  const newestPending = data?.find((i) => i.pendingReply);
+  const newestPending = items?.find((i) => i.pendingReply);
+  // Caso contrário, a última mensagem é do cliente: a bola está com a consultora.
+  const newestMsg = items?.find((i) => i.source !== "checkin");
+  const awaitingTeam = !newestPending && !!newestMsg?.inbound;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,15 +177,41 @@ export function ClientInteractionDetailsDialog({
         </DialogHeader>
 
         {!isLoading && !error && newestPending && (
-          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
-            <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-            <div className="min-w-0">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <div className="flex items-center gap-2">
+              <MessageCircleQuestion className="h-4 w-4 shrink-0 text-warning" />
               <p className="text-sm font-semibold text-warning">
-                Sem resposta do cliente {silenceLabel(newestPending.silentDays)}
+                Cliente sem responder {silenceLabel(newestPending.silentDays)}
               </p>
+            </div>
+            <dl className="mt-2 grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Última resposta do cliente</dt>
+                <dd className="font-medium">
+                  {data?.lastInboundAt ? dateTimeLabel(data.lastInboundAt) : "Nunca respondeu"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Última mensagem enviada (equipe)</dt>
+                <dd className="font-medium">
+                  {dateTimeLabel(newestPending.at)}
+                  {newestPending.who ? ` · ${newestPending.who}` : ""}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {newestPending.title} — a equipe escreveu por último e o cliente não respondeu depois disso.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && !error && awaitingTeam && newestMsg && (
+          <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/10 p-3">
+            <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-info">Aguardando resposta da consultora</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Última mensagem foi da equipe{newestPending.who ? ` (${newestPending.who})` : ""} em{" "}
-                {dateTimeLabel(newestPending.at)} — {newestPending.title}. Nenhuma resposta depois disso.
+                A última mensagem foi do cliente em {dateTimeLabel(newestMsg.at)} — {newestMsg.title}.
               </p>
             </div>
           </div>
@@ -183,17 +224,17 @@ export function ClientInteractionDetailsDialog({
           </div>
         ) : error ? (
           <p className="py-6 text-sm text-destructive">Não foi possível carregar as interações. Tente de novo.</p>
-        ) : !data?.length ? (
+        ) : !items?.length ? (
           <p className="py-6 text-sm text-muted-foreground">Nenhuma interação encontrada para este cliente.</p>
         ) : (
-          <ClientHistoryTimeline entries={data.map((it) => ({
+          <ClientHistoryTimeline entries={items.map((it) => ({
             id: it.id,
             at: it.at,
             title: it.title,
             detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
             text: it.text,
             icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
-            badge: it.pendingReply ? `Sem resposta ${silenceLabel(it.silentDays)}` : undefined,
+            badge: it.pendingReply ? `Cliente sem responder ${silenceLabel(it.silentDays)}` : undefined,
             action: it.link ? (
               <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
                 <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
