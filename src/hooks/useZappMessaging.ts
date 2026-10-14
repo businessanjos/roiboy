@@ -140,6 +140,7 @@ export function useZappMessaging({
   // Message input state
   const [messageInput, setMessageInput] = useState("");
   const [sendingMessage, setSendingMessage] = useState(false);
+  const sendLockRef = useRef(false);
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [audioPreview, setAudioPreview] = useState<{ blob: Blob; url: string; duration: number } | null>(null);
@@ -395,6 +396,17 @@ export function useZappMessaging({
 
   // Send message via UAZAPI
   const sendMessage = async () => {
+    // Trava contra envio duplo (Enter + clique, Enter repetido, toque duplo)
+    if (sendLockRef.current) return;
+    sendLockRef.current = true;
+    try {
+      await sendMessageInner();
+    } finally {
+      setTimeout(() => { sendLockRef.current = false; }, 400);
+    }
+  };
+
+  const sendMessageInner = async () => {
     if (imagePreview && selectedConversation) {
       const file = imagePreview.file;
       const caption = imagePreview.caption;
@@ -1357,6 +1369,7 @@ export function useZappMessaging({
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
+      if (e.repeat || (e.nativeEvent as KeyboardEvent).isComposing) return;
       sendMessage();
     }
   };
