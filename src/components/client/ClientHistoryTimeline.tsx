@@ -39,26 +39,28 @@ export function ClientHistoryTimeline({ entries }: { entries: ClientHistoryEntry
             {items.map((entry) => {
               const Icon = entry.icon;
               return (
-                <li key={entry.id} className="relative pb-6 pl-7 last:pb-1">
-                  <span className="absolute -left-4 top-0 flex h-8 w-8 items-center justify-center rounded-full border border-primary/20 bg-background text-primary">
-                    <Icon className="h-4 w-4" />
+                <li key={entry.id} className="relative pb-5 pl-6 last:pb-1">
+                  <span className="absolute -left-3.5 top-0 flex h-7 w-7 items-center justify-center rounded-full border border-border bg-background text-muted-foreground">
+                    <Icon className="h-3.5 w-3.5" />
                   </span>
-                  <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1 pt-1">
-                    <div className="flex min-w-0 flex-wrap items-center gap-1.5">
-                      <p className="text-sm font-semibold">{entry.title}</p>
+                  <div className="flex items-baseline justify-between gap-3 pt-1">
+                    <div className="flex min-w-0 items-center gap-1.5">
+                      <p className="truncate text-sm font-medium">{entry.title}</p>
                       {entry.badge && (
                         <Badge variant="outline" className={cn("h-4 shrink-0 text-[10px] bg-warning/10 text-warning border-warning/30")}>
                           {entry.badge}
                         </Badge>
                       )}
                     </div>
-                    <time dateTime={entry.at} className="inline-flex items-center gap-1 text-xs tabular-nums text-muted-foreground">
+                    <time dateTime={entry.at} className="inline-flex shrink-0 items-center gap-1 text-xs tabular-nums text-muted-foreground">
                       <Clock3 className="h-3 w-3" />{timeLabel(entry.at)}
                     </time>
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{entry.detail}</p>
-                  {entry.text && <p className="mt-3 whitespace-pre-wrap break-words border-l-2 border-primary/20 pl-3 text-sm leading-relaxed">{entry.text}</p>}
-                  {entry.action && <div className="mt-2">{entry.action}</div>}
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5">
+                    <p className="min-w-0 truncate text-xs text-muted-foreground">{entry.detail}</p>
+                    {entry.action}
+                  </div>
+                  {entry.text && <p className="mt-2 line-clamp-4 whitespace-pre-wrap break-words rounded-md bg-muted/50 px-3 py-2 text-sm leading-relaxed">{entry.text}</p>}
                 </li>
               );
             })}
