@@ -75,7 +75,7 @@ export function ZappGroupParticipantsDialog({ open, onOpenChange, groupJid, sect
         const { data: msgs } = await supabase
           .from("zapp_messages")
           .select("sender_phone, sender_name")
-          .in("conversation_id", convIds)
+          .in("zapp_conversation_id", convIds)
           .limit(5000);
         (msgs || []).forEach((m: any) => {
           const d = String(m.sender_phone || "").replace(/\D/g, "");
