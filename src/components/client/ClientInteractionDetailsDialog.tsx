@@ -158,7 +158,11 @@ export function ClientInteractionDetailsDialog({
 
   // A interação mais recente da linha do tempo é uma mensagem da equipe sem
   // resposta: cliente está há X dias sem responder.
-  const newestPending = data?.find((i) => i.pendingReply);
+  const newestPending = items?.find((i) => i.pendingReply);
+  // Caso contrário, a última mensagem é do cliente: a bola está com a consultora.
+  const newestMsg = items?.find((i) => i.source !== "checkin");
+  const awaitingTeam = !newestPending && newestMsg && !data?.lastInboundAt ? false
+    : !newestPending && !!newestMsg && data?.lastInboundAt === newestMsg.at;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
