@@ -138,6 +138,9 @@ export function ClientInteractionDetailsDialog({
     },
   });
 
+  // A interação mais recente da linha do tempo é uma mensagem da equipe sem
+  // resposta: cliente está há X dias sem responder.
+  const newestPending = data?.find((i) => i.pendingReply);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -148,6 +151,22 @@ export function ClientInteractionDetailsDialog({
             Registros de check-in e mensagens do RoyZapp, do mais recente ao mais antigo (horário de Brasília).
           </DialogDescription>
         </DialogHeader>
+
+        {!isLoading && !error && newestPending && (
+          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-warning">
+                Sem resposta do cliente {silenceLabel(newestPending.silentDays)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Última mensagem foi da equipe{newestPending.who ? ` (${newestPending.who})` : ""} em{" "}
+                {dateTimeLabel(newestPending.at)} — {newestPending.title.toLowerCase()}. Nenhuma resposta depois disso.
+              </p>
+            </div>
+          </div>
+        )}
+
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
