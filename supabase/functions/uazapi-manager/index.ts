@@ -1841,7 +1841,27 @@ Deno.serve(async (req) => {
     } else if (action === "list_groups") {
       const r = await uazapiInstance("/group/fetchAllGroups", "GET", token!, undefined, sectorServer);
       result = { groups: (Array.isArray(r) ? r : r.groups || []).map((g:any) => ({ group_jid: g.JID||g.jid||g.id, name: g.Name||g.name||g.Subject })) };
-    
+
+    } else if (action === "group_participants") {
+      // Somente leitura: lista os participantes de um grupo do WhatsApp.
+      const jid = String(group_id || "").includes("@g.us") ? String(group_id) : `${group_id}@g.us`;
+      if (!group_id) {
+        return new Response(JSON.stringify({ error: "group_id é obrigatório" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+      }
+      let info: any = null;
+      try {
+        info = await uazapiInstance("/group/info", "POST", token!, { groupjid: jid, getInviteLink: false }, sectorServer);
+      } catch (err) {
+        const response = await invalidTokenResponse(err);
+        if (response) return response;
+        throw err;
+      }
+      const participants = info?.Participants || info?.participants || info?.group?.Participants || [];
+      result = {
+        name: info?.Name || info?.name || null,
+        participants: Array.isArray(participants) ? participants : [],
+      };
+
     } else if (action === "list_instances") {
       const allRaw = await uazapiAdmin("/instance/all", "GET", undefined, sectorServer);
       const all = extractInstancesList(allRaw);
