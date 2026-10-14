@@ -99,7 +99,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
       <CardContent className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-3 text-sm">
           <Info
-            label={lastCheckpoint ? "Último checkpoint" : "Último contato"}
+            label="Última interação"
             value={referenceAt ? format(new Date(referenceAt), "dd/MM/yyyy", { locale: ptBR }) : "—"}
           />
           <Info label="Próximo previsto" value={state.nextDueAt ? format(new Date(state.nextDueAt), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
