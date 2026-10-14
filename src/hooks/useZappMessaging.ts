@@ -149,7 +149,7 @@ export function useZappMessaging({
   const [showFormatting, setShowFormatting] = useState(false);
   const [uploadingMedia, setUploadingMedia] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{ id: string; content: string | null; sender_name: string | null; is_from_client: boolean; external_message_id?: string | null } | null>(null);
-  const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string }[]>([]);
+  const [pendingMentions, setPendingMentions] = useState<{ phone: string; jid: string; name?: string }[]>([]);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const imageInputRef = useRef<HTMLInputElement>(null);
 
@@ -1626,7 +1626,7 @@ export function useZappMessaging({
   };
 
   // Handle mention insert
-  const handleMentionInsert = (mention: { phone: string; jid: string }) => {
+  const handleMentionInsert = (mention: { phone: string; jid: string; name?: string }) => {
     setPendingMentions(prev => [...prev, mention]);
   };
 
