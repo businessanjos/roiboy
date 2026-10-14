@@ -30,6 +30,8 @@ interface ZappGroupMentionInputProps {
   onPaste?: (e: React.ClipboardEvent<HTMLTextAreaElement>) => void;
 }
 
+const norm = (t: string) => (t || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
 export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMentionInputProps>(
   ({ value, onChange, onMentionInsert, placeholder, className, onKeyDown, disabled, groupJid, sectorId, onPaste }, ref) => {
     const [showSuggestions, setShowSuggestions] = useState(false);
@@ -60,15 +62,34 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             },
           });
 
-          // If there's an error (e.g., WhatsApp not connected), just set empty participants
-          if (error) {
-            console.warn("Could not fetch group participants:", error.message);
-            setParticipants([]);
-            setLoadingParticipants(false);
-            return;
-          }
+          if (error) console.warn("Could not fetch group participants:", error.message);
+          const rawParticipants: any[] = error ? [] : (data?.data?.participants || data?.participants || []);
 
-          const rawParticipants = data?.data?.participants || data?.participants || [];
+          // Nomes conhecidos: cache de participantes + remetentes de mensagens do grupo
+          const known: Record<string, string> = {};
+          const addKnown = (ph: any, nm: any) => {
+            const d = String(ph || "").replace(/\D/g, "");
+            const n = String(nm || "").trim();
+            if (d.length >= 8 && n && !/^\+?\d[\d\s()-]*$/.test(n) && !known[d.slice(-8)]) known[d.slice(-8)] = n;
+          };
+          const sb: any = supabase;
+          const { data: cached } = await sb.from("whatsapp_group_participants").select("phone, name").eq("group_jid", groupJid).limit(1000);
+          (cached || []).forEach((c: any) => addKnown(c.phone, c.name));
+          const { data: conv } = await sb.from("zapp_conversations").select("id").eq("group_jid", groupJid).limit(5);
+          const convIds = (conv || []).map((c: any) => c.id);
+          if (convIds.length) {
+            const { data: msgs } = await sb.from("zapp_messages").select("sender_phone, sender_name")
+              .in("zapp_conversation_id", convIds).not("sender_name", "is", null)
+              .order("created_at", { ascending: false }).limit(2000);
+            (msgs || []).forEach((m: any) => addKnown(m.sender_phone, m.sender_name));
+          }
+          if (rawParticipants.length === 0) {
+            Object.entries(known).forEach(([suf, nm]) => {
+              const row = (cached || []).find((c: any) => String(c.phone || "").replace(/\D/g, "").endsWith(suf));
+              const ph = String(row?.phone || "").replace(/\D/g, "");
+              if (ph) rawParticipants.push({ PhoneNumber: ph, DisplayName: nm });
+            });
+          }
           
           // Extract phone numbers for client lookup
           const phoneNumbers = rawParticipants.map((p: any) => {
@@ -77,9 +98,10 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           }).filter(Boolean);
 
           // Query clients to get names - match by last 8 digits
-          const { data: clients } = await supabase
-            .from("clients")
-            .select("phone_e164, full_name");
+          const sufs = phoneNumbers.map((x: string) => x.replace(/\D/g, "").slice(-8)).filter((x: string) => x.length === 8);
+          const { data: clients } = sufs.length
+            ? await sb.from("clients").select("phone_e164, full_name").or(sufs.map((x: string) => `phone_e164.ilike.%${x}`).join(",")).limit(500)
+            : { data: [] as any[] };
 
           // Create phone -> name map
           const phoneToName: Record<string, string> = {};
@@ -96,7 +118,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           
           const participantsList: GroupParticipant[] = rawParticipants.map((p: any) => {
             const phoneField = p.PhoneNumber || p.phoneNumber || p.phone || p.id || "";
-            const phone = phoneField.replace("@s.whatsapp.net", "").replace("@lid", "");
+            const phone = String(phoneField).split("@")[0].split(":")[0].replace(/\D/g, "");
             const displayName = p.DisplayName || p.displayName || p.name || p.notify || p.pushName || "";
             const isAdmin = p.IsAdmin || p.isAdmin || p.IsSuperAdmin || p.isSuperAdmin || 
                            p.admin === "admin" || p.admin === "superadmin" || false;
@@ -107,7 +129,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             return {
               id: p.JID || p.jid || p.LID || p.lid || p.id || phone,
               phone: phone,
-              name: displayName || clientName || phone,
+              name: displayName || known[phone.slice(-8)] || clientName || phone,
               isAdmin: isAdmin,
             };
           });
@@ -131,7 +153,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       } else {
         const query = mentionQuery.toLowerCase();
         const filtered = participants.filter(
-          p => p.name.toLowerCase().includes(query) || p.phone.includes(query)
+          p => norm(p.name).includes(norm(query)) || p.phone.includes(query)
         ).slice(0, 8);
         setFilteredParticipants(filtered);
       }
