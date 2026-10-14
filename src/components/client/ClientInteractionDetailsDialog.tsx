@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ExternalLink, Loader2, MessageCircle, Users, ClipboardCheck } from "lucide-react";
+import { ExternalLink, Loader2, MessageCircle, Users, ClipboardCheck, MessageCircleQuestion } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClientHistoryTimeline } from "./ClientHistoryTimeline";
 import { Button } from "@/components/ui/button";
@@ -15,10 +15,23 @@ type Item = {
   action: string;
   text: string | null;
   link?: string;
+  /** Última mensagem da conversa é da equipe e o cliente não respondeu */
+  pendingReply?: boolean;
+  /** Dias desde essa mensagem da equipe */
+  silentDays?: number;
 };
 
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
 const CHANNEL: Record<string, string> = { whatsapp: "WhatsApp", call: "Ligação", ligacao: "Ligação", meeting: "Reunião", reuniao: "Reunião", email: "E-mail", presencial: "Presencial" };
+
+const zone = "America/Sao_Paulo";
+const dateTimeLabel = (at: string) =>
+  new Intl.DateTimeFormat("pt-BR", { timeZone: zone, day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(at));
+const silenceLabel = (days?: number) => {
+  if (days === undefined) return "";
+  if (days <= 0) return "hoje";
+  return days === 1 ? "há 1 dia" : `há ${days} dias`;
+};
 
 export function ClientInteractionDetailsDialog({
   clientId,
@@ -75,6 +88,20 @@ export function ClientInteractionDetailsDialog({
       );
       for (const m of msgs) if (m.error) throw m.error;
 
+      // Conversas em que a última mensagem é da equipe: o cliente não respondeu
+      // depois dela. Guardamos quantos dias se passaram desde essa mensagem.
+      const pendingMessages = new Map<string, number>();
+      msgs.forEach((m) => {
+        const rows = m.data || [];
+        if (rows.length && rows[0].direction === "outbound") {
+          pendingMessages.set(
+            `msg-${rows[0].id}`,
+            Math.floor((Date.now() - new Date(rows[0].sent_at).getTime()) / 86_400_000),
+          );
+        }
+      });
+
+
       const userIds = [...new Set((ck.data || []).map((r: any) => r.user_id).filter(Boolean))];
       const users = new Map<string, string>();
       if (userIds.length) {
@@ -109,6 +136,8 @@ export function ClientInteractionDetailsDialog({
               r.message_type && r.message_type !== "text" ? ` · ${r.message_type}` : ""
             }`,
             text: r.content,
+            pendingReply: pendingMessages.has(`msg-${r.id}`) || undefined,
+            silentDays: pendingMessages.get(`msg-${r.id}`),
             link: `/roy-zapp?sector=${c?.sector_id || ""}&conversation=${r.zapp_conversation_id}`,
           });
         }),
@@ -118,6 +147,9 @@ export function ClientInteractionDetailsDialog({
     },
   });
 
+  // A interação mais recente da linha do tempo é uma mensagem da equipe sem
+  // resposta: cliente está há X dias sem responder.
+  const newestPending = data?.find((i) => i.pendingReply);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -128,6 +160,22 @@ export function ClientInteractionDetailsDialog({
             Registros de check-in e mensagens do RoyZapp, do mais recente ao mais antigo (horário de Brasília).
           </DialogDescription>
         </DialogHeader>
+
+        {!isLoading && !error && newestPending && (
+          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-warning">
+                Sem resposta do cliente {silenceLabel(newestPending.silentDays)}
+              </p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                Última mensagem foi da equipe{newestPending.who ? ` (${newestPending.who})` : ""} em{" "}
+                {dateTimeLabel(newestPending.at)} — {newestPending.title}. Nenhuma resposta depois disso.
+              </p>
+            </div>
+          </div>
+        )}
+
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-8 text-sm text-muted-foreground">
@@ -145,6 +193,7 @@ export function ClientInteractionDetailsDialog({
             detail: [it.action, it.who ? `Por ${it.who}` : null].filter(Boolean).join(" · "),
             text: it.text,
             icon: it.source === "checkin" ? ClipboardCheck : it.source === "group" ? Users : MessageCircle,
+            badge: it.pendingReply ? `Sem resposta ${silenceLabel(it.silentDays)}` : undefined,
             action: it.link ? (
               <Button asChild variant="ghost" size="sm" className="h-8 px-0 text-xs text-primary">
                 <Link to={it.link}><ExternalLink className="mr-1.5 h-3.5 w-3.5" />Ver no RoyZapp</Link>
