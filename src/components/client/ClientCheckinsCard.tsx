@@ -1,4 +1,6 @@
 import { useMemo, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,14 +29,41 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
 
-  // Qualquer contato registrado conta como toque com o cliente. Se não houver
-  // um checkpoint formal, usamos o último contato para não deixar o painel vazio.
+  // Qualquer interação conta: checkpoint, contato registrado ou a última
+  // mensagem no RoyZapp (da equipe ou do cliente), mesmo sem resposta.
   const lastCheckpoint = useMemo(
     () => checkins.find((c) => c.kind === "checkpoint")?.happened_at ?? null,
     [checkins]
   );
   const lastContact = useMemo(() => checkins[0]?.happened_at ?? null, [checkins]);
-  const referenceAt = lastCheckpoint ?? lastContact;
+  const { data: lastMessageAt = null } = useQuery({
+    queryKey: ["client-last-message", clientId],
+    queryFn: async () => {
+      const { data: convs, error } = await supabase
+        .from("zapp_conversations")
+        .select("id")
+        .eq("client_id", clientId)
+        .limit(200);
+      if (error) throw error;
+      const ids = (convs || []).map((c: any) => c.id);
+      if (ids.length === 0) return null;
+      const { data: msg, error: mErr } = await (supabase as any)
+        .from("zapp_messages")
+        .select("sent_at")
+        .in("conversation_id", ids)
+        .order("sent_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (mErr) throw mErr;
+      return (msg as any)?.sent_at ?? null;
+    },
+    enabled: !!clientId,
+  });
+  const referenceAt = useMemo(() => {
+    const vals = [lastCheckpoint, lastContact, lastMessageAt].filter(Boolean) as string[];
+    if (!vals.length) return null;
+    return vals.reduce((a, b) => (new Date(a) > new Date(b) ? a : b));
+  }, [lastCheckpoint, lastContact, lastMessageAt]);
   const state = getCheckpointState(referenceAt);
 
 
@@ -70,7 +99,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
       <CardContent className="space-y-3">
         <div className="grid gap-2 sm:grid-cols-3 text-sm">
           <Info
-            label={lastCheckpoint ? "Último checkpoint" : "Último contato"}
+            label="Última interação"
             value={referenceAt ? format(new Date(referenceAt), "dd/MM/yyyy", { locale: ptBR }) : "—"}
           />
           <Info label="Próximo previsto" value={state.nextDueAt ? format(new Date(state.nextDueAt), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
