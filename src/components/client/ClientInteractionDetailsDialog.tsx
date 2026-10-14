@@ -148,9 +148,13 @@ export function ClientInteractionDetailsDialog({
         }),
       );
 
-      return items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 15);
+      return {
+        items: items.sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime()).slice(0, 15),
+        lastInboundAt,
+      };
     },
   });
+  const items = data?.items;
 
   // A interação mais recente da linha do tempo é uma mensagem da equipe sem
   // resposta: cliente está há X dias sem responder.
