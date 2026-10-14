@@ -57,11 +57,11 @@ export function ZappGroupParticipantsDialog({ open, onOpenChange, groupJid, sect
     retry: 1,
     queryFn: async () => {
       // Fontes de nome além do WhatsApp: cache do webhook + nomes já vistos nas mensagens do ROY.
-      const [cachedRes, convRes] = await Promise.all([
-        supabase.from("whatsapp_group_participants").select("phone, name, is_admin").eq("group_jid", groupJid),
-        supabase.from("zapp_conversations").select("id").eq("group_jid", groupJid),
-      ]);
       const cachedByName = new Map<string, string>();
+      const cachedRes = await supabase
+        .from("whatsapp_group_participants")
+        .select("phone, name, is_admin")
+        .eq("group_jid", groupJid);
       (cachedRes.data || []).forEach((c: any) => {
         const d = String(c.phone || "").replace(/\D/g, "");
         const n = String(c.name || "").trim();
@@ -69,6 +69,7 @@ export function ZappGroupParticipantsDialog({ open, onOpenChange, groupJid, sect
       });
 
       const msgNames = new Map<string, string>();
+      const convRes = await supabase.from("zapp_conversations").select("id").eq("group_jid", groupJid);
       const convIds = (convRes.data || []).map((c: any) => c.id);
       if (convIds.length) {
         const { data: msgs } = await supabase
