@@ -284,7 +284,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           >
             {mentionSegments.map((seg, i) =>
               seg.mention ? (
-                <span key={i} className="bg-zapp-accent/25 text-zapp-accent rounded-sm">
+                <span key={i} className="bg-zapp-accent/25 rounded-sm">
                   {seg.text}
                 </span>
               ) : (
@@ -321,7 +321,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           className={cn(
             sharedBoxClasses,
             "relative flex placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto",
-            mentionSegments ? "bg-transparent text-transparent caret-zapp-text" : "bg-zapp-input text-zapp-text",
+            mentionSegments ? "bg-transparent text-zapp-text caret-zapp-text" : "bg-zapp-input text-zapp-text",
             className
           )}
         />
