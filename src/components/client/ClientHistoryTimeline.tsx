@@ -10,6 +10,8 @@ export interface ClientHistoryEntry {
   text: string | null;
   icon: LucideIcon;
   action?: ReactNode;
+  /** Badge opcional (ex.: "Sem resposta há 12 dias") */
+  badge?: string;
 }
 
 const zone = "America/Sao_Paulo";
