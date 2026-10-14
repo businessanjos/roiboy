@@ -70,13 +70,12 @@ export function ZappGroupParticipantsDialog({ open, onOpenChange, groupJid, sect
 
       const msgNames = new Map<string, string>();
       const convRes = await supabase.from("zapp_conversations").select("id").eq("group_jid", groupJid);
-      const convIds = (convRes.data || []).map((c: any) => c.id);
+      const convIds: string[] = (convRes.data || []).map((c: any) => c.id);
       if (convIds.length) {
         const { data: msgs } = await supabase
           .from("zapp_messages")
           .select("sender_phone, sender_name")
           .in("conversation_id", convIds)
-          .not("sender_name", "is", null)
           .limit(5000);
         (msgs || []).forEach((m: any) => {
           const d = String(m.sender_phone || "").replace(/\D/g, "");
