@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ExternalLink, Loader2, MessageCircle, Users, ClipboardCheck } from "lucide-react";
+import { ExternalLink, Loader2, MessageCircle, Users, ClipboardCheck, MessageCircleQuestion } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ClientHistoryTimeline } from "./ClientHistoryTimeline";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,10 @@ type Item = {
   action: string;
   text: string | null;
   link?: string;
+  /** Última mensagem da conversa é da equipe e o cliente não respondeu */
+  pendingReply?: boolean;
+  /** Dias desde essa mensagem da equipe */
+  silentDays?: number;
 };
 
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
@@ -75,6 +79,20 @@ export function ClientInteractionDetailsDialog({
       );
       for (const m of msgs) if (m.error) throw m.error;
 
+      // Conversas em que a última mensagem é da equipe: o cliente não respondeu
+      // depois dela. Guardamos quantos dias se passaram desde essa mensagem.
+      const pendingMessages = new Map<string, number>();
+      msgs.forEach((m) => {
+        const rows = m.data || [];
+        if (rows.length && rows[0].direction === "outbound") {
+          pendingMessages.set(
+            `msg-${rows[0].id}`,
+            Math.floor((Date.now() - new Date(rows[0].sent_at).getTime()) / 86_400_000),
+          );
+        }
+      });
+
+
       const userIds = [...new Set((ck.data || []).map((r: any) => r.user_id).filter(Boolean))];
       const users = new Map<string, string>();
       if (userIds.length) {
@@ -109,6 +127,8 @@ export function ClientInteractionDetailsDialog({
               r.message_type && r.message_type !== "text" ? ` · ${r.message_type}` : ""
             }`,
             text: r.content,
+            pendingReply: pendingMessages.has(`msg-${r.id}`) || undefined,
+            silentDays: pendingMessages.get(`msg-${r.id}`),
             link: `/roy-zapp?sector=${c?.sector_id || ""}&conversation=${r.zapp_conversation_id}`,
           });
         }),
