@@ -47,7 +47,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
       if (error) throw error;
       const ids = (convs || []).map((c: any) => c.id);
       if (ids.length === 0) return null;
-      const { data: msg, error: mErr } = await supabase
+      const { data: msg, error: mErr } = await (supabase as any)
         .from("zapp_messages")
         .select("sent_at")
         .in("conversation_id", ids)
