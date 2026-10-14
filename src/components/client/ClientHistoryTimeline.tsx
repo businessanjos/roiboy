@@ -18,7 +18,7 @@ export interface ClientHistoryEntry {
 
 const zone = "America/Sao_Paulo";
 const dateLabel = (at: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: zone, day: "2-digit", month: "long", year: "numeric" }).format(new Date(at));
-const timeLabel = (at: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: zone, hour: "2-digit", minute: "2-digit", second: "2-digit" }).format(new Date(at));
+const timeLabel = (at: string) => new Intl.DateTimeFormat("pt-BR", { timeZone: zone, hour: "2-digit", minute: "2-digit" }).format(new Date(at));
 
 export function ClientHistoryTimeline({ entries }: { entries: ClientHistoryEntry[] }) {
   const groups = new Map<string, ClientHistoryEntry[]>();
