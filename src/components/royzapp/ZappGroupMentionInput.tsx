@@ -237,8 +237,63 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       return name.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2);
     };
 
+    // Highlight @mentions (WhatsApp-style) via a mirrored overlay behind the textarea
+    const highlightRef = useRef<HTMLDivElement>(null);
+    const mentionNames = participants
+      .map((p) => p.name)
+      .filter((n) => n && !/^\+?\d[\d\s()-]*$/.test(n))
+      .sort((a, b) => b.length - a.length);
+
+    const mentionSegments = (() => {
+      if (!groupJid || mentionNames.length === 0 || !value.includes("@")) return null;
+      const escaped = mentionNames.map((n) => n.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+      const re = new RegExp(`@(?:${escaped.join("|")})(?![\\wÀ-ÿ])`, "g");
+      const segs: { text: string; mention: boolean }[] = [];
+      let last = 0;
+      let m: RegExpExecArray | null;
+      while ((m = re.exec(value)) !== null) {
+        if (m.index > last) segs.push({ text: value.slice(last, m.index), mention: false });
+        segs.push({ text: m[0], mention: true });
+        last = m.index + m[0].length;
+      }
+      if (segs.length === 0) return null;
+      if (last < value.length) segs.push({ text: value.slice(last), mention: false });
+      return segs;
+    })();
+
+    const syncHighlightScroll = () => {
+      if (highlightRef.current && inputRef.current) {
+        highlightRef.current.scrollTop = inputRef.current.scrollTop;
+      }
+    };
+
+    const sharedBoxClasses =
+      "min-h-[52px] max-h-[120px] w-full rounded-lg border-0 px-4 py-2.5 text-sm whitespace-pre-wrap break-words";
+
     return (
       <div ref={containerRef} className="relative w-full flex-1">
+        {/* Highlight overlay (mirrors textarea content) */}
+        {mentionSegments && (
+          <div
+            ref={highlightRef}
+            aria-hidden
+            className={cn(
+              sharedBoxClasses,
+              "absolute inset-0 overflow-hidden pointer-events-none bg-zapp-input text-transparent"
+            )}
+          >
+            {mentionSegments.map((seg, i) =>
+              seg.mention ? (
+                <span key={i} className="bg-zapp-accent/25 text-zapp-accent rounded-sm">
+                  {seg.text}
+                </span>
+              ) : (
+                <span key={i}>{seg.text}</span>
+              )
+            )}
+            {"\n"}
+          </div>
+        )}
         <textarea
           ref={(node) => {
             (inputRef as any).current = node;
@@ -255,14 +310,18 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             const target = e.target;
             target.style.height = 'auto';
             target.style.height = `${Math.min(target.scrollHeight, 120)}px`;
+            syncHighlightScroll();
           }}
+          onScroll={syncHighlightScroll}
           onKeyDown={handleKeyDown}
           onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
           rows={2}
           className={cn(
-            "flex min-h-[52px] max-h-[120px] w-full rounded-lg border-0 bg-zapp-input px-4 py-2.5 text-sm text-zapp-text placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto",
+            sharedBoxClasses,
+            "relative flex placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto",
+            mentionSegments ? "bg-transparent text-transparent caret-zapp-text" : "bg-zapp-input text-zapp-text",
             className
           )}
         />
