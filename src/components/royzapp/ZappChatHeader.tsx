@@ -173,16 +173,36 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             }
           }}
         >
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-            <AvatarImage src={contactInfo.avatar || undefined} />
-            <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
-              {contactInfo.isGroup ? (
-                <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
-              ) : (
-                getInitials(contactInfo.name)
-              )}
-            </AvatarFallback>
-          </Avatar>
+          {isGroup && groupJid ? (
+            <button
+              type="button"
+              className="relative shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-zapp-accent"
+              title="Ver contatos do grupo"
+              aria-label="Ver contatos do grupo"
+              onClick={(e) => {
+                e.stopPropagation();
+                setParticipantsOpen(true);
+              }}
+            >
+              <Avatar className="h-8 w-8 sm:h-10 sm:w-10 ring-2 ring-zapp-accent/50">
+                <AvatarImage src={contactInfo.avatar || undefined} />
+                <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
+                  <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                </AvatarFallback>
+              </Avatar>
+            </button>
+          ) : (
+            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+              <AvatarImage src={contactInfo.avatar || undefined} />
+              <AvatarFallback className="bg-muted text-muted-foreground text-xs sm:text-sm">
+                {contactInfo.isGroup ? (
+                  <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
+                ) : (
+                  getInitials(contactInfo.name)
+                )}
+              </AvatarFallback>
+            </Avatar>
+          )}
           <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
             {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
             <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base flex items-center gap-1.5 min-w-0">
