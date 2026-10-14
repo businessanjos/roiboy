@@ -19,6 +19,8 @@ type Item = {
   pendingReply?: boolean;
   /** Dias desde essa mensagem da equipe */
   silentDays?: number;
+  /** Mensagem recebida do cliente (não enviada pela equipe) */
+  inbound?: boolean;
 };
 
 const KIND: Record<string, string> = { checkpoint: "Checkpoint registrado", contato: "Contato registrado" };
@@ -143,6 +145,7 @@ export function ClientInteractionDetailsDialog({
             text: r.content,
             pendingReply: pendingMessages.has(`msg-${r.id}`) || undefined,
             silentDays: pendingMessages.get(`msg-${r.id}`),
+            inbound: !out,
             link: `/roy-zapp?sector=${c?.sector_id || ""}&conversation=${r.zapp_conversation_id}`,
           });
         }),
@@ -161,8 +164,7 @@ export function ClientInteractionDetailsDialog({
   const newestPending = items?.find((i) => i.pendingReply);
   // Caso contrário, a última mensagem é do cliente: a bola está com a consultora.
   const newestMsg = items?.find((i) => i.source !== "checkin");
-  const awaitingTeam = !newestPending && newestMsg && !data?.lastInboundAt ? false
-    : !newestPending && !!newestMsg && data?.lastInboundAt === newestMsg.at;
+  const awaitingTeam = !newestPending && !!newestMsg?.inbound;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
