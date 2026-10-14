@@ -1776,7 +1776,23 @@ Deno.serve(async (req) => {
       const groupBody: Record<string, unknown> = { number: jid, text: applySignature(message) };
       const normalizedQuotedMessageId = normalizeQuotedMessageId(payload.quoted_message_id);
       if (normalizedQuotedMessageId) { groupBody.replyid = normalizedQuotedMessageId; }
-      if (payload.mentions) groupBody.mentions = payload.mentions;
+      if (payload.mentions) {
+        // uazapi espera string "num1,num2" (só dígitos) e o texto com "@num" para virar menção
+        const list = (Array.isArray(payload.mentions) ? payload.mentions : String(payload.mentions).split(","))
+          .map((m: unknown) => String(m || "").split("@")[0].split(":")[0].replace(/\D/g, ""))
+          .filter((d: string) => d.length >= 10);
+        if (list.length) {
+          groupBody.mentions = [...new Set(list)].join(",");
+          let txt = String(groupBody.text || "");
+          const names = Array.isArray(payload.mention_names) ? payload.mention_names : [];
+          for (const mn of names) {
+            const d = String(mn?.phone || "").replace(/\D/g, "");
+            const nm = String(mn?.name || "").trim();
+            if (d && nm && nm !== d) txt = txt.split(`@${nm}`).join(`@${d}`);
+          }
+          groupBody.text = txt;
+        }
+      }
       
       try {
         result = await enqueueSend(token!, `send_to_group user=${userData.name}`, () =>
