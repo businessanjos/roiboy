@@ -177,15 +177,41 @@ export function ClientInteractionDetailsDialog({
         </DialogHeader>
 
         {!isLoading && !error && newestPending && (
-          <div className="flex items-start gap-3 rounded-lg border border-warning/30 bg-warning/10 p-3">
-            <MessageCircleQuestion className="mt-0.5 h-4 w-4 shrink-0 text-warning" />
-            <div className="min-w-0">
+          <div className="rounded-lg border border-warning/30 bg-warning/10 p-3">
+            <div className="flex items-center gap-2">
+              <MessageCircleQuestion className="h-4 w-4 shrink-0 text-warning" />
               <p className="text-sm font-semibold text-warning">
-                Sem resposta do cliente {silenceLabel(newestPending.silentDays)}
+                Cliente sem responder {silenceLabel(newestPending.silentDays)}
               </p>
+            </div>
+            <dl className="mt-2 grid gap-x-4 gap-y-1.5 text-xs sm:grid-cols-2">
+              <div>
+                <dt className="text-muted-foreground">Última resposta do cliente</dt>
+                <dd className="font-medium">
+                  {data?.lastInboundAt ? dateTimeLabel(data.lastInboundAt) : "Nunca respondeu"}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-muted-foreground">Última mensagem enviada (equipe)</dt>
+                <dd className="font-medium">
+                  {dateTimeLabel(newestPending.at)}
+                  {newestPending.who ? ` · ${newestPending.who}` : ""}
+                </dd>
+              </div>
+            </dl>
+            <p className="mt-2 text-xs text-muted-foreground">
+              {newestPending.title} — a equipe escreveu por último e o cliente não respondeu depois disso.
+            </p>
+          </div>
+        )}
+
+        {!isLoading && !error && awaitingTeam && newestMsg && (
+          <div className="flex items-start gap-3 rounded-lg border border-info/30 bg-info/10 p-3">
+            <MessageCircle className="mt-0.5 h-4 w-4 shrink-0 text-info" />
+            <div className="min-w-0">
+              <p className="text-sm font-semibold text-info">Aguardando resposta da consultora</p>
               <p className="mt-0.5 text-xs text-muted-foreground">
-                Última mensagem foi da equipe{newestPending.who ? ` (${newestPending.who})` : ""} em{" "}
-                {dateTimeLabel(newestPending.at)} — {newestPending.title}. Nenhuma resposta depois disso.
+                A última mensagem foi do cliente em {dateTimeLabel(newestMsg.at)} — {newestMsg.title}.
               </p>
             </div>
           </div>
