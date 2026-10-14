@@ -49,7 +49,7 @@ export function ClientInteractionDetailsDialog({
   const { data, isLoading, error } = useQuery({
     queryKey: ["client-interaction-details", clientId],
     enabled: open,
-    queryFn: async (): Promise<Item[]> => {
+    queryFn: async (): Promise<{ items: Item[]; lastInboundAt: string | null }> => {
       const [ck, direct, links] = await Promise.all([
         supabase
           .from("client_checkins")
