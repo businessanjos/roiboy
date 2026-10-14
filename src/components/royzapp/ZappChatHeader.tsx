@@ -1,5 +1,6 @@
 import { memo, useState } from "react";
 import { ZappGroupClientsDialog } from "./dialogs/ZappGroupClientsDialog";
+import { ZappGroupParticipantsDialog } from "./dialogs/ZappGroupParticipantsDialog";
 import {
   ArrowLeft,
   ArrowRightLeft,
@@ -116,11 +117,22 @@ export const ZappChatHeader = memo(function ZappChatHeader({
   const clientId = assignment.zapp_conversation?.client_id || assignment.conversation?.client?.id;
   const conversationId = assignment.zapp_conversation_id || assignment.zapp_conversation?.id;
   const [groupClientsOpen, setGroupClientsOpen] = useState(false);
+  const [participantsOpen, setParticipantsOpen] = useState(false);
+  const groupJid = assignment.zapp_conversation?.group_jid || null;
 
   return (
     <div className="flex flex-col">
       {isGroup && conversationId && accountId && (
         <ZappGroupClientsDialog open={groupClientsOpen} onOpenChange={setGroupClientsOpen} conversationId={conversationId} accountId={accountId} />
+      )}
+      {isGroup && groupJid && (
+        <ZappGroupParticipantsDialog
+          open={participantsOpen}
+          onOpenChange={setParticipantsOpen}
+          groupJid={groupJid}
+          sectorId={assignment.zapp_conversation?.sector_id}
+          integrationId={(assignment.zapp_conversation as any)?.integration_id}
+        />
       )}
       {/* Suggestion Banner - only show if no client linked */}
       {!clientId && conversationId && accountId && onClientLinked && onOpenLinkClient && (
@@ -442,6 +454,12 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   )}
                   <DropdownMenuSeparator className="bg-zapp-border" />
                 </div>
+                {isGroup && groupJid && (
+                  <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => setParticipantsOpen(true)}>
+                    <Users2 className="h-4 w-4 mr-2 text-zapp-accent" />
+                    Ver contatos do grupo
+                  </DropdownMenuItem>
+                )}
                 {isGroup && conversationId && accountId && (
                   <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => setGroupClientsOpen(true)}>
                     <Users2 className="h-4 w-4 mr-2 text-zapp-accent" />
