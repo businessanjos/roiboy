@@ -91,6 +91,7 @@ export function ClientInteractionDetailsDialog({
       // Conversas em que a última mensagem é da equipe: o cliente não respondeu
       // depois dela. Guardamos quantos dias se passaram desde essa mensagem.
       const pendingMessages = new Map<string, number>();
+      let lastInboundAt: string | null = null;
       msgs.forEach((m) => {
         const rows = m.data || [];
         if (rows.length && rows[0].direction === "outbound") {
@@ -98,6 +99,10 @@ export function ClientInteractionDetailsDialog({
             `msg-${rows[0].id}`,
             Math.floor((Date.now() - new Date(rows[0].sent_at).getTime()) / 86_400_000),
           );
+        }
+        const inbound = rows.find((r: any) => r.direction !== "outbound");
+        if (inbound && (!lastInboundAt || new Date(inbound.sent_at) > new Date(lastInboundAt))) {
+          lastInboundAt = inbound.sent_at;
         }
       });
 
