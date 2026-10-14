@@ -2,6 +2,10 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 
+vi.mock("@/hooks/useCurrentUser", () => ({
+  useCurrentUser: () => ({ currentUser: { account_id: "acc-1" } }),
+}));
+
 // O grupo responde 2 participantes e o clientão casa um deles.
 vi.mock("@/integrations/supabase/client", () => ({
   supabase: {
