@@ -492,6 +492,7 @@ export function useZappMessaging({
           payload.group_id = groupJid;
           if (mentionsToSend.length > 0) {
             payload.mentions = mentionsToSend.map(m => m.jid);
+            payload.mention_names = mentionsToSend.map(m => ({ phone: m.phone, name: m.name }));
           }
         } else {
           payload.phone = phone;
@@ -630,6 +631,7 @@ export function useZappMessaging({
               retryPayload.group_id = groupJid;
               if (mentionsToSend.length > 0) {
                 retryPayload.mentions = mentionsToSend.map(m => m.jid);
+            retryPayload.mention_names = mentionsToSend.map(m => ({ phone: m.phone, name: m.name }));
               }
             } else {
               retryPayload.phone = phone;
