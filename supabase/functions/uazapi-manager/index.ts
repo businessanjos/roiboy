@@ -1786,9 +1786,13 @@ Deno.serve(async (req) => {
           let txt = String(groupBody.text || "");
           const names = Array.isArray(payload.mention_names) ? payload.mention_names : [];
           for (const mn of names) {
+            const isLid = !!(mn as any)?.is_lid;
             const d = String(mn?.phone || "").replace(/\D/g, "");
             const nm = String(mn?.name || "").trim();
-            if (d && nm && nm !== d) txt = txt.split(`@${nm}`).join(`@${d}`);
+            // Participante exposto só pelo LID: mantém "@Nome" no texto — trocar pelo número
+            // deixaria o WhatsApp exibindo o LID cru (ex. "@2564...") em vez do nome.
+            if (isLid || d.length < 10) continue;
+            if (nm && nm !== d) txt = txt.split(`@${nm}`).join(`@${d}`);
           }
           groupBody.text = txt;
         }

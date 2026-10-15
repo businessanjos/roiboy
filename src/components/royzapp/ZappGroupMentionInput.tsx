@@ -7,6 +7,8 @@ import { Users } from "lucide-react";
 interface GroupParticipant {
   id: string;
   phone: string;
+  jid: string;
+  isLid: boolean;
   name: string;
   isAdmin: boolean;
 }
@@ -15,6 +17,7 @@ export interface MentionData {
   phone: string;
   jid: string;
   name: string;
+  is_lid?: boolean;
 }
 
 interface ZappGroupMentionInputProps {
@@ -117,8 +120,16 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           }
           
           const participantsList: GroupParticipant[] = rawParticipants.map((p: any) => {
-            const phoneField = p.PhoneNumber || p.phoneNumber || p.phone || p.id || "";
-            const phone = String(phoneField).split("@")[0].split(":")[0].replace(/\D/g, "");
+            const phoneField = String(p.PhoneNumber || p.phoneNumber || p.phone || p.id || "");
+            const lidJid = String(p.LID || p.lid || "");
+            let realJid = String(p.JID || p.jid || "");
+            if (!realJid && phoneField.includes("@")) realJid = phoneField;
+            if (!realJid && lidJid) realJid = lidJid.includes("@") ? lidJid : `${lidJid}@lid`;
+            if (realJid && !realJid.includes("@")) realJid = `${realJid}@s.whatsapp.net`;
+            // WhatsApp pode expor o participante apenas pelo LID (sem o número real);
+            // guardamos o JID real para a menção e preservamos o @Nome no texto.
+            const isLid = realJid.endsWith("@lid");
+            const phone = String(realJid || phoneField).split("@")[0].split(":")[0].replace(/\D/g, "");
             const displayName = p.DisplayName || p.displayName || p.name || p.notify || p.pushName || "";
             const isAdmin = p.IsAdmin || p.isAdmin || p.IsSuperAdmin || p.isSuperAdmin || 
                            p.admin === "admin" || p.admin === "superadmin" || false;
@@ -128,6 +139,8 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             
             return {
               id: p.JID || p.jid || p.LID || p.lid || p.id || phone,
+              jid: realJid || `${phone}@s.whatsapp.net`,
+              isLid,
               phone: phone,
               name: displayName || known[phone.slice(-8)] || clientName || phone,
               isAdmin: isAdmin,
@@ -193,9 +206,9 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       onChange(newValue);
       setShowSuggestions(false);
       
-      // Always build JID using phone number with @s.whatsapp.net format (not @lid)
-      const jid = `${participant.phone}@s.whatsapp.net`;
-      onMentionInsert?.({ phone: participant.phone, jid, name: participant.name });
+      // JID real do participante: usa o domínio correto (@lid quando o WhatsApp só expõe o LID)
+      const jid = participant.jid || `${participant.phone}@s.whatsapp.net`;
+      onMentionInsert?.({ phone: participant.phone, jid, name: participant.name, is_lid: participant.isLid });
 
       setTimeout(() => inputRef.current?.focus(), 0);
     }, [value, mentionStartIndex, mentionQuery, onChange, onMentionInsert]);
