@@ -16,3 +16,16 @@ export function isInternalGroup(name: string | null | undefined, isGroup: boolea
   const n = name || "";
   return INTERNAL_PATTERNS.some((r) => r.test(n));
 }
+
+// Sinal de espera (ponto laranja / "Aguardando").
+// Em conversa de cliente vale a régua de atendimento: "pending" marca espera.
+// Nos nossos grupos a régua não se aplica: só o laranja de mensagem realmente
+// não lida aparece, e ele some assim que a pessoa lê.
+export function showsWaitIndicator(opts: {
+  internal: boolean;
+  status: string;
+  unreadCount: number;
+}): boolean {
+  if (opts.internal) return opts.unreadCount > 0;
+  return opts.status === "pending";
+}
