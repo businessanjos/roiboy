@@ -90,6 +90,7 @@ const STATUS_CONFIG: Record<string, { label: string; color: string; bgColor: str
   closed: { label: "Finalizado", color: "text-muted-foreground", bgColor: "bg-muted-foreground" },
 };
 
+import { isInternalGroup } from "@/lib/zappInternalGroups";
 import { ZAPP_VIEW_SET as ZAPP_VIEWS, type ZappView } from "@/lib/royZappRoutes";
 
 export default function RoyZapp() {
@@ -1392,6 +1393,8 @@ export default function RoyZapp() {
       // Otherwise, HIDE closed conversations by default
       // EXCEPTION: Pinned groups ALWAYS show in the groups tab and in "Todas", even if closed
       const isClosed = a.status === "closed";
+      // Grupos internos da equipe nunca aparecem na Fila
+      if (inboxTab === "queue" && !filterArchived && isInternalGroup(contact.name, isGroup, contact.isPinned)) return false;
       const isPinned = contact.isPinned;
       const isPinnedGroupInAllOrGroups = isGroup && isPinned && (filterConversationType === "all" || filterConversationType === "group");
       const skipClosedFilterForPinnedGroups = isPinnedGroupInAllOrGroups;
@@ -1497,7 +1500,8 @@ export default function RoyZapp() {
     const totalQueueConversations = assignments.filter((a) => 
       a.agent_id === null && 
       a.status !== "closed" && 
-      !a.zapp_conversation?.is_archived
+      !a.zapp_conversation?.is_archived &&
+      !isInternalGroup(a.zapp_conversation?.contact_name, !!a.zapp_conversation?.is_group, !!a.zapp_conversation?.is_pinned)
     ).length;
     
     // A contagem de "Minhas" acompanha o escopo selecionado no seletor de atendente
@@ -1530,6 +1534,7 @@ export default function RoyZapp() {
       a.agent_id === null &&
       a.status !== "closed" && 
       !a.zapp_conversation?.is_archived &&
+      !isInternalGroup(a.zapp_conversation?.contact_name, !!a.zapp_conversation?.is_group, !!a.zapp_conversation?.is_pinned) &&
       (a.zapp_conversation?.unread_count || 0) > 0
     ).length;
     
