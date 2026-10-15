@@ -101,16 +101,16 @@ export function ZappNewConversationsDialog(p: Props) {
   }, [pg.items]);
 
   const chips: { k: NewConvFilter; label: string }[] = [
-    { k: "all", label: "Todas" }, { k: "client", label: "Cliente chamou" }, { k: "team", label: "Time chamou" },
+    { k: "all", label: "Todos" }, { k: "client", label: "Cliente iniciou" }, { k: "team", label: "Equipe iniciou" },
   ];
 
   return (
     <Dialog open={p.open} onOpenChange={p.onOpenChange}>
       <DialogContent className="max-w-3xl bg-zapp-panel border-zapp-border text-zapp-text">
         <DialogHeader>
-          <DialogTitle>Conversas novas</DialogTitle>
+          <DialogTitle>Primeiros contatos na área</DialogTitle>
           <DialogDescription className="text-zapp-text-muted">
-            Primeiro contato no período{p.periodLabel ? ` · ${p.periodLabel}` : ""} · quem chamou, quando e o que foi dito
+            Primeira troca de mensagens nesta área{p.periodLabel ? ` · ${p.periodLabel}` : ""}. Contatos com histórico anterior não entram, mesmo quando retomados no período.
           </DialogDescription>
         </DialogHeader>
 
@@ -128,7 +128,7 @@ export function ZappNewConversationsDialog(p: Props) {
         ) : isLoading ? (
           <div className="space-y-2 py-2">{Array.from({ length: 5 }).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}</div>
         ) : rows.length === 0 ? (
-          <p className="py-8 text-center text-sm text-zapp-text-muted">Nenhuma conversa nova neste filtro.</p>
+          <p className="py-8 text-center text-sm text-zapp-text-muted">Nenhum primeiro contato na área neste filtro. Isso não significa que não houve mensagens ou conversas retomadas.</p>
         ) : (
           <ScrollArea className="h-[55vh] pr-2">
             <div className="space-y-5">
@@ -154,7 +154,7 @@ export function ZappNewConversationsDialog(p: Props) {
                             </div>
                             <Badge variant="outline" className={cn("gap-1 text-[11px]", byClient ? "border-primary/40 text-primary" : "border-success/40 text-success")}>
                               {byClient ? <Inbox className="h-3 w-3" /> : <Send className="h-3 w-3" />}
-                              {byClient ? "Cliente chamou" : "Time chamou"}
+                              {byClient ? "Cliente iniciou" : "Equipe iniciou"}
                             </Badge>
                           </div>
                           <p className="mt-2 text-xs text-zapp-text-muted">
