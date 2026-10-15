@@ -41,6 +41,7 @@ export function useZappConversationActions({
   setFilterStatus,
   fetchData,
   markAsRead,
+  markGroupUnread,
   getAgentName,
 }: UseZappConversationActionsProps) {
 
@@ -475,7 +476,7 @@ export function useZappConversationActions({
       console.error("Error marking as unread:", error);
       toast.error("Erro ao marcar como não lida");
     }
-  }, [setAssignments]);
+  }, [setAssignments, assignments, markGroupUnread]);
 
   return {
     assignToMe,
