@@ -48,8 +48,8 @@ interface Props {
 
 const MODELS = [
   { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Rápido)" },
-  { value: "google/gemini-2.5-flash", label: "Gemini 2.5 Flash (Equilibrado)" },
-  { value: "google/gemini-2.5-pro", label: "Gemini 2.5 Pro (Avançado)" },
+  { value: "google/gemini-3-flash-preview", label: "Gemini 3 Flash (Equilibrado)" },
+  { value: "google/gemini-3.1-pro-preview", label: "Gemini 3.1 Pro (Avançado)" },
   { value: "openai/gpt-5.4-mini", label: "GPT-5.4 Mini (Eficiente)" },
   { value: "openai/gpt-5.5", label: "GPT-5.5 (Premium)" },
 ];

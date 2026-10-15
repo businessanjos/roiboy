@@ -255,9 +255,9 @@ Seja direto, sem floreios. Use bullets onde fizer sentido.`;
       }
     };
 
-    const GEMINI_MODEL = 'google/gemini-2.5-pro';
-    const GPT_MODEL = 'openai/gpt-5-mini';
-    const SYNTH_MODEL = 'google/gemini-2.5-flash';
+    const GEMINI_MODEL = 'google/gemini-3.1-pro-preview';
+    const GPT_MODEL = 'openai/gpt-5.4-mini';
+    const SYNTH_MODEL = 'google/gemini-3-flash-preview';
 
     const [gemini, gpt] = await Promise.all([
       callModel(GEMINI_MODEL),

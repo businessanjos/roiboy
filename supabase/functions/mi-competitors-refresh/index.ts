@@ -59,7 +59,7 @@ async function screenChunk(chunk: string): Promise<Club[]> {
     method: 'POST',
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
-      model: 'google/gemini-2.5-flash',
+      model: 'google/gemini-3-flash-preview',
       messages: [
         {
           role: 'system',

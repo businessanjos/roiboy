@@ -149,7 +149,7 @@ TAREFA:
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              model: 'google/gemini-2.5-flash',
+              model: 'google/gemini-3-flash-preview',
               messages: [
                 { role: 'system', content: 'Você é um assistente financeiro que classifica transações bancárias. Seja conciso e preciso.' },
                 { role: 'user', content: prompt }
