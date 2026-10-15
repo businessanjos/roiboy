@@ -520,7 +520,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               ? ` · ${data.messages_from_history} mensagens vieram da importação de histórico (sem atendente identificável)`
               : ""}
             {(data.new_conversations_from_history ?? 0) > 0
-              ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como novas`
+              ? ` · ${data.new_conversations_from_history} conversas antigas importadas no período não contam como primeiro contato`
               : ""}
             {(data.messages_out_unattributed ?? 0) > 0 && data.messages_out > 0
               ? ` · ${data.messages_out_unattributed} envios (${Math.round((data.messages_out_unattributed! / data.messages_out) * 100)}%) sem atendente identificado — enviados pelo celular, fora do ranking por pessoa`
@@ -608,34 +608,34 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
               <Kpi
                 icon={UserPlus}
-                label="Conversas novas"
+                label="Primeiro contato na área"
                 value={(data.new_conversations ?? 0).toLocaleString("pt-BR")}
                 hint={
                   data.active_conversations > 0
-                    ? `${Math.round(((data.new_conversations ?? 0) / data.active_conversations) * 100)}% das ${data.active_conversations} ativas`
-                    : "primeiro contato no período"
+                    ? `primeira troca de mensagens no período · ${Math.round(((data.new_conversations ?? 0) / data.active_conversations) * 100)}% das ${data.active_conversations} ativas · não inclui retomadas`
+                    : "primeira troca de mensagens no período · não inclui retomadas"
                 }
                 onClick={() => setNewConvDialog("all")}
               />
               <Kpi
                 icon={Inbox}
-                label="Novas — cliente chamou"
+                label="Primeiro contato — cliente iniciou"
                 value={(data.new_by_client ?? 0).toLocaleString("pt-BR")}
                 hint={
                   (data.new_conversations ?? 0) > 0
-                    ? `${Math.round(((data.new_by_client ?? 0) / data.new_conversations) * 100)}% das novas`
-                    : "—"
+                    ? `${Math.round(((data.new_by_client ?? 0) / data.new_conversations) * 100)}% dos primeiros contatos · primeira mensagem veio do cliente`
+                    : "primeira mensagem veio do cliente · sem histórico anterior na área"
                 }
                 onClick={() => setNewConvDialog("client")}
               />
               <Kpi
                 icon={Send}
-                label="Novas — time chamou"
+                label="Primeiro contato — equipe iniciou"
                 value={(data.new_by_team ?? 0).toLocaleString("pt-BR")}
                 hint={
                   (data.new_conversations ?? 0) > 0
-                    ? `${Math.round(((data.new_by_team ?? 0) / data.new_conversations) * 100)}% das novas (prospecção ativa)`
-                    : "—"
+                    ? `${Math.round(((data.new_by_team ?? 0) / data.new_conversations) * 100)}% dos primeiros contatos · primeira mensagem foi da equipe`
+                    : "primeira mensagem foi da equipe · sem histórico anterior na área"
                 }
                 tone="success"
                 onClick={() => setNewConvDialog("team")}
@@ -644,7 +644,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 icon={CalendarDays}
                 label="Média de atendimento por dia"
                 value={data.avg_conversations_per_day === null || data.avg_conversations_per_day === undefined ? "—" : `${Number(data.avg_conversations_per_day).toLocaleString("pt-BR")}`}
-                hint={`conversas/dia em ${data.active_days ?? 0} dias com movimento · ${data.avg_new_conversations_per_day ?? 0} novas/dia`}
+                hint={`conversas/dia em ${data.active_days ?? 0} dias com movimento · ${data.avg_new_conversations_per_day ?? 0} primeiros contatos/dia`}
               />
             </div>
 
@@ -652,11 +652,11 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             <div className="grid gap-3 lg:grid-cols-2">
               <Card className="bg-zapp-panel border-zapp-border">
                 <CardHeader className="pb-2">
-                  <CardTitle className="text-sm text-zapp-text">Conversas novas por dia — quem iniciou</CardTitle>
+                  <CardTitle className="text-sm text-zapp-text">Primeiros contatos na área por dia — quem iniciou</CardTitle>
                 </CardHeader>
                 <CardContent className="h-[240px]">
                   {(data.by_day_new || []).length === 0 ? (
-                    <p className="text-sm text-zapp-text-muted">Nenhuma conversa nova no período.</p>
+                    <p className="text-sm text-zapp-text-muted">Nenhum primeiro contato na área no período. Conversas retomadas não entram nesta contagem.</p>
                   ) : (
                     <ResponsiveContainer width="100%" height="100%">
                       <BarChart
@@ -681,7 +681,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
               <Card className="bg-zapp-panel border-zapp-border">
                 <CardHeader className="pb-2">
                   <CardTitle className="text-sm text-zapp-text flex items-center gap-2">
-                    <Send className="h-4 w-4" /> Prospecção ativa por consultora
+                    <Send className="h-4 w-4" /> Primeiros contatos iniciados pela equipe
                   </CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -689,14 +689,14 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                     <TableHeader>
                       <TableRow>
                         <TableHead>Consultora</TableHead>
-                        <TableHead className="text-right">Conversas iniciadas</TableHead>
+                        <TableHead className="text-right">Primeiros contatos</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {(data.new_by_team_agent || []).length === 0 ? (
                         <TableRow>
                           <TableCell colSpan={2} className="text-center text-sm text-zapp-text-muted py-6">
-                            Nenhuma conversa iniciada pelo time no período.
+                            Nenhum primeiro contato iniciado pela equipe no período.
                           </TableCell>
                         </TableRow>
                       ) : (
