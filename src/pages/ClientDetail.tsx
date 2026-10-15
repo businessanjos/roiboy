@@ -301,7 +301,8 @@ function mapFollowupsToEvents(rows: any[]): TimelineEvent[] {
 }
 
 function mapCheckinsToEvents(rows: any[]): TimelineEvent[] {
-  return rows.map((ci: any) => {
+  // Resumos diários da IA já aparecem no card de Checkpoints; não repetir aqui.
+  return rows.filter((ci: any) => ci.source !== "ai_whatsapp").map((ci: any) => {
     const fromClient = ci.initiated_by === "cliente";
     const channelLabel = getCheckinChannelLabel(ci.channel);
     return {

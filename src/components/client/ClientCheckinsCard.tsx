@@ -6,7 +6,7 @@ import { ptBR } from "date-fns/locale";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { CalendarCheck, Plus, Sparkles, ArrowDownLeft, ArrowUpRight, Loader2, FileText } from "lucide-react";
+import { CalendarCheck, Plus, Sparkles, ArrowDownLeft, ArrowUpRight, Loader2, FileText, ChevronDown, ChevronUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useClientCheckins } from "@/hooks/useClientCheckins";
@@ -31,6 +31,16 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
   const [summarizing, setSummarizing] = useState(false);
+  const [visible, setVisible] = useState(6);
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem("roy:checkinsTimelineCollapsed") === "1"; } catch { return false; }
+  });
+  const toggleCollapsed = () => {
+    setCollapsed((c) => {
+      try { localStorage.setItem("roy:checkinsTimelineCollapsed", c ? "0" : "1"); } catch { /* noop */ }
+      return !c;
+    });
+  };
   const generateSummary = async () => {
     setSummarizing(true);
     try {
@@ -134,10 +144,24 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
           />
           <Info label="Próximo previsto" value={state.nextDueAt ? format(new Date(state.nextDueAt), "dd/MM/yyyy", { locale: ptBR }) : "—"} />
           <Info label="Situação" value={state.status === "sem_registro" ? "Sem registro" : lastCheckpoint ? state.label : `${state.label} (contato avulso)`} />
-
         </div>
 
-        {isLoading ? (
+        <button
+          type="button"
+          onClick={toggleCollapsed}
+          aria-expanded={!collapsed}
+          className="flex w-full items-center justify-between rounded-lg border border-border/70 px-3 py-2 text-sm hover:bg-muted/40"
+        >
+          <span className="font-medium">
+            Linha do tempo {checkins.length > 0 && <span className="text-muted-foreground font-normal">· {checkins.length} registros</span>}
+          </span>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            {collapsed ? "Expandir" : "Minimizar"}
+            {collapsed ? <ChevronDown className="h-4 w-4" /> : <ChevronUp className="h-4 w-4" />}
+          </span>
+        </button>
+
+        {!collapsed && (isLoading ? (
           <div className="flex justify-center py-6">
             <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
           </div>
@@ -146,8 +170,15 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
             Nenhum contato registrado ainda.
           </p>
         ) : (
-          <CheckinsTimeline items={checkins.slice(0, 6) as any} />
-        )}
+          <>
+            <CheckinsTimeline items={checkins.slice(0, visible) as any} />
+            {checkins.length > visible && (
+              <Button variant="ghost" size="sm" className="w-full" onClick={() => setVisible((v) => v + 6)}>
+                Ver mais antigos ({checkins.length - visible})
+              </Button>
+            )}
+          </>
+        ))}
       </CardContent>
 
       <ClientCheckinDialog
