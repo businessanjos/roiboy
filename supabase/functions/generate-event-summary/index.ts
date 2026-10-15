@@ -59,7 +59,7 @@ Deno.serve(async (req) => {
     const supabaseServiceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const admin = createClient(supabaseUrl, supabaseServiceKey);
 
-    const chosenModel = model || "google/gemini-2.5-pro";
+    const chosenModel = model || "google/gemini-3.1-pro-preview";
 
     const userPrompt = `Esta é a transcrição completa do DIA ${day_number || 1} do evento. Gere o resumo editorial completo no formato JSON pedido.\n\n--- TRANSCRIÇÃO ---\n${transcript_text}\n--- FIM ---`;
 

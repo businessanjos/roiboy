@@ -1231,7 +1231,7 @@ REGRAS DURAS:
               method: "POST",
               headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
               body: JSON.stringify({
-                model: "google/gemini-2.5-pro",
+                model: "google/gemini-3.1-pro-preview",
                 messages,
                 tools: TOOLS,
                 tool_choice: iter === 0 ? "auto" : "auto",
@@ -1308,7 +1308,7 @@ Se misturar unidades na mesma tabela, deixe claro na coluna Componente (ex: "Reu
 Se houver limitação, finalize com *Premissa: ...* (máx 1 linha).
 Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA invente.`;
 
-          const insightModel = "openai/gpt-5-mini";
+          const insightModel = "openai/gpt-5.4-mini";
           const gptResp = await fetch(GATEWAY, {
             method: "POST",
             headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
@@ -1365,7 +1365,7 @@ Se a análise não trouxer número, diga em 1 linha o que falta e pare. NUNCA in
             chart_hint: scrubStringsOnly(analyst.chart_hint ?? null),
             analysis: scrubExecutiveText(String(analyst.analysis ?? "")),
             period_months: monthsBack,
-            models: { analyst: "google/gemini-2.5-pro", insight: insightModel },
+            models: { analyst: "google/gemini-3.1-pro-preview", insight: insightModel },
           }));
         } catch (e) {
           send(JSON.stringify({ type: "error", error: e instanceof Error ? e.message : String(e) }));

@@ -253,7 +253,7 @@ ${clientSummaries.join("\n---\n")}
 Analise esses dados e forneça insights profundos sobre os padrões de churn. CITE NOMES ESPECÍFICOS de clientes e consultoras em toda a análise.`;
 
     const payload = JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userPrompt },

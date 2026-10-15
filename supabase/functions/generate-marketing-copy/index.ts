@@ -142,7 +142,7 @@ Entregue apenas o conteúdo final, sem explicações.`;
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3.1-pro-preview",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
@@ -177,7 +177,7 @@ Entregue apenas o conteúdo final, sem explicações.`;
         prompt: brief,
         output,
         context: { format, platform, hook, useBrandVoice, objective, profileId, profilePlatform, profileUsername },
-        model: "google/gemini-2.5-pro",
+        model: "google/gemini-3.1-pro-preview",
         created_by: createdBy,
       })
       .select()

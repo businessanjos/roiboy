@@ -8,9 +8,9 @@ const corsHeaders = {
 
 // Custos estimados por 1M tokens (USD)
 const MODEL_COSTS: Record<string, { input: number; output: number }> = {
-  "google/gemini-2.5-flash": { input: 0.075, output: 0.30 },
-  "google/gemini-2.5-flash-lite": { input: 0.025, output: 0.10 },
-  "google/gemini-2.5-pro": { input: 1.25, output: 5.00 },
+  "google/gemini-3-flash-preview": { input: 0.075, output: 0.30 },
+  "google/gemini-3.1-flash-lite": { input: 0.025, output: 0.10 },
+  "google/gemini-3.1-pro-preview": { input: 1.25, output: 5.00 },
   "google/gemini-3-pro-preview": { input: 1.50, output: 6.00 },
 };
 

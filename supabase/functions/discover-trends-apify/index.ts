@@ -146,7 +146,7 @@ Retorne JSON: { "scores": [{ "index": 1, "relevance": 7, "reason": "..." }, ...]
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: "Você é curador especializado em conteúdo de negócio para o mercado de estética brasileiro. Responda sempre em JSON válido." },
           { role: "user", content: prompt },
@@ -181,7 +181,7 @@ Cada adaptação DEVE: (1) descrever o gancho/roteiro adaptado, (2) usar vocabul
     method: "POST",
     headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
     body: JSON.stringify({
-      model: "google/gemini-2.5-flash",
+      model: "google/gemini-3-flash-preview",
       messages: [
         { role: "system", content: "Você é um estrategista de conteúdo brasileiro especializado em mercado de estética. Responda sempre em JSON válido." },
         { role: "user", content: prompt },
