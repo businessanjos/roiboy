@@ -32,6 +32,7 @@ import { cn } from "@/lib/utils";
 import { ConversationAssignment, getContactInfo, getInitials } from "./types";
 import { VipBadge } from "@/components/client/VipBadge";
 import { CountryFlag } from "@/components/ui/CountryFlag";
+import { isInternalGroup } from "@/lib/zappInternalGroups";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
@@ -105,6 +106,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
 }: ZappConversationItemProps) {
   const contact = getContactInfo(assignment);
   const zappConvId = assignment.zapp_conversation?.id;
+  const internal = isInternalGroup(contact.name, !!contact.isGroup, !!contact.isPinned);
   
   const handleClick = () => {
     onSelect(assignment);
@@ -137,7 +139,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {contact.name ? getInitials(contact.name) : "?"}
           </AvatarFallback>
         </Avatar>
-        {assignment.status === "pending" && (
+        {!internal && assignment.status === "pending" && (
           <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-warning border-2 border-zapp-bg" />
         )}
         {contact.isGroup ? (
@@ -324,7 +326,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
         {/* Third row: Wait time (queue) / Agent + Products + Tags */}
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {/* Show status badge based on assignment status */}
-          {assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
+          {!internal && assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
             <Badge 
               variant="secondary" 
               className="bg-warning/15 text-warning border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
@@ -333,7 +335,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
               Aguardando {formatWaitTime(assignment.zapp_conversation.last_message_at)}
             </Badge>
           )}
-          {assignment.status === "waiting" && (
+          {!internal && assignment.status === "waiting" && (
             <Badge 
               variant="secondary" 
               className="bg-info/15 text-info border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
