@@ -8,6 +8,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { getDepartmentColor } from "@/lib/zappDepartmentColor";
 
 interface Department {
   id: string;
@@ -30,32 +31,6 @@ interface ZappDepartmentListProps {
   onDeleteDepartment: (id: string) => void;
 }
 
-// Map sector/color names to actual CSS colors
-const COLOR_MAP: Record<string, string> = {
-  primary: "hsl(39 60% 55%)",
-  emerald: "hsl(152 55% 45%)",
-  amber: "hsl(39 60% 55%)",
-  blue: "hsl(217 91% 60%)",
-  purple: "hsl(271 81% 56%)",
-  slate: "hsl(215 20% 65%)",
-  green: "hsl(142 71% 45%)",
-  red: "hsl(0 72% 51%)",
-  orange: "hsl(25 95% 53%)",
-  yellow: "hsl(48 96% 53%)",
-  teal: "hsl(172 66% 50%)",
-  cyan: "hsl(187 85% 53%)",
-  indigo: "hsl(239 84% 67%)",
-  pink: "hsl(330 81% 60%)",
-};
-
-const getColorValue = (color: string): string => {
-  // If color is already a valid CSS color, return it
-  if (color.startsWith("#") || color.startsWith("hsl") || color.startsWith("rgb")) {
-    return color;
-  }
-  // Map known color names
-  return COLOR_MAP[color] || "hsl(var(--zapp-accent))";
-};
 
 export const ZappDepartmentList = memo(function ZappDepartmentList({
   departments,
@@ -93,7 +68,7 @@ export const ZappDepartmentList = memo(function ZappDepartmentList({
                 <div className="flex items-center gap-2">
                   <div
                     className="w-3 h-3 rounded-full"
-                    style={{ backgroundColor: getColorValue(dept.color) }}
+                    style={{ backgroundColor: getDepartmentColor(dept.color) }}
                   />
                   <span className="text-zapp-text font-medium">{dept.name}</span>
                 </div>
