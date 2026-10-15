@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
 
@@ -103,7 +104,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   return map;
 }
 
-export function ZappMessagesList({
+function ZappMessagesListInner({
   messages,
   conversationId = null,
   isGroup,
@@ -381,7 +382,7 @@ export function ZappMessagesList({
     firstMessageIdRef.current = null;
     pendingRestoreRef.current = null;
     atBottomRef.current = true;
-    pinBottomUntilRef.current = Date.now() + 5000;
+    pinBottomUntilRef.current = Date.now() + 1500;
     scrollToBottom();
   }, [conversationId, scrollToBottom]);
 
@@ -445,7 +446,20 @@ export function ZappMessagesList({
       raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(raf);
+    // Assim que o usuário encosta o dedo/rola, solta o "pin" para não brigar
+    // com a rolagem inercial do iOS.
+    const viewport = viewportRef.current;
+    const release = () => {
+      pinBottomUntilRef.current = 0;
+      cancelAnimationFrame(raf);
+    };
+    viewport?.addEventListener("touchstart", release, { passive: true });
+    viewport?.addEventListener("wheel", release, { passive: true });
+    return () => {
+      cancelAnimationFrame(raf);
+      viewport?.removeEventListener("touchstart", release);
+      viewport?.removeEventListener("wheel", release);
+    };
   }, [conversationId]);
 
 
@@ -653,3 +667,4 @@ export function ZappMessagesList({
     </>
   );
 }
+export const ZappMessagesList = memo(ZappMessagesListInner);
