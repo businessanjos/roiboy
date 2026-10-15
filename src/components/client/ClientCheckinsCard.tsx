@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CalendarCheck, Plus, Sparkles, ArrowDownLeft, ArrowUpRight, Loader2, FileText } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { toast } from "sonner";
 import { useClientCheckins } from "@/hooks/useClientCheckins";
 import { ClientCheckinDialog } from "./ClientCheckinDialog";
 import { ClientCheckinsReportDialog } from "./ClientCheckinsReportDialog";
@@ -28,6 +29,30 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
   const { data: checkins = [], isLoading, refetch } = useClientCheckins(clientId);
   const [open, setOpen] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [summarizing, setSummarizing] = useState(false);
+  const generateSummary = async () => {
+    setSummarizing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("client-daily-summary-now", {
+        body: { client_id: clientId },
+      });
+      if (error) {
+        let msg = error.message;
+        try { msg = (await (error as any).context?.json())?.error || msg; } catch { /* noop */ }
+        throw new Error(msg);
+      }
+      const r = (data as any)?.result;
+      if (r === "empty") toast.info("Nenhuma mensagem hoje para resumir.");
+      else if (r === "unchanged") toast.info("O resumo de hoje já está atualizado.");
+      else toast.success("Resumo de hoje gerado na timeline.");
+      await refetch();
+      onSaved?.();
+    } catch (e) {
+      toast.error((e as Error).message || "Não foi possível gerar o resumo.");
+    } finally {
+      setSummarizing(false);
+    }
+  };
 
   // Qualquer interação conta: checkpoint, contato registrado ou a última
   // mensagem no RoyZapp (da equipe ou do cliente), mesmo sem resposta.
@@ -85,6 +110,10 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
             <Badge variant="outline" className={cn("text-xs", CHECKPOINT_STATUS_STYLES[state.status])}>
               {CHECKPOINT_STATUS_LABELS[state.status]}
             </Badge>
+            <Button size="sm" variant="outline" onClick={generateSummary} disabled={summarizing}>
+              {summarizing ? <Loader2 className="h-4 w-4 mr-1.5 animate-spin" /> : <Sparkles className="h-4 w-4 mr-1.5" />}
+              Resumir hoje
+            </Button>
             <Button size="sm" variant="outline" onClick={() => setReportOpen(true)}>
               <FileText className="h-4 w-4 mr-1.5" />
               Relatório
