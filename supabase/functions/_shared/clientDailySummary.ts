@@ -124,6 +124,15 @@ export async function summarizeClientDay(
     .order("happened_at", { ascending: true }).limit(1).maybeSingle();
   if (existing && existing.message_count === total) return { result: "unchanged" };
 
+  // Contexto: último resumo anterior para dar continuidade (pendências em aberto).
+  const { data: prev } = await supabase
+    .from("client_checkins").select("summary, happened_at")
+    .eq("client_id", clientId).eq("source", "ai_whatsapp")
+    .lt("happened_at", start).order("happened_at", { ascending: false }).limit(1).maybeSingle();
+  const prevBlock = prev?.summary
+    ? `\n\nResumo anterior (${brtDayKey(prev.happened_at)}), use só para continuidade:\n${String(prev.summary).slice(0, 800)}`
+    : "";
+
   const aiRes = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
     method: "POST",
     headers: { Authorization: `Bearer ${apiKey}`, "Content-Type": "application/json" },
@@ -132,14 +141,20 @@ export async function summarizeClientDay(
       messages: [
         {
           role: "system",
-          content:
-            "Você resume as conversas de WhatsApp de um dia entre a equipe de Customer Success de uma mentoria e uma cliente. " +
-            "Use SOMENTE informações presentes nas mensagens, nunca invente. Português do Brasil, sem emojis. " +
-            "Formato: uma linha por conversa/grupo, começando com o nome entre colchetes (ex.: [Individual] ou [Grupo X]), " +
-            "seguido dos assuntos tratados, pedidos, orientações, decisões e pendências. Em grupos, só atribua à cliente o que ela disse; " +
-            "diga 'no grupo' para assuntos compartilhados. Se a equipe escreveu e a cliente não respondeu, diga isso. Máximo 600 caracteres no total.",
+          content: [
+            "Você é analista sênior de Customer Success de uma mentoria para profissionais da saúde (Eternum/Rykas).",
+            "Leia as conversas do dia entre a equipe e a cliente e produza uma análise útil para a consultora que vai assumir o próximo contato.",
+            "Raciocine antes de escrever: qual era o objetivo real da conversa, o que a cliente precisa, como ela está (engajada, insegura, frustrada, satisfeita), o que ficou resolvido e o que ficou em aberto.",
+            "Regras: use SOMENTE fatos das mensagens; nunca invente datas, valores ou promessas. Ignore saudações, 'ok', figurinhas e conversa social sem conteúdo.",
+            "Em grupos, atribua cada fala a quem disse (cliente, sócio/cônjuge ou equipe); nunca atribua à cliente o que outra pessoa falou.",
+            "Se o resumo anterior trouxer pendências, diga se foram resolvidas hoje, quando houver evidência.",
+            "Formato: uma linha por conversa, começando com o rótulo entre colchetes ([Individual] ou [Grupo Nome]), em texto corrido e objetivo:",
+            "contexto e assuntos -> o que foi decidido/entregue -> pendências com responsável (equipe ou cliente).",
+            "Termine com uma linha [Leitura CS] contendo: humor/engajamento percebido, sinais de risco (insatisfação, sumiço, cobrança, menção a cancelar/pausar) ou de oportunidade (resultado, elogio, interesse em renovar/upsell), e a próxima ação recomendada. Se não houver sinal, diga 'sem sinais de risco'.",
+            "Se a equipe escreveu e a cliente não respondeu, registre isso. Português do Brasil, sem emojis, sem markdown. Máximo 1100 caracteres.",
+          ].join(" "),
         },
-        { role: "user", content: `Cliente: ${client.full_name}\nDia: ${dayKey}\n\n${blocks.join("\n\n")}` },
+        { role: "user", content: `Cliente: ${client.full_name}\nDia: ${dayKey}${prevBlock}\n\nConversas de hoje:\n\n${blocks.join("\n\n")}` },
       ],
     }),
   });
@@ -148,7 +163,7 @@ export async function summarizeClientDay(
   }
   if (!aiRes.ok) throw new Error(`IA ${aiRes.status}`);
   const aiJson = await aiRes.json();
-  const summary = String(aiJson?.choices?.[0]?.message?.content || "").trim().slice(0, 800);
+  const summary = String(aiJson?.choices?.[0]?.message?.content || "").trim().slice(0, 1400);
   if (!summary) throw new Error("IA não retornou resumo");
 
   const row = {
