@@ -12,6 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { getDepartmentColor } from "@/lib/zappDepartmentColor";
 import { Agent, Department, getInitials } from "../types";
 
 interface ZappTransferDialogProps {
@@ -168,7 +169,7 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
                     ) : (
                       <span
                         className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
-                        style={{ backgroundColor: opt.color }}
+                        style={{ backgroundColor: getDepartmentColor(opt.color) }}
                       />
                     )}
                     <span className="min-w-0 flex-1">
