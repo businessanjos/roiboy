@@ -1,7 +1,5 @@
 # Roadmap
-- [ ] Resumos diários CS: coleta por dia de Brasília, grupos vinculados, progresso idempotente e pausa de IA.
-- [ ] Resumos diários CS: timeline com fontes e apresentação estruturada; testes e verificação real.
-- [ ] Resumos diários CS: conferir ativação segura do agendamento existente.
+- [ ] Resumos diários CS: implementar worker e timeline do plano aprovado. Bloqueado pela autenticação do callback legado: cron envia apenas apikey pública anon; migração automática/gerenciamento HTTP não disponíveis neste projeto. Preservar callback e cron existentes até disponibilizar ativação segura.
 - [x] Arthur: remover aviso de teste da conta interna no menu e banner, sem alterar cobrança ou permissões.
 - [x] Checkpoints: relatório e detalhes em linha do tempo compartilhada, filtros discretos e ações compactas; build OK.
 - [ ] Checkpoints: validação visual com dados reais aguarda usuário entrar no preview; sessão própria indisponível.
