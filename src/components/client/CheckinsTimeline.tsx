@@ -97,6 +97,17 @@ export function CheckinsTimeline({ items }: { items: CheckinItem[] }) {
                     <div className="mt-2 space-y-2">
                       {sections.map((s, i) => {
                         const isGroup = !!s.label && /grupo/i.test(s.label);
+                        const isRead = !!s.label && /leitura/i.test(s.label);
+                        if (isRead) {
+                          return (
+                            <div key={i} className="rounded-lg border border-primary/30 bg-primary/5 px-3 py-2.5">
+                              <div className="mb-1 flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-primary">
+                                <Sparkles className="h-3 w-3" /> Leitura CS
+                              </div>
+                              <p className="whitespace-pre-wrap break-words text-sm leading-relaxed text-foreground/90">{s.body}</p>
+                            </div>
+                          );
+                        }
                         return (
                           <div key={i} className="rounded-lg border border-border/60 bg-muted/40 px-3 py-2.5">
                             {s.label && (
