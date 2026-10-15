@@ -1109,7 +1109,7 @@ export function DealDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange} modal={!dialerOpen}>
-      <SheetContent className="w-full sm:max-w-3xl p-0 flex flex-col">
+      <SheetContent className="w-full sm:max-w-3xl p-0 pt-[env(safe-area-inset-top)] flex flex-col">
         <SheetHeader className="px-4 py-3 sm:px-5 sm:py-4 border-b bg-muted/30 space-y-0">
           <div className="flex flex-col sm:flex-row sm:items-center gap-3">
             <div className="flex items-start sm:items-center gap-3 flex-1 min-w-0 pr-8 sm:pr-0">
