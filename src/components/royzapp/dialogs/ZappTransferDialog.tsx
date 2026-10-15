@@ -2,6 +2,7 @@ import { memo, useEffect, useMemo, useState } from "react";
 import { Check, Search, Users2, Building2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Dialog,
@@ -33,7 +34,7 @@ const norm = (s: string) =>
     .toLowerCase()
     .trim();
 
-type Option = { id: string; name: string; color?: string; hint?: string; online?: boolean };
+type Option = { id: string; name: string; color?: string; hint?: string; online?: boolean; avatarUrl?: string | null };
 
 export const ZappTransferDialog = memo(function ZappTransferDialog({
   open,
@@ -63,6 +64,7 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
       .map((a) => ({
         id: a.id,
         name: a.user?.name || "Sem nome",
+        avatarUrl: a.user?.avatar_url,
         online: !!a.is_online,
         hint: a.department?.name,
       }))
@@ -163,9 +165,12 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
                     )}
                   >
                     {isAgent ? (
-                      <span className="flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-full bg-zapp-panel text-[11px] font-semibold text-zapp-text-muted">
-                        {getInitials(opt.name)}
-                      </span>
+                      <Avatar className="h-7 w-7 flex-shrink-0">
+                        <AvatarImage src={opt.avatarUrl || undefined} alt={opt.name} className="object-cover" />
+                        <AvatarFallback className="bg-zapp-panel text-[11px] font-semibold text-zapp-text-muted">
+                          {getInitials(opt.name)}
+                        </AvatarFallback>
+                      </Avatar>
                     ) : (
                       <span
                         className="h-2.5 w-2.5 flex-shrink-0 rounded-full"
