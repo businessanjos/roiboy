@@ -66,7 +66,7 @@ Deno.serve(async (req) => {
       channelKey = null,
       assetLabel = null,
       styleNotes = "",
-      model = "google/gemini-3-pro-image-preview",
+      model = "google/gemini-3-pro-image",
     } = body || {};
 
     if (!prompt || typeof prompt !== "string" || prompt.trim().length < 5) {

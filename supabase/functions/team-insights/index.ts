@@ -330,7 +330,7 @@ Produza uma análise detalhada cobrindo:
 
     console.log(`[Step 1] Calling Gemini 2.5 Pro for ${isIndividual ? memberName : "team"} analysis...`);
 
-    const analysisResult = await callAI(lovableKey, "google/gemini-2.5-pro", [
+    const analysisResult = await callAI(lovableKey, "google/gemini-3.1-pro-preview", [
       {
         role: "system",
         content: "Você é um analista de dados comerciais sênior. Analise os dados fornecidos com profundidade e rigor analítico. Responda em português brasileiro. Seja quantitativo e específico.",
@@ -385,7 +385,7 @@ REGRAS:
 
     const insightsResult = await callAI(
       lovableKey,
-      "openai/gpt-5.2",
+      "openai/gpt-5.5",
       [
         { role: "system", content: insightSystemPrompt },
         { role: "user", content: `Análise de dados:\n\n${analysis}\n\nGere insights estruturados com base nesta análise.` },

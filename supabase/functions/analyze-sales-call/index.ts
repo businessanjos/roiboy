@@ -74,7 +74,7 @@ AUDITORIA OBRIGATÓRIA: avalie se o vendedor seguiu as etapas do processo comerc
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash",
+        model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: auditPrompt },
           { role: "user", content: `Analise esta transcrição de call de vendas:\n\n${transcript}` },
@@ -106,7 +106,7 @@ AUDITORIA OBRIGATÓRIA: avalie se o vendedor seguiu as etapas do processo comerc
         method: "POST",
         headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "google/gemini-2.5-pro",
+          model: "google/gemini-3.1-pro-preview",
           messages: [
             { role: "system", content: "Você extrai sinais de ICP de uma transcrição de call de vendas. Retorne SEMPRE em português, conciso e factual. Quando não houver evidência, retorne null ou array vazio — NUNCA invente. Para 'niche_combined' SEMPRE construa profissão + área (ex: 'Médico que atua com emagrecimento', 'Biomédica que atua com harmonização facial') quando houver pelo menos uma pista de profissão E de área." },
             { role: "user", content: `Transcrição da call:\n\n${transcript.substring(0, 14000)}` },

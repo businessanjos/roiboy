@@ -96,7 +96,7 @@ export function AiStudio({
   const [palette, setPalette] = useState<PaletteColor[]>(ETERNUM_PALETTE);
   const [hexDraft, setHexDraft] = useState("");
   const [refUrls, setRefUrls] = useState<string[]>([]);
-  const [model, setModel] = useState("google/gemini-3-pro-image-preview");
+  const [model, setModel] = useState("google/gemini-3-pro-image");
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [resultMeta, setResultMeta] = useState<{ w: number; h: number; genId: string } | null>(null);
 
@@ -226,7 +226,7 @@ export function AiStudio({
               <Select value={model} onValueChange={setModel}>
                 <SelectTrigger className="h-9"><SelectValue /></SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="google/gemini-3-pro-image-preview">Gemini 3 Pro Image — Google (qualidade máxima)</SelectItem>
+                  <SelectItem value="google/gemini-3-pro-image">Gemini 3 Pro Image — Google (qualidade máxima)</SelectItem>
                   <SelectItem value="openai/gpt-image-2">GPT Image 2 — OpenAI (qualidade máxima)</SelectItem>
                 </SelectContent>
               </Select>
