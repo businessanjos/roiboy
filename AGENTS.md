@@ -9,3 +9,4 @@
 - Trial notices share a presentation-only identity predicate; SidebarPlanInfo reads the account from useCurrentUser. Why: consistent internal notices without altering billing or subscription access.
 - Department colors must render through `getDepartmentColor` (src/lib/zappDepartmentColor.ts), which maps stored color names to real CSS. Why: stored values like "primary"/"emerald" are not valid CSS, so using them raw paints invisible markers and breaks list alignment.
 - Transfer favorites are presentation-only local preferences scoped by account and current user, applied after normal agent sorting. Why: personal ordering must not change other users' lists or transfer permissions.
+- RoyZapp group read state is per user (`zapp_conversation_reads` + RPC `zapp_my_group_unread`, hook `useZappPersonalGroupReads`); the shared `unread_count` stays for 1:1 chats. Why: one person reading a group must not clear it for colleagues.
