@@ -1,3 +1,4 @@
+import { memo } from "react";
 import { useRef, useLayoutEffect, useMemo, useState, useCallback, useEffect } from "react";
 import { MessageSquare, Loader2, ArrowUp } from "lucide-react";
 
@@ -103,7 +104,7 @@ function buildFallbackMentionMap(messages: Message[]): Record<string, string> {
   return map;
 }
 
-export function ZappMessagesList({
+function ZappMessagesListInner({
   messages,
   conversationId = null,
   isGroup,
@@ -666,3 +667,4 @@ export function ZappMessagesList({
     </>
   );
 }
+export const ZappMessagesList = memo(ZappMessagesListInner);
