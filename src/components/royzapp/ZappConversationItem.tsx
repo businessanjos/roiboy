@@ -32,7 +32,7 @@ import { cn } from "@/lib/utils";
 import { ConversationAssignment, getContactInfo, getInitials } from "./types";
 import { VipBadge } from "@/components/client/VipBadge";
 import { CountryFlag } from "@/components/ui/CountryFlag";
-import { isInternalGroup } from "@/lib/zappInternalGroups";
+import { isInternalGroup, showsWaitIndicator } from "@/lib/zappInternalGroups";
 
 interface ZappConversationItemProps {
   assignment: ConversationAssignment;
@@ -139,7 +139,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {contact.name ? getInitials(contact.name) : "?"}
           </AvatarFallback>
         </Avatar>
-        {(internal ? contact.unreadCount > 0 : assignment.status === "pending") && (
+        {showsWaitIndicator({ internal, status: assignment.status, unreadCount: contact.unreadCount }) && (
           <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-warning border-2 border-zapp-bg" />
         )}
         {contact.isGroup ? (
