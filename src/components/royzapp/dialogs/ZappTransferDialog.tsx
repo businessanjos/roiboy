@@ -1,5 +1,5 @@
 import { memo, useEffect, useMemo, useState } from "react";
-import { Check, Search, Users2, Building2 } from "lucide-react";
+import { Check, Search, Users2, Building2, Star } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -14,6 +14,8 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { getDepartmentColor } from "@/lib/zappDepartmentColor";
+import { useCurrentUser } from "@/hooks/useCurrentUser";
+import { prioritizeTransferFavorites, readTransferFavorites, transferFavoritesKey } from "@/lib/zappTransferFavorites";
 import { Agent, Department, getInitials } from "../types";
 
 interface ZappTransferDialogProps {
@@ -47,6 +49,21 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
   onTransfer,
 }: ZappTransferDialogProps) {
   const [search, setSearch] = useState("");
+  const { currentUser } = useCurrentUser();
+  const favoritesKey = currentUser ? transferFavoritesKey(currentUser.account_id, currentUser.id) : null;
+  const [favoriteState, setFavoriteState] = useState<{ key: string | null; ids: string[] }>({ key: null, ids: [] });
+  const favorites = favoriteState.key === favoritesKey ? favoriteState.ids : [];
+
+  useEffect(() => {
+    setFavoriteState({ key: favoritesKey, ids: readTransferFavorites(favoritesKey) });
+  }, [favoritesKey]);
+
+  const toggleFavorite = (id: string) => {
+    if (!favoritesKey) return;
+    const ids = favorites.includes(id) ? favorites.filter((value) => value !== id) : [...favorites, id];
+    setFavoriteState({ key: favoritesKey, ids });
+    try { localStorage.setItem(favoritesKey, JSON.stringify(ids)); } catch { /* Preference remains available for this session. */ }
+  };
 
   // Limpa a busca ao fechar/reabrir para a lista começar organizada.
   useEffect(() => {
@@ -76,11 +93,12 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
 
   const filtered = useMemo(() => {
     const q = norm(search);
-    if (!q) return options;
-    return options.filter(
+    const sorted = transferTarget.type === "agent" ? prioritizeTransferFavorites(options, favorites) : options;
+    if (!q) return sorted;
+    return sorted.filter(
       (o) => norm(o.name).includes(q) || norm(o.hint || "").includes(q)
     );
-  }, [options, search]);
+  }, [options, search, favorites, transferTarget.type]);
 
   const isAgent = transferTarget.type === "agent";
 
@@ -151,14 +169,17 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
               filtered.map((opt) => {
                 const selected = opt.id === transferTarget.id;
                 return (
-                  <button
+                  <div key={opt.id} className="group relative">
+                  <Button
                     key={opt.id}
+                    variant="ghost"
                     type="button"
                     role="option"
                     aria-selected={selected}
                     onClick={() => onTransferTargetChange({ ...transferTarget, id: opt.id })}
                     className={cn(
-                      "flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      "flex h-auto w-full items-center justify-start gap-3 rounded-lg px-3 py-2 text-left text-sm transition-colors",
+                      isAgent && "pr-12",
                       selected
                         ? "bg-zapp-accent/15 text-zapp-text ring-1 ring-zapp-accent/40"
                         : "text-zapp-text hover:bg-zapp-hover"
@@ -187,7 +208,23 @@ export const ZappTransferDialog = memo(function ZappTransferDialog({
                       )}
                     </span>
                     {selected && <Check className="h-4 w-4 flex-shrink-0 text-zapp-accent" />}
-                  </button>
+                  </Button>
+                  {isAgent && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      aria-label={`${favorites.includes(opt.id) ? "Desfavoritar" : "Favoritar"} ${opt.name}`}
+                      title={favorites.includes(opt.id) ? "Remover dos favoritos" : "Favoritar atendente"}
+                      aria-pressed={favorites.includes(opt.id)}
+                      disabled={!favoritesKey}
+                      onClick={() => toggleFavorite(opt.id)}
+                      className="absolute right-1 top-1/2 h-9 w-9 -translate-y-1/2 text-zapp-text-muted opacity-0 transition-opacity hover:bg-zapp-hover hover:text-zapp-accent group-hover:opacity-100 group-focus-within:opacity-100 focus-visible:opacity-100 [@media(hover:none)]:opacity-100"
+                    >
+                      <Star className={cn("h-4 w-4", favorites.includes(opt.id) && "fill-current text-zapp-accent")} />
+                    </Button>
+                  )}
+                  </div>
                 );
               })
             )}
