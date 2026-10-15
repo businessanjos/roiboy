@@ -1,4 +1,7 @@
 # Roadmap
+- [ ] Resumos diários CS: coleta por dia de Brasília, grupos vinculados, progresso idempotente e pausa de IA.
+- [ ] Resumos diários CS: timeline com fontes e apresentação estruturada; testes e verificação real.
+- [ ] Resumos diários CS: conferir ativação segura do agendamento existente.
 - [x] Arthur: remover aviso de teste da conta interna no menu e banner, sem alterar cobrança ou permissões.
 - [x] Checkpoints: relatório e detalhes em linha do tempo compartilhada, filtros discretos e ações compactas; build OK.
 - [ ] Checkpoints: validação visual com dados reais aguarda usuário entrar no preview; sessão própria indisponível.
