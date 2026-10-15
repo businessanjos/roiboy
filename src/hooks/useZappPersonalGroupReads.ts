@@ -50,6 +50,21 @@ export function useZappPersonalGroupReads<T extends { zapp_conversation?: any }>
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
 
+  // Se o contador compartilhado foi zerado (ex.: alguém respondeu), reancora a base.
+  useEffect(() => {
+    let changed = false;
+    const next = { ...entries };
+    assignments.forEach((a) => {
+      const zc = a.zapp_conversation;
+      const e = zc?.id ? next[zc.id] : undefined;
+      if (e && (zc.unread_count || 0) < e.raw) {
+        next[zc.id] = { count: e.count, raw: zc.unread_count || 0 };
+        changed = true;
+      }
+    });
+    if (changed) setEntries(next);
+  }, [assignments, entries]);
+
   const personalAssignments = useMemo(
     () =>
       assignments.map((a) => {
