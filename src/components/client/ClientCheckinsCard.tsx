@@ -50,7 +50,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
       const { data: msg, error: mErr } = await (supabase as any)
         .from("zapp_messages")
         .select("sent_at")
-        .in("conversation_id", ids)
+        .in("zapp_conversation_id", ids)
         .order("sent_at", { ascending: false })
         .limit(1)
         .maybeSingle();

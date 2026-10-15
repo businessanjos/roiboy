@@ -50,6 +50,13 @@
       "when": 1791922328540,
       "tag": "0006_live_activity_small_groups_only",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "7",
+      "when": 1792067791237,
+      "tag": "0007_scope_external_message_id_per_conversation",
+      "breakpoints": true
     }
   ]
 }
