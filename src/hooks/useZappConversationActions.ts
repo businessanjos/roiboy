@@ -24,6 +24,7 @@ interface UseZappConversationActionsProps {
   setFilterStatus: React.Dispatch<React.SetStateAction<string>>;
   fetchData: () => void;
   markAsRead: (conversationId: string) => void;
+  markGroupUnread?: (conversationId: string, lastMessageAt?: string | null) => Promise<void>;
   getAgentName: (agentId: string | null) => string | null;
 }
 
@@ -450,6 +451,12 @@ export function useZappConversationActions({
   }, [setAssignments]);
 
   const markAsUnread = useCallback(async (conversationId: string) => {
+    const conv = assignments.find(a => a.zapp_conversation?.id === conversationId)?.zapp_conversation;
+    if (conv?.is_group && markGroupUnread) {
+      await markGroupUnread(conversationId, conv.last_message_at);
+      toast.success("Marcada como não lida!");
+      return;
+    }
     try {
       const { error } = await supabase
         .from("zapp_conversations")

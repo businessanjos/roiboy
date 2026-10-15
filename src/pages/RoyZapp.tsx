@@ -327,6 +327,8 @@ export default function RoyZapp() {
     isLoadingMessages,
 
     setMessages,
+    markGroupRead,
+    markGroupUnread,
   } = useZappData({
     sectorId: selectedSectorId || undefined,
     integrationId: selectedIntegrationId,
@@ -821,7 +823,9 @@ export default function RoyZapp() {
     setFilterStatus,
     fetchData,
     markAsRead: (conversationId: string) => {
-      // Inline markAsRead for the hook - same logic
+      // Grupos: leitura individual (não zera para os colegas)
+      const conv = assignments.find(a => a.zapp_conversation?.id === conversationId)?.zapp_conversation;
+      if (conv?.is_group) { void markGroupRead(conversationId); return; }
       supabase
         .from("zapp_conversations")
         .update({ unread_count: 0 })
@@ -833,6 +837,7 @@ export default function RoyZapp() {
           : a
       ));
     },
+    markGroupUnread,
     getAgentName: (agentId: string | null) => {
       if (!agentId) return null;
       const agent = agents.find(a => a.id === agentId);
