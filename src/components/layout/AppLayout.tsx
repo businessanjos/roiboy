@@ -181,12 +181,12 @@ export function AppLayout() {
             <main
               id={MAIN_SCROLL_ID}
               className={
-                "flex-1 min-w-0 min-h-0 flex flex-col overflow-auto overscroll-contain lg:pb-0 " +
+                "flex-1 min-w-0 min-h-0 flex flex-col overscroll-contain lg:pb-0 " +
                 (isRoyZapp
-                  ? "pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
+                  ? "overflow-hidden pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
                   : tabBarVisible
-                    ? "pb-[calc(3.5rem+env(safe-area-inset-bottom))]"
-                    : "pb-[env(safe-area-inset-bottom)]")
+                    ? "overflow-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))]"
+                    : "overflow-auto pb-[env(safe-area-inset-bottom)]")
               }
             >
               <Outlet />
