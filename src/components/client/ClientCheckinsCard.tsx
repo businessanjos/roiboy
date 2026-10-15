@@ -12,6 +12,7 @@ import { toast } from "sonner";
 import { useClientCheckins } from "@/hooks/useClientCheckins";
 import { ClientCheckinDialog } from "./ClientCheckinDialog";
 import { ClientCheckinsReportDialog } from "./ClientCheckinsReportDialog";
+import { CheckinsTimeline } from "./CheckinsTimeline";
 import {
   CHECKPOINT_STATUS_LABELS,
   CHECKPOINT_STATUS_STYLES,
@@ -145,51 +146,7 @@ export function ClientCheckinsCard({ clientId, clientName, onSaved }: Props) {
             Nenhum contato registrado ainda.
           </p>
         ) : (
-          <div className="space-y-2">
-            {checkins.slice(0, 6).map((c) => {
-              const fromClient = c.initiated_by === "cliente";
-              return (
-                <div key={c.id} className="flex gap-3 rounded-lg border border-border/60 p-3">
-                  <div
-                    className={cn(
-                      "h-8 w-8 rounded-full flex items-center justify-center shrink-0",
-                      fromClient ? "bg-info/10 text-info" : "bg-primary/10 text-primary"
-                    )}
-                  >
-                    {fromClient ? <ArrowDownLeft className="h-4 w-4" /> : <ArrowUpRight className="h-4 w-4" />}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
-                      <span className="font-medium text-foreground">
-                        {fromClient ? "Cliente procurou" : "Consultor procurou"}
-                      </span>
-                      <span>·</span>
-                      <span>{getChannelLabel(c.channel)}</span>
-                      <span>·</span>
-                      <span>{format(new Date(c.happened_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}</span>
-                      {c.kind === "checkpoint" && (
-                        <Badge variant="outline" className="text-[10px] h-4">Checkpoint</Badge>
-                      )}
-                      {c.source === "ai_whatsapp" && (
-                        <Badge
-                          variant="outline"
-                          className="text-[10px] h-4 gap-1 border-primary/30 text-primary"
-                          title="Resumo gerado por IA a partir do RoyZapp de Customer Success"
-                        >
-                          <Sparkles className="h-2.5 w-2.5" /> RoyZapp CS · IA
-                        </Badge>
-                      )}
-                      {c.source === "manual" && (
-                        <Badge variant="outline" className="text-[10px] h-4">Manual</Badge>
-                      )}
-
-                    </div>
-                    <p className="text-sm mt-1 break-words">{c.summary}</p>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+          <CheckinsTimeline items={checkins.slice(0, 6) as any} />
         )}
       </CardContent>
 
