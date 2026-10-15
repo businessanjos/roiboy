@@ -139,7 +139,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
             {contact.name ? getInitials(contact.name) : "?"}
           </AvatarFallback>
         </Avatar>
-        {!internal && assignment.status === "pending" && contact.unreadCount > 0 && (
+        {(internal ? contact.unreadCount > 0 : assignment.status === "pending") && (
           <div className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-warning border-2 border-zapp-bg" />
         )}
         {contact.isGroup ? (
@@ -326,7 +326,7 @@ export const ZappConversationItem = memo(function ZappConversationItem({
         {/* Third row: Wait time (queue) / Agent + Products + Tags */}
         <div className="flex items-center gap-1.5 mt-1 flex-wrap">
           {/* Show status badge based on assignment status */}
-          {!internal && assignment.status === "pending" && contact.unreadCount > 0 && assignment.zapp_conversation?.last_message_at && (
+          {!internal && assignment.status === "pending" && assignment.zapp_conversation?.last_message_at && (
             <Badge 
               variant="secondary" 
               className="bg-warning/15 text-warning border-0 text-[10px] px-1.5 py-0 h-4 flex items-center gap-1"
