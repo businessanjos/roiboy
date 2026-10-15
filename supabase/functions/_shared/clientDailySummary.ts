@@ -1,8 +1,11 @@
 // Núcleo do resumo diário de conversas (Customer Success + grupos vinculados).
 // 1 registro por cliente por dia de Brasília (source "ai_whatsapp"); reexecução atualiza o mesmo registro.
 
+// Grupos internos e comunitários (gerais da mentoria) nunca entram no resumo individual.
 const INTERNAL_GROUP_RE =
-  /(eternum club|ec \||em \||eternum mentoring|financeiro|ep club|bugs?\s*roy|tech supor|cancelamento|congelamento|cl[ií]nica ryka)/i;
+  /(eternum club|ec \||em \||eternum mentoring|rykas mentoring|financeiro|ep club|bugs?\s*roy|tech supor|cancelamento|congelamento|cl[ií]nica ryka|comunidade|turma|avisos|networking)/i;
+// Só grupos de acompanhamento pequenos (mentorado + casal/sócio): no máximo 3 clientes vinculados.
+const MAX_LINKED_CLIENTS = 3;
 
 const BRT_OFFSET_MS = 3 * 3600_000;
 
@@ -53,6 +56,14 @@ export async function summarizeClientDay(
     const { data } = await supabase
       .from("zapp_conversations").select("id, contact_name").in("id", groupIds).eq("is_group", true);
     groups = (data || []).filter((g: any) => !INTERNAL_GROUP_RE.test(g.contact_name || ""));
+    if (groups.length) {
+      const { data: allLinks } = await supabase
+        .from("zapp_group_clients").select("conversation_id")
+        .in("conversation_id", groups.map((g: any) => g.id)).limit(2000);
+      const counts = new Map<string, number>();
+      for (const l of allLinks || []) counts.set(l.conversation_id, (counts.get(l.conversation_id) || 0) + 1);
+      groups = groups.filter((g: any) => (counts.get(g.id) || 0) <= MAX_LINKED_CLIENTS);
+    }
   }
 
   const convs = [
