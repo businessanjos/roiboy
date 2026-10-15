@@ -30427,6 +30427,17 @@ export type Database = {
         }
         Returns: Json
       }
+      zapp_productivity_new_conversations: {
+        Args: {
+          _agent_user_id?: string
+          _from: string
+          _include_groups?: boolean
+          _integration_id?: string
+          _sector_id: string
+          _to: string
+        }
+        Returns: Json
+      }
       zapp_sales_lean_views: { Args: never; Returns: string[] }
       zapp_sector_role: {
         Args: { _auth_user_id: string; _sector_id: string }
