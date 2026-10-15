@@ -28121,6 +28121,32 @@ export type Database = {
           },
         ]
       }
+      zapp_conversation_reads: {
+        Row: {
+          last_read_at: string
+          user_id: string
+          zapp_conversation_id: string
+        }
+        Insert: {
+          last_read_at?: string
+          user_id?: string
+          zapp_conversation_id: string
+        }
+        Update: {
+          last_read_at?: string
+          user_id?: string
+          zapp_conversation_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "zapp_conversation_reads_zapp_conversation_id_fkey"
+            columns: ["zapp_conversation_id"]
+            isOneToOne: false
+            referencedRelation: "zapp_conversations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       zapp_conversation_tags: {
         Row: {
           account_id: string
@@ -30401,6 +30427,13 @@ export type Database = {
       zapp_is_unrestricted_user: {
         Args: { _user_id: string }
         Returns: boolean
+      }
+      zapp_my_group_unread: {
+        Args: { p_conv_ids: string[] }
+        Returns: {
+          conversation_id: string
+          unread: number
+        }[]
       }
       zapp_norm_phone: { Args: { p: string }; Returns: string }
       zapp_phone_core: { Args: { _phone: string }; Returns: string }

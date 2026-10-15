@@ -5,6 +5,7 @@ import { SectorId } from "@/config/sectors";
 import { useZappDialogs, TeamUser } from "@/hooks/useZappDialogs";
 import { useZappConversations } from "@/hooks/useZappConversations";
 import { useZappFilters } from "@/hooks/useZappFilters";
+import { useZappPersonalGroupReads } from "@/hooks/useZappPersonalGroupReads";
 
 export interface Message {
   id: string;
@@ -84,6 +85,8 @@ export function useZappData(options: UseZappDataOptions = {}) {
     hasGlobalVisibility,
   });
 
+  const groupReads = useZappPersonalGroupReads(conversations.assignments);
+
   const filters = useZappFilters({
     accountId: currentUser?.account_id,
   });
@@ -141,7 +144,9 @@ export function useZappData(options: UseZappDataOptions = {}) {
     hasGlobalVisibility,
 
     // Conversation data
-    assignments: conversations.assignments,
+    assignments: groupReads.personalAssignments,
+    markGroupRead: groupReads.markGroupRead,
+    markGroupUnread: groupReads.markGroupUnread,
     messages: conversations.messages,
     loading,
     initialDataLoaded: hasLoadedOnceRef.current,
