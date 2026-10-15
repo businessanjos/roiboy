@@ -285,6 +285,16 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   zappRole,
   showConversationList = false,
 }: ZappConversationPanelProps) {
+  const [pinnedCollapsed, setPinnedCollapsed] = useState<boolean>(() => {
+    try { return localStorage.getItem("royzapp:pinnedGroupsCollapsed") === "1"; } catch { return false; }
+  });
+  const togglePinnedCollapsed = () => setPinnedCollapsed((v) => {
+    const n = !v;
+    try { localStorage.setItem("royzapp:pinnedGroupsCollapsed", n ? "1" : "0"); } catch { /* ignore */ }
+    return n;
+  });
+  const pinnedUnreadCount = (list: typeof filteredAssignments) =>
+    list.filter((a) => (getContactInfo(a).unreadCount || 0) > 0).length;
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
   const navigate = useNavigate();
@@ -823,14 +833,32 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   
                   return (
                     <>
-                      {/* Pinned groups header */}
-                      <div className="px-4 py-2 bg-zapp-panel/50 border-b border-zapp-border">
+                      {/* Pinned groups header (recolhível) */}
+                      <button
+                        type="button"
+                        onClick={togglePinnedCollapsed}
+                        aria-expanded={!pinnedCollapsed}
+                        className="w-full px-4 py-2 bg-zapp-panel/50 border-b border-zapp-border flex items-center justify-between hover:bg-zapp-panel/80 transition-colors"
+                      >
                         <span className="text-xs font-medium text-zapp-accent flex items-center gap-1.5">
                           <Pin className="h-3 w-3" />
                           GRUPOS FIXADOS
+                          <span className="text-zapp-text-muted font-normal">({pinnedGroups.length})</span>
+                          {pinnedCollapsed && pinnedUnreadCount(pinnedGroups) > 0 && (
+                            <span className="ml-1 rounded-full bg-zapp-accent/15 px-1.5 text-[10px] text-zapp-accent">
+                              {pinnedUnreadCount(pinnedGroups)} não lida(s)
+                            </span>
+                          )}
                         </span>
-                      </div>
-                      {pinnedGroups.map((assignment) => (
+                        <span className="flex items-center gap-1 text-[11px] text-zapp-text-muted">
+                          {pinnedCollapsed ? "Expandir" : "Minimizar"}
+                          <ChevronDown className={`h-3.5 w-3.5 transition-transform ${pinnedCollapsed ? "-rotate-90" : ""}`} />
+                        </span>
+                      </button>
+                      {(pinnedCollapsed
+                        ? pinnedGroups.filter((a) => (getContactInfo(a).unreadCount || 0) > 0 || selectedConversation?.id === a.id)
+                        : pinnedGroups
+                      ).map((assignment) => (
                         <ZappConversationItem
                           key={assignment.id}
                           assignment={assignment}
