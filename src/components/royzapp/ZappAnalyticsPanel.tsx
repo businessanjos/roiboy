@@ -60,6 +60,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
+import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -255,6 +256,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [agentId, setAgentId] = useState<string>("all");
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
+  const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
 
@@ -613,6 +615,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                     ? `${Math.round(((data.new_conversations ?? 0) / data.active_conversations) * 100)}% das ${data.active_conversations} ativas`
                     : "primeiro contato no período"
                 }
+                onClick={() => setNewConvDialog("all")}
               />
               <Kpi
                 icon={Inbox}
@@ -623,6 +626,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                     ? `${Math.round(((data.new_by_client ?? 0) / data.new_conversations) * 100)}% das novas`
                     : "—"
                 }
+                onClick={() => setNewConvDialog("client")}
               />
               <Kpi
                 icon={Send}
@@ -634,6 +638,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                     : "—"
                 }
                 tone="success"
+                onClick={() => setNewConvDialog("team")}
               />
               <Kpi
                 icon={CalendarDays}
@@ -857,6 +862,21 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             </Card>
           </>
         ) : null}
+
+        {newConvDialog && (
+          <ZappNewConversationsDialog
+            open={!!newConvDialog}
+            onOpenChange={(o) => !o && setNewConvDialog(null)}
+            initialFilter={newConvDialog}
+            sectorId={effectiveSector}
+            integrationId={effectiveIntegration}
+            includeGroups={includeGroups}
+            agentUserId={effectiveAgent}
+            from={range.from}
+            to={range.to}
+            periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
+          />
+        )}
 
         {contactsDialog && (
           <ZappContactsBreakdownDialog
