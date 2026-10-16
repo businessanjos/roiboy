@@ -128,8 +128,11 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
             if (realJid && !realJid.includes("@")) realJid = `${realJid}@s.whatsapp.net`;
             // WhatsApp pode expor o participante apenas pelo LID (sem o número real);
             // guardamos o JID real para a menção e preservamos o @Nome no texto.
+            // Número real vem em PhoneNumber; o JID pode ser só o LID interno.
+            const pnDigits = phoneField.includes("@lid") ? "" : phoneField.split("@")[0].split(":")[0].replace(/\D/g, "");
+            if (pnDigits.length >= 10) realJid = `${pnDigits}@s.whatsapp.net`;
             const isLid = realJid.endsWith("@lid");
-            const phone = String(realJid || phoneField).split("@")[0].split(":")[0].replace(/\D/g, "");
+            const phone = pnDigits || String(realJid).split("@")[0].split(":")[0].replace(/\D/g, "");
             const displayName = p.DisplayName || p.displayName || p.name || p.notify || p.pushName || "";
             const isAdmin = p.IsAdmin || p.isAdmin || p.IsSuperAdmin || p.isSuperAdmin || 
                            p.admin === "admin" || p.admin === "superadmin" || false;
@@ -358,6 +361,8 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
                 filteredParticipants.map((participant, index) => (
                   <button
                     key={participant.id}
+                    type="button"
+                    onMouseDown={(e) => e.preventDefault()}
                     onClick={() => selectMention(participant)}
                     className={cn(
                       "w-full flex items-center gap-3 px-3 py-2 rounded text-sm text-left transition-colors",
