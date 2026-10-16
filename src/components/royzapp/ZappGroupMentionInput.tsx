@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
 import { Users } from "lucide-react";
+import { canonicalE164 } from "@/lib/phoneNormalize";
 
 interface GroupParticipant {
   id: string;
@@ -386,7 +387,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
                         )}
                       </div>
                       <span className="text-xs text-zapp-text-muted truncate block">
-                        +{participant.phone}
+                        {canonicalE164(participant.phone) || `+${participant.phone}`}
                       </span>
                     </div>
                   </button>
