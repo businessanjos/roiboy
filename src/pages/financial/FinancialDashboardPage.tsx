@@ -137,7 +137,7 @@ export default function FinancialDashboardPage() {
   const overdueTone = overduePctOfOpen >= 20 ? "danger" : overduePctOfOpen >= 5 ? "warning" : "success";
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 sm:p-6 space-y-8">
       <FinancialPageHeader
         icon={LayoutDashboard}
         title="Dashboard Financeiro"

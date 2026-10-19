@@ -38,6 +38,26 @@ import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useCurrentUser } from "@/hooks/useCurrentUser";
 import { supabase } from "@/integrations/supabase/client";
 import { PERMISSIONS } from "@/lib/access/permissions";
+import { useSectorNavItems } from "@/hooks/useSectorNavItems";
+import { useSector } from "@/contexts/SectorContext";
+
+function useSearchSectorPages() {
+  // Fixed hook calls for the fixed sector catalog; every menu uses the same filtering.
+  const operations = useSectorNavItems(sectors.find((s) => s.id === "operacoes"));
+  const financial = useSectorNavItems(sectors.find((s) => s.id === "financeiro"));
+  const sales = useSectorNavItems(sectors.find((s) => s.id === "vendas"));
+  const marketing = useSectorNavItems(sectors.find((s) => s.id === "marketing"));
+  const hr = useSectorNavItems(sectors.find((s) => s.id === "rh"));
+  const events = useSectorNavItems(sectors.find((s) => s.id === "eventos"));
+  const zapp = useSectorNavItems(sectors.find((s) => s.id === "royzapp"));
+  const everia = useSectorNavItems(sectors.find((s) => s.id === "everia"));
+  const tech = useSectorNavItems(sectors.find((s) => s.id === "gestao-tech"));
+  const leaders = useSectorNavItems(sectors.find((s) => s.id === "reuniao-lideres"));
+  const settings = useSectorNavItems(sectors.find((s) => s.id === "configuracoes"));
+  return useMemo(() => ({ operacoes: operations, financeiro: financial, vendas: sales, marketing, rh: hr,
+    eventos: events, royzapp: zapp, everia, "gestao-tech": tech, "reuniao-lideres": leaders, configuracoes: settings }),
+    [operations, financial, sales, marketing, hr, events, zapp, everia, tech, leaders, settings]);
+}
 
 /** Evento global para abrir a busca a partir de qualquer botão do app. */
 export const GLOBAL_SEARCH_EVENT = "roy:open-global-search";
@@ -96,6 +116,8 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
   const { hasPermission, loading: permissionsLoading } = usePermissions();
   const { hasSectorAccess, isLoading: sectorLoading } = useSectorAccess();
   const { currentUser } = useCurrentUser();
+  const { setCurrentSector } = useSector();
+  const sectorPages = useSearchSectorPages();
 
   const userEmail = (currentUser?.email || "").toLowerCase();
   const canSeeRh = RH_ALLOWED_EMAILS.includes(userEmail);
@@ -108,7 +130,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       if (sector.comingSoon) continue;
       if (sector.id === "rh" && !canSeeRh) continue;
       if (!hasSectorAccess(sector.id)) continue;
-      for (const nav of sector.navItems) {
+      for (const nav of sectorPages[sector.id]) {
         if (nav.comingSoon) continue;
         if (nav.permission && !hasPermission(nav.permission)) continue;
         const Icon = nav.icon;
@@ -129,7 +151,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       seen.add(item.href);
       return true;
     });
-  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh]);
+  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
 
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
   const canViewSales = hasSectorAccess("vendas");
@@ -653,10 +675,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
 
   const handleSelect = useCallback(
     (result: SearchResult) => {
+      const pageSector = sectors.find((s) => result.id.startsWith(`${s.id}:`));
+      if (pageSector) setCurrentSector(pageSector.id);
       navigate(result.href);
       onOpenChange(false);
     },
-    [navigate, onOpenChange],
+    [navigate, onOpenChange, setCurrentSector],
   );
 
   const handleKeyDown = useCallback(
@@ -694,7 +718,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
         <VisuallyHidden>
           <DialogTitle>Busca global</DialogTitle>
         </VisuallyHidden>
-        <div className="flex items-center border-b px-3">
+        <div className="flex items-center border-b pl-3 pr-14">
           <Search className="h-4 w-4 text-muted-foreground" />
           <Input
             ref={inputRef}
@@ -706,13 +730,13 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
           />
           {searching && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           {query && (
-            <Button variant="ghost" size="sm" className="h-6 w-6 p-0 ml-1" onClick={() => setQuery("")}>
+            <Button variant="ghost" size="icon" aria-label="Limpar busca" className="h-11 w-11 shrink-0 p-0 ml-1" onClick={() => setQuery("")}>
               <X className="h-3 w-3" />
             </Button>
           )}
         </div>
 
-        <div className="max-h-[360px] overflow-y-auto p-2">
+        <div className="max-h-[min(360px,calc(var(--app-vh,100dvh)-10rem))] overflow-y-auto overscroll-contain p-2">
           {filteredResults.length === 0 ? (
             <div className="py-8 text-center text-muted-foreground">
               {searching ? (
@@ -733,12 +757,12 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                     {group}
                   </p>
                   {entries.map(({ result, index }) => (
-                    <button
+                    <Button variant="ghost"
                       key={result.id}
                       onClick={() => handleSelect(result)}
                       onMouseEnter={() => setSelectedIndex(index)}
                       className={cn(
-                        "w-full flex items-center gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
+                        "h-auto min-h-11 w-full flex items-center justify-start gap-3 px-3 py-2.5 rounded-md text-left transition-colors",
                         index === selectedIndex
                           ? "bg-primary/10 text-foreground"
                           : "hover:bg-muted text-muted-foreground hover:text-foreground",
@@ -756,7 +780,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
                       {index === selectedIndex && (
                         <ArrowRight className="h-4 w-4 flex-shrink-0 text-primary" />
                       )}
-                    </button>
+                    </Button>
                   ))}
                 </div>
               ))}

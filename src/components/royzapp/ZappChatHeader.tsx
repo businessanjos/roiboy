@@ -158,8 +158,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
+          className="lg:hidden shrink-0 text-zapp-text-muted hover:bg-zapp-hover h-11 w-11"
           onClick={onBack}
+          aria-label="Voltar para conversas"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -174,9 +175,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           }}
         >
           {isGroup && groupJid ? (
-            <button
+            <Button variant="ghost" size="icon"
               type="button"
-              className="relative shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-zapp-accent"
+              className="relative h-11 w-11 shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-zapp-accent"
               title="Ver contatos do grupo"
               aria-label="Ver contatos do grupo"
               onClick={(e) => {
@@ -190,7 +191,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </AvatarFallback>
               </Avatar>
-            </button>
+            </Button>
           ) : (
             <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
               <AvatarImage src={contactInfo.avatar || undefined} />
@@ -235,7 +236,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           </div>
         </div>
         {conversationId && (
-          <ZappConversationIdBadge conversationId={conversationId} className="mx-1 shrink-0" />
+          <ZappConversationIdBadge conversationId={conversationId} className="mx-1 hidden shrink-0 sm:inline-flex" />
         )}
         <div className="flex items-center gap-1 sm:gap-2">
 
@@ -406,7 +407,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8">
+                <Button variant="ghost" size="icon" aria-label="Opções da conversa" className="text-zapp-text-muted hover:bg-zapp-hover h-11 w-11 sm:h-8 sm:w-8">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

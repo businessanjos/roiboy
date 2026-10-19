@@ -70,7 +70,7 @@ export function FinancialKpiCard({
       onClick={onClick}
     >
       <CardContent className="p-3.5 sm:p-5">
-        <div className="flex items-start justify-between gap-2 sm:gap-3">
+        <div className="flex flex-col-reverse items-start justify-between gap-2 sm:flex-row sm:gap-3">
           <div className="space-y-1 min-w-0 flex-1">
             <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">
               {label}
@@ -80,7 +80,7 @@ export function FinancialKpiCard({
             </p>
 
             {(hint || delta) && (
-              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <div className="flex flex-wrap items-center gap-1.5 text-xs text-muted-foreground">
                 {delta && (
                   <span
                     className={cn(
@@ -98,7 +98,7 @@ export function FinancialKpiCard({
                     {delta.value}
                   </span>
                 )}
-                {hint && <span className="truncate">{hint}</span>}
+                {hint && <span className="break-words">{hint}</span>}
               </div>
             )}
           </div>
