@@ -8,7 +8,7 @@ import { roleNameMatches } from "@/lib/roles";
 import { isManagementUser } from "@/lib/access/managementRoles";
 import { isTrafficAgencyUser } from "@/lib/agency";
 import { canViewZappAnalytics } from "@/lib/royZappAnalyticsAccess";
-import type { NavItem } from "@/config/sectors";
+import type { NavItem, Sector } from "@/config/sectors";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { isRouteBlockedByProfile, isRouteGrantedByProfile } from "@/lib/access/profileGate";
 
@@ -36,11 +36,12 @@ export const SDR_VENDAS_ALLOWED_ROUTES = new Set<string>([
  * exceções nominais. Fonte única usada pela sidebar (desktop) e pela
  * barra de abas inferior (mobile) para nunca divergirem.
  */
-export function useSectorNavItems(): NavItem[] {
+export function useSectorNavItems(sector?: Sector | null): NavItem[] {
   const { currentUser } = useCurrentUser();
   const { isSuperAdmin } = useSuperAdmin();
   const { hasPermission, isAdmin, loading: permissionsLoading } = usePermissions();
-  const { currentSector } = useSector();
+  const { currentSector: selectedSector } = useSector();
+  const currentSector = sector === undefined ? selectedSector : sector;
   const { perms: profilePerms, isAdmin: profileIsAdmin } = useUserPermissions();
 
   return useMemo(() => {

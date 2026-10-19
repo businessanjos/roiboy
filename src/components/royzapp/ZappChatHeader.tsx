@@ -154,12 +154,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
 
       {/* Header */}
-      <div className="bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
+      <div className="shrink-0 bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden text-zapp-text-muted hover:bg-zapp-hover h-8 w-8"
+          className="lg:hidden shrink-0 text-zapp-text-muted hover:bg-zapp-hover h-11 w-11"
           onClick={onBack}
+          aria-label="Voltar para conversas"
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -174,9 +175,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           }}
         >
           {isGroup && groupJid ? (
-            <button
+            <Button variant="ghost" size="icon"
               type="button"
-              className="relative shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-zapp-accent"
+              className="relative h-11 w-11 shrink-0 rounded-full outline-none transition-transform hover:scale-105 focus-visible:ring-2 focus-visible:ring-zapp-accent"
               title="Ver contatos do grupo"
               aria-label="Ver contatos do grupo"
               onClick={(e) => {
@@ -190,7 +191,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   <Users2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </AvatarFallback>
               </Avatar>
-            </button>
+            </Button>
           ) : (
             <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
               <AvatarImage src={contactInfo.avatar || undefined} />
@@ -235,9 +236,9 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           </div>
         </div>
         {conversationId && (
-          <ZappConversationIdBadge conversationId={conversationId} className="mx-1 shrink-0" />
+          <ZappConversationIdBadge conversationId={conversationId} className="mx-1 hidden shrink-0 sm:inline-flex" />
         )}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
           {!canClaim ? (
@@ -247,7 +248,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           ) : assignment.agent_id !== currentAgentId ? (
             <Button
               size="sm"
-              className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-7 sm:h-8 px-2 sm:px-3"
+              aria-label="Puxar atendimento"
+              className="bg-zapp-accent hover:bg-zapp-accent-hover text-primary-foreground text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onAssignToMe(assignment.id)}
             >
               <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -257,7 +259,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               variant="outline"
-              className="border-warning text-warning hover:bg-warning/10 text-xs h-7 sm:h-8 px-2 sm:px-3"
+              aria-label="Devolver atendimento"
+              className="border-warning text-warning hover:bg-warning/10 text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onReleaseToQueue(assignment.id)}
             >
               <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -273,13 +276,12 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "h-7 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
+                  "h-11 min-w-11 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                   STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
                   "border-current bg-transparent"
                 )}
               >
-                <span className="hidden sm:inline">{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
-                <span className="sm:hidden">{(STATUS_CONFIG[assignment.status]?.label || "Status").slice(0, 5)}</span>
+                <span>{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">
@@ -406,7 +408,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8">
+                <Button variant="ghost" size="icon" aria-label="Opções da conversa" className="text-zapp-text-muted hover:bg-zapp-hover h-11 w-11 sm:h-8 sm:w-8">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>

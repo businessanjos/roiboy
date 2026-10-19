@@ -4,14 +4,14 @@ import { FinancialPageSkeleton } from "@/components/financial/_shared/FinancialP
 
 export function FinancialLayout() {
   return (
-    <div className="flex flex-col h-full">
-      <main className="flex-1 overflow-auto">
+    <div className="flex min-h-0 flex-1 flex-col lg:h-full">
+      <div className="flex-1 lg:overflow-auto">
 
         {/* Skeleton local — não cobre a sidebar nem o header global */}
         <Suspense fallback={<FinancialPageSkeleton />}>
           <Outlet />
         </Suspense>
-      </main>
+      </div>
     </div>
   );
 }

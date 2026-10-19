@@ -413,11 +413,27 @@
   }
   /* Diálogos centrais nunca passam da viewport dinâmica e rolam por dentro */
   [role="dialog"][data-state="open"].fixed.top-\[50\%\] {
-    max-height: calc(100dvh - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
+    top: calc(env(safe-area-inset-top) + var(--app-vh, 100dvh) / 2);
+    max-height: calc(var(--app-vh, 100dvh) - 2rem - env(safe-area-inset-top) - env(safe-area-inset-bottom));
     overflow-y: auto;
     overscroll-behavior: contain;
     width: calc(100vw - 1.5rem);
     border-radius: 20px;
+  }
+  [role="dialog"] > button:last-child {
+    touch-action: manipulation;
+  }
+  [role="dialog"] > div:first-child:has(h2) {
+    padding-right: 2rem;
+  }
+  [role="menu"] {
+    max-height: min(var(--radix-dropdown-menu-content-available-height, 70dvh), calc(var(--app-vh, 100dvh) - 2rem));
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+  [role="menuitem"], [role="menuitemcheckbox"], [role="menuitemradio"] {
+    min-height: 44px;
+    white-space: normal;
   }
   /* Tabs horizontais roláveis em vez de quebrar/cortar */
   [role="tablist"] {

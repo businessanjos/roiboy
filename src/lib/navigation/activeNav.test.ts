@@ -5,6 +5,7 @@ describe("pickActiveNavIndex", () => {
   const items = ["/roy-zapp?sector=vendas&view=inbox", "/roy-zapp?sector=vendas&view=analytics", "/pipeline", "/pipeline/settings"];
 
   it("diferencia abas pela query", () => {
+    expect(pickActiveNavIndex(items, "/roy-zapp", "?sector=vendas&chat=1")).toBe(0);
     expect(pickActiveNavIndex(items, "/roy-zapp", "?sector=vendas&view=analytics")).toBe(1);
     expect(pickActiveNavIndex(items, "/roy-zapp", "?view=inbox&sector=vendas&chat=1")).toBe(0);
   });

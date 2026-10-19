@@ -34,7 +34,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { hasAppHistory } from "@/lib/navigation/mobileNavigation";
 import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
@@ -305,14 +305,14 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
       <div className="bg-zapp-panel-header px-4 py-3 flex items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0 flex-1">
           {/* No celular o RoyZapp não tem tab bar: este é o caminho de volta. */}
-          <button
+          <Button variant="ghost" size="icon"
             type="button"
-            onClick={() => (window.history.length > 1 ? navigate(-1) : navigate("/setores"))}
+            onClick={() => (hasAppHistory(window.history.state?.idx) ? navigate(-1) : navigate("/setores"))}
             aria-label="Voltar"
-            className="touch-press -ml-2 -mr-1 inline-flex h-11 w-9 shrink-0 items-center justify-center rounded-full text-zapp-text hover:bg-zapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
+            className="touch-press -ml-2 -mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zapp-text hover:bg-zapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
-          </button>
+          </Button>
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
             <AvatarFallback className="bg-zapp-accent text-white text-sm">
@@ -320,7 +320,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             </AvatarFallback>
           </Avatar>
           <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-2 min-w-0">
+            <div className="flex flex-wrap items-center gap-2 min-w-0">
               <h2 className="text-zapp-text font-medium whitespace-nowrap">ROY zAPP</h2>
               {sectorName && (
                 <div className="flex items-center gap-1.5 min-w-0">
@@ -341,7 +341,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 </div>
               )}
             </div>
-            <div className="mt-1 flex items-center gap-2 min-w-0">
+            <div className="mt-1 flex flex-wrap items-center gap-2 min-w-0">
               <p className="text-xs text-zapp-text-muted whitespace-nowrap">{activeConversations} em atendimento</p>
               {/* Instance/line selector — lives under the title so it never collides with the header actions */}
               {isConversationListVisible && sectorId && onSelectIntegration && (
@@ -758,7 +758,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
 
       {/* Conversation list */}
-      <ScrollArea className="flex-1">
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-scroll-area>
         {isConversationListVisible && (
           <div className="divide-y divide-zapp-border">
             {filteredAssignments.length === 0 ? (() => {
@@ -1030,7 +1030,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         {activeView === "meetings" && !showConversationList && (
           <MeetingsPanel />
         )}
-      </ScrollArea>
+      </div>
     </div>
   );
 });

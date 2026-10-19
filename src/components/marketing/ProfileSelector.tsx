@@ -13,7 +13,7 @@ export function ProfileSelector() {
   const { profiles, isLoading, selectedProfile, setSelectedProfileId } = useContentProfile();
 
   if (isLoading) {
-    return <div className="h-10 w-64 rounded-md bg-muted animate-pulse" />;
+    return <div className="h-11 w-64 max-w-full rounded-md bg-muted animate-pulse" />;
   }
 
   if (!profiles.length) {
@@ -30,18 +30,18 @@ export function ProfileSelector() {
       value={selectedProfile?.id ?? ''}
       onValueChange={(v) => setSelectedProfileId(v)}
     >
-      <SelectTrigger className="w-72">
+      <SelectTrigger className="h-11 w-full min-w-0 sm:w-72">
         <SelectValue>
           {selectedProfile && (
-            <div className="flex items-center gap-2">
+            <div className="flex min-w-0 items-center gap-2">
               <Avatar className="h-6 w-6">
                 <AvatarImage src={selectedProfile.avatar_url ?? undefined} />
                 <AvatarFallback className="text-xs">
                   {(selectedProfile.display_name ?? selectedProfile.username ?? '?').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
-              <span className="font-medium">{selectedProfile.display_name ?? selectedProfile.username}</span>
-              <span className="text-xs text-muted-foreground">@{selectedProfile.username}</span>
+              <span className="truncate font-medium">{selectedProfile.display_name ?? selectedProfile.username}</span>
+              <span className="hidden text-xs text-muted-foreground sm:inline">@{selectedProfile.username}</span>
             </div>
           )}
         </SelectValue>

@@ -29,6 +29,12 @@ import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { NewVersionDialog } from "@/components/system/NewVersionDialog";
 import { isTrafficAgencyUser } from "@/lib/agency";
 import { useVisualViewportHeight } from "@/hooks/useVisualViewportHeight";
+import { useMainScrollRestoration } from "@/hooks/useMainScrollRestoration";
+
+function MainScrollRestoration() {
+  useMainScrollRestoration();
+  return null;
+}
 
 export function AppLayout() {
   const { user, loading: authLoading } = useAuth();
@@ -185,10 +191,11 @@ export function AppLayout() {
                 (isRoyZapp
                   ? "overflow-hidden pb-0 pt-[env(safe-area-inset-top)] lg:pt-0"
                   : tabBarVisible
-                    ? "overflow-auto pb-[calc(3.5rem+env(safe-area-inset-bottom))]"
+                    ? "overflow-auto pb-[calc(3.75rem+env(safe-area-inset-bottom))]"
                     : "overflow-auto pb-[env(safe-area-inset-bottom)]")
               }
             >
+              <MainScrollRestoration />
               <Outlet />
             </main>
           </div>

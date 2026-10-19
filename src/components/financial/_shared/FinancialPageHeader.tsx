@@ -32,7 +32,7 @@ export function FinancialPageHeader({
       <div className="min-w-0">
         <h1 className="text-2xl font-semibold tracking-tight flex items-center gap-2">
           {Icon && <Icon className="h-6 w-6 text-primary shrink-0" />}
-          <span className="truncate">{title}</span>
+          <span className="min-w-0 break-words">{title}</span>
         </h1>
         {description && (
           <p className="text-sm text-muted-foreground mt-1">{description}</p>

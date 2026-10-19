@@ -137,7 +137,7 @@ export default function FinancialDashboardPage() {
   const overdueTone = overduePctOfOpen >= 20 ? "danger" : overduePctOfOpen >= 5 ? "warning" : "success";
 
   return (
-    <div className="p-6 space-y-8">
+    <div className="p-4 sm:p-6 space-y-8">
       <FinancialPageHeader
         icon={LayoutDashboard}
         title="Dashboard Financeiro"
@@ -243,7 +243,7 @@ export default function FinancialDashboardPage() {
           title="Inadimplência"
           subtitle="Quanto está em atraso e quem deve atenção primeiro"
           action={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => navigate("/financial/relatorios?tab=aging")}>
                 Relatório de aging
               </Button>
