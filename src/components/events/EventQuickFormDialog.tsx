@@ -236,7 +236,7 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
             <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Nome do evento" />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Tipo</Label>
               <Select value={eventType} onValueChange={setEventType}>
@@ -260,7 +260,7 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label>Início</Label>
               <Input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} />
@@ -288,7 +288,7 @@ export function EventQuickFormDialog({ open, onOpenChange, event, defaultYear, o
 
               {frequency !== "none" && (
                 <>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div className="space-y-1.5">
                       <Label className="text-xs">A cada</Label>
                       <div className="flex items-center gap-2">
