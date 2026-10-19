@@ -301,12 +301,12 @@ export function SocialMediaTab({ initialPostId, onPostOpened }: SocialMediaTabPr
 
       {/* Header with Profile Selector */}
       <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+        <div className="flex w-full min-w-0 items-center gap-3 sm:w-auto">
           <Select
             value={selectedProfileId || currentProfile?.id || ''}
             onValueChange={setSelectedProfileId}
           >
-            <SelectTrigger className="w-[240px] bg-card">
+            <SelectTrigger className="min-w-0 flex-1 bg-card sm:w-[240px] sm:flex-none">
               <div className="flex items-center gap-2">
                 <Instagram className="h-4 w-4 text-pink-500" />
                 <SelectValue placeholder="Selecione um perfil" />
