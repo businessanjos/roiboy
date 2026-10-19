@@ -707,8 +707,7 @@ export default function HRCollaborators() {
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="w-full"
+                    className="w-full h-11"
                     onClick={() => navigate(`/rh/service-providers/${p.id}`)}
                   >
                     <Eye className="h-4 w-4 mr-2" /> Abrir ficha
@@ -780,6 +779,9 @@ export default function HRCollaborators() {
           collaborators={pdaRows}
           canSeeSalary={RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())}
           onChanged={() => { refetch(); refetchProviders(); }}
+          deptFilter={deptFilter}
+          onDeptFilterChange={setDeptFilter}
+          departments={departments}
         />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
@@ -797,7 +799,7 @@ export default function HRCollaborators() {
         <>
         {/* Mobile: cartões */}
         <div className="space-y-2 md:hidden">
-          <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
+          <label className="flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground cursor-pointer">
             <Checkbox
               checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
               onCheckedChange={(v) => {
@@ -816,18 +818,19 @@ export default function HRCollaborators() {
             return (
               <div key={c.id} className={`rounded-lg border bg-card p-3 space-y-2 ${selectedRows.has(c.id) ? "border-primary/40 bg-primary/5" : ""}`}>
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    className="mt-1 shrink-0"
-                    checked={selectedRows.has(c.id)}
-                    onCheckedChange={(v) => {
-                      setSelectedRows(prev => {
-                        const next = new Set(prev);
-                        if (v) next.add(c.id); else next.delete(c.id);
-                        return next;
-                      });
-                    }}
-                    aria-label={`Selecionar ${c.full_name}`}
-                  />
+                  <label className="-ml-2 -my-2 flex h-11 w-11 shrink-0 items-center justify-center cursor-pointer">
+                    <Checkbox
+                      checked={selectedRows.has(c.id)}
+                      onCheckedChange={(v) => {
+                        setSelectedRows(prev => {
+                          const next = new Set(prev);
+                          if (v) next.add(c.id); else next.delete(c.id);
+                          return next;
+                        });
+                      }}
+                      aria-label={`Selecionar ${c.full_name}`}
+                    />
+                  </label>
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={c.avatar_url || undefined} />
                     <AvatarFallback className="bg-info/10 text-info text-xs font-medium">
@@ -851,8 +854,7 @@ export default function HRCollaborators() {
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1"
+                    className="flex-1 h-11"
                     onClick={() => navigate(`/rh/collaborators/${c.id}`)}
                   >
                     <Eye className="h-4 w-4 mr-2" /> Ver perfil
@@ -860,7 +862,7 @@ export default function HRCollaborators() {
                   {c.status !== "inactive" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
+                        <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
