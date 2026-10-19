@@ -521,10 +521,10 @@ export default function HRCollaborators() {
 
       {/* View switch */}
       <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
-        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
-          <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
-          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex h-auto">
+          <TabsTrigger value="clt" className="min-h-11 sm:min-h-9">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
+          <TabsTrigger value="pj" className="min-h-11 sm:min-h-9">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
+          <TabsTrigger value="pda" className="min-h-11 sm:min-h-9">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -533,8 +533,8 @@ export default function HRCollaborators() {
         <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            aria-label="Buscar colaborador"
-            placeholder="Buscar por nome, email, CPF, cargo..."
+            aria-label="Buscar colaborador por nome, email, CPF ou cargo"
+            placeholder="Buscar..."
             className="pl-9"
             value={search}
             onChange={e => setSearch(e.target.value)}
