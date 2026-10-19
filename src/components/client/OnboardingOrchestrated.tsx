@@ -206,7 +206,7 @@ export function OnboardingOrchestrated({
   return (
     <div className="space-y-4">
       {/* Header with actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Badge variant="secondary" className="gap-1">
             <User className="h-3 w-3" />
