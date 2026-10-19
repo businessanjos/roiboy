@@ -268,7 +268,7 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Orçado</p>
-                <p className="text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedExpenses)}</p>
+                <p className="text-base sm:text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedExpenses)}</p>
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
@@ -288,7 +288,7 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
             <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Orçado</p>
-                <p className="text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedIncome)}</p>
+                <p className="text-base sm:text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedIncome)}</p>
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
