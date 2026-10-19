@@ -1781,6 +1781,17 @@ export default function RoyZapp() {
           allowedViews={allowedViews}
           activeView={activeView}
           setActiveView={changeView}
+          onChooseSector={canChooseSector ? () => {
+            setSelectedConversation(null);
+            setSelectedSectorId(null);
+            setSelectedIntegrationId(undefined);
+            changeView("inbox");
+            replaceSearchParams((next) => {
+              next.delete("sector");
+              next.delete("integrationId");
+              next.delete("conversation");
+            });
+          } : undefined}
           inboxTab={inboxTab}
           setInboxTab={setInboxTab}
           searchQuery={searchQuery}

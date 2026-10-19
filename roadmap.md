@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Complemento mobile: retorno contextual RoyZapp, menu de seções rotulado, seleção acessível e destaque único no Mais de Vendas; validar sem dados/publicação.
 - [ ] Resumos diários CS: implementar worker e timeline do plano aprovado. Bloqueado pela autenticação do callback legado: cron envia apenas apikey pública anon; migração automática/gerenciamento HTTP não disponíveis neste projeto. Preservar callback e cron existentes até disponibilizar ativação segura.
 - [x] Arthur: remover aviso de teste da conta interna no menu e banner, sem alterar cobrança ou permissões.
 - [x] Checkpoints: relatório e detalhes em linha do tempo compartilhada, filtros discretos e ações compactas; build OK.

@@ -34,7 +34,6 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { hasAppHistory } from "@/lib/navigation/mobileNavigation";
 import { cn } from "@/lib/utils";
 import { ZappConversationItem } from "./ZappConversationItem";
 import { ZappInstanceSwitcher } from "./ZappInstanceSwitcher";
@@ -72,6 +71,7 @@ interface ZappConversationPanelProps {
 
   activeView: ZappView;
   setActiveView: (view: ZappView) => void;
+  onChooseSector?: () => void;
   inboxTab: "mine" | "queue";
   setInboxTab: (tab: "mine" | "queue") => void;
   searchQuery: string;
@@ -285,6 +285,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   allowedViews,
   zappRole,
   showConversationList = false,
+  onChooseSector,
 }: ZappConversationPanelProps) {
   const [pinnedCollapsed, setPinnedCollapsed] = useState<boolean>(() => {
     try { return localStorage.getItem("royzapp:pinnedGroupsCollapsed") === "1"; } catch { return false; }
@@ -307,13 +308,13 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           {/* No celular o RoyZapp não tem tab bar: este é o caminho de volta. */}
           <Button variant="ghost" size="icon"
             type="button"
-            onClick={() => (hasAppHistory(window.history.state?.idx) ? navigate(-1) : navigate("/setores"))}
-            aria-label="Voltar"
+            onClick={() => activeView !== "inbox" ? setActiveView("inbox") : onChooseSector ? onChooseSector() : navigate("/setores")}
+            aria-label={activeView !== "inbox" ? "Voltar para conversas" : onChooseSector ? "Escolher setor do RoyZapp" : "Voltar para Áreas"}
             className="touch-press -ml-2 -mr-1 inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-zapp-text hover:bg-zapp-hover focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring lg:hidden"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
           </Button>
-          <Avatar className="h-10 w-10 shrink-0">
+          <Avatar className="hidden sm:flex h-10 w-10 shrink-0">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
             <AvatarFallback className="bg-zapp-accent text-white text-sm">
               {currentUser ? getInitials(currentUser.name) : "?"}
@@ -326,7 +327,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 <div className="flex items-center gap-1.5 min-w-0">
                   <Badge 
                     variant="outline" 
-                    className="text-[10px] px-1.5 py-0 h-4 truncate max-w-[120px]"
+                    className="text-xs px-1.5 py-0.5 whitespace-normal break-words"
                     style={{ 
                       borderColor: sectorColor || '#6b7280',
                       color: sectorColor || '#6b7280'
@@ -357,6 +358,17 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="ghost" size="icon" aria-label="Saída e seleção de setor" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel">
+                <ChevronDown className="h-5 w-5" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {onChooseSector && <DropdownMenuItem className="min-h-11" onSelect={onChooseSector}>Escolher setor do RoyZapp</DropdownMenuItem>}
+              <DropdownMenuItem className="min-h-11" onSelect={() => navigate("/setores")}>Ir para Áreas</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
 
           {isConversationListVisible && (
             <>
@@ -365,7 +377,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
+                    aria-label="Nova conversa"
+                    className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full"
                     onClick={onOpenNewConversationDialog}
                   >
                     <Plus className="h-5 w-5" />
@@ -375,7 +388,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               </Tooltip>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="text-zapp-text-muted hover:bg-zapp-panel rounded-full">
+                  <Button variant="ghost" size="icon" aria-label="Filtrar conversas" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full">
                     <Filter className="h-5 w-5" />
                   </Button>
                 </DropdownMenuTrigger>
