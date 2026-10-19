@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -111,43 +112,61 @@ export default function CollaboratorsPDAWorkspace({
       .join(" · ");
   }, [activePdaFilters, optionsFor]);
 
+  /** Campo de filtro com rótulo visível (o painel rola, então o contexto não se perde). */
+  const labeledField = (label: string, field: React.ReactNode) => (
+    <div className="space-y-1.5" key={label}>
+      <Label className="text-xs">{label}</Label>
+      {field}
+    </div>
+  );
+
   const pdaFilterFields = (
     <>
-      <Select value={filters.sector} onValueChange={v => setFilter("sector", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Setor"><SelectValue placeholder="Setor" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os setores</SelectItem>
-          {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.level} onValueChange={v => setFilter("level", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Nível"><SelectValue placeholder="Nível" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os níveis</SelectItem>
-          {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.phase} onValueChange={v => setFilter("phase", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Fase"><SelectValue placeholder="Fase" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as fases</SelectItem>
-          {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.thermo} onValueChange={v => setFilter("thermo", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Termômetro"><SelectValue placeholder="Termômetro" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Empresa de registro"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as empresas</SelectItem>
-          {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      {labeledField("Setor", (
+        <Select value={filters.sector} onValueChange={v => setFilter("sector", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Setor"><SelectValue placeholder="Setor" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os setores</SelectItem>
+            {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Nível", (
+        <Select value={filters.level} onValueChange={v => setFilter("level", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Nível"><SelectValue placeholder="Nível" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os níveis</SelectItem>
+            {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Fase", (
+        <Select value={filters.phase} onValueChange={v => setFilter("phase", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Fase"><SelectValue placeholder="Fase" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as fases</SelectItem>
+            {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Termômetro", (
+        <Select value={filters.thermo} onValueChange={v => setFilter("thermo", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Termômetro"><SelectValue placeholder="Termômetro" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Empresa de registro", (
+        <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Empresa de registro"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as empresas</SelectItem>
+            {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
     </>
   );
 
