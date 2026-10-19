@@ -182,8 +182,8 @@ export default function CollaboratorsPDAWorkspace({
   const mobileFiltersSheet = (
     <Sheet>
       <SheetTrigger asChild>
-        <Button variant="outline" className="h-11 flex-1 md:hidden max-w-full" aria-label="Filtros dos colaboradores">
-          <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
+        <Button variant="outline" className="h-11 w-full min-w-0 gap-1.5 px-2 text-xs md:hidden" aria-label="Filtros dos colaboradores">
+          <SlidersHorizontal className="h-4 w-4 shrink-0" />
           <span className="truncate">
             {[
               deptFilter && deptFilter !== "all" ? deptFilter : null,
