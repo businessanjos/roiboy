@@ -33,11 +33,13 @@ interface ZappRoleHelpPopoverProps {
   /** Papel do usuário atual neste setor — destacado na tabela. */
   currentRole?: ZappSectorRole | null;
   className?: string;
+  showLabel?: boolean;
 }
 
 export const ZappRoleHelpPopover = memo(function ZappRoleHelpPopover({
   currentRole,
   className,
+  showLabel = false,
 }: ZappRoleHelpPopoverProps) {
   return (
     <Popover>
@@ -46,14 +48,16 @@ export const ZappRoleHelpPopover = memo(function ZappRoleHelpPopover({
           <PopoverTrigger asChild>
             <Button
               variant="ghost"
-              size="icon"
+              size={showLabel ? "default" : "icon"}
               aria-label="Entenda os papéis do ROY zAPP"
               className={cn(
-                "shrink-0 rounded-full h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text",
+                "shrink-0 rounded-full h-11 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text",
+                !showLabel && "w-11",
                 className
               )}
             >
               <HelpCircle className="h-4 w-4" />
+              {showLabel && "Papéis e ajuda"}
             </Button>
           </PopoverTrigger>
         </TooltipTrigger>

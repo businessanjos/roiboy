@@ -111,11 +111,11 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
   }
 
   return (
-    <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
-      <div className="flex min-w-0 flex-1 flex-col gap-1 lg:hidden">
+    <div data-zapp-navigation className="relative flex items-center gap-1 px-2 sm:px-3 py-0 lg:py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
+      <div className="flex min-w-0 flex-1 items-center gap-1 lg:hidden">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" aria-label="Seções do RoyZapp" className="min-h-11 h-auto w-full justify-between gap-2 whitespace-normal text-left text-zapp-text hover:bg-zapp-panel">
+            <Button variant="ghost" aria-label="Seções do RoyZapp" className="h-11 min-w-0 flex-1 justify-between gap-2 whitespace-normal text-left text-zapp-text hover:bg-zapp-panel">
               <span className="min-w-0 font-semibold">{navItems.find((item) => item.view === activeView)?.label || "Conversas"}</span>
               <ChevronDown className="h-5 w-5 shrink-0" />
             </Button>
@@ -124,9 +124,12 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             {navItems.map(({ view, icon: Icon, label }) => <DropdownMenuItem key={view} aria-current={activeView === view ? "page" : undefined} className={cn("min-h-11 gap-3", activeView === view && "bg-zapp-accent/15 font-semibold")} onSelect={() => setActiveView(view)}><Icon className="h-5 w-5" />{label}</DropdownMenuItem>)}
           </DropdownMenuContent>
         </DropdownMenu>
-        {activeView === "inbox" && <div className="flex flex-wrap gap-1" role="group" aria-label="Tipo de conversa">
-          {([['all', 'Todas'], ['individual', 'Individuais'], ['group', 'Grupos']] as const).filter(([type]) => !isLeanSalesMenu || type !== 'all').map(([type, label]) => <Button key={type} variant="ghost" aria-pressed={filterConversationType === type} onClick={() => setFilterConversationType(type)} className={cn("h-11 px-3 text-xs hover:bg-zapp-panel", filterConversationType === type ? "bg-zapp-input text-zapp-accent" : "text-zapp-text-muted")}>{label}</Button>)}
-        </div>}
+        {activeView === "inbox" && <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="ghost" aria-label="Tipo de conversa" className="h-11 shrink-0 gap-1 px-2 text-xs text-zapp-accent"><span>{filterConversationType === "all" ? "Todas" : filterConversationType === "individual" ? "Individuais" : "Grupos"}</span><ChevronDown className="h-4 w-4" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="bg-zapp-panel text-zapp-text">
+            {([['all', 'Todas'], ['individual', 'Individuais'], ['group', 'Grupos']] as const).map(([type, label]) => <DropdownMenuItem key={type} role="menuitemradio" aria-checked={filterConversationType === type} onSelect={() => setFilterConversationType(type)} className={cn("min-h-11 gap-2", filterConversationType === type && "bg-zapp-input text-zapp-accent font-semibold")}>{label}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>}
       </div>
       {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
           em vez de quebrar ou desaparecer */}
@@ -230,7 +233,7 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
       </div>
 
       {/* Status indicators — compactos em telas pequenas */}
-      <div className="flex items-center gap-2 pl-1 text-xs shrink-0">
+      <div className="hidden lg:flex items-center gap-2 pl-1 text-xs shrink-0">
         <ZappRoleHelpPopover currentRole={zappRole ?? undefined} />
         <div className="flex items-center gap-1.5">
           <div className="w-2 h-2 rounded-full bg-zapp-accent" />

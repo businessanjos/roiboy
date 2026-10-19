@@ -16,3 +16,5 @@
 - Transfer favorites are presentation-only local preferences scoped by account and current user, applied after normal agent sorting. Why: personal ordering must not change other users' lists or transfer permissions.
 - RoyZapp group read state is per user (`zapp_conversation_reads` + RPC `zapp_my_group_unread`, hook `useZappPersonalGroupReads`); the shared `unread_count` stays for 1:1 chats. Why: one person reading a group must not clear it for colleagues.
 - Client daily WhatsApp summaries share supabase/functions/_shared/clientDailySummary.ts (1 ai_whatsapp checkin per client per Brasília day, updated in place; manual button via client-daily-summary-now with user auth). Why: manual and nightly runs must never duplicate.
+
+- RoyZapp mobile inbox uses a compact header, one-row section/type navigation, and search-adjacent filters; alerts own their spacing and mobile secondary actions reuse existing callbacks. Why: absent alerts and secondary controls must not consume conversation-list height.
