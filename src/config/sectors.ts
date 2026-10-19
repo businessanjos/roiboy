@@ -75,6 +75,7 @@ import {
   CalendarCheck,
 } from "lucide-react";
 import { Permission, PERMISSIONS } from "@/lib/access/permissions";
+import { pickActiveNavIndex } from "@/lib/navigation/activeNav";
 import { buildRoyZappUrl } from "@/lib/royZappRoutes";
 
 export type SectorId = "operacoes" | "financeiro" | "vendas" | "marketing" | "royzapp" | "everia" | "gestao-tech" | "rh" | "eventos" | "reuniao-lideres" | "configuracoes";
@@ -336,19 +337,18 @@ export function getSectorById(id: SectorId): Sector | undefined {
 }
 
 export function getSectorByRoute(route: string): Sector | undefined {
-  const matches = sectors.filter((sector) =>
-    sector.navItems.some((item) => route.startsWith(item.to))
-  );
-  return matches.sort((a, b) => {
-    const aLength = Math.max(...a.navItems.filter((item) => route.startsWith(item.to)).map((item) => item.to.length));
-    const bLength = Math.max(...b.navItems.filter((item) => route.startsWith(item.to)).map((item) => item.to.length));
-    return bLength - aLength;
-  })[0];
+  const [pathname, query = ""] = route.split("?");
+  const matches = sectors.flatMap((sector) => {
+    const index = pickActiveNavIndex(sector.navItems.map((item) => item.to), pathname, query);
+    const item = sector.navItems[index];
+    return item ? [{ sector, length: item.to.split("?")[0].length }] : [];
+  });
+  return matches.sort((a, b) => b.length - a.length)[0]?.sector;
 }
 
-// Check if a route belongs to a specific sector
 export function routeBelongsToSector(route: string, sectorId: SectorId): boolean {
   const sector = getSectorById(sectorId);
   if (!sector) return false;
-  return sector.navItems.some((item) => route.startsWith(item.to));
+  const [pathname, query = ""] = route.split("?");
+  return pickActiveNavIndex(sector.navItems.map((item) => item.to), pathname, query) !== -1;
 }
