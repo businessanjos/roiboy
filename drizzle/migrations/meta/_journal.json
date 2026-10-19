@@ -78,6 +78,13 @@
       "when": 1792437165850,
       "tag": "0010_zapp_productivity_detail_rpc",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1792438651193,
+      "tag": "0011_optimize_zapp_productivity_detail",
+      "breakpoints": true
     }
   ]
 }
