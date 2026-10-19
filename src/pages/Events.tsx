@@ -923,7 +923,7 @@ export default function Events() {
                   Novo Evento
                 </Button>
               </DialogTrigger>
-          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+          <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto grid-cols-1">
             <DialogHeader>
               <DialogTitle>
                 {editingEvent ? "Editar Evento" : "Novo Evento"}
@@ -957,7 +957,7 @@ export default function Events() {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label>Tipo de Evento</Label>
                   <Select value={eventType} onValueChange={(v: EventType) => setEventType(v)}>
@@ -1073,7 +1073,7 @@ export default function Events() {
 
                   {isMultiDay ? (
                     <div className="space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div className="space-y-2">
                           <Label htmlFor="start_date">Data de Início</Label>
                           <Input
@@ -1160,7 +1160,7 @@ export default function Events() {
                       })()}
                     </div>
                   ) : (
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div className="space-y-2">
                         <Label htmlFor="scheduled_at">Data e Hora</Label>
                         <Input

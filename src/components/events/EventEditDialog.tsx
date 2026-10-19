@@ -293,7 +293,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
               />
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Tipo de Evento</Label>
                 <Select value={eventType} onValueChange={(v: EventType) => setEventType(v)}>
@@ -403,7 +403,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
                 </div>
 
                 {isMultiDay ? (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="start_date">Data de Início</Label>
                       <Input
@@ -429,7 +429,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
                     </div>
                   </div>
                 ) : (
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="scheduled_at">Data e Hora</Label>
                       <Input
