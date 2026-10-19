@@ -18,3 +18,4 @@
 - Client daily WhatsApp summaries share supabase/functions/_shared/clientDailySummary.ts (1 ai_whatsapp checkin per client per Brasília day, updated in place; manual button via client-daily-summary-now with user auth). Why: manual and nightly runs must never duplicate.
 
 - RoyZapp mobile inbox uses a compact header, one-row section/type navigation, and search-adjacent filters; alerts own their spacing and mobile secondary actions reuse existing callbacks. Why: absent alerts and secondary controls must not consume conversation-list height.
+- The persistent 3C panel portals its existing mobile launcher into the RoyZapp conversation header when mounted, falling back to its global launcher elsewhere. Why: keep dialing access without covering composer actions or changing call lifecycle.

@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { GripVertical, Headphones, Loader2, Maximize2, Minimize2, Phone, PhoneCall, X } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -542,6 +543,19 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
   const StatusIcon = statusInfo.icon;
   const popupOpen = visible && canUseDialer && isOpen;
   const isMobileView = useIsMobile();
+  const [conversationLauncher, setConversationLauncher] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    if (!isMobileView) {
+      setConversationLauncher(null);
+      return;
+    }
+    // Only presentation moves: the same launcher and persistent dialer own all actions.
+    const findLauncher = () => setConversationLauncher(document.querySelector<HTMLElement>("[data-threec-conversation-launcher]"));
+    findLauncher();
+    const observer = new MutationObserver(findLauncher);
+    observer.observe(document.body, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, [isMobileView]);
   const activeCall = inCall || dialing;
   const contactLabel = contact?.name || contact?.phone || null;
 
@@ -580,31 +594,31 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
     { edge: "se", className: "bottom-0 right-0 h-3 w-3 cursor-nwse-resize" },
   ];
 
+  const mobileLauncher = (
+    <Button
+      variant="ghost"
+      type="button"
+      onClick={() => {
+        setIsOpen(true);
+        void refreshStatus();
+      }}
+      aria-label={`Abrir Discador 3C. ${activeCall ? (inCall ? "Em chamada" : "Chamando") + " " + formatElapsed(elapsed) : "Status: " + statusInfo.label}`}
+      style={conversationLauncher ? undefined : { bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
+      className={cn(
+        "pointer-events-auto relative flex h-11 w-11 shrink-0 items-center justify-center rounded-full touch-press",
+        conversationLauncher ? "text-zapp-text-muted hover:bg-zapp-hover" : "fixed right-4 z-40 h-12 w-auto min-w-12 gap-1.5 border border-border bg-card px-3 shadow-lg",
+      )}
+    >
+      <Phone className={cn("h-5 w-5", activeCall ? "text-destructive" : "text-primary")} aria-hidden="true" />
+      <span className={cn("absolute right-1.5 top-1.5 h-2 w-2 rounded-full ring-2 ring-background", statusInfo.dot)} aria-hidden="true" />
+      {activeCall && !conversationLauncher && <span className="font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>}
+    </Button>
+  );
+
   return (
     <>
       {/* Botão sempre visível: fechar o popup apenas recolhe para cá. */}
-      {visible && canUseDialer && !isOpen && isMobileView && (
-        <button
-          type="button"
-          onClick={() => {
-            setIsOpen(true);
-            void refreshStatus();
-          }}
-          aria-label={`Abrir Discador 3C. ${activeCall ? (inCall ? "Em chamada" : "Chamando") + " " + formatElapsed(elapsed) : "Status: " + statusInfo.label}`}
-          style={{ bottom: "calc(env(safe-area-inset-bottom, 0px) + 76px)" }}
-          className={cn(
-            "pointer-events-auto fixed right-4 z-40 flex h-12 min-w-12 items-center justify-center gap-1.5 rounded-full border bg-card px-3 shadow-lg touch-press focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
-            activeCall ? "border-destructive/50" : "border-border",
-          )}
-        >
-          <Phone className={cn("h-5 w-5", activeCall ? "text-destructive" : "text-primary")} aria-hidden="true" />
-          {activeCall ? (
-            <span className="font-mono text-xs text-destructive">{formatElapsed(elapsed)}</span>
-          ) : (
-            <span className={cn("absolute right-2 top-2 h-2.5 w-2.5 rounded-full ring-2 ring-card", statusInfo.dot)} aria-hidden="true" />
-          )}
-        </button>
-      )}
+      {visible && canUseDialer && !isOpen && isMobileView && (conversationLauncher ? createPortal(mobileLauncher, conversationLauncher) : mobileLauncher)}
       {visible && canUseDialer && !isOpen && !isMobileView && (
         <div
           ref={launcherRef}
@@ -652,7 +666,7 @@ export function ThreeCPlusPanel({ visible = true }: { visible?: boolean }) {
       )}
 
       {/* Cartão de chamada em andamento quando o popup está aberto em outro canto. */}
-      {visible && canUseDialer && isOpen && activeCall && (
+      {visible && canUseDialer && isOpen && activeCall && !(isMobileView && conversationLauncher) && (
         <div className="pointer-events-auto fixed bottom-20 left-4 z-[70] flex items-center gap-2 rounded-md border border-destructive/40 bg-card px-3 py-2 shadow-lg lg:bottom-6 lg:left-6">
           <span className="relative flex h-2.5 w-2.5 shrink-0">
             <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-destructive opacity-70" />

@@ -67,6 +67,15 @@ Screenshots antes/depois de inbox e conversa foram capturados e inspecionados, i
 - Teclado e safe-area em iPhone físico não testados: viewport reduzida é simulação, não comprova teclado real.
 - Múltiplas conexões e alertas reais não disponíveis na sessão exercitada; controles mantidos, sem operação de conexão.
 - Funções bloqueadas por segurança podem mostrar seleção de setores como desconectada ou Configurações sem conexões; isso não é diagnóstico da conexão real.
-- Discador ativo/sugestões não verificados operacionalmente; guard bloqueou funções que poderiam produzir efeitos. Código de telefonia não alterado.
+- Discador ativo/sugestões não verificados operacionalmente; guard bloqueou funções que poderiam produzir efeitos. Na rodada inicial o código de telefonia não foi alterado; complemento abaixo altera somente a apresentação da entrada.
 - Não testado todos os cargos nem envios, puxar fila, status, contatos, conexões ou ações financeiras.
 - Demais pendências históricas no roadmap estão fora desta revisão e não foram alteradas.
+
+## Complemento: entrada 3C sem sobreposição
+
+- `ThreeCPlusPanel.tsx` agora renderiza o mesmo botão no espaço dedicado do `ZappChatHeader.tsx` no mobile. Fora da conversa, mantém a entrada global. Painel persistente, permissões, integrações e comandos de ligação inalterados.
+- Com sessão real de Everton e consultas reais de extensão/conexão/runtime: entrada 3C Offline disponível, sem simular autorização ou dados de telefonia.
+- Em 393×852 e 393×500: entrada x=293, y=8, 44×44; cabeçalho 61px. Em altura 500, Foto/Arquivo ocupam y=394..438 e campo y=452..492, sem sobreposição. Em 320×740: entrada x=220, y=8, também sem sobreposição.
+- Screenshots capturadas e visualmente inspecionadas das conversas, Foto/Arquivo após rolar atalhos, menu e painel aberto. Abrir/recolher painel e retorno à lista conferidos; o conteúdo externo do discador foi bloqueado para não provocar sessões/chamadas. Gravações de tabelas/RPCs e funções não estritamente consultivas bloqueadas, incluindo read-state; nenhuma chamada/configuração executada.
+- 9 testes passaram: `bunx vitest run src/lib/navigation/zappSectionNavigation.test.ts src/hooks/useVisualViewportHeight.test.ts src/lib/__tests__/royZappAccess.test.ts`. Build automático OK; nenhum erro JavaScript no fluxo direcionado.
+- Limitações: conteúdo externo do discador e chamadas não exercitados; iPhone físico não testado; esta rodada não repete a auditoria completa. Nada publicado.

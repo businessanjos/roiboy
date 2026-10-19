@@ -238,6 +238,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         {conversationId && (
           <ZappConversationIdBadge conversationId={conversationId} className="mx-1 hidden shrink-0 sm:inline-flex" />
         )}
+        <div data-threec-conversation-launcher className="flex shrink-0 items-center lg:hidden" />
         <div className="flex shrink-0 items-center justify-end gap-1 lg:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
