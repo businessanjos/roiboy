@@ -274,7 +274,7 @@ export default function FinancialBalanceSheetPage() {
         data?.isBalanced ? "border-success/50 bg-success/5" : "border-destructive/50 bg-destructive/5"
       )}>
         <CardContent className="py-4">
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
               <Scale className={cn(
                 "h-8 w-8",

@@ -122,14 +122,14 @@ export default function RHDepartments() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="p-2 rounded-xl bg-muted-foreground/10">
           <Building className="h-6 w-6 text-muted-foreground" strokeWidth={1.5} />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1 basis-48">
           <h1 className="text-xl font-semibold text-foreground">Departamentos</h1>
           <p className="text-sm text-muted-foreground">Áreas e departamentos da empresa</p>
         </div>

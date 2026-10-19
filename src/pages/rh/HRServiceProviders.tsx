@@ -239,7 +239,7 @@ export default function HRServiceProviders() {
                       {statusInfo.label}
                     </Badge>
                   </div>
-                  <div className="flex items-center gap-4 mt-1 text-xs text-muted-foreground">
+                  <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-1 text-xs text-muted-foreground">
                     {(provider as any).provider_kind === "on_demand" && provider.full_name && (
                       <span className="flex items-center gap-1">
                         <Building2 className="h-3 w-3" />
@@ -256,8 +256,8 @@ export default function HRServiceProviders() {
                       <span>{provider.service_type}</span>
                     )}
                     {provider.email && (
-                      <span className="flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
+                      <span className="flex min-w-0 items-center gap-1 break-all">
+                        <Mail className="h-3 w-3 shrink-0" />
                         {provider.email}
                       </span>
                     )}

@@ -193,12 +193,12 @@ export default function FinancialAgingPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent className="px-3 pt-4 sm:px-6">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <AlertTriangle className="h-4 w-4" />
                   Total Atrasado
                 </div>
-                <div className="text-2xl font-bold text-destructive">
+                <div className="break-words text-lg font-bold text-destructive sm:text-2xl">
                   {formatCurrency(totalOverdue)}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -209,12 +209,12 @@ export default function FinancialAgingPage() {
             
             {agingBuckets.map((bucket) => (
               <Card key={bucket.label}>
-                <CardContent className="pt-4">
+                <CardContent className="px-3 pt-4 sm:px-6">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm">
                     <div className={`w-3 h-3 rounded-full ${bucket.color}`} />
                     {bucket.label}
                   </div>
-                  <div className="text-xl font-bold">
+                  <div className="break-words text-base font-bold sm:text-xl">
                     {formatCurrency(bucket.total)}
                   </div>
                   <div className="text-xs text-muted-foreground">
@@ -262,13 +262,13 @@ export default function FinancialAgingPage() {
               <CardContent>
                 <div className="space-y-2">
                   {byClient.slice(0, 5).map((client, idx) => (
-                    <div key={idx} className="flex items-center justify-between p-2 bg-muted/50 rounded">
-                      <div className="flex items-center gap-2">
-                        <User className="h-4 w-4 text-muted-foreground" />
-                        <span className="font-medium">{client.name}</span>
+                    <div key={idx} className="flex items-center justify-between gap-2 p-2 bg-muted/50 rounded">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <User className="h-4 w-4 shrink-0 text-muted-foreground" />
+                        <span className="min-w-0 truncate font-medium">{client.name}</span>
                         <Badge variant="secondary">{client.entries.length}</Badge>
                       </div>
-                      <span className="font-bold text-destructive">
+                      <span className="shrink-0 font-bold text-destructive">
                         {formatCurrency(client.total)}
                       </span>
                     </div>
@@ -279,8 +279,8 @@ export default function FinancialAgingPage() {
           )}
 
           {/* Filters and Table */}
-          <div className="flex items-center gap-4">
-            <div className="relative flex-1">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="relative min-w-[12rem] flex-1">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por descrição ou cliente..."

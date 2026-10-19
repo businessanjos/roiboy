@@ -15,3 +15,5 @@
 - [x] Validação 180dc811: Portal Prestadores clamp/reset conta + testes cache mesmo QueryClient; Typeform within(card) e teste form_id/days real; checagens finais + revisão RPCs
 - [ ] Revisão 54cc028e: RPC tasks 3 campos+hidratação lotes; audit unificado joins/contexto antes do filtro, autores, export p_to fixo; security conta; notificações markAsRead/realtime/ordem; Leads pager layout; ClientDetail erros; zapp timezone; RH audit escape; Playbooks fonte; inventário real
 - [x] Navegação mobile completa: contexto/voltar, Mais pesquisável, atalhos com acesso existente, rolagem por histórico, painéis e auditoria autenticada 320/393/430/1440; 44 testes passaram; sem escritas de dados nem publicação. Teclado/momentum em iPhone físico não verificados.
+
+- [x] Auditoria de largura mobile (deslocamento lateral): 139 rotas × 320/393/440/1440, interações (Mais, diálogos, buscas, RoyZapp, ir/voltar, teclado reduzido); causa raiz no shell + 40 telas; teste de inventário e roteiro em scripts/qa; docs/mobile-width-audit.md. iPhone físico não verificado.

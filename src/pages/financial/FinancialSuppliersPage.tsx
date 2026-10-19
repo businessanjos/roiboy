@@ -530,7 +530,7 @@ export default function FinancialSuppliersPage() {
         <TabsContent value="suppliers" className="mt-6">
           <Card>
             <CardHeader>
-              <div className="flex items-center justify-between">
+              <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Truck className="h-5 w-5" />
                   <div>
@@ -632,7 +632,7 @@ export default function FinancialSuppliersPage() {
                         {supplier.document && (
                           <span className="font-mono">{supplier.document}</span>
                         )}
-                        {supplier.email && <span>{supplier.email}</span>}
+                        {supplier.email && <span className="min-w-0 break-all">{supplier.email}</span>}
                         {supplier.phone && <span>{supplier.phone}</span>}
                       </div>
                     </div>

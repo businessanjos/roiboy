@@ -189,7 +189,7 @@ export function DailyContentPanel() {
               {format(new Date(), "EEEE, d 'de' MMMM", { locale: ptBR })}
             </p>
           </div>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex w-full flex-wrap gap-2 md:w-auto [&>button]:max-w-full [&>button]:whitespace-normal [&>button]:h-auto [&>button]:min-h-11">
             <Button variant="outline" onClick={handleUseWeeklySuggestionToday} disabled={!todayWeeklySuggestion || loading} size="lg">
               <CalendarIcon className="h-4 w-4 mr-2" />
               Usar sugestão da semana

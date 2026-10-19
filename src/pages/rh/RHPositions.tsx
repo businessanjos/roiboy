@@ -225,14 +225,14 @@ export default function RHPositions() {
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div className="p-2 rounded-xl bg-info/10">
           <FileText className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1 basis-48">
           <h1 className="text-xl font-semibold text-foreground">Cargos</h1>
           <p className="text-sm text-muted-foreground">
             {positions.length} {positions.length === 1 ? "cargo cadastrado" : "cargos cadastrados"} • organizados por departamento e hierarquia

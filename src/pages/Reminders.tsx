@@ -787,7 +787,7 @@ export default function Reminders() {
                 return (
                   <div 
                     key={step} 
-                    className="flex items-center cursor-pointer"
+                    className="flex min-w-0 items-center cursor-pointer"
                     onClick={() => goToStep(step)}
                   >
                     <div className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors ${
@@ -799,11 +799,11 @@ export default function Reminders() {
                     }`}>
                       {isPast ? <CheckCircle2 className="h-4 w-4" /> : index + 1}
                     </div>
-                    <span className={`ml-2 text-sm font-medium ${isActive ? "text-foreground" : "text-muted-foreground"}`}>
+                    <span className={`ml-2 text-sm font-medium ${isActive ? "text-foreground" : "hidden text-muted-foreground sm:inline"}`}>
                       {stepLabels[step]}
                     </span>
                     {index < STEPS.length - 1 && (
-                      <ChevronRight className="h-4 w-4 mx-4 text-muted-foreground/50" />
+                      <ChevronRight className="h-4 w-4 mx-1 shrink-0 text-muted-foreground/50 sm:mx-4" />
                     )}
                   </div>
                 );

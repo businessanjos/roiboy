@@ -139,8 +139,8 @@ export default function RHOffers() {
   return (
     <TooltipProvider delayDuration={200}>
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/10 to-violet-500/10">
             <Sparkles className="h-7 w-7 text-indigo-600" strokeWidth={1.5} />
           </div>

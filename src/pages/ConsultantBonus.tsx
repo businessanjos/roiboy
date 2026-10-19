@@ -281,10 +281,10 @@ export default function ConsultantBonus() {
             const consultantGoals = goalsByConsultant.get(c.id) || [];
             return (
               <TabsContent key={c.id} value={c.id} className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <div>
+                <div className="flex flex-wrap justify-between items-center gap-3">
+                  <div className="min-w-0">
                     <h2 className="text-xl font-semibold">{c.name}</h2>
-                    <p className="text-sm text-muted-foreground">{c.email}</p>
+                    <p className="break-all text-sm text-muted-foreground">{c.email}</p>
                   </div>
                   <Button onClick={() => openNew(c.id)} className="gap-2">
                     <Plus className="h-4 w-4" /> Nova meta

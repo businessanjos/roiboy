@@ -193,7 +193,7 @@ export default function HRPartnerProfile() {
   return (
     <div className="p-6 max-w-5xl mx-auto space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh/partners")}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
@@ -203,7 +203,7 @@ export default function HRPartnerProfile() {
             {getInitials(partner.full_name)}
           </AvatarFallback>
         </Avatar>
-        <div className="flex-1">
+        <div className="min-w-0 flex-1 basis-40">
           <h1 className="text-xl font-semibold text-foreground flex items-center gap-2">
             {partner.full_name}
             <Crown className="h-4 w-4 text-primary" />
@@ -230,8 +230,8 @@ export default function HRPartnerProfile() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <div className="flex items-center gap-2 min-w-[200px] justify-end">
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-[120px] justify-end">
+        <div className="flex items-center gap-2 justify-end sm:min-w-[200px]">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground justify-end sm:min-w-[120px]">
             {saving ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...</>
             ) : lastSaved ? (

@@ -742,8 +742,8 @@ export default function FinancialFaqPage() {
             </h2>
           </div>
 
-          <div className="flex items-center gap-2">
-            <div className="relative w-44 sm:w-60">
+          <div className="flex w-full min-w-0 flex-wrap items-center gap-2 sm:w-auto">
+            <div className="relative min-w-0 flex-1 basis-40 sm:w-60 sm:flex-none">
               <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={textFilter}
@@ -765,7 +765,7 @@ export default function FinancialFaqPage() {
                   )}
                 </Button>
               </PopoverTrigger>
-              <PopoverContent align="end" className="w-80 space-y-4">
+              <PopoverContent align="end" className="w-80 max-w-[calc(100vw-1rem)] space-y-4">
                 <div className="space-y-1.5">
                   <Label className="text-xs">Categoria</Label>
                   <Select value={categoryFilter} onValueChange={setCategoryFilter}>

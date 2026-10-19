@@ -891,7 +891,7 @@ export default function FinancialActiveClientsPage() {
                   Cria fatura + parcelas oficiais (aparecem em Financeiro › Parcelas). Idempotente: pula contratos que já têm fatura.
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2 [&>button]:h-auto [&>button]:min-h-9 [&>button]:max-w-full [&>button]:whitespace-normal">
                 {!allFilteredSelected ? (
                   <Button size="sm" variant="outline" onClick={toggleAll}>
                     Selecionar todos os {filtered.length} resultados filtrados

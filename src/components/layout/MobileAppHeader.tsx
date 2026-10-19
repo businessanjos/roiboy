@@ -78,7 +78,7 @@ export function MobileAppHeader() {
         )}
 
         <div className="min-w-0 flex-1 px-1">
-          <h1 className="line-clamp-2 break-words text-[15px] font-semibold leading-tight tracking-normal text-foreground">
+          <h1 lang="pt-BR" className="line-clamp-2 break-words hyphens-auto text-[15px] font-semibold leading-tight tracking-normal text-foreground">
             {isSectors ? "Áreas" : title}
           </h1>
           {subtitle && subtitle !== title && (

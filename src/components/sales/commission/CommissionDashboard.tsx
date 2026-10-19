@@ -121,14 +121,14 @@ export function CommissionDashboard({
   return (
     <div className="space-y-6">
       {/* Actions */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h3 className="font-semibold">{plan.name}</h3>
           <p className="text-xs text-muted-foreground">
             Apuração mensal {hasSDRModel && "· Inclui modelo SDR"}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
           <div className="flex items-center gap-1 bg-muted rounded-lg px-1 py-1">
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={goToPreviousMonth}>
               <ChevronLeft className="h-4 w-4" />
