@@ -283,8 +283,8 @@ export default function HRServiceProviderProfile() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-        <div className="flex items-center gap-2 min-w-[200px] justify-end">
-          <span className="flex items-center gap-1.5 text-xs text-muted-foreground min-w-[120px] justify-end">
+        <div className="flex items-center gap-2 justify-end sm:min-w-[200px]">
+          <span className="flex items-center gap-1.5 text-xs text-muted-foreground justify-end sm:min-w-[120px]">
             {saving ? (
               <><Loader2 className="h-3.5 w-3.5 animate-spin" /> Salvando...</>
             ) : lastSaved ? (
