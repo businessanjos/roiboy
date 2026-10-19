@@ -265,14 +265,14 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
               <TrendingDown className="h-4 w-4 text-danger" />
               Despesas
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:gap-4">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Orçado</p>
-                <p className="text-base sm:text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedExpenses)}</p>
+                <p className="text-lg font-bold whitespace-nowrap tabular-nums">{formatCurrency(totals.plannedExpenses)}</p>
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
-                <p className="text-lg font-bold text-danger break-words tabular-nums">{formatCurrency(totals.actualExpenses)}</p>
+                <p className="text-lg font-bold text-danger whitespace-nowrap tabular-nums">{formatCurrency(totals.actualExpenses)}</p>
               </div>
             </div>
             <Progress 
@@ -285,14 +285,14 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
               <TrendingUp className="h-4 w-4 text-success" />
               Receitas
             </div>
-            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+            <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:gap-4">
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Orçado</p>
-                <p className="text-base sm:text-lg font-bold break-words tabular-nums">{formatCurrency(totals.plannedIncome)}</p>
+                <p className="text-lg font-bold whitespace-nowrap tabular-nums">{formatCurrency(totals.plannedIncome)}</p>
               </div>
               <div className="min-w-0">
                 <p className="text-xs text-muted-foreground">Realizado</p>
-                <p className="text-lg font-bold text-success break-words tabular-nums">{formatCurrency(totals.actualIncome)}</p>
+                <p className="text-lg font-bold text-success whitespace-nowrap tabular-nums">{formatCurrency(totals.actualIncome)}</p>
               </div>
             </div>
             <Progress 

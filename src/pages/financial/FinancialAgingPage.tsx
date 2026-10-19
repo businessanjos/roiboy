@@ -191,14 +191,14 @@ export default function FinancialAgingPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Summary Cards */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 sm:gap-4">
             <Card>
               <CardContent className="px-3 pt-4 sm:px-6">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <AlertTriangle className="h-4 w-4" />
                   Total Atrasado
                 </div>
-                <div className="break-words text-lg font-bold text-destructive sm:text-2xl">
+                <div className="whitespace-nowrap tabular-nums text-xl font-bold text-destructive sm:text-2xl">
                   {formatCurrency(totalOverdue)}
                 </div>
                 <div className="text-xs text-muted-foreground">
@@ -214,7 +214,7 @@ export default function FinancialAgingPage() {
                     <div className={`w-3 h-3 rounded-full ${bucket.color}`} />
                     {bucket.label}
                   </div>
-                  <div className="break-words text-base font-bold sm:text-xl">
+                  <div className="whitespace-nowrap tabular-nums text-lg font-bold sm:text-xl">
                     {formatCurrency(bucket.total)}
                   </div>
                   <div className="text-xs text-muted-foreground">
