@@ -454,7 +454,37 @@ export default function CollaboratorsPDATable({
         </p>
       )}
 
-      <div className="border rounded-lg overflow-x-auto">
+      {/* Mobile: cartões por pessoa */}
+      <div className="space-y-2 md:hidden">
+        {rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Nenhum colaborador nesta visão.</div>
+        ) : (
+          <>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Ativos ({activeRows.length})
+            </div>
+            {activeRows.map(renderCard)}
+            {activeRows.length > 0 && (
+              <p className="text-xs text-muted-foreground px-1">{cardGroupSummary(activeRows, "Total ativos")}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowTerminated(v => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              {showTerminated ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              Desligados ({terminatedRows.length})
+            </button>
+            {showTerminated && terminatedRows.map(renderCard)}
+            {showTerminated && terminatedRows.length > 0 && (
+              <p className="text-xs text-muted-foreground px-1">{cardGroupSummary(terminatedRows, "Total desligados")}</p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="border rounded-lg overflow-x-auto hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50 border-b">
