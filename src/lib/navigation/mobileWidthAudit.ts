@@ -86,3 +86,60 @@ export function findWidthViolations(m: WidthMetrics): string[] {
   for (const e of m.offscreenElements) violations.push(`fora da tela: ${e}`);
   return violations;
 }
+
+/** Substitui `:param` pelos IDs informados; rotas sem ID ficam como não exercitadas. */
+export function resolveAuditRoutes(
+  routes: readonly string[],
+  ids: Readonly<Record<string, string>>,
+): { routes: { template: string; path: string }[]; notExercised: string[] } {
+  const out: { template: string; path: string }[] = [];
+  const notExercised: string[] = [];
+  for (const template of routes) {
+    if (!template.includes(":")) { out.push({ template, path: template }); continue; }
+    const path = ids[template];
+    if (path && !path.includes(":")) out.push({ template, path });
+    else notExercised.push(template);
+  }
+  return { routes: out, notExercised };
+}
+
+export type GestureResult = { status: "ok" } | { status: "skipped" } | { status: "failed"; error: string };
+
+export interface RouteAuditInput {
+  requestedPath: string;
+  /** Caminho efetivo após redirecionamentos (pathname). */
+  finalPath: string;
+  /** Shell autenticado presente (#app-main-scroll). */
+  hasAuthenticatedShell: boolean;
+  before: WidthMetrics & { mainScrollLeft?: number };
+  /** Medição repetida após o gesto lateral e uma estabilização curta. */
+  after: (WidthMetrics & { mainScrollLeft?: number }) | null;
+  gesture: GestureResult;
+}
+
+export type RouteAuditStatus = "ok" | "falha" | "limitacao";
+
+/**
+ * Avalia uma rota nos dois estados (antes/depois do gesto). Login ou shell ausente
+ * reprova; gesto que falhou não vira aprovação silenciosa.
+ */
+export function evaluateRouteAudit(i: RouteAuditInput): { status: RouteAuditStatus; problems: string[] } {
+  const problems: string[] = [];
+  if (!i.hasAuthenticatedShell || /^\/(auth|login)\b/.test(i.finalPath)) {
+    return { status: "falha", problems: [`sem shell autenticado (destino efetivo ${i.finalPath})`] };
+  }
+  for (const v of findWidthViolations(i.before)) problems.push(`antes do gesto: ${v}`);
+  if ((i.before.mainScrollLeft ?? 0) !== 0) problems.push(`antes do gesto: main scrollLeft=${i.before.mainScrollLeft}`);
+  if (i.gesture.status === "ok") {
+    if (!i.after) problems.push("sem medição após o gesto");
+    else {
+      for (const v of findWidthViolations(i.after)) problems.push(`após o gesto: ${v}`);
+      if ((i.after.mainScrollLeft ?? 0) !== 0) problems.push(`após o gesto: main scrollLeft=${i.after.mainScrollLeft}`);
+    }
+  }
+  if (problems.length) return { status: "falha", problems };
+  if (i.gesture.status === "failed") {
+    return { status: "limitacao", problems: [`gesto lateral não executado: ${i.gesture.error}`] };
+  }
+  return { status: "ok", problems };
+}

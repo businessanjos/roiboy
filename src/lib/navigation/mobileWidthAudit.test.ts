@@ -4,7 +4,9 @@ import { describe, expect, it } from "vitest";
 import {
   MOBILE_WIDTH_AUDIT_EXCLUDED,
   MOBILE_WIDTH_AUDIT_ROUTES,
+  evaluateRouteAudit,
   findWidthViolations,
+  resolveAuditRoutes,
   type WidthMetrics,
 } from "./mobileWidthAudit";
 
@@ -62,5 +64,42 @@ describe("findWidthViolations", () => {
   });
   it("tolerates subpixel rounding of one pixel", () => {
     expect(findWidthViolations({ ...clean, mainScrollWidth: 394 })).toEqual([]);
+  });
+});
+
+describe("resolveAuditRoutes", () => {
+  it("keeps detail routes without an ID as not exercised", () => {
+    const r = resolveAuditRoutes(["/clients", "/clients/:id", "/events/:id"], { "/clients/:id": "/clients/abc" });
+    expect(r.routes.map((x) => x.path)).toEqual(["/clients", "/clients/abc"]);
+    expect(r.notExercised).toEqual(["/events/:id"]);
+  });
+});
+
+describe("evaluateRouteAudit", () => {
+  const base = { requestedPath: "/financial", finalPath: "/financial", hasAuthenticatedShell: true, before: clean };
+  it("passes only when both states are aligned", () => {
+    expect(evaluateRouteAudit({ ...base, after: clean, gesture: { status: "ok" } }).status).toBe("ok");
+  });
+  it("fails when the main scroller moved sideways after the gesture", () => {
+    const r = evaluateRouteAudit({ ...base, after: { ...clean, mainScrollLeft: 8 }, gesture: { status: "ok" } });
+    expect(r.status).toBe("falha");
+    expect(r.problems[0]).toContain("scrollLeft=8");
+  });
+  it("fails when an ancestor shifts only after the gesture", () => {
+    const r = evaluateRouteAudit({ ...base, after: { ...clean, shiftedAncestors: ["main 8"] }, gesture: { status: "ok" } });
+    expect(r.status).toBe("falha");
+  });
+  it("fails a login page or redirect without the authenticated shell", () => {
+    const r = evaluateRouteAudit({ ...base, finalPath: "/auth", hasAuthenticatedShell: false, after: clean, gesture: { status: "ok" } });
+    expect(r.status).toBe("falha");
+    expect(r.problems[0]).toContain("/auth");
+  });
+  it("reports a failed gesture as a limitation, never as ok", () => {
+    const r = evaluateRouteAudit({ ...base, after: null, gesture: { status: "failed", error: "CDP indisponível" } });
+    expect(r.status).toBe("limitacao");
+  });
+  it("still fails on overflow measured before a failed gesture", () => {
+    const r = evaluateRouteAudit({ ...base, before: { ...clean, mainScrollWidth: 401 }, after: null, gesture: { status: "failed", error: "x" } });
+    expect(r.status).toBe("falha");
   });
 });

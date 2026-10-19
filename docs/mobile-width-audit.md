@@ -93,7 +93,7 @@ Pipeline, conversa, menus, Mais de Configurações e "Nova tarefa" em 320 confer
   elemento fora da tela, tolerância de 1px).
 - `npx vitest run src/lib/navigation`: 6 arquivos, 25 testes, todos passaram.
 - Compilação automática: OK. Build/typecheck manuais não executados (vedados neste ambiente).
-- Regressão de geometria reexecutável: `scripts/qa/mobile-width-audit.mjs` (+ `mobile-width-measure.js`), somente leitura.
+- Regressão de geometria reexecutável: `bun scripts/qa/mobile-width-audit.mjs` (+ `mobile-width-measure.js`), somente leitura (gravações bloqueadas, credenciais só por variáveis de ambiente). Mede cada rota antes e depois do gesto lateral (400 ms de estabilização), incluindo `scrollLeft` do main e dos ancestrais; reprova login/redirect sem shell autenticado mostrando o destino efetivo; gesto que falha vira "limitação" (código 2), nunca aprovação; rotas `:id` sem `AUDIT_IDS` aparecem como não exercitadas. Avaliador puro `evaluateRouteAudit`/`resolveAuditRoutes` testado em `mobileWidthAudit.test.ts`. Opcionais: `AUDIT_ONLY` (rotas específicas) e `CHROMIUM_PATH`.
 
 ### Segurança dos testes
 Todas as gravações foram interceptadas e respondidas localmente (71 por varredura; inclui o salvamento automático da ficha do
