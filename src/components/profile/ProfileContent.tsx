@@ -328,10 +328,10 @@ export function ProfileContent() {
                 {uploadingAvatar ? <Loader2 className="h-4 w-4 animate-spin" /> : <Camera className="h-4 w-4" />}
               </Button>
             </div>
-            <div>
-              <CardTitle>{profile.name}</CardTitle>
-              <CardDescription className="flex items-center gap-1">
-                <Mail className="h-3 w-3" /> {profile.email}
+            <div className="min-w-0 flex-1">
+              <CardTitle className="break-words">{profile.name}</CardTitle>
+              <CardDescription className="flex min-w-0 items-center gap-1">
+                <Mail className="h-3 w-3 shrink-0" /> <span className="min-w-0 break-all">{profile.email}</span>
               </CardDescription>
               <div className="flex items-center gap-2 mt-2 flex-wrap">
                 <Badge variant="outline">{getRoleLabel(profile.role)}</Badge>
