@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { matchesScreenSearch } from "@/lib/navigation/mobileNavigation";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -49,10 +51,12 @@ export function ClientDetailSidebarNav({
   collapsed,
   onNavigate,
   clientName,
+  searchQuery = "",
 }: {
   collapsed: boolean;
   onNavigate?: () => void;
   clientName?: string;
+  searchQuery?: string;
 }) {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -67,10 +71,10 @@ export function ClientDetailSidebarNav({
   return (
     <>
       <div className="p-3 border-b border-border">
-        <button
+        <Button variant="ghost"
           onClick={() => { navigate("/clients"); onNavigate?.(); }}
           className={cn(
-            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+            "flex min-h-11 h-auto justify-start whitespace-normal text-left items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
             "text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
@@ -84,11 +88,11 @@ export function ClientDetailSidebarNav({
               </span>
             </div>
           )}
-        </button>
+        </Button>
       </div>
 
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {navGroups.map((group) => (
+        {navGroups.map((group) => ({ ...group, items: group.items.filter((item) => matchesScreenSearch(item.label, group.title, searchQuery)) })).filter((group) => group.items.length > 0).map((group) => (
           <div key={group.title}>
             {!collapsed && (
               <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
@@ -100,11 +104,12 @@ export function ClientDetailSidebarNav({
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
-                  <button
+                  <Button variant="ghost"
                     key={item.id}
+                    aria-current={isActive ? "page" : undefined}
                     onClick={() => handleTabChange(item.id)}
                     className={cn(
-                      "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                      "flex min-h-11 h-auto justify-start whitespace-normal text-left items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                       isActive
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -113,7 +118,7 @@ export function ClientDetailSidebarNav({
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!collapsed && <span>{item.label}</span>}
-                  </button>
+                  </Button>
                 );
               })}
             </div>

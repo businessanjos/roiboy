@@ -1,4 +1,5 @@
 # Roadmap
+- [x] Revisão d1116f6: menus especializados pesquisáveis no Mais sem setor salvo e títulos contextuais; 53 testes e caminhos autenticados direcionados em 393px aprovados; build automático OK, typecheck/build manuais vedados pelo ambiente; relatório docs/mobile-specialized-menu-review.md; sem dados/backend/publicação.
 - [x] Complemento mobile: retorno contextual RoyZapp preserva conexão, menu permitido rotulado com 44px, seleção acessível sem botões aninhados e destaque único no Mais de Vendas; caminhos autenticados em 393px e 42 testes passaram; sem dados/publicação. Build automático OK; typecheck separado não executado.
 - [ ] Resumos diários CS: implementar worker e timeline do plano aprovado. Bloqueado pela autenticação do callback legado: cron envia apenas apikey pública anon; migração automática/gerenciamento HTTP não disponíveis neste projeto. Preservar callback e cron existentes até disponibilizar ativação segura.
 - [x] Arthur: remover aviso de teste da conta interna no menu e banner, sem alterar cobrança ou permissões.

@@ -62,7 +62,7 @@ import { SidebarPlanInfo } from "./SidebarPlanInfo";
 import { useSector } from "@/contexts/SectorContext";
 import { sectors as allSectors, SectorId } from "@/config/sectors";
 import { royZappSectorLabel } from "@/lib/royZappSectors";
-import { isClientDetailRoute } from "@/lib/navigation/clientRoutes";
+import { getSpecializedMenu } from "@/lib/navigation/specializedMenu";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSectorNavItems } from "@/hooks/useSectorNavItems";
 import {
@@ -244,18 +244,16 @@ export function SidebarContent({ collapsed, onNavigate }: { collapsed: boolean; 
     location.pathname,
     location.search,
   );
-  const isOnSettings = location.pathname === "/settings";
-  const isOnAdmin = location.pathname === "/admin";
-  const clientDetailMatch = isClientDetailRoute(location.pathname);
+  const specializedMenu = getSpecializedMenu(location.pathname);
 
 
-  if (isOnSettings) {
+  if (specializedMenu?.kind === "settings") {
     return <SettingsSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
   }
-  if (isOnAdmin) {
+  if (specializedMenu?.kind === "admin") {
     return <AdminSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
   }
-  if (clientDetailMatch) {
+  if (specializedMenu?.kind === "client") {
     return <ClientDetailSidebarNav collapsed={collapsed} onNavigate={onNavigate} />;
   }
 

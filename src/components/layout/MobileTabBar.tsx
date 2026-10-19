@@ -21,6 +21,11 @@ import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
 import { useSectorAccess } from "@/hooks/useSectorAccess";
 import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
 import { resolveActiveTarget } from "@/lib/navigation/activeNav";
+import { getSpecializedMenu } from "@/lib/navigation/specializedMenu";
+import { SettingsSidebarNav } from "./SettingsSidebarNav";
+import { AdminSidebarNav } from "./AdminSidebarNav";
+import { ClientDetailSidebarNav } from "./ClientDetailSidebarNav";
+import { Input } from "@/components/ui/input";
 
 /** Rotas onde a barra inferior nunca aparece. */
 export const TAB_BAR_HIDDEN_ROUTES = ["/setores", "/", "/auth", "/choose-plan"];
@@ -34,6 +39,7 @@ export function useMobileTabBarVisible(): boolean {
   const location = useLocation();
   const navItems = useSectorNavItems();
   if (location.pathname.startsWith("/roy-zapp")) return false;
+  if (getSpecializedMenu(location.pathname)) return true;
   if (!currentSector || TAB_BAR_HIDDEN_ROUTES.includes(location.pathname)) return false;
   return navItems.length > 0;
 }
@@ -51,6 +57,8 @@ export function MobileTabBar() {
   const location = useLocation();
   const navItems = useSectorNavItems();
   const [moreOpen, setMoreOpen] = useState(false);
+  const [menuQuery, setMenuQuery] = useState("");
+  const specializedMenu = getSpecializedMenu(location.pathname);
   const closeRef = useRef<HTMLButtonElement>(null);
   const visible = useMobileTabBarVisible();
   const { canOpenZappSector } = useRoyZappViewAccess();
@@ -61,6 +69,7 @@ export function MobileTabBar() {
   // Na barra inferior priorizamos "Insights" no lugar do Dashboard (o Dashboard
   // continua acessível em "Mais"). No setor Vendas, "Gestão" vira atalho ao RoyZapp.
   const primary = useMemo(() => {
+    if (specializedMenu) return [];
     const isDashboard = (to: string) => to.split("?")[0].includes("dashboard");
     const insights = navItems.find((i) => i.to.split("?")[0] === "/insights");
     let list = [...navItems];
@@ -81,7 +90,7 @@ export function MobileTabBar() {
       });
     }
     return list.slice(0, 4);
-  }, [navItems, currentSector?.id, canOpenCurrentZapp]);
+  }, [navItems, currentSector?.id, canOpenCurrentZapp, specializedMenu?.kind]);
 
   // Ativo decidido sobre a lista completa do setor (inclui filhos sem atalho,
   // ex.: /clients/medicos) e só então mapeado para um atalho ou "Mais".
@@ -97,7 +106,7 @@ export function MobileTabBar() {
   const activeIndex = primary.findIndex((i) => i.to === activeTarget);
 
   // Fecha o menu ao mudar de rota e ao crescer para desktop (sem overlay preso).
-  useEffect(() => { setMoreOpen(false); }, [location.pathname, location.search]);
+  useEffect(() => { setMoreOpen(false); setMenuQuery(""); }, [location.pathname, location.search]);
   useEffect(() => {
     const mq = window.matchMedia("(min-width: 1024px)");
     const onChange = () => { if (mq.matches) setMoreOpen(false); };
@@ -106,7 +115,7 @@ export function MobileTabBar() {
     return () => mq.removeEventListener("change", onChange);
   }, []);
 
-  if (!visible || !currentSector || primary.length === 0) return null;
+  if (!visible || (!specializedMenu && (!currentSector || primary.length === 0))) return null;
 
   // Se a tela atual não é um dos 4 atalhos, "Mais" fica ativo (seção atual está lá).
   const moreActive = activeIndex === -1;
@@ -126,7 +135,7 @@ export function MobileTabBar() {
                 to={item.to}
                 aria-current={active ? "page" : undefined}
                 title={item.label}
-                onClick={item.to.startsWith("/roy-zapp") ? (event) => { event.preventDefault(); void openZappForSector(currentSector.id); } : undefined}
+                onClick={item.to.startsWith("/roy-zapp") ? (event) => { event.preventDefault(); if (currentSector) void openZappForSector(currentSector.id); } : undefined}
                 className={cn(
                   "touch-press flex h-[60px] min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active ? "text-foreground" : "text-muted-foreground",
@@ -153,7 +162,7 @@ export function MobileTabBar() {
             <DrawerTrigger asChild>
               <Button variant="ghost"
                 type="button"
-                aria-label="Mais opções do setor"
+                aria-label={specializedMenu ? `Mais opções: ${specializedMenu.title}` : "Mais opções do setor"}
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
                 className={cn(
@@ -174,9 +183,9 @@ export function MobileTabBar() {
                 <RoyLogo size="md" />
                 <div className="min-w-0">
                   <DrawerTitle className="truncate text-[17px] font-semibold tracking-tight">
-                    {currentSector.name}
+                    {specializedMenu?.title || currentSector?.name}
                   </DrawerTitle>
-                  <DrawerDescription className="text-[13px]">{navItems.find((item) => item.to === activeTarget)?.label || "Menu do setor"}</DrawerDescription>
+                  <DrawerDescription className="text-[13px]">{specializedMenu ? "Seções" : navItems.find((item) => item.to === activeTarget)?.label || "Menu do setor"}</DrawerDescription>
                 </div>
                 <DrawerClose asChild>
                   <Button variant="ghost" size="icon"
@@ -189,8 +198,17 @@ export function MobileTabBar() {
                   </Button>
                 </DrawerClose>
               </div>
-              <MobileSectorMenu items={navItems} activeTarget={activeTarget} onNavigate={() => setMoreOpen(false)}
-                onZapp={canOpenCurrentZapp ? () => { setMoreOpen(false); void openZappForSector(currentSector.id); } : undefined} zappLoading={zappLoading} />
+              {specializedMenu ? <div className="flex min-h-0 flex-1 flex-col" data-vaul-no-drag>
+                <div className="px-4 pb-3">
+                  <Input aria-label={`Buscar seção: ${specializedMenu.title}`} placeholder="Buscar seção…" value={menuQuery} onChange={(e) => setMenuQuery(e.target.value)} className="h-11" />
+                </div>
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]">
+                  {specializedMenu.kind === "settings" && <SettingsSidebarNav collapsed={false} searchQuery={menuQuery} onNavigate={() => setMoreOpen(false)} />}
+                  {specializedMenu.kind === "admin" && <AdminSidebarNav collapsed={false} searchQuery={menuQuery} onNavigate={() => setMoreOpen(false)} />}
+                  {specializedMenu.kind === "client" && <ClientDetailSidebarNav collapsed={false} searchQuery={menuQuery} onNavigate={() => setMoreOpen(false)} />}
+                </div>
+              </div> : <MobileSectorMenu items={navItems} activeTarget={activeTarget} onNavigate={() => setMoreOpen(false)}
+                onZapp={canOpenCurrentZapp && currentSector ? () => { setMoreOpen(false); void openZappForSector(currentSector.id); } : undefined} zappLoading={zappLoading} />}
             </DrawerContent>
           </Drawer>
         </li>
