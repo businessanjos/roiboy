@@ -488,7 +488,7 @@ export default function HRCollaborators() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        <div className="hidden w-full flex-wrap items-center gap-2 sm:flex sm:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" disabled={filtered.length === 0}>
