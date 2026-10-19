@@ -281,7 +281,14 @@ export function DealKanban({ stages, deals, onDealClick, onDealMove, showActivit
     window.addEventListener("resize", measure);
     window.addEventListener("orientationchange", measure);
     const ro = new ResizeObserver(measure);
-    if (document.body) ro.observe(document.body);
+    // O body mantém a altura do shell quando os filtros são recolhidos.
+    // Observar os contêineres do quadro captura a mudança de posição causada
+    // por filtros, chips e cabeçalhos, sem depender de um resize da janela.
+    let container = mobileBoardRef.current?.parentElement;
+    while (container) {
+      ro.observe(container);
+      container = container.parentElement;
+    }
     return () => {
       cancelAnimationFrame(raf);
       window.removeEventListener("resize", measure);
