@@ -445,7 +445,7 @@ export default function HRCollaborators() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-6">
+    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="hidden shrink-0 lg:inline-flex" aria-label="Voltar para o RH">
@@ -530,7 +530,7 @@ export default function HRCollaborators() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+        <div className="relative w-full sm:flex-1 sm:w-auto sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             aria-label="Buscar colaborador por nome, email, CPF ou cargo"
@@ -545,11 +545,11 @@ export default function HRCollaborators() {
         {view !== "pda" && (
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" className="h-11 sm:hidden max-w-full" aria-label="Abrir filtros">
+            <Button variant="outline" className="h-11 w-full sm:hidden" aria-label="Abrir filtros">
               <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
               <span className="truncate">
                 {[
-                  STATUS_MAP[statusFilter]?.label || "Ativo",
+                  statusFilter === "all" ? "Todos os status" : STATUS_MAP[statusFilter]?.label || "Ativo",
                   deptFilter !== "all" ? deptFilter : null,
                   view === "clt" && typeFilter !== "all" ? EMPLOYMENT_TYPES[typeFilter] || typeFilter : null,
                 ].filter(Boolean).join(" · ")}
@@ -684,20 +684,18 @@ export default function HRCollaborators() {
               const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
               return (
                 <div key={p.id} className="rounded-lg border bg-card p-3 space-y-2">
-                  <div className="flex items-start gap-3">
+                  <div className="flex items-center gap-3">
                     <Avatar className="h-10 w-10 shrink-0">
                       <AvatarImage src={p.avatar_url || undefined} />
                       <AvatarFallback className="bg-warning/10 text-warning text-xs font-medium">
                         {getInitials(p.full_name)}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="min-w-0 flex-1">
-                      <p className="font-medium text-foreground break-words">{p.full_name}</p>
-                      <p className="text-xs text-muted-foreground break-all">{p.email || "—"}</p>
-                    </div>
-                    <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                    <p className="min-w-0 flex-1 font-medium text-foreground break-words">{p.full_name}</p>
                   </div>
+                  <p className="text-xs text-muted-foreground break-all">{p.email || "—"}</p>
                   <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
                     <Badge variant="outline" className="text-xs">
                       {(p as any).provider_kind === "director" ? "Cargo de confiança" : "Prestador"}
                     </Badge>
@@ -817,8 +815,8 @@ export default function HRCollaborators() {
             const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
             return (
               <div key={c.id} className={`rounded-lg border bg-card p-3 space-y-2 ${selectedRows.has(c.id) ? "border-primary/40 bg-primary/5" : ""}`}>
-                <div className="flex items-start gap-3">
-                  <label className="-ml-2 -my-2 flex h-11 w-11 shrink-0 items-center justify-center cursor-pointer">
+                <div className="flex items-center gap-2">
+                  <label className="-ml-1 flex h-11 w-11 shrink-0 items-center justify-center cursor-pointer">
                     <Checkbox
                       checked={selectedRows.has(c.id)}
                       onCheckedChange={(v) => {
@@ -837,13 +835,11 @@ export default function HRCollaborators() {
                       {getInitials(c.full_name)}
                     </AvatarFallback>
                   </Avatar>
-                  <div className="min-w-0 flex-1">
-                    <p className="font-medium text-foreground break-words">{c.full_name}</p>
-                    <p className="text-xs text-muted-foreground break-all">{c.email || "—"}</p>
-                  </div>
-                  <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                  <p className="min-w-0 flex-1 font-medium text-foreground break-words">{c.full_name}</p>
                 </div>
+                <p className="text-xs text-muted-foreground break-all">{c.email || "—"}</p>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
                   {c.employment_type && (
                     <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
                   )}

@@ -73,3 +73,15 @@ Nenhuma pendente neste escopo. Aguardando revisão do usuário para publicação
 
 - Correção posterior (revisão do commit 944ac96e): as 4 `ScrollArea` agora usam `h-[min(280px,calc(var(--radix-popover-content-available-height)-144px))]` no celular (busca + abas 2x2) e `-104px` a partir de `sm` (abas em uma linha). Assim só a lista rola, e não o popover junto.
 - Medição: 393x500, popover client 294 / scroll 294 (sem rolagem própria), lista y347..499 com 152px visíveis e 428 de conteúdo; rolada até o fim mostra a última opção (Vanessa Minelli) inteira. 320x740 e 440x852: lista com 280px, igual a antes. Gravações bloqueadas, nada salvo.
+
+## Rodada de acabamento RH Colaboradores (11:35 UTC, build OK)
+
+1. **Resumo de status corrigido**: `statusFilter === "all"` agora exibe "Todos os status" (antes caía no fallback "Ativo"). Busca mobile passou a linha própria full-width (`w-full sm:flex-1`), então resumo longo nunca esmaga a busca; botão de filtros mobile também full-width abaixo.
+2. **Cartões CLT/PJ reorganizados**: linha 1 = seleção (44px) + avatar + nome com largura útil; email em linha própria full-width; badge de status moveu para a linha de metadados (junto de vínculo/cargo/departamento). Fontes inalteradas. No PDA, o botão "Ficha" saiu da linha de identidade e ficou na linha de ações ao lado de "Ver detalhes" (ambos 44px).
+3. **PDA: uma faixa só de controles mobile** — Filtros/Opções/Colunas na mesma linha na visão Lista (slot `mobileControls` da tabela; em Quadro/Painel o painel segue no cabeçalho). Espaçamento vertical mobile reduzido (`space-y-4`→`space-y-4 sm:space-y-6` na página; `space-y-3 md:space-y-4` no workspace). Primeira pessoa PDA em 320: y457 (antes y546); primeiro cartão CLT: y365.
+4. **Painel de filtros PDA com rótulos visíveis**: Departamento, Setor, Nível, Fase, Termômetro e Empresa de registro com `<Label>` acima de cada campo (mobile e popover desktop).
+
+Validação (Chromium emulado, escritas bloqueadas; RPCs de leitura permitidos: is_super_admin, get_user_permissions, check_force_relogin, get_account_limits):
+- 320x740 e 393x500: sem overflow lateral (sw=iw); busca 288px/361px; controles PDA na mesma linha (y377, 44px); sheet com 6 rótulos visíveis; wheel real rolou o sheet (0→88 em 320, 0→292 em 393x500).
+- Desktop: inalterado (selects inline, tabela com rolagem local).
+Evidências: /tmp/browser/rhfin2/shots/.

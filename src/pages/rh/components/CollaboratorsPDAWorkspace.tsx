@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -111,43 +112,61 @@ export default function CollaboratorsPDAWorkspace({
       .join(" · ");
   }, [activePdaFilters, optionsFor]);
 
+  /** Campo de filtro com rótulo visível (o painel rola, então o contexto não se perde). */
+  const labeledField = (label: string, field: React.ReactNode) => (
+    <div className="space-y-1.5" key={label}>
+      <Label className="text-xs">{label}</Label>
+      {field}
+    </div>
+  );
+
   const pdaFilterFields = (
     <>
-      <Select value={filters.sector} onValueChange={v => setFilter("sector", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Setor"><SelectValue placeholder="Setor" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os setores</SelectItem>
-          {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.level} onValueChange={v => setFilter("level", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Nível"><SelectValue placeholder="Nível" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos os níveis</SelectItem>
-          {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.phase} onValueChange={v => setFilter("phase", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Fase"><SelectValue placeholder="Fase" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as fases</SelectItem>
-          {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.thermo} onValueChange={v => setFilter("thermo", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Termômetro"><SelectValue placeholder="Termômetro" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todos</SelectItem>
-          {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
-      <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
-        <SelectTrigger className="h-11 md:h-10" aria-label="Empresa de registro"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
-        <SelectContent>
-          <SelectItem value="all">Todas as empresas</SelectItem>
-          {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-        </SelectContent>
-      </Select>
+      {labeledField("Setor", (
+        <Select value={filters.sector} onValueChange={v => setFilter("sector", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Setor"><SelectValue placeholder="Setor" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os setores</SelectItem>
+            {optionsFor("pda_sectors").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Nível", (
+        <Select value={filters.level} onValueChange={v => setFilter("level", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Nível"><SelectValue placeholder="Nível" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos os níveis</SelectItem>
+            {optionsFor("pda_level").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Fase", (
+        <Select value={filters.phase} onValueChange={v => setFilter("phase", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Fase"><SelectValue placeholder="Fase" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as fases</SelectItem>
+            {optionsFor("pda_phase").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Termômetro", (
+        <Select value={filters.thermo} onValueChange={v => setFilter("thermo", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Termômetro"><SelectValue placeholder="Termômetro" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos</SelectItem>
+            {optionsFor("pda_thermometer").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
+      {labeledField("Empresa de registro", (
+        <Select value={filters.company} onValueChange={v => setFilter("company", v)}>
+          <SelectTrigger className="h-11 md:h-10" aria-label="Empresa de registro"><SelectValue placeholder="Empresa de registro" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todas as empresas</SelectItem>
+            {optionsFor("registration_company").map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      ))}
     </>
   );
 
@@ -159,9 +178,64 @@ export default function CollaboratorsPDAWorkspace({
     </Button>
   );
 
+  /** Painel inferior unificado (departamento da página + filtros PDA), com rótulos visíveis. */
+  const mobileFiltersSheet = (
+    <Sheet>
+      <SheetTrigger asChild>
+        <Button variant="outline" className="h-11 flex-1 md:hidden max-w-full" aria-label="Filtros dos colaboradores">
+          <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
+          <span className="truncate">
+            {[
+              deptFilter && deptFilter !== "all" ? deptFilter : null,
+              activePdaFilters.length > 0 ? pdaFilterSummary : null,
+            ].filter(Boolean).join(" · ") || "Filtros"}
+          </span>
+          {(activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)) > 0 && (
+            <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] shrink-0">
+              {activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)}
+            </Badge>
+          )}
+        </Button>
+      </SheetTrigger>
+      <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+        <SheetHeader className="text-left">
+          <SheetTitle>Filtros</SheetTitle>
+          <SheetDescription>Refina a lista, o quadro e o painel dos colaboradores. Status e vínculo não se aplicam ao PDA.</SheetDescription>
+        </SheetHeader>
+        <div className="mt-4 grid gap-3">
+          {onDeptFilterChange && (
+            <div className="space-y-1.5">
+              <Label className="text-xs">Departamento</Label>
+              <Select value={deptFilter || "all"} onValueChange={onDeptFilterChange}>
+                <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os departamentos</SelectItem>
+                  {(departments || []).map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {pdaFilterFields}
+        </div>
+        {(hasActivePdaFilters(filters) || (deptFilter && deptFilter !== "all")) && (
+          <Button
+            variant="ghost"
+            className="mt-3 h-11 w-full"
+            onClick={() => { clearPdaFilters(); onDeptFilterChange?.("all"); }}
+          >
+            <X className="h-4 w-4 mr-1" /> Limpar filtros
+          </Button>
+        )}
+        <SheetClose asChild>
+          <Button className="mt-4 h-11 w-full">Concluir</Button>
+        </SheetClose>
+      </SheetContent>
+    </Sheet>
+  );
+
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
+    <div className="space-y-3 md:space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-2 md:gap-3">
         <Tabs value={view} onValueChange={v => setView(v as View)} className="w-full md:w-auto">
           <TabsList className="w-full grid grid-cols-4 md:w-auto md:inline-flex h-auto">
             <TabsTrigger value="list" className="min-h-11 md:min-h-9">Lista</TabsTrigger>
@@ -200,55 +274,8 @@ export default function CollaboratorsPDAWorkspace({
               </PopoverContent>
             </Popover>
 
-            {/* Mobile: painel inferior unificado (departamento da página + filtros PDA) */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="outline" className="h-11 md:hidden max-w-full" aria-label="Filtros dos colaboradores">
-                  <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
-                  <span className="truncate">
-                    {[
-                      deptFilter && deptFilter !== "all" ? deptFilter : null,
-                      activePdaFilters.length > 0 ? pdaFilterSummary : null,
-                    ].filter(Boolean).join(" · ") || "Filtros"}
-                  </span>
-                  {(activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)) > 0 && (
-                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] shrink-0">
-                      {activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)}
-                    </Badge>
-                  )}
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
-                <SheetHeader className="text-left">
-                  <SheetTitle>Filtros</SheetTitle>
-                  <SheetDescription>Refina a lista, o quadro e o painel dos colaboradores. Status e vínculo não se aplicam ao PDA.</SheetDescription>
-                </SheetHeader>
-                <div className="mt-4 grid gap-3">
-                  {onDeptFilterChange && (
-                    <Select value={deptFilter || "all"} onValueChange={onDeptFilterChange}>
-                      <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todos os departamentos</SelectItem>
-                        {(departments || []).map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  )}
-                  {pdaFilterFields}
-                </div>
-                {(hasActivePdaFilters(filters) || (deptFilter && deptFilter !== "all")) && (
-                  <Button
-                    variant="ghost"
-                    className="mt-3 h-11 w-full"
-                    onClick={() => { clearPdaFilters(); onDeptFilterChange?.("all"); }}
-                  >
-                    <X className="h-4 w-4 mr-1" /> Limpar filtros
-                  </Button>
-                )}
-                <SheetClose asChild>
-                  <Button className="mt-4 h-11 w-full">Concluir</Button>
-                </SheetClose>
-              </SheetContent>
-            </Sheet>
+            {/* Mobile: na visão Lista o painel fica na mesma faixa de Opções/Colunas (slot da tabela) */}
+            {view !== "list" && mobileFiltersSheet}
           </>
         )}
       </div>
@@ -260,6 +287,7 @@ export default function CollaboratorsPDAWorkspace({
           canEdit={canEdit}
           onChanged={onChanged}
           hideFilters
+          mobileControls={mobileFiltersSheet}
         />
       )}
       {view === "board" && <PdaBoardView collaborators={filtered} />}
