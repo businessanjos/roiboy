@@ -196,7 +196,7 @@ export default function FinancialBudgetPage() {
     <div className="p-6 space-y-6">
       <Card>
         <CardHeader>
-          <div className="flex items-center justify-between">
+          <div className="flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-2">
               <Target className="h-5 w-5" />
               <div>
@@ -214,7 +214,7 @@ export default function FinancialBudgetPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Filters */}
-          <div className="flex gap-4 items-center">
+          <div className="flex flex-wrap gap-4 items-center">
             <div className="flex items-center gap-2">
               <Label>Ano:</Label>
               <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>

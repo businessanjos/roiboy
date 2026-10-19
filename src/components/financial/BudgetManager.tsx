@@ -220,7 +220,7 @@ export function BudgetManager({ open, onOpenChange }: BudgetManagerProps) {
         </DialogHeader>
 
         {/* Filters */}
-        <div className="flex gap-4 items-center">
+        <div className="flex flex-wrap gap-4 items-center">
           <div className="flex items-center gap-2">
             <Label>Ano:</Label>
             <Select value={selectedYear.toString()} onValueChange={(v) => setSelectedYear(parseInt(v))}>
