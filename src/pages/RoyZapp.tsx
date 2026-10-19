@@ -56,7 +56,7 @@ import {
 } from "lucide-react";
 import { useReloadPermissions } from "@/hooks/useReloadPermissions";
 import { Badge } from "@/components/ui/badge";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import {
@@ -111,6 +111,7 @@ export default function RoyZapp() {
     currentUser?.role === "super_admin" ||
     currentUser?.is_also_admin === true;
   const navigate = useNavigate();
+  const navigationLocation = useLocation();
   const { reload: reloadPermissions, reloading: reloadingPermissions } = useReloadPermissions();
   const [searchParams, setSearchParams] = useSearchParams();
   const replaceSearchParams = useCallback((update: (params: URLSearchParams) => void) => {
@@ -584,6 +585,20 @@ export default function RoyZapp() {
   // Quando o usuário fecha a conversa manualmente, não restaurar de novo.
   const suppressRestoreRef = useRef(false);
 
+  // Mobile selections get a history entry without replaying deep-link actions.
+  // Back returns to the list; forward restores the selected conversation.
+  useEffect(() => {
+    if (!isNarrowScreen) return;
+    const selectionId = navigationLocation.state?.zappSelection;
+    if (typeof selectionId === "string") {
+      const selection = assignments.find((a) => a.id === selectionId);
+      if (selection) setSelectedConversation(selection);
+    } else if (navigationLocation.state?.zappList) {
+      suppressRestoreRef.current = true;
+      setSelectedConversation(null);
+    }
+  }, [navigationLocation.key, navigationLocation.state, assignments, isNarrowScreen]);
+
   const closeConversation = useCallback(() => {
     suppressRestoreRef.current = true;
     lastSelectedAssignmentIdRef.current = null;
@@ -593,7 +608,8 @@ export default function RoyZapp() {
       // ignore
     }
     setSelectedConversation(null);
-  }, [selectionStorageKey]);
+    if (isNarrowScreen && navigationLocation.state?.zappSelection) navigate(-1);
+  }, [selectionStorageKey, isNarrowScreen, navigationLocation.state, navigate]);
 
   useEffect(() => {
     if (selectedConversation?.id) {
@@ -1819,7 +1835,11 @@ export default function RoyZapp() {
           importLimit={importLimit}
           importingConversations={importingConversations}
           onSelectConversation={(a) => {
-            
+            if (isNarrowScreen) {
+              const url = navigationLocation.pathname + navigationLocation.search;
+              navigate(url, { replace: true, state: { ...navigationLocation.state, zappList: true, zappSelection: undefined } });
+              navigate(url, { state: { ...navigationLocation.state, zappList: false, zappSelection: a.id } });
+            }
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
             if (zappConvId && (a.zapp_conversation?.unread_count || 0) > 0) {
