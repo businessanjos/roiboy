@@ -16,7 +16,7 @@ import PdaOptionsDialog from "./PdaOptionsDialog";
 import { ManagerCell, MoneyCell, MultiOptionCell, OptionCell, YesNoCell } from "./PdaEditableCell";
 import {
   computeSynergyPct, formatDateBR, formatMoney, formatTenure, mentalModelLabel,
-  normalizeMentalModel, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
+  normalizeMentalModel, optionColor, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
 } from "@/lib/rh/pda";
 
 interface RenderCtx {
@@ -158,6 +158,7 @@ export default function CollaboratorsPDATable({
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, Record<string, any>>>({});
   const [showTerminated, setShowTerminated] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
