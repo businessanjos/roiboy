@@ -306,7 +306,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           <Select value={filterAgentId} onValueChange={setFilterAgentId}>
             <SelectTrigger
               aria-label="Exibir conversas de"
-              className="h-11 w-full shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
+              className="h-11 lg:h-9 w-full lg:w-auto lg:max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
               title="Exibir conversas de"
             >
               <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
