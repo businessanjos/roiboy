@@ -183,17 +183,17 @@ export function MarketingEventSheet({ event, open, onOpenChange, onEdit, onDelet
           {/* Visibility by Sector */}
           <Collapsible open={visibilityOpen} onOpenChange={setVisibilityOpen}>
             <CollapsibleTrigger asChild>
-              <Button variant="outline" className="w-full justify-between">
-                <div className="flex items-center gap-2">
-                  <Eye className="h-4 w-4" />
-                  <span>Visibilidade em outros setores</span>
+              <Button variant="outline" className="w-full justify-between h-auto min-h-10 whitespace-normal text-left">
+                <div className="flex min-w-0 flex-1 items-center gap-2">
+                  <Eye className="h-4 w-4 shrink-0" />
+                  <span className="min-w-0 break-words">Visibilidade em outros setores</span>
                   {selectedCount > 0 && (
-                    <Badge variant="secondary" className="ml-1">
+                    <Badge variant="secondary" className="ml-1 shrink-0">
                       {selectedCount}
                     </Badge>
                   )}
                 </div>
-                <ChevronDown className={cn("h-4 w-4 transition-transform", 
+                <ChevronDown className={cn("h-4 w-4 shrink-0 transition-transform", 
                   visibilityOpen && "rotate-180")} />
               </Button>
             </CollapsibleTrigger>
