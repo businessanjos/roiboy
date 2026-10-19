@@ -109,8 +109,8 @@ function Kpi({ icon: Icon, label, value, hint, tone = "default" }: KpiProps) {
             <Icon className={`h-4 w-4 ${toneMap.icon}`} strokeWidth={1.75} />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">{label}</p>
-            <p className={`mt-0.5 text-2xl font-semibold tabular-nums tracking-tight ${toneMap.text}`}>{value}</p>
+            <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground break-words">{label}</p>
+            <p className={`mt-0.5 whitespace-nowrap text-2xl font-semibold tabular-nums tracking-tight ${toneMap.text}`}>{value}</p>
             {hint && <p className="mt-0.5 text-xs text-muted-foreground">{hint}</p>}
           </div>
         </div>
@@ -350,7 +350,7 @@ export default function RHDashboard() {
           {/* Headcount & composição */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Headcount & Composição</h2>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
               <Kpi icon={Users} label="Pessoas ativas" value={metrics.totalPeople} hint="CLT + PJ" tone="primary" />
               <Kpi icon={Building} label="CLT ativos" value={metrics.clt} />
               <Kpi icon={ShieldCheck} label="PJ cargo de confiança" value={metrics.pjDirectors} hint="Diretoria / liderança PJ" />
@@ -428,7 +428,7 @@ export default function RHDashboard() {
           {/* Movimentação & Turnover */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Movimentação & Turnover</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <Kpi icon={UserPlus} label="Admissões no mês" value={metrics.hiresMonth} hint={`${metrics.hiresYear} no ano`} tone="success" />
               <Kpi icon={UserMinus} label="Desligamentos no mês" value={metrics.termsMonth} hint={`${metrics.termsYear} no ano`} tone="danger" />
               <Kpi icon={TrendingDown} label="Turnover (12m)" value={`${metrics.turnover.toFixed(1)}%`} tone="warning" />
@@ -456,7 +456,7 @@ export default function RHDashboard() {
           {/* Recrutamento */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Recrutamento & Vagas</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <Kpi icon={Briefcase} label="Vagas abertas" value={metrics.openJobsCount} hint={`${metrics.totalOpenings} posição(ões)`} tone="primary" />
               <Kpi icon={Users} label="Candidatos ativos" value={metrics.activeAppsCount} />
               <Kpi icon={Sparkles} label="Admissões em andamento" value={metrics.admissionsInProgress} tone="success" />
@@ -484,7 +484,7 @@ export default function RHDashboard() {
           {/* Folha, custos e férias */}
           <section className="space-y-3">
             <h2 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">Folha, Custos & Férias</h2>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
               <Kpi icon={DollarSign} label="Custo total (folha)" value={fmtBRL(metrics.totalCost)} hint="Colaboradores ativos" tone="primary" />
               <Kpi icon={DollarSign} label="Salário base médio" value={fmtBRL(metrics.avgSalary)} />
               <Kpi icon={Palmtree} label="Em férias agora" value={metrics.onVacationNow} hint={`${metrics.upcomingVacations} nos próx. 30 dias`} tone="success" />
