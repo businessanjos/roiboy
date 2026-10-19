@@ -113,7 +113,7 @@ export default function FinancialProfitabilityPage() {
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Filters */}
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <Select value={period} onValueChange={(v) => setPeriod(v as any)}>
               <SelectTrigger className="w-[150px]">
                 <SelectValue />
