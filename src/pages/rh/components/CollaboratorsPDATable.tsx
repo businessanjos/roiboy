@@ -337,7 +337,7 @@ export default function CollaboratorsPDATable({
           {c.pda_dominant_profile && (
             <PdaBadge label={c.pda_dominant_profile} color={optionColor(optionsFor("pda_profile"), c.pda_dominant_profile)} />
           )}
-          {pct != null && <PdaBadge label={`Sinergia ${pct}%`} color={optionColor(optionsFor("pda_synergy"), "SIM")} />}
+          {pct != null && <PdaBadge label={`Sinergia ${pct}%`} color={PDA_COLORS.azul} />}
           <PdaBadge label={thermo} color={optionColor(optionsFor("pda_thermometer"), thermo)} />
         </div>
         <button
