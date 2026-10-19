@@ -14,7 +14,8 @@ export function pickActiveNavIndex(targets: string[], pathname: string, search: 
     const params = new URLSearchParams(query);
     let queryMatches = 0;
     for (const [k, v] of params.entries()) {
-      if (current.get(k) !== v) return; // query exigida e diferente → não é este
+      const value = current.get(k);
+      if (value !== v && !(k === "view" && v === "inbox" && value === null)) return;
       queryMatches++;
     }
     // Caminho mais específico vence; empate decidido por mais parâmetros casados.

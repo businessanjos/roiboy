@@ -15,7 +15,11 @@ import {
   DrawerTrigger,
 } from "@/components/ui/drawer";
 import { RoyLogo } from "@/components/ui/roy-logo";
-import { SidebarContent } from "./Sidebar";
+import { MobileSectorMenu } from "./MobileSectorMenu";
+import { Button } from "@/components/ui/button";
+import { useRoyZappViewAccess } from "@/hooks/useRoyZappViewAccess";
+import { useSectorAccess } from "@/hooks/useSectorAccess";
+import { useSidebarZappNavigation } from "@/hooks/useSidebarZappNavigation";
 import { resolveActiveTarget } from "@/lib/navigation/activeNav";
 
 /** Rotas onde a barra inferior nunca aparece. */
@@ -49,6 +53,10 @@ export function MobileTabBar() {
   const [moreOpen, setMoreOpen] = useState(false);
   const closeRef = useRef<HTMLButtonElement>(null);
   const visible = useMobileTabBarVisible();
+  const { canOpenZappSector } = useRoyZappViewAccess();
+  const { hasSectorAccess } = useSectorAccess();
+  const { openZappForSector, loading: zappLoading, PinDialog, InstanceSelectorDialog } = useSidebarZappNavigation();
+  const canOpenCurrentZapp = !!currentSector && canOpenZappSector(currentSector.id, hasSectorAccess(currentSector.id));
 
   // Na barra inferior priorizamos "Insights" no lugar do Dashboard (o Dashboard
   // continua acessível em "Mais"). No setor Vendas, "Gestão" vira atalho ao RoyZapp.
@@ -58,11 +66,14 @@ export function MobileTabBar() {
     let list = [...navItems];
     if (insights) {
       const dashIndex = list.findIndex((i) => isDashboard(i.to));
-      list = list.filter((i) => !isDashboard(i.to) && i.to.split("?")[0] !== "/insights");
-      list.splice(dashIndex >= 0 ? dashIndex : list.length, 0, insights);
+      if (dashIndex >= 0) {
+        list = list.filter((i) => i.to.split("?")[0] !== "/insights");
+        list.splice(dashIndex, 1, insights);
+      }
     }
-    if (currentSector?.id === "vendas") {
-      list = list.filter((i) => i.to.split("?")[0] !== "/sales-team");
+    if (currentSector?.id === "vendas" && canOpenCurrentZapp) {
+      const managementIndex = list.findIndex((i) => i.to.split("?")[0] === "/sales-team");
+      if (managementIndex >= 0) list.splice(managementIndex, 1);
       list.unshift({
         to: buildRoyZappUrl({ sector: "vendas", extra: { view: "inbox" } }),
         icon: MessageSquare,
@@ -70,19 +81,20 @@ export function MobileTabBar() {
       });
     }
     return list.slice(0, 4);
-  }, [navItems, currentSector?.id]);
+  }, [navItems, currentSector?.id, canOpenCurrentZapp]);
 
   // Ativo decidido sobre a lista completa do setor (inclui filhos sem atalho,
   // ex.: /clients/medicos) e só então mapeado para um atalho ou "Mais".
-  const activeIndex = useMemo(() => {
+  const activeTarget = useMemo(() => {
     const all = Array.from(new Set([
       ...primary.map((i) => i.to),
       ...navItems.map((i) => i.to),
       ...(currentSector?.navItems ?? []).map((i) => i.to),
     ]));
     const target = resolveActiveTarget(all, location.pathname, location.search);
-    return target ? primary.findIndex((i) => i.to === target) : -1;
+    return target;
   }, [primary, navItems, currentSector?.navItems, location.pathname, location.search]);
+  const activeIndex = primary.findIndex((i) => i.to === activeTarget);
 
   // Fecha o menu ao mudar de rota e ao crescer para desktop (sem overlay preso).
   useEffect(() => { setMoreOpen(false); }, [location.pathname, location.search]);
@@ -113,8 +125,10 @@ export function MobileTabBar() {
               <Link
                 to={item.to}
                 aria-current={active ? "page" : undefined}
+                title={item.label}
+                onClick={item.to.startsWith("/roy-zapp") ? (event) => { event.preventDefault(); void openZappForSector(currentSector.id); } : undefined}
                 className={cn(
-                  "touch-press flex h-[52px] min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "touch-press flex h-[60px] min-h-[44px] flex-col items-center justify-center gap-0.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   active ? "text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -126,7 +140,7 @@ export function MobileTabBar() {
                 >
                   <item.icon className="h-[22px] w-[22px]" strokeWidth={active ? 2.2 : 1.7} aria-hidden />
                 </span>
-                <span className={cn("max-w-full truncate px-0.5 text-[10px] leading-none", active ? "font-semibold" : "font-medium")}>
+                <span className={cn("line-clamp-2 max-w-full break-words px-0.5 text-center text-[10px] leading-3", active ? "font-semibold" : "font-medium")}>
                   {item.label}
                 </span>
               </Link>
@@ -137,13 +151,13 @@ export function MobileTabBar() {
         <li className="min-w-0">
           <Drawer open={moreOpen} onOpenChange={setMoreOpen} shouldScaleBackground={false}>
             <DrawerTrigger asChild>
-              <button
+              <Button variant="ghost"
                 type="button"
                 aria-label="Mais opções do setor"
                 aria-haspopup="dialog"
                 aria-expanded={moreOpen}
                 className={cn(
-                  "touch-press flex h-[52px] w-full flex-col items-center justify-center gap-0.5 rounded-xl focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "touch-press flex h-[60px] w-full flex-col items-center justify-center gap-0.5 rounded-xl px-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring",
                   moreActive ? "text-foreground" : "text-muted-foreground",
                 )}
               >
@@ -151,40 +165,38 @@ export function MobileTabBar() {
                   <MoreHorizontal className="h-[22px] w-[22px]" aria-hidden />
                 </span>
                 <span className={cn("text-[10px] leading-none", moreActive ? "font-semibold" : "font-medium")}>Mais</span>
-              </button>
+              </Button>
             </DrawerTrigger>
             <DrawerContent
               onOpenAutoFocus={(e) => { e.preventDefault(); closeRef.current?.focus(); }}
-              className="max-h-[88dvh] rounded-t-[24px] border-border/60 bg-background lg:hidden">
+              className="h-[min(88dvh,var(--app-vh,88dvh))] max-h-[var(--app-vh,88dvh)] rounded-t-[24px] border-border/60 bg-background lg:hidden">
               <div className="flex items-center gap-2.5 px-5 pb-2 pt-3">
                 <RoyLogo size="md" />
                 <div className="min-w-0">
                   <DrawerTitle className="truncate text-[17px] font-semibold tracking-tight">
                     {currentSector.name}
                   </DrawerTitle>
-                  <DrawerDescription className="text-[13px]">Todas as telas deste setor</DrawerDescription>
+                  <DrawerDescription className="text-[13px]">{navItems.find((item) => item.to === activeTarget)?.label || "Menu do setor"}</DrawerDescription>
                 </div>
                 <DrawerClose asChild>
-                  <button
+                  <Button variant="ghost" size="icon"
                     ref={closeRef}
                     type="button"
                     aria-label="Fechar menu"
                     className="touch-press ml-auto flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground hover:text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                   >
                     <X className="h-5 w-5" aria-hidden />
-                  </button>
+                  </Button>
                 </DrawerClose>
               </div>
-              <div
-                className="min-h-0 flex-1 overflow-y-auto overscroll-contain pb-[calc(1rem+env(safe-area-inset-bottom))]"
-                data-vaul-no-drag
-              >
-                <SidebarContent collapsed={false} onNavigate={() => setMoreOpen(false)} />
-              </div>
+              <MobileSectorMenu items={navItems} activeTarget={activeTarget} onNavigate={() => setMoreOpen(false)}
+                onZapp={canOpenCurrentZapp ? () => { setMoreOpen(false); void openZappForSector(currentSector.id); } : undefined} zappLoading={zappLoading} />
             </DrawerContent>
           </Drawer>
         </li>
       </ul>
+      {PinDialog}
+      {InstanceSelectorDialog}
     </nav>
   );
 }

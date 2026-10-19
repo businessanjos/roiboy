@@ -1,4 +1,4 @@
-import { pickActiveNavIndex } from "@/lib/navigation/activeNav";
+import { hasAppHistory, mobileRouteContext } from "@/lib/navigation/mobileNavigation";
 import { useMemo } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bell, ChevronLeft, Search } from "lucide-react";
@@ -11,15 +11,7 @@ import { usePendingTasksCount } from "@/hooks/usePendingTasksCount";
 import { RoyLogo } from "@/components/ui/roy-logo";
 import { cn } from "@/lib/utils";
 import { openGlobalSearch } from "@/components/ui/global-search";
-
-/** Títulos de telas globais (fora da navegação do setor). */
-const GLOBAL_TITLES: Array<[string, string]> = [
-  ["/settings", "Configurações"],
-  ["/notifications", "Notificações"],
-  ["/tasks", "Tarefas"],
-  ["/setores", "Áreas"],
-  ["/reuniao-lideres", "Reunião de Líderes"],
-];
+import { Button } from "@/components/ui/button";
 
 const iconBtn =
   "touch-press relative inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-foreground/80 hover:bg-muted/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring";
@@ -40,27 +32,17 @@ export function MobileAppHeader() {
 
   const totalBadgeCount = unreadCount + pendingCount;
 
-  const { title, parent } = useMemo(() => {
-    const path = location.pathname;
-    const idx = pickActiveNavIndex(navItems.map((i) => i.to), path, location.search);
-    const match = idx === -1 ? undefined : navItems[idx];
-    const global = GLOBAL_TITLES.find(([p]) => path === p || path.startsWith(p + "/"));
-    if (match) {
-      const base = match.to.split("?")[0];
-      // Rota profunda (ex.: /clients/123): voltar leva à lista do item.
-      const deep = path !== base;
-      return { title: match.label, parent: deep ? { to: match.to, label: match.label } : null };
-    }
-    if (global) return { title: global[1], parent: null };
-    return { title: currentSector?.name || "ROY", parent: null };
-  }, [navItems, currentSector, location.pathname, location.search]);
+  const { title, parent } = useMemo(() => mobileRouteContext(navItems, location.pathname, location.search),
+    [navItems, location.pathname, location.search]);
 
   const getInitials = (name: string) =>
     name.split(" ").map((n) => n[0]).join("").toUpperCase().slice(0, 2);
 
-  if (location.pathname === "/notifications") return null;
-
   const handleBack = () => {
+    if (hasAppHistory(window.history.state?.idx)) {
+      navigate(-1);
+      return;
+    }
     if (parent) {
       navigate(parent.to);
       return;
@@ -71,7 +53,7 @@ export function MobileAppHeader() {
 
   // Em /setores (mesmo com setor salvo) a tela já é "Áreas": sem voltar nem subtítulo.
   const isSectors = location.pathname === "/setores";
-  const showBack = !isSectors && (!!currentSector || !!parent);
+  const showBack = !isSectors;
   const subtitle = isSectors ? undefined : parent ? parent.label : currentSector?.name;
 
   return (
@@ -81,14 +63,14 @@ export function MobileAppHeader() {
     >
       <div className="flex h-14 items-center gap-1 px-1.5">
         {showBack ? (
-          <button
+          <Button variant="ghost" size="icon"
             type="button"
             className={cn(iconBtn, "text-foreground")}
             onClick={handleBack}
-            aria-label={parent ? `Voltar para ${parent.label}` : "Voltar para as áreas"}
+            aria-label="Voltar"
           >
             <ChevronLeft className="h-6 w-6" aria-hidden />
-          </button>
+          </Button>
         ) : (
           <span className="flex h-11 w-11 items-center justify-center">
             <RoyLogo size="md" />
@@ -96,7 +78,7 @@ export function MobileAppHeader() {
         )}
 
         <div className="min-w-0 flex-1 px-1">
-          <h1 className="truncate text-[17px] font-semibold leading-tight tracking-tight text-foreground">
+          <h1 className="line-clamp-2 break-words text-[15px] font-semibold leading-tight tracking-normal text-foreground">
             {isSectors ? "Áreas" : title}
           </h1>
           {subtitle && subtitle !== title && (
@@ -104,11 +86,11 @@ export function MobileAppHeader() {
           )}
         </div>
 
-        <button type="button" className={iconBtn} onClick={openGlobalSearch} aria-label="Buscar">
+        <Button variant="ghost" size="icon" type="button" className={iconBtn} onClick={openGlobalSearch} aria-label="Buscar">
           <Search className="h-5 w-5" aria-hidden />
-        </button>
+        </Button>
 
-        <button
+        <Button variant="ghost" size="icon"
           type="button"
           className={iconBtn}
           onClick={() => navigate("/notifications")}
@@ -128,9 +110,9 @@ export function MobileAppHeader() {
               {totalBadgeCount > 9 ? "9+" : totalBadgeCount}
             </span>
           )}
-        </button>
+        </Button>
 
-        <button
+        <Button variant="ghost" size="icon"
           type="button"
           onClick={() => navigate("/settings")}
           aria-label="Abrir configurações e perfil"
@@ -142,7 +124,7 @@ export function MobileAppHeader() {
               {currentUser ? getInitials(currentUser.name) : "?"}
             </AvatarFallback>
           </Avatar>
-        </button>
+        </Button>
       </div>
     </header>
   );
