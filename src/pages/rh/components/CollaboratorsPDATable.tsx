@@ -423,17 +423,17 @@ export default function CollaboratorsPDATable({
             </Select>
           </>
         )}
-        <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
+        <div className="grid w-full grid-cols-3 items-center gap-1.5 md:ml-auto md:flex md:w-auto md:gap-3">
           {mobileControls}
           {canEdit && (
-            <Button variant="outline" className="h-11 flex-1 px-3 text-xs md:h-10 md:flex-none md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
-              <SlidersHorizontal className="h-4 w-4 mr-1.5 md:mr-2" /> Opções
+            <Button variant="outline" className="h-11 min-w-0 gap-1.5 px-2 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4 shrink-0" /> Opções
             </Button>
           )}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="h-11 flex-1 px-3 text-xs md:h-10 md:flex-none md:px-4 md:text-sm">
-                <Columns3 className="h-4 w-4 mr-1.5 md:mr-2" /> Colunas
+              <Button variant="outline" className="h-11 min-w-0 gap-1.5 px-2 text-xs md:h-10 md:gap-2 md:px-4 md:text-sm">
+                <Columns3 className="h-4 w-4 shrink-0" /> Colunas
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-64 p-2 max-h-[360px] overflow-y-auto">
