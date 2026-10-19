@@ -71,6 +71,13 @@
       "when": 1792377840447,
       "tag": "0009_tighten_rls_and_storage_ownership",
       "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1792437165850,
+      "tag": "0010_zapp_productivity_detail_rpc",
+      "breakpoints": true
     }
   ]
 }

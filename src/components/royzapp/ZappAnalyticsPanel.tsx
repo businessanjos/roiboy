@@ -61,6 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
+import { ZappAlertDetailDialog, type ZappAlertDetailKind } from "./ZappAlertDetailDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -180,6 +181,7 @@ function Kpi({
   hint,
   tone,
   onClick,
+  cta,
 }: {
   icon: typeof MessageSquare;
   label: string;
@@ -187,6 +189,7 @@ function Kpi({
   hint?: string;
   tone?: "danger" | "warning" | "success";
   onClick?: () => void;
+  cta?: string;
 }) {
   const toneClass =
     tone === "danger"
@@ -216,7 +219,7 @@ function Kpi({
             <p className="text-[11px] uppercase tracking-wide text-zapp-text-muted font-medium">{label}</p>
             <p className={cn("text-2xl font-semibold leading-tight", toneClass)}>{value}</p>
             {hint && <p className="text-[11px] text-zapp-text-muted mt-0.5">{hint}</p>}
-            {onClick && <p className="text-[11px] text-zapp-accent mt-1">Clique para ver quem atendeu quem</p>}
+            {onClick && <p className="text-[11px] text-zapp-accent mt-1">{cta ?? "Clique para ver quem atendeu quem"}</p>}
           </div>
         </div>
       </CardContent>
@@ -257,6 +260,7 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
   const [aiSummary, setAiSummary] = useState<string | null>(null);
   const [contactsDialog, setContactsDialog] = useState<"inbound" | "outbound" | null>(null);
   const [newConvDialog, setNewConvDialog] = useState<NewConvFilter | null>(null);
+  const [alertDetail, setAlertDetail] = useState<ZappAlertDetailKind | null>(null);
   const [aiLoading, setAiLoading] = useState(false);
 
 
@@ -587,13 +591,15 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 hint={`p90 ${fmtDuration(data.p90_response_seconds)} · média ${fmtDuration(data.avg_response_seconds)} (distorcida por respostas no dia seguinte) · ${(data.responses_count ?? 0).toLocaleString("pt-BR")} respostas medidas`}
               />
               <Kpi icon={Timer} label="Respostas em até 5 min" value={data.responses_under_5min_pct === null ? "—" : `${data.responses_under_5min_pct}%`} tone={(data.responses_under_5min_pct ?? 0) < 50 ? "warning" : "success"} />
-              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} />
+              <Kpi icon={AlertTriangle} label="Sem resposta" value={data.unanswered_conversations.toLocaleString("pt-BR")} hint={`última mensagem é do cliente · ${data.unanswered_over_24h} há mais de 24h`} tone={data.unanswered_over_24h > 0 ? "danger" : undefined} onClick={() => setAlertDetail("unanswered")} cta="Clique para ver as conversas" />
               <Kpi
                 icon={UserX}
                 label="Nunca escreveram"
                 value={data.clients_never_messaged.toLocaleString("pt-BR")}
                 hint={`de ${(data.clients_active_base ?? 0).toLocaleString("pt-BR")} clientes com contrato ativo que têm conversa nesta área · ${data.silent_conversations} conversas só com envio nosso no período`}
                 tone={data.clients_never_messaged > 0 ? "warning" : undefined}
+                onClick={() => setAlertDetail("never_messaged")}
+                cta="Clique para ver os clientes"
               />
               <Kpi
                 icon={Users}
@@ -601,6 +607,8 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
                 value={(data.clients_no_conversation ?? 0).toLocaleString("pt-BR")}
                 hint="clientes com contrato ativo sem nenhuma conversa nesta área — cobertura, não produtividade"
                 tone={(data.clients_no_conversation ?? 0) > 0 ? "warning" : undefined}
+                onClick={() => setAlertDetail("no_conversation")}
+                cta="Clique para ver os clientes"
               />
             </div>
 
@@ -883,6 +891,21 @@ export function ZappAnalyticsPanel({ sectorId, integrationId }: { sectorId?: str
             open={!!contactsDialog}
             onOpenChange={(o) => !o && setContactsDialog(null)}
             direction={contactsDialog}
+            sectorId={effectiveSector}
+            integrationId={effectiveIntegration}
+            includeGroups={includeGroups}
+            agentUserId={effectiveAgent}
+            from={range.from}
+            to={range.to}
+            periodLabel={`${format(range.from, "dd/MM", { locale: ptBR })} a ${format(range.to, "dd/MM", { locale: ptBR })}${selectedAgentName ? ` · ${selectedAgentName}` : ""}`}
+          />
+        )}
+
+        {alertDetail && (
+          <ZappAlertDetailDialog
+            open={!!alertDetail}
+            onOpenChange={(o) => !o && setAlertDetail(null)}
+            kind={alertDetail}
             sectorId={effectiveSector}
             integrationId={effectiveIntegration}
             includeGroups={includeGroups}

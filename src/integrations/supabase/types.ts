@@ -30464,6 +30464,18 @@ export type Database = {
         }
         Returns: Json
       }
+      zapp_productivity_detail: {
+        Args: {
+          _agent_user_id?: string
+          _from: string
+          _include_groups?: boolean
+          _integration_id?: string
+          _kind: string
+          _sector_id: string
+          _to: string
+        }
+        Returns: Json
+      }
       zapp_productivity_metrics: {
         Args: {
           _agent_user_id?: string
