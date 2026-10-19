@@ -154,7 +154,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
 
       {/* Header */}
-      <div className="shrink-0 bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
+      <div className="shrink-0 bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
@@ -238,7 +238,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         {conversationId && (
           <ZappConversationIdBadge conversationId={conversationId} className="mx-1 hidden shrink-0 sm:inline-flex" />
         )}
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
           {!canClaim ? (

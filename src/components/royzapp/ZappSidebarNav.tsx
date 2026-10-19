@@ -125,17 +125,17 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
                 aria-current={isActive ? "page" : undefined}
                 aria-label={label}
                 className={cn(
-                  "relative shrink-0 rounded-full h-10 transition-all",
+                  "relative shrink-0 rounded-full h-11 sm:h-10 transition-all",
                   isActive
                     ? "w-auto px-3 gap-2 bg-zapp-accent/15 text-zapp-accent ring-1 ring-zapp-accent/40 shadow-[0_0_0_2px_hsl(var(--zapp-bg))] font-medium hover:bg-zapp-accent/20"
-                    : "w-10 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text"
+                    : "w-11 sm:w-10 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text"
                 )}
                 onClick={() => setActiveView(view)}
               >
                 <Icon className="h-5 w-5 shrink-0" />
                 {isActive && (
                   <>
-                    <span className="hidden md:inline text-xs whitespace-nowrap">{label}</span>
+                    <span className="text-xs whitespace-nowrap">{label}</span>
                     <span className="absolute -bottom-2 left-1/2 -translate-x-1/2 h-0.5 w-6 rounded-full bg-zapp-accent" />
                   </>
                 )}
