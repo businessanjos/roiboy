@@ -1,3 +1,4 @@
+import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -897,6 +898,7 @@ export default function RoyZapp() {
         });
         return;
       }
+      pushMobileSelectionHistory(assignment.id);
       setSelectedConversation(assignment);
       setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
       return;
@@ -904,7 +906,7 @@ export default function RoyZapp() {
     // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
     replaceSearchParams((next) => next.set("conversation", conversationId));
     setUrlParamsProcessed(false);
-  }, [assignments, currentAgent?.id, agents, replaceSearchParams]);
+  }, [assignments, currentAgent?.id, agents, replaceSearchParams, pushMobileSelectionHistory]);
 
   // Notification hook
   const { 
