@@ -25,8 +25,11 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import {
-  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown, UserX, Loader2,
+  Search, Plus, UsersRound, ArrowLeft, Eye, Download, Pencil, X, FileSpreadsheet, FileText, ChevronDown, UserX, Loader2, MoreHorizontal, SlidersHorizontal,
 } from "lucide-react";
+import {
+  Sheet, SheetClose, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -452,12 +455,40 @@ export default function HRCollaborators() {
           <UsersRound className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
           <p className="text-sm text-muted-foreground">
             {collaborators.length} colaborador{collaborators.length !== 1 ? "es" : ""} cadastrado{collaborators.length !== 1 ? "s" : ""}
           </p>
         </div>
-        <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+        {/* Mobile: Novo em destaque + menu de mais ações */}
+        <div className="flex w-full items-center gap-2 sm:hidden">
+          <Button onClick={() => setDialogOpen(true)} className="flex-1">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Colaborador
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Mais ações">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <div className="px-2 py-1.5 text-[11px] text-muted-foreground border-b mb-1">
+                Colaboradores com status <span className="font-medium">Desligado</span> são sempre excluídos da folha, mesmo que apareçam no filtro atual.
+              </div>
+              <DropdownMenuItem disabled={filtered.length === 0} onClick={() => exportPayrollXLSX(filtered)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar folha (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={filtered.length === 0} onClick={() => exportPayrollCSV(filtered)}>
+                <FileText className="h-4 w-4 mr-2" /> Exportar folha (.csv)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenImport}>
+                <Download className="h-4 w-4 mr-2" /> Importar da Equipe
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+        <div className="hidden w-full flex-wrap items-center gap-2 sm:flex sm:w-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" disabled={filtered.length === 0}>
@@ -490,7 +521,7 @@ export default function HRCollaborators() {
 
       {/* View switch */}
       <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
-        <TabsList>
+        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex">
           <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
           <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
           <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
@@ -498,41 +529,119 @@ export default function HRCollaborators() {
       </Tabs>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
-        <div className="relative flex-1 min-w-[220px]">
+      <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
+        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input placeholder="Buscar por nome, email, CPF, cargo, unidade..." className="pl-9" value={search} onChange={e => setSearch(e.target.value)} />
+          <Input
+            aria-label="Buscar colaborador"
+            placeholder="Buscar por nome, email, CPF, cargo..."
+            className="pl-9"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(STATUS_MAP).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v.label}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={deptFilter} onValueChange={setDeptFilter}>
-          <SelectTrigger className="w-[160px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[130px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Todos</SelectItem>
-            {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
-              <SelectItem key={k} value={k}>{v}</SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+
+        {/* Mobile: filtros identificados em painel inferior */}
+        <Sheet>
+          <SheetTrigger asChild>
+            <Button variant="outline" className="h-10 sm:hidden" aria-label="Abrir filtros">
+              <SlidersHorizontal className="h-4 w-4 mr-1.5" />
+              Filtros
+              {((view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)) > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
+                  {(view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)}
+                </Badge>
+              )}
+            </Button>
+          </SheetTrigger>
+          <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+            <SheetHeader className="text-left">
+              <SheetTitle>Filtros</SheetTitle>
+              <SheetDescription>
+                {view === "pda"
+                  ? "Na visão PDA valem a busca e o departamento; status e vínculo não se aplicam."
+                  : "Refina a lista de colaboradores exibida."}
+              </SheetDescription>
+            </SheetHeader>
+            <div className="mt-4 grid gap-3">
+              {view !== "pda" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Status</Label>
+                  <Select value={statusFilter} onValueChange={setStatusFilter}>
+                    <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {Object.entries(STATUS_MAP).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Departamento</Label>
+                <Select value={deptFilter} onValueChange={setDeptFilter}>
+                  <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {view !== "pda" && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs">Vínculo</Label>
+                  <Select value={typeFilter} onValueChange={setTypeFilter}>
+                    <SelectTrigger className="h-11" aria-label="Vínculo"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
+                        <SelectItem key={k} value={k}>{v}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+            </div>
+            <SheetClose asChild>
+              <Button className="mt-4 h-11 w-full">Concluir</Button>
+            </SheetClose>
+          </SheetContent>
+        </Sheet>
+
+        {/* Desktop: selects inline */}
+        <div className="hidden sm:flex flex-wrap gap-3 items-center">
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[140px]"><SelectValue placeholder="Status" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(STATUS_MAP).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v.label}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={deptFilter} onValueChange={setDeptFilter}>
+            <SelectTrigger className="w-[160px]"><SelectValue placeholder="Departamento" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {departments.map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={typeFilter} onValueChange={setTypeFilter}>
+            <SelectTrigger className="w-[130px]"><SelectValue placeholder="Vínculo" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos</SelectItem>
+              {Object.entries(EMPLOYMENT_TYPES).map(([k, v]) => (
+                <SelectItem key={k} value={k}>{v}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bulk action bar */}
       {selectedRows.size > 0 && (
-        <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/40 bg-primary/5 px-4 py-2.5">
+        <div className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 rounded-lg border border-primary/40 bg-primary/5 px-3 sm:px-4 py-2.5">
           <div className="text-sm">
             <span className="font-medium">{selectedRows.size}</span> colaborador{selectedRows.size !== 1 ? "es" : ""} selecionado{selectedRows.size !== 1 ? "s" : ""}
           </div>
@@ -558,7 +667,47 @@ export default function HRCollaborators() {
           </div>
         ) : (
           <>
-          <div className="border rounded-lg overflow-x-auto">
+          {/* Mobile: cartões */}
+          <div className="space-y-2 md:hidden">
+            {pgProviders.items.map(p => {
+              const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
+              return (
+                <div key={p.id} className="rounded-lg border bg-card p-3 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={p.avatar_url || undefined} />
+                      <AvatarFallback className="bg-warning/10 text-warning text-xs font-medium">
+                        {getInitials(p.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground break-words">{p.full_name}</p>
+                      <p className="text-xs text-muted-foreground break-all">{p.email || "—"}</p>
+                    </div>
+                    <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      {(p as any).provider_kind === "director" ? "Cargo de confiança" : "Prestador"}
+                    </Badge>
+                    {(p.position || p.service_type) && <span className="break-words">{p.position || p.service_type}</span>}
+                    {p.department && <span className="break-words">· {p.department}</span>}
+                    {p.company_name && <span className="break-words">· {p.company_name}</span>}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/rh/service-providers/${p.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" /> Abrir ficha
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: tabela */}
+          <div className="border rounded-lg overflow-x-auto hidden md:block">
             <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b">
@@ -635,7 +784,92 @@ export default function HRCollaborators() {
         </div>
       ) : (
         <>
-        <div className="border rounded-lg overflow-x-auto">
+        {/* Mobile: cartões */}
+        <div className="space-y-2 md:hidden">
+          <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
+            <Checkbox
+              checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
+              onCheckedChange={(v) => {
+                setSelectedRows(prev => {
+                  const next = new Set(prev);
+                  if (v) filtered.forEach(c => next.add(c.id));
+                  else filtered.forEach(c => next.delete(c.id));
+                  return next;
+                });
+              }}
+            />
+            Selecionar todos
+          </label>
+          {pgCollaborators.items.map(c => {
+            const st = STATUS_MAP[c.status || "active"] || STATUS_MAP.active;
+            return (
+              <div key={c.id} className={`rounded-lg border bg-card p-3 space-y-2 ${selectedRows.has(c.id) ? "border-primary/40 bg-primary/5" : ""}`}>
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    className="mt-1 shrink-0"
+                    checked={selectedRows.has(c.id)}
+                    onCheckedChange={(v) => {
+                      setSelectedRows(prev => {
+                        const next = new Set(prev);
+                        if (v) next.add(c.id); else next.delete(c.id);
+                        return next;
+                      });
+                    }}
+                    aria-label={`Selecionar ${c.full_name}`}
+                  />
+                  <Avatar className="h-10 w-10 shrink-0">
+                    <AvatarImage src={c.avatar_url || undefined} />
+                    <AvatarFallback className="bg-info/10 text-info text-xs font-medium">
+                      {getInitials(c.full_name)}
+                    </AvatarFallback>
+                  </Avatar>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground break-words">{c.full_name}</p>
+                    <p className="text-xs text-muted-foreground break-all">{c.email || "—"}</p>
+                  </div>
+                  <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                </div>
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                  {c.employment_type && (
+                    <Badge variant="outline" className="text-xs">{EMPLOYMENT_TYPES[c.employment_type] || c.employment_type}</Badge>
+                  )}
+                  {c.position && <span className="break-words">{c.position}</span>}
+                  {c.department && <span className="break-words">· {c.department}</span>}
+                  {c.unit && <span className="break-words">· {c.unit}</span>}
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1"
+                    onClick={() => navigate(`/rh/collaborators/${c.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" /> Ver perfil
+                  </Button>
+                  {c.status !== "inactive" && (
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive"
+                          onClick={() => setDeactivateTarget(c)}
+                        >
+                          <UserX className="h-4 w-4 mr-2" /> Inativar colaborador
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        {/* Desktop: tabela */}
+        <div className="border rounded-lg overflow-x-auto hidden md:block">
           <table className="w-full min-w-[1100px] text-sm">
             <thead>
               <tr className="bg-muted/50 border-b">
@@ -745,12 +979,12 @@ export default function HRCollaborators() {
 
       {/* New Collaborator Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg grid-cols-1 max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Colaborador</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div className="col-span-full">
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Nome completo" />
             </div>

@@ -16,7 +16,7 @@ import PdaOptionsDialog from "./PdaOptionsDialog";
 import { ManagerCell, MoneyCell, MultiOptionCell, OptionCell, YesNoCell } from "./PdaEditableCell";
 import {
   computeSynergyPct, formatDateBR, formatMoney, formatTenure, mentalModelLabel,
-  normalizeMentalModel, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
+  normalizeMentalModel, optionColor, PDA_COLORS, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
 } from "@/lib/rh/pda";
 
 interface RenderCtx {
@@ -158,6 +158,7 @@ export default function CollaboratorsPDATable({
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [overrides, setOverrides] = useState<Record<string, Record<string, any>>>({});
   const [showTerminated, setShowTerminated] = useState(false);
+  const [expandedCards, setExpandedCards] = useState<Set<string>>(new Set());
   const [visible, setVisible] = useState<string[]>(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -295,6 +296,86 @@ export default function CollaboratorsPDATable({
     );
   };
 
+  const ctxFor = (c: HRCollaborator): RenderCtx => {
+    const mgr = c.manager_id ? nameById[c.manager_id] : undefined;
+    return { managerName: mgr?.full_name, managerAvatar: mgr?.avatar_url, opt: optionsFor, people, save, canEdit };
+  };
+
+  /** Cartão mobile: resumo + detalhes expansíveis com TODAS as colunas visíveis. */
+  const renderCard = (c: HRCollaborator) => {
+    const ctx = ctxFor(c);
+    const pct = computeSynergyPct(c.pda_role_profile, c.pda_dominant_profile, c.pda_secondary_profile);
+    const thermo = (c as any).pda_thermometer || THERMOMETER_DEFAULT;
+    const expanded = expandedCards.has(c.id);
+    return (
+      <div key={c.id} className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarImage src={c.avatar_url || undefined} />
+            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{initials(c.full_name)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm break-words">{c.full_name}</p>
+            <p className="text-xs text-muted-foreground break-words">
+              {[c.position, c.department].filter(Boolean).join(" · ") || "—"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-1.5" /> Ficha
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {c.pda_level && <PdaBadge label={c.pda_level} color={optionColor(optionsFor("pda_level"), c.pda_level)} />}
+          {(c.pda_sectors || []).map((s: string) => (
+            <PdaBadge key={s} label={s} color={optionColor(optionsFor("pda_sectors"), s)} />
+          ))}
+          {c.pda_dominant_profile && (
+            <PdaBadge label={c.pda_dominant_profile} color={optionColor(optionsFor("pda_profile"), c.pda_dominant_profile)} />
+          )}
+          {pct != null && <PdaBadge label={`Sinergia ${pct}%`} color={PDA_COLORS.azul} />}
+          <PdaBadge label={thermo} color={optionColor(optionsFor("pda_thermometer"), thermo)} />
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+            return next;
+          })}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          aria-expanded={expanded}
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {expanded ? "Ocultar detalhes" : "Ver detalhes"}
+        </button>
+        {expanded && (
+          <dl className="grid gap-2 border-t pt-2">
+            {columns.map(col => (
+              <div key={col.key} className="grid gap-0.5">
+                <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{col.label}</dt>
+                <dd className="text-sm break-words">{col.render(c, ctx)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    );
+  };
+
+  const cardGroupSummary = (list: HRCollaborator[], label: string) => {
+    const t = totalsFor(list);
+    const parts = [`${label}: ${t.count}`];
+    if (t.avgTenure != null) parts.push(`tempo médio ${t.avgTenure} m`);
+    if (t.avgSynergy != null) parts.push(`sinergia média ${t.avgSynergy}%`);
+    if (canSeeSalary) parts.push(`folha c/ encargos ${formatMoney(t.with)}`);
+    return parts.join(" · ");
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
@@ -373,7 +454,37 @@ export default function CollaboratorsPDATable({
         </p>
       )}
 
-      <div className="border rounded-lg overflow-x-auto">
+      {/* Mobile: cartões por pessoa */}
+      <div className="space-y-2 md:hidden">
+        {rows.length === 0 ? (
+          <div className="rounded-lg border border-dashed p-6 text-center text-sm text-muted-foreground">Nenhum colaborador nesta visão.</div>
+        ) : (
+          <>
+            <div className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+              Ativos ({activeRows.length})
+            </div>
+            {activeRows.map(renderCard)}
+            {activeRows.length > 0 && (
+              <p className="text-xs text-muted-foreground px-1">{cardGroupSummary(activeRows, "Total ativos")}</p>
+            )}
+            <button
+              type="button"
+              onClick={() => setShowTerminated(v => !v)}
+              className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide text-muted-foreground hover:text-foreground"
+            >
+              {showTerminated ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+              Desligados ({terminatedRows.length})
+            </button>
+            {showTerminated && terminatedRows.map(renderCard)}
+            {showTerminated && terminatedRows.length > 0 && (
+              <p className="text-xs text-muted-foreground px-1">{cardGroupSummary(terminatedRows, "Total desligados")}</p>
+            )}
+          </>
+        )}
+      </div>
+
+      {/* Desktop: tabela */}
+      <div className="border rounded-lg overflow-x-auto hidden md:block">
         <table className="w-full text-sm">
           <thead>
             <tr className="bg-muted/50 border-b">
