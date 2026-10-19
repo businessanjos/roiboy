@@ -455,10 +455,38 @@ export default function HRCollaborators() {
           <UsersRound className="h-6 w-6 text-info" strokeWidth={1.5} />
         </div>
         <div className="min-w-0 flex-1">
-          <h1 className="text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
+          <h1 className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight">Colaboradores</h1>
           <p className="text-sm text-muted-foreground">
             {collaborators.length} colaborador{collaborators.length !== 1 ? "es" : ""} cadastrado{collaborators.length !== 1 ? "s" : ""}
           </p>
+        </div>
+        {/* Mobile: Novo em destaque + menu de mais ações */}
+        <div className="flex w-full items-center gap-2 sm:hidden">
+          <Button onClick={() => setDialogOpen(true)} className="flex-1">
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Colaborador
+          </Button>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="icon" aria-label="Mais ações">
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" className="w-72">
+              <div className="px-2 py-1.5 text-[11px] text-muted-foreground border-b mb-1">
+                Colaboradores com status <span className="font-medium">Desligado</span> são sempre excluídos da folha, mesmo que apareçam no filtro atual.
+              </div>
+              <DropdownMenuItem disabled={filtered.length === 0} onClick={() => exportPayrollXLSX(filtered)}>
+                <FileSpreadsheet className="h-4 w-4 mr-2" /> Exportar folha (.xlsx)
+              </DropdownMenuItem>
+              <DropdownMenuItem disabled={filtered.length === 0} onClick={() => exportPayrollCSV(filtered)}>
+                <FileText className="h-4 w-4 mr-2" /> Exportar folha (.csv)
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={handleOpenImport}>
+                <Download className="h-4 w-4 mr-2" /> Importar da Equipe
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
         <DropdownMenu>
