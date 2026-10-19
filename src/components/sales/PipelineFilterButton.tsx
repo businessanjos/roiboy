@@ -291,7 +291,7 @@ export function PipelineFilterButton({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[min(340px,calc(100vw-1rem))] p-0" align="start">
+        <PopoverContent className="w-[min(340px,calc(100vw-1rem))] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto p-0" align="start">
           {/* Search */}
           <div className="p-3 border-b">
             <div className="relative">
