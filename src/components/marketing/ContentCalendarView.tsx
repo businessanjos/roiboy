@@ -161,7 +161,7 @@ export function ContentCalendarView({
             <Button variant="ghost" size="icon" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <h2 className="text-lg sm:text-xl font-semibold capitalize whitespace-nowrap">
+            <h2 className="text-lg sm:text-xl font-semibold first-letter:uppercase whitespace-nowrap">
               {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
             </h2>
           </div>
