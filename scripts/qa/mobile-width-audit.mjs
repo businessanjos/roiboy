@@ -5,6 +5,7 @@
 // Uso (bun, para importar o avaliador em TypeScript):
 //   ROY_STORAGE_KEY=... ROY_SESSION_JSON=... AUDIT_IDS='{"/clients/:id":"/clients/<uuid>"}' \
 //     bun scripts/qa/mobile-width-audit.mjs [baseUrl]
+// AUDIT_ONLY="/rh,/settings" limita a rotas específicas (verificação pontual).
 // Credenciais só por variável de ambiente; nada é gravado em arquivo.
 // Cada rota é medida ANTES e DEPOIS do gesto lateral (com estabilização curta),
 // incluindo scrollLeft do main e dos ancestrais. Sai com código 1 se houver
@@ -26,7 +27,8 @@ if (!storageKey || !sessionJson) {
   process.exit(1);
 }
 const ids = JSON.parse(process.env.AUDIT_IDS || "{}");
-const { routes, notExercised } = resolveAuditRoutes(MOBILE_WIDTH_AUDIT_ROUTES, ids);
+const only = (process.env.AUDIT_ONLY || "").split(",").filter(Boolean);
+const { routes, notExercised } = resolveAuditRoutes(only.length ? only : MOBILE_WIDTH_AUDIT_ROUTES, ids);
 const measureSrc = readFileSync(new URL("./mobile-width-measure.js", import.meta.url), "utf8");
 const widths = [320, 393, 440, 1440];
 
