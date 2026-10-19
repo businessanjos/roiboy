@@ -254,7 +254,7 @@ export default function FinancialBudgetPage() {
                 <TrendingDown className="h-4 w-4 text-danger" />
                 Despesas
               </div>
-              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2 sm:gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Orçado</p>
                   <p className="text-lg font-bold whitespace-nowrap tabular-nums">{formatCurrency(totals.plannedExpenses)}</p>
@@ -274,7 +274,7 @@ export default function FinancialBudgetPage() {
                 <TrendingUp className="h-4 w-4 text-success" />
                 Receitas
               </div>
-              <div className="grid grid-cols-1 gap-2 min-[400px]:grid-cols-2 sm:gap-4">
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(11rem,1fr))] gap-2 sm:gap-4">
                 <div className="min-w-0">
                   <p className="text-xs text-muted-foreground">Orçado</p>
                   <p className="text-lg font-bold whitespace-nowrap tabular-nums">{formatCurrency(totals.plannedIncome)}</p>
