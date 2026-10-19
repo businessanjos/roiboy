@@ -146,12 +146,15 @@ export default function CollaboratorsPDATable({
   canEdit = true,
   onChanged,
   hideFilters = false,
+  mobileControls,
 }: {
   collaborators: HRCollaborator[];
   canSeeSalary?: boolean;
   canEdit?: boolean;
   onChanged?: () => void;
   hideFilters?: boolean;
+  /** Controles locais (ex.: botão Filtros) renderizados na mesma faixa mobile de Opções/Colunas. */
+  mobileControls?: React.ReactNode;
 }) {
   const navigate = useNavigate();
   const { optionsFor } = useHRPdaOptions();
@@ -309,7 +312,7 @@ export default function CollaboratorsPDATable({
     const expanded = expandedCards.has(c.id);
     return (
       <div key={c.id} className="rounded-lg border bg-card p-3 space-y-2">
-        <div className="flex items-start gap-3">
+        <div className="flex items-center gap-3">
           <Avatar className="h-10 w-10 shrink-0">
             <AvatarImage src={c.avatar_url || undefined} />
             <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{initials(c.full_name)}</AvatarFallback>
@@ -320,13 +323,6 @@ export default function CollaboratorsPDATable({
               {[c.position, c.department].filter(Boolean).join(" · ") || "—"}
             </p>
           </div>
-          <Button
-            variant="outline"
-            className="shrink-0 h-11"
-            onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)}
-          >
-            <Eye className="h-4 w-4 mr-1.5" /> Ficha
-          </Button>
         </div>
         <div className="flex flex-wrap gap-1">
           {c.pda_level && <PdaBadge label={c.pda_level} color={optionColor(optionsFor("pda_level"), c.pda_level)} />}
