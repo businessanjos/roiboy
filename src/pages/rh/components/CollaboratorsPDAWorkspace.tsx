@@ -200,25 +200,47 @@ export default function CollaboratorsPDAWorkspace({
               </PopoverContent>
             </Popover>
 
-            {/* Mobile: sheet lateral inferior */}
+            {/* Mobile: painel inferior unificado (departamento da página + filtros PDA) */}
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="outline" className="h-11 md:hidden" aria-label="Filtros dos colaboradores">
-                  <SlidersHorizontal className="h-4 w-4 mr-1.5" />
-                  Filtros
-                  {activePdaFilters.length > 0 && (
-                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">{activePdaFilters.length}</Badge>
+                <Button variant="outline" className="h-11 md:hidden max-w-full" aria-label="Filtros dos colaboradores">
+                  <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
+                  <span className="truncate">
+                    {[
+                      deptFilter && deptFilter !== "all" ? deptFilter : null,
+                      activePdaFilters.length > 0 ? pdaFilterSummary : null,
+                    ].filter(Boolean).join(" · ") || "Filtros"}
+                  </span>
+                  {(activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)) > 0 && (
+                    <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] shrink-0">
+                      {activePdaFilters.length + (deptFilter && deptFilter !== "all" ? 1 : 0)}
+                    </Badge>
                   )}
                 </Button>
               </SheetTrigger>
               <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
                 <SheetHeader className="text-left">
                   <SheetTitle>Filtros</SheetTitle>
-                  <SheetDescription>Refina a lista, o quadro e o painel dos colaboradores.</SheetDescription>
+                  <SheetDescription>Refina a lista, o quadro e o painel dos colaboradores. Status e vínculo não se aplicam ao PDA.</SheetDescription>
                 </SheetHeader>
-                <div className="mt-4 grid gap-3">{pdaFilterFields}</div>
-                {hasActivePdaFilters(filters) && (
-                  <Button variant="ghost" className="mt-3 h-11 w-full" onClick={clearPdaFilters}>
+                <div className="mt-4 grid gap-3">
+                  {onDeptFilterChange && (
+                    <Select value={deptFilter || "all"} onValueChange={onDeptFilterChange}>
+                      <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Todos os departamentos</SelectItem>
+                        {(departments || []).map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                      </SelectContent>
+                    </Select>
+                  )}
+                  {pdaFilterFields}
+                </div>
+                {(hasActivePdaFilters(filters) || (deptFilter && deptFilter !== "all")) && (
+                  <Button
+                    variant="ghost"
+                    className="mt-3 h-11 w-full"
+                    onClick={() => { clearPdaFilters(); onDeptFilterChange?.("all"); }}
+                  >
                     <X className="h-4 w-4 mr-1" /> Limpar filtros
                   </Button>
                 )}
