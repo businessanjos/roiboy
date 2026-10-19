@@ -187,7 +187,7 @@ export default function AccountSettings() {
 
   return (
     <div className="w-full min-w-0 space-y-6 px-4 py-4 sm:px-5 lg:px-6 lg:py-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Configurações da Conta</h1>
           <p className="text-muted-foreground">
