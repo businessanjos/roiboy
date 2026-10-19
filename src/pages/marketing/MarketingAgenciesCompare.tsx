@@ -133,9 +133,9 @@ export default function MarketingAgenciesCompare() {
 
           {/* Evolução temporal */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-row flex-wrap items-center justify-between gap-2">
               <CardTitle className="text-base">Evolução temporal</CardTitle>
-              <div className="flex gap-1">
+              <div className="flex flex-wrap gap-1">
                 {METRICS.map((m) => (
                   <Button
                     key={m.value}

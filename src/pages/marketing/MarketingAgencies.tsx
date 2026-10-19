@@ -54,7 +54,7 @@ export default function MarketingAgencies() {
             Cadastre as agências parceiras, compare a performance e dê acesso restrito ao ROY.
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Button variant="outline" onClick={handleReapplyRules} disabled={reapplying}>
             <Wand2 className="h-4 w-4 mr-2" />
             {reapplying ? "Reaplicando..." : "Reaplicar regras"}

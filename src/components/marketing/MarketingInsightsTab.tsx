@@ -134,9 +134,9 @@ export default function MarketingInsightsTab() {
   }
 
   return (
-    <div className="flex gap-4 min-h-[600px]">
+    <div className="flex flex-col gap-4 min-h-[600px] md:flex-row">
       {/* Sidebar */}
-      <div className="w-56 shrink-0 border rounded-lg bg-card flex flex-col">
+      <div className="w-full max-h-72 shrink-0 border rounded-lg bg-card flex flex-col md:w-56 md:max-h-none">
         <div className="p-3 border-b">
           <h3 className="font-semibold text-sm flex items-center gap-2 mb-2">
             <BarChart3 className="h-4 w-4" />
@@ -210,8 +210,8 @@ export default function MarketingInsightsTab() {
           </div>
         ) : (
           <div className="space-y-4">
-             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
+             <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex min-w-0 flex-wrap items-center gap-3">
                 <h3 className="font-semibold text-lg">{activeDashboard.name}</h3>
                 {fixedYear !== null && (
                   <MarketingDateFilter
