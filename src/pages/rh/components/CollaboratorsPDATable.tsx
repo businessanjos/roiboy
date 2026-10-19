@@ -335,19 +335,28 @@ export default function CollaboratorsPDATable({
           {pct != null && <PdaBadge label={`Sinergia ${pct}%`} color={PDA_COLORS.azul} />}
           <PdaBadge label={thermo} color={optionColor(optionsFor("pda_thermometer"), thermo)} />
         </div>
-        <button
-          type="button"
-          onClick={() => setExpandedCards(prev => {
-            const next = new Set(prev);
-            if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
-            return next;
-          })}
-          className="flex min-h-11 w-full items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
-          aria-expanded={expanded}
-        >
-          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
-          {expanded ? "Ocultar detalhes" : "Ver detalhes"}
-        </button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            className="h-11 shrink-0"
+            onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-1.5" /> Ficha
+          </Button>
+          <button
+            type="button"
+            onClick={() => setExpandedCards(prev => {
+              const next = new Set(prev);
+              if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+              return next;
+            })}
+            className="flex min-h-11 flex-1 items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+            aria-expanded={expanded}
+          >
+            {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+            {expanded ? "Ocultar detalhes" : "Ver detalhes"}
+          </button>
+        </div>
         {expanded && (
           <dl className="grid gap-2 border-t pt-2">
             {canEdit && (
@@ -381,7 +390,7 @@ export default function CollaboratorsPDATable({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center gap-2 md:gap-3">
         {!hideFilters && (
           <>
             <Select value={sectorFilter} onValueChange={setSectorFilter}>
@@ -414,15 +423,16 @@ export default function CollaboratorsPDATable({
             </Select>
           </>
         )}
-        <div className="ml-auto flex items-center gap-2">
+        {mobileControls}
+        <div className="ml-auto flex flex-1 items-center gap-2 md:flex-none">
           {canEdit && (
-            <Button variant="outline" className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
+            <Button variant="outline" className="h-11 flex-1 px-3 text-xs md:h-10 md:flex-none md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
               <SlidersHorizontal className="h-4 w-4 mr-1.5 md:mr-2" /> Opções
             </Button>
           )}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline" className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm">
+              <Button variant="outline" className="h-11 flex-1 px-3 text-xs md:h-10 md:flex-none md:px-4 md:text-sm">
                 <Columns3 className="h-4 w-4 mr-1.5 md:mr-2" /> Colunas
               </Button>
             </PopoverTrigger>
