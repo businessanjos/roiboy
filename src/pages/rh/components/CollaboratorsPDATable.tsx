@@ -423,8 +423,8 @@ export default function CollaboratorsPDATable({
             </Select>
           </>
         )}
-        {mobileControls}
-        <div className="ml-auto flex flex-1 items-center gap-2 md:flex-none">
+        <div className="flex w-full items-center gap-2 md:ml-auto md:w-auto">
+          {mobileControls}
           {canEdit && (
             <Button variant="outline" className="h-11 flex-1 px-3 text-xs md:h-10 md:flex-none md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
               <SlidersHorizontal className="h-4 w-4 mr-1.5 md:mr-2" /> Opções
