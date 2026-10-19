@@ -340,7 +340,7 @@ export function PipelineFilterButton({
 
             {/* Vendedores Tab */}
             <TabsContent value="vendedores" className="m-0">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[min(280px,calc(var(--radix-popover-content-available-height)-144px))] sm:h-[min(280px,calc(var(--radix-popover-content-available-height)-104px))]">
                 <div className="p-2 space-y-1">
                   {/* All salespeople option */}
                   <button
@@ -397,7 +397,7 @@ export function PipelineFilterButton({
 
             {/* Produtos Tab */}
             <TabsContent value="produtos" className="m-0">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[min(280px,calc(var(--radix-popover-content-available-height)-144px))] sm:h-[min(280px,calc(var(--radix-popover-content-available-height)-104px))]">
                 <div className="p-2 space-y-1">
                   {/* All products option */}
                   <button
@@ -446,7 +446,7 @@ export function PipelineFilterButton({
 
             {/* Recomendados Tab */}
             <TabsContent value="recomendados" className="m-0">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[min(280px,calc(var(--radix-popover-content-available-height)-144px))] sm:h-[min(280px,calc(var(--radix-popover-content-available-height)-104px))]">
                 <div className="p-2 space-y-1">
                   {filteredRecommended.map((filter) => {
                     const btn = (
@@ -488,7 +488,7 @@ export function PipelineFilterButton({
 
             {/* Personalizados Tab */}
             <TabsContent value="personalizados" className="m-0">
-              <ScrollArea className="h-[280px]">
+              <ScrollArea className="h-[min(280px,calc(var(--radix-popover-content-available-height)-144px))] sm:h-[min(280px,calc(var(--radix-popover-content-available-height)-104px))]">
                 <div className="p-2 space-y-1">
                   {filteredCustomFilters.map((filter) => (
                     <button
