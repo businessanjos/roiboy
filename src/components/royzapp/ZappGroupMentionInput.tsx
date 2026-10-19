@@ -288,7 +288,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
       "min-h-[52px] max-h-[120px] w-full rounded-lg border-0 px-4 py-2.5 text-sm whitespace-pre-wrap break-words";
 
     return (
-      <div ref={containerRef} className="relative w-full flex-1">
+      <div ref={containerRef} className="relative min-w-0 w-full flex-1">
         {/* Highlight overlay (mirrors textarea content) */}
         {mentionSegments && (
           <div
@@ -334,7 +334,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
           onPaste={onPaste}
           placeholder={placeholder}
           disabled={disabled}
-          rows={2}
+          rows={1}
           className={cn(
             sharedBoxClasses,
             "relative flex placeholder:text-zapp-text-muted focus-visible:outline-none focus-visible:ring-0 disabled:cursor-not-allowed disabled:opacity-50 resize-none overflow-y-auto",
@@ -345,7 +345,7 @@ export const ZappGroupMentionInput = forwardRef<HTMLTextAreaElement, ZappGroupMe
 
         {/* Suggestions Dropdown */}
         {showSuggestions && groupJid && (
-          <div className="absolute bottom-full left-0 mb-1 w-72 bg-zapp-panel border border-zapp-border rounded-lg shadow-lg z-50 overflow-hidden">
+          <div className="absolute bottom-full left-0 mb-1 w-72 max-w-[calc(100vw-7rem)] bg-zapp-panel border border-zapp-border rounded-lg shadow-lg z-50 overflow-hidden">
             <div className="px-3 py-2 border-b border-zapp-border bg-zapp-panel-header">
               <div className="flex items-center gap-2 text-xs text-zapp-text-muted">
                 <Users className="h-3 w-3" />

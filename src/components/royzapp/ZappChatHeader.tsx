@@ -154,7 +154,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
 
       {/* Header */}
-      <div className="bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
+      <div className="shrink-0 bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex items-center gap-2 sm:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
@@ -248,7 +248,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           ) : assignment.agent_id !== currentAgentId ? (
             <Button
               size="sm"
-              className="bg-zapp-accent hover:bg-zapp-accent-hover text-white text-xs h-7 sm:h-8 px-2 sm:px-3"
+              aria-label="Puxar atendimento"
+              className="bg-zapp-accent hover:bg-zapp-accent-hover text-primary-foreground text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onAssignToMe(assignment.id)}
             >
               <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -258,7 +259,8 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               variant="outline"
-              className="border-warning text-warning hover:bg-warning/10 text-xs h-7 sm:h-8 px-2 sm:px-3"
+              aria-label="Devolver atendimento"
+              className="border-warning text-warning hover:bg-warning/10 text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onReleaseToQueue(assignment.id)}
             >
               <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -274,7 +276,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "h-7 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
+                  "h-11 min-w-11 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                   STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
                   "border-current bg-transparent"
                 )}

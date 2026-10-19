@@ -155,7 +155,7 @@ export default function ContentHQ() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             <span className="text-sm text-muted-foreground">Perfil de marca:</span>
             <ProfileSelector />
           </div>
@@ -174,11 +174,11 @@ export default function ContentHQ() {
                     const Icon = s.icon;
                     const active = section === s.id;
                     return (
-                      <button
+                      <Button variant="ghost"
                         key={s.id}
                         onClick={() => setSection(s.id)}
                         className={cn(
-                          "w-full text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
+                          "h-auto min-h-11 w-full justify-start text-left text-sm rounded-md px-2.5 py-1.5 flex items-center gap-2 transition-colors",
                           active
                             ? "bg-primary/10 text-primary font-medium"
                             : "text-muted-foreground hover:text-foreground hover:bg-muted/50"
@@ -186,7 +186,7 @@ export default function ContentHQ() {
                       >
                         <Icon className="h-4 w-4 shrink-0" />
                         <span className="truncate">{s.label}</span>
-                      </button>
+                      </Button>
                     );
                   })}
                 </nav>

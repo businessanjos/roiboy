@@ -531,7 +531,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
       {/* Message input */}
       <div 
         className={cn(
-          "bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-3 flex items-end sm:items-center gap-1 sm:gap-2 relative",
+          "shrink-0 bg-zapp-panel px-2 sm:px-4 py-2 sm:py-3 pb-[calc(0.5rem+env(safe-area-inset-bottom))] sm:pb-3 flex items-end sm:items-center gap-1 sm:gap-2 relative",
           isDragging && "ring-2 ring-zapp-accent ring-inset"
         )}
         onDrop={handleDrop}
@@ -895,7 +895,7 @@ export const ZappMessageInput = memo(function ZappMessageInput({
             {isGroup && groupJid ? (
               <ZappGroupMentionInput
                 ref={messageInputRef}
-                placeholder="Digite uma mensagem (@ para mencionar)"
+                placeholder="Mensagem"
                 value={messageInput}
                 onChange={(value) => {
                   if (value.length <= SECURITY_LIMITS.MESSAGE_MAX) {
