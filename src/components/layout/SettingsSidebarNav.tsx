@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { matchesScreenSearch } from "@/lib/navigation/mobileNavigation";
 import { useSearchParams, useNavigate } from "react-router-dom";
 import { cn } from "@/lib/utils";
 import {
@@ -20,7 +22,7 @@ interface NavGroup {
   items: NavItem[];
 }
 
-export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+export function SettingsSidebarNav({ collapsed, onNavigate, searchQuery = "" }: { collapsed: boolean; onNavigate?: () => void; searchQuery?: string }) {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const { hasVendasAccess } = useSectorAccess();
@@ -101,10 +103,10 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
     <>
       {/* Back button */}
       <div className="p-3 border-b border-border">
-        <button
+        <Button variant="ghost"
           onClick={() => { navigate("/"); onNavigate?.(); }}
           className={cn(
-            "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+            "flex min-h-11 h-auto justify-start whitespace-normal text-left items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
             "text-muted-foreground hover:bg-muted hover:text-foreground"
           )}
         >
@@ -115,12 +117,12 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
               <span className="font-semibold text-foreground">Configurações</span>
             </div>
           )}
-        </button>
+        </Button>
       </div>
 
       {/* Navigation */}
       <nav className="flex-1 p-3 space-y-4 overflow-y-auto">
-        {navGroups.map((group) => (
+        {navGroups.map((group) => ({ ...group, items: group.items.filter((item) => matchesScreenSearch(item.label, group.title, searchQuery)) })).filter((group) => group.items.length > 0).map((group) => (
           <div key={group.title}>
             {!collapsed && (
               <p className="px-3 mb-1.5 text-[10px] uppercase tracking-wider text-muted-foreground font-semibold">
@@ -132,11 +134,12 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
                 const Icon = item.icon;
                 const isActive = activeTab === item.id;
                 return (
-                  <button
+                  <Button variant="ghost"
                     key={item.id}
+                    aria-current={isActive ? "page" : undefined}
                     onClick={() => handleTabChange(item.id)}
                     className={cn(
-                      "flex items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
+                      "flex min-h-11 h-auto justify-start whitespace-normal text-left items-center gap-3 w-full px-3 py-2.5 rounded-lg text-sm font-medium transition-all",
                       isActive
                         ? "bg-accent text-accent-foreground"
                         : "text-muted-foreground hover:bg-muted hover:text-foreground",
@@ -145,7 +148,7 @@ export function SettingsSidebarNav({ collapsed, onNavigate }: { collapsed: boole
                   >
                     <Icon className="h-5 w-5 flex-shrink-0" />
                     {!collapsed && <span>{item.label}</span>}
-                  </button>
+                  </Button>
                 );
               })}
             </div>
