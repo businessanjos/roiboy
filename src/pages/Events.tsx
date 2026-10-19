@@ -1331,19 +1331,19 @@ export default function Events() {
                       <CollapsibleTrigger asChild>
                         <Button 
                           variant="outline" 
-                          className="w-full justify-between"
+                          className="w-full justify-between h-auto min-h-10 whitespace-normal text-left"
                           type="button"
                         >
-                          <div className="flex items-center gap-2">
-                            <Eye className="h-4 w-4" />
-                            <span>Visibilidade em outros setores</span>
+                          <div className="flex min-w-0 flex-1 items-center gap-2">
+                            <Eye className="h-4 w-4 shrink-0" />
+                            <span className="min-w-0 break-words">Visibilidade em outros setores</span>
                             {visibleSectors.length > 0 && (
-                              <Badge variant="secondary" className="ml-1">
+                              <Badge variant="secondary" className="ml-1 shrink-0">
                                 {visibleSectors.length}
                               </Badge>
                             )}
                           </div>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${visibilityOpen ? 'rotate-180' : ''}`} />
+                          <ChevronDown className={`h-4 w-4 shrink-0 transition-transform ${visibilityOpen ? 'rotate-180' : ''}`} />
                         </Button>
                       </CollapsibleTrigger>
                       <CollapsibleContent className="pt-3 space-y-2">
