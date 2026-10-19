@@ -450,6 +450,13 @@
   [role="tablist"]::-webkit-scrollbar {
     display: none;
   }
+  /* Raiz de cada tela ocupa exatamente a largura do main. Como o main é
+     flex-col, raízes com mx-auto (max-w-*) virariam "fit-content" e
+     cresceriam até o min-content do conteúdo, alargando a tela inteira. */
+  :where(#app-main-scroll) > * {
+    width: 100%;
+    min-width: 0;
+  }
   /* Tabelas largas: rolagem contida no próprio container */
   .relative.w-full.overflow-auto:has(> table) {
     overscroll-behavior-x: contain;
