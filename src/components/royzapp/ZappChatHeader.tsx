@@ -281,8 +281,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   "border-current bg-transparent"
                 )}
               >
-                <span className="hidden sm:inline">{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
-                <span className="sm:hidden">{(STATUS_CONFIG[assignment.status]?.label || "Status").slice(0, 5)}</span>
+                <span>{STATUS_CONFIG[assignment.status]?.label || "Status"}</span>
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-48 z-50">

@@ -132,7 +132,6 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       if (!hasSectorAccess(sector.id)) continue;
       for (const nav of sectorPages[sector.id]) {
         if (nav.comingSoon) continue;
-        if (nav.permission && !hasPermission(nav.permission)) continue;
         const Icon = nav.icon;
         items.push({
           id: `${sector.id}:${nav.to}`,
@@ -151,7 +150,7 @@ export function GlobalSearch({ open, onOpenChange }: GlobalSearchProps) {
       seen.add(item.href);
       return true;
     });
-  }, [hasPermission, hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
+  }, [hasSectorAccess, permissionsLoading, sectorLoading, canSeeRh, sectorPages]);
 
   const canViewClients = hasPermission(PERMISSIONS.CLIENTS_VIEW);
   const canViewSales = hasSectorAccess("vendas");
