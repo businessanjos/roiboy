@@ -521,7 +521,7 @@ export default function HRCollaborators() {
 
       {/* View switch */}
       <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
-        <TabsList>
+        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex">
           <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
           <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
           <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
