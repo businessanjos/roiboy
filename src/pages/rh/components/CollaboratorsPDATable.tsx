@@ -322,8 +322,7 @@ export default function CollaboratorsPDATable({
           </div>
           <Button
             variant="outline"
-            size="sm"
-            className="shrink-0"
+            className="shrink-0 h-11"
             onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)}
           >
             <Eye className="h-4 w-4 mr-1.5" /> Ficha
@@ -347,7 +346,7 @@ export default function CollaboratorsPDATable({
             if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
             return next;
           })}
-          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          className="flex min-h-11 w-full items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
           aria-expanded={expanded}
         >
           {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
@@ -355,10 +354,15 @@ export default function CollaboratorsPDATable({
         </button>
         {expanded && (
           <dl className="grid gap-2 border-t pt-2">
+            {canEdit && (
+              <p className="text-[11px] text-muted-foreground">
+                Toque em um valor colorido para alterar — a mudança é salva na hora. Tempo de casa e Sinergia são calculados automaticamente.
+              </p>
+            )}
             {columns.map(col => (
               <div key={col.key} className="grid gap-0.5">
                 <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{col.label}</dt>
-                <dd className="text-sm break-words">{col.render(c, ctx)}</dd>
+                <dd className="text-sm break-words [&_*]:whitespace-normal">{col.render(c, ctx)}</dd>
               </div>
             ))}
           </dl>
@@ -369,10 +373,13 @@ export default function CollaboratorsPDATable({
 
   const cardGroupSummary = (list: HRCollaborator[], label: string) => {
     const t = totalsFor(list);
+    const has = (k: string) => columns.some(col => col.key === k);
     const parts = [`${label}: ${t.count}`];
-    if (t.avgTenure != null) parts.push(`tempo médio ${t.avgTenure} m`);
-    if (t.avgSynergy != null) parts.push(`sinergia média ${t.avgSynergy}%`);
-    if (canSeeSalary) parts.push(`folha c/ encargos ${formatMoney(t.with)}`);
+    if (has("tenure") && t.avgTenure != null) parts.push(`tempo médio ${t.avgTenure} m`);
+    if (has("synergy_pct") && t.avgSynergy != null) parts.push(`sinergia média ${t.avgSynergy}%`);
+    if (has("net_salary")) parts.push(`líquido ${formatMoney(t.net)}`);
+    if (has("salary_without_charges")) parts.push(`s/ encargos ${formatMoney(t.without)}`);
+    if (has("salary_with_charges")) parts.push(`c/ encargos ${formatMoney(t.with)}`);
     return parts.join(" · ");
   };
 
@@ -413,14 +420,14 @@ export default function CollaboratorsPDATable({
         )}
         <div className="ml-auto flex items-center gap-2">
           {canEdit && (
-            <Button variant="outline" onClick={() => setOptionsOpen(true)}>
-              <SlidersHorizontal className="h-4 w-4 mr-2" /> Opções
+            <Button variant="outline" className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm" onClick={() => setOptionsOpen(true)}>
+              <SlidersHorizontal className="h-4 w-4 mr-1.5 md:mr-2" /> Opções
             </Button>
           )}
           <Popover>
             <PopoverTrigger asChild>
-              <Button variant="outline">
-                <Columns3 className="h-4 w-4 mr-2" /> Colunas
+              <Button variant="outline" className="h-9 px-3 text-xs md:h-10 md:px-4 md:text-sm">
+                <Columns3 className="h-4 w-4 mr-1.5 md:mr-2" /> Colunas
               </Button>
             </PopoverTrigger>
             <PopoverContent align="end" className="w-64 p-2 max-h-[360px] overflow-y-auto">
@@ -448,7 +455,7 @@ export default function CollaboratorsPDATable({
       </div>
 
       {canEdit && (
-        <p className="text-xs text-muted-foreground">
+        <p className="hidden md:block text-xs text-muted-foreground">
           Clique em qualquer célula colorida para alterar o valor — a mudança é salva na hora.
           Tempo de casa, Sinergia e % Sinergia são calculados automaticamente.
         </p>

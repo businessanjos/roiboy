@@ -521,10 +521,10 @@ export default function HRCollaborators() {
 
       {/* View switch */}
       <Tabs value={view} onValueChange={(v) => setView(v as "clt" | "pj" | "pda")}>
-        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex">
-          <TabsTrigger value="clt">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
-          <TabsTrigger value="pj">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
-          <TabsTrigger value="pda">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
+        <TabsList className="w-full grid grid-cols-3 sm:w-auto sm:inline-flex h-auto">
+          <TabsTrigger value="clt" className="min-h-11 sm:min-h-9">CLT <span className="ml-1 text-xs text-muted-foreground">({filtered.length})</span></TabsTrigger>
+          <TabsTrigger value="pj" className="min-h-11 sm:min-h-9">PJ <span className="ml-1 text-xs text-muted-foreground">({filteredProviders.length})</span></TabsTrigger>
+          <TabsTrigger value="pda" className="min-h-11 sm:min-h-9">PDA <span className="ml-1 text-xs text-muted-foreground">({pdaActiveCount})</span></TabsTrigger>
         </TabsList>
       </Tabs>
 
@@ -533,23 +533,30 @@ export default function HRCollaborators() {
         <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
-            aria-label="Buscar colaborador"
-            placeholder="Buscar por nome, email, CPF, cargo..."
+            aria-label="Buscar colaborador por nome, email, CPF ou cargo"
+            placeholder="Buscar..."
             className="pl-9"
             value={search}
             onChange={e => setSearch(e.target.value)}
           />
         </div>
 
-        {/* Mobile: filtros identificados em painel inferior */}
+        {/* Mobile: filtros identificados em painel inferior (na visão PDA o painel unificado fica no Workspace) */}
+        {view !== "pda" && (
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" className="h-10 sm:hidden" aria-label="Abrir filtros">
-              <SlidersHorizontal className="h-4 w-4 mr-1.5" />
-              Filtros
-              {((view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)) > 0 && (
-                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px]">
-                  {(view !== "pda" && statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view !== "pda" && typeFilter !== "all" ? 1 : 0)}
+            <Button variant="outline" className="h-11 sm:hidden max-w-full" aria-label="Abrir filtros">
+              <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
+              <span className="truncate">
+                {[
+                  STATUS_MAP[statusFilter]?.label || "Ativo",
+                  deptFilter !== "all" ? deptFilter : null,
+                  view === "clt" && typeFilter !== "all" ? EMPLOYMENT_TYPES[typeFilter] || typeFilter : null,
+                ].filter(Boolean).join(" · ")}
+              </span>
+              {((statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view === "clt" && typeFilter !== "all" ? 1 : 0)) > 0 && (
+                <Badge variant="secondary" className="ml-1.5 h-5 px-1.5 text-[10px] shrink-0">
+                  {(statusFilter !== "active" ? 1 : 0) + (deptFilter !== "all" ? 1 : 0) + (view === "clt" && typeFilter !== "all" ? 1 : 0)}
                 </Badge>
               )}
             </Button>
@@ -557,27 +564,21 @@ export default function HRCollaborators() {
           <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
             <SheetHeader className="text-left">
               <SheetTitle>Filtros</SheetTitle>
-              <SheetDescription>
-                {view === "pda"
-                  ? "Na visão PDA valem a busca e o departamento; status e vínculo não se aplicam."
-                  : "Refina a lista de colaboradores exibida."}
-              </SheetDescription>
+              <SheetDescription>Refina a lista de colaboradores exibida.</SheetDescription>
             </SheetHeader>
             <div className="mt-4 grid gap-3">
-              {view !== "pda" && (
-                <div className="space-y-1.5">
-                  <Label className="text-xs">Status</Label>
-                  <Select value={statusFilter} onValueChange={setStatusFilter}>
-                    <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Todos</SelectItem>
-                      {Object.entries(STATUS_MAP).map(([k, v]) => (
-                        <SelectItem key={k} value={k}>{v.label}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="space-y-1.5">
+                <Label className="text-xs">Status</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger className="h-11" aria-label="Status"><SelectValue placeholder="Status" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {Object.entries(STATUS_MAP).map(([k, v]) => (
+                      <SelectItem key={k} value={k}>{v.label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <div className="space-y-1.5">
                 <Label className="text-xs">Departamento</Label>
                 <Select value={deptFilter} onValueChange={setDeptFilter}>
@@ -588,7 +589,7 @@ export default function HRCollaborators() {
                   </SelectContent>
                 </Select>
               </div>
-              {view !== "pda" && (
+              {view === "clt" && (
                 <div className="space-y-1.5">
                   <Label className="text-xs">Vínculo</Label>
                   <Select value={typeFilter} onValueChange={setTypeFilter}>
@@ -603,11 +604,21 @@ export default function HRCollaborators() {
                 </div>
               )}
             </div>
+            {(statusFilter !== "active" || deptFilter !== "all" || typeFilter !== "all") && (
+              <Button
+                variant="ghost"
+                className="mt-3 h-11 w-full"
+                onClick={() => { setStatusFilter("active"); setDeptFilter("all"); setTypeFilter("all"); }}
+              >
+                <X className="h-4 w-4 mr-1" /> Limpar filtros
+              </Button>
+            )}
             <SheetClose asChild>
               <Button className="mt-4 h-11 w-full">Concluir</Button>
             </SheetClose>
           </SheetContent>
         </Sheet>
+        )}
 
         {/* Desktop: selects inline */}
         <div className="hidden sm:flex flex-wrap gap-3 items-center">
@@ -696,8 +707,7 @@ export default function HRCollaborators() {
                   </div>
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="w-full"
+                    className="w-full h-11"
                     onClick={() => navigate(`/rh/service-providers/${p.id}`)}
                   >
                     <Eye className="h-4 w-4 mr-2" /> Abrir ficha
@@ -769,6 +779,9 @@ export default function HRCollaborators() {
           collaborators={pdaRows}
           canSeeSalary={RH_ALLOWED_EMAILS.includes((currentUser?.email || "").toLowerCase())}
           onChanged={() => { refetch(); refetchProviders(); }}
+          deptFilter={deptFilter}
+          onDeptFilterChange={setDeptFilter}
+          departments={departments}
         />
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
@@ -786,7 +799,7 @@ export default function HRCollaborators() {
         <>
         {/* Mobile: cartões */}
         <div className="space-y-2 md:hidden">
-          <label className="flex items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground">
+          <label className="flex min-h-11 items-center gap-2 rounded-lg border bg-card px-3 py-2 text-sm text-muted-foreground cursor-pointer">
             <Checkbox
               checked={filtered.length > 0 && filtered.every(c => selectedRows.has(c.id))}
               onCheckedChange={(v) => {
@@ -805,18 +818,19 @@ export default function HRCollaborators() {
             return (
               <div key={c.id} className={`rounded-lg border bg-card p-3 space-y-2 ${selectedRows.has(c.id) ? "border-primary/40 bg-primary/5" : ""}`}>
                 <div className="flex items-start gap-3">
-                  <Checkbox
-                    className="mt-1 shrink-0"
-                    checked={selectedRows.has(c.id)}
-                    onCheckedChange={(v) => {
-                      setSelectedRows(prev => {
-                        const next = new Set(prev);
-                        if (v) next.add(c.id); else next.delete(c.id);
-                        return next;
-                      });
-                    }}
-                    aria-label={`Selecionar ${c.full_name}`}
-                  />
+                  <label className="-ml-2 -my-2 flex h-11 w-11 shrink-0 items-center justify-center cursor-pointer">
+                    <Checkbox
+                      checked={selectedRows.has(c.id)}
+                      onCheckedChange={(v) => {
+                        setSelectedRows(prev => {
+                          const next = new Set(prev);
+                          if (v) next.add(c.id); else next.delete(c.id);
+                          return next;
+                        });
+                      }}
+                      aria-label={`Selecionar ${c.full_name}`}
+                    />
+                  </label>
                   <Avatar className="h-10 w-10 shrink-0">
                     <AvatarImage src={c.avatar_url || undefined} />
                     <AvatarFallback className="bg-info/10 text-info text-xs font-medium">
@@ -840,8 +854,7 @@ export default function HRCollaborators() {
                 <div className="flex items-center gap-2">
                   <Button
                     variant="outline"
-                    size="sm"
-                    className="flex-1"
+                    className="flex-1 h-11"
                     onClick={() => navigate(`/rh/collaborators/${c.id}`)}
                   >
                     <Eye className="h-4 w-4 mr-2" /> Ver perfil
@@ -849,7 +862,7 @@ export default function HRCollaborators() {
                   {c.status !== "inactive" && (
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="outline" size="icon" className="h-9 w-9 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
+                        <Button variant="outline" size="icon" className="h-11 w-11 shrink-0" aria-label={`Mais ações para ${c.full_name}`}>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
                       </DropdownMenuTrigger>
