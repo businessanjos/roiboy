@@ -445,7 +445,7 @@ export default function HRCollaborators() {
   }
 
   return (
-    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-6">
+    <div className="p-4 sm:p-6 w-full max-w-[1600px] mx-auto space-y-4 sm:space-y-6">
       {/* Header */}
       <div className="flex flex-wrap items-center gap-3">
         <Button variant="ghost" size="icon" onClick={() => navigate("/rh")} className="hidden shrink-0 lg:inline-flex" aria-label="Voltar para o RH">
@@ -530,7 +530,7 @@ export default function HRCollaborators() {
 
       {/* Filters */}
       <div className="flex flex-wrap gap-2 sm:gap-3 items-center">
-        <div className="relative flex-1 min-w-0 sm:min-w-[220px]">
+        <div className="relative w-full sm:flex-1 sm:w-auto sm:min-w-[220px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             aria-label="Buscar colaborador por nome, email, CPF ou cargo"
@@ -545,11 +545,11 @@ export default function HRCollaborators() {
         {view !== "pda" && (
         <Sheet>
           <SheetTrigger asChild>
-            <Button variant="outline" className="h-11 sm:hidden max-w-full" aria-label="Abrir filtros">
+            <Button variant="outline" className="h-11 w-full sm:hidden" aria-label="Abrir filtros">
               <SlidersHorizontal className="h-4 w-4 mr-1.5 shrink-0" />
               <span className="truncate">
                 {[
-                  STATUS_MAP[statusFilter]?.label || "Ativo",
+                  statusFilter === "all" ? "Todos os status" : STATUS_MAP[statusFilter]?.label || "Ativo",
                   deptFilter !== "all" ? deptFilter : null,
                   view === "clt" && typeFilter !== "all" ? EMPLOYMENT_TYPES[typeFilter] || typeFilter : null,
                 ].filter(Boolean).join(" · ")}
