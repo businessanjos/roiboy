@@ -302,8 +302,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
   const navigate = useNavigate();
-  const agentScopeSelector = (
-        {inboxTab === "mine" && canSeeAllSectorConversations && (
+  const agentScopeSelector = inboxTab === "mine" && canSeeAllSectorConversations ? (
           <Select value={filterAgentId} onValueChange={setFilterAgentId}>
             <SelectTrigger
               aria-label="Exibir conversas de"
@@ -331,8 +330,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               ))}
             </SelectContent>
           </Select>
-        )}
-  );
+  ) : null;
   const conversationFilters = (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
