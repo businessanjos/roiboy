@@ -64,6 +64,13 @@
       "when": 1792087397126,
       "tag": "0008_zapp_group_personal_reads",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1792377840447,
+      "tag": "0009_tighten_rls_and_storage_ownership",
+      "breakpoints": true
     }
   ]
 }

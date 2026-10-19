@@ -29812,6 +29812,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_job_offer_by_token: { Args: { _token: string }; Returns: Json }
       get_latest_recommendations_for_clients: {
         Args: { p_client_ids: string[] }
         Returns: {
@@ -30074,6 +30075,16 @@ export type Database = {
         Args: { _platform: string; _reason?: string }
         Returns: Json
       }
+      respond_job_offer: {
+        Args: {
+          _email: string
+          _message: string
+          _phone: string
+          _status: string
+          _token: string
+        }
+        Returns: Json
+      }
       revoke_user_access: { Args: { _user_id: string }; Returns: undefined }
       save_admission_signer_data: {
         Args: { _data: Json; _token: string }
@@ -30227,6 +30238,10 @@ export type Database = {
           _user_agent: string
         }
         Returns: Json
+      }
+      storage_can_manage_object: {
+        Args: { _owner_id: string }
+        Returns: boolean
       }
       submit_admission_doc:
         | {
