@@ -145,8 +145,8 @@ export function ContentCalendarView({
     <TooltipProvider delayDuration={200}>
       <div className="flex flex-col h-[calc(100vh-220px)] space-y-4">
         {/* Header */}
-        <div className="flex items-center justify-between flex-shrink-0">
-          <div className="flex items-center gap-2">
+        <div className="flex items-center justify-between flex-shrink-0 min-w-0">
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1 min-w-0">
             <Button
               variant="outline"
               size="sm"
@@ -161,7 +161,7 @@ export function ContentCalendarView({
             <Button variant="ghost" size="icon" onClick={handleNextMonth}>
               <ChevronRight className="h-4 w-4" />
             </Button>
-            <h2 className="text-xl font-semibold capitalize">
+            <h2 className="text-lg sm:text-xl font-semibold first-letter:uppercase whitespace-nowrap">
               {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
             </h2>
           </div>
