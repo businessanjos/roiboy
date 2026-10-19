@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Complemento RoyZapp: integrar entrada 3C no cabeçalho da conversa mobile sem cobrir composer; conferir imagens em 393×852/500 sem ligações ou gravações.
 - [x] RoyZapp: inbox compactado (lista y=210, header 64, navegação 45, busca 56); imagens autenticadas antes/depois em 320/393/440/1440, conversas/menus/CS Configurações/voltar com gravações bloqueadas, 33 testes e build automático OK; docs/royzapp-mobile-compact-review.md; sem publicação. iPhone físico, múltiplas conexões e ações de negócio não exercitados.
 - [x] Revisão d1116f6: menus especializados pesquisáveis no Mais sem setor salvo e títulos contextuais; 53 testes e caminhos autenticados direcionados em 393px aprovados; build automático OK, typecheck/build manuais vedados pelo ambiente; relatório docs/mobile-specialized-menu-review.md; sem dados/backend/publicação.
 - [x] Complemento mobile: retorno contextual RoyZapp preserva conexão, menu permitido rotulado com 44px, seleção acessível sem botões aninhados e destaque único no Mais de Vendas; caminhos autenticados em 393px e 42 testes passaram; sem dados/publicação. Build automático OK; typecheck separado não executado.
