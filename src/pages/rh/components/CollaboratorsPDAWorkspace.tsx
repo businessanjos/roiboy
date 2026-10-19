@@ -278,6 +278,42 @@ export default function CollaboratorsPDAWorkspace({
             {view !== "list" && mobileFiltersSheet}
           </>
         )}
+
+        {/* Mobile: no Calendário só o Departamento se aplica (os filtros PDA não afetam a agenda) */}
+        {view === "calendar" && onDeptFilterChange && (
+          <Sheet>
+            <SheetTrigger asChild>
+              <Button variant="outline" className="h-11 w-full min-w-0 gap-1.5 px-2 text-xs md:hidden" aria-label="Filtrar calendário por departamento">
+                <SlidersHorizontal className="h-4 w-4 shrink-0" />
+                <span className="truncate">{deptFilter && deptFilter !== "all" ? deptFilter : "Departamento"}</span>
+              </Button>
+            </SheetTrigger>
+            <SheetContent side="bottom" className="rounded-t-2xl pb-[max(1rem,env(safe-area-inset-bottom))] max-h-[85dvh] overflow-y-auto">
+              <SheetHeader className="text-left">
+                <SheetTitle>Departamento</SheetTitle>
+                <SheetDescription>Filtra o calendário por departamento. Os demais filtros PDA não se aplicam à agenda.</SheetDescription>
+              </SheetHeader>
+              <div className="mt-4 space-y-1.5">
+                <Label className="text-xs">Departamento</Label>
+                <Select value={deptFilter || "all"} onValueChange={onDeptFilterChange}>
+                  <SelectTrigger className="h-11" aria-label="Departamento"><SelectValue placeholder="Departamento" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os departamentos</SelectItem>
+                    {(departments || []).map(d => <SelectItem key={d} value={d!}>{d}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              {deptFilter && deptFilter !== "all" && (
+                <Button variant="ghost" className="mt-3 h-11 w-full" onClick={() => onDeptFilterChange("all")}>
+                  <X className="h-4 w-4 mr-1" /> Limpar
+                </Button>
+              )}
+              <SheetClose asChild>
+                <Button className="mt-4 h-11 w-full">Concluir</Button>
+              </SheetClose>
+            </SheetContent>
+          </Sheet>
+        )}
       </div>
 
       {view === "list" && (
