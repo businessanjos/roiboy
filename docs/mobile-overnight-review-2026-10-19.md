@@ -41,3 +41,9 @@ Medição antes e depois do gesto lateral em cada estado: `document.scrollWidth`
 ## Pendências
 
 Nenhuma pendente neste escopo. Aguardando revisão do usuário para publicação.
+
+## Complemento: diálogo Novo Evento em 320px (achado em produção)
+
+- **Causa:** o `DialogContent` de `/events` (inline em `src/pages/Events.tsx`) é `grid gap-4` sem template de coluna; a coluna assumia o min-content do filho mais largo (input `datetime-local`, ~279px), esticando todos os campos e criando ~30px de rolagem horizontal interna. As grades `grid-cols-2` (Tipo/Modalidade, Data/Hora, múltiplos dias) agravavam o corte.
+- **Correção:** `grid-cols-1` no `DialogContent` (minmax(0,1fr) limita a coluna à largura do diálogo) e `grid-cols-1 sm:grid-cols-2` nas três grades do formulário em `Events.tsx`. Mesmo ajuste aplicado aos componentes compartilhados `EventQuickFormDialog.tsx` e `EventEditDialog.tsx` (3 grades cada).
+- **Verificação (prévia, QA autenticado, gravações bloqueadas):** 320x740 — diálogo 294/294 (antes 294/327), todos os campos visíveis sem corte, rolagem vertical até Criar/Cancelar (fotos topo e rodapé inspecionadas); 393x500 — 367/367. Nenhum clique em Criar/salvar. Build automático OK (05:30 UTC).
