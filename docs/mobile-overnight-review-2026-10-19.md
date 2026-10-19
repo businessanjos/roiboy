@@ -53,3 +53,9 @@ Nenhuma pendente neste escopo. Aguardando revisão do usuário para publicação
 - Causa: o efeito mobile reaplicava `state.zappSelection`/`zappList` a cada atualização de `assignments`, sobrescrevendo conversa aberta por notificação/URL.
 - Correção: estado de histórico aplicado uma única vez por entrada (`src/lib/navigation/zappMobileSelection.ts`); notificação no mobile agora cria entrada de histórico (lista → conversa) como a lista. Bloqueio de outro atendente, setor/instância, leitura e backend inalterados.
 - Testes: `zappMobileSelection.test.ts` cobre lista→A→notificação B→atualização mantém B; lista após Voltar→notificação B mantém B; Voltar/Avançar; espera do carregamento. Sem mensagens reais, notificações reais ou registros criados.
+
+## Complemento: botão "Visibilidade em outros setores" (Novo Evento)
+
+- Antes (320): botão width 246, client 244 / scroll 258; seta saía ~13px da borda.
+- Correção em `src/pages/Events.tsx` e `src/components/marketing/MarketingEventSheet.tsx`: texto pode quebrar (altura automática), bloco interno `min-w-0 flex-1`, ícones/badge `shrink-0`. Texto completo preservado.
+- Depois: 320x740 client 244 / scroll 244, conteúdo até x266 (borda 283), fechado e aberto; 393x500 317/317. Gravações bloqueadas, nada salvo.
