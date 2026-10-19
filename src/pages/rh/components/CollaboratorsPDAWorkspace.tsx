@@ -29,11 +29,18 @@ export default function CollaboratorsPDAWorkspace({
   canSeeSalary = true,
   canEdit = true,
   onChanged,
+  deptFilter,
+  onDeptFilterChange,
+  departments,
 }: {
   collaborators: HRCollaborator[];
   canSeeSalary?: boolean;
   canEdit?: boolean;
   onChanged?: () => void;
+  /** Filtro de departamento da página, exibido no mesmo painel mobile. */
+  deptFilter?: string;
+  onDeptFilterChange?: (v: string) => void;
+  departments?: (string | null)[];
 }) {
   const { optionsFor } = useHRPdaOptions();
   const { currentUser } = useCurrentUser();
@@ -156,11 +163,11 @@ export default function CollaboratorsPDAWorkspace({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs value={view} onValueChange={v => setView(v as View)} className="w-full md:w-auto">
-          <TabsList className="w-full grid grid-cols-4 md:w-auto md:inline-flex">
-            <TabsTrigger value="list">Lista</TabsTrigger>
-            <TabsTrigger value="board">Quadro</TabsTrigger>
-            <TabsTrigger value="dashboard">Painel</TabsTrigger>
-            <TabsTrigger value="calendar">Calendário</TabsTrigger>
+          <TabsList className="w-full grid grid-cols-4 md:w-auto md:inline-flex h-auto">
+            <TabsTrigger value="list" className="min-h-11 md:min-h-9">Lista</TabsTrigger>
+            <TabsTrigger value="board" className="min-h-11 md:min-h-9">Quadro</TabsTrigger>
+            <TabsTrigger value="dashboard" className="min-h-11 md:min-h-9">Painel</TabsTrigger>
+            <TabsTrigger value="calendar" className="min-h-11 md:min-h-9">Calendário</TabsTrigger>
           </TabsList>
         </Tabs>
 
