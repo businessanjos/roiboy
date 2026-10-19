@@ -103,8 +103,9 @@ export function ZappInstanceSwitcher({
         disabled={loading}
       >
         <SelectTrigger
+          aria-label="Conexão atual — trocar linha"
           className={cn(
-            "h-7 min-w-0 w-full max-w-[220px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
+            "h-11 lg:h-7 min-w-0 w-full lg:max-w-[220px] text-xs bg-zapp-panel border-zapp-border text-zapp-text",
             "focus:ring-zapp-accent focus:ring-offset-0"
           )}
         >

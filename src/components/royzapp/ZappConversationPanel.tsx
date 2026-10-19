@@ -14,6 +14,7 @@ import {
   ChevronDown,
   Users,
 
+  MoreVertical,
   RefreshCw,
   ChevronLeft,
 } from "lucide-react";
@@ -47,6 +48,7 @@ import { ZappTagsList } from "./ZappTagsList";
 import { ZappSettingsPanel } from "./ZappSettingsPanel";
 import { ZappWhatsAppAdminPanel } from "./ZappWhatsAppAdminPanel";
 import { ZappDepartmentList } from "./ZappDepartmentList";
+import { ZappRoleHelpPopover } from "./ZappRoleHelpPopover";
 import { ZappSidebarNav } from "./ZappSidebarNav";
 import { ZappAnalyticsPanel } from "./ZappAnalyticsPanel";
 import type { ZappView } from "@/lib/royZappRoutes";
@@ -300,10 +302,255 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
   const navigate = useNavigate();
+  const agentScopeSelector = inboxTab === "mine" && canSeeAllSectorConversations ? (
+          <Select value={filterAgentId} onValueChange={setFilterAgentId}>
+            <SelectTrigger
+              aria-label="Exibir conversas de"
+              className="h-11 lg:h-9 w-full lg:w-auto lg:max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
+              title="Exibir conversas de"
+            >
+              <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
+              <SelectValue placeholder="Minhas" />
+            </SelectTrigger>
+            <SelectContent className="bg-zapp-panel border-zapp-border">
+              <SelectItem value="all" className="text-zapp-text text-xs min-h-11">Somente minhas conversas</SelectItem>
+              <SelectItem value="__team__" className="text-zapp-text text-xs min-h-11">Toda a equipe do setor</SelectItem>
+              {agents
+                .filter((a) =>
+                  !sectorDepartmentId ||
+                  a.department_id === sectorDepartmentId ||
+                  sectorAgentIds?.has(a.id)
+                )
+                .filter((a) => a.is_active || sectorAgentIds?.has(a.id))
+                .sort((x, y) => Number(y.is_active) - Number(x.is_active) || (x.user?.name || "").localeCompare(y.user?.name || ""))
+                .map((agent) => (
+                <SelectItem key={agent.id} value={agent.id} className="text-zapp-text text-xs min-h-11">
+                  {agent.user?.name || "Atendente"}{!agent.is_active ? " (inativo)" : ""}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+  ) : null;
+  const conversationFilters = (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Filtrar conversas" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full">
+                    <Filter className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-[min(320px,calc(100vw-16px))] max-h-[70dvh] overflow-y-auto [&_[role=menuitem]]:min-h-11">
+<div className="lg:hidden px-2 pb-2">{agentScopeSelector}</div>
+{inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && <DropdownMenuItem className="lg:hidden min-h-11 gap-2 text-zapp-accent" onSelect={onPullFromQueue}><ArrowDownToLine className="h-5 w-5" />Puxar da fila ({totalQueueConversations})</DropdownMenuItem>}
+              {/* Status filters */}
+              <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "all" && "bg-zapp-accent text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterStatus("all")}
+              >
+                <span>Todas</span>
+                {filterStatus === "all" && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterUnread && "bg-zapp-accent text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterUnread(!filterUnread)}
+              >
+                <span>Não lidas</span>
+                {filterUnread && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "triage" && "bg-zapp-accent text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterStatus("triage")}
+              >
+                <span>Triagem</span>
+                {filterStatus === "triage" && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "active" && "bg-zapp-accent text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterStatus("active")}
+              >
+                <span>Em atendimento</span>
+                {filterStatus === "active" && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterStatus === "closed" && "bg-zapp-accent text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterStatus("closed")}
+              >
+                <span>Finalizado</span>
+                {filterStatus === "closed" && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              
+              <DropdownMenuSeparator className="bg-zapp-border" />
+              
+              {/* Archived filter */}
+              <DropdownMenuItem 
+                className={cn(
+                  "text-zapp-text flex items-center justify-between cursor-pointer", 
+                  filterArchived && "bg-warning text-primary-foreground font-semibold"
+                )}
+                onClick={() => setFilterArchived(!filterArchived)}
+              >
+                <span>📦 Arquivadas</span>
+                {filterArchived && <Check className="h-4 w-4" />}
+              </DropdownMenuItem>
+              
+              {/* Product filters */}
+              {availableProducts.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
+                  <DropdownMenuItem 
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterProductId === "all" && "bg-zapp-accent text-primary-foreground font-semibold"
+                    )}
+                    onClick={() => setFilterProductId("all")}
+                  >
+                    <span>Todos os produtos</span>
+                    {filterProductId === "all" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  {availableProducts.map((product) => (
+                    <DropdownMenuItem 
+                      key={product.id}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterProductId === product.id && "bg-zapp-accent text-primary-foreground font-semibold"
+                      )}
+                      onClick={() => setFilterProductId(product.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: product.color || '#10b981' }}
+                        />
+                        <span className="truncate">{product.name}</span>
+                      </div>
+                      {filterProductId === product.id && <Check className="h-4 w-4 flex-shrink-0" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              
+              {/* Tag filters */}
+              {tags.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
+                  <DropdownMenuItem 
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterTagId === "all" && "bg-zapp-accent text-primary-foreground font-semibold"
+                    )}
+                    onClick={() => setFilterTagId("all")}
+                  >
+                    <span>Todas as etiquetas</span>
+                    {filterTagId === "all" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  {tags.filter(t => t.is_active).map((tag) => (
+                    <DropdownMenuItem 
+                      key={tag.id}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterTagId === tag.id && "bg-zapp-accent text-primary-foreground font-semibold"
+                      )}
+                      onClick={() => setFilterTagId(tag.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <div 
+                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                          style={{ backgroundColor: tag.color }}
+                        />
+                        <span className="truncate">{tag.name}</span>
+                      </div>
+                      {filterTagId === tag.id && <Check className="h-4 w-4 flex-shrink-0" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+              
+              {/* Agent filters */}
+              {agents.length > 0 && (
+                <>
+                  <DropdownMenuSeparator className="bg-zapp-border" />
+                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
+                  <DropdownMenuItem 
+                    className={cn(
+                      "text-zapp-text flex items-center justify-between cursor-pointer", 
+                      filterAgentId === "all" && "bg-zapp-accent text-primary-foreground font-semibold"
+                    )}
+                    onClick={() => setFilterAgentId("all")}
+                  >
+                    <span>Todos os atendentes</span>
+                    {filterAgentId === "all" && <Check className="h-4 w-4" />}
+                  </DropdownMenuItem>
+                  {agents.filter(a => a.is_active).map((agent) => (
+                    <DropdownMenuItem 
+                      key={agent.id}
+                      className={cn(
+                        "text-zapp-text flex items-center justify-between cursor-pointer", 
+                        filterAgentId === agent.id && "bg-zapp-accent text-primary-foreground font-semibold"
+                      )}
+                      onClick={() => setFilterAgentId(agent.id)}
+                    >
+                      <div className="flex items-center gap-2">
+                        <Avatar className="h-5 w-5">
+                          <AvatarImage src={agent.user?.avatar_url || undefined} />
+                          <AvatarFallback className="text-[8px] bg-zapp-panel">
+                            {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
+                          </AvatarFallback>
+                        </Avatar>
+                        <span className="truncate">{agent.user?.name || "Atendente"}</span>
+                        {agent.is_online && (
+                          <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
+                        )}
+                      </div>
+                      {filterAgentId === agent.id && <Check className="h-4 w-4 flex-shrink-0" />}
+                    </DropdownMenuItem>
+                  ))}
+                </>
+              )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+  );
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
+      <div data-zapp-inbox-header className="flex min-h-16 shrink-0 items-center gap-1 border-b border-zapp-border bg-zapp-panel-header px-2 py-2 lg:hidden">
+        <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-zapp-text" onClick={() => activeView !== "inbox" ? setActiveView("inbox") : onChooseSector ? onChooseSector() : navigate("/setores")} aria-label={activeView !== "inbox" ? "Voltar para conversas" : "Escolher setor do RoyZapp"}><ChevronLeft className="h-5 w-5" /></Button>
+        <div className="min-w-0 flex-1">
+          <h2 className="text-sm font-semibold leading-5 text-zapp-text">ROY zAPP</h2>
+          <p className="flex items-start gap-1.5 text-xs leading-4 text-zapp-text-muted"><span className={cn("mt-1 h-2 w-2 shrink-0 rounded-full", whatsappConnected ? "bg-success" : "bg-danger")} aria-label={whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"} /><span className="break-words">{sectorName || "WhatsApp"}</span></p>
+        </div>
+        {isConversationListVisible && <Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-zapp-text" aria-label="Nova conversa" onClick={onOpenNewConversationDialog}><Plus className="h-5 w-5" /></Button>}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild><Button variant="ghost" size="icon" className="h-11 w-11 shrink-0 text-zapp-text" aria-label="Ações do RoyZapp"><MoreVertical className="h-5 w-5" /></Button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="max-h-[70dvh] w-[min(300px,calc(100vw-16px))] overflow-y-auto bg-zapp-panel text-zapp-text">
+            <div className="px-2 py-2 text-xs text-zapp-text-muted">{whatsappConnected ? "WhatsApp conectado" : "WhatsApp desconectado"}{whatsappInstanceName && <span className="block break-words">{whatsappInstanceName}</span>}<span className="block">{activeConversations} em atendimento · {onlineAgents} online</span></div>
+            {isConversationListVisible && <DropdownMenuItem className="min-h-11 gap-2" onSelect={onRefreshMessages} disabled={isRefreshingMessages}><RefreshCw className="h-5 w-5" />Atualizar mensagens</DropdownMenuItem>}
+            <ZappRoleHelpPopover currentRole={zappRole} showLabel className="w-full justify-start rounded-md px-2" />
+            <DropdownMenuSeparator />
+            {onChooseSector && <DropdownMenuItem className="min-h-11" onSelect={onChooseSector}>Escolher setor do RoyZapp</DropdownMenuItem>}
+            <DropdownMenuItem className="min-h-11" onSelect={() => navigate("/setores")}>Ir para Áreas</DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      {isConversationListVisible && sectorId && onSelectIntegration && <ZappInstanceSwitcher accountId={accountId} sectorId={sectorId} selectedIntegrationId={selectedIntegrationId} onChange={onSelectIntegration} className="mx-3 my-1 min-w-0 lg:hidden" />}
+
       {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex flex-wrap sm:flex-nowrap items-start justify-between gap-2">
+      <div className="hidden lg:flex bg-zapp-panel-header px-4 py-3 flex-wrap sm:flex-nowrap items-start justify-between gap-2">
         <div className="flex items-start gap-3 min-w-0 w-full sm:w-auto sm:flex-1">
           {/* No celular o RoyZapp não tem tab bar: este é o caminho de volta. */}
           <Button variant="ghost" size="icon"
@@ -316,7 +563,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           </Button>
           <Avatar className="hidden sm:flex h-10 w-10 shrink-0">
             <AvatarImage src={currentUser?.avatar_url || undefined} />
-            <AvatarFallback className="bg-zapp-accent text-white text-sm">
+            <AvatarFallback className="bg-zapp-accent text-primary-foreground text-sm">
               {currentUser ? getInitials(currentUser.name) : "?"}
             </AvatarFallback>
           </Avatar>
@@ -386,197 +633,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
                 </TooltipTrigger>
                 <TooltipContent>Nova conversa</TooltipContent>
               </Tooltip>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Filtrar conversas" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full">
-                    <Filter className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-56 max-h-80 overflow-y-auto">
-              {/* Status filters */}
-              <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterStatus === "all" && "bg-zapp-accent text-white font-semibold"
-                )}
-                onClick={() => setFilterStatus("all")}
-              >
-                <span>Todas</span>
-                {filterStatus === "all" && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterUnread && "bg-zapp-accent text-white font-semibold"
-                )}
-                onClick={() => setFilterUnread(!filterUnread)}
-              >
-                <span>Não lidas</span>
-                {filterUnread && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterStatus === "triage" && "bg-zapp-accent text-white font-semibold"
-                )}
-                onClick={() => setFilterStatus("triage")}
-              >
-                <span>Triagem</span>
-                {filterStatus === "triage" && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterStatus === "active" && "bg-zapp-accent text-white font-semibold"
-                )}
-                onClick={() => setFilterStatus("active")}
-              >
-                <span>Em atendimento</span>
-                {filterStatus === "active" && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterStatus === "closed" && "bg-zapp-accent text-white font-semibold"
-                )}
-                onClick={() => setFilterStatus("closed")}
-              >
-                <span>Finalizado</span>
-                {filterStatus === "closed" && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              
-              <DropdownMenuSeparator className="bg-zapp-border" />
-              
-              {/* Archived filter */}
-              <DropdownMenuItem 
-                className={cn(
-                  "text-zapp-text flex items-center justify-between cursor-pointer", 
-                  filterArchived && "bg-warning text-white font-semibold"
-                )}
-                onClick={() => setFilterArchived(!filterArchived)}
-              >
-                <span>📦 Arquivadas</span>
-                {filterArchived && <Check className="h-4 w-4" />}
-              </DropdownMenuItem>
-              
-              {/* Product filters */}
-              {availableProducts.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Produto</div>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-zapp-text flex items-center justify-between cursor-pointer", 
-                      filterProductId === "all" && "bg-zapp-accent text-white font-semibold"
-                    )}
-                    onClick={() => setFilterProductId("all")}
-                  >
-                    <span>Todos os produtos</span>
-                    {filterProductId === "all" && <Check className="h-4 w-4" />}
-                  </DropdownMenuItem>
-                  {availableProducts.map((product) => (
-                    <DropdownMenuItem 
-                      key={product.id}
-                      className={cn(
-                        "text-zapp-text flex items-center justify-between cursor-pointer", 
-                        filterProductId === product.id && "bg-zapp-accent text-white font-semibold"
-                      )}
-                      onClick={() => setFilterProductId(product.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: product.color || '#10b981' }}
-                        />
-                        <span className="truncate">{product.name}</span>
-                      </div>
-                      {filterProductId === product.id && <Check className="h-4 w-4 flex-shrink-0" />}
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-              
-              {/* Tag filters */}
-              {tags.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Etiqueta</div>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-zapp-text flex items-center justify-between cursor-pointer", 
-                      filterTagId === "all" && "bg-zapp-accent text-white font-semibold"
-                    )}
-                    onClick={() => setFilterTagId("all")}
-                  >
-                    <span>Todas as etiquetas</span>
-                    {filterTagId === "all" && <Check className="h-4 w-4" />}
-                  </DropdownMenuItem>
-                  {tags.filter(t => t.is_active).map((tag) => (
-                    <DropdownMenuItem 
-                      key={tag.id}
-                      className={cn(
-                        "text-zapp-text flex items-center justify-between cursor-pointer", 
-                        filterTagId === tag.id && "bg-zapp-accent text-white font-semibold"
-                      )}
-                      onClick={() => setFilterTagId(tag.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <div 
-                          className="w-2.5 h-2.5 rounded-full flex-shrink-0"
-                          style={{ backgroundColor: tag.color }}
-                        />
-                        <span className="truncate">{tag.name}</span>
-                      </div>
-                      {filterTagId === tag.id && <Check className="h-4 w-4 flex-shrink-0" />}
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-              
-              {/* Agent filters */}
-              {agents.length > 0 && (
-                <>
-                  <DropdownMenuSeparator className="bg-zapp-border" />
-                  <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Atendente</div>
-                  <DropdownMenuItem 
-                    className={cn(
-                      "text-zapp-text flex items-center justify-between cursor-pointer", 
-                      filterAgentId === "all" && "bg-zapp-accent text-white font-semibold"
-                    )}
-                    onClick={() => setFilterAgentId("all")}
-                  >
-                    <span>Todos os atendentes</span>
-                    {filterAgentId === "all" && <Check className="h-4 w-4" />}
-                  </DropdownMenuItem>
-                  {agents.filter(a => a.is_active).map((agent) => (
-                    <DropdownMenuItem 
-                      key={agent.id}
-                      className={cn(
-                        "text-zapp-text flex items-center justify-between cursor-pointer", 
-                        filterAgentId === agent.id && "bg-zapp-accent text-white font-semibold"
-                      )}
-                      onClick={() => setFilterAgentId(agent.id)}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Avatar className="h-5 w-5">
-                          <AvatarImage src={agent.user?.avatar_url || undefined} />
-                          <AvatarFallback className="text-[8px] bg-zapp-panel">
-                            {agent.user?.name?.split(" ").map(n => n[0]).join("").slice(0, 2) || "?"}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="truncate">{agent.user?.name || "Atendente"}</span>
-                        {agent.is_online && (
-                          <div className="w-2 h-2 rounded-full bg-success flex-shrink-0" />
-                        )}
-                      </div>
-                      {filterAgentId === agent.id && <Check className="h-4 w-4 flex-shrink-0" />}
-                    </DropdownMenuItem>
-                  ))}
-                </>
-              )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {conversationFilters}
               <Button
                 variant="ghost"
                 size="icon"
@@ -613,14 +670,15 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {isConversationListVisible && (
       <div className="flex border-b border-zapp-border bg-zapp-bg">
-        <button
+        <Button variant="ghost"
+          aria-pressed={inboxTab === "mine"}
           onClick={() => {
             setInboxTab("mine");
             if (filterConversationType !== "all") setFilterConversationType("all");
             if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
-            "flex-1 py-3 text-sm font-medium transition-colors relative",
+            "h-11 rounded-none flex-1 py-0 text-sm font-medium transition-colors relative",
             inboxTab === "mine" 
               ? "text-zapp-accent" 
               : "text-zapp-text-muted hover:text-zapp-text"
@@ -630,7 +688,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             Minhas
             <span className="text-zapp-text-muted text-xs">({myConversations})</span>
             {myUnreadCount > 0 && (
-              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
+              <Badge variant="secondary" className="bg-zapp-accent text-primary-foreground text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
                 {myUnreadCount}
               </Badge>
             )}
@@ -638,15 +696,15 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           {inboxTab === "mine" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
           )}
-        </button>
-        <button
+        </Button>
+        <Button variant="ghost" aria-pressed={inboxTab === "queue"}
           onClick={() => {
             setInboxTab("queue");
             if (filterConversationType !== "all") setFilterConversationType("all");
             if (!showConversationList && activeView !== "inbox") setActiveView("inbox");
           }}
           className={cn(
-            "flex-1 py-3 text-sm font-medium transition-colors relative",
+            "h-11 rounded-none flex-1 py-0 text-sm font-medium transition-colors relative",
             inboxTab === "queue" 
               ? "text-zapp-accent" 
               : "text-zapp-text-muted hover:text-zapp-text"
@@ -656,7 +714,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             Fila
             <span className="text-zapp-text-muted text-xs">({totalQueueConversations})</span>
             {queueUnreadCount > 0 && (
-              <Badge variant="secondary" className="bg-zapp-accent text-white text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
+              <Badge variant="secondary" className="bg-zapp-accent text-primary-foreground text-[10px] px-1.5 py-0 h-4 min-w-[18px]">
                 {queueUnreadCount}
               </Badge>
             )}
@@ -664,57 +722,32 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
           {inboxTab === "queue" && (
             <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-zapp-accent" />
           )}
-        </button>
+        </Button>
       </div>
       )}
 
       {/* Linha única: busca + escopo + puxar da fila */}
       {isConversationListVisible && (
-      <div className="px-3 py-2 bg-zapp-bg flex items-center gap-2">
+      <div className="px-3 py-1.5 lg:py-2 bg-zapp-bg flex shrink-0 items-center gap-2" data-zapp-search>
         <div className="relative flex-1 min-w-0">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-zapp-text-muted" />
           <Input
+            aria-label="Pesquisar conversa"
             placeholder="Pesquisar conversa..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-9"
+            className="pl-10 bg-zapp-input border-0 text-zapp-text placeholder:text-zapp-text-muted focus-visible:ring-0 rounded-lg h-11 lg:h-9"
           />
         </div>
 
-        {inboxTab === "mine" && canSeeAllSectorConversations && (
-          <Select value={filterAgentId} onValueChange={setFilterAgentId}>
-            <SelectTrigger
-              className="h-9 w-auto max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
-              title="Exibir conversas de"
-            >
-              <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
-              <SelectValue placeholder="Minhas" />
-            </SelectTrigger>
-            <SelectContent className="bg-zapp-panel border-zapp-border">
-              <SelectItem value="all" className="text-zapp-text text-xs">Somente minhas conversas</SelectItem>
-              <SelectItem value="__team__" className="text-zapp-text text-xs">Toda a equipe do setor</SelectItem>
-              {agents
-                .filter((a) =>
-                  !sectorDepartmentId ||
-                  a.department_id === sectorDepartmentId ||
-                  sectorAgentIds?.has(a.id)
-                )
-                .filter((a) => a.is_active || sectorAgentIds?.has(a.id))
-                .sort((x, y) => Number(y.is_active) - Number(x.is_active) || (x.user?.name || "").localeCompare(y.user?.name || ""))
-                .map((agent) => (
-                <SelectItem key={agent.id} value={agent.id} className="text-zapp-text text-xs">
-                  {agent.user?.name || "Atendente"}{!agent.is_active ? " (inativo)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="lg:hidden shrink-0">{conversationFilters}</div>
+        <div className="hidden lg:block">{agentScopeSelector}</div>
 
         {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
           <Button
             variant="outline"
             size="sm"
-            className="h-9 shrink-0 gap-1 px-2 bg-zapp-accent/10 border-zapp-accent/30 text-zapp-accent hover:bg-zapp-accent/20 hover:text-zapp-accent"
+            className="hidden lg:inline-flex h-9 shrink-0 gap-1 px-2 bg-zapp-accent/10 border-zapp-accent/30 text-zapp-accent hover:bg-zapp-accent/20 hover:text-zapp-accent"
             onClick={onPullFromQueue}
             title={`Puxar da fila (${totalQueueConversations})`}
           >
@@ -749,29 +782,27 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
 
       {/* UAZAPI server offline alert — appears only when the sector's WhatsApp gateway is unreachable */}
       {isConversationListVisible && sectorId && (
-        <div className="px-3 pb-2">
           <UazapiServerHealthBanner
             sectorId={sectorId}
             integrationId={selectedIntegrationId || null}
             compact
+            className="mx-3 mb-2"
           />
-        </div>
       )}
 
       {/* Line disconnected → show QR immediately so the operator can reconnect on the spot */}
       {isConversationListVisible && sectorId && (
-        <div className="px-3 pb-2">
           <ZappDisconnectedQrBanner
             sectorId={sectorId}
             integrationId={selectedIntegrationId || null}
+            className="mx-3 mb-2"
           />
-        </div>
       )}
 
 
 
       {/* Conversation list */}
-      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-scroll-area>
+      <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain" data-scroll-area data-zapp-conversation-list>
         {isConversationListVisible && (
           <div className="divide-y divide-zapp-border">
             {filteredAssignments.length === 0 ? (() => {

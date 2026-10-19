@@ -154,7 +154,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
       )}
 
       {/* Header */}
-      <div className="shrink-0 bg-zapp-panel-header px-2 sm:px-4 py-2 sm:py-3 flex flex-wrap items-center gap-2 sm:flex-nowrap sm:gap-3 border-b border-zapp-border">
+      <div className="shrink-0 bg-zapp-panel-header px-2 lg:px-4 py-2 lg:py-3 flex flex-nowrap items-center gap-1 lg:gap-3 border-b border-zapp-border">
         <Button
           variant="ghost"
           size="icon"
@@ -206,13 +206,13 @@ export const ZappChatHeader = memo(function ZappChatHeader({
           )}
           <div className="flex-1 min-w-0 flex items-center gap-1 sm:gap-2">
             {contactInfo.isGroup && <Users2 className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-zapp-accent flex-shrink-0" />}
-            <h3 className="text-zapp-text font-medium truncate text-sm sm:text-base flex items-center gap-1.5 min-w-0">
-              <span className="truncate">{contactInfo.name}</span>
+            <h3 className="text-zapp-text font-medium text-sm sm:text-base flex items-center gap-1.5 min-w-0">
+              <span className="line-clamp-2 break-words lg:truncate">{contactInfo.name}</span>
               <VipBadge clientId={clientId} />
             </h3>
             {clientId && <ExternalLink className="h-3 w-3 sm:h-3.5 sm:w-3.5 text-zapp-text-muted flex-shrink-0" />}
             {clientProducts && clientProducts.length > 0 && (
-              <div className="hidden xs:flex items-center gap-1 flex-shrink-0">
+              <div className="hidden lg:flex items-center gap-1 flex-shrink-0">
                 {clientProducts.slice(0, 1).map((p) => (
                   <Badge 
                     key={p.id} 
@@ -238,7 +238,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
         {conversationId && (
           <ZappConversationIdBadge conversationId={conversationId} className="mx-1 hidden shrink-0 sm:inline-flex" />
         )}
-        <div className="flex w-full items-center justify-end gap-1 sm:w-auto sm:gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-1 lg:gap-2">
 
           {/* Assign to me / Release button - icon only on mobile */}
           {!canClaim ? (
@@ -249,7 +249,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               aria-label="Puxar atendimento"
-              className="bg-zapp-accent hover:bg-zapp-accent-hover text-primary-foreground text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
+              className="hidden lg:inline-flex bg-zapp-accent hover:bg-zapp-accent-hover text-primary-foreground text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onAssignToMe(assignment.id)}
             >
               <UserCheck className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -260,7 +260,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               size="sm"
               variant="outline"
               aria-label="Devolver atendimento"
-              className="border-warning text-warning hover:bg-warning/10 text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
+              className="hidden lg:inline-flex border-warning text-warning hover:bg-warning/10 text-xs h-11 min-w-11 sm:h-8 px-2 sm:px-3"
               onClick={() => onReleaseToQueue(assignment.id)}
             >
               <ArrowLeft className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1.5" />
@@ -276,7 +276,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                 variant="outline"
                 size="sm"
                 className={cn(
-                  "h-11 min-w-11 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
+                  "hidden lg:inline-flex h-11 min-w-11 sm:h-8 px-1.5 sm:px-3 text-[10px] sm:text-xs font-semibold transition-colors cursor-pointer hover:opacity-80",
                   STATUS_CONFIG[assignment.status]?.color || "text-muted-foreground",
                   "border-current bg-transparent"
                 )}
@@ -315,7 +315,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               size="sm"
               variant="outline"
-              className="hidden xs:flex h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs border-success text-success hover:bg-success/10"
+              className="hidden lg:flex h-7 sm:h-8 px-2 sm:px-3 text-[10px] sm:text-xs border-success text-success hover:bg-success/10"
               onClick={onOpenCloseTicket}
             >
               <CheckCircle className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-1" />
@@ -328,7 +328,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             <Button
               variant="ghost"
               size="icon"
-              className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+              className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
               onClick={onToggleSearch}
               title="Buscar na conversa"
             >
@@ -338,7 +338,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
                 onClick={onOpenTransfer}
                 title="Transferir conversa"
               >
@@ -352,14 +352,14 @@ export const ZappChatHeader = memo(function ZappChatHeader({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                    className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
                     disabled={callInProgress}
                     aria-label={callInProgress ? "Discando…" : "Ligar"}
                   >
                     {callInProgress ? <span className="text-xs">Discando…</span> : <Phone className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+                <DropdownMenuContent align="end" className="max-h-[70dvh] overflow-y-auto w-[min(300px,calc(100vw-16px))] bg-zapp-panel border-zapp-border z-50 [&_[role=menuitem]]:min-h-11">
                   <DropdownMenuItem className="text-zapp-text hover:bg-zapp-hover" onClick={() => onCall?.("3cplus")}>
                     <Phone className="h-4 w-4 mr-2" />
                     3C Plus
@@ -374,7 +374,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
                 onClick={() => onCall?.(callEngines[0])}
                 disabled={callInProgress}
                 aria-label={callInProgress ? "Discando…" : "Ligar"}
@@ -386,7 +386,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
                 onClick={onOpenCreateDeal}
                 title="Criar negócio no CRM"
                 aria-label="Criar negócio no CRM"
@@ -398,7 +398,7 @@ export const ZappChatHeader = memo(function ZappChatHeader({
               <Button
                 variant="ghost"
                 size="icon"
-                className="hidden sm:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
+                className="hidden lg:flex text-zapp-text-muted hover:bg-zapp-hover h-7 w-7 sm:h-8 sm:w-8"
                 onClick={onOpenRuler}
                 title="Iniciar régua de relacionamento"
                 aria-label="Iniciar régua de relacionamento"
@@ -408,13 +408,19 @@ export const ZappChatHeader = memo(function ZappChatHeader({
             )}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" aria-label="Opções da conversa" className="text-zapp-text-muted hover:bg-zapp-hover h-11 w-11 sm:h-8 sm:w-8">
+                <Button variant="ghost" size="icon" aria-label="Opções da conversa" className="text-zapp-text-muted hover:bg-zapp-hover h-11 w-11 lg:h-8 lg:w-8">
                   <MoreVertical className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border z-50">
+              <DropdownMenuContent align="end" className="max-h-[70dvh] overflow-y-auto w-[min(300px,calc(100vw-16px))] bg-zapp-panel border-zapp-border z-50 [&_[role=menuitem]]:min-h-11">
                 {/* Mobile-only actions */}
-                <div className="sm:hidden">
+                <div className="lg:hidden">
+                  <div className="px-2 py-2 text-xs text-zapp-text-muted">{STATUS_CONFIG[assignment.status]?.label || "Status"}</div>
+                  {!canClaim ? <div className="px-2 py-2 text-xs text-zapp-text-muted">Somente leitura</div> : <DropdownMenuItem className="min-h-11 text-zapp-text" onSelect={() => assignment.agent_id !== currentAgentId ? onAssignToMe(assignment.id) : onReleaseToQueue(assignment.id)}>{assignment.agent_id !== currentAgentId ? "Puxar atendimento" : "Devolver atendimento"}</DropdownMenuItem>}
+                  {([['triage', 'Triagem'], ['active', 'Em atendimento'], ['closed', 'Finalizado']] as const).map(([status, label]) => <DropdownMenuItem key={status} className="min-h-11 text-zapp-text" onSelect={() => onUpdateStatus(assignment.id, status)}>{label}</DropdownMenuItem>)}
+                  <DropdownMenuSeparator />
+                </div>
+                <div className="lg:hidden">
                   <DropdownMenuItem 
                     className="text-zapp-text hover:bg-zapp-hover"
                     onClick={onToggleSearch}
