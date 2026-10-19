@@ -198,7 +198,7 @@ export default function FinancialAgingPage() {
                   <AlertTriangle className="h-4 w-4" />
                   Total Atrasado
                 </div>
-                <div className="text-2xl font-bold text-destructive">
+                <div className="break-words text-lg font-bold text-destructive sm:text-2xl">
                   {formatCurrency(totalOverdue)}
                 </div>
                 <div className="text-xs text-muted-foreground">
