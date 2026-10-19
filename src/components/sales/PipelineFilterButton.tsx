@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -82,6 +82,8 @@ export function PipelineFilterButton({
   const { currentUser } = useCurrentUser();
   const { filters, fetchFilters, createFilter, updateFilter, deleteFilter } = usePipelineFilters();
   const [isOpen, setIsOpen] = useState(false);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("vendedores");
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -262,9 +264,14 @@ export function PipelineFilterButton({
 
   return (
     <>
-      <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <Popover open={isOpen} onOpenChange={(open) => {
+        // Keep nested content inside the Sheet's focus and scroll-lock boundary.
+        if (open) setPortalContainer(triggerRef.current?.closest<HTMLElement>('[role="dialog"]') ?? null);
+        setIsOpen(open);
+      }}>
         <PopoverTrigger asChild>
           <Button
+            ref={triggerRef}
             variant={activeFilter ? "default" : "outline"}
             size="sm"
             className="h-10 gap-2"
@@ -291,7 +298,7 @@ export function PipelineFilterButton({
             )}
           </Button>
         </PopoverTrigger>
-        <PopoverContent className="w-[min(340px,calc(100vw-1rem))] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto p-0" align="start">
+        <PopoverContent portalContainer={portalContainer} className="w-[min(340px,calc(100vw-1rem))] max-h-[var(--radix-popover-content-available-height)] overflow-y-auto p-0" align="start">
           {/* Search */}
           <div className="p-3 border-b">
             <div className="relative">
