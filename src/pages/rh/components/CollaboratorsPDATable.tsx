@@ -295,6 +295,86 @@ export default function CollaboratorsPDATable({
     );
   };
 
+  const ctxFor = (c: HRCollaborator): RenderCtx => {
+    const mgr = c.manager_id ? nameById[c.manager_id] : undefined;
+    return { managerName: mgr?.full_name, managerAvatar: mgr?.avatar_url, opt: optionsFor, people, save, canEdit };
+  };
+
+  /** Cartão mobile: resumo + detalhes expansíveis com TODAS as colunas visíveis. */
+  const renderCard = (c: HRCollaborator) => {
+    const ctx = ctxFor(c);
+    const pct = computeSynergyPct(c.pda_role_profile, c.pda_dominant_profile, c.pda_secondary_profile);
+    const thermo = (c as any).pda_thermometer || THERMOMETER_DEFAULT;
+    const expanded = expandedCards.has(c.id);
+    return (
+      <div key={c.id} className="rounded-lg border bg-card p-3 space-y-2">
+        <div className="flex items-start gap-3">
+          <Avatar className="h-10 w-10 shrink-0">
+            <AvatarImage src={c.avatar_url || undefined} />
+            <AvatarFallback className="text-[10px] bg-primary/10 text-primary">{initials(c.full_name)}</AvatarFallback>
+          </Avatar>
+          <div className="min-w-0 flex-1">
+            <p className="font-medium text-sm break-words">{c.full_name}</p>
+            <p className="text-xs text-muted-foreground break-words">
+              {[c.position, c.department].filter(Boolean).join(" · ") || "—"}
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0"
+            onClick={() => navigate((c as any).__route || `/rh/collaborators/${c.id}`)}
+          >
+            <Eye className="h-4 w-4 mr-1.5" /> Ficha
+          </Button>
+        </div>
+        <div className="flex flex-wrap gap-1">
+          {c.pda_level && <PdaBadge label={c.pda_level} color={optionColor(optionsFor("pda_level"), c.pda_level)} />}
+          {(c.pda_sectors || []).map((s: string) => (
+            <PdaBadge key={s} label={s} color={optionColor(optionsFor("pda_sectors"), s)} />
+          ))}
+          {c.pda_dominant_profile && (
+            <PdaBadge label={c.pda_dominant_profile} color={optionColor(optionsFor("pda_profile"), c.pda_dominant_profile)} />
+          )}
+          {pct != null && <PdaBadge label={`Sinergia ${pct}%`} color={optionColor(optionsFor("pda_synergy"), "SIM")} />}
+          <PdaBadge label={thermo} color={optionColor(optionsFor("pda_thermometer"), thermo)} />
+        </div>
+        <button
+          type="button"
+          onClick={() => setExpandedCards(prev => {
+            const next = new Set(prev);
+            if (next.has(c.id)) next.delete(c.id); else next.add(c.id);
+            return next;
+          })}
+          className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground hover:text-foreground"
+          aria-expanded={expanded}
+        >
+          {expanded ? <ChevronDown className="h-3.5 w-3.5" /> : <ChevronRight className="h-3.5 w-3.5" />}
+          {expanded ? "Ocultar detalhes" : "Ver detalhes"}
+        </button>
+        {expanded && (
+          <dl className="grid gap-2 border-t pt-2">
+            {columns.map(col => (
+              <div key={col.key} className="grid gap-0.5">
+                <dt className="text-[11px] uppercase tracking-wide text-muted-foreground">{col.label}</dt>
+                <dd className="text-sm break-words">{col.render(c, ctx)}</dd>
+              </div>
+            ))}
+          </dl>
+        )}
+      </div>
+    );
+  };
+
+  const cardGroupSummary = (list: HRCollaborator[], label: string) => {
+    const t = totalsFor(list);
+    const parts = [`${label}: ${t.count}`];
+    if (t.avgTenure != null) parts.push(`tempo médio ${t.avgTenure} m`);
+    if (t.avgSynergy != null) parts.push(`sinergia média ${t.avgSynergy}%`);
+    if (canSeeSalary) parts.push(`folha c/ encargos ${formatMoney(t.with)}`);
+    return parts.join(" · ");
+  };
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-3">
