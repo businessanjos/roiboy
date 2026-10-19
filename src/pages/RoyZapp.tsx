@@ -1,3 +1,4 @@
+import { resolveZappHistorySelection, zappSelectionHistoryStates } from "@/lib/navigation/zappMobileSelection";
 import { useUserPermissions } from "@/hooks/useUserPermissions";
 import { useState, useEffect, useMemo, useRef, useCallback, useSyncExternalStore } from "react";
 import { supabase } from "@/integrations/supabase/client";
@@ -588,17 +589,38 @@ export default function RoyZapp() {
 
   // Mobile selections get a history entry without replaying deep-link actions.
   // Back returns to the list; forward restores the selected conversation.
+  // Applied once per history entry: assignment refreshes must not replay old state.
+  const appliedHistoryKeyRef = useRef<string | null>(null);
   useEffect(() => {
     if (!isNarrowScreen) return;
-    const selectionId = navigationLocation.state?.zappSelection;
-    if (typeof selectionId === "string") {
-      const selection = assignments.find((a) => a.id === selectionId);
+    const action = resolveZappHistorySelection(
+      navigationLocation.key,
+      navigationLocation.state,
+      appliedHistoryKeyRef.current,
+      assignments.map((a) => a.id),
+    );
+    if (action.type === "wait") return;
+    appliedHistoryKeyRef.current = navigationLocation.key;
+    if (action.type === "select") {
+      const selection = assignments.find((a) => a.id === action.id);
       if (selection) setSelectedConversation(selection);
-    } else if (navigationLocation.state?.zappList) {
+    } else if (action.type === "list") {
       suppressRestoreRef.current = true;
       setSelectedConversation(null);
     }
   }, [navigationLocation.key, navigationLocation.state, assignments, isNarrowScreen]);
+
+  const pushMobileSelectionHistory = useCallback((assignmentId: string) => {
+    if (!isNarrowScreen) return;
+    const url = navigationLocation.pathname + navigationLocation.search;
+    const { listEntry, selectionEntry } = zappSelectionHistoryStates(navigationLocation.state, assignmentId);
+    if (navigationLocation.state?.zappSelection) {
+      navigate(url, { replace: true, state: selectionEntry });
+    } else {
+      navigate(url, { replace: true, state: listEntry });
+      navigate(url, { state: selectionEntry });
+    }
+  }, [isNarrowScreen, navigationLocation.pathname, navigationLocation.search, navigationLocation.state, navigate]);
 
   const closeConversation = useCallback(() => {
     suppressRestoreRef.current = true;
@@ -876,6 +898,7 @@ export default function RoyZapp() {
         });
         return;
       }
+      pushMobileSelectionHistory(assignment.id);
       setSelectedConversation(assignment);
       setInboxTab(assignment.agent_id === currentAgent?.id ? "mine" : "queue");
       return;
@@ -883,7 +906,7 @@ export default function RoyZapp() {
     // Não está na lista atual — deixa o efeito de URL processar (ele troca setor/instância)
     replaceSearchParams((next) => next.set("conversation", conversationId));
     setUrlParamsProcessed(false);
-  }, [assignments, currentAgent?.id, agents, replaceSearchParams]);
+  }, [assignments, currentAgent?.id, agents, replaceSearchParams, pushMobileSelectionHistory]);
 
   // Notification hook
   const { 
@@ -1849,8 +1872,9 @@ export default function RoyZapp() {
           onSelectConversation={(a) => {
             if (isNarrowScreen) {
               const url = navigationLocation.pathname + navigationLocation.search;
-              navigate(url, { replace: true, state: { ...navigationLocation.state, zappList: true, zappSelection: undefined } });
-              navigate(url, { state: { ...navigationLocation.state, zappList: false, zappSelection: a.id } });
+              const { listEntry, selectionEntry } = zappSelectionHistoryStates(navigationLocation.state, a.id);
+              navigate(url, { replace: true, state: listEntry });
+              navigate(url, { state: selectionEntry });
             }
             setSelectedConversation(a);
             const zappConvId = a.zapp_conversation?.id;
