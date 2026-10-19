@@ -443,7 +443,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
       {/* Header */}
       <div className="border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 p-4">
         <div className="flex items-center gap-3">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" className="h-11 w-11" aria-label="Voltar para Áreas" onClick={() => navigate("/setores")}>
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex-1">
@@ -484,21 +484,20 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                   </div>
                 )}
                 
-                <CardHeader 
-                  className="pb-2 cursor-pointer"
-                  onClick={() => handleSectorClick(sectorId)}
-                >
+                <CardHeader className="pb-2">
+                  <Button variant="ghost" aria-label={`Abrir ${sector.name}`} onClick={() => handleSectorClick(sectorId)} className="h-auto min-h-11 w-full justify-start whitespace-normal p-0 text-left hover:bg-muted">
                   <div className="flex items-center gap-3">
                     <div className={cn("p-2 rounded-lg", sector.bgColor)}>
                       <Icon className={cn("h-5 w-5", sector.color)} />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <CardTitle className="text-base">{sector.name}</CardTitle>
-                      <CardDescription className="text-xs truncate">
+                      <span className="block text-base font-semibold">{sector.name}</span>
+                      <span className="block text-xs text-muted-foreground">
                         {sector.description}
-                      </CardDescription>
+                      </span>
                     </div>
                   </div>
+                  </Button>
                 </CardHeader>
                 
                 <CardContent className="pt-2 space-y-2">
@@ -586,7 +585,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                           <Button 
                             variant="ghost" 
                             size="sm" 
-                            className="h-7 px-2 text-xs gap-1 max-w-[140px]"
+                            aria-label={`Selecionar conexão de ${sector.name}`}
+                            className="h-11 px-2 text-xs gap-1 max-w-[140px]"
                             onClick={(e) => e.stopPropagation()}
                           >
                             {selectedInstance?.has_pin && 
@@ -660,7 +660,7 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                         <Button
                           variant="default"
                           size="sm"
-                          className="h-7 px-2 text-xs gap-1"
+                          className="h-11 px-2 text-xs gap-1"
                           onClick={(e) => {
                             e.stopPropagation();
                             setManageSector({ id: sectorId, name: sector.name });
@@ -673,7 +673,8 @@ export function ZappSectorSelector({ onSelectSector }: ZappSectorSelectorProps) 
                         <Button
                           variant="ghost"
                           size="icon"
-                          className="h-7 w-7"
+                          className="h-11 w-11"
+                          aria-label={`Gerenciar conexões de ${sector.name}`}
                           title="Gerenciar conexões"
                           onClick={(e) => {
                             e.stopPropagation();

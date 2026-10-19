@@ -1,5 +1,6 @@
 import { memo } from "react";
-import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug, BarChart3, CalendarClock } from "lucide-react";
+import { MessageSquare, Users, Building2, Tags, Settings, BookOpen, Megaphone, Briefcase, CheckSquare, DollarSign, User, Users2, Video, Plug, BarChart3, CalendarClock, ChevronDown } from "lucide-react";
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -111,9 +112,25 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
 
   return (
     <div className="relative flex items-center gap-1 px-2 sm:px-3 py-2 bg-zapp-bg border-b border-zapp-border shrink-0 sticky top-0 z-50 isolate shadow-sm">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 lg:hidden">
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" aria-label="Seções do RoyZapp" className="min-h-11 h-auto w-full justify-between gap-2 whitespace-normal text-left text-zapp-text hover:bg-zapp-panel">
+              <span className="min-w-0 font-semibold">{navItems.find((item) => item.view === activeView)?.label || "Conversas"}</span>
+              <ChevronDown className="h-5 w-5 shrink-0" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="start" className="max-h-[60dvh] w-[min(280px,calc(100vw-32px))] overflow-y-auto bg-zapp-panel text-zapp-text">
+            {navItems.map(({ view, icon: Icon, label }) => <DropdownMenuItem key={view} aria-current={activeView === view ? "page" : undefined} className={cn("min-h-11 gap-3", activeView === view && "bg-zapp-accent/15 font-semibold")} onSelect={() => setActiveView(view)}><Icon className="h-5 w-5" />{label}</DropdownMenuItem>)}
+          </DropdownMenuContent>
+        </DropdownMenu>
+        {activeView === "inbox" && <div className="flex flex-wrap gap-1" role="group" aria-label="Tipo de conversa">
+          {([['all', 'Todas'], ['individual', 'Individuais'], ['group', 'Grupos']] as const).filter(([type]) => !isLeanSalesMenu || type !== 'all').map(([type, label]) => <Button key={type} variant="ghost" aria-pressed={filterConversationType === type} onClick={() => setFilterConversationType(type)} className={cn("h-11 px-3 text-xs hover:bg-zapp-panel", filterConversationType === type ? "bg-zapp-input text-zapp-accent" : "text-zapp-text-muted")}>{label}</Button>)}
+        </div>}
+      </div>
       {/* Trilha rolável: em telas pequenas os ícones deslizam horizontalmente
           em vez de quebrar ou desaparecer */}
-      <div className="flex-1 min-w-0 flex items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+      <div className="hidden lg:flex flex-1 min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
       {navItems.map(({ view, icon: Icon, label }) => {
         const isActive = activeView === view;
         return (
@@ -154,8 +171,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Todas as conversas"
               className={cn(
-                "rounded-full h-8 w-8",
+                "rounded-full h-11 w-11",
                 filterConversationType === "all" 
                   ? "bg-zapp-panel text-zapp-accent" 
                   : "text-zapp-text-muted hover:bg-zapp-panel/50"
@@ -174,8 +192,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Chats individuais"
               className={cn(
-                "rounded-full h-8 w-8",
+                "rounded-full h-11 w-11",
                 filterConversationType === "individual" 
                   ? "bg-zapp-panel text-zapp-accent" 
                   : "text-zapp-text-muted hover:bg-zapp-panel/50"
@@ -193,8 +212,9 @@ export const ZappSidebarNav = memo(function ZappSidebarNav({
             <Button
               variant="ghost"
               size="icon"
+              aria-label="Grupos"
               className={cn(
-                "rounded-full h-8 w-8",
+                "rounded-full h-11 w-11",
                 filterConversationType === "group" 
                   ? "bg-zapp-panel text-zapp-accent" 
                   : "text-zapp-text-muted hover:bg-zapp-panel/50"

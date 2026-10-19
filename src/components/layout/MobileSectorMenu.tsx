@@ -21,9 +21,9 @@ export function MobileSectorMenu({ items, activeTarget, onNavigate, onZapp, zapp
     <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(1rem+env(safe-area-inset-bottom))]" data-vaul-no-drag>
       {groups.map((group) => <section key={group} className="mb-4">
         <h3 className="mb-1 px-3 text-xs font-semibold text-muted-foreground">{group}</h3>
-        {filtered.filter((i) => (i.group || "Telas") === group).map((item) => <Button key={item.to} asChild variant="ghost" className={cn("h-auto min-h-11 w-full justify-start gap-3 py-3 text-left", activeTarget === item.to && "bg-primary/15")}>
+        {filtered.filter((i) => (i.group || "Telas") === group).map((item) => <Button key={item.to} asChild variant="ghost" className={cn("h-auto min-h-11 w-full justify-start gap-3 py-3 text-left hover:bg-muted focus:bg-muted", activeTarget === item.to ? "bg-primary/15 text-foreground" : "text-muted-foreground")}>
           <Link to={item.to} onClick={onNavigate} aria-current={activeTarget === item.to ? "page" : undefined}>
-            <item.icon className="h-5 w-5 shrink-0 text-primary" />
+            <item.icon className={cn("h-5 w-5 shrink-0", activeTarget === item.to ? "text-primary" : "text-muted-foreground")} />
             <span className="min-w-0 flex-1 whitespace-normal break-words">{item.label}</span>
             <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground" />
           </Link>

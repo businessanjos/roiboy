@@ -49,7 +49,7 @@ export const ZappRoleHelpPopover = memo(function ZappRoleHelpPopover({
               size="icon"
               aria-label="Entenda os papéis do ROY zAPP"
               className={cn(
-                "shrink-0 rounded-full h-8 w-8 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text",
+                "shrink-0 rounded-full h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel hover:text-zapp-text",
                 className
               )}
             >

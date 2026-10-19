@@ -7,6 +7,7 @@
 - Shell back navigation uses app history with parent-list fallback; only the main scroller restores positions by history entry through `useMainScrollRestoration`. Why: browser back preserves context without taking over chat or kanban scrolling.
 - Mobile RoyZapp selections use router history state, while existing conversation query links retain their lookup flow. Why: list/chat browser back and forward do not replay deep-link operations.
 - Financial pages use the shell scroller on mobile and their local scroller on desktop. Why: nested mobile scrolling otherwise prevents history-position restoration.
+- RoyZapp subsection back changes only the view to inbox; mobile section menus reuse the filtered internal navigation list, and sector-selection actions stay separate from connection controls. Why: contextual return preserves the chosen connection and avoids inaccessible nested buttons.
 - CX queue forecasts use a pure display-only calendar aggregation in America/Sao_Paulo, while queue and audit lists use shared pagination and bounded scroll regions. Why: readable day-based metrics without rescheduling events or changing delivery rules.
 - Client history dialogs share ClientHistoryTimeline for date-grouped presentation in America/Sao_Paulo. Why: consistent readable chronology without duplicating events or changing data access.
 - New sector WhatsApp numbers are created via uazapi-manager `create_sector_instance` (admin-only, then QR via ConnectQRCodeDialog). Why: sectors without pre-made UAZAPI instances could never generate a QR Code.
