@@ -16,7 +16,7 @@ import PdaOptionsDialog from "./PdaOptionsDialog";
 import { ManagerCell, MoneyCell, MultiOptionCell, OptionCell, YesNoCell } from "./PdaEditableCell";
 import {
   computeSynergyPct, formatDateBR, formatMoney, formatTenure, mentalModelLabel,
-  normalizeMentalModel, optionColor, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
+  normalizeMentalModel, optionColor, PDA_COLORS, synergyFromPct, tenureMonths, THERMOMETER_DEFAULT, type PdaOption,
 } from "@/lib/rh/pda";
 
 interface RenderCtx {
