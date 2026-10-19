@@ -193,7 +193,7 @@ export default function FinancialAgingPage() {
           {/* Summary Cards */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
             <Card>
-              <CardContent className="pt-4">
+              <CardContent className="px-3 pt-4 sm:px-6">
                 <div className="flex items-center gap-2 text-muted-foreground text-sm">
                   <AlertTriangle className="h-4 w-4" />
                   Total Atrasado
@@ -209,12 +209,12 @@ export default function FinancialAgingPage() {
             
             {agingBuckets.map((bucket) => (
               <Card key={bucket.label}>
-                <CardContent className="pt-4">
+                <CardContent className="px-3 pt-4 sm:px-6">
                   <div className="flex items-center gap-2 text-muted-foreground text-sm">
                     <div className={`w-3 h-3 rounded-full ${bucket.color}`} />
                     {bucket.label}
                   </div>
-                  <div className="text-xl font-bold">
+                  <div className="break-words text-base font-bold sm:text-xl">
                     {formatCurrency(bucket.total)}
                   </div>
                   <div className="text-xs text-muted-foreground">
