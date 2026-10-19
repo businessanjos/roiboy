@@ -979,12 +979,12 @@ export default function HRCollaborators() {
 
       {/* New Collaborator Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg grid-cols-1 max-h-[90dvh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Novo Colaborador</DialogTitle>
           </DialogHeader>
-          <div className="grid grid-cols-2 gap-4 mt-2">
-            <div className="col-span-2">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
+            <div className="col-span-full">
               <Label>Nome completo *</Label>
               <Input value={form.full_name} onChange={e => setForm(f => ({ ...f, full_name: e.target.value }))} placeholder="Nome completo" />
             </div>
