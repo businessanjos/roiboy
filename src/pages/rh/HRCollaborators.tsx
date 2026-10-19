@@ -667,7 +667,47 @@ export default function HRCollaborators() {
           </div>
         ) : (
           <>
-          <div className="border rounded-lg overflow-x-auto">
+          {/* Mobile: cartões */}
+          <div className="space-y-2 md:hidden">
+            {pgProviders.items.map(p => {
+              const st = STATUS_MAP[p.status || "active"] || STATUS_MAP.active;
+              return (
+                <div key={p.id} className="rounded-lg border bg-card p-3 space-y-2">
+                  <div className="flex items-start gap-3">
+                    <Avatar className="h-10 w-10 shrink-0">
+                      <AvatarImage src={p.avatar_url || undefined} />
+                      <AvatarFallback className="bg-warning/10 text-warning text-xs font-medium">
+                        {getInitials(p.full_name)}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-foreground break-words">{p.full_name}</p>
+                      <p className="text-xs text-muted-foreground break-all">{p.email || "—"}</p>
+                    </div>
+                    <Badge variant={st.variant} className="text-xs shrink-0">{st.label}</Badge>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                    <Badge variant="outline" className="text-xs">
+                      {(p as any).provider_kind === "director" ? "Cargo de confiança" : "Prestador"}
+                    </Badge>
+                    {(p.position || p.service_type) && <span className="break-words">{p.position || p.service_type}</span>}
+                    {p.department && <span className="break-words">· {p.department}</span>}
+                    {p.company_name && <span className="break-words">· {p.company_name}</span>}
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() => navigate(`/rh/service-providers/${p.id}`)}
+                  >
+                    <Eye className="h-4 w-4 mr-2" /> Abrir ficha
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+          {/* Desktop: tabela */}
+          <div className="border rounded-lg overflow-x-auto hidden md:block">
             <table className="w-full min-w-[900px] text-sm">
               <thead>
                 <tr className="bg-muted/50 border-b">
