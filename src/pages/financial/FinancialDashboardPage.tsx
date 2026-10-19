@@ -243,7 +243,7 @@ export default function FinancialDashboardPage() {
           title="Inadimplência"
           subtitle="Quanto está em atraso e quem deve atenção primeiro"
           action={
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2">
               <Button variant="outline" size="sm" onClick={() => navigate("/financial/relatorios?tab=aging")}>
                 Relatório de aging
               </Button>

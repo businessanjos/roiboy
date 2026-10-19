@@ -169,7 +169,7 @@ export default function ContentHQ() {
                 <div className="px-2 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-muted-foreground">
                   {g.group}
                 </div>
-                <nav className="space-y-0.5">
+                  <nav className="space-y-0.5">
                   {g.items.map((s) => {
                     const Icon = s.icon;
                     const active = section === s.id;
