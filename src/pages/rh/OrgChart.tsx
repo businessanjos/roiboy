@@ -404,8 +404,8 @@ export default function OrgChart() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <div className="relative w-64">
+          <div className="flex w-full min-w-0 items-center gap-2 sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:w-64 sm:flex-none">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
                 placeholder="Buscar por nome ou cargo..."
