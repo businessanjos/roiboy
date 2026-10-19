@@ -19,3 +19,4 @@
 
 - RoyZapp mobile inbox uses a compact header, one-row section/type navigation, and search-adjacent filters; alerts own their spacing and mobile secondary actions reuse existing callbacks. Why: absent alerts and secondary controls must not consume conversation-list height.
 - The persistent 3C panel portals its existing mobile launcher into the RoyZapp conversation header when mounted, falling back to its global launcher elsewhere. Why: keep dialing access without covering composer actions or changing call lifecycle.
+- Mobile shell: `#app-main-scroll` scrolls only vertically below lg and its direct page roots are forced to full width; wide content must wrap or scroll inside its own region, and new authenticated routes must be added to `src/lib/navigation/mobileWidthAudit.ts` (checked by test, measured by `scripts/qa/mobile-width-audit.mjs`). Why: page roots with mx-auto in a flex-col main grew to min-content and dragged the whole app sideways.
