@@ -101,8 +101,8 @@ export default function RHOffboarding() {
 
   return (
     <div className="p-6 max-w-7xl mx-auto space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div className="flex min-w-0 items-center gap-3">
           <div className="p-2.5 rounded-xl bg-danger/10">
             <UserMinus className="h-7 w-7 text-danger" strokeWidth={1.5} />
           </div>

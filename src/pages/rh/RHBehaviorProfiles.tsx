@@ -55,7 +55,7 @@ export default function RHBehaviorProfiles() {
             return (
               <Card key={p.profile_key}>
                 <CardHeader className="pb-3">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <CardTitle className="text-base flex items-center gap-2">
                       <Badge
                         className="border-0"
