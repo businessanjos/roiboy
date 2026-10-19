@@ -99,7 +99,7 @@ describe("evaluateRouteAudit", () => {
     expect(r.status).toBe("limitacao");
   });
   it("still fails on overflow measured before a failed gesture", () => {
-    const r = evaluateRouteAudit({ ...base, before: { ...clean, mainScrollWidth: 328 }, after: null, gesture: { status: "failed", error: "x" } });
+    const r = evaluateRouteAudit({ ...base, before: { ...clean, mainScrollWidth: 401 }, after: null, gesture: { status: "failed", error: "x" } });
     expect(r.status).toBe("falha");
   });
 });
