@@ -24,6 +24,7 @@ import {
 } from "@/components/royzapp";
 import { normalizeSearchText, normalizePhone, matchesSearchQuery } from "@/components/royzapp/types";
 import { ZappSectorSelector } from "@/components/royzapp/ZappSectorSelector";
+import { zappSectionSearch } from "@/lib/navigation/zappSectionNavigation";
 import { ZappWhatsAppAdminPanel } from "@/components/royzapp/ZappWhatsAppAdminPanel";
 import { ZappMetaTemplatesDialog } from "@/components/royzapp/ZappMetaTemplatesDialog";
 
@@ -518,8 +519,8 @@ export default function RoyZapp() {
   const changeView = useCallback((view: ZappView) => {
     lastHandledViewParamRef.current = view;
     setActiveView(view);
-    replaceSearchParams((next) => next.set("view", view));
-  }, [replaceSearchParams]);
+    setSearchParams((prev) => zappSectionSearch(prev, view), { replace: true });
+  }, [setSearchParams]);
 
 
 
