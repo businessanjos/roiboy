@@ -72,7 +72,7 @@ export function InstagramProfileHeader({
   }
 
   return (
-    <div className="bg-card rounded-xl border p-6">
+    <div className="min-w-0 bg-card rounded-xl border p-4 sm:p-6">
       <div className="flex flex-col sm:flex-row items-center sm:items-start gap-6">
         {/* Profile Picture with Instagram Gradient Border */}
         <div className="relative group">
@@ -112,11 +112,11 @@ export function InstagramProfileHeader({
         )}
 
         {/* Profile Info */}
-        <div className="flex-1 text-center sm:text-left space-y-4">
+        <div className="min-w-0 max-w-full flex-1 text-center sm:text-left space-y-4">
           {/* Username and Actions */}
           <div className="flex flex-col sm:flex-row items-center gap-3">
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl font-semibold">@{profile.username}</h2>
+            <div className="flex min-w-0 max-w-full flex-wrap items-center justify-center gap-2 sm:justify-start">
+              <h2 className="max-w-full break-all text-xl font-semibold">@{profile.username}</h2>
               {profile.display_name && profile.display_name !== profile.username && (
                 <Badge variant="secondary" className="font-normal">
                   {profile.display_name}
@@ -138,7 +138,7 @@ export function InstagramProfileHeader({
           </div>
 
           {/* Stats */}
-          <div className="flex justify-center sm:justify-start gap-8">
+          <div className="flex flex-wrap justify-center sm:justify-start gap-4 sm:gap-8">
             <div className="text-center sm:text-left">
               <span className="font-bold text-lg">{formatNumber(profile.posts_count)}</span>
               <p className="text-sm text-muted-foreground">publicações</p>
