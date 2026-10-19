@@ -303,8 +303,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   return (
     <div className="flex flex-col h-full bg-zapp-bg">
       {/* Header */}
-      <div className="bg-zapp-panel-header px-4 py-3 flex items-start justify-between gap-2">
-        <div className="flex items-start gap-3 min-w-0 flex-1">
+      <div className="bg-zapp-panel-header px-4 py-3 flex flex-wrap sm:flex-nowrap items-start justify-between gap-2">
+        <div className="flex items-start gap-3 min-w-0 w-full sm:w-auto sm:flex-1">
           {/* No celular o RoyZapp não tem tab bar: este é o caminho de volta. */}
           <Button variant="ghost" size="icon"
             type="button"
@@ -357,7 +357,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-1 shrink-0">
+        <div className="flex w-full sm:w-auto items-center justify-end gap-1 shrink-0">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="icon" aria-label="Saída e seleção de setor" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel">
@@ -580,7 +580,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
               <Button
                 variant="ghost"
                 size="icon"
-                className="text-zapp-text-muted hover:bg-zapp-panel rounded-full"
+                className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full"
                 onClick={onRefreshMessages}
                 disabled={isRefreshingMessages}
                 title="Atualizar mensagens"
