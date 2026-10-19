@@ -302,15 +302,8 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
   const isConversationListVisible = activeView === "inbox" || showConversationList;
 
   const navigate = useNavigate();
-  const conversationFilters = (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" aria-label="Filtrar conversas" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full">
-                    <Filter className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-[min(320px,calc(100vw-16px))] max-h-[70dvh] overflow-y-auto [&_[role=menuitem]]:min-h-11">
-<div className="lg:hidden px-2 pb-2">        {inboxTab === "mine" && canSeeAllSectorConversations && (
+  const agentScopeSelector = (
+        {inboxTab === "mine" && canSeeAllSectorConversations && (
           <Select value={filterAgentId} onValueChange={setFilterAgentId}>
             <SelectTrigger
               aria-label="Exibir conversas de"
@@ -339,7 +332,16 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
             </SelectContent>
           </Select>
         )}
-</div>
+  );
+  const conversationFilters = (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" aria-label="Filtrar conversas" className="h-11 w-11 text-zapp-text-muted hover:bg-zapp-panel rounded-full">
+                    <Filter className="h-5 w-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="bg-zapp-panel border-zapp-border w-[min(320px,calc(100vw-16px))] max-h-[70dvh] overflow-y-auto [&_[role=menuitem]]:min-h-11">
+<div className="lg:hidden px-2 pb-2">{agentScopeSelector}</div>
 {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && <DropdownMenuItem className="lg:hidden min-h-11 gap-2 text-zapp-accent" onSelect={onPullFromQueue}><ArrowDownToLine className="h-5 w-5" />Puxar da fila ({totalQueueConversations})</DropdownMenuItem>}
               {/* Status filters */}
               <div className="px-2 py-1.5 text-xs font-medium text-zapp-text-muted">Status</div>
@@ -741,34 +743,7 @@ export const ZappConversationPanel = memo(function ZappConversationPanel({
         </div>
 
         <div className="lg:hidden shrink-0">{conversationFilters}</div>
-        {inboxTab === "mine" && canSeeAllSectorConversations && (
-          <div className="hidden lg:block"><Select value={filterAgentId} onValueChange={setFilterAgentId}>
-            <SelectTrigger
-              className="h-9 w-auto max-w-[112px] shrink-0 gap-1 bg-zapp-input border-0 text-zapp-text text-[11px] focus:ring-0"
-              title="Exibir conversas de"
-            >
-              <Users className="h-3.5 w-3.5 shrink-0 text-zapp-text-muted" />
-              <SelectValue placeholder="Minhas" />
-            </SelectTrigger>
-            <SelectContent className="bg-zapp-panel border-zapp-border">
-              <SelectItem value="all" className="text-zapp-text text-xs">Somente minhas conversas</SelectItem>
-              <SelectItem value="__team__" className="text-zapp-text text-xs">Toda a equipe do setor</SelectItem>
-              {agents
-                .filter((a) =>
-                  !sectorDepartmentId ||
-                  a.department_id === sectorDepartmentId ||
-                  sectorAgentIds?.has(a.id)
-                )
-                .filter((a) => a.is_active || sectorAgentIds?.has(a.id))
-                .sort((x, y) => Number(y.is_active) - Number(x.is_active) || (x.user?.name || "").localeCompare(y.user?.name || ""))
-                .map((agent) => (
-                <SelectItem key={agent.id} value={agent.id} className="text-zapp-text text-xs">
-                  {agent.user?.name || "Atendente"}{!agent.is_active ? " (inativo)" : ""}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select></div>
-        )}
+        <div className="hidden lg:block">{agentScopeSelector}</div>
 
         {inboxTab === "mine" && totalQueueConversations > 0 && onPullFromQueue && (
           <Button
