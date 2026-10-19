@@ -61,6 +61,7 @@ import {
 import { cn } from "@/lib/utils";
 import { ZappContactsBreakdownDialog } from "./ZappContactsBreakdownDialog";
 import { ZappNewConversationsDialog, type NewConvFilter } from "./ZappNewConversationsDialog";
+import { ZappAlertDetailDialog, type ZappAlertDetailKind } from "./ZappAlertDetailDialog";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
@@ -180,6 +181,7 @@ function Kpi({
   hint,
   tone,
   onClick,
+  cta,
 }: {
   icon: typeof MessageSquare;
   label: string;
@@ -187,6 +189,7 @@ function Kpi({
   hint?: string;
   tone?: "danger" | "warning" | "success";
   onClick?: () => void;
+  cta?: string;
 }) {
   const toneClass =
     tone === "danger"
