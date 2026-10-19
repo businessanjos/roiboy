@@ -59,3 +59,8 @@ Nenhuma pendente neste escopo. Aguardando revisão do usuário para publicação
 - Antes (320): botão width 246, client 244 / scroll 258; seta saía ~13px da borda.
 - Correção em `src/pages/Events.tsx` e `src/components/marketing/MarketingEventSheet.tsx`: texto pode quebrar (altura automática), bloco interno `min-w-0 flex-1`, ícones/badge `shrink-0`. Texto completo preservado.
 - Depois: 320x740 client 244 / scroll 244, conteúdo até x266 (borda 283), fechado e aberto; 393x500 317/317. Gravações bloqueadas, nada salvo.
+
+## Complemento: coluna dos diálogos compartilhados de evento
+
+- `EventQuickFormDialog.tsx` e `EventEditDialog.tsx`: `DialogContent` recebeu `grid-cols-1` (além das grades internas já empilhadas).
+- Verificado em 320x740 (`/events/calendar` > Novo evento, gravações bloqueadas, nada salvo): diálogo x12..308, client 294 / scroll 294, topo e rodapé. Edição usa a mesma classe; não aberta para não tocar evento real.

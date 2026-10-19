@@ -263,7 +263,7 @@ export function EventEditDialog({ open, onOpenChange, event, onSuccess }: EventE
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+        <DialogContent className="grid-cols-1 max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Evento</DialogTitle>
             <DialogDescription>
