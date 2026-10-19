@@ -155,8 +155,8 @@ export default function CollaboratorsPDAWorkspace({
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <Tabs value={view} onValueChange={v => setView(v as View)}>
-          <TabsList>
+        <Tabs value={view} onValueChange={v => setView(v as View)} className="w-full md:w-auto">
+          <TabsList className="w-full grid grid-cols-4 md:w-auto md:inline-flex">
             <TabsTrigger value="list">Lista</TabsTrigger>
             <TabsTrigger value="board">Quadro</TabsTrigger>
             <TabsTrigger value="dashboard">Painel</TabsTrigger>
